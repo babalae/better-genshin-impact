@@ -17,6 +17,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using BetterGenshinImpact.Extensions;
+using BetterGenshinImpact.Utils;
 using Vanara.PInvoke;
 using Vision.WindowCapture;
 using Vision.WindowCapture.BitBlt;
@@ -39,13 +40,6 @@ namespace BetterGenshinImpact
         public string[] ModeNames { get; } = WindowCaptureFactory.ModeNames();
 
         public string SelectedMode { get; set; }
-
-        protected override void OnRender(DrawingContext drawingContext)
-        {
-            drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), new Rect(20, 20, 250, 250));
-
-            base.OnRender(drawingContext);
-        }
 
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -103,6 +97,38 @@ namespace BetterGenshinImpact
         private void StopBtn_Click(object sender, RoutedEventArgs e)
         {
             _capture.Stop();
+        }
+
+        private void TestMaskBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var hWnd = FindGenshinImpactHandle();
+            if (hWnd == IntPtr.Zero)
+            {
+                MessageBox.Show("未找到原神窗口");
+                return;
+            }
+
+            User32.GetWindowRect(hWnd, out var rect);
+            var x = rect.X;
+            var y = rect.Y;
+            var w = rect.Width;
+            var h = rect.Height;
+            //var x = (int)Math.Ceiling(rect.X * PrimaryScreen.ScaleX);
+            //var y = (int)Math.Ceiling(rect.Y * PrimaryScreen.ScaleY);
+            //var w = (int)Math.Ceiling(rect.Width * PrimaryScreen.ScaleX);
+            //var h = (int)Math.Ceiling(rect.Height * PrimaryScreen.ScaleY);
+            //Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
+            //Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{w} x {h}");
+
+            var window = new MaskWindow
+            {
+                Owner = this,
+                Left = x,
+                Top = y,
+                Width = w,
+                Height = h
+            };
+            window.Show();
         }
     }
 }

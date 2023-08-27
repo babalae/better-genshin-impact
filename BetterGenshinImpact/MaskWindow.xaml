@@ -1,0 +1,36 @@
+﻿<Window x:Class="BetterGenshinImpact.MaskWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BetterGenshinImpact"
+        mc:Ignorable="d"
+        Title="MaskWindow" Height="450" Width="800"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        Topmost="True"
+
+        DataContext="{Binding RelativeSource={RelativeSource Self}}">
+    <!-- ShowInTaskbar="False" -->
+    <Window.Background>
+        <SolidColorBrush Color="#FFB0B0B0"
+                         Opacity="0" />
+    </Window.Background>
+    <Window.Style>
+        <Style TargetType="Window">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Window">
+                        <Border BorderBrush="BlueViolet" BorderThickness="4">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Style>
+
+    <Grid>
+        
+    </Grid>
+</Window>
