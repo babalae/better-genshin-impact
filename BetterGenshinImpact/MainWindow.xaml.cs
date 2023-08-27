@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,10 +19,13 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using BetterGenshinImpact.Extensions;
 using BetterGenshinImpact.Utils;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using Vanara.PInvoke;
 using Vision.WindowCapture;
 using Vision.WindowCapture.BitBlt;
 using Vision.WindowCapture.GraphicsCapture;
+using Path = System.IO.Path;
 
 namespace BetterGenshinImpact
 {
@@ -30,6 +34,10 @@ namespace BetterGenshinImpact
     /// </summary>
     public partial class MainWindow : Window
     {
+
+        private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
+
+
         private IWindowCapture _capture;
 
         public MainWindow()
@@ -120,15 +128,16 @@ namespace BetterGenshinImpact
             //Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
             //Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{w} x {h}");
 
-            var window = new MaskWindow
-            {
-                Owner = this,
-                Left = x,
-                Top = y,
-                Width = w,
-                Height = h
-            };
+            var window =  MaskWindow.Instance();
+            window.Owner = this;
+            window.Left = x;
+            window.Top = y;
+            window.Width = w;
+            window.Height = h;
+
             window.Show();
+
+            _logger.LogInformation("Mask Window showed 遮罩窗口启动成功");
         }
     }
 }

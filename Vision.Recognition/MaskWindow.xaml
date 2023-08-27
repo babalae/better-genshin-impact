@@ -31,6 +31,12 @@
     </Window.Style>
 
     <Grid>
-        
+        <RichTextBox
+            x:Name="LogTextBox"
+            Background="Transparent"
+            Foreground="LightGray"
+            FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+            VerticalScrollBarVisibility="Auto"
+        />
     </Grid>
 </Window>
