@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33815.320
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterGenshinImpact", "BetterGenshinImpact\BetterGenshinImpact.csproj", "{75EC89E2-413D-4725-BCEA-AFAC57708F07}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vision.WindowCapture", "Vision.WindowCapture\Vision.WindowCapture.csproj", "{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {352D8B78-9DE3-4E58-985F-FADD22594DB4}
+	EndGlobalSection
+EndGlobal
