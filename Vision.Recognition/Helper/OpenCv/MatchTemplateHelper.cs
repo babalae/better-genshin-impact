@@ -59,10 +59,10 @@ namespace Vision.Recognition.Helper.OpenCv
                     p = new Point(point.X + dstMat.Width / 2, point.Y + dstMat.Height / 2);
                     if (VisionContext.Instance().Drawable)
                     {
-                        VisionContext.Instance().DrawRectList
-                            .Add(new Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
-                        VisionContext.Instance().DrawTextList
-                            .Add(new Tuple<Point, string>(new Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
+                        VisionContext.Instance().DrawContent.RectList
+                            .Add(new System.Windows.Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+                        VisionContext.Instance().DrawContent.TextList
+                            .Add(new Tuple<System.Windows.Point, string>(new System.Windows.Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
                         //var imgTar = srcMat.Clone();
                         //Cv2.Rectangle(imgTar, point,
                         //    new OpenCvSharp.Point(point.X + dstMat.Width, point.Y + dstMat.Height),
@@ -120,10 +120,10 @@ namespace Vision.Recognition.Helper.OpenCv
 
                         if (VisionContext.Instance().Drawable)
                         {
-                            VisionContext.Instance().DrawRectList
-                                .Add(new Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
-                            VisionContext.Instance().DrawTextList
-                                .Add(new Tuple<Point, string>(new Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
+                            VisionContext.Instance().DrawContent.RectList
+                                .Add(new System.Windows.Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+                            VisionContext.Instance().DrawContent.TextList
+                                .Add(new Tuple<System.Windows.Point, string>(new System.Windows.Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
                         }
                         //if (IsDebug)
                         //{

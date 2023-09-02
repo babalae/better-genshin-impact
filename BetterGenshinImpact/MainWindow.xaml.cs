@@ -20,6 +20,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Extensions;
 using BetterGenshinImpact.Utils;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using Serilog;
 using Vanara.PInvoke;
 using Vision.WindowCapture;
@@ -32,12 +33,12 @@ namespace BetterGenshinImpact
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : System.Windows.Window
     {
 
         private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
 
-
+        private MaskWindow _maskWindow;
         private IWindowCapture _capture;
 
         public MainWindow()
@@ -128,16 +129,22 @@ namespace BetterGenshinImpact
             //Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
             //Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{w} x {h}");
 
-            var window =  MaskWindow.Instance();
-            window.Owner = this;
-            window.Left = x;
-            window.Top = y;
-            window.Width = w;
-            window.Height = h;
+            _maskWindow =  MaskWindow.Instance();
+            ////window.Owner = this;
+            _maskWindow.Left = x;
+            _maskWindow.Top = y;
+            _maskWindow.Width = w;
+            _maskWindow.Height = h;
 
-            window.Show();
+            _maskWindow.Show();
 
             _logger.LogInformation("Mask Window showed 遮罩窗口启动成功");
+            _logger.LogInformation("123");
+        }
+
+        private void MainWindow_OnClosed(object? sender, EventArgs e)
+        {
+            _maskWindow.Close();
         }
     }
 }

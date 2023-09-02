@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Vision.Recognition;
+using Vision.Recognition.Helper.OpenCv;
 
 namespace BetterGenshinImpact
 {
@@ -23,10 +25,11 @@ namespace BetterGenshinImpact
     /// </summary>
     public partial class MaskWindow : Window
     {
-
         private static MaskWindow? _maskWindow;
 
         public ILogger<MaskWindow>? Logger { get; set; }
+
+        private static readonly Typeface MyTypeface = new FontFamily("微软雅黑").GetTypefaces().First();
 
         public static MaskWindow Instance(ILogger<MaskWindow>? logger = null)
         {
@@ -45,11 +48,29 @@ namespace BetterGenshinImpact
         {
             Logger?.LogInformation("OnRender...");
 
-            drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), new Rect(20, 20, 250, 250));
+            VisionContext.Instance().DrawContentCache.RectList.ForEach(rect =>
+            {
+                drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), rect);
+            });
+            VisionContext.Instance().DrawContentCache.TextList.ForEach(obj =>
+            {
+                drawingContext.DrawText(new FormattedText(obj.Item2,
+                    CultureInfo.GetCultureInfo("zh-cn"),
+                    FlowDirection.LeftToRight,
+                    MyTypeface,
+                    36, Brushes.Black, 1), obj.Item1);
+            });
 
             base.OnRender(drawingContext);
         }
 
         public RichTextBox LogBox => LogTextBox;
+
+        public Canvas Panel => WholeCanvas;
+
+        public void AddAreaSettingsControl()
+        {
+            Logger?.LogInformation("添加设置控件");
+        }
     }
 }

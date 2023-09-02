@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:BetterGenshinImpact"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800"
+        Closed="MainWindow_OnClosed"
         DataContext="{Binding RelativeSource={RelativeSource Self}}">
 
     <Grid>

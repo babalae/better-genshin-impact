@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:BetterGenshinImpact"
+        xmlns:s="clr-namespace:Vision.Recognition.Controls"
         mc:Ignorable="d"
         Title="MaskWindow" Height="450" Width="800"
         AllowsTransparency="True"
@@ -22,7 +22,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Window">
                         <Border BorderBrush="BlueViolet" BorderThickness="4">
-                            <ContentPresenter/>
+                            <ContentPresenter />
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -30,13 +30,108 @@
         </Style>
     </Window.Style>
 
-    <Grid>
-        <RichTextBox
-            x:Name="LogTextBox"
-            Background="Transparent"
-            Foreground="LightGray"
-            FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
-            VerticalScrollBarVisibility="Auto"
-        />
-    </Grid>
+    <Window.Resources>
+        <!--<Style TargetType="{x:Type s:TransformThumb}">
+            <Setter Property="MinHeight" Value="20" />
+            <Setter Property="MinWidth" Value="30" />
+            <Setter Property="Height" Value="100" />
+            <Setter Property="Width" Value="50" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type s:TransformThumb}">
+                        <ContentPresenter x:Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                          Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>-->
+
+        <!-- MoveThumb Template -->
+        <ControlTemplate x:Key="MoveThumbTemplate" TargetType="{x:Type s:MoveThumb}">
+            <Rectangle Fill="Transparent" />
+        </ControlTemplate>
+
+        <!-- ResizeDecorator Template -->
+        <ControlTemplate x:Key="ResizeDecoratorTemplate" TargetType="{x:Type Control}">
+            <Grid>
+                <s:ResizeThumb Height="3" Cursor="SizeNS" Margin="0 -4 0 0"
+                               VerticalAlignment="Top" HorizontalAlignment="Stretch" />
+                <s:ResizeThumb Width="3" Cursor="SizeWE" Margin="-4 0 0 0"
+                               VerticalAlignment="Stretch" HorizontalAlignment="Left" />
+                <s:ResizeThumb Width="3" Cursor="SizeWE" Margin="0 0 -4 0"
+                               VerticalAlignment="Stretch" HorizontalAlignment="Right" />
+                <s:ResizeThumb Height="3" Cursor="SizeNS" Margin="0 0 0 -4"
+                               VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
+                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNWSE" Margin="-6 -6 0 0"
+                               VerticalAlignment="Top" HorizontalAlignment="Left" />
+                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNESW" Margin="0 -6 -6 0"
+                               VerticalAlignment="Top" HorizontalAlignment="Right" />
+                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNESW" Margin="-6 0 0 -6"
+                               VerticalAlignment="Bottom" HorizontalAlignment="Left" />
+                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNWSE" Margin="0 0 -6 -6"
+                               VerticalAlignment="Bottom" HorizontalAlignment="Right" />
+            </Grid>
+        </ControlTemplate>
+
+
+        <!-- Designer Item Template-->
+        <ControlTemplate x:Key="AreaChooseTemplate" TargetType="ContentControl">
+            <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
+                <s:MoveThumb Template="{StaticResource MoveThumbTemplate}" Cursor="SizeAll" />
+                <Control Template="{StaticResource ResizeDecoratorTemplate}" />
+                <ContentPresenter Content="{TemplateBinding ContentControl.Content}" />
+            </Grid>
+        </ControlTemplate>
+
+
+        <!-- MoveThumb Template2 -->
+        <ControlTemplate x:Key="OuterMoveThumbTemplate" TargetType="{x:Type s:MoveThumb}">
+            <Rectangle Fill="Blue" />
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="CustomTemplate" TargetType="ContentControl">
+            <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
+                <s:MoveThumb Width="20" Height="20" Margin="0,-20,0,0" 
+                             VerticalAlignment="Top" HorizontalAlignment="Left"
+                             Template="{StaticResource OuterMoveThumbTemplate}" Cursor="SizeAll" Grid.ColumnSpan="2" />
+                <Control Template="{StaticResource ResizeDecoratorTemplate}" Grid.ColumnSpan="2" />
+                <ContentPresenter Content="{TemplateBinding ContentControl.Content}" Grid.ColumnSpan="2" />
+            </Grid>
+        </ControlTemplate>
+    </Window.Resources>
+
+
+    <Canvas x:Name="WholeCanvas">
+
+
+
+        <ContentControl Height="163" Canvas.Left="45" Canvas.Top="225" Width="247"
+                        Template="{StaticResource CustomTemplate}">
+            <RichTextBox
+                x:Name="LogTextBox"
+                Background="Transparent"
+                Foreground="LightGray"
+                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                BorderThickness="0"
+                VerticalScrollBarVisibility="Auto"  />
+        </ContentControl>
+
+        <ContentControl Width="130"
+                        MinWidth="5"
+                        Height="130"
+                        MinHeight="5"
+                        Canvas.Top="150"
+                        Canvas.Left="470"
+                        Template="{StaticResource AreaChooseTemplate}">
+            <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
+        </ContentControl>
+
+        <!--<s:TransformThumb Height="91" Canvas.Left="105" Canvas.Top="53" Width="174">
+            <s:TransformThumb.Content>
+                <TextBox ></TextBox>
+            </s:TransformThumb.Content>
+        </s:TransformThumb>-->
+    </Canvas>
+
 </Window>

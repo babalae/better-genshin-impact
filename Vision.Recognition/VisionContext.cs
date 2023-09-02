@@ -39,13 +39,12 @@ namespace Vision.Recognition
 
         public bool Drawable { get; set; }
 
+
+        public DrawContent DrawContent { get; set; } = new();
+
         /// <summary>
-        /// 在遮罩窗口上绘制的矩形
+        /// cache for drawContent
         /// </summary>
-        public List<Rect> DrawRectList { get; set; } = new();
-        /// <summary>
-        /// 在遮罩窗口上绘制的文本
-        /// </summary>
-        public List<Tuple<Point, string>> DrawTextList { get; set; } = new();
+        public DrawContent DrawContentCache { get; set; } = new();
     }
 }
