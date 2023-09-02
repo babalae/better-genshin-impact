@@ -1,29 +1,44 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 
 namespace Vision.Recognition.Controls
 {
-    /// <summary>
-    /// https://www.codeproject.com/Articles/22952/WPF-Diagram-Designer-Part-1
-    /// </summary>
     public class MoveThumb : Thumb
     {
+        private RotateTransform rotateTransform;
+        private ContentControl designerItem;
+
         public MoveThumb()
         {
+            DragStarted += new DragStartedEventHandler(this.MoveThumb_DragStarted);
             DragDelta += new DragDeltaEventHandler(this.MoveThumb_DragDelta);
+        }
+
+        private void MoveThumb_DragStarted(object sender, DragStartedEventArgs e)
+        {
+            this.designerItem = DataContext as ContentControl;
+
+            if (this.designerItem != null)
+            {
+                this.rotateTransform = this.designerItem.RenderTransform as RotateTransform;
+            }
         }
 
         private void MoveThumb_DragDelta(object sender, DragDeltaEventArgs e)
         {
-            Control designerItem = this.DataContext as Control;
-
-            if (designerItem != null)
+            if (this.designerItem != null)
             {
-                double left = Canvas.GetLeft(designerItem);
-                double top = Canvas.GetTop(designerItem);
+                Point dragDelta = new Point(e.HorizontalChange, e.VerticalChange);
 
-                Canvas.SetLeft(designerItem, left + e.HorizontalChange);
-                Canvas.SetTop(designerItem, top + e.VerticalChange);
+                if (this.rotateTransform != null)
+                {
+                    dragDelta = this.rotateTransform.Transform(dragDelta);
+                }
+
+                Canvas.SetLeft(this.designerItem, Canvas.GetLeft(this.designerItem) + dragDelta.X);
+                Canvas.SetTop(this.designerItem, Canvas.GetTop(this.designerItem) + dragDelta.Y);
             }
         }
     }

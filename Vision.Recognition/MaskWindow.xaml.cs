@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -71,6 +72,25 @@ namespace BetterGenshinImpact
         public void AddAreaSettingsControl()
         {
             Logger?.LogInformation("添加设置控件");
+        }
+
+        private void OnClick(object sender, RoutedEventArgs args)
+        {
+            CheckBox selectionCheckBox = sender as CheckBox;
+            if (selectionCheckBox != null && selectionCheckBox.IsChecked == true)
+            {
+                foreach (Control child in WholeCanvas.Children)
+                {
+                    Selector.SetIsSelected(child, true);
+                }
+            }
+            else
+            {
+                foreach (Control child in WholeCanvas.Children)
+                {
+                    Selector.SetIsSelected(child, false);
+                }
+            }
         }
     }
 }

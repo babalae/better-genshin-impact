@@ -1,15 +1,11 @@
 ﻿<Window x:Class="BetterGenshinImpact.MaskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:s="clr-namespace:Vision.Recognition.Controls"
-        mc:Ignorable="d"
+        xmlns:betterGenshinImpact="clr-namespace:BetterGenshinImpact"
         Title="MaskWindow" Height="450" Width="800"
         AllowsTransparency="True"
         WindowStyle="None"
         Topmost="True"
-
         DataContext="{Binding RelativeSource={RelativeSource Self}}">
     <!-- ShowInTaskbar="False" -->
     <Window.Background>
@@ -30,85 +26,47 @@
         </Style>
     </Window.Style>
 
+
     <Window.Resources>
-
-        <!-- MoveThumb Template -->
-        <ControlTemplate x:Key="MoveThumbTemplate" TargetType="{x:Type s:MoveThumb}">
-            <Rectangle Fill="Transparent" />
-        </ControlTemplate>
-
-        <!-- ResizeDecorator Template -->
-        <ControlTemplate x:Key="ResizeDecoratorTemplate" TargetType="{x:Type Control}">
-            <Grid>
-                <s:ResizeThumb Height="3" Cursor="SizeNS" Margin="0 -4 0 0"
-                               VerticalAlignment="Top" HorizontalAlignment="Stretch" />
-                <s:ResizeThumb Width="3" Cursor="SizeWE" Margin="-4 0 0 0"
-                               VerticalAlignment="Stretch" HorizontalAlignment="Left" />
-                <s:ResizeThumb Width="3" Cursor="SizeWE" Margin="0 0 -4 0"
-                               VerticalAlignment="Stretch" HorizontalAlignment="Right" />
-                <s:ResizeThumb Height="3" Cursor="SizeNS" Margin="0 0 0 -4"
-                               VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
-                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNWSE" Margin="-6 -6 0 0"
-                               VerticalAlignment="Top" HorizontalAlignment="Left" />
-                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNESW" Margin="0 -6 -6 0"
-                               VerticalAlignment="Top" HorizontalAlignment="Right" />
-                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNESW" Margin="-6 0 0 -6"
-                               VerticalAlignment="Bottom" HorizontalAlignment="Left" />
-                <s:ResizeThumb Width="7" Height="7" Cursor="SizeNWSE" Margin="0 0 -6 -6"
-                               VerticalAlignment="Bottom" HorizontalAlignment="Right" />
-            </Grid>
-        </ControlTemplate>
-
-
-        <!-- Designer Item Template-->
-        <ControlTemplate x:Key="AreaChooseTemplate" TargetType="ContentControl">
-            <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
-                <s:MoveThumb Template="{StaticResource MoveThumbTemplate}" Cursor="SizeAll" />
-                <Control Template="{StaticResource ResizeDecoratorTemplate}" />
-                <ContentPresenter Content="{TemplateBinding ContentControl.Content}" />
-            </Grid>
-        </ControlTemplate>
-
-
-        <!-- MoveThumb Template2 -->
-        <ControlTemplate x:Key="OuterMoveThumbTemplate" TargetType="{x:Type s:MoveThumb}">
-            <Rectangle Fill="Blue" />
-        </ControlTemplate>
-
-        <ControlTemplate x:Key="CustomTemplate" TargetType="ContentControl">
-            <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
-                <s:MoveThumb Width="20" Height="20" Margin="0,-20,0,0" 
-                             VerticalAlignment="Top" HorizontalAlignment="Left"
-                             Template="{StaticResource OuterMoveThumbTemplate}" Cursor="SizeAll" Grid.ColumnSpan="2" />
-                <Control Template="{StaticResource ResizeDecoratorTemplate}" Grid.ColumnSpan="2" />
-                <ContentPresenter Content="{TemplateBinding ContentControl.Content}" Grid.ColumnSpan="2" />
-            </Grid>
-        </ControlTemplate>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Vision.Recognition;component/Controls/Style/DraggableResizableItem.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Window.Resources>
 
 
-    <Canvas x:Name="WholeCanvas">
+    <AdornerDecorator ClipToBounds="True">
+        <Canvas x:Name="WholeCanvas" SnapsToDevicePixels="True">
 
-        <ContentControl Height="163" Canvas.Left="45" Canvas.Top="225" Width="247"
-                        Template="{StaticResource CustomTemplate}">
-            <RichTextBox
-                x:Name="LogTextBox"
-                Background="Transparent"
-                Foreground="LightGray"
-                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
-                BorderThickness="0"
-                VerticalScrollBarVisibility="Auto"  />
-        </ContentControl>
+            <CheckBox Click="OnClick"
+                      Content=" s e l e c t"
+                      Margin="20,10,0,0"
+                      Foreground="LightGray"
+                      FontFamily="UISegoe"
+                      FontSize="15"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top" />
 
-        <ContentControl Width="130"
-                        MinWidth="5"
-                        Height="130"
-                        MinHeight="5"
-                        Canvas.Top="150"
-                        Canvas.Left="470"
-                        Template="{StaticResource AreaChooseTemplate}">
-            <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
-        </ContentControl>
-    </Canvas>
+            <ContentControl Height="163" Canvas.Left="45" Canvas.Top="225" Width="247"
+                            Style="{StaticResource OuterDraggableResizableItemStyle}">
+                <RichTextBox
+                    x:Name="LogTextBox"
+                    Background="Transparent"
+                    Foreground="LightGray"
+                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                    BorderThickness="0"
+                    VerticalScrollBarVisibility="Auto" />
+            </ContentControl>
+
+            <ContentControl Width="130"
+                            Height="130"
+                            Canvas.Top="150"
+                            Canvas.Left="470"
+                            Style="{StaticResource DraggableResizableItemStyle}">
+                <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
+            </ContentControl>
+        </Canvas>
+    </AdornerDecorator>
 
 </Window>

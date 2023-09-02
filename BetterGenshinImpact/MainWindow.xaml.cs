@@ -110,6 +110,7 @@ namespace BetterGenshinImpact
 
         private void TestMaskBtn_Click(object sender, RoutedEventArgs e)
         {
+
             var hWnd = FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
             {
