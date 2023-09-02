@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Vision.Recognition;
 
 namespace BetterGenshinImpact
 {
@@ -30,7 +31,8 @@ namespace BetterGenshinImpact
         public static MaskWindow Instance(ILogger<MaskWindow>? logger = null)
         {
             _maskWindow ??= new MaskWindow();
-            _maskWindow.Logger = logger;
+            _maskWindow.Logger ??= logger;
+            VisionContext.Instance().Log ??= logger;
             return _maskWindow;
         }
 
