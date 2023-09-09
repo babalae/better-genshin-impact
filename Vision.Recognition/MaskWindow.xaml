@@ -40,7 +40,7 @@
         <Canvas x:Name="WholeCanvas" SnapsToDevicePixels="True">
 
             <CheckBox Click="OnClick"
-                      Content=" s e l e c t"
+                      Content=" select"
                       Margin="20,10,0,0"
                       Foreground="LightGray"
                       FontFamily="UISegoe"
@@ -59,12 +59,15 @@
                     VerticalScrollBarVisibility="Auto" />
             </ContentControl>
 
-            <ContentControl Width="130"
+            <ContentControl Width="230"
                             Height="130"
                             Canvas.Top="150"
                             Canvas.Left="470"
                             Style="{StaticResource DraggableResizableItemStyle}">
-                <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
+                <Grid>
+                    <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
+                    <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Grid>
             </ContentControl>
         </Canvas>
     </AdornerDecorator>

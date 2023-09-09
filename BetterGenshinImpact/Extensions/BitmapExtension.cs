@@ -14,14 +14,13 @@ namespace BetterGenshinImpact.Extensions
 
         public static BitmapImage ToBitmapImage(this Bitmap bitmap)
         {
-            MemoryStream ms = new MemoryStream();
+            var ms = new MemoryStream();
             bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-            BitmapImage image = new BitmapImage();
+            var image = new BitmapImage();
             image.BeginInit();
             ms.Seek(0, SeekOrigin.Begin);
             image.StreamSource = ms;
             image.EndInit();
-
             return image;
         }
     }

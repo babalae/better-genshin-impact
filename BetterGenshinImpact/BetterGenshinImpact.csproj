@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
@@ -17,6 +18,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Vision.Recognition\Vision.Recognition.csproj" />
     <ProjectReference Include="..\Vision.WindowCapture\Vision.WindowCapture.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Core\" />
+    <Folder Include="GameTask\AutoFishing\" />
+    <Folder Include="GameTask\AutoGeniusInvokation\" />
+    <Folder Include="GameTask\AutoPick\" />
   </ItemGroup>
 
 </Project>

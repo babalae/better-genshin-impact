@@ -13,6 +13,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
@@ -43,6 +44,7 @@ namespace BetterGenshinImpact
         private MaskWindow()
         {
             InitializeComponent();
+            AddAreaSettingsControl();
         }
 
         protected override void OnRender(DrawingContext drawingContext)
@@ -72,6 +74,19 @@ namespace BetterGenshinImpact
         public void AddAreaSettingsControl()
         {
             Logger?.LogInformation("添加设置控件");
+            var control = new ContentControl();
+            control.Width = 100;
+            control.Height = 100;
+            control.Style = (Style)FindResource("DraggableResizableItemStyle"); 
+            var rc = new Rectangle();
+            rc.Fill = Brushes.Red;
+            rc.IsHitTestVisible = false;
+            control.Content = rc;
+
+
+            Canvas.SetTop(control, 100);
+            Canvas.SetLeft(control, 20);
+            WholeCanvas.Children.Add(control);
         }
 
         private void OnClick(object sender, RoutedEventArgs args)

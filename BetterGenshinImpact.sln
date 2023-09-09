@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BetterGenshinImpact", "Bett
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vision.WindowCapture", "Vision.WindowCapture\Vision.WindowCapture.csproj", "{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vision.Recognition", "Vision.Recognition\Vision.Recognition.csproj", "{97A12A37-613B-4BE3-B01B-BF3411503711}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vision.Recognition", "Vision.Recognition\Vision.Recognition.csproj", "{97A12A37-613B-4BE3-B01B-BF3411503711}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
