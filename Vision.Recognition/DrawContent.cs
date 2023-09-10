@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,10 +12,10 @@ namespace Vision.Recognition
         /// <summary>
         /// 在遮罩窗口上绘制的矩形
         /// </summary>
-        public List<System.Windows.Rect> RectList { get; set; } = new();
+        public ConcurrentBag<System.Windows.Rect> RectList { get; set; } = new();
         /// <summary>
         /// 在遮罩窗口上绘制的文本
         /// </summary>
-        public List<Tuple<System.Windows.Point, string>> TextList { get; set; } = new();
+        public ConcurrentBag<Tuple<System.Windows.Point, string>> TextList { get; set; } = new();
     }
 }

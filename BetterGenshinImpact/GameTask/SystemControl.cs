@@ -13,13 +13,13 @@ namespace BetterGenshinImpact.GameTask
     {
         public static IntPtr FindGenshinImpactHandle()
         {
-            return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact");
+            return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
         }
 
         public static bool IsGenshinImpactActive()
         {
             var name = GetActiveProcessName();
-            return name is "YuanShen" or "GenshinImpact" or "Genshin Impact";
+            return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
         }
 
         public static IntPtr FindHandleByProcessName(params string[] names)

@@ -1,7 +1,6 @@
-﻿<Window x:Class="BetterGenshinImpact.MaskWindow"
+﻿<Window x:Class="Vision.Recognition.MaskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:betterGenshinImpact="clr-namespace:BetterGenshinImpact"
         Title="MaskWindow" Height="450" Width="800"
         AllowsTransparency="True"
         WindowStyle="None"
@@ -41,14 +40,13 @@
 
             <CheckBox Click="OnClick"
                       Content=" select"
-                      Margin="20,10,0,0"
                       Foreground="LightGray"
                       FontFamily="UISegoe"
                       FontSize="15"
                       HorizontalAlignment="Left"
-                      VerticalAlignment="Top" />
+                      VerticalAlignment="Top" Canvas.Left="84" Canvas.Top="117" />
 
-            <ContentControl Height="163" Canvas.Left="45" Canvas.Top="225" Width="247"
+            <ContentControl Height="163" Canvas.Left="245" Canvas.Top="225" Width="247"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
                 <RichTextBox
                     x:Name="LogTextBox"

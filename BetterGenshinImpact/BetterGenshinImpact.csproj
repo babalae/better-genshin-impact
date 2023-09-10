@@ -25,6 +25,7 @@
     <Folder Include="GameTask\AutoFishing\" />
     <Folder Include="GameTask\AutoGeniusInvokation\" />
     <Folder Include="GameTask\AutoPick\" />
+    <Folder Include="GameTask\QuickEnhanceArtifacts\" />
   </ItemGroup>
 
 </Project>

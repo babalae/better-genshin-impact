@@ -7,6 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
 {
     public class AutoSkipTrigger : ITaskTrigger
     {
+        public string Name => "自动剧情";
         public bool IsEnabled { get; set; }
         public int Priority => 20;
         public bool IsExclusive => false;

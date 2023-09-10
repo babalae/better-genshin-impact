@@ -11,6 +11,7 @@ using static Vanara.PInvoke.Kernel32;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using Vision.Recognition;
 
 namespace BetterGenshinImpact
 {

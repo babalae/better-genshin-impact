@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Serilog;
 using Vanara.PInvoke;
+using Vision.Recognition;
 using Vision.WindowCapture;
 using Vision.WindowCapture.BitBlt;
 using Vision.WindowCapture.GraphicsCapture;
@@ -38,8 +39,7 @@ namespace BetterGenshinImpact
 
         private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
 
-        private MaskWindow _maskWindow;
-        private IWindowCapture _capture;
+        private MaskWindow? _maskWindow;
 
         public MainWindow()
         {
@@ -48,64 +48,18 @@ namespace BetterGenshinImpact
 
         public string[] ModeNames { get; } = WindowCaptureFactory.ModeNames();
 
-        public string SelectedMode { get; set; }
+        public string? SelectedMode { get; set; }
 
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            IntPtr hWnd = FindGenshinImpactHandle();
-            if (hWnd == IntPtr.Zero)
-            {
-                MessageBox.Show("未找到原神窗口");
-                return;
-            }
-
-
-            _capture = WindowCaptureFactory.Create(SelectedMode.ToCaptureMode());
-            _capture.Start(hWnd);
-
-            CompositionTarget.Rendering += Loop;
 
         }
 
-        private void Loop(object? sender, EventArgs e)
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-            var bitmap = _capture.Capture();
-            sw.Stop();
-            Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
 
-            if (bitmap != null)
-            {
-                sw.Reset();
-                sw.Start();
-                ImageResult.Source = bitmap.ToBitmapImage();
-                sw.Stop();
-                Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
-            }
-        }
-
-        public IntPtr FindGenshinImpactHandle()
-        {
-            var pros = Process.GetProcessesByName("YuanShen");
-            if (pros.Any())
-            {
-                return pros[0].MainWindowHandle;
-            }
-
-            pros = Process.GetProcessesByName("GenshinImpact");
-            if (pros.Any())
-            {
-                return pros[0].MainWindowHandle;
-            }
-
-            return IntPtr.Zero;
-        }
 
         private void StopBtn_Click(object sender, RoutedEventArgs e)
         {
-            _capture.Stop();
         }
 
         private void TestMaskBtn_Click(object sender, RoutedEventArgs e)
@@ -151,7 +105,7 @@ namespace BetterGenshinImpact
 
         private void MainWindow_OnClosed(object? sender, EventArgs e)
         {
-            _maskWindow.Close();
+            _maskWindow?.Close();
         }
     }
 }

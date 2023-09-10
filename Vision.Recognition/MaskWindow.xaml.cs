@@ -18,7 +18,7 @@ using System.Windows.Shapes;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
 
-namespace BetterGenshinImpact
+namespace Vision.Recognition
 {
     /// <summary>
     /// MaskWindow.xaml 的交互逻辑
@@ -51,18 +51,18 @@ namespace BetterGenshinImpact
         {
             Logger?.LogInformation("OnRender...");
 
-            VisionContext.Instance().DrawContentCache.RectList.ForEach(rect =>
+            foreach (var rect in VisionContext.Instance().DrawContentCache.RectList)
             {
                 drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), rect);
-            });
-            VisionContext.Instance().DrawContentCache.TextList.ForEach(obj =>
+            }
+            foreach (var obj in VisionContext.Instance().DrawContentCache.TextList)
             {
                 drawingContext.DrawText(new FormattedText(obj.Item2,
                     CultureInfo.GetCultureInfo("zh-cn"),
                     FlowDirection.LeftToRight,
                     MyTypeface,
                     36, Brushes.Black, 1), obj.Item1);
-            });
+            }
 
             base.OnRender(drawingContext);
         }
@@ -77,10 +77,12 @@ namespace BetterGenshinImpact
             var control = new ContentControl();
             control.Width = 100;
             control.Height = 100;
-            control.Style = (Style)FindResource("DraggableResizableItemStyle"); 
-            var rc = new Rectangle();
-            rc.Fill = Brushes.Red;
-            rc.IsHitTestVisible = false;
+            control.Style = (Style)FindResource("DraggableResizableItemStyle");
+            var rc = new Rectangle
+            {
+                Fill = Brushes.Red,
+                IsHitTestVisible = false
+            };
             control.Content = rc;
 
 
