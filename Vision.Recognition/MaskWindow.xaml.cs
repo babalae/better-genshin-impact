@@ -44,7 +44,7 @@ namespace Vision.Recognition
         private MaskWindow()
         {
             InitializeComponent();
-            AddAreaSettingsControl();
+            AddAreaSettingsControl("测试识别窗口");
         }
 
         protected override void OnRender(DrawingContext drawingContext)
@@ -71,22 +71,34 @@ namespace Vision.Recognition
 
         public Canvas Panel => WholeCanvas;
 
-        public void AddAreaSettingsControl()
+        public void AddAreaSettingsControl(string name)
         {
             Logger?.LogInformation("添加设置控件");
             var control = new ContentControl();
             control.Width = 100;
             control.Height = 100;
             control.Style = (Style)FindResource("DraggableResizableItemStyle");
-            var rc = new Rectangle
+
+            var grid = new Grid();
+            grid.Children.Add(new Rectangle
             {
-                Fill = Brushes.Red,
+                Fill = Brushes.White,
+                Opacity = 0.2,
                 IsHitTestVisible = false
-            };
-            control.Content = rc;
+            });
+            grid.Children.Add(new TextBlock
+            {
+                Text = name,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center,
+                Foreground = Brushes.White,
+                TextWrapping = TextWrapping.Wrap
+            });
+            control.Content = grid;
 
 
-            Canvas.SetTop(control, 100);
+            Canvas.SetTop(control, 200);
             Canvas.SetLeft(control, 20);
             WholeCanvas.Children.Add(control);
         }

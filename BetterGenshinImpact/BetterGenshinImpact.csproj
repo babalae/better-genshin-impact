@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
@@ -26,6 +28,7 @@
     <Folder Include="GameTask\AutoGeniusInvokation\" />
     <Folder Include="GameTask\AutoPick\" />
     <Folder Include="GameTask\QuickEnhanceArtifacts\" />
+    <Folder Include="Service\Interface\" />
   </ItemGroup>
 
 </Project>

@@ -57,7 +57,7 @@
                     VerticalScrollBarVisibility="Auto" />
             </ContentControl>
 
-            <ContentControl Width="230"
+            <!--<ContentControl Width="230"
                             Height="130"
                             Canvas.Top="150"
                             Canvas.Left="470"
@@ -66,7 +66,7 @@
                     <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
                     <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Grid>
-            </ContentControl>
+            </ContentControl>-->
         </Canvas>
     </AdornerDecorator>
 

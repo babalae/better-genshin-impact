@@ -27,9 +27,3 @@
 ## 问题反馈
 
 提 [Issue](https://github.com/babalae/genius-invokation-auto-toy/issues) 或 QQ群[894935931](https://qm.qq.com/cgi-bin/qm/qr?k=u9Ij0HrDVQhvcoFvaiQGv38V3R7ZNY6K&jump_from=webapi&authKey=N++f74HhGHDzFje1dDD6E8vzuf45jmSFaPiVbc3Z7x/nTUWGwZ3UdSPqYQqPfOXK)
- 
-## 投喂
-
-觉的好用的话，可以支持作者哟ヾ(･ω･`｡) 👇
-* [⚡爱发电](https://afdian.net/@huiyadanli)
-* [🍚微信赞赏](https://github.com/huiyadanli/huiyadanli/blob/master/DONATE.md)
