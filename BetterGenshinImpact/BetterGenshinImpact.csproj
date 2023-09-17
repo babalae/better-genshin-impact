@@ -9,9 +9,11 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    <PackageReference Include="Config.Net" Version="5.1.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39" />
+    <PackageReference Include="MouseKeyHook" Version="5.7.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
@@ -23,12 +25,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Core\" />
     <Folder Include="GameTask\AutoFishing\" />
     <Folder Include="GameTask\AutoGeniusInvokation\" />
     <Folder Include="GameTask\AutoPick\" />
     <Folder Include="GameTask\QuickEnhanceArtifacts\" />
+    <Folder Include="GameTask\UseActiveCode\" />
     <Folder Include="Service\Interface\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="GameTask\AutoSkip\Assets\1920x1080\option.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

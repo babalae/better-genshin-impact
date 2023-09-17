@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
-namespace BetterGenshinImpact.Extensions
+namespace BetterGenshinImpact.Utils.Extensions
 {
     public static class BitmapExtension
     {

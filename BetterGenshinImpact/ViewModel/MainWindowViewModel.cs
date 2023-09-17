@@ -59,8 +59,8 @@ namespace BetterGenshinImpact.ViewModel
 
             var x = 0;
             var y = 0;
-            var w = 1000;
-            var h = 1000;
+            var w = 1200;
+            var h = 800;
 
             _maskWindow = MaskWindow.Instance();
             ////window.Owner = this;

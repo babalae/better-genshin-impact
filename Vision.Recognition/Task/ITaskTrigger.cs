@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenCvSharp;
+using Vision.Recognition.Helper.OpenCv;
 
 namespace Vision.Recognition.Task
 {
@@ -12,6 +13,9 @@ namespace Vision.Recognition.Task
     /// 触发器接口
     /// * 可以用于任务的触发、任务触发前的控件展示
     /// * 也可以是任务的本身
+    ///
+    /// 需要短时间内持续循环获取游戏图像的，使用触发器；
+    /// 需要休眠等待且有一定流程的，应该使用<see cref="BaseTaskThread"/>
     /// </summary>
     public interface ITaskTrigger
     {
@@ -45,7 +49,10 @@ namespace Vision.Recognition.Task
         /// </summary>
         /// <param name="bitmap"></param>
         /// <param name="frameIndex"></param>
-        void OnCapture(Bitmap bitmap, int frameIndex);
+        void OnCapture(Bitmap bitmap, int frameIndex)
+        {
+            OnCapture(bitmap.ToMat(), frameIndex);
+        }
         /// <summary>
         /// 捕获图像后操作
         /// </summary>
