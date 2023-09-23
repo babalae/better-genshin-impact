@@ -20,13 +20,13 @@ namespace BetterGenshinImpact.GameTask
         private readonly ILogger<TaskDispatcher> _logger = App.GetLogger<TaskDispatcher>();
 
         private readonly Timer _timer = new();
-        private List<ITaskTrigger> _triggers = new();
+        private readonly List<ITaskTrigger> _triggers;
 
         private IWindowCapture? _capture;
 
 
         private int _frameIndex = 0;
-        private int _frameRate = 60;
+        private int _frameRate = 30;
 
 
         public TaskDispatcher()
@@ -36,7 +36,7 @@ namespace BetterGenshinImpact.GameTask
             _timer.Elapsed += Tick;
         }
 
-        public void Start(CaptureMode mode, int frameRate)
+        public void Start(CaptureMode mode, int frameRate = 30)
         {
             IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
@@ -44,6 +44,7 @@ namespace BetterGenshinImpact.GameTask
                 MessageBox.Show("未找到原神窗口");
                 return;
             }
+            TaskContext.Instance().GameHandle = hWnd;
 
             _frameRate = frameRate;
 
@@ -63,10 +64,17 @@ namespace BetterGenshinImpact.GameTask
 
         public void Tick(object? sender, EventArgs e)
         {
-            if (_capture == null)
+            // 检查截图器是否初始化
+            if (_capture == null || !_capture.IsCapturing)
             {
                 _logger.LogError("截图器未初始化!");
                 Stop();
+                return;
+            }
+            
+            // 检查游戏是否在前台
+            if (!SystemControl.IsGenshinImpactActive())
+            {
                 return;
             }
 
@@ -74,11 +82,11 @@ namespace BetterGenshinImpact.GameTask
             _frameIndex = (_frameIndex + 1) % (_frameRate * 60);
 
             // 捕获游戏画面
-            var sw = new Stopwatch();
-            sw.Start();
+            //var sw = new Stopwatch();
+            //sw.Start();
             var bitmap = _capture.Capture();
-            sw.Stop();
-            Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
+            //sw.Stop();
+            //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
 
             if (bitmap == null)
             {

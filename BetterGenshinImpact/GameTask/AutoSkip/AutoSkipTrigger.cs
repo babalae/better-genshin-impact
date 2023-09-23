@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.Utils.Extensions;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
@@ -9,44 +12,68 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
 {
     public class AutoSkipTrigger : ITaskTrigger
     {
+        private ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
+
         public string Name => "自动剧情";
         public bool IsEnabled { get; set; }
         public int Priority => 20;
         public bool IsExclusive => false;
 
-        public void Init(ITaskContext context)
+        public void Init()
         {
-            
+            IsEnabled = true;
         }
 
         public void OnCapture(Mat matSrc, int frameIndex)
         {
-            //TODO 切割图片加快效率
+            if (frameIndex % 2 == 0)
+            {
+                return;
+            }
+
             var grayMat = new Mat();
             Cv2.CvtColor(matSrc, grayMat, ColorConversionCodes.BGR2GRAY);
             // 找左上角剧情自动的按钮
-            var p1 = MatchTemplateHelper.FindSingleTarget(grayMat, AutoSkipAssets.StopAutoButtonMat);
+            var grayLeftTopMat = CutHelper.CutLeftTop(grayMat, grayMat.Width / 5, grayMat.Height / 5);
+            var p1 = MatchTemplateHelper.FindSingleTarget(grayLeftTopMat, AutoSkipAssets.StopAutoButtonMat, 0.9);
             if (p1 is { X: > 0, Y: > 0 })
             {
-                //TODO 无效操作代码 需要替换
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
-                return;
+                Debug.WriteLine($"按下空格");
             }
+
             // 不存在则找右下的选项按钮
-            var p2 = MatchTemplateHelper.FindSingleTarget(grayMat, AutoSkipAssets.OptionMat);
+            var grayRightBottomMat = CutHelper.CutRightBottom(grayMat, grayMat.Width / 2, grayMat.Height / 3 * 2);
+            var p2 = MatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoSkipAssets.OptionMat);
             if (p2 is { X: > 0, Y: > 0 })
             {
-                new InputSimulator().Mouse.MoveMouseTo(p2.X, p2.Y).LeftButtonClick();
-                return;
+                // 不存在菜单的情况下 剧情在播放中
+                var grayLeftTopMat2 = CutHelper.CutLeftTop(grayMat, grayMat.Width / 4, grayMat.Height / 4);
+                var pMenu = MatchTemplateHelper.FindSingleTarget(grayLeftTopMat2, AutoSkipAssets.MenuMat);
+                if (pMenu is { X: 0, Y: 0 })
+                {
+
+                    p2 = p2.ToDesktopPositionOffset65535(grayMat.Width - grayMat.Width / 2,
+                        grayMat.Height - grayMat.Height / 3 * 2);
+                    new InputSimulator().Mouse.MoveMouseTo(p2.X, p2.Y).LeftButtonClick();
+                    _logger.LogInformation($"点击选项按钮：{p2}");
+                    Debug.WriteLine($"点击选项按钮：{p2}");
+                    return;
+                }
+
             }
-            // 判断左上角的黑色像素个数
+
+            // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
-            if (rate > 0.9)
+            if (rate > 0.7 && rate < 0.99)
             {
-                //TODO click center
+                var p3 = new Point(grayMat.Width / 2, grayMat.Height / 2).ToDesktopPosition65535();
+                new InputSimulator().Mouse.MoveMouseTo(p3.X, p3.Y).LeftButtonClick();
+                Debug.WriteLine($"点击黑屏剧情：{rate}");
                 return;
             }
+            // TODO 自动交付材料
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -16,10 +17,14 @@ namespace Vision.WindowCapture.BitBlt
         private IntPtr _hWnd;
         public bool IsCapturing { get; private set; }
 
+        private HDC hdcSrc;
+
         public void Start(IntPtr hWnd)
         {
             _hWnd = hWnd;
             IsCapturing = true;
+            
+            hdcSrc = User32.GetWindowDC(_hWnd);
         }
 
         public Bitmap? Capture()
@@ -29,22 +34,30 @@ namespace Vision.WindowCapture.BitBlt
                 return null;
             }
 
-            User32.GetWindowRect(_hWnd, out var windowRect);
-            var width = windowRect.right - windowRect.left;
-            var height = windowRect.bottom - windowRect.top;
+            try
+            {
+                User32.GetWindowRect(_hWnd, out var windowRect);
+                var width = windowRect.Width;
+                var height = windowRect.Height;
 
-            var hdcSrc = User32.GetWindowDC(_hWnd);
-            var hdcDest = Gdi32.CreateCompatibleDC(hdcSrc);
-            var hBitmap = Gdi32.CreateCompatibleBitmap(hdcSrc, width, height);
-            var hOld = Gdi32.SelectObject(hdcDest, hBitmap);
-            Gdi32.BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY);
-            Gdi32.SelectObject(hdcDest, hOld);
-            Gdi32.DeleteDC(hdcDest);
-            User32.ReleaseDC(_hWnd, hdcSrc);
 
-            var bitmap = hBitmap.ToBitmap();
-            Gdi32.DeleteObject(hBitmap);
-            return bitmap;
+                var hdcDest = Gdi32.CreateCompatibleDC(hdcSrc);
+                var hBitmap = Gdi32.CreateCompatibleBitmap(hdcSrc, width, height);
+                var hOld = Gdi32.SelectObject(hdcDest, hBitmap);
+                Gdi32.BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY);
+                Gdi32.SelectObject(hdcDest, hOld);
+                Gdi32.DeleteDC(hdcDest);
+                User32.ReleaseDC(_hWnd, hdcSrc);
+
+                var bitmap = hBitmap.ToBitmap();
+                Gdi32.DeleteObject(hBitmap);
+                return bitmap;
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+                return null;
+            }
         }
 
         public void Stop()

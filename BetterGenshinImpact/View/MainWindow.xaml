@@ -26,5 +26,6 @@
         <ComboBox x:Name="CboCaptureType" HorizontalAlignment="Left" Height="23" Margin="10,20,0,0"
                   VerticalAlignment="Top" Width="78" ItemsSource="{Binding ModeNames}"
                   SelectedItem="{Binding SelectedMode, Mode=TwoWay}" />
+        <Button x:Name="Start" Content="Start" Command="{Binding StartCaptureCommand}" HorizontalAlignment="Left" Margin="10,63,0,0" VerticalAlignment="Top" Height="33" Width="78" />
     </Grid>
 </Window>

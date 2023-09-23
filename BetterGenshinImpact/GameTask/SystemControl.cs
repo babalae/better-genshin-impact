@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Vanara.PInvoke;
@@ -50,5 +51,32 @@ namespace BetterGenshinImpact.GameTask
                 return null;
             }
         }
+        
+        /// <summary>
+        /// 获取窗口位置
+        /// </summary>
+        /// <param name="hWnd"></param>
+        /// <returns></returns>
+        public static RECT GetWindowRect(IntPtr hWnd)
+        {
+            User32.GetWindowRect(hWnd, out var windowRect);
+            return windowRect;
+        }
+
+        /// <summary>
+        /// 游戏本身分辨率获取
+        /// </summary>
+        /// <param name="hWnd"></param>
+        /// <returns></returns>
+        public static RECT GetGameScreenRect(IntPtr hWnd)
+        {
+            User32.GetClientRect(hWnd, out var clientRect);
+            return clientRect;
+        }
+
+        //public static int GetCaptionHeight()
+        //{
+        //    return User32.GetSystemMetrics(User32.SystemMetric.SM_CYFRAME) + User32.GetSystemMetrics(User32.SystemMetric.SM_CYCAPTION);
+        //}
     }
 }

@@ -33,6 +33,8 @@ namespace BetterGenshinImpact.GameTask
             List<ITaskTrigger> loadedTriggers = new();
             loadedTriggers.Add(new AutoSkip.AutoSkipTrigger());
 
+            loadedTriggers.ForEach(i => i.Init());
+
             return loadedTriggers.OrderByDescending(i => i.Priority).ToList();
         }
 

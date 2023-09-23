@@ -17,13 +17,10 @@ namespace Vision.Recognition.Task
 
         protected CancellationTokenSource Cancellation;
 
-        protected ITaskContext TaskContext;
-
-        public BaseTaskThread(ILogger<BaseTaskThread> logger, CancellationTokenSource cts, ITaskContext taskContext)
+        public BaseTaskThread(ILogger<BaseTaskThread> logger, CancellationTokenSource cts)
         {
             Log = logger;
             Cancellation = cts;
-            TaskContext = taskContext;
         }
     }
 }

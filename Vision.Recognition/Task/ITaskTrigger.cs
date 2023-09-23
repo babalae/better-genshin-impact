@@ -41,8 +41,7 @@ namespace Vision.Recognition.Task
         /// <summary>
         /// 初始化
         /// </summary>
-        /// <param name="context"></param>
-        void Init(ITaskContext context);
+        void Init();
 
         /// <summary>
         /// 捕获图像后操作
