@@ -17,14 +17,10 @@ namespace Vision.WindowCapture.BitBlt
         private IntPtr _hWnd;
         public bool IsCapturing { get; private set; }
 
-        private HDC hdcSrc;
-
         public void Start(IntPtr hWnd)
         {
             _hWnd = hWnd;
             IsCapturing = true;
-            
-            hdcSrc = User32.GetWindowDC(_hWnd);
         }
 
         public Bitmap? Capture()
@@ -40,7 +36,7 @@ namespace Vision.WindowCapture.BitBlt
                 var width = windowRect.Width;
                 var height = windowRect.Height;
 
-
+                var hdcSrc = User32.GetWindowDC(_hWnd);
                 var hdcDest = Gdi32.CreateCompatibleDC(hdcSrc);
                 var hBitmap = Gdi32.CreateCompatibleBitmap(hdcSrc, width, height);
                 var hOld = Gdi32.SelectObject(hdcDest, hBitmap);
