@@ -47,7 +47,13 @@ namespace Vision.Recognition
         private MaskWindow()
         {
             InitializeComponent();
+            LogTextBox.TextChanged += LogTextBoxTextChanged;
             //AddAreaSettingsControl("测试识别窗口");
+        }
+
+        private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
+        {
+            LogTextBox.ScrollToEnd();
         }
 
         public void Refresh()
@@ -58,6 +64,7 @@ namespace Vision.Recognition
 
         protected override void OnRender(DrawingContext drawingContext)
         {
+            Logger?.LogInformation("绘制识别结果");
             try
             {
                 foreach (var kv in VisionContext.Instance().DrawContent.RectList)

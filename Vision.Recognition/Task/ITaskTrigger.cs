@@ -46,17 +46,7 @@ namespace Vision.Recognition.Task
         /// <summary>
         /// 捕获图像后操作
         /// </summary>
-        /// <param name="bitmap"></param>
-        /// <param name="frameIndex"></param>
-        void OnCapture(Bitmap bitmap, int frameIndex)
-        {
-            OnCapture(bitmap.ToMat(), frameIndex);
-        }
-        /// <summary>
-        /// 捕获图像后操作
-        /// </summary>
-        /// <param name="matSrc">OpenCV的图片对象</param>
-        /// <param name="frameIndex"></param>
-        void OnCapture(Mat matSrc, int frameIndex);
+        /// <param name="content">捕获的图片等内容</param>
+        void OnCapture(CaptureContent content);
     }
 }

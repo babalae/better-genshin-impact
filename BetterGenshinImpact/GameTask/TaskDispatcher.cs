@@ -98,17 +98,17 @@ namespace BetterGenshinImpact.GameTask
             }
 
             // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-            var mat = bitmap.ToMat();
+            var content = new CaptureContent(bitmap, _frameIndex);
             var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
             if (exclusiveTrigger != null)
             {
-                exclusiveTrigger.OnCapture(mat, _frameIndex);
+                exclusiveTrigger.OnCapture(content);
             }
             else
             {
                 foreach (var trigger in _triggers.Where(trigger => trigger.IsEnabled))
                 {
-                    trigger.OnCapture(mat, _frameIndex);
+                    trigger.OnCapture(content);
                 }
             }
         }

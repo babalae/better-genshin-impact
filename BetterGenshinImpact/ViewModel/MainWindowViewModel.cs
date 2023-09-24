@@ -119,7 +119,7 @@ namespace BetterGenshinImpact.ViewModel
             _maskWindow.Top = y;
             _maskWindow.Width = w;
             _maskWindow.Height = h;
-
+            _maskWindow.Logger = App.GetLogger<MaskWindow>();
             _maskWindow.Show();
 
             _logger.LogInformation("Mask Window showed 遮罩窗口启动成功");

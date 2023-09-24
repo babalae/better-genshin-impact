@@ -27,20 +27,20 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
             IsEnabled = true;
         }
 
-        public void OnCapture(Mat matSrc, int frameIndex)
+        public void OnCapture(CaptureContent content)
         {
-            if (frameIndex % 2 == 0)
+            if (content.FrameIndex % 2 == 0)
             {
                 return;
             }
 
-            var grayMat = new Mat();
-            Cv2.CvtColor(matSrc, grayMat, ColorConversionCodes.BGR2GRAY);
+            var grayMat = content.SrcGreyMat;
             // 找左上角剧情自动的按钮
             var grayLeftTopMat = CutHelper.CutLeftTop(grayMat, grayMat.Width / 5, grayMat.Height / 5);
             var p1 = MatchTemplateHelper.FindSingleTarget(grayLeftTopMat, AutoSkipAssets.StopAutoButtonMat, 0.9);
             if (p1 is { X: > 0, Y: > 0 })
             {
+                //_logger.LogInformation($"找到剧情自动按钮：{p1}");
                 VisionContext.Instance().DrawContent.PutRect("StopAutoButton",
                     p1.CenterPointToRect(AutoSkipAssets.StopAutoButtonMat));
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
