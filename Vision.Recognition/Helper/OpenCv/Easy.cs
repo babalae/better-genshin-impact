@@ -26,7 +26,7 @@ namespace Vision.Recognition.Helper.OpenCv
             Point p = MatchTemplateHelper.FindSingleTarget(SrcMat, targetMat, threshold);
             if (p.X > 0 && p.Y > 0)
             {
-                VisionContext.Instance().DrawContent.RectList.Add(new System.Windows.Rect(
+                VisionContext.Instance().DrawContent.PutRect("ClickMatch", new System.Windows.Rect(
                     p.X - targetMat.Width * 1.0 / 2, p.Y - targetMat.Height * 1.0 / 2, targetMat.Width,
                     targetMat.Height));
                 // click...

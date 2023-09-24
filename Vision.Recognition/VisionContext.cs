@@ -40,10 +40,5 @@ namespace Vision.Recognition
 
 
         public DrawContent DrawContent { get; set; } = new();
-
-        /// <summary>
-        /// cache for drawContent
-        /// </summary>
-        public DrawContent DrawContentCache { get; set; } = new();
     }
 }

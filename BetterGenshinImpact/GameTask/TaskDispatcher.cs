@@ -12,6 +12,9 @@ using OpenCvSharp;
 using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
 using Vision.WindowCapture;
+using Vision.Recognition;
+using System.Windows.Threading;
+using System.Security.Cryptography;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -108,7 +111,6 @@ namespace BetterGenshinImpact.GameTask
                     trigger.OnCapture(mat, _frameIndex);
                 }
             }
-
         }
     }
 }

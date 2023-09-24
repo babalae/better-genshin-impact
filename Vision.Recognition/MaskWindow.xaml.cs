@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +17,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
 
@@ -44,24 +47,37 @@ namespace Vision.Recognition
         private MaskWindow()
         {
             InitializeComponent();
-            AddAreaSettingsControl("测试识别窗口");
+            //AddAreaSettingsControl("测试识别窗口");
+        }
+
+        public void Refresh()
+        {
+
+            Dispatcher.Invoke(InvalidateVisual);
         }
 
         protected override void OnRender(DrawingContext drawingContext)
         {
-            Logger?.LogInformation("OnRender...");
+            try
+            {
+                foreach (var kv in VisionContext.Instance().DrawContent.RectList)
+                {
+                    drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), kv.Value);
+                }
 
-            foreach (var rect in VisionContext.Instance().DrawContentCache.RectList)
-            {
-                drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), rect);
+                foreach (var kv in VisionContext.Instance().DrawContent.TextList)
+                {
+                    drawingContext.DrawText(new FormattedText(kv.Value.Item2,
+                        CultureInfo.GetCultureInfo("zh-cn"),
+                        FlowDirection.LeftToRight,
+                        MyTypeface,
+                        36, Brushes.Black, 1), kv.Value.Item1);
+                }
             }
-            foreach (var obj in VisionContext.Instance().DrawContentCache.TextList)
+            catch (Exception e)
             {
-                drawingContext.DrawText(new FormattedText(obj.Item2,
-                    CultureInfo.GetCultureInfo("zh-cn"),
-                    FlowDirection.LeftToRight,
-                    MyTypeface,
-                    36, Brushes.Black, 1), obj.Item1);
+                Debug.WriteLine(e);
+                Logger?.LogError(e, "绘制识别结果时发生错误");
             }
 
             base.OnRender(drawingContext);

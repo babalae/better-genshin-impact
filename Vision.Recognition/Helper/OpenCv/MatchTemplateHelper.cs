@@ -57,21 +57,12 @@ namespace Vision.Recognition.Helper.OpenCv
                 if (maxValue >= threshold)
                 {
                     p = new Point(point.X + dstMat.Width / 2, point.Y + dstMat.Height / 2);
-                    if (VisionContext.Instance().Drawable)
-                    {
-                        VisionContext.Instance().DrawContent.RectList
-                            .Add(new System.Windows.Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
-                        VisionContext.Instance().DrawContent.TextList
-                            .Add(new Tuple<System.Windows.Point, string>(new System.Windows.Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
-                        //var imgTar = srcMat.Clone();
-                        //Cv2.Rectangle(imgTar, point,
-                        //    new OpenCvSharp.Point(point.X + dstMat.Width, point.Y + dstMat.Height),
-                        //    Scalar.Red, 2);
-                        //Cv2.PutText(imgTar, maxValue.ToString("0.00"), new OpenCvSharp.Point(point.X, point.Y - 10),
-                        //    HersheyFonts.HersheySimplex, 0.5, Scalar.Red);
-
-                        //Cv2.ImShow("识别窗口", imgTar);
-                    }
+                    //if (VisionContext.Instance().Drawable)
+                    //{
+                        //VisionContext.Instance().DrawContent.PutRect("", new System.Windows.Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+                        //VisionContext.Instance().DrawContent.TextList
+                        //    .Add(new Tuple<System.Windows.Point, string>(new System.Windows.Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
+                    //}
                 }
 
                 return p;
@@ -118,13 +109,13 @@ namespace Vision.Recognition.Helper.OpenCv
                     {
                         pointList.Add(new Point(point.X + dstMat.Width / 2, point.Y + dstMat.Height / 2));
 
-                        if (VisionContext.Instance().Drawable)
-                        {
-                            VisionContext.Instance().DrawContent.RectList
-                                .Add(new System.Windows.Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
-                            VisionContext.Instance().DrawContent.TextList
-                                .Add(new Tuple<System.Windows.Point, string>(new System.Windows.Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
-                        }
+                        //if (VisionContext.Instance().Drawable)
+                        //{
+                        //    VisionContext.Instance().DrawContent.RectList
+                        //        .Add(new System.Windows.Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+                        //    VisionContext.Instance().DrawContent.TextList
+                        //        .Add(new Tuple<System.Windows.Point, string>(new System.Windows.Point(point.X, point.Y - 10), maxValue.ToString("0.00")));
+                        //}
                         //if (IsDebug)
                         //{
                         //    VisionContext.Instance().Log

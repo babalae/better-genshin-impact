@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Windows;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.Utils.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
 using WindowsInput;
+using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip
 {
     public class AutoSkipTrigger : ITaskTrigger
     {
-        private ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
+        private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
 
         public string Name => "自动剧情";
         public bool IsEnabled { get; set; }
@@ -38,8 +41,13 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
             var p1 = MatchTemplateHelper.FindSingleTarget(grayLeftTopMat, AutoSkipAssets.StopAutoButtonMat, 0.9);
             if (p1 is { X: > 0, Y: > 0 })
             {
+                VisionContext.Instance().DrawContent.PutRect("StopAutoButton",
+                    p1.CenterPointToRect(AutoSkipAssets.StopAutoButtonMat));
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
-                Debug.WriteLine($"按下空格");
+            }
+            else
+            {
+                VisionContext.Instance().DrawContent.RemoveRect("StopAutoButton");
             }
 
             // 不存在则找右下的选项按钮
@@ -52,15 +60,12 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
                 var pMenu = MatchTemplateHelper.FindSingleTarget(grayLeftTopMat2, AutoSkipAssets.MenuMat);
                 if (pMenu is { X: 0, Y: 0 })
                 {
-
                     p2 = p2.ToDesktopPositionOffset65535(grayMat.Width - grayMat.Width / 2,
                         grayMat.Height - grayMat.Height / 3 * 2);
                     new InputSimulator().Mouse.MoveMouseTo(p2.X, p2.Y).LeftButtonClick();
                     _logger.LogInformation($"点击选项按钮：{p2}");
-                    Debug.WriteLine($"点击选项按钮：{p2}");
                     return;
                 }
-
             }
 
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击

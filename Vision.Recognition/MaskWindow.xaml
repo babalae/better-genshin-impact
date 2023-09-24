@@ -16,7 +16,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Window">
-                        <Border BorderBrush="BlueViolet" BorderThickness="4">
+                        <Border BorderBrush="BlueViolet" BorderThickness="1">
                             <ContentPresenter />
                         </Border>
                     </ControlTemplate>
@@ -38,13 +38,13 @@
     <AdornerDecorator ClipToBounds="True">
         <Canvas x:Name="WholeCanvas" SnapsToDevicePixels="True">
 
-            <CheckBox Click="OnClick"
+            <CheckBox x:Name="TestChk" Click="OnClick"
                       Content=" select"
                       Foreground="LightGray"
                       FontFamily="UISegoe"
                       FontSize="15"
                       HorizontalAlignment="Left"
-                      VerticalAlignment="Top" Canvas.Left="84" Canvas.Top="117" />
+                      VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />
 
             <ContentControl Height="163" Canvas.Left="245" Canvas.Top="225" Width="247"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
