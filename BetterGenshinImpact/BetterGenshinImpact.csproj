@@ -32,6 +32,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="GameTask\AutoFishing\Assets\1920x1080\Space.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="GameTask\AutoSkip\Assets\1920x1080\menu.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -32,14 +32,16 @@ namespace BetterGenshinImpact.GameTask
         private int _frameRate = 30;
 
 
+
         public TaskDispatcher()
         {
             _triggers = GameTaskManager.LoadTriggers();
 
             _timer.Elapsed += Tick;
+            //_timer.Tick += Tick;
         }
 
-        public void Start(CaptureMode mode, int frameRate = 60)
+        public void Start(CaptureMode mode, int frameRate = 30)
         {
             IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
@@ -81,8 +83,8 @@ namespace BetterGenshinImpact.GameTask
                 return;
             }
 
-            // 帧序号自增 1分钟后归零
-            _frameIndex = (_frameIndex + 1) % (_frameRate * 60);
+            // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
+            _frameIndex = (_frameIndex + 1) % (_frameRate * CaptureContent.MaxFrameIndexSecond);
 
             // 捕获游戏画面
             //var sw = new Stopwatch();

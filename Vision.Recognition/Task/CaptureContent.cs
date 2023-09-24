@@ -15,6 +15,8 @@ namespace Vision.Recognition.Task
     /// </summary>
     public class CaptureContent
     {
+        public static readonly int MaxFrameIndexSecond = 60;
+
         public Bitmap SrcBitmap { get; }
         public int FrameIndex { get; private set; }
         public int FrameRate { get; private set; }
@@ -27,6 +29,7 @@ namespace Vision.Recognition.Task
         }
 
         private Mat? _srcMat;
+
         public Mat SrcMat
         {
             get
@@ -37,6 +40,7 @@ namespace Vision.Recognition.Task
         }
 
         private Mat? _srcGreyMat;
+
         public Mat SrcGreyMat
         {
             get
@@ -45,6 +49,22 @@ namespace Vision.Recognition.Task
                 Cv2.CvtColor(SrcMat, _srcGreyMat, ColorConversionCodes.BGR2GRAY);
                 return _srcGreyMat;
             }
+        }
+
+        /// <summary>
+        /// 达到了什么时间间隔
+        /// 最大MaxFrameIndexSecond秒
+        /// </summary>
+        /// <param name="interval"></param>
+        /// <returns></returns>
+        public bool IsReachInterval(TimeSpan interval)
+        {
+            if (interval.TotalSeconds > MaxFrameIndexSecond)
+            {
+                throw new ArgumentException($"时间间隔不能超过{MaxFrameIndexSecond}s");
+            }
+
+            return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
         }
     }
 }

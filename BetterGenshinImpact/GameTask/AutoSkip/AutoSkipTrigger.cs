@@ -32,7 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
 
         public void OnCapture(CaptureContent content)
         {
-            if (content.FrameIndex % 2 == 0)
+            if (content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
             {
                 return;
             }
