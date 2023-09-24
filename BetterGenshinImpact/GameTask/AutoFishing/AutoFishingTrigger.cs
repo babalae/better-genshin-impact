@@ -1,21 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Media.Media3D;
-using OpenCvSharp;
+using System.Drawing;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
 using WindowsInput;
-using static Vanara.PInvoke.Kernel32;
 using static Vanara.PInvoke.User32;
-using WinRT;
-using Windows.ApplicationModel.Contacts;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -37,7 +30,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public void Init()
         {
             IsEnabled = true;
-            IsExclusive = true;
+            IsExclusive = false;
 
             // 钓鱼变量初始化
             _findFishBoxTips = false;
@@ -94,7 +87,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 int hExtra = _cur.Height, vExtra = _cur.Height / 4;
                 _fishBoxRect = new Rect(_cur.X - hExtra, _cur.Y - vExtra,
                     (_left.X + _left.Width / 2 - _cur.X) * 2 + hExtra * 2, _cur.Height + vExtra * 2);
-                VisionContext.Instance().DrawContent.PutRect("FishBox", _fishBoxRect.ToWindowsRectangle());
+                VisionContext.Instance().DrawContent
+                    .PutRect("FishBox", _fishBoxRect.ToRectDrawable(new Pen(Color.LightPink, 2)));
             }
         }
 
@@ -130,7 +124,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     rects.RemoveRange(3, rects.Count - 3);
                 }
 
-                Debug.WriteLine($"识别到{rects.Count} 个矩形");
+                //Debug.WriteLine($"识别到{rects.Count} 个矩形");
                 if (rects.Count == 2)
                 {
                     if (rects[0].Width < rects[1].Width)
@@ -152,7 +146,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         {
                             simulator.Mouse.LeftButtonDown();
                             _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN;
-                            Debug.WriteLine("进度不到 左键按下");
+                            //Debug.WriteLine("进度不到 左键按下");
                         }
                     }
                     else
@@ -161,7 +155,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         {
                             simulator.Mouse.LeftButtonUp();
                             _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
-                            Debug.WriteLine("进度超出 左键松开");
+                            //Debug.WriteLine("进度超出 左键松开");
                         }
                     }
                 }
@@ -179,7 +173,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         {
                             simulator.Mouse.LeftButtonUp();
                             _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
-                            Debug.WriteLine("进入框内中间 左键松开");
+                            //Debug.WriteLine("进入框内中间 左键松开");
                         }
                     }
                     else
@@ -188,7 +182,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         {
                             simulator.Mouse.LeftButtonDown();
                             _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN;
-                            Debug.WriteLine("未到框内中间 左键按下");
+                            //Debug.WriteLine("未到框内中间 左键按下");
                         }
                     }
                 }
@@ -215,11 +209,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private void PutRects(Rect left, Rect cur, Rect right)
         {
-            var list = new List<(string, System.Windows.Rect)>
+            Pen pen = new(Color.Red, 1);
+            var list = new List<(string, RectDrawable)>
             {
-                ("FishingBarLeft", left.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y)),
-                ("FishingBarCur", cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y)),
-                ("FishingBarRight", right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y))
+                ("FishingBarLeft", left.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(pen)),
+                ("FishingBarCur", cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(pen)),
+                ("FishingBarRight", right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(pen))
             };
             VisionContext.Instance().DrawContent.PutOrRemoveRectList(list);
         }

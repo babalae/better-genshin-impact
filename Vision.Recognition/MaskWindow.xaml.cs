@@ -53,12 +53,16 @@ namespace Vision.Recognition
 
         private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
         {
+            var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
+            if (textRange.Text.Length > 10000)
+            {
+                LogTextBox.Document.Blocks.Clear();
+            }
             LogTextBox.ScrollToEnd();
         }
 
         public void Refresh()
         {
-
             Dispatcher.Invoke(InvalidateVisual);
         }
 
@@ -69,22 +73,25 @@ namespace Vision.Recognition
             {
                 foreach (var kv in VisionContext.Instance().DrawContent.RectList)
                 {
-                    if (!kv.Value.IsEmpty)
+                    var drawable = kv.Value;
+                    if (!drawable.IsEmpty)
                     {
-                        drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), kv.Value);
+                        drawingContext.DrawRectangle(Brushes.Transparent,
+                            new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
+                            drawable.Rect);
                     }
-
                 }
 
                 foreach (var kv in VisionContext.Instance().DrawContent.TextList)
                 {
-                    if (kv.Value.Item1.X != 0 || kv.Value.Item1.Y != 0)
+                    var drawable = kv.Value;
+                    if (!drawable.IsEmpty)
                     {
-                        drawingContext.DrawText(new FormattedText(kv.Value.Item2,
+                        drawingContext.DrawText(new FormattedText(drawable.Text,
                             CultureInfo.GetCultureInfo("zh-cn"),
                             FlowDirection.LeftToRight,
                             MyTypeface,
-                            36, Brushes.Black, 1), kv.Value.Item1);
+                            36, Brushes.Black, 1), drawable.Point);
                     }
                 }
             }

@@ -14,18 +14,18 @@ namespace Vision.Recognition
         /// <summary>
         /// 在遮罩窗口上绘制的矩形
         /// </summary>
-        public ConcurrentDictionary<string, System.Windows.Rect> RectList { get; set; } = new();
+        public ConcurrentDictionary<string, RectDrawable> RectList { get; set; } = new();
 
         /// <summary>
         /// 在遮罩窗口上绘制的文本
         /// </summary>
-        public ConcurrentDictionary<string, (System.Windows.Point, string)> TextList { get; set; } = new();
+        public ConcurrentDictionary<string, TextDrawable> TextList { get; set; } = new();
 
-        public void PutRect(string key, System.Windows.Rect newRect)
+        public void PutRect(string key, RectDrawable newRect)
         {
             if (RectList.TryGetValue(key, out var prevRect))
             {
-                if (newRect == prevRect)
+                if (newRect.Equals(prevRect))
                 {
                     return;
                 }
@@ -35,7 +35,7 @@ namespace Vision.Recognition
             MaskWindow.Instance().Refresh();
         }
 
-        public void PutOrRemoveRectList(List<(string, System.Windows.Rect)> list)
+        public void PutOrRemoveRectList(List<(string, RectDrawable)> list)
         {
             bool changed = false;
             list.ForEach(item =>
@@ -53,7 +53,7 @@ namespace Vision.Recognition
                 {
                     if (RectList.TryGetValue(item.Item1, out var prevRect))
                     {
-                        if (newRect == prevRect)
+                        if (newRect.Equals(prevRect))
                         {
                             return;
                         }
@@ -61,8 +61,6 @@ namespace Vision.Recognition
                     RectList[item.Item1] = newRect;
                     changed = true;
                 }
-
-
             });
             if (changed)
             {
@@ -79,11 +77,11 @@ namespace Vision.Recognition
             }
         }
 
-        public void PutText(string key, (System.Windows.Point, string) newText)
+        public void PutText(string key, TextDrawable newText)
         {
             if (TextList.TryGetValue(key, out var prevText))
             {
-                if (newText.Item1 == prevText.Item1 && newText.Item2 == prevText.Item2)
+                if (newText.Equals(prevText))
                 {
                     return;
                 }

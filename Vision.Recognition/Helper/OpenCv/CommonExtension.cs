@@ -50,7 +50,15 @@ namespace Vision.Recognition.Helper.OpenCv
             {
                 throw new ArgumentException("rectangle is empty");
             }
+
             return new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
         }
+
+
+        public static System.Windows.Media.Color ToWindowsColor(this Color color)
+        {
+            return System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
+        }
     }
+
 }

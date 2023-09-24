@@ -45,7 +45,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
             {
                 //_logger.LogInformation($"找到剧情自动按钮：{p1}");
                 VisionContext.Instance().DrawContent.PutRect("StopAutoButton",
-                    p1.CenterPointToRect(AutoSkipAssets.StopAutoButtonMat));
+                    p1.CenterPointToRect(AutoSkipAssets.StopAutoButtonMat).ToRectDrawable());
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
             }
             else
