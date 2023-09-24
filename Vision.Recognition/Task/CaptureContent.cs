@@ -17,11 +17,13 @@ namespace Vision.Recognition.Task
     {
         public Bitmap SrcBitmap { get; }
         public int FrameIndex { get; private set; }
+        public int FrameRate { get; private set; }
 
-        public CaptureContent(Bitmap srcBitmap, int frameIndex)
+        public CaptureContent(Bitmap srcBitmap, int frameIndex, int frameRate)
         {
             SrcBitmap = srcBitmap;
             FrameIndex = frameIndex;
+            FrameRate = frameRate;
         }
 
         private Mat? _srcMat;

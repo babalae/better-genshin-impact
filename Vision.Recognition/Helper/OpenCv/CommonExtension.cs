@@ -34,6 +34,11 @@ namespace Vision.Recognition.Helper.OpenCv
             return new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height);
         }
 
+        public static System.Windows.Rect ToWindowsRectangleOffset(this OpenCvSharp.Rect rect, int offsetX, int offsetY)
+        {
+            return new System.Windows.Rect(rect.X + offsetX, rect.Y + offsetY, rect.Width, rect.Height);
+        }
+
         public static Rectangle ToDrawingRectangle(this OpenCvSharp.Rect rect)
         {
             return new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);

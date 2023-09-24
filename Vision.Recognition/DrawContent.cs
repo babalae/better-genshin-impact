@@ -1,9 +1,11 @@
-﻿using System;
+﻿ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace Vision.Recognition
 {
@@ -31,6 +33,41 @@ namespace Vision.Recognition
 
             RectList[key] = newRect;
             MaskWindow.Instance().Refresh();
+        }
+
+        public void PutOrRemoveRectList(List<(string, System.Windows.Rect)> list)
+        {
+            bool changed = false;
+            list.ForEach(item =>
+            {
+                var newRect = item.Item2;
+                if (newRect.IsEmpty)
+                {
+                    if (RectList.TryGetValue(item.Item1, out _))
+                    {
+                        RectList.TryRemove(item.Item1, out _);
+                        changed = true;
+                    }
+                }
+                else
+                {
+                    if (RectList.TryGetValue(item.Item1, out var prevRect))
+                    {
+                        if (newRect == prevRect)
+                        {
+                            return;
+                        }
+                    }
+                    RectList[item.Item1] = newRect;
+                    changed = true;
+                }
+
+
+            });
+            if (changed)
+            {
+                MaskWindow.Instance().Refresh();
+            }
         }
 
         public void RemoveRect(string key)

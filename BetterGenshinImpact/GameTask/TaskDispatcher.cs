@@ -39,7 +39,7 @@ namespace BetterGenshinImpact.GameTask
             _timer.Elapsed += Tick;
         }
 
-        public void Start(CaptureMode mode, int frameRate = 30)
+        public void Start(CaptureMode mode, int frameRate = 60)
         {
             IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
@@ -98,7 +98,7 @@ namespace BetterGenshinImpact.GameTask
             }
 
             // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-            var content = new CaptureContent(bitmap, _frameIndex);
+            var content = new CaptureContent(bitmap, _frameIndex, _frameRate);
             var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
             if (exclusiveTrigger != null)
             {

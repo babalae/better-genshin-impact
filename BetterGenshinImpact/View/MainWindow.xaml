@@ -6,7 +6,7 @@
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="200">
+        Title="MainWindow" Height="200" Width="300">
     <Window.DataContext>
         <viewModel:MainWindowViewModel />
     </Window.DataContext>

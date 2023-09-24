@@ -69,16 +69,23 @@ namespace Vision.Recognition
             {
                 foreach (var kv in VisionContext.Instance().DrawContent.RectList)
                 {
-                    drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), kv.Value);
+                    if (!kv.Value.IsEmpty)
+                    {
+                        drawingContext.DrawRectangle(Brushes.Transparent, new Pen(Brushes.Red, 2), kv.Value);
+                    }
+
                 }
 
                 foreach (var kv in VisionContext.Instance().DrawContent.TextList)
                 {
-                    drawingContext.DrawText(new FormattedText(kv.Value.Item2,
-                        CultureInfo.GetCultureInfo("zh-cn"),
-                        FlowDirection.LeftToRight,
-                        MyTypeface,
-                        36, Brushes.Black, 1), kv.Value.Item1);
+                    if (kv.Value.Item1.X != 0 || kv.Value.Item1.Y != 0)
+                    {
+                        drawingContext.DrawText(new FormattedText(kv.Value.Item2,
+                            CultureInfo.GetCultureInfo("zh-cn"),
+                            FlowDirection.LeftToRight,
+                            MyTypeface,
+                            36, Brushes.Black, 1), kv.Value.Item1);
+                    }
                 }
             }
             catch (Exception e)

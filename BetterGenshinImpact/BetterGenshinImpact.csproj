@@ -25,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="GameTask\AutoFishing\" />
     <Folder Include="GameTask\AutoGeniusInvokation\" />
     <Folder Include="GameTask\QuickEnhanceArtifacts\" />
     <Folder Include="GameTask\UseActiveCode\" />

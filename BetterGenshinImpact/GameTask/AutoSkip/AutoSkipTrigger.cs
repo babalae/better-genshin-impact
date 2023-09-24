@@ -13,6 +13,9 @@ using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip
 {
+    /// <summary>
+    /// 自动剧情有选项点击，必须使用BitBlt
+    /// </summary>
     public class AutoSkipTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();

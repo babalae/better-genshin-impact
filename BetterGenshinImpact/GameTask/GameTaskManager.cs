@@ -30,8 +30,11 @@ namespace BetterGenshinImpact.GameTask
             //                .ForEach(type => LoadedTriggers.Add(type.CreateInstance<ITaskTrigger>()));
             //        });
 
-            List<ITaskTrigger> loadedTriggers = new();
-            loadedTriggers.Add(new AutoSkip.AutoSkipTrigger());
+            List<ITaskTrigger> loadedTriggers = new()
+            {
+                new AutoSkip.AutoSkipTrigger(),
+                new AutoFishing.AutoFishingTrigger()
+            };
 
             loadedTriggers.ForEach(i => i.Init());
 
