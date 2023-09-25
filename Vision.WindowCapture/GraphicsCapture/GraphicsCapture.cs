@@ -1,32 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using Vision.WindowCapture.GraphicsCapture.Helpers;
-using Windows.Devices.HumanInterfaceDevice;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
-using Windows.Graphics.DirectX.Direct3D11;
-using SharpDX.Direct3D11;
-using WinRT.Interop;
+using Windows.Win32.Foundation;
 
 namespace Vision.WindowCapture.GraphicsCapture
 {
     public class GraphicsCapture : IWindowCapture
     {
-        private IntPtr _hWnd;
+        private HWND _hWnd;
 
-        private Direct3D11CaptureFramePool _captureFramePool;
-        private GraphicsCaptureItem _captureItem;
-        private GraphicsCaptureSession _captureSession;
+        private Direct3D11CaptureFramePool? _captureFramePool;
+        private GraphicsCaptureItem? _captureItem;
+        private GraphicsCaptureSession? _captureSession;
 
         public bool IsCapturing { get; private set; }
 
-        public void Start(IntPtr hWnd)
+        public void Start(HWND hWnd)
         {
             _hWnd = hWnd;
             IsCapturing = true;
@@ -47,7 +37,7 @@ namespace Vision.WindowCapture.GraphicsCapture
                 throw new InvalidOperationException("Failed to create capture item.");
             }
 
-            _captureItem.Closed += CaptureItemOnClosed;
+            _captureItem.Closed += OnCaptureItemClosed;
 
             var device = Direct3D11Helper.CreateDevice();
 
@@ -72,15 +62,15 @@ namespace Vision.WindowCapture.GraphicsCapture
         {
             _captureSession?.Dispose();
             _captureFramePool?.Dispose();
-            _captureSession = null;
-            _captureFramePool = null;
-            _captureItem = null;
+            _captureSession = default;
+            _captureFramePool = default;
+            _captureItem = default;
 
-            _hWnd = IntPtr.Zero;
+            _hWnd = HWND.Null;
             IsCapturing = false;
         }
 
-        private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)
+        private void OnCaptureItemClosed(GraphicsCaptureItem sender, object args)
         {
             Stop();
         }

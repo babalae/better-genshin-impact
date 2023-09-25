@@ -1,65 +1,51 @@
-﻿using SharpDX;
-using SharpDX.Direct3D11;
-using SharpDX.DXGI;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using Windows.Graphics.Capture;
-using Windows.Graphics.DirectX.Direct3D11;
-using Windows.Graphics.Imaging;
-using Windows.Storage.Streams;
-using Vision.WindowCapture.GraphicsCapture.Helpers;
+using Windows.Win32;
+using Windows.Win32.Graphics.Direct3D11;
+using Windows.Win32.Graphics.Dxgi.Common;
 using WinRT;
 
 namespace Vision.WindowCapture.GraphicsCapture.Helpers
 {
     public static class Texture2DExtensions
     {
-        public static Bitmap? ToBitmap(this Direct3D11CaptureFrame frame)
+        public static unsafe Bitmap ToBitmap(this Direct3D11CaptureFrame frame)
         {
-            var texture2dBitmap = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
+            var texture2dBitmap = Direct3D11Helper.CreateD3D11Texture2D(frame.Surface);
 
-            var d3dDevice = texture2dBitmap.Device;
+            texture2dBitmap.GetDevice(out var d3dDevice);
+            texture2dBitmap.GetDesc(out D3D11_TEXTURE2D_DESC desc);
+            D3D11_TEXTURE2D_DESC newDesc = new()
+            {
+                Width = (uint)frame.ContentSize.Width,
+                Height = (uint)frame.ContentSize.Height,
+                MipLevels = 1U,
+                ArraySize = 1U,
+                Format = desc.Format,
+                Usage = D3D11_USAGE.D3D11_USAGE_STAGING,
+                SampleDesc = new DXGI_SAMPLE_DESC() { Count = 1 },
+                CPUAccessFlags = D3D11_CPU_ACCESS_FLAG.D3D11_CPU_ACCESS_READ,
+            };
 
             // Create texture copy
-            var staging = new Texture2D(d3dDevice, new Texture2DDescription
-            {
-                Width = frame.ContentSize.Width,
-                Height = frame.ContentSize.Height,
-                MipLevels = 1,
-                ArraySize = 1,
-                Format = texture2dBitmap.Description.Format,
-                Usage = ResourceUsage.Staging,
-                SampleDescription = new SampleDescription(1, 0),
-                BindFlags = BindFlags.None,
-                CpuAccessFlags = CpuAccessFlags.Read,
-                OptionFlags = ResourceOptionFlags.None
-            });
+            d3dDevice.CreateTexture2D(newDesc, default, out ID3D11Texture2D staging);
+            d3dDevice.GetImmediateContext(out ID3D11DeviceContext context);
 
-            try
-            {
-                // Copy data
-                d3dDevice.ImmediateContext.CopyResource(texture2dBitmap, staging);
+            // Copy data
+            context.CopyResource(texture2dBitmap, staging);
+            D3D11_MAPPED_SUBRESOURCE subResource = default;
+            context.Map(staging, default, D3D11_MAP.D3D11_MAP_READ, default, &subResource);
 
-                var dataBox = d3dDevice.ImmediateContext.MapSubresource(staging, 0, 0, MapMode.Read,
-                    SharpDX.Direct3D11.MapFlags.None,
-                    out DataStream stream);
+            staging.GetDesc(out var stagingDesc);
+            var bitmap = new Bitmap(
+                (int)stagingDesc.Width,
+                (int)stagingDesc.Height,
+                (int)subResource.RowPitch,
+                PixelFormat.Format32bppArgb,
+                (nint)subResource.pData);
 
-                var bitmap = new Bitmap(staging.Description.Width, staging.Description.Height, dataBox.RowPitch,
-                    PixelFormat.Format32bppArgb, dataBox.DataPointer);
-
-                return bitmap;
-            }
-            finally
-            {
-                staging.Dispose();
-            }
+            return bitmap;
         }
 
         //public static Stream ToBitmapStream(this Direct3D11CaptureFrame frame)

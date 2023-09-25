@@ -1,0 +1,25 @@
+﻿// D3D11
+CreateDirect3D11DeviceFromDXGIDevice
+CreateDirect3D11SurfaceFromDXGISurface
+
+// GDI32
+BitBlt
+CreateCompatibleBitmap
+CreateCompatibleDC
+DeleteDC
+SelectObject
+
+// User32
+GetWindowDC
+GetWindowRect
+ReleaseDC
+
+// COM & WinRT
+D3D11CreateDevice
+ID3D11Device3
+IDirect3DDxgiInterfaceAccess
+IGraphicsCaptureItem
+IGraphicsCaptureItemInterop
+
+// Constants
+D3D11_SDK_VERSION
