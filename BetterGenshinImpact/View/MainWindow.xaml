@@ -24,8 +24,11 @@
     </b:Interaction.Triggers>
     <Grid>
         <ComboBox x:Name="CboCaptureType" HorizontalAlignment="Left" Height="23" Margin="10,20,0,0"
-                  VerticalAlignment="Top" Width="78" ItemsSource="{Binding ModeNames}"
+                  VerticalAlignment="Top" Width="252" ItemsSource="{Binding ModeNames}"
                   SelectedItem="{Binding SelectedMode, Mode=TwoWay}" />
-        <Button x:Name="Start" Content="Start" Command="{Binding StartCaptureCommand}" HorizontalAlignment="Left" Margin="10,63,0,0" VerticalAlignment="Top" Height="33" Width="78" />
+        <Button x:Name="StartCaptureTest" Content="测试图像捕获" Command="{Binding StartCaptureTestCommand}" HorizontalAlignment="Left" Margin="10,55,0,0" VerticalAlignment="Top" Height="22" Width="252"/>
+
+        <Button x:Name="StartTrigger" Content="启动触发器（自动剧情、钓鱼）" Command="{Binding StartTriggerCommand}" HorizontalAlignment="Left" Margin="10,106,0,0" VerticalAlignment="Top" Height="33" Width="252" />
+        
     </Grid>
 </Window>

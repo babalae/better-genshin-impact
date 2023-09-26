@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.View.Test;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using Vision.Recognition;
@@ -22,7 +23,7 @@ namespace BetterGenshinImpact.ViewModel
     {
         [ObservableProperty] private string[] _modeNames = WindowCaptureFactory.ModeNames();
 
-        [ObservableProperty] private string? _selectedMode;
+        [ObservableProperty] private string? _selectedMode = CaptureMode.BitBlt.ToString();
 
         private MaskWindow? _maskWindow;
         private readonly ILogger<MainWindowViewModel> _logger = App.GetLogger<MainWindowViewModel>();
@@ -43,7 +44,26 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private void OnStartCapture()
+        private void OnStartCaptureTest()
+        {
+            if (SelectedMode == null)
+            {
+                MessageBox.Show("请选择捕获方式");
+                return;
+            }
+            var hWnd = SystemControl.FindGenshinImpactHandle();
+            if (hWnd == IntPtr.Zero)
+            {
+                MessageBox.Show("未找到原神窗口");
+                return;
+            }
+            CaptureTestWindow captureTestWindow = new();
+            captureTestWindow.StartCapture(hWnd, SelectedMode.ToCaptureMode());
+            captureTestWindow.Show();
+        }
+
+        [RelayCommand]
+        private void OnStartTrigger()
         {
             TestMask();
             new TaskDispatcher().Start(CaptureMode.BitBlt);
