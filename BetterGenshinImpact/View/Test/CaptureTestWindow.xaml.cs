@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
+using Windows.Win32.Foundation;
 using Vision.WindowCapture;
 
 namespace BetterGenshinImpact.View.Test
@@ -28,7 +29,7 @@ namespace BetterGenshinImpact.View.Test
 
 
             _capture = WindowCaptureFactory.Create(captureMode);
-            _capture.Start(hWnd);
+            _capture.Start((HWND)hWnd);
 
             CompositionTarget.Rendering += Loop;
         }

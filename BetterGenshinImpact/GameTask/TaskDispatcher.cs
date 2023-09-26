@@ -15,6 +15,7 @@ using Vision.WindowCapture;
 using Vision.Recognition;
 using System.Windows.Threading;
 using System.Security.Cryptography;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -54,7 +55,7 @@ namespace BetterGenshinImpact.GameTask
             _frameRate = frameRate;
 
             _capture = WindowCaptureFactory.Create(mode);
-            _capture.Start(hWnd);
+            _capture.Start((Windows.Win32.Foundation.HWND)hWnd);
 
             _frameIndex = 0;
             _timer.Interval = Convert.ToInt32(1000d / frameRate);
