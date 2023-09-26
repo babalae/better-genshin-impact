@@ -7,97 +7,96 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace Vision.Recognition
+namespace Vision.Recognition;
+
+public class DrawContent
 {
-    public class DrawContent
+    /// <summary>
+    /// 在遮罩窗口上绘制的矩形
+    /// </summary>
+    public ConcurrentDictionary<string, RectDrawable> RectList { get; set; } = new();
+
+    /// <summary>
+    /// 在遮罩窗口上绘制的文本
+    /// </summary>
+    public ConcurrentDictionary<string, TextDrawable> TextList { get; set; } = new();
+
+    public void PutRect(string key, RectDrawable newRect)
     {
-        /// <summary>
-        /// 在遮罩窗口上绘制的矩形
-        /// </summary>
-        public ConcurrentDictionary<string, RectDrawable> RectList { get; set; } = new();
-
-        /// <summary>
-        /// 在遮罩窗口上绘制的文本
-        /// </summary>
-        public ConcurrentDictionary<string, TextDrawable> TextList { get; set; } = new();
-
-        public void PutRect(string key, RectDrawable newRect)
+        if (RectList.TryGetValue(key, out var prevRect))
         {
-            if (RectList.TryGetValue(key, out var prevRect))
+            if (newRect.Equals(prevRect))
             {
-                if (newRect.Equals(prevRect))
-                {
-                    return;
-                }
+                return;
             }
-
-            RectList[key] = newRect;
-            MaskWindow.Instance().Refresh();
         }
 
-        public void PutOrRemoveRectList(List<(string, RectDrawable)> list)
+        RectList[key] = newRect;
+        MaskWindow.Instance().Refresh();
+    }
+
+    public void PutOrRemoveRectList(List<(string, RectDrawable)> list)
+    {
+        bool changed = false;
+        list.ForEach(item =>
         {
-            bool changed = false;
-            list.ForEach(item =>
+            var newRect = item.Item2;
+            if (newRect.IsEmpty)
             {
-                var newRect = item.Item2;
-                if (newRect.IsEmpty)
+                if (RectList.TryGetValue(item.Item1, out _))
                 {
-                    if (RectList.TryGetValue(item.Item1, out _))
-                    {
-                        RectList.TryRemove(item.Item1, out _);
-                        changed = true;
-                    }
-                }
-                else
-                {
-                    if (RectList.TryGetValue(item.Item1, out var prevRect))
-                    {
-                        if (newRect.Equals(prevRect))
-                        {
-                            return;
-                        }
-                    }
-                    RectList[item.Item1] = newRect;
+                    RectList.TryRemove(item.Item1, out _);
                     changed = true;
                 }
-            });
-            if (changed)
-            {
-                MaskWindow.Instance().Refresh();
             }
-        }
-
-        public void RemoveRect(string key)
-        {
-            if (RectList.TryGetValue(key, out _))
+            else
             {
-                RectList.TryRemove(key, out _);
-                MaskWindow.Instance().Refresh();
-            }
-        }
-
-        public void PutText(string key, TextDrawable newText)
-        {
-            if (TextList.TryGetValue(key, out var prevText))
-            {
-                if (newText.Equals(prevText))
+                if (RectList.TryGetValue(item.Item1, out var prevRect))
                 {
-                    return;
+                    if (newRect.Equals(prevRect))
+                    {
+                        return;
+                    }
                 }
+                RectList[item.Item1] = newRect;
+                changed = true;
             }
-
-            TextList[key] = newText;
+        });
+        if (changed)
+        {
             MaskWindow.Instance().Refresh();
         }
+    }
 
-        public void RemoveText(string key)
+    public void RemoveRect(string key)
+    {
+        if (RectList.TryGetValue(key, out _))
         {
-            if (TextList.TryGetValue(key, out _))
+            RectList.TryRemove(key, out _);
+            MaskWindow.Instance().Refresh();
+        }
+    }
+
+    public void PutText(string key, TextDrawable newText)
+    {
+        if (TextList.TryGetValue(key, out var prevText))
+        {
+            if (newText.Equals(prevText))
             {
-                TextList.TryRemove(key, out _);
-                MaskWindow.Instance().Refresh();
+                return;
             }
+        }
+
+        TextList[key] = newText;
+        MaskWindow.Instance().Refresh();
+    }
+
+    public void RemoveText(string key)
+    {
+        if (TextList.TryGetValue(key, out _))
+        {
+            TextList.TryRemove(key, out _);
+            MaskWindow.Instance().Refresh();
         }
     }
 }

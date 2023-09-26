@@ -1,19 +1,5 @@
 ﻿namespace Vision.WindowCapture;
 
-public enum CaptureMode
-{
-    BitBlt,
-    WindowsGraphicsCapture
-}
-
-public static class CaptureModeExtensions
-{
-    public static CaptureMode ToCaptureMode(this string modeName)
-    {
-        return (CaptureMode) Enum.Parse(typeof(CaptureMode), modeName);
-    }
-}
-
 public class WindowCaptureFactory
 {
     public static string[] ModeNames()

@@ -7,11 +7,15 @@ BitBlt
 CreateCompatibleBitmap
 CreateCompatibleDC
 DeleteDC
+GetDeviceCaps
 SelectObject
 
 // User32
+GetDC
 GetWindowDC
 GetWindowRect
+mouse_event
+PostMessage
 ReleaseDC
 
 // COM & WinRT
@@ -23,3 +27,5 @@ IGraphicsCaptureItemInterop
 
 // Constants
 D3D11_SDK_VERSION
+WM_LBUTTONDOWN
+WM_LBUTTONUP

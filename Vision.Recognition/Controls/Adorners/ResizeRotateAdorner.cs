@@ -3,40 +3,43 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 
-namespace Vision.Recognition.Controls.Adorners
+namespace Vision.Recognition.Controls.Adorners;
+
+public class ResizeRotateAdorner : Adorner
 {
-    public class ResizeRotateAdorner : Adorner
+    private readonly VisualCollection visuals;
+    private readonly ResizeRotateChrome chrome;
+
+    protected override int VisualChildrenCount
     {
-        private VisualCollection visuals;
-        private ResizeRotateChrome chrome;
-
-        protected override int VisualChildrenCount
+        get
         {
-            get
-            {
-                return this.visuals.Count;
-            }
+            return visuals.Count;
         }
+    }
 
-        public ResizeRotateAdorner(ContentControl designerItem)
-            : base(designerItem)
+    public ResizeRotateAdorner(ContentControl? designerItem)
+        : base(designerItem)
+    {
+        SnapsToDevicePixels = true;
+        chrome = new ResizeRotateChrome
         {
-            SnapsToDevicePixels = true;
-            this.chrome = new ResizeRotateChrome();
-            this.chrome.DataContext = designerItem;
-            this.visuals = new VisualCollection(this);
-            this.visuals.Add(this.chrome);
-        }
+            DataContext = designerItem
+        };
+        visuals = new VisualCollection(this)
+        {
+            chrome
+        };
+    }
 
-        protected override Size ArrangeOverride(Size arrangeBounds)
-        {
-            this.chrome.Arrange(new Rect(arrangeBounds));
-            return arrangeBounds;
-        }
+    protected override Size ArrangeOverride(Size arrangeBounds)
+    {
+        chrome.Arrange(new Rect(arrangeBounds));
+        return arrangeBounds;
+    }
 
-        protected override Visual GetVisualChild(int index)
-        {
-            return this.visuals[index];
-        }
+    protected override Visual GetVisualChild(int index)
+    {
+        return visuals[index];
     }
 }
