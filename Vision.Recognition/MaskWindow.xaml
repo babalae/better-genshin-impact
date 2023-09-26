@@ -1,7 +1,7 @@
 ﻿<Window x:Class="Vision.Recognition.MaskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MaskWindow" Height="450" Width="800"
+        Title="MaskWindow" Height="600" Width="800"
         AllowsTransparency="True"
         WindowStyle="None"
         Topmost="True"
@@ -38,15 +38,15 @@
     <AdornerDecorator ClipToBounds="True">
         <Canvas x:Name="WholeCanvas" SnapsToDevicePixels="True">
 
-            <CheckBox x:Name="TestChk" Click="OnClick"
+            <!--<CheckBox x:Name="TestChk" Click="OnClick"
                       Content=" select"
                       Foreground="LightGray"
                       FontFamily="UISegoe"
                       FontSize="15"
                       HorizontalAlignment="Left"
-                      VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />
+                      VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />-->
 
-            <ContentControl Height="163" Canvas.Left="245" Canvas.Top="225" Width="247"
+            <ContentControl Height="188" Canvas.Left="20" Canvas.Top="500" Width="477"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
                 <RichTextBox
                     x:Name="LogTextBox"
@@ -54,8 +54,7 @@
                     Foreground="LightGray"
                     FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                     BorderThickness="0"
-                    VerticalScrollBarVisibility="Hidden" Margin="0,0,-258,10">
-                </RichTextBox>
+                    VerticalScrollBarVisibility="Hidden"/>
             </ContentControl>
 
             <!--<ContentControl Width="230"
