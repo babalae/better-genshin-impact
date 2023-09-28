@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Windows;
 using Vision.Recognition;
+using WinRT;
 
 namespace BetterGenshinImpact
 {
@@ -15,6 +16,7 @@ namespace BetterGenshinImpact
     {
         public App()
         {
+            ComWrappersSupport.InitializeComWrappers();
             Services = ConfigureServices();
 
             this.InitializeComponent();

@@ -26,7 +26,6 @@ ReleaseDC
 D3D11CreateDevice
 ID3D11Device3
 IDirect3DDxgiInterfaceAccess
-IGraphicsCaptureItem
 IGraphicsCaptureItemInterop
 
 // Constants
