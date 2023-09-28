@@ -16,7 +16,7 @@ namespace BetterGenshinImpact.GameTask
         private readonly ILogger<TaskDispatcher> _logger = App.GetLogger<TaskDispatcher>();
 
         private readonly System.Timers.Timer _timer = new();
-        private readonly List<ITaskTrigger> _triggers;
+        private List<ITaskTrigger>? _triggers;
 
         private IWindowCapture? _capture;
 
@@ -27,14 +27,13 @@ namespace BetterGenshinImpact.GameTask
 
         public TaskDispatcher()
         {
-            _triggers = GameTaskManager.LoadTriggers();
-
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
         }
 
         public void Start(CaptureModeEnum mode, int frameRate = 30)
         {
+            _triggers = GameTaskManager.LoadTriggers();
             IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
             {
@@ -89,7 +88,7 @@ namespace BetterGenshinImpact.GameTask
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (_frameRate * CaptureContent.MaxFrameIndexSecond);
 
-                if (!_triggers.Exists(t => t.IsEnabled))
+                if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
                     Debug.WriteLine("没有可用的触发器, 不再进行截屏");
                     return;

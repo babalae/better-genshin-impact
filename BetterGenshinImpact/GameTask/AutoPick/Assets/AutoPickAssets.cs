@@ -10,6 +10,6 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
 {
     public class AutoPickAssets
     {
-        public static Mat StopAutoButtonMat = new(Global.Absolute(@"GameTask\AutoPick\Assets\1920x1080\F.png"), ImreadModes.Grayscale);
+        public static Mat FMat = new(Global.Absolute(@"GameTask\AutoPick\Assets\1920x1080\F.png"), ImreadModes.Grayscale);
     }
 }

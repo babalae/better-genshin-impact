@@ -47,6 +47,19 @@ public class CaptureContent
         }
     }
 
+    private Mat? _srcGreyRightBottomMat;
+    /// <summary>
+    /// 1/2 右 2/3 下
+    /// </summary>
+    public Mat SrcGreyRightBottomMat
+    {
+        get
+        {
+            _srcGreyRightBottomMat ??= CutHelper.CutRightBottom(SrcGreyMat, SrcGreyMat.Width / 2, SrcGreyMat.Height / 3 * 2);
+            return _srcGreyRightBottomMat;
+        }
+    }
+
     /// <summary>
     /// 达到了什么时间间隔
     /// 最大MaxFrameIndexSecond秒

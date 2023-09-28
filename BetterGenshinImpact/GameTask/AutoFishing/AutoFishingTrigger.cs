@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 钓鱼是要独占模式的
         /// 在钓鱼的时候，不应该有其他任务在执行
-        /// 在触发器发现正在钓鱼的时候，启用独占模式(通过右下角的 Space 判断)
+        /// 在触发器发现正在钓鱼的时候，启用独占模式
         /// </summary>
         public bool IsExclusive { get; set; }
 
@@ -40,12 +40,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _findFishBoxTips = false;
         }
 
-
         private Rect _fishBoxRect = Rect.Empty;
 
         public void OnCapture(CaptureContent content)
         {
-            // 进入独占的判定 通过右下角的 Space 判断
+            // 进入独占的判定
             if (!IsExclusive)
             {
                 if (!content.IsReachInterval(TimeSpan.FromSeconds(1)))
@@ -71,6 +70,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         return;
                     }
+
                     _fishBoxRect = GetFishBoxArea(content.SrcMat);
                 }
                 else
@@ -80,6 +80,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
             }
         }
+
+
+        //private bool OcrStartFishingForExclusive(CaptureContent content)
+        //{
+        //    var srcMat = content.SrcMat;
+        //    var rightBottomMat = CutHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
+        //    var text = _ocrService.Ocr(rightBottomMat.ToBitmap());
+        //    if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("开始") && StringUtils.RemoveAllSpace(text).Contains("钓鱼"))
+        //    {
+        //        return true;
+        //    }
+        //    return false;
+        //}
 
         /// <summary>
         /// 找右下角的 Space 按钮

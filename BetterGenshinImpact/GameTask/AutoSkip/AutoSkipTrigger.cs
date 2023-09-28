@@ -54,7 +54,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
             }
 
             // 不存在则找右下的选项按钮
-            var grayRightBottomMat = CutHelper.CutRightBottom(grayMat, grayMat.Width / 2, grayMat.Height / 3 * 2);
+            var grayRightBottomMat = content.SrcGreyRightBottomMat;
             var p2 = MatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoSkipAssets.OptionMat);
             if (p2 is { X: > 0, Y: > 0 })
             {

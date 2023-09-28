@@ -14,24 +14,9 @@ namespace BetterGenshinImpact.GameTask
     {
         public static List<ITaskTrigger> LoadTriggers()
         {
-            //if (!Directory.Exists(folder))
-            //    return;
-
-            //Directory.GetFiles(folder, "BGI.Task.*.dll",
-            //        SearchOption.AllDirectories)
-            //    .ToList()
-            //    .ForEach(
-            //        lib =>
-            //        {
-            //            (from t in Assembly.LoadFrom(lib).GetExportedTypes()
-            //                    where !t.IsInterface && !t.IsAbstract
-            //                    where typeof(ITaskTrigger).IsAssignableFrom(t)
-            //                    select t).ToList()
-            //                .ForEach(type => LoadedTriggers.Add(type.CreateInstance<ITaskTrigger>()));
-            //        });
-
             List<ITaskTrigger> loadedTriggers = new()
             {
+                new AutoPick.AutoPickTrigger(),
                 new AutoSkip.AutoSkipTrigger(),
                 new AutoFishing.AutoFishingTrigger()
             };
