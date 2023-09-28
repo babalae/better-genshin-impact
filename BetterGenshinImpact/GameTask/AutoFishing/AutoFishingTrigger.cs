@@ -1,29 +1,24 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFishing.Assets;
+using BetterGenshinImpact.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
-using BetterGenshinImpact.Utils;
 using Vision.Recognition;
+using Vision.Recognition.Helper.OCR;
 using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
-using WindowsInput;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
-using static Vanara.PInvoke.User32;
-using Point = OpenCvSharp.Point;
-using Serilog.Core;
-using Vision.Recognition.Helper.OCR;
+using WindowsInput;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private IOcrService _ocrService = OcrFactory.Create(OcrEngineType.WinRT);
+        private readonly IOcrService _ocrService = OcrFactory.Create(OcrEngineType.WinRT);
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }

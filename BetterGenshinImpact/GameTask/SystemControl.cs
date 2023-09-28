@@ -38,16 +38,18 @@ namespace BetterGenshinImpact.GameTask
             try
             {
                 var hWnd = GetForegroundWindow();
-                var pid = GetWindowThreadProcessId(hWnd);
+                uint pid = default;
+                _ = GetWindowThreadProcessId(hWnd, &pid);
                 var p = Process.GetProcessById((int)pid);
                 return p.ProcessName;
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine(ex);
                 return null;
             }
         }
-        
+
         /// <summary>
         /// 获取窗口位置
         /// </summary>

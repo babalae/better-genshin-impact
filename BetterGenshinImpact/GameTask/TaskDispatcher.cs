@@ -119,6 +119,10 @@ namespace BetterGenshinImpact.GameTask
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.StackTrace);
+            }
             finally
             {
                 if (hasLock)
