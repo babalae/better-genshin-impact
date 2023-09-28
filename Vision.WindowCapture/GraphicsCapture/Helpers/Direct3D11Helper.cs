@@ -42,7 +42,7 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
         //static Guid ID3D11Device = new Guid("db6f6ddb-ac77-4e88-8253-819df9bbf140");
         static Guid ID3D11Texture2D = new Guid("6f15aaf2-d208-4e89-9ab4-489535d34f9c");
 
-        public static IDirect3DDevice CreateDevice()
+        public static IDirect3DDevice? CreateDevice()
         {
             return CreateDevice(false);
         }
@@ -70,7 +70,8 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             // Wrap the native device using a WinRT interop object.
             if (CreateDirect3D11DeviceFromDXGIDevice(d3d11Device.As<IDXGIDevice>(), out Windows.Win32.System.WinRT.IInspectable iInspectable).Succeeded)
             {
-                return iInspectable.As<IDirect3DDevice>();
+                nint pointer = Marshal.GetIUnknownForObject(iInspectable);
+                return MarshalInterface<IDirect3DDevice>.FromAbi(pointer);
             }
 
             return default;
@@ -82,7 +83,8 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             // Wrap the native device using a WinRT interop object.
             if (CreateDirect3D11SurfaceFromDXGISurface(texture.As<IDXGISurface>(), out Windows.Win32.System.WinRT.IInspectable iInspectable).Succeeded)
             {
-                return iInspectable.As<IDirect3DSurface>();
+                nint pointer = Marshal.GetIUnknownForObject(iInspectable);
+                return MarshalInterface<IDirect3DSurface>.FromAbi(pointer);
             }
 
             return default;

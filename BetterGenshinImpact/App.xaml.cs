@@ -16,7 +16,6 @@ namespace BetterGenshinImpact
     {
         public App()
         {
-            ComWrappersSupport.InitializeComWrappers();
             Services = ConfigureServices();
 
             this.InitializeComponent();
