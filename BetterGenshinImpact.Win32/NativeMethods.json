@@ -3,5 +3,8 @@
   "allowMarshaling": true,
   "useSafeHandles": false,
   "emitSingleFile": true,
-  "public": true
+  "public": true,
+  "comInterop": {
+    "useIntPtrForComOutPointers": true
+  }
 }

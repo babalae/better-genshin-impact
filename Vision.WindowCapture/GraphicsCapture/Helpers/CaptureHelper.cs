@@ -43,8 +43,8 @@ public static class CaptureHelper
     {
         GraphicsCaptureItem
             .As<IGraphicsCaptureItemInterop>()
-            .CreateForWindow(hwnd, GraphicsCaptureItemGuid, out var obj);
-        return (GraphicsCaptureItem)obj;
+            .CreateForWindow(hwnd, GraphicsCaptureItemGuid, out nint thisPtr);
+        return GraphicsCaptureItem.FromAbi(thisPtr);
     }
 
     //public static GraphicsCaptureItem CreateItemForMonitor(IntPtr hmon)

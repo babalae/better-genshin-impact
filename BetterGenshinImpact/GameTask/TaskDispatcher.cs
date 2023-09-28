@@ -1,20 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
-using OpenCvSharp;
-using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
 using Vision.WindowCapture;
-using Vision.Recognition;
-using System.Windows.Threading;
-using System.Security.Cryptography;
+using Windows.Win32.Foundation;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -43,7 +35,7 @@ namespace BetterGenshinImpact.GameTask
 
         public void Start(CaptureMode mode, int frameRate = 30)
         {
-            IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
+            HWND hWnd = (HWND)SystemControl.FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
             {
                 MessageBox.Show("未找到原神窗口");

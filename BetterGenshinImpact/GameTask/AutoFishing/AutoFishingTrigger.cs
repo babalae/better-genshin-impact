@@ -1,19 +1,15 @@
-﻿using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+﻿using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
-using Vision.Recognition.Helper.Simulator;
 using Vision.Recognition.Task;
 using WindowsInput;
-using static Vanara.PInvoke.User32;
-using Point = OpenCvSharp.Point;
-using Serilog.Core;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -212,7 +208,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private int _noRectsCount = 0;
         private Rect _cur, _left, _right;
-        private MOUSEEVENTF _prevMouseEvent = 0x0;
+        private MOUSE_EVENT_FLAGS _prevMouseEvent = 0x0;
         private bool _findFishBoxTips;
 
 
@@ -258,21 +254,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     if (_cur.X < _left.X)
                     {
-                        if (_prevMouseEvent != MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
+                        if (_prevMouseEvent != MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN)
                         {
                             simulator.Mouse.LeftButtonDown();
                             //Simulator.PostMessage(TaskContext.Instance().GameHandle).LeftButtonDown();
-                            _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN;
+                            _prevMouseEvent = MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN;
                             //Debug.WriteLine("进度不到 左键按下");
                         }
                     }
                     else
                     {
-                        if (_prevMouseEvent == MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
+                        if (_prevMouseEvent == MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN)
                         {
                             simulator.Mouse.LeftButtonUp();
                             //Simulator.PostMessage(TaskContext.Instance().GameHandle).LeftButtonUp();
-                            _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
+                            _prevMouseEvent = MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTUP;
                             //Debug.WriteLine("进度超出 左键松开");
                         }
                     }
@@ -287,21 +283,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     if (_right.X + _right.Width - (_cur.X + _cur.Width) <= _cur.X - _left.X)
                     {
-                        if (_prevMouseEvent == MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
+                        if (_prevMouseEvent == MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN)
                         {
                             simulator.Mouse.LeftButtonUp();
                             //Simulator.PostMessage(TaskContext.Instance().GameHandle).LeftButtonUp();
-                            _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
+                            _prevMouseEvent = MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTUP;
                             //Debug.WriteLine("进入框内中间 左键松开");
                         }
                     }
                     else
                     {
-                        if (_prevMouseEvent != MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
+                        if (_prevMouseEvent != MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN)
                         {
                             simulator.Mouse.LeftButtonDown();
                             //Simulator.PostMessage(TaskContext.Instance().GameHandle).LeftButtonDown();
-                            _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN;
+                            _prevMouseEvent = MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN;
                             //Debug.WriteLine("未到框内中间 左键按下");
                         }
                     }

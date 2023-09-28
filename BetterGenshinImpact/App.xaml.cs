@@ -1,16 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
-using Serilog;
-using static Vanara.PInvoke.Kernel32;
-using System.IO;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
+using Serilog;
+using System;
+using System.IO;
+using System.Windows;
 using Vision.Recognition;
 
 namespace BetterGenshinImpact
