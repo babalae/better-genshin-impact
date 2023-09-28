@@ -3,18 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using System.Timers;
+using System.Threading;
 using System.Windows;
-using OpenCvSharp;
-using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
 using Vision.WindowCapture;
-using Vision.Recognition;
-using System.Windows.Threading;
-using System.Security.Cryptography;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -22,15 +14,14 @@ namespace BetterGenshinImpact.GameTask
     {
         private readonly ILogger<TaskDispatcher> _logger = App.GetLogger<TaskDispatcher>();
 
-        private readonly Timer _timer = new();
+        private readonly System.Timers.Timer _timer = new();
         private readonly List<ITaskTrigger> _triggers;
 
         private IWindowCapture? _capture;
 
-
+        private static object _locker = new();
         private int _frameIndex = 0;
         private int _frameRate = 30;
-
 
 
         public TaskDispatcher()
@@ -49,6 +40,7 @@ namespace BetterGenshinImpact.GameTask
                 MessageBox.Show("未找到原神窗口");
                 return;
             }
+
             TaskContext.Instance().GameHandle = hWnd;
 
             _frameRate = frameRate;
@@ -69,48 +61,72 @@ namespace BetterGenshinImpact.GameTask
 
         public void Tick(object? sender, EventArgs e)
         {
-            // 检查截图器是否初始化
-            if (_capture == null || !_capture.IsCapturing)
+            var hasLock = false;
+            try
             {
-                _logger.LogError("截图器未初始化!");
-                Stop();
-                return;
-            }
-            
-            // 检查游戏是否在前台
-            if (!SystemControl.IsGenshinImpactActive())
-            {
-                return;
-            }
-
-            // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
-            _frameIndex = (_frameIndex + 1) % (_frameRate * CaptureContent.MaxFrameIndexSecond);
-
-            // 捕获游戏画面
-            //var sw = new Stopwatch();
-            //sw.Start();
-            var bitmap = _capture.Capture();
-            //sw.Stop();
-            //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
-
-            if (bitmap == null)
-            {
-                _logger.LogWarning("截图失败!");
-                return;
-            }
-
-            // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-            var content = new CaptureContent(bitmap, _frameIndex, _frameRate);
-            var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-            if (exclusiveTrigger != null)
-            {
-                exclusiveTrigger.OnCapture(content);
-            }
-            else
-            {
-                foreach (var trigger in _triggers.Where(trigger => trigger.IsEnabled))
+                Monitor.TryEnter(_locker, ref hasLock);
+                if (!hasLock)
                 {
-                    trigger.OnCapture(content);
+                    // 正在执行时跳过
+                    return;
+                }
+
+                // 检查截图器是否初始化
+                if (_capture == null || !_capture.IsCapturing)
+                {
+                    _logger.LogError("截图器未初始化!");
+                    Stop();
+                    return;
+                }
+
+                // 检查游戏是否在前台
+                if (!SystemControl.IsGenshinImpactActive())
+                {
+                    return;
+                }
+
+                // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
+                _frameIndex = (_frameIndex + 1) % (_frameRate * CaptureContent.MaxFrameIndexSecond);
+
+                if (!_triggers.Exists(t => t.IsEnabled))
+                {
+                    Debug.WriteLine("没有可用的触发器, 不再进行截屏");
+                    return;
+                }
+
+                // 捕获游戏画面
+                //var sw = new Stopwatch();
+                //sw.Start();
+                var bitmap = _capture.Capture();
+                //sw.Stop();
+                //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
+
+                if (bitmap == null)
+                {
+                    _logger.LogWarning("截图失败!");
+                    return;
+                }
+
+                // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
+                var content = new CaptureContent(bitmap, _frameIndex, _frameRate);
+                var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                if (exclusiveTrigger != null)
+                {
+                    exclusiveTrigger.OnCapture(content);
+                }
+                else
+                {
+                    foreach (var trigger in _triggers.Where(trigger => trigger.IsEnabled))
+                    {
+                        trigger.OnCapture(content);
+                    }
+                }
+            }
+            finally
+            {
+                if (hasLock)
+                {
+                    Monitor.Exit(_locker);
                 }
             }
         }

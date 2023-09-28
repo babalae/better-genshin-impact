@@ -66,7 +66,12 @@ namespace BetterGenshinImpact.ViewModel
         private void OnStartTrigger()
         {
             TestMask();
-            new TaskDispatcher().Start(CaptureMode.BitBlt);
+            if (SelectedMode == null)
+            { 
+                MessageBox.Show("请选择捕获方式");
+                return;
+            }
+            new TaskDispatcher().Start(SelectedMode.ToCaptureMode());
         }
 
         private void TestRect()
