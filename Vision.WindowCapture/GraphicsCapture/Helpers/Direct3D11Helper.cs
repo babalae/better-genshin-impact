@@ -95,7 +95,7 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             device
                 .As<IDirect3DDxgiInterfaceAccess>()
                 .GetInterface(typeof(ID3D11Device).GUID, out var d3dDevice);
-            return d3dDevice.As<ID3D11Device>();
+            return MarshalInterface<ID3D11Device>.FromAbi(d3dDevice);
         }
 
         public static ID3D11Texture2D CreateD3D11Texture2D(IDirect3DSurface surface)
@@ -103,7 +103,7 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             surface
                 .As<IDirect3DDxgiInterfaceAccess>()
                 .GetInterface(typeof(ID3D11Texture2D).GUID, out var d3dSurface);
-            return d3dSurface.As<ID3D11Texture2D>();
+            return MarshalInterface<ID3D11Texture2D>.FromAbi(d3dSurface);
         }
     }
 }
