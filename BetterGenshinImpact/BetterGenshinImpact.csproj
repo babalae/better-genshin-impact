@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <Folder Include="GameTask\AutoGeniusInvokation\" />
-    <Folder Include="GameTask\QuickEnhanceArtifacts\" />
     <Folder Include="GameTask\UseActiveCode\" />
     <Folder Include="Service\Interface\" />
   </ItemGroup>

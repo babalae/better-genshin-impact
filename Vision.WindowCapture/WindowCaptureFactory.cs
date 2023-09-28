@@ -4,17 +4,17 @@ public class WindowCaptureFactory
 {
     public static string[] ModeNames()
     {
-        return Enum.GetNames(typeof(CaptureMode));
+        return Enum.GetNames(typeof(CaptureModeEnum));
     }
 
 
-    public static IWindowCapture Create(CaptureMode mode)
+    public static IWindowCapture Create(CaptureModeEnum mode)
     {
         switch (mode)
         {
-            case CaptureMode.BitBlt:
+            case CaptureModeEnum.BitBlt:
                 return new BitBlt.BitBltCapture();
-            case CaptureMode.WindowsGraphicsCapture:
+            case CaptureModeEnum.WindowsGraphicsCapture:
                 return new GraphicsCapture.GraphicsCapture();
             default:
                 throw new ArgumentOutOfRangeException(nameof(mode), mode, null);

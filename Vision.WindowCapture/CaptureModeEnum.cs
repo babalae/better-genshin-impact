@@ -1,6 +1,6 @@
 ﻿namespace Vision.WindowCapture;
 
-public enum CaptureMode
+public enum CaptureModeEnum
 {
     BitBlt,
     WindowsGraphicsCapture

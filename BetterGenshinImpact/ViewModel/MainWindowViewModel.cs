@@ -4,13 +4,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Diagnostics;
 using System.Windows;
-using Vision.Recognition;
-using Vision.Recognition.Helper.Simulator;
-using Vision.WindowCapture;
 using Windows.Win32.Foundation;
-using Windows.Win32.UI.WindowsAndMessaging;
+using Vision.Recognition;
+using Vision.WindowCapture;
 using static Windows.Win32.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
@@ -19,7 +16,7 @@ namespace BetterGenshinImpact.ViewModel
     {
         [ObservableProperty] private string[] _modeNames = WindowCaptureFactory.ModeNames();
 
-        [ObservableProperty] private string? _selectedMode = CaptureMode.BitBlt.ToString();
+        [ObservableProperty] private string? _selectedMode = CaptureModeEnum.BitBlt.ToString();
 
         private MaskWindow? _maskWindow;
         private readonly ILogger<MainWindowViewModel> _logger = App.GetLogger<MainWindowViewModel>();
@@ -75,8 +72,7 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnStopTrigger()
         {
-            HWND hWnd = (HWND)SystemControl.FindGenshinImpactHandle();
-            if (hWnd == HWND.Null)
+            if (SelectedMode == null)
             {
                 MessageBox.Show("请选择捕获方式");
                 return;
@@ -93,7 +89,7 @@ namespace BetterGenshinImpact.ViewModel
         //        return;
         //    }
 
-        //    GetWindowRect(hWnd, out var rect);
+        //    User32.GetWindowRect(hWnd, out var rect);
         //    //var x = rect.X;
         //    //var y = rect.Y;
         //    //var w = rect.Width;
@@ -123,14 +119,14 @@ namespace BetterGenshinImpact.ViewModel
 
         private void TestMask()
         {
-            HWND hWnd = (HWND)SystemControl.FindGenshinImpactHandle();
-            if (hWnd == HWND.Null)
+            var hWnd = SystemControl.FindGenshinImpactHandle();
+            if (hWnd == IntPtr.Zero)
             {
                 MessageBox.Show("未找到原神窗口");
                 return;
             }
 
-            GetWindowRect(hWnd, out var rect);
+            GetWindowRect((HWND)hWnd, out var rect);
             var x = rect.X;
             var y = rect.Y;
             var w = rect.Width;

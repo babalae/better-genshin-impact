@@ -3,12 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Timers;
 using System.Threading;
 using System.Windows;
+using Windows.Win32.Foundation;
 using Vision.Recognition.Task;
 using Vision.WindowCapture;
-using Windows.Win32.Foundation;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -34,9 +33,9 @@ namespace BetterGenshinImpact.GameTask
             //_timer.Tick += Tick;
         }
 
-        public void Start(CaptureMode mode, int frameRate = 30)
+        public void Start(CaptureModeEnum mode, int frameRate = 30)
         {
-            HWND hWnd = (HWND)SystemControl.FindGenshinImpactHandle();
+            IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
             if (hWnd == IntPtr.Zero)
             {
                 MessageBox.Show("未找到原神窗口");
@@ -48,7 +47,7 @@ namespace BetterGenshinImpact.GameTask
             _frameRate = frameRate;
 
             _capture = WindowCaptureFactory.Create(mode);
-            _capture.Start((Windows.Win32.Foundation.HWND)hWnd);
+            _capture.Start((HWND)hWnd);
 
             _frameIndex = 0;
             _timer.Interval = Convert.ToInt32(1000d / frameRate);
@@ -118,10 +117,6 @@ namespace BetterGenshinImpact.GameTask
                         trigger.OnCapture(content);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.StackTrace);
             }
             finally
             {

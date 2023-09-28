@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.View.Test
             InitializeComponent();
         }
 
-        public void StartCapture(IntPtr hWnd, CaptureMode captureMode)
+        public void StartCapture(IntPtr hWnd, CaptureModeEnum captureMode)
         {
             if (hWnd == IntPtr.Zero)
             {

@@ -2,8 +2,8 @@
 
 public static class CaptureModeExtensions
 {
-    public static CaptureMode ToCaptureMode(this string modeName)
+    public static CaptureModeEnum ToCaptureMode(this string modeName)
     {
-        return (CaptureMode) Enum.Parse(typeof(CaptureMode), modeName);
+        return (CaptureModeEnum) Enum.Parse(typeof(CaptureModeEnum), modeName);
     }
 }
