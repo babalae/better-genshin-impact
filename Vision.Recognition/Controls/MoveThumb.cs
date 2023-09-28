@@ -3,43 +3,42 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
-namespace Vision.Recognition.Controls
+namespace Vision.Recognition.Controls;
+
+public class MoveThumb : Thumb
 {
-    public class MoveThumb : Thumb
+    private RotateTransform? rotateTransform;
+    private ContentControl? designerItem;
+
+    public MoveThumb()
     {
-        private RotateTransform rotateTransform;
-        private ContentControl designerItem;
+        DragStarted += OnMoveThumbDragStarted;
+        DragDelta += OnMoveThumbDragDelta;
+    }
 
-        public MoveThumb()
+    private void OnMoveThumbDragStarted(object sender, DragStartedEventArgs e)
+    {
+        designerItem = DataContext as ContentControl;
+
+        if (designerItem != null)
         {
-            DragStarted += new DragStartedEventHandler(this.MoveThumb_DragStarted);
-            DragDelta += new DragDeltaEventHandler(this.MoveThumb_DragDelta);
+            rotateTransform = designerItem.RenderTransform as RotateTransform;
         }
+    }
 
-        private void MoveThumb_DragStarted(object sender, DragStartedEventArgs e)
+    private void OnMoveThumbDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (designerItem is not null)
         {
-            this.designerItem = DataContext as ContentControl;
+            Point dragDelta = new(e.HorizontalChange, e.VerticalChange);
 
-            if (this.designerItem != null)
+            if (rotateTransform is not null)
             {
-                this.rotateTransform = this.designerItem.RenderTransform as RotateTransform;
+                dragDelta = rotateTransform.Transform(dragDelta);
             }
-        }
 
-        private void MoveThumb_DragDelta(object sender, DragDeltaEventArgs e)
-        {
-            if (this.designerItem != null)
-            {
-                Point dragDelta = new Point(e.HorizontalChange, e.VerticalChange);
-
-                if (this.rotateTransform != null)
-                {
-                    dragDelta = this.rotateTransform.Transform(dragDelta);
-                }
-
-                Canvas.SetLeft(this.designerItem, Canvas.GetLeft(this.designerItem) + dragDelta.X);
-                Canvas.SetTop(this.designerItem, Canvas.GetTop(this.designerItem) + dragDelta.Y);
-            }
+            Canvas.SetLeft(designerItem, Canvas.GetLeft(designerItem) + dragDelta.X);
+            Canvas.SetTop(designerItem, Canvas.GetTop(designerItem) + dragDelta.Y);
         }
     }
 }

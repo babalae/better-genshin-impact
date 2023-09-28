@@ -1,15 +1,15 @@
 ﻿using System.Drawing;
+using Windows.Win32.Foundation;
 
-namespace Vision.WindowCapture
+namespace Vision.WindowCapture;
+
+public interface IWindowCapture
 {
-    public interface IWindowCapture
-    {
-        bool IsCapturing { get; }
-        
-        void Start(IntPtr hWnd);
+    bool IsCapturing { get; }
+    
+    void Start(HWND hWnd);
 
-        Bitmap? Capture();
+    Bitmap? Capture();
 
-        void Stop();
-    }
+    void Stop();
 }

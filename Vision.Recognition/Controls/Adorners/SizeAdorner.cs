@@ -3,42 +3,45 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 
-namespace Vision.Recognition.Controls.Adorners
+namespace Vision.Recognition.Controls.Adorners;
+
+public class SizeAdorner : Adorner
 {
-    public class SizeAdorner : Adorner
+    private readonly SizeChrome chrome;
+    private readonly VisualCollection visuals;
+    private readonly ContentControl designerItem;
+
+    protected override int VisualChildrenCount
     {
-        private SizeChrome chrome;
-        private VisualCollection visuals;
-        private ContentControl designerItem;
-
-        protected override int VisualChildrenCount
+        get
         {
-            get
-            {
-                return this.visuals.Count;
-            }
+            return visuals.Count;
         }
+    }
 
-        public SizeAdorner(ContentControl designerItem)
-            : base(designerItem)
+    public SizeAdorner(ContentControl designerItem)
+        : base(designerItem)
+    {
+        SnapsToDevicePixels = true;
+        this.designerItem = designerItem;
+        chrome = new SizeChrome
         {
-            this.SnapsToDevicePixels = true;
-            this.designerItem = designerItem;
-            this.chrome = new SizeChrome();
-            this.chrome.DataContext = designerItem;
-            this.visuals = new VisualCollection(this);
-            this.visuals.Add(this.chrome);
-        }
+            DataContext = designerItem
+        };
+        visuals = new VisualCollection(this)
+        {
+            chrome
+        };
+    }
 
-        protected override Visual GetVisualChild(int index)
-        {
-            return this.visuals[index];
-        }
+    protected override Visual GetVisualChild(int index)
+    {
+        return visuals[index];
+    }
 
-        protected override Size ArrangeOverride(Size arrangeBounds)
-        {
-            this.chrome.Arrange(new Rect(new Point(0.0, 0.0), arrangeBounds));
-            return arrangeBounds;
-        }
+    protected override Size ArrangeOverride(Size arrangeBounds)
+    {
+        chrome.Arrange(new Rect(default, arrangeBounds));
+        return arrangeBounds;
     }
 }

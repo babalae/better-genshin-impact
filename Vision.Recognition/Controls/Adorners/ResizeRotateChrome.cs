@@ -1,13 +1,12 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 
-namespace Vision.Recognition.Controls.Adorners
+namespace Vision.Recognition.Controls.Adorners;
+
+public class ResizeRotateChrome : Control
 {
-    public class ResizeRotateChrome : Control
+    static ResizeRotateChrome()
     {
-        static ResizeRotateChrome()
-        {
-            FrameworkElement.DefaultStyleKeyProperty.OverrideMetadata(typeof(ResizeRotateChrome), new FrameworkPropertyMetadata(typeof(ResizeRotateChrome)));
-        }
+        DefaultStyleKeyProperty.OverrideMetadata(typeof(ResizeRotateChrome), new FrameworkPropertyMetadata(typeof(ResizeRotateChrome)));
     }
 }

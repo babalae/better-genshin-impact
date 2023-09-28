@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask;
+﻿using BetterGenshinImpact.GameTask;
 using OpenCvSharp;
+using System;
 using Vision.Recognition.Helper.Simulator;
+using Windows.Win32.Foundation;
 
 namespace BetterGenshinImpact.Utils.Extensions
 {
@@ -18,7 +15,7 @@ namespace BetterGenshinImpact.Utils.Extensions
                 return point;
             }
 
-            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
+            var rc = SystemControl.GetWindowRect((HWND)TaskContext.Instance().GameHandle);
             return new Point(rc.X + point.X, rc.Y + point.Y);
         }
 
@@ -36,7 +33,7 @@ namespace BetterGenshinImpact.Utils.Extensions
                 return point;
             }
 
-            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
+            var rc = SystemControl.GetWindowRect((HWND)TaskContext.Instance().GameHandle);
             return new Point(rc.X + point.X + offsetX, rc.Y + point.Y + offsetY);
         }
 

@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Vision.Recognition.Controls;
 
-namespace Vision.Recognition.Controls
+public class AreaSettingsControlBuilder
 {
-    public class AreaSettingsControlBuilder
-    {
-    }
 }

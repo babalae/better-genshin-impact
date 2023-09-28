@@ -1,21 +1,17 @@
 ﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.View.Test;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.View.Test;
-using OpenCvSharp;
-using Vanara.PInvoke;
 using Vision.Recognition;
 using Vision.Recognition.Helper.Simulator;
 using Vision.WindowCapture;
+using Windows.Win32.Foundation;
+using Windows.Win32.UI.WindowsAndMessaging;
+using static Windows.Win32.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -79,7 +75,8 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnStopTrigger()
         {
-            if (SelectedMode == null)
+            HWND hWnd = (HWND)SystemControl.FindGenshinImpactHandle();
+            if (hWnd == HWND.Null)
             {
                 MessageBox.Show("请选择捕获方式");
                 return;
@@ -96,7 +93,7 @@ namespace BetterGenshinImpact.ViewModel
         //        return;
         //    }
 
-        //    User32.GetWindowRect(hWnd, out var rect);
+        //    GetWindowRect(hWnd, out var rect);
         //    //var x = rect.X;
         //    //var y = rect.Y;
         //    //var w = rect.Width;
@@ -126,14 +123,14 @@ namespace BetterGenshinImpact.ViewModel
 
         private void TestMask()
         {
-            var hWnd = SystemControl.FindGenshinImpactHandle();
-            if (hWnd == IntPtr.Zero)
+            HWND hWnd = (HWND)SystemControl.FindGenshinImpactHandle();
+            if (hWnd == HWND.Null)
             {
                 MessageBox.Show("未找到原神窗口");
                 return;
             }
 
-            User32.GetWindowRect(hWnd, out var rect);
+            GetWindowRect(hWnd, out var rect);
             var x = rect.X;
             var y = rect.Y;
             var w = rect.Width;

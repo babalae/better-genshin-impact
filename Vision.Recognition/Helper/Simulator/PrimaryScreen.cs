@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
-using Vanara.PInvoke;
-using static Vanara.PInvoke.Gdi32;
+using Windows.Win32.Foundation;
+using Windows.Win32.Graphics.Gdi;
+using static Windows.Win32.PInvoke;
 
 namespace Vision.Recognition.Helper.Simulator
 {
@@ -15,13 +16,13 @@ namespace Vision.Recognition.Helper.Simulator
         {
             get
             {
-                var hdc = User32.GetDC(IntPtr.Zero);
+                var hdc = GetDC(default);
                 var size = new Size
                 {
-                    Width = Gdi32.GetDeviceCaps(hdc, DeviceCap.HORZRES),
-                    Height = Gdi32.GetDeviceCaps(hdc, DeviceCap.VERTRES)
+                    Width = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.HORZRES),
+                    Height = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.VERTRES)
                 };
-                User32.ReleaseDC(IntPtr.Zero, hdc);
+                ReleaseDC(default, hdc);
                 return size;
             }
         }
@@ -32,9 +33,9 @@ namespace Vision.Recognition.Helper.Simulator
         {
             get
             {
-                var hdc = User32.GetDC(IntPtr.Zero);
-                var dpiX = Gdi32.GetDeviceCaps(hdc, DeviceCap.LOGPIXELSX);
-                User32.ReleaseDC(IntPtr.Zero, hdc);
+                var hdc = GetDC(default);
+                var dpiX = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.LOGPIXELSX);
+                ReleaseDC(default, hdc);
                 return dpiX;
             }
         }
@@ -45,9 +46,9 @@ namespace Vision.Recognition.Helper.Simulator
         {
             get
             {
-                var hdc = User32.GetDC(IntPtr.Zero);
-                var dpiX = Gdi32.GetDeviceCaps(hdc, DeviceCap.LOGPIXELSY);
-                User32.ReleaseDC(IntPtr.Zero, hdc);
+                var hdc = GetDC(default);
+                var dpiX = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.LOGPIXELSY);
+                ReleaseDC(default, hdc);
                 return dpiX;
             }
         }
@@ -58,13 +59,13 @@ namespace Vision.Recognition.Helper.Simulator
         {
             get
             {
-                var hdc = User32.GetDC(IntPtr.Zero);
+                var hdc = GetDC(default);
                 var size = new Size
                 {
-                    Width = Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPHORZRES),
-                    Height = Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPVERTRES)
+                    Width = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPHORZRES),
+                    Height = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPVERTRES)
                 };
-                User32.ReleaseDC(IntPtr.Zero, hdc);
+                ReleaseDC(default, hdc);
                 return size;
             }
         }
@@ -76,9 +77,9 @@ namespace Vision.Recognition.Helper.Simulator
         {
             get
             {
-                var hdc = User32.GetDC(IntPtr.Zero);
-                var scaleX = (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPHORZRES) / (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.HORZRES);
-                User32.ReleaseDC(IntPtr.Zero, hdc);
+                var hdc = GetDC(default);
+                var scaleX = (float)GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPHORZRES) / GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.HORZRES);
+                ReleaseDC(default, hdc);
                 return scaleX;
             }
         }
@@ -89,9 +90,9 @@ namespace Vision.Recognition.Helper.Simulator
         {
             get
             {
-                var hdc = User32.GetDC(IntPtr.Zero);
-                var scaleY = (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPVERTRES) / (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.VERTRES);
-                User32.ReleaseDC(IntPtr.Zero, hdc);
+                var hdc = GetDC(default);
+                var scaleY = (float)GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPVERTRES) / GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.VERTRES);
+                ReleaseDC(default, hdc);
                 return scaleY;
             }
         }

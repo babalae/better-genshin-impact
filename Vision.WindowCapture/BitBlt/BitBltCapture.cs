@@ -1,23 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using Vanara.Extensions;
-using Vanara.PInvoke;
+using Windows.Win32.Foundation;
+using Windows.Win32.Graphics.Gdi;
+using static Windows.Win32.PInvoke;
 
 namespace Vision.WindowCapture.BitBlt
 {
     public class BitBltCapture : IWindowCapture
     {
-        private IntPtr _hWnd;
+        private HWND _hWnd;
+
         public bool IsCapturing { get; private set; }
 
-        public void Start(IntPtr hWnd)
+        public void Start(HWND hWnd)
         {
             _hWnd = hWnd;
             IsCapturing = true;
@@ -32,21 +27,21 @@ namespace Vision.WindowCapture.BitBlt
 
             try
             {
-                User32.GetWindowRect(_hWnd, out var windowRect);
+                GetWindowRect(_hWnd, out var windowRect);
                 var width = windowRect.Width;
                 var height = windowRect.Height;
 
-                var hdcSrc = User32.GetWindowDC(_hWnd);
-                var hdcDest = Gdi32.CreateCompatibleDC(hdcSrc);
-                var hBitmap = Gdi32.CreateCompatibleBitmap(hdcSrc, width, height);
-                var hOld = Gdi32.SelectObject(hdcDest, hBitmap);
-                Gdi32.BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY);
-                Gdi32.SelectObject(hdcDest, hOld);
-                Gdi32.DeleteDC(hdcDest);
-                User32.ReleaseDC(_hWnd, hdcSrc);
-
-                var bitmap = hBitmap.ToBitmap();
-                Gdi32.DeleteObject(hBitmap);
+                var hdcSrc = GetWindowDC(_hWnd);
+                var hdcDest = CreateCompatibleDC(hdcSrc);
+                var hBitmap = CreateCompatibleBitmap(hdcSrc, width, height);
+                var hOld = SelectObject(hdcDest, hBitmap);
+                Windows.Win32.PInvoke.BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, ROP_CODE.SRCCOPY);
+                SelectObject(hdcDest, hOld);
+                DeleteDC(hdcDest);
+                ReleaseDC(_hWnd, hdcSrc);
+                
+                var bitmap = Image.FromHbitmap(hBitmap);
+                DeleteObject(hBitmap);
                 return bitmap;
             }
             catch (Exception e)
@@ -58,7 +53,7 @@ namespace Vision.WindowCapture.BitBlt
 
         public void Stop()
         {
-            _hWnd = IntPtr.Zero;
+            _hWnd = HWND.Null;
             IsCapturing = false;
         }
     }

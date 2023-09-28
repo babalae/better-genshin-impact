@@ -1,98 +1,81 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows;
 using System.Windows.Media;
 using Vision.Recognition.Controls.Adorners;
 
-namespace Vision.Recognition.Controls
+namespace Vision.Recognition.Controls;
+
+public class DesignerItemDecorator : Control
 {
-    public class DesignerItemDecorator : Control
+    private Adorner? adorner;
+
+    public bool ShowDecorator
     {
-        private Adorner adorner;
+        get { return (bool)GetValue(ShowDecoratorProperty); }
+        set { SetValue(ShowDecoratorProperty, value); }
+    }
 
-        public bool ShowDecorator
+    public static readonly DependencyProperty ShowDecoratorProperty =
+        DependencyProperty.Register(nameof(ShowDecorator), typeof(bool), typeof(DesignerItemDecorator),
+        new FrameworkPropertyMetadata(false, new PropertyChangedCallback(OnShowDecoratorChanged)));
+
+    public DesignerItemDecorator()
+    {
+        Unloaded += OnDesignerItemDecoratorUnloaded;
+    }
+
+    private void HideAdorner()
+    {
+        if (adorner is not null)
         {
-            get { return (bool)GetValue(ShowDecoratorProperty); }
-            set { SetValue(ShowDecoratorProperty, value); }
+            adorner.Visibility = Visibility.Hidden;
         }
+    }
 
-        public static readonly DependencyProperty ShowDecoratorProperty =
-            DependencyProperty.Register("ShowDecorator", typeof(bool), typeof(DesignerItemDecorator),
-            new FrameworkPropertyMetadata(false, new PropertyChangedCallback(ShowDecoratorProperty_Changed)));
-
-        public DesignerItemDecorator()
+    private void ShowAdorner()
+    {
+        if (adorner is null)
         {
-            Unloaded += new RoutedEventHandler(this.DesignerItemDecorator_Unloaded);
-        }
+            AdornerLayer adornerLayer = AdornerLayer.GetAdornerLayer(this);
 
-        private void HideAdorner()
-        {
-            if (this.adorner != null)
+            if (adornerLayer is not null)
             {
-                this.adorner.Visibility = Visibility.Hidden;
-            }
-        }
+                ContentControl? designerItem = DataContext as ContentControl;
+                // Canvas? canvas = VisualTreeHelper.GetParent(designerItem) as Canvas;
+                adorner = new ResizeRotateAdorner(designerItem);
+                adornerLayer.Add(adorner);
 
-        private void ShowAdorner()
-        {
-            if (this.adorner == null)
-            {
-                AdornerLayer adornerLayer = AdornerLayer.GetAdornerLayer(this);
-
-                if (adornerLayer != null)
-                {
-                    ContentControl designerItem = this.DataContext as ContentControl;
-                    Canvas canvas = VisualTreeHelper.GetParent(designerItem) as Canvas;
-                    this.adorner = new ResizeRotateAdorner(designerItem);
-                    adornerLayer.Add(this.adorner);
-
-                    if (this.ShowDecorator)
-                    {
-                        this.adorner.Visibility = Visibility.Visible;
-                    }
-                    else
-                    {
-                        this.adorner.Visibility = Visibility.Hidden;
-                    }
-                }
-            }
-            else
-            {
-                this.adorner.Visibility = Visibility.Visible;
+                adorner.Visibility = ShowDecorator ? Visibility.Visible : Visibility.Hidden;
             }
         }
-
-        private void DesignerItemDecorator_Unloaded(object sender, RoutedEventArgs e)
+        else
         {
-            if (this.adorner != null)
-            {
-                AdornerLayer adornerLayer = AdornerLayer.GetAdornerLayer(this);
-                if (adornerLayer != null)
-                {
-                    adornerLayer.Remove(this.adorner);
-                }
-
-                this.adorner = null;
-            }
+            adorner.Visibility = Visibility.Visible;
         }
+    }
 
-        private static void ShowDecoratorProperty_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private void OnDesignerItemDecoratorUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (adorner is not null)
         {
-            DesignerItemDecorator decorator = (DesignerItemDecorator)d;
-            bool showDecorator = (bool)e.NewValue;
+            AdornerLayer.GetAdornerLayer(this)?.Remove(adorner);
+            adorner = null;
+        }
+    }
 
-            if (showDecorator)
-            {
-                decorator.ShowAdorner();
-            }
-            else
-            {
-                decorator.HideAdorner();
-            }
+    private static void OnShowDecoratorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        DesignerItemDecorator decorator = (DesignerItemDecorator)d;
+        bool showDecorator = (bool)e.NewValue;
+
+        if (showDecorator)
+        {
+            decorator.ShowAdorner();
+        }
+        else
+        {
+            decorator.HideAdorner();
         }
     }
 }

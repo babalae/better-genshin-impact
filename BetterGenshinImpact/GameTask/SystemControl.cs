@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Vanara.PInvoke;
+using Windows.Win32.Foundation;
+using static Windows.Win32.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
 {
     public class SystemControl
     {
-        public static IntPtr FindGenshinImpactHandle()
+        public static nint FindGenshinImpactHandle()
         {
             return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
         }
@@ -23,7 +19,7 @@ namespace BetterGenshinImpact.GameTask
             return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
         }
 
-        public static IntPtr FindHandleByProcessName(params string[] names)
+        public static nint FindHandleByProcessName(params string[] names)
         {
             foreach (var name in names)
             {
@@ -34,32 +30,34 @@ namespace BetterGenshinImpact.GameTask
                 }
             }
 
-            return IntPtr.Zero;
+            return 0;
         }
 
-        public static string? GetActiveProcessName()
+        public static unsafe string? GetActiveProcessName()
         {
             try
             {
-                var hWnd = User32.GetForegroundWindow();
-                User32.GetWindowThreadProcessId(hWnd, out var pid);
+                var hWnd = GetForegroundWindow();
+                uint pid = default;
+                _ = GetWindowThreadProcessId(hWnd, &pid);
                 var p = Process.GetProcessById((int)pid);
                 return p.ProcessName;
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine(ex);
                 return null;
             }
         }
-        
+
         /// <summary>
         /// 获取窗口位置
         /// </summary>
         /// <param name="hWnd"></param>
         /// <returns></returns>
-        public static RECT GetWindowRect(IntPtr hWnd)
+        public static RECT GetWindowRect(HWND hWnd)
         {
-            User32.GetWindowRect(hWnd, out var windowRect);
+            Windows.Win32.PInvoke.GetWindowRect(hWnd, out var windowRect);
             return windowRect;
         }
 
@@ -68,9 +66,9 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         /// <param name="hWnd"></param>
         /// <returns></returns>
-        public static RECT GetGameScreenRect(IntPtr hWnd)
+        public static RECT GetGameScreenRect(HWND hWnd)
         {
-            User32.GetClientRect(hWnd, out var clientRect);
+            Windows.Win32.PInvoke.GetWindowRect(hWnd, out var clientRect);
             return clientRect;
         }
 
