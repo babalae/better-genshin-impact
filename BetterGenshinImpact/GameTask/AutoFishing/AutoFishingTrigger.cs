@@ -5,17 +5,25 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
+using BetterGenshinImpact.Utils;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OpenCv;
 using Vision.Recognition.Task;
 using WindowsInput;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
+using static Vanara.PInvoke.User32;
+using Point = OpenCvSharp.Point;
+using Serilog.Core;
+using Vision.Recognition.Helper.OCR;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private IOcrService _ocrService = OcrFactory.Create(OcrEngineType.WinRT);
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }
@@ -36,6 +44,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             // 钓鱼变量初始化
             _findFishBoxTips = false;
         }
+
 
         private Rect _fishBoxRect = Rect.Empty;
 
@@ -58,6 +67,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
+                // 上钩判断
+                FishBite(content);
                 // 进入钓鱼界面先尝试获取钓鱼框的位置
                 if (_fishBoxRect.Width == 0)
                 {
@@ -65,13 +76,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         return;
                     }
-
                     _fishBoxRect = GetFishBoxArea(content.SrcMat);
                 }
                 else
                 {
-                    // 上钩判断
-                    FishBite(content, _fishBoxRect);
                     // 钓鱼拉条
                     Fishing(content, new Mat(content.SrcMat, _fishBoxRect));
                 }
@@ -139,6 +147,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     .PutRect("FishBox", _fishBoxRect.ToRectDrawable(new Pen(Color.LightPink, 2)));
                 return _fishBoxRect;
             }
+
             VisionContext.Instance().DrawContent.RemoveRect("FishBox");
             return Rect.Empty;
         }
@@ -153,19 +162,24 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 自动提竿
         /// </summary>
         /// <param name="content"></param>
-        /// <param name="fishBoxRect"></param>
-        private void FishBite(CaptureContent content, Rect fishBoxRect)
+        private void FishBite(CaptureContent content)
         {
-            if (_isFishingProcess || fishBoxRect == Rect.Empty)
+            if (_isFishingProcess)
             {
                 return;
             }
+
             // 自动识别的钓鱼框向下延伸到屏幕中间
-            var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
-                fishBoxRect.Width, content.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
+            //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
+            //    fishBoxRect.Width, content.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
+            // 上半屏幕和中间1/3的区域
+            var liftingWordsAreaRect = new Rect(content.SrcMat.Width / 3, 0, content.SrcMat.Width / 3,
+                content.SrcMat.Height / 2);
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
+            var wordCaptureMat = new Mat(content.SrcMat, liftingWordsAreaRect);
+            var wordCaptureOriginMat = wordCaptureMat.Clone();
             var currentBiteWordsTips =
-                AutoFishingImageRecognition.MatchFishBiteWords(new Mat(content.SrcMat, liftingWordsAreaRect),
+                AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat,
                     liftingWordsAreaRect);
             if (currentBiteWordsTips != Rect.Empty)
             {
@@ -185,18 +199,34 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             currentBiteWordsTips
                                 .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
                                 .ToRectDrawable());
+
+                        if (_biteTipsExitCount >= content.FrameRate / 4d)
+                        {
+                            var text = _ocrService.Ocr(wordCaptureOriginMat.ToBitmap());
+                            if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
+                            {
+                                new InputSimulator().Mouse.LeftButtonClick();
+                                _logger.LogInformation(@"┌------------------------┐");
+                                _logger.LogInformation("  自动提竿(OCR)");
+                                _isFishingProcess = true;
+                                _biteTipsExitCount = 0;
+                                _baseBiteTips = Rect.Empty;
+                                VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                            }
+                        }
                     }
                     else
                     {
                         _biteTipsExitCount = 0;
                         _baseBiteTips = currentBiteWordsTips;
+                        VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
                     }
 
                     if (_biteTipsExitCount >= content.FrameRate / 2d)
                     {
                         new InputSimulator().Mouse.LeftButtonClick();
                         _logger.LogInformation(@"┌------------------------┐");
-                        _logger.LogInformation("  自动提竿");
+                        _logger.LogInformation("  自动提竿(文字块)");
                         _isFishingProcess = true;
                         _biteTipsExitCount = 0;
                         _baseBiteTips = Rect.Empty;
@@ -220,7 +250,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <param name="fishBarMat"></param>
         private void Fishing(CaptureContent content, Mat fishBarMat)
         {
-            List<Rect>? rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
+            var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
             {
                 var simulator = new InputSimulator();
@@ -326,7 +356,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (!IsExclusive)
                 {
                     _logger.LogInformation("退出钓鱼界面");
-                    //_fishBoxRect = new(0, 0, 0, 0);
+                    _fishBoxRect = Rect.Empty;
+                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                 }
             }
 
