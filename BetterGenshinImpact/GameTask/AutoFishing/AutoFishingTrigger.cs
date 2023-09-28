@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _findFishBoxTips = false;
         }
 
-        private Rect _fishBoxRect = new(0, 0, 0, 0);
+        private Rect _fishBoxRect = Rect.Empty;
 
         public void OnCapture(CaptureContent content)
         {
@@ -54,7 +54,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (IsExclusive)
                 {
                     _logger.LogInformation("进入钓鱼界面");
-                    _fishBoxRect = new(0, 0, 0, 0);
                 }
             }
             else
@@ -107,6 +106,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (Math.Abs(rects[0].Height - rects[1].Height) > 10)
                 {
                     Debug.WriteLine("两个矩形高度差距过大，未识别到钓鱼框");
+                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                     return Rect.Empty;
                 }
 
@@ -128,6 +128,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     || !(_left.X < srcMat.Width / 2 && _left.X + _left.Width > srcMat.Width / 2) // left肯定穿过游戏中轴线
                    )
                 {
+                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                     return Rect.Empty;
                 }
 
