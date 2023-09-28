@@ -6,7 +6,7 @@
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         mc:Ignorable="d"
-        Title="MainWindow" Height="200" Width="300">
+        Title="更好的原神Alpha1" Height="300" Width="300">
     <Window.DataContext>
         <viewModel:MainWindowViewModel />
     </Window.DataContext>
@@ -23,12 +23,17 @@
         </b:EventTrigger>
     </b:Interaction.Triggers>
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="26*"/>
+            <ColumnDefinition Width="49*"/>
+        </Grid.ColumnDefinitions>
         <ComboBox x:Name="CboCaptureType" HorizontalAlignment="Left" Height="23" Margin="10,20,0,0"
                   VerticalAlignment="Top" Width="252" ItemsSource="{Binding ModeNames}"
-                  SelectedItem="{Binding SelectedMode, Mode=TwoWay}" />
-        <Button x:Name="StartCaptureTest" Content="测试图像捕获" Command="{Binding StartCaptureTestCommand}" HorizontalAlignment="Left" Margin="10,55,0,0" VerticalAlignment="Top" Height="22" Width="252"/>
+                  SelectedItem="{Binding SelectedMode, Mode=TwoWay}" Grid.ColumnSpan="2" />
+        <Button x:Name="StartCaptureTest" Content="测试图像捕获" Command="{Binding StartCaptureTestCommand}" HorizontalAlignment="Left" Margin="10,55,0,0" VerticalAlignment="Top" Height="22" Width="252" Grid.ColumnSpan="2"/>
 
-        <Button x:Name="StartTrigger" Content="启动触发器（自动剧情、钓鱼）" Command="{Binding StartTriggerCommand}" HorizontalAlignment="Left" Margin="10,106,0,0" VerticalAlignment="Top" Height="33" Width="252" />
-        
+        <Button x:Name="StartTrigger" Content="启动触发器（自动剧情、钓鱼）" Command="{Binding StartTriggerCommand}" HorizontalAlignment="Left" Margin="10,106,0,0" VerticalAlignment="Top" Height="33" Width="252" Grid.ColumnSpan="2" />
+        <Button x:Name="StopTrigger" Content="关闭触发器" Command="{Binding StopTriggerCommand}" HorizontalAlignment="Left" Margin="10,152,0,0" VerticalAlignment="Top" Height="33" Width="252" Grid.ColumnSpan="2" />
+
     </Grid>
 </Window>

@@ -95,12 +95,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 捕获游戏画面
-                //var sw = new Stopwatch();
-                //sw.Start();
                 var bitmap = _capture.Capture();
-                //sw.Stop();
-                //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
-
                 if (bitmap == null)
                 {
                     _logger.LogWarning("截图失败!");
