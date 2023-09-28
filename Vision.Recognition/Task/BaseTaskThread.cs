@@ -13,13 +13,11 @@ namespace Vision.Recognition.Task;
 /// </summary>
 public class BaseTaskThread
 {
-    protected ILogger<BaseTaskThread> Log;
 
     protected CancellationTokenSource Cancellation;
 
-    public BaseTaskThread(ILogger<BaseTaskThread> logger, CancellationTokenSource cts)
+    public BaseTaskThread(CancellationTokenSource cts)
     {
-        Log = logger;
         Cancellation = cts;
     }
 }

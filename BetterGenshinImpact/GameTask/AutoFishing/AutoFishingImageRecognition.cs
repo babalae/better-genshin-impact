@@ -66,7 +66,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     new OpenCvSharp.Point(-1, -1));
                 Cv2.Dilate(src, src, kernel); //膨胀
 
-                var color = new Scalar(0, 0, 255);
                 Cv2.FindContours(src, out var contours, out _, RetrievalModes.External,
                     ContourApproximationModes.ApproxSimple, null);
                 if (contours.Length > 0)

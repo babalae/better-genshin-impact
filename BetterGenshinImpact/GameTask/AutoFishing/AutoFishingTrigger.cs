@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.AutoFishing.Assets;
+﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -6,9 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using Windows.Win32.Foundation;
 using Vision.Recognition;
 using Vision.Recognition.Helper.OCR;
 using Vision.Recognition.Helper.OpenCv;
+using Vision.Recognition.Helper.Simulator;
 using Vision.Recognition.Task;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using WindowsInput;
@@ -52,12 +55,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return;
                 }
 
-                // 找右下角的 Space 按钮
-                IsExclusive = FindSpaceButtonForExclusive(content);
-                if (IsExclusive)
-                {
-                    _logger.LogInformation("进入钓鱼界面");
-                }
+                // 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
+                // 点击按钮进入独占模式
+                DisplayButtonOnStartFishPageForExclusive(content);
             }
             else
             {
@@ -77,6 +77,44 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     // 钓鱼拉条
                     Fishing(content, new Mat(content.SrcMat, _fishBoxRect));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
+        /// </summary>
+        /// <param name="content"></param>
+        /// <returns></returns>
+        private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
+        {
+            VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
+            var srcMat = content.SrcMat;
+            var rightBottomMat = CutHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
+            var list = CommonRecognition.FindGameButton(rightBottomMat);
+            foreach (var rect in list)
+            {
+                var text = _ocrService.Ocr(new Mat(rightBottomMat, rect).ToBitmap());
+                if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("开始") &&
+                    StringUtils.RemoveAllSpace(text).Contains("钓鱼"))
+                {
+                    VisionContext.Instance().DrawContent.PutRect("StartFishingButton",
+                        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
+                    MaskWindow.Instance().AddButton("开始自动钓鱼",
+                        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2 - 80),
+                        () =>
+                        {
+                            //AutoThrowRodTask
+                            Debug.WriteLine("自动钓鱼，启动！");
+                            IsExclusive = true;
+                            var rc = SystemControl.GetWindowRect((HWND)TaskContext.Instance().GameHandle);
+                            new InputSimulator().Mouse.MoveMouseTo(
+                                (rc.X+srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
+                                PrimaryScreen.WorkingArea.Width,
+                                (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 /
+                                PrimaryScreen.WorkingArea.Height).LeftButtonClick();
+                        });
+                    return;
                 }
             }
         }

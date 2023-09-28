@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -157,6 +158,35 @@ namespace Vision.Recognition
                     Selector.SetIsSelected(child, false);
                 }
             }
+        }
+
+        public ConcurrentDictionary<string, Button> ButtonList { get; set; } = new();
+
+        public void AddButton(string name, Rect position, Action action)
+        {
+            if (ButtonList.ContainsKey(name))
+            {
+                return;
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                var b = new Button
+                {
+                    Name = name,
+                    Content = name,
+                    Width = position.Width,
+                    Height = position.Height
+                };
+
+                b.Click += (e, a) => { action.Invoke(); };
+
+                Canvas.SetLeft(b, position.X);
+                Canvas.SetTop(b, position.Y);
+                WholeCanvas.Children.Add(b);
+                ButtonList[name] = b;
+            });
+
         }
     }
 }

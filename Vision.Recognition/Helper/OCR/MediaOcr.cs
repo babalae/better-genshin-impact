@@ -17,16 +17,17 @@ namespace Vision.Recognition.Helper.OCR
     {
         private static readonly OcrEngine Engine =
             OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans-CN"));
-        public static string StartUpPath { get; private set; } = AppDomain.CurrentDomain.BaseDirectory;
+        //public static string StartUpPath { get; private set; } = AppDomain.CurrentDomain.BaseDirectory;
 
-        public static string Absolute(string relativePath)
-        {
-            return Path.Combine(StartUpPath, relativePath);
-        }
+        //public static string Absolute(string relativePath)
+        //{
+        //    return Path.Combine(StartUpPath, relativePath);
+        //}
 
         /// <summary>
         /// 图片太小的时候这个方法会报错，无法判断图片类型
         /// BitmapDecoder (0x88982F50)
+        /// https://github.com/microsoft/CsWinRT/issues/682
         /// </summary>
         /// <param name="bitmap"></param>
         /// <returns></returns>
@@ -34,10 +35,9 @@ namespace Vision.Recognition.Helper.OCR
         {
             try
             {
-                using var stream = new InMemoryRandomAccessStream();
-                bitmap.Save(stream.AsStream(),
-                    ImageFormat.Png); //choose the specific image format by your own bitmap source
-                var decoder = await BitmapDecoder.CreateAsync(stream);
+                var stream = new InMemoryRandomAccessStream();
+                bitmap.Save(stream.AsStream(), ImageFormat.Png);
+                var decoder = BitmapDecoder.CreateAsync(stream).GetAwaiter().GetResult();
                 var softwareBitmap = await decoder.GetSoftwareBitmapAsync();
                 var ocrResult = await Engine.RecognizeAsync(softwareBitmap);
                 softwareBitmap.Dispose();
@@ -45,20 +45,18 @@ namespace Vision.Recognition.Helper.OCR
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine(e.Message);
                 return null;
             }
         }
 
-        public async Task<OcrResult?> OcrAsyncByFile(Bitmap bitmap)
+        public async Task<OcrResult?> OcrAsyncByBytes(Bitmap bitmap)
         {
             try
             {
-                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp.png");
-                bitmap.Save(path);
-                var storageFile = await StorageFile.GetFileFromPathAsync(path);
-                IRandomAccessStream randomAccessStream = await storageFile.OpenReadAsync();
-                var decoder = await BitmapDecoder.CreateAsync(randomAccessStream);
+                var bytes = BitmapToByte(bitmap);
+                var stream = new MemoryStream(bytes);
+                var decoder = await BitmapDecoder.CreateAsync(stream.AsRandomAccessStream());
                 var softwareBitmap = await decoder.GetSoftwareBitmapAsync();
                 var ocrResult = await Engine.RecognizeAsync(softwareBitmap);
                 softwareBitmap.Dispose();
@@ -66,22 +64,62 @@ namespace Vision.Recognition.Helper.OCR
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine(e.Message);
                 return null;
             }
         }
 
+        /// <summary>
+        /// 将BitMap转换成bytes数组
+        /// </summary>
+        /// <param name="bitmap">要转换的图像</param>
+        /// <returns></returns>
+        private byte[] BitmapToByte(Bitmap bitmap)
+        {
+            // 1.先将BitMap转成内存流
+            var ms = new MemoryStream();
+            bitmap.Save(ms, ImageFormat.Bmp);
+            ms.Seek(0, SeekOrigin.Begin);
+            // 2.再将内存流转成byte[]并返回
+            byte[] bytes = new byte[ms.Length];
+            var _ = ms.Read(bytes, 0, bytes.Length);
+            ms.Dispose();
+            return bytes;
+        }
+
+        //public async Task<OcrResult?> OcrAsyncByFile(Bitmap bitmap)
+        //{
+        //    try
+        //    {
+        //        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "temp.png");
+        //        bitmap.Save(path);
+        //        var storageFile = await StorageFile.GetFileFromPathAsync(path);
+        //        IRandomAccessStream randomAccessStream = await storageFile.OpenReadAsync();
+        //        var decoder = await BitmapDecoder.CreateAsync(randomAccessStream);
+        //        var softwareBitmap = await decoder.GetSoftwareBitmapAsync();
+        //        var ocrResult = await Engine.RecognizeAsync(softwareBitmap);
+        //        softwareBitmap.Dispose();
+        //        return ocrResult;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine(e.Message);
+        //        return null;
+        //    }
+        //}
+
         public string Ocr(Bitmap bitmap)
         {
-            var ocrResult = OcrAsync(bitmap);
-            if (ocrResult.Result == null)
+            var ocrResult = OcrAsyncByBytes(bitmap).GetAwaiter().GetResult();
+
+            if (ocrResult == null)
             {
                 return "";
             }
             else
             {
-                Debug.WriteLine("文字识别结果：" + ocrResult.Result.Text);
-                return ocrResult.Result.Text;
+                Debug.WriteLine("文字识别结果：" + ocrResult.Text);
+                return ocrResult.Text;
             }
         }
     }
