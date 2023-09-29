@@ -2,6 +2,7 @@
 using System.Drawing.Imaging;
 using Windows.Graphics.Capture;
 using Windows.Win32;
+using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Direct3D11;
 using Windows.Win32.Graphics.Dxgi.Common;
 using WinRT;
@@ -12,10 +13,8 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
     {
         public static unsafe Bitmap ToBitmap(this Direct3D11CaptureFrame frame)
         {
-            var texture2dBitmap = Direct3D11Helper.CreateD3D11Texture2D(frame.Surface);
-
-            texture2dBitmap.GetDevice(out var d3dDevice);
-            texture2dBitmap.GetDesc(out D3D11_TEXTURE2D_DESC desc);
+            var texture2d = Direct3D11Helper.CreateD3D11Texture2D(frame.Surface);
+            texture2d.GetDesc(out D3D11_TEXTURE2D_DESC desc);
             D3D11_TEXTURE2D_DESC newDesc = new()
             {
                 Width = (uint)frame.ContentSize.Width,
@@ -29,11 +28,13 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             };
 
             // Create texture copy
+            texture2d.GetDevice(out var d3dDevice);
+            HRESULT result = d3dDevice.GetDeviceRemovedReason();
             d3dDevice.CreateTexture2D(newDesc, default, out ID3D11Texture2D staging);
             d3dDevice.GetImmediateContext(out ID3D11DeviceContext context);
 
             // Copy data
-            context.CopyResource(texture2dBitmap, staging);
+            context.CopyResource(texture2d, staging);
             D3D11_MAPPED_SUBRESOURCE subResource = default;
             context.Map(staging, default, D3D11_MAP.D3D11_MAP_READ, default, &subResource);
 

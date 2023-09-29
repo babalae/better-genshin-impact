@@ -5,6 +5,9 @@
   "emitSingleFile": true,
   "public": true,
   "comInterop": {
-    "useIntPtrForComOutPointers": true
+    "useIntPtrForComOutPointers": true,
+    "preserveSigMethods": [
+      "ID3D11Device.GetDeviceRemovedReason"
+    ]
   }
 }

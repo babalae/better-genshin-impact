@@ -70,8 +70,8 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             // Wrap the native device using a WinRT interop object.
             if (CreateDirect3D11DeviceFromDXGIDevice(d3d11Device.As<IDXGIDevice>(), out Windows.Win32.System.WinRT.IInspectable iInspectable).Succeeded)
             {
-                nint pointer = Marshal.GetIUnknownForObject(iInspectable);
-                return MarshalInterface<IDirect3DDevice>.FromAbi(pointer);
+                nint pointer = Marshal.GetIUnknownForObject(iInspectable); // IUnknown
+                return MarshalInterface<IDirect3DDevice>.FromAbi(pointer); // RCW
             }
 
             return default;
@@ -83,8 +83,8 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             // Wrap the native device using a WinRT interop object.
             if (CreateDirect3D11SurfaceFromDXGISurface(texture.As<IDXGISurface>(), out Windows.Win32.System.WinRT.IInspectable iInspectable).Succeeded)
             {
-                nint pointer = Marshal.GetIUnknownForObject(iInspectable);
-                return MarshalInterface<IDirect3DSurface>.FromAbi(pointer);
+                nint pointer = Marshal.GetIUnknownForObject(iInspectable); // IUnknown
+                return MarshalInterface<IDirect3DSurface>.FromAbi(pointer); // RCW
             }
 
             return default;
@@ -95,7 +95,7 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             device
                 .As<IDirect3DDxgiInterfaceAccess>()
                 .GetInterface(typeof(ID3D11Device).GUID, out var d3dDevice);
-            return MarshalInterface<ID3D11Device>.FromAbi(d3dDevice);
+            return (ID3D11Device)Marshal.GetObjectForIUnknown(d3dDevice); // RCW
         }
 
         public static ID3D11Texture2D CreateD3D11Texture2D(IDirect3DSurface surface)
@@ -103,7 +103,7 @@ namespace Vision.WindowCapture.GraphicsCapture.Helpers
             surface
                 .As<IDirect3DDxgiInterfaceAccess>()
                 .GetInterface(typeof(ID3D11Texture2D).GUID, out var d3dSurface);
-            return MarshalInterface<ID3D11Texture2D>.FromAbi(d3dSurface);
+            return (ID3D11Texture2D)Marshal.GetObjectForIUnknown(d3dSurface); // RCW
         }
     }
 }
