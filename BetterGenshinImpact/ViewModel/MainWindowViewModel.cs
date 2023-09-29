@@ -1,13 +1,16 @@
-﻿using BetterGenshinImpact.GameTask;
+﻿using BetterGenshinImpact.Core.Recognition.Simulator;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Test;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.Windows;
-using Windows.Win32.Foundation;
-using Vision.Recognition;
 using Vision.WindowCapture;
+using Windows.Win32.Foundation;
 using static Windows.Win32.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
@@ -29,6 +32,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             //TestMask();
             //TestRect();
+            Debug.WriteLine(DpiHelper.ScaleY);
         }
 
         [RelayCommand]
@@ -127,17 +131,17 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             GetWindowRect((HWND)hWnd, out var rect);
-            var x = rect.X;
-            var y = rect.Y;
-            var w = rect.Width;
-            var h = rect.Height;
+            //var x = rect.X;
+            //var y = rect.Y;
+            //var w = rect.Width;
+            //var h = rect.Height;
 
-            //var x = (int)Math.Ceiling(rect.X * PrimaryScreen.ScaleX);
-            //var y = (int)Math.Ceiling(rect.Y * PrimaryScreen.ScaleY);
-            //var w = (int)Math.Ceiling(rect.Width * PrimaryScreen.ScaleX);
-            //var h = (int)Math.Ceiling(rect.Height * PrimaryScreen.ScaleY);
-            //Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
-            //Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{w} x {h}");
+            var x = (int)Math.Ceiling(rect.X * PrimaryScreen.ScaleX);
+            var y = (int)Math.Ceiling(rect.Y * PrimaryScreen.ScaleY);
+            var w = (int)Math.Ceiling(rect.Width * PrimaryScreen.ScaleX);
+            var h = (int)Math.Ceiling(rect.Height * PrimaryScreen.ScaleY);
+            Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
+            Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{w} x {h}");
 
             //var x = 0;
             //var y = 0;
@@ -146,10 +150,10 @@ namespace BetterGenshinImpact.ViewModel
 
             _maskWindow = MaskWindow.Instance();
             ////window.Owner = this;
-            _maskWindow.Left = x;
-            _maskWindow.Top = y;
-            _maskWindow.Width = w;
-            _maskWindow.Height = h;
+            _maskWindow.Left = x / DpiHelper.ScaleY;
+            _maskWindow.Top = y / DpiHelper.ScaleY;
+            _maskWindow.Width = w / DpiHelper.ScaleY;
+            _maskWindow.Height = h / DpiHelper.ScaleY;
             _maskWindow.Logger = App.GetLogger<MaskWindow>();
             _maskWindow.Show();
 

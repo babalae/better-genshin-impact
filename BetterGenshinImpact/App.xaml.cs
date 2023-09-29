@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using BetterGenshinImpact.View;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using System;
 using System.IO;
 using System.Windows;
-using Vision.Recognition;
-using WinRT;
 
 namespace BetterGenshinImpact
 {

@@ -19,10 +19,4 @@
     <ProjectReference Include="..\BetterGenshinImpact.Win32\BetterGenshinImpact.Win32.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="MaskWindow.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-  </ItemGroup>
-
 </Project>

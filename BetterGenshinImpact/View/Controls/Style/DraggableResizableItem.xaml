@@ -1,0 +1,77 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls">
+
+    <ResourceDictionary.MergedDictionaries>
+        <!-- SizeChrome 显示宽高的 -->
+        <!-- <ResourceDictionary Source="SizeChrome.xaml"/> -->
+        <ResourceDictionary Source="ResizeRotateChrome.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- 可以拖拽调整大小的 -->
+    <ControlTemplate x:Key="MoveThumbTemplate" TargetType="{x:Type controls:MoveThumb}">
+        <Rectangle Fill="Transparent" />
+    </ControlTemplate>
+
+    <Style x:Key="DraggableResizableItemStyle" TargetType="ContentControl">
+        <Setter Property="MinHeight" Value="5" />
+        <Setter Property="MinWidth" Value="5" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="SnapsToDevicePixels" Value="true" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
+                        <controls:MoveThumb Cursor="SizeAll" Template="{StaticResource MoveThumbTemplate}" />
+                        <ContentPresenter Content="{TemplateBinding ContentControl.Content}"
+                                          Margin="{TemplateBinding Padding}" />
+                        <controls:DesignerItemDecorator x:Name="ItemDecorator" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Selector.IsSelected" Value="True">
+                            <Setter TargetName="ItemDecorator" Property="ShowDecorator" Value="True" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 可以拖拽调整大小的 拖拽按钮在外面 -->
+    <ControlTemplate x:Key="OuterMoveThumbTemplate" TargetType="{x:Type controls:MoveThumb}">
+        <Rectangle x:Name="DragHandle" Fill="Blue" />
+        <!--<ControlTemplate.Triggers>
+            <Trigger Property="Selector.IsSelected" Value="False">
+                <Setter TargetName="DragHandle" Property="Fill" Value="Transparent" />
+            </Trigger>
+        </ControlTemplate.Triggers>-->
+    </ControlTemplate>
+
+    <Style x:Key="OuterDraggableResizableItemStyle" TargetType="ContentControl">
+        <Setter Property="MinHeight" Value="5" />
+        <Setter Property="MinWidth" Value="5" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="SnapsToDevicePixels" Value="true" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
+                        <controls:MoveThumb Width="20" Height="20" Margin="0,-23,0,0" 
+                                     VerticalAlignment="Top" HorizontalAlignment="Left"
+                                     Cursor="SizeAll" Template="{StaticResource OuterMoveThumbTemplate}" />
+                        <ContentPresenter Content="{TemplateBinding ContentControl.Content}"
+                                          Margin="{TemplateBinding Padding}" />
+                        <controls:DesignerItemDecorator x:Name="ItemDecorator" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Selector.IsSelected" Value="True">
+                            <Setter TargetName="ItemDecorator" Property="ShowDecorator" Value="True" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
+</ResourceDictionary>

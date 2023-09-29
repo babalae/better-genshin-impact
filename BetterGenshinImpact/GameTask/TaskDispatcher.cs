@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using Windows.Win32.Foundation;
-using Vision.Recognition.Task;
 using Vision.WindowCapture;
 
 namespace BetterGenshinImpact.GameTask

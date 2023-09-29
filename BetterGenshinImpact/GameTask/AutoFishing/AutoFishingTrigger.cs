@@ -1,6 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
-using BetterGenshinImpact.Utils;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -8,11 +13,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using Windows.Win32.Foundation;
-using Vision.Recognition;
-using Vision.Recognition.Helper.OCR;
-using Vision.Recognition.Helper.OpenCv;
-using Vision.Recognition.Helper.Simulator;
-using Vision.Recognition.Task;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using WindowsInput;
 

@@ -1,15 +1,7 @@
-﻿using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using Vision.Recognition.Helper.OpenCv;
-using Vision.Recognition.Task;
-using WindowsInput;
-using BetterGenshinImpact.GameTask.AutoSkip;
 using Microsoft.Extensions.Logging;
+using WindowsInput;
 
 namespace BetterGenshinImpact.GameTask.AutoPick
 {

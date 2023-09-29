@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Windows;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.Utils.Extensions;
+using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
-using Vision.Recognition;
-using Vision.Recognition.Helper.OpenCv;
-using Vision.Recognition.Task;
+using System;
+using System.Diagnostics;
 using WindowsInput;
 using Point = OpenCvSharp.Point;
 

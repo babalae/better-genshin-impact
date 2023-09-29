@@ -1,0 +1,49 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:adorners="clr-namespace:BetterGenshinImpact.View.Controls.Adorners">
+
+  <adorners:DoubleFormatConverter x:Key="doubleFormatConverter"/>
+
+  <Style TargetType="{x:Type adorners:SizeChrome}">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="{x:Type adorners:SizeChrome}">
+          <Grid SnapsToDevicePixels="True">
+            <Path Stroke="Red"
+                  StrokeThickness="1"
+                  Height="10"
+                  VerticalAlignment="Bottom"
+                  Margin="-2,0,-2,-15"
+                  Stretch="Fill"
+                  Data="M0,0 0,10 M 0,5 100,5 M 100,0 100,10"/>
+            <TextBlock Text="{Binding Path=Width, Converter={StaticResource doubleFormatConverter}}"
+                       Background="White"
+                       Padding="3,0,3,0"
+                       Foreground="Red"
+                       Margin="0,0,0,-18"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom"/>
+            <Path Stroke="Red"
+                  StrokeThickness="1"
+                  Width="10"
+                  HorizontalAlignment="Right"
+                  Margin="0,-2,-15,-2"
+                  Stretch="Fill"
+                  Data="M5,0 5,100 M 0,0 10,0 M 0,100 10,100"/>
+            <TextBlock Text="{Binding Path=Height, Converter={StaticResource doubleFormatConverter}}"
+                       Background="White"
+                       Foreground="Red"
+                       Padding="3,0,3,0"
+                       Margin="0,0,-18,0"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center">
+              <TextBlock.LayoutTransform>
+                <RotateTransform Angle="90" CenterX="1" CenterY="0.5"/>
+              </TextBlock.LayoutTransform>
+            </TextBlock>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+</ResourceDictionary>

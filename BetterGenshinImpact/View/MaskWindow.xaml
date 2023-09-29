@@ -1,0 +1,73 @@
+﻿<Window x:Class="BetterGenshinImpact.View.MaskWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MaskWindow" Height="600" Width="800"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        Topmost="True"
+        DataContext="{Binding RelativeSource={RelativeSource Self}}">
+    <!-- ShowInTaskbar="False" -->
+    <Window.Background>
+        <SolidColorBrush Color="#FFB0B0B0"
+                         Opacity="0" />
+    </Window.Background>
+    <Window.Style>
+        <Style TargetType="Window">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Window">
+                        <Border BorderBrush="BlueViolet" BorderThickness="1">
+                            <ContentPresenter />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Style>
+
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Style/DraggableResizableItem.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+
+    <AdornerDecorator ClipToBounds="True">
+        <Canvas x:Name="WholeCanvas" SnapsToDevicePixels="True">
+
+            <!--<CheckBox x:Name="TestChk" Click="OnClick"
+                      Content=" select"
+                      Foreground="LightGray"
+                      FontFamily="UISegoe"
+                      FontSize="15"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />-->
+
+            <ContentControl Height="188" Canvas.Left="20" Canvas.Top="500" Width="477"
+                            Style="{StaticResource OuterDraggableResizableItemStyle}">
+                <RichTextBox
+                    x:Name="LogTextBox"
+                    Background="Transparent"
+                    Foreground="LightGray"
+                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                    BorderThickness="0"
+                    VerticalScrollBarVisibility="Hidden"/>
+            </ContentControl>
+
+            <!--<ContentControl Width="230"
+                            Height="130"
+                            Canvas.Top="150"
+                            Canvas.Left="470"
+                            Style="{StaticResource DraggableResizableItemStyle}">
+                <Grid>
+                    <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
+                    <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Grid>
+            </ContentControl>-->
+        </Canvas>
+    </AdornerDecorator>
+
+</Window>
