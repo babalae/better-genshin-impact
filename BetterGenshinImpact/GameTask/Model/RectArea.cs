@@ -196,7 +196,6 @@ public class RectArea
         {
             throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
         }
-
         var p = MatchTemplateHelper.FindSingleTarget(SrcGreyMat, targetImageMat);
         return p is { X: > 0, Y: > 0 } ? new RectArea(targetImageMat, p.X - targetImageMat.Width / 2, p.Y - targetImageMat.Height / 2, this) : new RectArea();
     }
