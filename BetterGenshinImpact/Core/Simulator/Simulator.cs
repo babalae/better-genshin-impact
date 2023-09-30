@@ -1,6 +1,6 @@
 ﻿using Windows.Win32.Foundation;
 
-namespace BetterGenshinImpact.Core.Recognition.Simulator;
+namespace BetterGenshinImpact.Core.Simulator;
 
 public class Simulator
 {

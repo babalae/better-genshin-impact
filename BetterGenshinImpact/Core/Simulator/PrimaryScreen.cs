@@ -5,7 +5,7 @@ using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Gdi;
 using static Windows.Win32.PInvoke;
 
-namespace BetterGenshinImpact.Core.Recognition.Simulator
+namespace BetterGenshinImpact.Core.Simulator
 {
     public class PrimaryScreen
     {

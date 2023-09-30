@@ -2,7 +2,7 @@
 using Windows.Win32.Foundation;
 using static Windows.Win32.PInvoke;
 
-namespace BetterGenshinImpact.Core.Recognition.Simulator;
+namespace BetterGenshinImpact.Core.Simulator;
 
 public class PostMessageSimulator
 {
@@ -20,7 +20,7 @@ public class PostMessageSimulator
     /// <param name="y"></param>
     public void LeftButtonClick(int x, int y)
     {
-        LPARAM p = (y << 16) | x;
+        LPARAM p = y << 16 | x;
         PostMessage(_hWnd, WM_LBUTTONDOWN, default, p);
         Thread.Sleep(100);
         PostMessage(_hWnd, WM_LBUTTONUP, default, p);

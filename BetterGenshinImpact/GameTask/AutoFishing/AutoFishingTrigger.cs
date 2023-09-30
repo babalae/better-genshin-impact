@@ -1,7 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Recognition.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;

@@ -1,8 +1,8 @@
 ﻿using BetterGenshinImpact.GameTask;
 using OpenCvSharp;
 using System;
-using BetterGenshinImpact.Core.Recognition.Simulator;
 using Windows.Win32.Foundation;
+using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.Helpers.Extensions
 {

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.Simulator;
+﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;

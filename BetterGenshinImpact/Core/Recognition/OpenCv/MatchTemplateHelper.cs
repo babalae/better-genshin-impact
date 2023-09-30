@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 {
     public class MatchTemplateHelper
     {
-        private static ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
+        private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
 
         public static double WidthScale = 1;
         public static double HeightScale = 1;

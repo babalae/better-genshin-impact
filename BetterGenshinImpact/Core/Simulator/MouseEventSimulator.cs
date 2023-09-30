@@ -3,14 +3,14 @@ using System.Windows;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using static Windows.Win32.PInvoke;
 
-namespace BetterGenshinImpact.Core.Recognition.Simulator;
+namespace BetterGenshinImpact.Core.Simulator;
 
 public class MouseEventSimulator
 {
     public static void Move(int x, int y)
     {
         mouse_event(
-            MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE|MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE,
+            MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE,
             x * 65535 / PrimaryScreen.DESKTOP.Width,
             y * 65535 / PrimaryScreen.DESKTOP.Height,
             0,
