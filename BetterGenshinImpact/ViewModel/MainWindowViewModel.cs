@@ -1,17 +1,15 @@
-﻿using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask;
+﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Test;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fischless.WindowCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Windows;
-using Vision.WindowCapture;
-using Windows.Win32.Foundation;
-using static Windows.Win32.PInvoke;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -19,7 +17,7 @@ namespace BetterGenshinImpact.ViewModel
     {
         [ObservableProperty] private string[] _modeNames = WindowCaptureFactory.ModeNames();
 
-        [ObservableProperty] private string? _selectedMode = CaptureModeEnum.BitBlt.ToString();
+        [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
         private MaskWindow? _maskWindow;
         private readonly ILogger<MainWindowViewModel> _logger = App.GetLogger<MainWindowViewModel>();
@@ -98,7 +96,7 @@ namespace BetterGenshinImpact.ViewModel
 
         private void ShowMaskWindow(IntPtr hWnd)
         {
-            GetWindowRect((HWND)hWnd, out var rect);
+            User32.GetWindowRect(hWnd, out var rect);
             //var x = rect.X;
             //var y = rect.Y;
             //var w = rect.Width;

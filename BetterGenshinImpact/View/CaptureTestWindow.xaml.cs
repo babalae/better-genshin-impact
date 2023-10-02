@@ -1,10 +1,10 @@
 ﻿using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.WindowCapture;
 using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
-using Windows.Win32.Foundation;
-using Vision.WindowCapture;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.View.Test
 {
@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.View.Test
             InitializeComponent();
         }
 
-        public void StartCapture(IntPtr hWnd, CaptureModeEnum captureMode)
+        public void StartCapture(IntPtr hWnd, CaptureModes captureMode)
         {
             if (hWnd == IntPtr.Zero)
             {
@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.View.Test
 
 
             _capture = WindowCaptureFactory.Create(captureMode);
-            _capture.Start((HWND)hWnd);
+            _capture.Start(hWnd);
 
             CompositionTarget.Rendering += Loop;
         }

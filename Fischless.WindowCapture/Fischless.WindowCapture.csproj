@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0-windows10.0.22621.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>x64</Platforms>
+		<UseWindowsForms>True</UseWindowsForms>
+		<UseWPF>True</UseWPF>
+		<LangVersion>11.0</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+		<PackageReference Include="Vanara.PInvoke.Gdi32" Version="3.4.16" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.16" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.16" />
+		<PackageReference Include="Vanara.Windows.Extensions" Version="3.4.16" />
+	</ItemGroup>
+
+</Project>

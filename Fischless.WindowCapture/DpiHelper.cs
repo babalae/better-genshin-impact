@@ -1,13 +1,10 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Interop;
+﻿using System.Windows.Interop;
 using Vanara.PInvoke;
-using HMONITOR = Vanara.PInvoke.HMONITOR;
-using HWND = Vanara.PInvoke.HWND;
+using Application = System.Windows.Application;
 
-namespace BetterGenshinImpact.Helpers;
+namespace Fischless.WindowCapture;
 
-public class DpiHelper
+internal static class DpiHelper
 {
     public static float ScaleY => GetScaleY();
 
@@ -18,13 +15,13 @@ public class DpiHelper
         {
             HWND hWnd = new WindowInteropHelper(Application.Current?.MainWindow).Handle;
             HMONITOR hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
-            SHCore.GetDpiForMonitor(hMonitor, SHCore.MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out _, out uint dpiY);
+            _ = SHCore.GetDpiForMonitor(hMonitor, SHCore.MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out _, out uint dpiY);
             return dpiY / 96f;
         }
 
-        Vanara.PInvoke.HDC hdc = User32.GetDC(HWND.NULL);
+        HDC hdc = User32.GetDC(HWND.NULL);
         float scaleY = Gdi32.GetDeviceCaps(hdc, Gdi32.DeviceCap.LOGPIXELSY);
-        _ = User32.ReleaseDC(0, hdc);
+        _ = User32.ReleaseDC(HWND.NULL, hdc);
         return scaleY / 96f;
     }
 }

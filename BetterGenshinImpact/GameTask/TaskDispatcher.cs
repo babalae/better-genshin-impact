@@ -1,13 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Fischless.WindowCapture;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Windows;
-using Windows.Win32.Foundation;
-using BetterGenshinImpact.GameTask.Model;
-using Vision.WindowCapture;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -30,7 +28,7 @@ namespace BetterGenshinImpact.GameTask
             //_timer.Tick += Tick;
         }
 
-        public void Start(IntPtr hWnd, CaptureModeEnum mode, int interval = 50)
+        public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化任务上下文
             TaskContext.Instance().Init(hWnd);
@@ -39,7 +37,7 @@ namespace BetterGenshinImpact.GameTask
 
             // 初始化截图器
             _capture = WindowCaptureFactory.Create(mode);
-            _capture.Start((HWND)hWnd);
+            _capture.Start(hWnd);
 
             // 启动定时器
             _frameIndex = 0;

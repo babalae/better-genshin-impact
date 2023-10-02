@@ -1,16 +1,20 @@
-﻿using System.Threading;
-using Windows.Win32.Foundation;
-using static Windows.Win32.PInvoke;
+﻿using System;
+using System.Threading;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Simulator;
 
 public class PostMessageSimulator
 {
-    private readonly HWND _hWnd;
+    public static readonly uint WM_LBUTTONDOWN = 0x201; //按下鼠标左键
 
-    public PostMessageSimulator(HWND hWnd)
+    public static readonly uint WM_LBUTTONUP = 0x202; //释放鼠标左键
+
+    private readonly IntPtr _hWnd;
+
+    public PostMessageSimulator(IntPtr hWnd)
     {
-        _hWnd = hWnd;
+        this._hWnd = hWnd;
     }
 
     /// <summary>
@@ -20,10 +24,10 @@ public class PostMessageSimulator
     /// <param name="y"></param>
     public void LeftButtonClick(int x, int y)
     {
-        LPARAM p = y << 16 | x;
-        PostMessage(_hWnd, WM_LBUTTONDOWN, default, p);
+        IntPtr p = (y << 16) | x;
+        User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero, p);
         Thread.Sleep(100);
-        PostMessage(_hWnd, WM_LBUTTONUP, default, p);
+        User32.PostMessage(_hWnd, WM_LBUTTONUP, IntPtr.Zero, p);
     }
 
     /// <summary>
@@ -31,7 +35,7 @@ public class PostMessageSimulator
     /// </summary>
     public void LeftButtonDown()
     {
-        PostMessage(_hWnd, WM_LBUTTONDOWN, default, default);
+        User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero);
     }
 
     /// <summary>
@@ -39,6 +43,6 @@ public class PostMessageSimulator
     /// </summary>
     public void LeftButtonUp()
     {
-        PostMessage(_hWnd, WM_LBUTTONUP, default, default);
+        User32.PostMessage(_hWnd, WM_LBUTTONUP, IntPtr.Zero);
     }
 }

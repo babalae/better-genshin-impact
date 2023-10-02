@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using Windows.Win32.Foundation;
-using static Windows.Win32.PInvoke;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -21,8 +20,8 @@ namespace BetterGenshinImpact.GameTask
 
         public static bool IsGenshinImpactActive2()
         {
-            var hWnd = GetForegroundWindow();
-            return (nint)hWnd == TaskContext.Instance().GameHandle;
+            var hWnd = User32.GetForegroundWindow();
+            return hWnd == TaskContext.Instance().GameHandle;
         }
 
         public static nint FindHandleByProcessName(params string[] names)
@@ -39,29 +38,26 @@ namespace BetterGenshinImpact.GameTask
             return 0;
         }
 
-        public static unsafe string? GetActiveProcessName()
+        public static string? GetActiveProcessName()
         {
             try
             {
-                var hWnd = GetForegroundWindow();
-                uint pid = default;
-                _ = GetWindowThreadProcessId(hWnd, &pid);
+                var hWnd = User32.GetForegroundWindow();
+                _ = User32.GetWindowThreadProcessId(hWnd, out var pid);
                 var p = Process.GetProcessById((int)pid);
                 return p.ProcessName;
             }
-            catch (Exception ex)
+            catch
             {
-                Debug.WriteLine(ex);
                 return null;
             }
         }
 
-        public static unsafe Process GetProcessByHandle(nint hWnd)
+        public static Process? GetProcessByHandle(IntPtr hWnd)
         {
             try
             {
-                uint pid = default;
-                _ = GetWindowThreadProcessId((HWND)hWnd, &pid);
+                _ = User32.GetWindowThreadProcessId(hWnd, out var pid);
                 var p = Process.GetProcessById((int)pid);
                 return p;
             }
@@ -79,7 +75,7 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         public static RECT GetWindowRect(IntPtr hWnd)
         {
-            Windows.Win32.PInvoke.GetWindowRect((HWND)hWnd, out var windowRect);
+            User32.GetWindowRect(hWnd, out var windowRect);
             return windowRect;
         }
 
@@ -90,7 +86,7 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         public static RECT GetGameScreenRect(IntPtr hWnd)
         {
-            GetClientRect((HWND)hWnd, out var clientRect);
+            User32.GetClientRect(hWnd, out var clientRect);
             return clientRect;
         }
 

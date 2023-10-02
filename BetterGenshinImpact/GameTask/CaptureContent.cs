@@ -17,6 +17,8 @@ public class CaptureContent
     public int FrameIndex { get; }
     public double TimerInterval { get; }
 
+    public int FrameRate => (int)(1000 /  TimerInterval);
+
     public RectArea CaptureRectArea { get; private set; }
 
     public CaptureContent(Bitmap srcBitmap, int frameIndex, double interval)

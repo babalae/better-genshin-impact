@@ -1,13 +1,7 @@
 ﻿using BetterGenshinImpact.Helpers;
-using Microsoft.Win32.SafeHandles;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Windows.Win32.Foundation;
-using OpenCvSharp;
+using Vanara.PInvoke;
 using Size = System.Drawing.Size;
 
 namespace BetterGenshinImpact.GameTask.Model

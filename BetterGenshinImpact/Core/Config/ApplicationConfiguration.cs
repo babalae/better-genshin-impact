@@ -1,7 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using System;
-using Vision.WindowCapture;
+using Fischless.WindowCapture;
 
 namespace BetterGenshinImpact.Core.Config
 {
@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 窗口捕获的方式
         /// </summary>
-        public string CaptureMode { get; set; } = CaptureModeEnum.BitBlt.ToString();
+        public string CaptureMode { get; set; } = CaptureModes.BitBlt.ToString();
 
         /// <summary>
         /// 窗口捕获帧数/触发器触发频率

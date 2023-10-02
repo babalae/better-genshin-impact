@@ -1,8 +1,7 @@
-﻿using System.Threading;
+﻿using BetterGenshinImpact.Helpers;
+using System.Threading;
 using System.Windows;
-using Windows.Win32.UI.Input.KeyboardAndMouse;
-using BetterGenshinImpact.Helpers;
-using static Windows.Win32.PInvoke;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Simulator;
 
@@ -10,22 +9,19 @@ public class MouseEventSimulator
 {
     public static void Move(int x, int y)
     {
-        mouse_event(
-            MOUSE_EVENT_FLAGS.MOUSEEVENTF_ABSOLUTE | MOUSE_EVENT_FLAGS.MOUSEEVENTF_MOVE,
-            x * 65535 / PrimaryScreen.DESKTOP.Width,
-            y * 65535 / PrimaryScreen.DESKTOP.Height,
-            0,
-            0);
+        User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF.MOUSEEVENTF_MOVE,
+            x * 65535 / PrimaryScreen.DESKTOP.Width, y * 65535 / PrimaryScreen.DESKTOP.Height,
+            0, 0);
     }
 
     public static void LeftButtonDown()
     {
-        mouse_event(MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+        User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
     }
 
     public static void LeftButtonUp()
     {
-        mouse_event(MOUSE_EVENT_FLAGS.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+        User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
     public static bool Click(int x, int y)

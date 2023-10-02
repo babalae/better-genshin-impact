@@ -1,6 +1,7 @@
-﻿using System.Drawing;
-using Windows.Win32.Graphics.Gdi;
-using static Windows.Win32.PInvoke;
+﻿using System;
+using System.Drawing;
+using static Vanara.PInvoke.Gdi32;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Helpers
 {
@@ -13,13 +14,13 @@ namespace BetterGenshinImpact.Helpers
         {
             get
             {
-                var hdc = GetDC(default);
+                var hdc = User32.GetDC(IntPtr.Zero);
                 var size = new Size
                 {
-                    Width = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.HORZRES),
-                    Height = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.VERTRES)
+                    Width = Gdi32.GetDeviceCaps(hdc, DeviceCap.HORZRES),
+                    Height = Gdi32.GetDeviceCaps(hdc, DeviceCap.VERTRES)
                 };
-                ReleaseDC(default, hdc);
+                User32.ReleaseDC(IntPtr.Zero, hdc);
                 return size;
             }
         }
@@ -30,9 +31,9 @@ namespace BetterGenshinImpact.Helpers
         {
             get
             {
-                var hdc = GetDC(default);
-                var dpiX = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.LOGPIXELSX);
-                ReleaseDC(default, hdc);
+                var hdc = User32.GetDC(IntPtr.Zero);
+                var dpiX = Gdi32.GetDeviceCaps(hdc, DeviceCap.LOGPIXELSX);
+                User32.ReleaseDC(IntPtr.Zero, hdc);
                 return dpiX;
             }
         }
@@ -43,9 +44,9 @@ namespace BetterGenshinImpact.Helpers
         {
             get
             {
-                var hdc = GetDC(default);
-                var dpiX = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.LOGPIXELSY);
-                ReleaseDC(default, hdc);
+                var hdc = User32.GetDC(IntPtr.Zero);
+                var dpiX = Gdi32.GetDeviceCaps(hdc, DeviceCap.LOGPIXELSY);
+                User32.ReleaseDC(IntPtr.Zero, hdc);
                 return dpiX;
             }
         }
@@ -56,13 +57,13 @@ namespace BetterGenshinImpact.Helpers
         {
             get
             {
-                var hdc = GetDC(default);
+                var hdc = User32.GetDC(IntPtr.Zero);
                 var size = new Size
                 {
-                    Width = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPHORZRES),
-                    Height = GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPVERTRES)
+                    Width = Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPHORZRES),
+                    Height = Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPVERTRES)
                 };
-                ReleaseDC(default, hdc);
+                User32.ReleaseDC(IntPtr.Zero, hdc);
                 return size;
             }
         }
@@ -74,9 +75,9 @@ namespace BetterGenshinImpact.Helpers
         {
             get
             {
-                var hdc = GetDC(default);
-                var scaleX = (float)GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPHORZRES) / GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.HORZRES);
-                ReleaseDC(default, hdc);
+                var hdc = User32.GetDC(IntPtr.Zero);
+                var scaleX = (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPHORZRES) / (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.HORZRES);
+                User32.ReleaseDC(IntPtr.Zero, hdc);
                 return scaleX;
             }
         }
@@ -87,11 +88,12 @@ namespace BetterGenshinImpact.Helpers
         {
             get
             {
-                var hdc = GetDC(default);
-                var scaleY = (float)GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.DESKTOPVERTRES) / GetDeviceCaps(hdc, GET_DEVICE_CAPS_INDEX.VERTRES);
-                ReleaseDC(default, hdc);
+                var hdc = User32.GetDC(IntPtr.Zero);
+                var scaleY = (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.DESKTOPVERTRES) / (float)Gdi32.GetDeviceCaps(hdc, DeviceCap.VERTRES);
+                User32.ReleaseDC(IntPtr.Zero, hdc);
                 return scaleY;
             }
         }
     }
+
 }

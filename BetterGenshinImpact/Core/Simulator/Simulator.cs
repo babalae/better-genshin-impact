@@ -1,10 +1,10 @@
-﻿using Windows.Win32.Foundation;
+﻿using System;
 
 namespace BetterGenshinImpact.Core.Simulator;
 
 public class Simulator
 {
-    public static PostMessageSimulator PostMessage(HWND hWnd)
+    public static PostMessageSimulator PostMessage(IntPtr hWnd)
     {
         return new PostMessageSimulator(hWnd);
     }
