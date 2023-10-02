@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Model;
 using System;
+using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -33,9 +34,12 @@ namespace BetterGenshinImpact.GameTask
         {
             GameHandle = hWnd;
             SystemInfo = new SystemInfo(hWnd);
+            DpiScale = DpiHelper.ScaleY;
         }
 
         public IntPtr GameHandle { get; set; }
+
+        public float DpiScale;
 
 
         public SystemInfo SystemInfo { get; set; }

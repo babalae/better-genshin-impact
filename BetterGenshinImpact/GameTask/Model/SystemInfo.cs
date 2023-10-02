@@ -24,6 +24,11 @@ namespace BetterGenshinImpact.GameTask.Model
         /// </summary>
         public double AssetScale { get;  }
 
+        /// <summary>
+        /// 游戏窗口内分辨率
+        /// </summary>
+        public RECT GameWindowRect { get; }
+
         public Process GameProcess { get;  }
 
         public string GameProcessName { get; }
@@ -34,15 +39,19 @@ namespace BetterGenshinImpact.GameTask.Model
 
         public SystemInfo(IntPtr hWnd)
         {
+            var p = SystemControl.GetProcessByHandle(hWnd);
+            GameProcess = p ?? throw new ArgumentException("通过句柄获取游戏进程失败");
+            GameProcessName = GameProcess.ProcessName;
+            GameProcessId = GameProcess.Id;
+
             DisplaySize = PrimaryScreen.WorkingArea;
             DesktopRectArea = new RectArea( 0, 0, DisplaySize.Width, DisplaySize.Height);
             // 注意截图区域要和游戏窗口实际区域一致
             // todo 窗口移动后？
             GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
             AssetScale = GameScreenSize.Width / 1920d;
-            GameProcess = SystemControl.GetProcessByHandle(hWnd);
-            GameProcessName = GameProcess.ProcessName;
-            GameProcessId = GameProcess.Id;
+            GameWindowRect = SystemControl.GetWindowRect(hWnd);
+
         }
     }
 }

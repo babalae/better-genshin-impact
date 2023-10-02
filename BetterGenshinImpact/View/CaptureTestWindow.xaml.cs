@@ -29,6 +29,7 @@ namespace BetterGenshinImpact.View.Test
 
 
             _capture = WindowCaptureFactory.Create(captureMode);
+            _capture.IsClientEnabled = true;
             _capture.Start(hWnd);
 
             CompositionTarget.Rendering += Loop;

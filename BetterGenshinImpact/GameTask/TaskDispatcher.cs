@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Vanara.PInvoke;
 
@@ -37,6 +38,7 @@ namespace BetterGenshinImpact.GameTask
 
             // 初始化截图器
             _capture = WindowCaptureFactory.Create(mode);
+            _capture.IsClientEnabled = true;
             _capture.Start(hWnd);
 
             // 启动定时器

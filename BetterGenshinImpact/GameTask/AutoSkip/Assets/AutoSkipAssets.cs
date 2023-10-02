@@ -27,7 +27,7 @@ public class AutoSkipAssets
             RecognitionType = RecognitionType.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
             RegionOfInterest = new Rect(info.GameScreenSize.Width / 2, 0, info.GameScreenSize.Width - info.GameScreenSize.Width / 2, info.GameScreenSize.Height),
-            DrawOnWindow = true
+            DrawOnWindow = false
         };
         OptionButtonRo.InitTemplate();
         MenuRo = new RecognitionObject
@@ -36,7 +36,7 @@ public class AutoSkipAssets
             RecognitionType = RecognitionType.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "menu.png"),
             RegionOfInterest = new Rect(0, 0, info.GameScreenSize.Width / 4, info.GameScreenSize.Height / 4),
-            DrawOnWindow = true
+            DrawOnWindow = false
         };
         MenuRo.InitTemplate();
     }

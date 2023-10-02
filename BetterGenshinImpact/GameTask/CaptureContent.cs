@@ -27,7 +27,7 @@ public class CaptureContent
         FrameIndex = frameIndex;
         TimerInterval = interval;
         var systemInfo = TaskContext.Instance().SystemInfo;
-        CaptureRectArea = new RectArea(srcBitmap, systemInfo.GameScreenSize.X, systemInfo.GameScreenSize.Y, systemInfo.DesktopRectArea);
+        CaptureRectArea = new RectArea(srcBitmap, systemInfo.GameWindowRect.X, systemInfo.GameWindowRect.Y, systemInfo.DesktopRectArea);
     }
 
     private Mat? _srcMat;

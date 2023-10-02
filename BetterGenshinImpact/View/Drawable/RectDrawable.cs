@@ -2,6 +2,8 @@
 using System.Drawing;
 using System.Windows;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Drawable
 {
@@ -53,17 +55,22 @@ namespace BetterGenshinImpact.View.Drawable
     {
         public static RectDrawable ToRectDrawable(this Rect rect, Pen? pen = null, string? name = null)
         {
+            var scale = TaskContext.Instance().DpiScale;
+            rect.X /= scale;
+            rect.Y /= scale;
+            rect.Width /= scale;
+            rect.Height /= scale;
             return new RectDrawable(rect, pen, name);
         }
 
         public static RectDrawable ToRectDrawable(this OpenCvSharp.Rect rect, Pen? pen = null, string? name = null)
         {
+            var scale = TaskContext.Instance().DpiScale;
+            rect.X = (int)(rect.X / scale);
+            rect.Y = (int)(rect.Y / scale);
+            rect.Width = (int)(rect.Width / scale);
+            rect.Height = (int)(rect.Height / scale);
             return new RectDrawable(rect.ToWindowsRectangle(), pen, name);
-        }
-
-        public static RectDrawable ToRectDrawable(this Rect rect, string? name)
-        {
-            return new RectDrawable(rect, name);
         }
     }
 }

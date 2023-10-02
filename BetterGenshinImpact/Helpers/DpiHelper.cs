@@ -2,8 +2,6 @@
 using System.Windows;
 using System.Windows.Interop;
 using Vanara.PInvoke;
-using HMONITOR = Vanara.PInvoke.HMONITOR;
-using HWND = Vanara.PInvoke.HWND;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -22,7 +20,7 @@ public class DpiHelper
             return dpiY / 96f;
         }
 
-        Vanara.PInvoke.HDC hdc = User32.GetDC(HWND.NULL);
+        HDC hdc = User32.GetDC(HWND.NULL);
         float scaleY = Gdi32.GetDeviceCaps(hdc, Gdi32.DeviceCap.LOGPIXELSY);
         _ = User32.ReleaseDC(0, hdc);
         return scaleY / 96f;
