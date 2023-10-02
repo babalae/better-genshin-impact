@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
-using WindowsInput;
-using static Vanara.PInvoke.Gdi32;
+using System;
+using System.Drawing;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.Model;
@@ -165,6 +159,11 @@ public class RectArea
         return ConvertRelativePositionTo(0);
     }
 
+    public Rect ConvertRelativePositionToCaptureArea()
+    {
+        return ConvertRelativePositionTo(1);
+    }
+
     public Rect ToRect()
     {
         return new Rect(X, Y, Width, Height);
@@ -190,14 +189,93 @@ public class RectArea
     /// </summary>
     /// <param name="targetImageMat"></param>
     /// <returns></returns>
+    [Obsolete]
     public RectArea Find(Mat targetImageMat)
     {
         if (!HasImage())
         {
             throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
         }
-        var p = MatchTemplateHelper.FindSingleTarget(SrcGreyMat, targetImageMat);
+
+        var p = OldMatchTemplateHelper.FindSingleTarget(SrcGreyMat, targetImageMat);
         return p is { X: > 0, Y: > 0 } ? new RectArea(targetImageMat, p.X - targetImageMat.Width / 2, p.Y - targetImageMat.Height / 2, this) : new RectArea();
+    }
+
+    /// <summary>
+    /// 在本区域内查找识别对象
+    /// </summary>
+    /// <param name="ro"></param>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public RectArea Find(RecognitionObject ro, Action<RectArea>? action = null)
+    {
+        if (!HasImage())
+        {
+            throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
+        }
+
+        if (ro == null)
+        {
+            throw new Exception("识别对象不能为null");
+        }
+
+        if (RecognitionType.TemplateMatch.Equals(ro.RecognitionType))
+        {
+            if (ro.TemplateImageGreyMat == null)
+            {
+                throw new Exception("识别对象的模板图片不能为null");
+            }
+
+            var roi = SrcGreyMat;
+            if (ro.RegionOfInterest != Rect.Empty)
+            {
+                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+            }
+
+            var p = MatchTemplateHelper.MatchTemplate(roi, ro.TemplateImageGreyMat, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
+            if (p is { X: > 0, Y: > 0 })
+            {
+                var newRa = new RectArea(ro.TemplateImageGreyMat, p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.PutRect(ro.Name, newRa
+                        .ConvertRelativePositionToCaptureArea()
+                        .ToRectDrawable(ro.DrawOnWindowPen, ro.Name));
+                }
+                action?.Invoke(newRa);
+                return newRa;
+            }
+            else
+            {
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                }
+
+                return new RectArea();
+            }
+        }
+        else
+        {
+            throw new Exception($"RectArea不支持的识别类型{ro.RecognitionType}");
+        }
+    }
+
+    /// <summary>
+    /// 找到识别对象并点击中心
+    /// </summary>
+    /// <param name="ro"></param>
+    /// <returns></returns>
+    public RectArea ClickCenter(RecognitionObject ro)
+    {
+        var ra = Find(ro);
+        if (!ra.IsEmpty())
+        {
+            ra.ClickCenter();
+        }
+
+        return ra;
     }
 
     /// <summary>
@@ -205,6 +283,7 @@ public class RectArea
     /// </summary>
     /// <param name="targetImageMat"></param>
     /// <returns></returns>
+    [Obsolete]
     public RectArea ClickCenter(Mat targetImageMat)
     {
         var ra = Find(targetImageMat);

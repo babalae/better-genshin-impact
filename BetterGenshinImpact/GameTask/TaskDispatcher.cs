@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using Windows.Win32.Foundation;
+using BetterGenshinImpact.GameTask.Model;
 using Vision.WindowCapture;
 
 namespace BetterGenshinImpact.GameTask
@@ -19,7 +20,7 @@ namespace BetterGenshinImpact.GameTask
 
         private IWindowCapture? _capture;
 
-        private static object _locker = new();
+        private static readonly object _locker = new();
         private int _frameIndex = 0;
         private int _frameRate = 30;
 
@@ -102,7 +103,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                var content = new CaptureContent(bitmap, _frameIndex, _frameRate);
+                var content = new CaptureContent(bitmap, _frameIndex, _frameRate, new RectArea());
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {

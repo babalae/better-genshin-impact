@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 
         public Point Click(Mat targetMat, double threshold = 0.8, int intervalMillisecond = 300)
         {
-            Point p = MatchTemplateHelper.FindSingleTarget(SrcMat, targetMat, threshold);
+            Point p = OldMatchTemplateHelper.FindSingleTarget(SrcMat, targetMat, threshold);
             if (p.X > 0 && p.Y > 0)
             {
                 //VisionContext.Instance().DrawContent.PutRect("ClickMatch", new System.Windows.Rect(
@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 
         public Point Exist(Mat targetMat, double threshold = 0.8)
         {
-            return MatchTemplateHelper.FindSingleTarget(SrcMat, targetMat, threshold);
+            return OldMatchTemplateHelper.FindSingleTarget(SrcMat, targetMat, threshold);
         }
     }
 }

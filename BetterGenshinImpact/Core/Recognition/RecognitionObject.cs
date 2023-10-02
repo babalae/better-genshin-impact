@@ -2,16 +2,19 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
-using Rect = System.Windows.Rect;
 
 namespace BetterGenshinImpact.Core.Recognition;
 
 /// <summary>
 /// 识别对象
 /// </summary>
+[Serializable]
 public class RecognitionObject
 {
     public RecognitionType RecognitionType { get; set; }
@@ -23,9 +26,15 @@ public class RecognitionObject
     #region 模板匹配
 
     /// <summary>
-    /// 模板匹配的对象
+    /// 模板匹配的对象(彩色)
     /// </summary>
-    public Mat TemplateImageMat { get; set; }
+    public Mat? TemplateImageMat { get; set; }
+
+    /// <summary>
+    /// 模板匹配的对象(灰色)
+    /// </summary>
+    public Mat? TemplateImageGreyMat { get; set; }
+
     /// <summary>
     /// 模板匹配阈值。可选，默认 0.8 。
     /// </summary>
@@ -44,10 +53,37 @@ public class RecognitionObject
     public bool UseMask { get; set; } = false;
 
     /// <summary>
-    /// 不需要匹配的颜色，默认绿幕
+    /// 不需要匹配的颜色，默认绿色
+    /// UseMask = true 的时候有用
     /// </summary>
     public Color MaskColor { get; set; } = Color.FromArgb(0, 255, 0);
 
+    public Mat? MaskMat { get; set; }
+
+    /// <summary>
+    /// 匹配成功时，是否在屏幕上绘制矩形框。可选，默认 false 。
+    /// true 时 Name 必须有值。
+    /// </summary>
+    public bool DrawOnWindow { get; set; } = false;
+
+    /// <summary>
+    /// DrawOnWindow 为 true 时，绘制的矩形框的颜色。可选，默认红色。
+    /// </summary>
+    public Pen DrawOnWindowPen = new(Color.Red, 2);
+
+    public void InitTemplate()
+    {
+        if (TemplateImageMat != null && TemplateImageGreyMat == null)
+        {
+            TemplateImageGreyMat = new Mat();
+            Cv2.CvtColor(TemplateImageMat, TemplateImageGreyMat, ColorConversionCodes.BGR2GRAY);
+        }
+
+        if (UseMask && TemplateImageMat != null && MaskMat == null)
+        {
+            MaskMat = OpenCvCommonHelper.Threshold(TemplateImageMat, MaskColor.ToScalar());
+        }
+    }
 
     #endregion
 
@@ -62,6 +98,7 @@ public class RecognitionObject
 
     public Color LowerColor { get; set; }
     public Color UpperColor { get; set; }
+
     /// <summary>
     /// 符合的点的数量要求。可选，默认 1
     /// </summary>
@@ -104,6 +141,7 @@ public class RecognitionObject
     /// <summary>
     /// 圣遗物 Yas
     /// 拾取 Yap
+    /// TODO 换成枚举
     /// </summary>
     public string? ModelTextRecognitionType { get; set; }
 

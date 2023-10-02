@@ -47,5 +47,21 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             }
             return sum;
         }
+
+        public static Mat Threshold(Mat src, Scalar low, Scalar high)
+        {
+            using var mask = new Mat();
+            using var rgbMat = new Mat();
+
+            Cv2.CvtColor(src, rgbMat, ColorConversionCodes.BGR2RGB);
+            Cv2.InRange(rgbMat, low, high, mask);
+            Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary); //二值化
+            return mask;
+        }
+
+        public static Mat Threshold(Mat src, Scalar s)
+        {
+            return Threshold(src, s, s);
+        }
     }
 }

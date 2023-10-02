@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Helpers.Extensions
 {
@@ -22,6 +18,11 @@ namespace BetterGenshinImpact.Helpers.Extensions
             image.StreamSource = ms;
             image.EndInit();
             return image;
+        }
+
+        public static Scalar ToScalar(this Color color)
+        {
+            return new Scalar(color.R, color.G, color.B);
         }
     }
 }

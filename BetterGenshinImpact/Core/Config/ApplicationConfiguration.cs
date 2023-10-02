@@ -24,7 +24,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 触发器触发频率(ms)
         /// </summary>
-        public int FrameInterval { get; set; } = 50;
+        public int TriggerInterval { get; set; } = 100;
 
         /// <summary>
         /// 遮罩窗口配置

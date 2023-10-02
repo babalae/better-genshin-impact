@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Windows;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
+using BetterGenshinImpact.Helpers;
 using static Windows.Win32.PInvoke;
 
 namespace BetterGenshinImpact.Core.Simulator;

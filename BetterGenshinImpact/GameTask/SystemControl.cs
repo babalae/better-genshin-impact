@@ -68,7 +68,7 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         public static RECT GetGameScreenRect(HWND hWnd)
         {
-            Windows.Win32.PInvoke.GetWindowRect(hWnd, out var clientRect);
+            GetClientRect(hWnd, out var clientRect);
             return clientRect;
         }
 
@@ -76,5 +76,7 @@ namespace BetterGenshinImpact.GameTask
         //{
         //    return User32.GetSystemMetrics(User32.SystemMetric.SM_CYFRAME) + User32.GetSystemMetrics(User32.SystemMetric.SM_CYCAPTION);
         //}
+
+
     }
 }

@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         public void OnCapture(CaptureContent content)
         {
             var grayRightBottomMat = content.SrcGreyRightBottomMat.Clone();
-            var p2 = MatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoPickAssets.FMat);
+            var p2 = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoPickAssets.FMat);
             if (p2 is { X: > 0, Y: > 0 })
             {
                 _logger.LogInformation("找到F按钮");

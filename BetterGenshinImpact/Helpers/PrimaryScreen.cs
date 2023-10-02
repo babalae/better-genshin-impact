@@ -1,11 +1,8 @@
-﻿using System;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using Windows.Win32.Foundation;
+﻿using System.Drawing;
 using Windows.Win32.Graphics.Gdi;
 using static Windows.Win32.PInvoke;
 
-namespace BetterGenshinImpact.Core.Simulator
+namespace BetterGenshinImpact.Helpers
 {
     public class PrimaryScreen
     {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterGenshinImpact.GameTask.Model;
+using System;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -28,5 +29,7 @@ namespace BetterGenshinImpact.GameTask
         }
 
         public IntPtr GameHandle { get; set; }
+
+        public SystemInfo SystemInfo { get; set; }
     }
 }

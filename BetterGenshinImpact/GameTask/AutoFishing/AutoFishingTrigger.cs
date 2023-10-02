@@ -143,7 +143,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             var grayMat = content.SrcGreyMat;
             var grayRightBottomMat = CutHelper.CutRightBottom(grayMat, grayMat.Width / 3, grayMat.Height / 5);
-            var p = MatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoFishingAssets.SpaceButtonMat);
+            var p = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoFishingAssets.SpaceButtonMat);
             return p is { X: > 0, Y: > 0 };
         }
 

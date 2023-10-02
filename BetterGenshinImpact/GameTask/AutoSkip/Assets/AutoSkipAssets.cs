@@ -1,17 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Recognition;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.AutoSkip.Assets
+namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
+
+public class AutoSkipAssets
 {
-    public class AutoSkipAssets
+    public RecognitionObject StopAutoButtonRo;
+    public RecognitionObject OptionButtonRo;
+    public RecognitionObject MenuRo;
+
+    public AutoSkipAssets()
     {
-        public static Mat StopAutoButtonMat  = new(Global.Absolute(@"GameTask\AutoSkip\Assets\1920x1080\stop_auto.png"), ImreadModes.Grayscale);
-        public static Mat OptionMat = new(Global.Absolute(@"GameTask\AutoSkip\Assets\1920x1080\option.png"), ImreadModes.Grayscale);
-        public static Mat MenuMat = new(Global.Absolute(@"GameTask\AutoSkip\Assets\1920x1080\menu.png"), ImreadModes.Grayscale);
+        var info = TaskContext.Instance().SystemInfo;
+        StopAutoButtonRo = new RecognitionObject
+        {
+            Name = "StopAutoButton",
+            RecognitionType = RecognitionType.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "stop_auto.png"),
+            RegionOfInterest = new Rect(0, 0, info.GameScreenSize.Width / 5, info.GameScreenSize.Height / 5),
+            DrawOnWindow = true
+        };
+        StopAutoButtonRo.InitTemplate();
+        OptionButtonRo = new RecognitionObject
+        {
+            Name = "OptionButton",
+            RecognitionType = RecognitionType.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
+            RegionOfInterest = new Rect(info.GameScreenSize.Width / 2, 0, info.GameScreenSize.Width - info.GameScreenSize.Width / 2, info.GameScreenSize.Height),
+            DrawOnWindow = true
+        };
+        OptionButtonRo.InitTemplate();
+        MenuRo = new RecognitionObject
+        {
+            Name = "Menu",
+            RecognitionType = RecognitionType.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "menu.png"),
+            RegionOfInterest = new Rect(0, 0, info.GameScreenSize.Width / 4, info.GameScreenSize.Height / 4),
+            DrawOnWindow = true
+        };
+        MenuRo.InitTemplate();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask;
@@ -17,11 +18,14 @@ public class CaptureContent
     public int FrameIndex { get; private set; }
     public int FrameRate { get; private set; }
 
-    public CaptureContent(Bitmap srcBitmap, int frameIndex, int frameRate)
+    public RectArea CaptureRectArea { get; private set; }
+
+    public CaptureContent(Bitmap srcBitmap, int frameIndex, int frameRate, RectArea rectArea)
     {
         SrcBitmap = srcBitmap;
         FrameIndex = frameIndex;
         FrameRate = frameRate;
+        CaptureRectArea = rectArea;
     }
 
     private Mat? _srcMat;
