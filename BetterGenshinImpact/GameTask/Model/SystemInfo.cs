@@ -29,6 +29,12 @@ namespace BetterGenshinImpact.GameTask.Model
         /// </summary>
         public RECT GameWindowRect { get; }
 
+        /// <summary>
+        /// 捕获窗口区域
+        /// CaptureAreaRect = GameScreenSize or GameWindowRect
+        /// </summary>
+        public RECT CaptureAreaRect { get; }
+
         public Process GameProcess { get;  }
 
         public string GameProcessName { get; }
@@ -51,7 +57,7 @@ namespace BetterGenshinImpact.GameTask.Model
             GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
             AssetScale = GameScreenSize.Width / 1920d;
             GameWindowRect = SystemControl.GetWindowRect(hWnd);
-
+            CaptureAreaRect = GameWindowRect;
         }
     }
 }

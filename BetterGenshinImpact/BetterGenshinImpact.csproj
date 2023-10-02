@@ -45,7 +45,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\Space.png">
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\space.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoPick\Assets\1920x1080\F.png">

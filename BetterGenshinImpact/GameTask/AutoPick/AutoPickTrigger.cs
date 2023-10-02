@@ -13,6 +13,14 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         public bool IsEnabled { get; set; }
         public int Priority => 30;
         public bool IsExclusive => false;
+
+        private AutoPickAssets _autoPickAssets;
+
+        public AutoPickTrigger()
+        {
+            _autoPickAssets = new AutoPickAssets();
+        }
+
         public void Init()
         {
             IsEnabled = true;
@@ -20,13 +28,11 @@ namespace BetterGenshinImpact.GameTask.AutoPick
 
         public void OnCapture(CaptureContent content)
         {
-            //var grayRightBottomMat = content.SrcGreyRightBottomMat.Clone();
-            //var p2 = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoPickAssets.FMat);
-            //if (p2 is { X: > 0, Y: > 0 })
-            //{
-            //    _logger.LogInformation("找到F按钮");
-            //    new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
-            //}
+            content.CaptureRectArea.Find(_autoPickAssets.FRo, _ =>
+            {
+                _logger.LogInformation("找到F按钮");
+                new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
+            });
         }
     }
 }

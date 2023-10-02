@@ -58,7 +58,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
         // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
         var grayMat = content.CaptureRectArea.SrcGreyMat;
-        var blackCount = OpenCvCommonHelper.CountGrayMatColor(content.SrcGreyMat, 0);
+        var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
         var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
         if (rate > 0.7 && rate < 0.99)
         {

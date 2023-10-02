@@ -30,29 +30,6 @@ public class CaptureContent
         CaptureRectArea = new RectArea(srcBitmap, systemInfo.GameWindowRect.X, systemInfo.GameWindowRect.Y, systemInfo.DesktopRectArea);
     }
 
-    private Mat? _srcMat;
-
-    public Mat SrcMat
-    {
-        get
-        {
-            _srcMat ??= SrcBitmap.ToMat();
-            return _srcMat;
-        }
-    }
-
-    private Mat? _srcGreyMat;
-
-    public Mat SrcGreyMat
-    {
-        get
-        {
-            _srcGreyMat ??= new Mat();
-            Cv2.CvtColor(SrcMat, _srcGreyMat, ColorConversionCodes.BGR2GRAY);
-            return _srcGreyMat;
-        }
-    }
-
     /// <summary>
     /// 达到了什么时间间隔
     /// 最大MaxFrameIndexSecond秒

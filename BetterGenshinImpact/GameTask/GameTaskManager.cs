@@ -13,9 +13,9 @@ namespace BetterGenshinImpact.GameTask
         {
             List<ITaskTrigger> loadedTriggers = new()
             {
-                //new AutoPick.AutoPickTrigger(),
+                new AutoPick.AutoPickTrigger(),
                 new AutoSkip.AutoSkipTrigger(),
-                //new AutoFishing.AutoFishingTrigger()
+                new AutoFishing.AutoFishingTrigger()
             };
 
             loadedTriggers.ForEach(i => i.Init());
@@ -34,10 +34,10 @@ namespace BetterGenshinImpact.GameTask
         public static Mat LoadAssertImage(string featName, string assertName)
         {
             var info = TaskContext.Instance().SystemInfo;
-            var assetsFolder = Global.Absolute($@"GameTask\AutoSkip\Assets\{info.GameScreenSize.Width}x{info.GameScreenSize.Height}");
+            var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{info.GameScreenSize.Width}x{info.GameScreenSize.Height}");
             if (!Directory.Exists(assetsFolder))
             {
-                assetsFolder = Global.Absolute($@"GameTask\AutoSkip\Assets\1920x1080");
+                assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
             }
             if (!Directory.Exists(assetsFolder))
             {

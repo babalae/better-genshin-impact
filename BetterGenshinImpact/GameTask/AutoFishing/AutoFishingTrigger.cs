@@ -32,6 +32,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         public bool IsExclusive { get; set; }
 
+        private AutoFishingAssets _autoFishingAssets;
+
+        public AutoFishingTrigger()
+        {
+            _autoFishingAssets = new AutoFishingAssets();
+        }
+
         public void Init()
         {
             IsEnabled = true;
@@ -69,12 +76,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         return;
                     }
 
-                    _fishBoxRect = GetFishBoxArea(content.SrcMat);
+                    _fishBoxRect = GetFishBoxArea(content.CaptureRectArea.SrcMat);
                 }
                 else
                 {
                     // 钓鱼拉条
-                    Fishing(content, new Mat(content.SrcMat, _fishBoxRect));
+                    Fishing(content, new Mat(content.CaptureRectArea.SrcMat, _fishBoxRect));
                 }
             }
         }
@@ -87,7 +94,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
         {
             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
-            var srcMat = content.SrcMat;
+            var srcMat = content.CaptureRectArea.SrcMat;
             var rightBottomMat = CropHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
             var list = CommonRecognition.FindGameButton(rightBottomMat);
             foreach (var rect in list)
@@ -120,7 +127,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         //private bool OcrStartFishingForExclusive(CaptureContent content)
         //{
-        //    var srcMat = content.SrcMat;
+        //    var srcMat = content.CaptureRectArea.SrcMat;
         //    var rightBottomMat = CutHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
         //    var text = _ocrService.Ocr(rightBottomMat.ToBitmap());
         //    if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("开始") && StringUtils.RemoveAllSpace(text).Contains("钓鱼"))
@@ -139,10 +146,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <returns></returns>
         private bool FindSpaceButtonForExclusive(CaptureContent content)
         {
-            var grayMat = content.SrcGreyMat;
-            var grayRightBottomMat = CropHelper.CutRightBottom(grayMat, grayMat.Width / 3, grayMat.Height / 5);
-            var p = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoFishingAssets.SpaceButtonMat);
-            return p is { X: > 0, Y: > 0 };
+            return !content.CaptureRectArea.Find(_autoFishingAssets.SpaceButtonRo).IsEmpty();
         }
 
 
@@ -215,12 +219,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             // 自动识别的钓鱼框向下延伸到屏幕中间
             //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
-            //    fishBoxRect.Width, content.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
+            //    fishBoxRect.Width, content.CaptureRectArea.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
             // 上半屏幕和中间1/3的区域
-            var liftingWordsAreaRect = new Rect(content.SrcMat.Width / 3, 0, content.SrcMat.Width / 3,
-                content.SrcMat.Height / 2);
+            var liftingWordsAreaRect = new Rect(content.CaptureRectArea.SrcMat.Width / 3, 0, content.CaptureRectArea.SrcMat.Width / 3,
+                content.CaptureRectArea.SrcMat.Height / 2);
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
-            var wordCaptureMat = new Mat(content.SrcMat, liftingWordsAreaRect);
+            var wordCaptureMat = new Mat(content.CaptureRectArea.SrcMat, liftingWordsAreaRect);
             var wordCaptureOriginMat = wordCaptureMat.Clone();
             var currentBiteWordsTips =
                 AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat,
