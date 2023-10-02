@@ -13,19 +13,19 @@ namespace BetterGenshinImpact.GameTask;
 public class CaptureContent
 {
     public static readonly int MaxFrameIndexSecond = 60;
-
     public Bitmap SrcBitmap { get; }
-    public int FrameIndex { get; private set; }
-    public int FrameRate { get; private set; }
+    public int FrameIndex { get; }
+    public double TimerInterval { get; }
 
     public RectArea CaptureRectArea { get; private set; }
 
-    public CaptureContent(Bitmap srcBitmap, int frameIndex, int frameRate, RectArea rectArea)
+    public CaptureContent(Bitmap srcBitmap, int frameIndex, double interval)
     {
         SrcBitmap = srcBitmap;
         FrameIndex = frameIndex;
-        FrameRate = frameRate;
-        CaptureRectArea = rectArea;
+        TimerInterval = interval;
+        var systemInfo = TaskContext.Instance().SystemInfo;
+        CaptureRectArea = new RectArea(srcBitmap, systemInfo.GameScreenSize.X, systemInfo.GameScreenSize.Y, systemInfo.DesktopRectArea);
     }
 
     private Mat? _srcMat;
@@ -51,19 +51,6 @@ public class CaptureContent
         }
     }
 
-    private Mat? _srcGreyRightBottomMat;
-    /// <summary>
-    /// 1/2 右 2/3 下
-    /// </summary>
-    public Mat SrcGreyRightBottomMat
-    {
-        get
-        {
-            _srcGreyRightBottomMat ??= CutHelper.CutRightBottom(SrcGreyMat, SrcGreyMat.Width / 2, SrcGreyMat.Height / 3 * 2);
-            return _srcGreyRightBottomMat;
-        }
-    }
-
     /// <summary>
     /// 达到了什么时间间隔
     /// 最大MaxFrameIndexSecond秒
@@ -77,6 +64,6 @@ public class CaptureContent
             throw new ArgumentException($"时间间隔不能超过{MaxFrameIndexSecond}s");
         }
 
-        return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
+        return interval.TotalMilliseconds >= FrameIndex * TimerInterval && interval.TotalMilliseconds < (FrameIndex + 1) * TimerInterval;
     }
 }

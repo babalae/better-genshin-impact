@@ -10,7 +10,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
     /// <summary>
     /// 图片剪裁
     /// </summary>
-    public class CutHelper
+    public class CropHelper
     {
         public static Mat CutRightTop(Mat srcMat, int saveRightWidth, int saveTopHeight)
         {

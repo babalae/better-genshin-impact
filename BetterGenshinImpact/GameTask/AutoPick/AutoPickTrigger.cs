@@ -20,13 +20,13 @@ namespace BetterGenshinImpact.GameTask.AutoPick
 
         public void OnCapture(CaptureContent content)
         {
-            var grayRightBottomMat = content.SrcGreyRightBottomMat.Clone();
-            var p2 = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoPickAssets.FMat);
-            if (p2 is { X: > 0, Y: > 0 })
-            {
-                _logger.LogInformation("找到F按钮");
-                new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
-            }
+            //var grayRightBottomMat = content.SrcGreyRightBottomMat.Clone();
+            //var p2 = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoPickAssets.FMat);
+            //if (p2 is { X: > 0, Y: > 0 })
+            //{
+            //    _logger.LogInformation("找到F按钮");
+            //    new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
+            //}
         }
     }
 }

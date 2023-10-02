@@ -90,7 +90,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
             var srcMat = content.SrcMat;
-            var rightBottomMat = CutHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
+            var rightBottomMat = CropHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
             var list = CommonRecognition.FindGameButton(rightBottomMat);
             foreach (var rect in list)
             {
@@ -107,7 +107,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             //AutoThrowRodTask
                             Debug.WriteLine("自动钓鱼，启动！");
                             IsExclusive = true;
-                            var rc = SystemControl.GetWindowRect((HWND)TaskContext.Instance().GameHandle);
+                            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
                             new InputSimulator().Mouse.MoveMouseTo(
                                 (rc.X+srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
                                 PrimaryScreen.WorkingArea.Width,
@@ -142,7 +142,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private bool FindSpaceButtonForExclusive(CaptureContent content)
         {
             var grayMat = content.SrcGreyMat;
-            var grayRightBottomMat = CutHelper.CutRightBottom(grayMat, grayMat.Width / 3, grayMat.Height / 5);
+            var grayRightBottomMat = CropHelper.CutRightBottom(grayMat, grayMat.Width / 3, grayMat.Height / 5);
             var p = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoFishingAssets.SpaceButtonMat);
             return p is { X: > 0, Y: > 0 };
         }
@@ -153,7 +153,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         private Rect GetFishBoxArea(Mat srcMat)
         {
-            srcMat = CutHelper.CutTop(srcMat, srcMat.Height / 2);
+            srcMat = CropHelper.CutTop(srcMat, srcMat.Height / 2);
             var rects = AutoFishingImageRecognition.GetFishBarRect(srcMat);
             if (rects != null && rects.Count == 2)
             {

@@ -19,6 +19,12 @@ namespace BetterGenshinImpact.GameTask
             return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
         }
 
+        public static bool IsGenshinImpactActive2()
+        {
+            var hWnd = GetForegroundWindow();
+            return (nint)hWnd == TaskContext.Instance().GameHandle;
+        }
+
         public static nint FindHandleByProcessName(params string[] names)
         {
             foreach (var name in names)
@@ -50,14 +56,30 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        public static unsafe Process GetProcessByHandle(nint hWnd)
+        {
+            try
+            {
+                uint pid = default;
+                _ = GetWindowThreadProcessId((HWND)hWnd, &pid);
+                var p = Process.GetProcessById((int)pid);
+                return p;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return null;
+            }
+        }
+
         /// <summary>
         /// 获取窗口位置
         /// </summary>
         /// <param name="hWnd"></param>
         /// <returns></returns>
-        public static RECT GetWindowRect(HWND hWnd)
+        public static RECT GetWindowRect(IntPtr hWnd)
         {
-            Windows.Win32.PInvoke.GetWindowRect(hWnd, out var windowRect);
+            Windows.Win32.PInvoke.GetWindowRect((HWND)hWnd, out var windowRect);
             return windowRect;
         }
 
@@ -66,9 +88,9 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         /// <param name="hWnd"></param>
         /// <returns></returns>
-        public static RECT GetGameScreenRect(HWND hWnd)
+        public static RECT GetGameScreenRect(IntPtr hWnd)
         {
-            GetClientRect(hWnd, out var clientRect);
+            GetClientRect((HWND)hWnd, out var clientRect);
             return clientRect;
         }
 

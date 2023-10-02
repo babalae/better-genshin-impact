@@ -93,24 +93,28 @@ public class RectArea
     {
     }
 
-    public RectArea(int x, int y, RectArea? owner = null)
+    public RectArea(int x, int y, int width, int height, RectArea? owner = null)
     {
         X = x;
         Y = y;
-        Width = 0;
-        Height = 0;
+        Width = width;
+        Height = height;
         Owner = owner;
         CoordinateLevelNum = owner?.CoordinateLevelNum + 1 ?? 0;
     }
 
-    public RectArea(Bitmap bitmap, int x, int y, RectArea? owner = null) : this(x, y, owner)
+    public RectArea(Bitmap bitmap, int x, int y, RectArea? owner = null) : this(x, y, 0, 0, owner)
     {
         _srcBitmap = bitmap;
+        Width = bitmap.Width;
+        Height = bitmap.Height;
     }
 
-    public RectArea(Mat mat, int x, int y, RectArea? owner = null) : this(x, y, owner)
+    public RectArea(Mat mat, int x, int y, RectArea? owner = null) : this(x, y, 0, 0, owner)
     {
         _srcMat = mat;
+        Width = mat.Width;
+        Height = mat.Height;
     }
 
     public RectArea(Mat mat, Point p, RectArea? owner = null) : this(mat, p.X, p.Y, owner)
@@ -243,6 +247,7 @@ public class RectArea
                         .ConvertRelativePositionToCaptureArea()
                         .ToRectDrawable(ro.DrawOnWindowPen, ro.Name));
                 }
+
                 action?.Invoke(newRa);
                 return newRa;
             }

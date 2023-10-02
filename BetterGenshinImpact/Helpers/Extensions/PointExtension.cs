@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.Helpers.Extensions
                 return point;
             }
 
-            var rc = SystemControl.GetWindowRect((HWND)TaskContext.Instance().GameHandle);
+            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
             return new Point(rc.X + point.X, rc.Y + point.Y);
         }
 

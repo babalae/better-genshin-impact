@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Model;
 using System;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -28,7 +29,14 @@ namespace BetterGenshinImpact.GameTask
             return _uniqueInstance;
         }
 
+        public void Init(IntPtr hWnd)
+        {
+            GameHandle = hWnd;
+            SystemInfo = new SystemInfo(hWnd);
+        }
+
         public IntPtr GameHandle { get; set; }
+
 
         public SystemInfo SystemInfo { get; set; }
     }

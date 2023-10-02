@@ -23,11 +23,11 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         public int Priority => 20;
         public bool IsExclusive => false;
 
-        private AutoSkipAssets autoSkipAssets;
+        private readonly AutoSkipAssets _autoSkipAssets;
 
         public AutoSkipTrigger()
         {
-            autoSkipAssets = new AutoSkipAssets();
+            _autoSkipAssets = new AutoSkipAssets();
         }
 
         public void Init()
@@ -42,10 +42,36 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
                 return;
             }
 
-            new RectArea().Find(autoSkipAssets.StopAutoButtonRo, (_) =>
+            // 找左上角剧情自动的按钮
+            content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo, (_) =>
             {
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
             });
+
+            // 不存在则找右下的选项按钮
+            content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
+            {
+                // 不存在菜单的情况下 剧情在播放中
+                var menuRectArea = content.CaptureRectArea.Find(_autoSkipAssets.MenuRo);
+                if (menuRectArea.IsEmpty())
+                {
+                    optionButtonRectArea.ClickCenter();
+                    _logger.LogInformation("点击选项按钮");
+                }
+            });
+
+            // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
+            var grayMat = content.CaptureRectArea.SrcGreyMat;
+            var blackCount = OpenCvCommonHelper.CountGrayMatColor(content.SrcGreyMat, 0);
+            var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
+            if (rate > 0.7 && rate < 0.99)
+            {
+                new InputSimulator().Mouse.LeftButtonClick();
+                Debug.WriteLine($"点击黑屏剧情：{rate}");
+                return;
+            }
+
+            // TODO 自动交付材料
 
             //var grayMat = content.SrcGreyMat;
             //// 找左上角剧情自动的按钮
@@ -81,17 +107,8 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
             //    }
             //}
 
-            //// 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            //var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
-            //var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
-            //if (rate > 0.7 && rate < 0.99)
-            //{
-            //    var p3 = new Point(grayMat.Width / 2, grayMat.Height / 2).ToDesktopPosition65535();
-            //    new InputSimulator().Mouse.MoveMouseTo(p3.X, p3.Y).LeftButtonClick();
-            //    Debug.WriteLine($"点击黑屏剧情：{rate}");
-            //    return;
-            //}
-            // TODO 自动交付材料
+
+
         }
     }
 }

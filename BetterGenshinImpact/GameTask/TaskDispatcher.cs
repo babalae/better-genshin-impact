@@ -22,7 +22,6 @@ namespace BetterGenshinImpact.GameTask
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
-        private int _frameRate = 30;
 
 
         public TaskDispatcher()
@@ -31,25 +30,20 @@ namespace BetterGenshinImpact.GameTask
             //_timer.Tick += Tick;
         }
 
-        public void Start(CaptureModeEnum mode, int frameRate = 30)
+        public void Start(IntPtr hWnd, CaptureModeEnum mode, int interval = 50)
         {
+            // 初始化任务上下文
+            TaskContext.Instance().Init(hWnd);
+            // 初始化触发器
             _triggers = GameTaskManager.LoadTriggers();
-            IntPtr hWnd = SystemControl.FindGenshinImpactHandle();
-            if (hWnd == IntPtr.Zero)
-            {
-                MessageBox.Show("未找到原神窗口");
-                return;
-            }
 
-            TaskContext.Instance().GameHandle = hWnd;
-
-            _frameRate = frameRate;
-
+            // 初始化截图器
             _capture = WindowCaptureFactory.Create(mode);
             _capture.Start((HWND)hWnd);
 
+            // 启动定时器
             _frameIndex = 0;
-            _timer.Interval = Convert.ToInt32(1000d / frameRate);
+            _timer.Interval = interval;
             _timer.Start();
         }
 
@@ -86,7 +80,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
-                _frameIndex = (_frameIndex + 1) % (_frameRate * CaptureContent.MaxFrameIndexSecond);
+                _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
@@ -103,7 +97,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                var content = new CaptureContent(bitmap, _frameIndex, _frameRate, new RectArea());
+                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {
