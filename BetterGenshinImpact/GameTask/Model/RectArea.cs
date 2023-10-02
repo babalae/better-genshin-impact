@@ -1,10 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Drawing;
+using System.Text.RegularExpressions;
+using BetterGenshinImpact.Helpers;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.Model;
@@ -228,7 +231,7 @@ public class RectArea
         {
             if (ro.TemplateImageGreyMat == null)
             {
-                throw new Exception("识别对象的模板图片不能为null");
+                throw new Exception($"[TemplateMatch]识别对象{ro.Name}的模板图片不能为null");
             }
 
             var roi = SrcGreyMat;
@@ -260,6 +263,55 @@ public class RectArea
 
                 return new RectArea();
             }
+        }
+        else if (RecognitionType.Ocr.Equals(ro.RecognitionType))
+        {
+            if (ro.ContainMatchText.Count == 0 && ro.RegexMatchText.Count == 0)
+            {
+                throw new Exception($"[OCR]识别对象{ro.Name}的匹配文本不能全为空");
+            }
+
+            var roi = SrcMat;
+            if (ro.RegionOfInterest != Rect.Empty)
+            {
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
+            }
+
+            var text = OcrFactory.MediaOcr.Ocr(roi.ToBitmap());
+            text = StringUtils.RemoveAllSpace(text);
+            // 替换可能出错的文本
+            foreach (var entry in ro.ReplaceDictionary)
+            {
+                foreach (var replaceStr in entry.Value)
+                {
+                    text = text.Replace(entry.Key, replaceStr);
+                }
+            }
+
+            // 包含匹配
+            int successContainCount = 0, successRegexCount = 0;
+            foreach (var s in ro.ContainMatchText)
+            {
+                if (text.Contains(s))
+                {
+                    successContainCount++;
+                }
+            }
+            // 正则匹配
+            foreach (var re in ro.RegexMatchText)
+            {
+                if (Regex.IsMatch(text, re))
+                {
+                    successRegexCount++;
+                }
+            }
+
+            if (successContainCount == ro.ContainMatchText.Count && successRegexCount == ro.RegexMatchText.Count)
+            {
+                var newRa = new RectArea(roi, X + ro.RegionOfInterest.X, Y + ro.RegionOfInterest.Y, this);
+                action?.Invoke(newRa);
+            }
+            return new RectArea();
         }
         else
         {

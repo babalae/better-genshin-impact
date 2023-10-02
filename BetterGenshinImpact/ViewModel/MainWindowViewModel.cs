@@ -90,7 +90,7 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
-            _maskWindow?.Close();
+            _maskWindow?.Hide();
             _taskDispatcher.Stop();
         }
 

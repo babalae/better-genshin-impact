@@ -93,15 +93,26 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <returns></returns>
         private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
         {
+            var info = TaskContext.Instance().SystemInfo;
             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
             var srcMat = content.CaptureRectArea.SrcMat;
             var rightBottomMat = CropHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
             var list = CommonRecognition.FindGameButton(rightBottomMat);
             foreach (var rect in list)
             {
-                var text = _ocrService.Ocr(new Mat(rightBottomMat, rect).ToBitmap());
-                if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("开始") &&
-                    StringUtils.RemoveAllSpace(text).Contains("钓鱼"))
+                var ro = new RecognitionObject()
+                {
+                    Name = "StartFishingText",
+                    RecognitionType = RecognitionType.Ocr,
+                    RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2, 
+                        srcMat.Height - srcMat.Height / 2),
+                    ContainMatchText = new List<string>
+                    {
+                        "开始", "钓鱼"
+                    },
+                    DrawOnWindow = false
+                };
+                content.CaptureRectArea.Find(ro, _ =>
                 {
                     VisionContext.Instance().DrawContent.PutRect("StartFishingButton",
                         rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
@@ -112,15 +123,37 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             //AutoThrowRodTask
                             Debug.WriteLine("自动钓鱼，启动！");
                             IsExclusive = true;
-                            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
+                            var rc = info.GameWindowRect;
                             new InputSimulator().Mouse.MoveMouseTo(
-                                (rc.X+srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
-                                PrimaryScreen.WorkingArea.Width,
+                                (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
+                                info.DesktopRectArea.Width,
                                 (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 /
-                                PrimaryScreen.WorkingArea.Height).LeftButtonClick();
+                                info.DesktopRectArea.Height).LeftButtonClick();
                         });
-                    return;
-                }
+                });
+
+                //var text = _ocrService.Ocr(new Mat(rightBottomMat, rect).ToBitmap());
+                //if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("开始") &&
+                //    StringUtils.RemoveAllSpace(text).Contains("钓鱼"))
+                //{
+                //    VisionContext.Instance().DrawContent.PutRect("StartFishingButton",
+                //        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
+                //    MaskWindow.Instance().AddButton("开始自动钓鱼",
+                //        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2 - 80),
+                //        () =>
+                //        {
+                //            //AutoThrowRodTask
+                //            Debug.WriteLine("自动钓鱼，启动！");
+                //            IsExclusive = true;
+                //            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
+                //            new InputSimulator().Mouse.MoveMouseTo(
+                //                (rc.X+srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
+                //                PrimaryScreen.WorkingArea.Width,
+                //                (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 /
+                //                PrimaryScreen.WorkingArea.Height).LeftButtonClick();
+                //        });
+                //    return;
+                //}
             }
         }
 

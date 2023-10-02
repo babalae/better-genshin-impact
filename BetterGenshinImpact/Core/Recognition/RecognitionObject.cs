@@ -19,6 +19,9 @@ public class RecognitionObject
 {
     public RecognitionType RecognitionType { get; set; }
 
+    /// <summary>
+    /// 感兴趣的区域
+    /// </summary>
     public Rect RegionOfInterest { get; set; }
 
     public string? Name { get; set; }
@@ -71,7 +74,7 @@ public class RecognitionObject
     /// </summary>
     public Pen DrawOnWindowPen = new(Color.Red, 2);
 
-    public void InitTemplate()
+    public RecognitionObject InitTemplate()
     {
         if (TemplateImageMat != null && TemplateImageGreyMat == null)
         {
@@ -83,6 +86,7 @@ public class RecognitionObject
         {
             MaskMat = OpenCvCommonHelper.Threshold(TemplateImageMat, MaskColor.ToScalar());
         }
+        return this;
     }
 
     #endregion
@@ -120,11 +124,14 @@ public class RecognitionObject
 
     /// <summary>
     /// 包含匹配
+    /// 多个值全匹配的情况下才算成功
+    /// 复杂情况请用下面的正则匹配
     /// </summary>
     public List<string> ContainMatchText { get; set; } = new();
 
     /// <summary>
     /// 正则匹配
+    /// 多个值全匹配的情况下才算成功
     /// </summary>
     public List<string> RegexMatchText { get; set; } = new();
 

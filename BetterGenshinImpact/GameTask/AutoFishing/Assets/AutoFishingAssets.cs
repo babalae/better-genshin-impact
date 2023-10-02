@@ -26,7 +26,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                     info.CaptureAreaRect.Width / 3, 
                     info.CaptureAreaRect.Height / 5),
                 DrawOnWindow = false
-            };
+            }.InitTemplate();
         }
     }
 }

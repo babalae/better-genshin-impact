@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         public int Priority => 30;
         public bool IsExclusive => false;
 
-        private AutoPickAssets _autoPickAssets;
+        private readonly AutoPickAssets _autoPickAssets;
 
         public AutoPickTrigger()
         {

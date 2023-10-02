@@ -56,7 +56,7 @@ namespace BetterGenshinImpact.View.Drawable
         public static RectDrawable ToRectDrawable(this Rect rect, Pen? pen = null, string? name = null)
         {
             var scale = TaskContext.Instance().DpiScale;
-            Rect newRect = new(rect.X * scale, rect.Y * scale, rect.Width * scale, rect.Height * scale);
+            Rect newRect = new(rect.X / scale, rect.Y / scale, rect.Width /scale, rect.Height / scale);
             return new RectDrawable(newRect, pen, name);
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Model;
@@ -17,7 +18,7 @@ public class CaptureContent
     public int FrameIndex { get; }
     public double TimerInterval { get; }
 
-    public int FrameRate => (int)(1000 /  TimerInterval);
+    public int FrameRate => (int)(1000 / TimerInterval);
 
     public RectArea CaptureRectArea { get; private set; }
 
@@ -42,7 +43,7 @@ public class CaptureContent
         {
             throw new ArgumentException($"时间间隔不能超过{MaxFrameIndexSecond}s");
         }
-
-        return interval.TotalMilliseconds >= FrameIndex * TimerInterval && interval.TotalMilliseconds < (FrameIndex + 1) * TimerInterval;
+        Debug.WriteLine($"{FrameIndex}%{FrameRate * interval.TotalSeconds}={FrameIndex % (FrameRate * interval.TotalSeconds)}");
+        return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
     }
 }

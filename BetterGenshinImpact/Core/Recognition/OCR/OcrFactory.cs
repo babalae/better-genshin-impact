@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
     }
     public class OcrFactory
     {
-        public static BetterGenshinImpact.Core.Recognition.OCR.IOcrService Create(OcrEngineType type)
+        public static IOcrService Create(OcrEngineType type)
         {
             switch (type)
             {
@@ -19,5 +19,7 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
         }
+
+        public static IOcrService MediaOcr = Create(OcrEngineType.WinRT);
     }
 }

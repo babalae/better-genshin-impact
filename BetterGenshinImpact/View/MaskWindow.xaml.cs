@@ -11,6 +11,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.View.Drawable;
 
 namespace BetterGenshinImpact.View
@@ -50,6 +52,7 @@ namespace BetterGenshinImpact.View
             {
                 LogTextBox.Document.Blocks.Clear();
             }
+
             LogTextBox.ScrollToEnd();
         }
 
@@ -166,18 +169,17 @@ namespace BetterGenshinImpact.View
                 {
                     Name = name,
                     Content = name,
-                    Width = position.Width,
-                    Height = position.Height
+                    Width = position.Width / TaskContext.Instance().DpiScale,
+                    Height = position.Height / TaskContext.Instance().DpiScale
                 };
 
                 b.Click += (e, a) => { action.Invoke(); };
 
-                Canvas.SetLeft(b, position.X);
-                Canvas.SetTop(b, position.Y);
+                Canvas.SetLeft(b, position.X / TaskContext.Instance().DpiScale);
+                Canvas.SetTop(b, position.Y / TaskContext.Instance().DpiScale);
                 WholeCanvas.Children.Add(b);
                 ButtonList[name] = b;
             });
-
         }
     }
 }

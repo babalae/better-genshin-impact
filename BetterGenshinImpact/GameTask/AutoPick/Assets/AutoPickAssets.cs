@@ -26,8 +26,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                     info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, 
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3),
                 DrawOnWindow = false
-            };
-            FRo.InitTemplate();
+            }.InitTemplate();
         }
     }
 }
