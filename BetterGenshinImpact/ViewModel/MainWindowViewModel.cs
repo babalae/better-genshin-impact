@@ -4,11 +4,13 @@ using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Test;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Fischless.WindowCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Windows;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
@@ -30,7 +32,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             //TestMask();
             //TestRect();
-            Debug.WriteLine(DpiHelper.ScaleY);
+            //Debug.WriteLine(DpiHelper.ScaleY);
         }
 
         [RelayCommand]
@@ -96,34 +98,11 @@ namespace BetterGenshinImpact.ViewModel
 
         private void ShowMaskWindow(IntPtr hWnd)
         {
-            User32.GetWindowRect(hWnd, out var rect);
-            //var x = rect.X;
-            //var y = rect.Y;
-            //var w = rect.Width;
-            //var h = rect.Height;
-
-            var x = (int)Math.Ceiling(rect.X / DpiHelper.ScaleY);
-            var y = (int)Math.Ceiling(rect.Y / DpiHelper.ScaleY);
-            var w = (int)Math.Ceiling(rect.Width / DpiHelper.ScaleY);
-            var h = (int)Math.Ceiling(rect.Height / DpiHelper.ScaleY);
-            Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
-            Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{w} x {h}");
-
-            //var x = 0;
-            //var y = 0;
-            //var w = 1200;
-            //var h = 800;
-
             _maskWindow ??= MaskWindow.Instance();
-            ////window.Owner = this;
-            _maskWindow.Left = x;
-            _maskWindow.Top = y;
-            _maskWindow.Width = w;
-            _maskWindow.Height = h;
-            _maskWindow.Logger = App.GetLogger<MaskWindow>();
+           
             _maskWindow.Show();
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<IntPtr>(this, "hWnd", hWnd, hWnd));
 
-            _logger.LogInformation("- 遮罩窗口启动成功");
         }
     }
 }

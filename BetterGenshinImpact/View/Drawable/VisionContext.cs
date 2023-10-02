@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.View.Drawable
             return _uniqueInstance;
         }
 
-        public ILogger? Log { get; set; }
+        //public ILogger? Log { get; set; }
 
 
         public bool Drawable { get; set; }

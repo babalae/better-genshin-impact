@@ -1,4 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -12,8 +15,8 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.View.Drawable;
+using Vanara.PInvoke;
+using FontFamily = System.Windows.Media.FontFamily;
 
 namespace BetterGenshinImpact.View
 {
@@ -26,15 +29,23 @@ namespace BetterGenshinImpact.View
     {
         private static MaskWindow? _maskWindow;
 
-        public ILogger<MaskWindow>? Logger { get; set; }
-
         private static readonly Typeface MyTypeface = new FontFamily("微软雅黑").GetTypefaces().First();
 
-        public static MaskWindow Instance(ILogger<MaskWindow>? logger = null)
+        public static MaskWindow Instance(IntPtr? hWnd = null)
         {
             _maskWindow ??= new MaskWindow();
-            _maskWindow.Logger ??= logger;
-            VisionContext.Instance().Log ??= logger;
+            if (hWnd != null)
+            {
+                User32.GetWindowRect(hWnd.Value, out var rect);
+                double scale = DpiHelper.ScaleY;
+                _maskWindow.Left = (int)Math.Ceiling(rect.X * 1d / scale);
+                _maskWindow.Top = (int)Math.Ceiling(rect.Y * 1d / scale);
+                _maskWindow.Width = (int)Math.Ceiling(rect.Width * 1d / scale);
+                _maskWindow.Height = (int)Math.Ceiling(rect.Height * 1d / scale);
+                Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
+                Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{_maskWindow.Width} x {_maskWindow.Height}");
+            }
+
             return _maskWindow;
         }
 
@@ -93,7 +104,6 @@ namespace BetterGenshinImpact.View
             catch (Exception e)
             {
                 Debug.WriteLine(e);
-                Logger?.LogError(e, "绘制识别结果时发生错误");
             }
 
             base.OnRender(drawingContext);
@@ -105,7 +115,6 @@ namespace BetterGenshinImpact.View
 
         public void AddAreaSettingsControl(string name)
         {
-            Logger?.LogInformation("添加设置控件");
             var control = new ContentControl();
             control.Width = 100;
             control.Height = 100;
