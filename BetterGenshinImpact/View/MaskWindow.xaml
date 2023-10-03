@@ -7,11 +7,8 @@
         AllowsTransparency="True"
         WindowStyle="None"
         Topmost="True"
->
-    <!--Height="{Binding WindowRect.Height,Mode=TwoWay}"
-        Width="{Binding WindowRect.Width, Mode=TwoWay}"
-        Left="{Binding WindowRect.X, Mode=TwoWay}"
-        Top="{Binding WindowRect.Y, Mode=TwoWay}"-->
+        Width="500"
+        Height="800">
     <Window.DataContext>
         <viewModel:MaskWindowViewModel />
     </Window.DataContext>
@@ -70,7 +67,7 @@
                     Foreground="LightGray"
                     FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                     BorderThickness="0"
-                    VerticalScrollBarVisibility="Hidden"/>
+                    VerticalScrollBarVisibility="Hidden" />
             </ContentControl>
 
             <!--<ContentControl Width="230"
@@ -83,6 +80,27 @@
                     <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Grid>
             </ContentControl>-->
+
+            <ItemsControl ItemsSource="{Binding MaskButtons, Mode=TwoWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas IsItemsHost="True" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemContainerStyle>
+                    <Style>
+                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding ClickAction}" Content="{Binding Name}" Name="btn"
+                                Height="{Binding Height}" Width="{Binding Width}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
         </Canvas>
     </AdornerDecorator>
 

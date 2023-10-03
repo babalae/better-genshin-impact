@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick
 
         public void Init()
         {
-            IsEnabled = true;
+            IsEnabled = false;
         }
 
         public void OnCapture(CaptureContent content)

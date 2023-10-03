@@ -25,6 +25,11 @@ namespace BetterGenshinImpact.GameTask
             return hWnd == TaskContext.Instance().GameHandle;
         }
 
+        public static IntPtr GetForegroundWindowHandle()
+        {
+            return (IntPtr)User32.GetForegroundWindow();
+        }
+
         public static nint FindHandleByProcessName(params string[] names)
         {
             foreach (var name in names)

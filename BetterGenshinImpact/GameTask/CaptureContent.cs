@@ -43,7 +43,7 @@ public class CaptureContent
         {
             throw new ArgumentException($"时间间隔不能超过{MaxFrameIndexSecond}s");
         }
-        Debug.WriteLine($"{FrameIndex}%{FrameRate * interval.TotalSeconds}={FrameIndex % (FrameRate * interval.TotalSeconds)}");
+        //Debug.WriteLine($"{FrameIndex}%{FrameRate * interval.TotalSeconds}={FrameIndex % (FrameRate * interval.TotalSeconds)}");
         return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
     }
 }

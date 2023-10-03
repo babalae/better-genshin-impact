@@ -89,8 +89,13 @@ namespace BetterGenshinImpact.GameTask
                 {
                     if (_prevGameActive)
                     {
-                        maskWindow.Invoke(() => { maskWindow.Hide(); });
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
+                    }
+
+                    var pName = SystemControl.GetActiveProcessName();
+                    if (pName != "BetterGenshinImpact" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                    {
+                        maskWindow.Invoke(() => { maskWindow.Hide(); });
                     }
 
                     _prevGameActive = active;
@@ -102,6 +107,7 @@ namespace BetterGenshinImpact.GameTask
                     {
                         maskWindow.Invoke(() => { maskWindow.Show(); });
                     }
+
                     _prevGameActive = active;
                     // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
                     if (SyncMaskWindowPosition())

@@ -184,7 +184,7 @@ public class RectArea
 
     public bool IsEmpty()
     {
-        return Width == 0 || Height == 0;
+        return Width == 0 && Height == 0 && X== 0 && Y == 0;
     }
 
     public bool HasImage()
@@ -311,8 +311,12 @@ public class RectArea
             {
                 var newRa = new RectArea(roi, X + ro.RegionOfInterest.X, Y + ro.RegionOfInterest.Y, this);
                 action?.Invoke(newRa);
+                return newRa;
             }
-            return new RectArea();
+            else
+            {
+                return new RectArea();
+            }
         }
         else
         {

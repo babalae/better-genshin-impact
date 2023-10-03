@@ -79,7 +79,7 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
-            ShowMaskWindow(hWnd);
+            _maskWindow = MaskWindow.Instance(hWnd);
             _taskDispatcher.Start(hWnd, SelectedMode.ToCaptureMode());
         }
 
@@ -94,15 +94,6 @@ namespace BetterGenshinImpact.ViewModel
 
             _maskWindow?.Hide();
             _taskDispatcher.Stop();
-        }
-
-        private void ShowMaskWindow(IntPtr hWnd)
-        {
-            _maskWindow = MaskWindow.Instance(hWnd);
-           
-            //_maskWindow.Show();
-            //WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<IntPtr>(this, "hWnd", hWnd, hWnd));
-
         }
     }
 }

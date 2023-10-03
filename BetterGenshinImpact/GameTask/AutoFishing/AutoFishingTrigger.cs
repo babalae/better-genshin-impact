@@ -5,12 +5,15 @@ using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Drawable;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using BetterGenshinImpact.Model;
 using WindowsInput;
 using static Vanara.PInvoke.User32;
 
@@ -55,7 +58,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             // 进入独占的判定
             if (!IsExclusive)
             {
-                if (!content.IsReachInterval(TimeSpan.FromSeconds(1)))
+                if (!content.IsReachInterval(TimeSpan.FromMilliseconds(300)))
                 {
                     return;
                 }
@@ -93,67 +96,59 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <returns></returns>
         private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
         {
-            var info = TaskContext.Instance().SystemInfo;
             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
+            var info = TaskContext.Instance().SystemInfo;
             var srcMat = content.CaptureRectArea.SrcMat;
             var rightBottomMat = CropHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
             var list = CommonRecognition.FindGameButton(rightBottomMat);
-            foreach (var rect in list)
+            if (list.Count > 0)
             {
-                var ro = new RecognitionObject()
+                foreach (var rect in list)
                 {
-                    Name = "StartFishingText",
-                    RecognitionType = RecognitionType.Ocr,
-                    RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2, 
-                        srcMat.Height - srcMat.Height / 2),
-                    ContainMatchText = new List<string>
+                    var ro = new RecognitionObject()
+                    {
+                        Name = "StartFishingText",
+                        RecognitionType = RecognitionType.Ocr,
+                        RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2,
+                            srcMat.Height - srcMat.Height / 2),
+                        ContainMatchText = new List<string>
                     {
                         "开始", "钓鱼"
                     },
-                    DrawOnWindow = false
-                };
-                content.CaptureRectArea.Find(ro, _ =>
-                {
-                    VisionContext.Instance().DrawContent.PutRect("StartFishingButton",
-                        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
-                    MaskWindow.Instance().AddButton("开始自动钓鱼",
-                        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2 - 80),
-                        () =>
+                        DrawOnWindow = false
+                    };
+                    var ocrRaRes = content.CaptureRectArea.Find(ro);
+                    if (ocrRaRes.IsEmpty())
+                    {
+                        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
+                    }
+                    else
+                    {
+                        VisionContext.Instance().DrawContent.PutRect("StartFishingButton", rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
+
+                        var btnPosition = new Rect(rect.X + srcMat.Width / 2, rect.Y + srcMat.Height / 2 - rect.Height - 10, rect.Width, rect.Height);
+                        var maskButton = new MaskButton("开始自动钓鱼", btnPosition, () =>
                         {
-                            //AutoThrowRodTask
+                            VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
                             Debug.WriteLine("自动钓鱼，启动！");
                             IsExclusive = true;
+                            // 点击下面的按钮
                             var rc = info.GameWindowRect;
-                            new InputSimulator().Mouse.MoveMouseTo(
-                                (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
-                                info.DesktopRectArea.Width,
-                                (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 /
-                                info.DesktopRectArea.Height).LeftButtonClick();
+                            new InputSimulator()
+                                .Mouse
+                                .MoveMouseTo(
+                                    (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 / info.DesktopRectArea.Width,
+                                    (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 / info.DesktopRectArea.Height)
+                                .LeftButtonClick();
+                            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
                         });
-                });
-
-                //var text = _ocrService.Ocr(new Mat(rightBottomMat, rect).ToBitmap());
-                //if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("开始") &&
-                //    StringUtils.RemoveAllSpace(text).Contains("钓鱼"))
-                //{
-                //    VisionContext.Instance().DrawContent.PutRect("StartFishingButton",
-                //        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
-                //    MaskWindow.Instance().AddButton("开始自动钓鱼",
-                //        rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2 - 80),
-                //        () =>
-                //        {
-                //            //AutoThrowRodTask
-                //            Debug.WriteLine("自动钓鱼，启动！");
-                //            IsExclusive = true;
-                //            var rc = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
-                //            new InputSimulator().Mouse.MoveMouseTo(
-                //                (rc.X+srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 /
-                //                PrimaryScreen.WorkingArea.Width,
-                //                (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 /
-                //                PrimaryScreen.WorkingArea.Height).LeftButtonClick();
-                //        });
-                //    return;
-                //}
+                        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "AddButton", new object(), maskButton));
+                    }
+                }
+            }
+            else
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
             }
         }
 

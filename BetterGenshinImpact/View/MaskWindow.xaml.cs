@@ -167,32 +167,32 @@ namespace BetterGenshinImpact.View
             }
         }
 
-        public ConcurrentDictionary<string, Button> ButtonList { get; set; } = new();
+        //public ConcurrentDictionary<string, Button> ButtonList { get; set; } = new();
 
-        public void AddButton(string name, Rect position, Action action)
-        {
-            if (ButtonList.ContainsKey(name))
-            {
-                return;
-            }
+        //public void AddButton(string name, Rect position, Action action)
+        //{
+        //    if (ButtonList.ContainsKey(name))
+        //    {
+        //        return;
+        //    }
 
-            Dispatcher.Invoke(() =>
-            {
-                var b = new Button
-                {
-                    Name = name,
-                    Content = name,
-                    Width = position.Width / TaskContext.Instance().DpiScale,
-                    Height = position.Height / TaskContext.Instance().DpiScale
-                };
+        //    Dispatcher.Invoke(() =>
+        //    {
+        //        var b = new Button
+        //        {
+        //            Name = name,
+        //            Content = name,
+        //            Width = position.Width / TaskContext.Instance().DpiScale,
+        //            Height = position.Height / TaskContext.Instance().DpiScale
+        //        };
 
-                b.Click += (e, a) => { action.Invoke(); };
+        //        b.Click += (e, a) => { action.Invoke(); };
 
-                Canvas.SetLeft(b, position.X / TaskContext.Instance().DpiScale);
-                Canvas.SetTop(b, position.Y / TaskContext.Instance().DpiScale);
-                WholeCanvas.Children.Add(b);
-                ButtonList[name] = b;
-            });
-        }
+        //        Canvas.SetLeft(b, position.X / TaskContext.Instance().DpiScale);
+        //        Canvas.SetTop(b, position.Y / TaskContext.Instance().DpiScale);
+        //        WholeCanvas.Children.Add(b);
+        //        ButtonList[name] = b;
+        //    });
+        //}
     }
 }

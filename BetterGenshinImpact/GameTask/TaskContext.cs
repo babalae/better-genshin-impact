@@ -1,7 +1,10 @@
 ﻿using BetterGenshinImpact.GameTask.Model;
 using System;
+using System.Diagnostics;
 using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
+using System.Windows.Interop;
+using BetterGenshinImpact.View;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -35,9 +38,12 @@ namespace BetterGenshinImpact.GameTask
             GameHandle = hWnd;
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
+            MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
         }
 
         public IntPtr GameHandle { get; set; }
+
+        public IntPtr MaskWindowHandle { get; set; }
 
         public float DpiScale;
 
