@@ -69,41 +69,5 @@ public class AutoSkipTrigger : ITaskTrigger
 
         // TODO 自动交付材料
 
-        //var grayMat = content.SrcGreyMat;
-        //// 找左上角剧情自动的按钮
-        //var grayLeftTopMat = CutHelper.CutLeftTop(grayMat, grayMat.Width / 5, grayMat.Height / 5);
-        //var p1 = OldMatchTemplateHelper.FindSingleTarget(grayLeftTopMat, AutoSkipAssets.StopAutoButtonMat, 0.9);
-        //if (p1 is { X: > 0, Y: > 0 })
-        //{
-        //    //_logger.LogInformation($"找到剧情自动按钮：{p1}");
-        //    VisionContext.Instance().DrawContent.PutRect("StopAutoButton",
-        //        p1.CenterPointToRect(AutoSkipAssets.StopAutoButtonMat).ToRectDrawable());
-        //    new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
-        //}
-        //else
-        //{
-        //    VisionContext.Instance().DrawContent.RemoveRect("StopAutoButton");
-        //}
-
-        //// 不存在则找右下的选项按钮
-        //var grayRightBottomMat = content.SrcGreyRightBottomMat;
-        //var p2 = OldMatchTemplateHelper.FindSingleTarget(grayRightBottomMat, AutoSkipAssets.OptionMat);
-        //if (p2 is { X: > 0, Y: > 0 })
-        //{
-        //    // 不存在菜单的情况下 剧情在播放中
-        //    var grayLeftTopMat2 = CutHelper.CutLeftTop(grayMat, grayMat.Width / 4, grayMat.Height / 4);
-        //    var pMenu = OldMatchTemplateHelper.FindSingleTarget(grayLeftTopMat2, AutoSkipAssets.MenuMat);
-        //    if (pMenu is { X: 0, Y: 0 })
-        //    {
-        //        p2 = p2.ToDesktopPositionOffset65535(grayMat.Width - grayMat.Width / 2,
-        //            grayMat.Height - grayMat.Height / 3 * 2);
-        //        new InputSimulator().Mouse.MoveMouseTo(p2.X, p2.Y).LeftButtonClick();
-        //        _logger.LogInformation($"点击选项按钮：{p2}");
-        //        return;
-        //    }
-        //}
-
-
-
     }
 }

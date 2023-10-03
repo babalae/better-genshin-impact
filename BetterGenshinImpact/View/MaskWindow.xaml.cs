@@ -2,7 +2,6 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -34,7 +33,7 @@ namespace BetterGenshinImpact.View
         public static MaskWindow Instance(IntPtr? hWnd = null)
         {
             _maskWindow ??= new MaskWindow();
-            if (hWnd != null)
+            if (hWnd != null && hWnd!=IntPtr.Zero)
             {
                 User32.GetWindowRect(hWnd.Value, out var rect);
                 double scale = DpiHelper.ScaleY;
@@ -70,6 +69,11 @@ namespace BetterGenshinImpact.View
         public void Refresh()
         {
             Dispatcher.Invoke(InvalidateVisual);
+        }
+
+        public void Invoke(Action action)
+        {
+            Dispatcher.Invoke(action);
         }
 
         protected override void OnRender(DrawingContext drawingContext)

@@ -7,11 +7,7 @@
         AllowsTransparency="True"
         WindowStyle="None"
         Topmost="True"
-        Height="{Binding H,Mode=TwoWay}"
-        Width="{Binding W, Mode=TwoWay}"
-        Left="{Binding X, Mode=TwoWay}"
-        Top="{Binding Y, Mode=TwoWay}"
-        >
+>
     <!--Height="{Binding WindowRect.Height,Mode=TwoWay}"
         Width="{Binding WindowRect.Width, Mode=TwoWay}"
         Left="{Binding WindowRect.X, Mode=TwoWay}"

@@ -12,13 +12,14 @@ namespace BetterGenshinImpact.GameTask
             return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
         }
 
-        public static bool IsGenshinImpactActive()
+        [Obsolete]
+        public static bool IsGenshinImpactActiveOld()
         {
             var name = GetActiveProcessName();
             return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
         }
 
-        public static bool IsGenshinImpactActive2()
+        public static bool IsGenshinImpactActive()
         {
             var hWnd = User32.GetForegroundWindow();
             return hWnd == TaskContext.Instance().GameHandle;

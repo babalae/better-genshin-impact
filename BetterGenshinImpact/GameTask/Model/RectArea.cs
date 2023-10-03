@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.Helpers;
 using Point = OpenCvSharp.Point;
+using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.Model;
 

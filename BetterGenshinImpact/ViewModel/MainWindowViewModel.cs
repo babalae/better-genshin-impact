@@ -98,10 +98,10 @@ namespace BetterGenshinImpact.ViewModel
 
         private void ShowMaskWindow(IntPtr hWnd)
         {
-            _maskWindow ??= MaskWindow.Instance();
+            _maskWindow = MaskWindow.Instance(hWnd);
            
-            _maskWindow.Show();
-            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<IntPtr>(this, "hWnd", hWnd, hWnd));
+            //_maskWindow.Show();
+            //WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<IntPtr>(this, "hWnd", hWnd, hWnd));
 
         }
     }

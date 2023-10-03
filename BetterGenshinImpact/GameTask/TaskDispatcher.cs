@@ -3,10 +3,14 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Windows;
+using BetterGenshinImpact.View;
 using Vanara.PInvoke;
+using System.Windows.Threading;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -22,6 +26,9 @@ namespace BetterGenshinImpact.GameTask
         private static readonly object _locker = new();
         private int _frameIndex = 0;
 
+        private RECT _gameRect = RECT.Empty;
+        private bool _prevGameActive;
+
 
         public TaskDispatcher()
         {
@@ -31,7 +38,7 @@ namespace BetterGenshinImpact.GameTask
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
-            // 初始化任务上下文
+            // 初始化任务上下文(一定要在初始化触发器前完成)
             TaskContext.Instance().Init(hWnd);
             // 初始化触发器
             _triggers = GameTaskManager.LoadTriggers();
@@ -51,6 +58,8 @@ namespace BetterGenshinImpact.GameTask
         {
             _timer.Stop();
             _capture?.Stop();
+            _gameRect = RECT.Empty;
+            _prevGameActive = false;
         }
 
         public void Tick(object? sender, EventArgs e)
@@ -74,9 +83,31 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查游戏是否在前台
-                if (!SystemControl.IsGenshinImpactActive())
+                var active = SystemControl.IsGenshinImpactActive();
+                var maskWindow = MaskWindow.Instance();
+                if (!active)
                 {
+                    if (_prevGameActive)
+                    {
+                        maskWindow.Invoke(() => { maskWindow.Hide(); });
+                        Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
+                    }
+
+                    _prevGameActive = active;
                     return;
+                }
+                else
+                {
+                    if (!_prevGameActive)
+                    {
+                        maskWindow.Invoke(() => { maskWindow.Show(); });
+                    }
+                    _prevGameActive = active;
+                    // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
+                    if (SyncMaskWindowPosition())
+                    {
+                        return;
+                    }
                 }
 
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
@@ -118,6 +149,34 @@ namespace BetterGenshinImpact.GameTask
                     Monitor.Exit(_locker);
                 }
             }
+        }
+
+        /// <summary>
+        /// / 移动游戏窗口的时候同步遮罩窗口的位置
+        /// </summary>
+        /// <returns></returns>
+        private bool SyncMaskWindowPosition()
+        {
+            var currentRect = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
+            if (_gameRect == RECT.Empty)
+            {
+                _gameRect = new RECT(currentRect);
+            }
+            else if (_gameRect != currentRect)
+            {
+                _gameRect = new RECT(currentRect);
+                var maskWindow = MaskWindow.Instance();
+                maskWindow.Invoke(() =>
+                {
+                    maskWindow.Left = currentRect.left;
+                    maskWindow.Top = currentRect.top;
+                    maskWindow.Width = currentRect.Width;
+                    maskWindow.Height = currentRect.Height;
+                });
+                return true;
+            }
+
+            return false;
         }
     }
 }

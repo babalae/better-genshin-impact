@@ -13,6 +13,7 @@ namespace BetterGenshinImpact.GameTask
         {
             List<ITaskTrigger> loadedTriggers = new()
             {
+                new RecognitionTest.TestTrigger(),
                 new AutoPick.AutoPickTrigger(),
                 new AutoSkip.AutoSkipTrigger(),
                 new AutoFishing.AutoFishingTrigger()
@@ -48,7 +49,7 @@ namespace BetterGenshinImpact.GameTask
             {
                 throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
             }
-            var mat = new Mat(filePath, ImreadModes.AnyColor);
+            var mat = new Mat(filePath); // ImreadModes.Color
             if (info.GameScreenSize.Width != 1920)
             {
                 mat = ResizeHelper.Resize(mat, info.AssetScale);
