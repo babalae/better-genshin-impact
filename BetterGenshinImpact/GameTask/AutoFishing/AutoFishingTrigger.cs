@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
 using BetterGenshinImpact.Model;
 using WindowsInput;
 using static Vanara.PInvoke.User32;
@@ -35,7 +36,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         public bool IsExclusive { get; set; }
 
-        private AutoFishingAssets _autoFishingAssets;
+        private readonly AutoFishingAssets _autoFishingAssets;
 
         public AutoFishingTrigger()
         {
@@ -69,6 +70,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
+                // 自动抛竿
+                ThrowRod(content);
                 // 上钩判断
                 FishBite(content);
                 // 进入钓鱼界面先尝试获取钓鱼框的位置
@@ -112,9 +115,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2,
                             srcMat.Height - srcMat.Height / 2),
                         ContainMatchText = new List<string>
-                    {
-                        "开始", "钓鱼"
-                    },
+                        {
+                            "开始", "钓鱼"
+                        },
                         DrawOnWindow = false
                     };
                     var ocrRaRes = content.CaptureRectArea.Find(ro);
@@ -130,8 +133,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         var maskButton = new MaskButton("开始自动钓鱼", btnPosition, () =>
                         {
                             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
-                            Debug.WriteLine("自动钓鱼，启动！");
+                            _logger.LogInformation("自动钓鱼，启动！");
                             IsExclusive = true;
+                            _noFishActionContinuouslyFrameNum = 0;
+                            _isThrowRod = false;
                             // 点击下面的按钮
                             var rc = info.GameWindowRect;
                             new InputSimulator()
@@ -175,6 +180,66 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private bool FindSpaceButtonForExclusive(CaptureContent content)
         {
             return !content.CaptureRectArea.Find(_autoFishingAssets.SpaceButtonRo).IsEmpty();
+        }
+
+
+        private int _throwRodWaitFrameNum = 0; // 抛竿等待的时间(帧数)
+        private int _noFishActionContinuouslyFrameNum = 0; // 无钓鱼三种场景的持续时间(帧数)
+        private bool _isThrowRod = false; // 是否已经抛竿
+
+        /// <summary>
+        /// 钓鱼有3种场景
+        /// 1. 未抛竿 BaitButtonRo存在 && WaitBiteButtonRo不存在
+        /// 2. 抛竿后未拉条 WaitBiteButtonRo存在 && BaitButtonRo不存在
+        /// 3. 上钩拉条 _isFishingProcess && _biteTipsExitCount > 0
+        /// </summary>
+        /// <param name="content"></param>
+        private void ThrowRod(CaptureContent content)
+        {
+            // 没有拉条和提竿的时候，自动抛竿
+            if (!_isFishingProcess && _biteTipsExitCount == 0)
+            {
+                var baitRectArea = content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo);
+                var waitBiteArea = content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo);
+                if (!baitRectArea.IsEmpty() && waitBiteArea.IsEmpty() && !_isThrowRod)
+                {
+                    _noFishActionContinuouslyFrameNum = 0;
+                    //new InputSimulator().Mouse.LeftButtonDown().Sleep(300).LeftButtonUp();
+                    new InputSimulator().Mouse.LeftButtonClick();
+                    Debug.WriteLine("自动抛竿");
+                    Thread.Sleep(500);
+                    _isThrowRod = true;
+                }
+                if (baitRectArea.IsEmpty() && !waitBiteArea.IsEmpty() && _isThrowRod)
+                {
+                    _noFishActionContinuouslyFrameNum = 0;
+                    _throwRodWaitFrameNum++;
+                    // 30s 没有上钩，重新抛竿
+                    if (_throwRodWaitFrameNum >= content.FrameRate * 5)
+                    {
+                        new InputSimulator().Mouse.LeftButtonClick();
+                        _throwRodWaitFrameNum = 0;
+                        Debug.WriteLine("超时自动收竿");
+                        Thread.Sleep(2000);
+                        _isThrowRod = false;
+                    }
+                }
+
+                if (baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
+                {
+                    _noFishActionContinuouslyFrameNum++;
+                    if (_noFishActionContinuouslyFrameNum > content.FrameRate)
+                    {
+                        CheckFishingInterface(content);
+                    }
+                }
+            }
+            else
+            {
+                _noFishActionContinuouslyFrameNum = 0;
+                _throwRodWaitFrameNum = 0;
+                _isThrowRod = false;
+            }
         }
 
 
@@ -428,13 +493,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _logger.LogInformation(@"└------------------------┘");
                 }
 
-                IsExclusive = FindSpaceButtonForExclusive(content);
-                if (!IsExclusive)
-                {
-                    _logger.LogInformation("退出钓鱼界面");
-                    _fishBoxRect = Rect.Empty;
-                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
-                }
+                CheckFishingInterface(content);
             }
 
             // 提竿后没有钓鱼的情况
@@ -452,6 +511,22 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else
             {
                 _notFishingAfterBiteCount = 0;
+            }
+        }
+
+        /// <summary>
+        /// 检查是否退出钓鱼界面
+        /// </summary>
+        /// <param name="content"></param>
+        private void CheckFishingInterface(CaptureContent content)
+        {
+            IsExclusive = FindSpaceButtonForExclusive(content);
+            if (!IsExclusive)
+            {
+                _isThrowRod = false;
+                _logger.LogInformation("退出钓鱼界面");
+                _fishBoxRect = Rect.Empty;
+                VisionContext.Instance().DrawContent.RemoveRect("FishBox");
             }
         }
 

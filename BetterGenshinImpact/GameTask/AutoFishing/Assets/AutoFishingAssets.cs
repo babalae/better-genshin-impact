@@ -13,6 +13,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
     {
         public RecognitionObject SpaceButtonRo;
 
+        public RecognitionObject BaitButtonRo;
+        public RecognitionObject WaitBiteButtonRo;
+
         public AutoFishingAssets()
         {
             var info = TaskContext.Instance().SystemInfo;
@@ -21,11 +24,36 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                 Name = "SpaceButton",
                 RecognitionType = RecognitionType.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "space.png"),
-                RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 3, 
-                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 5, 
-                    info.CaptureAreaRect.Width / 3, 
+                RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 3,
+                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 5,
+                    info.CaptureAreaRect.Width / 3,
                     info.CaptureAreaRect.Height / 5),
                 DrawOnWindow = false
+            }.InitTemplate();
+
+            BaitButtonRo = new RecognitionObject
+            {
+                Name = "BaitButton",
+                RecognitionType = RecognitionType.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "bait.png"),
+                RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
+                    info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height / 4),
+                Threshold = 0.7,
+                DrawOnWindow = true
+            }.InitTemplate();
+            WaitBiteButtonRo = new RecognitionObject
+            {
+                Name = "WaitBiteButton",
+                RecognitionType = RecognitionType.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "wait_bite.png"),
+                RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
+                    info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height / 4),
+                Threshold = 0.7,
+                DrawOnWindow = true
             }.InitTemplate();
         }
     }

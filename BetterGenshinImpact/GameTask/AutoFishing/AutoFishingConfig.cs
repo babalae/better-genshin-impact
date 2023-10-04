@@ -23,6 +23,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 暂时无用
         /// </summary>
         public Rect FishHookedRecognitionArea { get; set; } = Rect.Empty;
+
+        /// <summary>
+        /// 自动抛竿未上钩超时时间(秒)
+        /// </summary>
+        public int AutoThrowRodTimeOut { get; set; } = 30;
     }
 
 }

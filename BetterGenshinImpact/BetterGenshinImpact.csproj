@@ -45,8 +45,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\space.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\wait_bite.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoPick\Assets\1920x1080\F.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenCvSharp;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 
 namespace BetterGenshinImpact.GameTask.RecognitionTest
 {
@@ -18,6 +19,8 @@ namespace BetterGenshinImpact.GameTask.RecognitionTest
 
         private readonly RecognitionObject _optionButtonRo;
 
+        private readonly AutoFishingAssets _autoFishingAssets;
+
         public TestTrigger()
         {
             var info = TaskContext.Instance().SystemInfo;
@@ -28,6 +31,7 @@ namespace BetterGenshinImpact.GameTask.RecognitionTest
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
                 DrawOnWindow = true
             }.InitTemplate();
+            _autoFishingAssets = new AutoFishingAssets();
         }
 
         public void Init()
@@ -38,7 +42,15 @@ namespace BetterGenshinImpact.GameTask.RecognitionTest
 
         public void OnCapture(CaptureContent content)
         {
-            content.CaptureRectArea.Find(_optionButtonRo, (optionButtonRectArea) =>
+            //content.CaptureRectArea.Find(_optionButtonRo, (optionButtonRectArea) =>
+            //{
+            //});
+
+            content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo, (rectArea) =>
+            {
+            });
+
+            content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo, (rectArea) =>
             {
             });
         }
