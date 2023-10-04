@@ -95,7 +95,7 @@
                 </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Command="{Binding ClickAction}" Content="{Binding Name}" Name="btn"
+                        <Button Command="{Binding ClickAction}" Content="{Binding Name}" Name="btn" Opacity="0.5"
                                 Height="{Binding Height}" Width="{Binding Width}" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

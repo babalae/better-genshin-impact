@@ -134,9 +134,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         {
                             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
                             _logger.LogInformation("自动钓鱼，启动！");
-                            IsExclusive = true;
-                            _noFishActionContinuouslyFrameNum = 0;
-                            _isThrowRod = false;
                             // 点击下面的按钮
                             var rc = info.GameWindowRect;
                             new InputSimulator()
@@ -146,6 +143,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                     (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 / info.DesktopRectArea.Height)
                                 .LeftButtonClick();
                             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
+                            // 启动要延时一会等待钓鱼界面切换
+                            Thread.Sleep(1000);
+                            IsExclusive = true;
+                            _switchBaitContinuouslyFrameNum = 0;
+                            _waitBiteContinuouslyFrameNum = 0;
+                            _noFishActionContinuouslyFrameNum = 0;
+                            _isThrowRod = false;
                         });
                         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "AddButton", new object(), maskButton));
                     }
@@ -184,6 +188,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
 
         private int _throwRodWaitFrameNum = 0; // 抛竿等待的时间(帧数)
+        private int _switchBaitContinuouslyFrameNum = 0; // 切换鱼饵的持续时间(帧数)
+        private int _waitBiteContinuouslyFrameNum = 0; // 等待上钩的持续时间(帧数)
         private int _noFishActionContinuouslyFrameNum = 0; // 无钓鱼三种场景的持续时间(帧数)
         private bool _isThrowRod = false; // 是否已经抛竿
 
@@ -201,32 +207,60 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 var baitRectArea = content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo);
                 var waitBiteArea = content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo);
-                if (!baitRectArea.IsEmpty() && waitBiteArea.IsEmpty() && !_isThrowRod)
+                if (!baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
                 {
+                    _switchBaitContinuouslyFrameNum++;
+                    _waitBiteContinuouslyFrameNum = 0;
                     _noFishActionContinuouslyFrameNum = 0;
-                    //new InputSimulator().Mouse.LeftButtonDown().Sleep(300).LeftButtonUp();
-                    new InputSimulator().Mouse.LeftButtonClick();
-                    Debug.WriteLine("自动抛竿");
-                    Thread.Sleep(500);
-                    _isThrowRod = true;
+
+                    if (_switchBaitContinuouslyFrameNum >= content.FrameRate)
+                    {
+                        _isThrowRod = false;
+                        _switchBaitContinuouslyFrameNum = 0;
+                    }
+
+                    if (!_isThrowRod)
+                    {
+                        new InputSimulator().Mouse.LeftButtonClick();
+                        Debug.WriteLine("自动抛竿");
+                        Thread.Sleep(500);
+                        _isThrowRod = true;
+                    }
                 }
                 if (baitRectArea.IsEmpty() && !waitBiteArea.IsEmpty() && _isThrowRod)
                 {
+                    _switchBaitContinuouslyFrameNum = 0;
+                    _waitBiteContinuouslyFrameNum ++;
                     _noFishActionContinuouslyFrameNum = 0;
                     _throwRodWaitFrameNum++;
-                    // 30s 没有上钩，重新抛竿
-                    if (_throwRodWaitFrameNum >= content.FrameRate * 5)
+
+
+                    if (_waitBiteContinuouslyFrameNum >= content.FrameRate)
                     {
-                        new InputSimulator().Mouse.LeftButtonClick();
-                        _throwRodWaitFrameNum = 0;
-                        Debug.WriteLine("超时自动收竿");
-                        Thread.Sleep(2000);
-                        _isThrowRod = false;
+                        _isThrowRod = true;
+                        _waitBiteContinuouslyFrameNum = 0;
+                    }
+
+
+                    if (_isThrowRod)
+                    {
+                        // 30s 没有上钩，重新抛竿
+                        if (_throwRodWaitFrameNum >= content.FrameRate * 20)
+                        {
+                            new InputSimulator().Mouse.LeftButtonClick();
+                            _throwRodWaitFrameNum = 0;
+                            _waitBiteContinuouslyFrameNum = 0;
+                            Debug.WriteLine("超时自动收竿");
+                            Thread.Sleep(2000);
+                            _isThrowRod = false;
+                        }
                     }
                 }
 
                 if (baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
                 {
+                    _switchBaitContinuouslyFrameNum = 0;
+                    _waitBiteContinuouslyFrameNum = 0;
                     _noFishActionContinuouslyFrameNum++;
                     if (_noFishActionContinuouslyFrameNum > content.FrameRate)
                     {
@@ -236,6 +270,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
+                _switchBaitContinuouslyFrameNum = 0;
+                _waitBiteContinuouslyFrameNum = 0;
                 _noFishActionContinuouslyFrameNum = 0;
                 _throwRodWaitFrameNum = 0;
                 _isThrowRod = false;
@@ -488,9 +524,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     _findFishBoxTips = false;
                     _isFishingProcess = false;
+                    _isThrowRod = false;
                     _prevMouseEvent = 0x0;
                     _logger.LogInformation("  钓鱼结束");
                     _logger.LogInformation(@"└------------------------┘");
+                    Thread.Sleep(1000);
                 }
 
                 CheckFishingInterface(content);
@@ -503,6 +541,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (_notFishingAfterBiteCount >= decimal.ToDouble(content.FrameRate) * 2)
                 {
                     _isFishingProcess = false;
+                    _isThrowRod = false;
                     _notFishingAfterBiteCount = 0;
                     _logger.LogInformation("  X 提竿后没有钓鱼，重置!");
                     _logger.LogInformation(@"└------------------------┘");
