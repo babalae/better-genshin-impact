@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Windows;
+using BetterGenshinImpact.Core;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Vanara.PInvoke;
 
@@ -24,20 +25,20 @@ namespace BetterGenshinImpact.ViewModel
         private MaskWindow? _maskWindow;
         private readonly ILogger<MainWindowViewModel> _logger = App.GetLogger<MainWindowViewModel>();
 
-        private TaskDispatcher _taskDispatcher = new();
-
+        private readonly TaskDispatcher _taskDispatcher = new();
+        private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
         [RelayCommand]
         private void OnLoaded()
         {
-            //TestMask();
-            //TestRect();
-            //Debug.WriteLine(DpiHelper.ScaleY);
+
         }
 
         [RelayCommand]
         private void OnClosed()
         {
+            _mouseKeyMonitor.Unsubscribe();
+            OnStopTrigger();
             _maskWindow?.Close();
             Application.Current.Shutdown();
         }
@@ -78,7 +79,7 @@ namespace BetterGenshinImpact.ViewModel
                 MessageBox.Show("未找到原神窗口");
                 return;
             }
-
+            _mouseKeyMonitor.Subscribe(hWnd);
             _maskWindow = MaskWindow.Instance(hWnd);
             _taskDispatcher.Start(hWnd, SelectedMode.ToCaptureMode());
         }
@@ -86,12 +87,6 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnStopTrigger()
         {
-            if (SelectedMode == null)
-            {
-                MessageBox.Show("请选择捕获方式");
-                return;
-            }
-
             _maskWindow?.Hide();
             _taskDispatcher.Stop();
         }

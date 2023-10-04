@@ -2,7 +2,7 @@
 
 namespace BetterGenshinImpact.Core.Simulator;
 
-public class Simulator
+public class MySimulator
 {
     public static PostMessageSimulator PostMessage(IntPtr hWnd)
     {
