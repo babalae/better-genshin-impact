@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Config
 {
-    public class ScriptConfig
+    public class MacroConfig
     {
         /// <summary>
         /// 长按空格变空格连发

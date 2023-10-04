@@ -13,6 +13,7 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
 		<PackageReference Include="H.InputSimulator" Version="1.4.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />
 		<PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.46-beta">
@@ -26,11 +27,10 @@
 		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.16" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.16" />
+		<PackageReference Include="WPF-UI" Version="3.0.0-preview.6" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="GameTask\AutoGeniusInvokation\" />
-		<Folder Include="GameTask\UseActiveCode\" />
 		<Folder Include="Service\Interface\" />
 	</ItemGroup>
 
@@ -41,6 +41,9 @@
 	<ItemGroup>
 		<Compile Update="View\MaskWindow.xaml.cs">
 			<SubType>Code</SubType>
+		</Compile>
+		<Compile Update="View\Pages\TriggerSettingsPage.xaml.cs">
+		  <SubType>Code</SubType>
 		</Compile>
 	</ItemGroup>
 

@@ -41,5 +41,9 @@ namespace BetterGenshinImpact.Core.Config
         /// </summary>
         public AutoFishingConfig AutoFishingConfig { get; set; } = new();
 
+        /// <summary>
+        /// 脚本类配置
+        /// </summary>
+        public MacroConfig ScriptConfig { get; set; } = new();
     }
 }

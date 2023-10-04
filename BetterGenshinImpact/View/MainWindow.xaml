@@ -1,15 +1,17 @@
-﻿<Window x:Class="BetterGenshinImpact.View.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-        xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
-        mc:Ignorable="d"
-        Title="更好的原神Alpha1" Height="300" Width="300">
-    <Window.DataContext>
-        <viewModel:MainWindowViewModel />
-    </Window.DataContext>
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 Title="更好的原神Alpha2" Height="600" Width="900">
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction
@@ -22,7 +24,84 @@
                 Command="{Binding ClosedCommand}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
+
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:NavigationView
+            x:Name="RootNavigation" Grid.Row="1"
+            OpenPaneLength="150"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleVisible="True">
+            <!--<ui:NavigationView.AutoSuggestBox>
+                <ui:AutoSuggestBox x:Name="AutoSuggestBox" PlaceholderText="Search">
+                    <ui:AutoSuggestBox.Icon>
+                        <ui:IconSourceElement>
+                            <ui:SymbolIconSource Symbol="Search24" />
+                        </ui:IconSourceElement>
+                    </ui:AutoSuggestBox.Icon>
+                </ui:AutoSuggestBox>
+            </ui:NavigationView.AutoSuggestBox>-->
+            <!--<ui:NavigationView.Header>
+                <ui:BreadcrumbBar
+                    Margin="42,32,0,0"
+                    FontSize="28"
+                    FontWeight="DemiBold" />
+            </ui:NavigationView.Header>-->
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem
+                    Content="首页"
+                    NavigationCacheMode="Enabled"
+                    TargetPageType="{x:Type pages:HomePage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Home24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem
+                    Content="自动化"
+                    NavigationCacheMode="Enabled"
+                    TargetPageType="{x:Type pages:TriggerSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Flash24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <!--<ui:NavigationViewItem
+                    Content="任务"
+                    NavigationCacheMode="Enabled"
+                    TargetPageType="{x:Type pages:TriggerSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>-->
+                <ui:NavigationViewItem
+                    Content="辅助操控"
+                    NavigationCacheMode="Enabled"
+                    TargetPageType="{x:Type pages:MacroSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="XboxController24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+            </ui:NavigationView.MenuItems>
+            <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem
+                    Content="设置"
+                    NavigationCacheMode="Enabled">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Settings24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+            </ui:NavigationView.FooterMenuItems>
+        </ui:NavigationView>
+
+        <ui:TitleBar
+            Title="更好的原神 · Alpha2"
+            Grid.Row="0" />
+
+    </Grid>
+    <!--<Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="26*"/>
             <ColumnDefinition Width="49*"/>
@@ -35,5 +114,5 @@
         <Button x:Name="StartTrigger" Content="启动触发器（自动剧情、钓鱼）" Command="{Binding StartTriggerCommand}" HorizontalAlignment="Left" Margin="10,106,0,0" VerticalAlignment="Top" Height="33" Width="252" Grid.ColumnSpan="2" />
         <Button x:Name="StopTrigger" Content="关闭触发器" Command="{Binding StopTriggerCommand}" HorizontalAlignment="Left" Margin="10,152,0,0" VerticalAlignment="Top" Height="33" Width="252" Grid.ColumnSpan="2" />
 
-    </Grid>
-</Window>
+    </Grid>-->
+</ui:FluentWindow>
