@@ -11,7 +11,9 @@ using System.IO;
 using System.Windows;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Configuration;
+using Serilog.Events;
 using Wpf.Ui;
+using Serilog.Filters;
 
 namespace BetterGenshinImpact
 {
@@ -36,6 +38,9 @@ namespace BetterGenshinImpact
 
                     Log.Logger = new LoggerConfiguration()
                         .WriteTo.File(path: logFile, outputTemplate: "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}", rollingInterval: RollingInterval.Day)
+                        .MinimumLevel.Information()
+                        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
                         .WriteTo.RichTextBox(MaskWindow.Instance().LogBox, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                         .CreateLogger();
                     services.AddLogging(c => c.AddSerilog());
