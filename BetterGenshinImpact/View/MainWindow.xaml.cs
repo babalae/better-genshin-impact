@@ -1,20 +1,43 @@
-﻿using BetterGenshinImpact.ViewModel;
+﻿using System;
+using BetterGenshinImpact.ViewModel;
+using System.Windows.Navigation;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
 
-namespace BetterGenshinImpact.View
+namespace BetterGenshinImpact.View;
+
+/// <summary>
+/// Interaction logic for MainWindow.xaml
+/// </summary>
+public partial class MainWindow : INavigationWindow
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow
+    public MainWindowViewModel ViewModel { get; }
+
+    public MainWindow(MainWindowViewModel viewModel, IPageService pageService, INavigationService navigationService)
     {
+        DataContext = ViewModel = viewModel;
 
-        public MainWindowViewModel ViewModel { get; }
+        InitializeComponent();
 
-        public MainWindow()
-        {
-            DataContext = ViewModel = new();
-            InitializeComponent();
-        }
-
+        SetPageService(pageService);
+        navigationService.SetNavigationControl(RootNavigation);
     }
+
+    public INavigationView GetNavigation() => RootNavigation;
+
+    public bool Navigate(Type pageType) => RootNavigation.Navigate(pageType);
+
+    public void SetServiceProvider(IServiceProvider serviceProvider)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SetPageService(IPageService pageService)
+    {
+        RootNavigation.SetPageService(pageService);
+    }
+
+    public void ShowWindow() => Show();
+
+    public void CloseWindow() => Close();
 }

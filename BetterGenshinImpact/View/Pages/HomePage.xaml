@@ -5,6 +5,9 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      d:DataContext="{d:DesignInstance Type=pages:HomePageViewModel}"
       mc:Ignorable="d"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -12,14 +15,34 @@
       Title="HomePage"
       d:DesignHeight="450"
       d:DesignWidth="800">
+
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction
+                CommandParameter="{Binding}"
+                Command="{Binding LoadedCommand}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+
     <StackPanel Margin="42">
-        <TextBlock
-            VerticalAlignment="Center"
-            TextWrapping = "Wrap"
-            Text="你喜欢钓鱼吗？你想玩七圣召唤吗？你是否想要跳过不爱看的剧情？你做完所有邀约了吗？是否对日复一日的重复点击感到疲劳？" />
-        <TextBlock
-            VerticalAlignment="Center"
-            TextWrapping = "Wrap"
-            Text="better-genshin-impact 一个意图在有限的条件内让原神变的更好的项目。" />
+        <Label Content="截图模式：" Target="{Binding ElementName=CaptureModeComboBox}" />
+        <ComboBox x:Name="CaptureModeComboBox" Margin="0,4,0,0" ItemsSource="{Binding ModeNames}"
+                  SelectedItem="{Binding SelectedMode, Mode=TwoWay}" />
+
+        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+            <ui:Button
+                Icon="{ui:SymbolIcon Play24}"
+                Content="启动"
+                Command="{Binding StartTriggerCommand}"
+                Visibility="{Binding StartButtonVisibility}"/>
+            <ui:Button
+                Icon="{ui:SymbolIcon Dismiss24}"
+                Content="停止"
+                Command="{Binding StopTriggerCommand}"
+                Visibility="{Binding StopButtonVisibility}"/>
+        </StackPanel>
+
+        <ui:Button x:Name="StartCaptureTest"  Margin="0,20,0,0" Content="测试图像捕获" Command="{Binding StartCaptureTestCommand}" />
+
     </StackPanel>
 </Page>

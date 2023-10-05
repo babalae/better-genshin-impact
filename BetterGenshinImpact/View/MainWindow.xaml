@@ -10,6 +10,7 @@
                  mc:Ignorable="d"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ExtendsContentIntoTitleBar="True"
                  Title="更好的原神Alpha2" Height="600" Width="900">
     <b:Interaction.Triggers>
@@ -35,7 +36,8 @@
             x:Name="RootNavigation" Grid.Row="1"
             OpenPaneLength="150"
             IsBackButtonVisible="Collapsed"
-            IsPaneToggleVisible="True">
+            IsPaneToggleVisible="True"
+            >
             <!--<ui:NavigationView.AutoSuggestBox>
                 <ui:AutoSuggestBox x:Name="AutoSuggestBox" PlaceholderText="Search">
                     <ui:AutoSuggestBox.Icon>
@@ -97,7 +99,7 @@
         </ui:NavigationView>
 
         <ui:TitleBar
-            Title="更好的原神 · Alpha2"
+            Title="更好的原神（内测版） · Alpha2"
             Grid.Row="0" />
 
     </Grid>

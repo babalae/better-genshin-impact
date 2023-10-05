@@ -29,6 +29,8 @@ namespace BetterGenshinImpact.GameTask
         private RECT _gameRect = RECT.Empty;
         private bool _prevGameActive;
 
+        public bool Enabled => _timer.Enabled;
+
 
         public TaskDispatcher()
         {
@@ -51,7 +53,10 @@ namespace BetterGenshinImpact.GameTask
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
-            _timer.Start();
+            if (!_timer.Enabled)
+            {
+                _timer.Start();
+            }
         }
 
         public void Stop()

@@ -30,6 +30,19 @@ namespace BetterGenshinImpact.View
 
         private static readonly Typeface MyTypeface = new FontFamily("微软雅黑").GetTypefaces().First();
 
+        static MaskWindow()
+        {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
+
+        }
+
+        public override void OnApplyTemplate()
+        {
+            base.OnApplyTemplate();
+
+            // gets called finally
+        }
+
         public static MaskWindow Instance(IntPtr? hWnd = null)
         {
             _maskWindow ??= new MaskWindow();
@@ -50,6 +63,7 @@ namespace BetterGenshinImpact.View
 
         private MaskWindow()
         {
+            this.SetResourceReference(StyleProperty, typeof(MaskWindow));
             InitializeComponent();
             LogTextBox.TextChanged += LogTextBoxTextChanged;
             //AddAreaSettingsControl("测试识别窗口");

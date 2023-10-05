@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.ViewModel.Pages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,8 +18,11 @@ namespace BetterGenshinImpact.View.Pages
 {
     public partial class HomePage
     {
-        public HomePage()
+        public HomePageViewModel ViewModel { get; }
+
+        public HomePage(HomePageViewModel viewModel)
         {
+            DataContext = ViewModel = viewModel;
             InitializeComponent();
         }
     }

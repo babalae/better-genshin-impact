@@ -28,7 +28,7 @@
         <ui:TextBlock
             Margin="0,0,0,8"
             FontTypography="BodyStrong"
-            Text="快捷控制设置" />
+            Text="辅助操控设置" />
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>
                 <Grid>
@@ -40,11 +40,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="长按空格等于连续按下空格" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="轻松解除冻结" />
                 </Grid>
             </ui:CardControl.Header>
@@ -61,11 +63,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="长按 F 等于连续按下 F " />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="快速拾取大量掉落物" />
                 </Grid>
             </ui:CardControl.Header>

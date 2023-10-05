@@ -32,12 +32,14 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="自动拾取" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="界面出现不在黑名单的选项时，自动按下 F 拾取/对话" />
+                        TextWrapping="Wrap"
+                        Text="选项不在黑名单时，自动按下 F 拾取/对话" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -59,11 +61,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="黑名单" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="排除 NPC 对话、各类交互选项、不需要拾取的物品等" />
                     <ui:Button
                         Grid.Row="0"
@@ -85,11 +89,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="白名单" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="需要主动按下F交互的内容，请配合黑名单使用" />
                     <ui:Button
                         Grid.Row="0"
@@ -116,11 +122,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="自动剧情" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="在游戏内剧情“自动”开启时，快速跳过文本、自动选择选项。" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
@@ -143,11 +151,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="快速跳过对话文本" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="如果你要听完整的主线语音的话，可以关闭此功能" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
@@ -173,11 +183,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="自动钓鱼" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="自动提竿、自动完成钓鱼进度" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
@@ -200,11 +212,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="愿者上钩 - 自动抛竿" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="自动循环选择饵料并抛竿" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
@@ -225,11 +239,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="愿者上钩 - 超时时间" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="超过这个时间将自动提竿，并重新选择鱼饵重新抛竿" />
                     <ui:NumberBox
                         Grid.Row="0"
@@ -253,11 +269,13 @@
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
+                        TextWrapping="Wrap"
                         Text="自动七圣召唤" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
                         Text="全自动打牌" />
                 </Grid>
             </ui:CardControl.Header>

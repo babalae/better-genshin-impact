@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterGenshinImpact.ViewModel.Pages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,8 +17,11 @@ namespace BetterGenshinImpact.View.Pages
 {
     public partial class TriggerSettingsPage
     {
-        public TriggerSettingsPage()
+        TriggerSettingsPageViewModel ViewModel { get; }
+
+        public TriggerSettingsPage(TriggerSettingsPageViewModel viewModel)
         {
+            DataContext = ViewModel = viewModel;
             InitializeComponent();
         }
     }
