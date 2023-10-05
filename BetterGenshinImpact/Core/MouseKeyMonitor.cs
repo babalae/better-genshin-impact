@@ -3,6 +3,7 @@ using Gma.System.MouseKeyHook;
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core;
@@ -19,6 +20,7 @@ public class MouseKeyMonitor
     /// 长按空格变空格连发
     /// </summary>
     private readonly System.Timers.Timer _spaceTimer = new();
+
     /// <summary>
     /// 长按F变F连发
     /// </summary>
@@ -28,6 +30,7 @@ public class MouseKeyMonitor
     /// DateTime.MaxValue 代表没有按下
     /// </summary>
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
+
     private DateTime _firstFKeyDownTime = DateTime.MaxValue;
 
     public void Subscribe(IntPtr gameHandle)
@@ -43,18 +46,20 @@ public class MouseKeyMonitor
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _firstSpaceKeyDownTime = DateTime.MaxValue;
-        _spaceTimer.Interval = 50;
+        var si = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
+        _spaceTimer.Interval = si;
         _spaceTimer.Elapsed += (sender, args) =>
         {
             MySimulator.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE);
-            _spaceTimer.Interval = _random.Next(50, 70);
+            _spaceTimer.Interval = _random.Next(si, si + 20);
         };
 
-        _fTimer.Interval = 50;
+        var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
+        _fTimer.Interval = fi;
         _fTimer.Elapsed += (sender, args) =>
         {
             MySimulator.PostMessage(_hWnd).KeyPress(User32.VK.VK_F);
-            _fTimer.Interval = _random.Next(50, 70);
+            _fTimer.Interval = _random.Next(fi, fi + 20);
         };
     }
 
@@ -71,17 +76,16 @@ public class MouseKeyMonitor
             else
             {
                 var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
-                if (timeSpan.TotalMilliseconds > 300)
+                if (timeSpan.TotalMilliseconds > 300 && TaskContext.Instance().Config.MacroConfig.SpacePressHoldToContinuationEnabled)
                 {
                     if (!_spaceTimer.Enabled)
                     {
                         _spaceTimer.Start();
                     }
-
                 }
             }
         }
-        else if(e.KeyCode == Keys.F)
+        else if (e.KeyCode == Keys.F)
         {
             if (_firstFKeyDownTime == DateTime.MaxValue)
             {
@@ -90,13 +94,12 @@ public class MouseKeyMonitor
             else
             {
                 var timeSpan = DateTime.Now - _firstFKeyDownTime;
-                if (timeSpan.TotalMilliseconds > 200)
+                if (timeSpan.TotalMilliseconds > 200 && TaskContext.Instance().Config.MacroConfig.FPressHoldToContinuationEnabled)
                 {
                     if (!_fTimer.Enabled)
                     {
                         _fTimer.Start();
                     }
-
                 }
             }
         }
@@ -113,7 +116,6 @@ public class MouseKeyMonitor
                 Debug.WriteLine($"Space按下时间：{timeSpan.TotalMilliseconds}ms");
                 _firstSpaceKeyDownTime = DateTime.MaxValue;
                 _spaceTimer.Stop();
-
             }
         }
         else if (e.KeyCode == Keys.F)
@@ -124,7 +126,6 @@ public class MouseKeyMonitor
                 Debug.WriteLine($"F按下时间：{timeSpan.TotalMilliseconds}ms");
                 _firstFKeyDownTime = DateTime.MaxValue;
                 _fTimer.Stop();
-
             }
         }
     }
