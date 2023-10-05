@@ -39,7 +39,11 @@
 
     <!-- 可以拖拽调整大小的 拖拽按钮在外面 -->
     <ControlTemplate x:Key="OuterMoveThumbTemplate" TargetType="{x:Type controls:MoveThumb}">
-        <Rectangle x:Name="DragHandle" Fill="Blue" />
+        <!--<Rectangle x:Name="DragHandle" Fill="Blue" >
+            
+        </Rectangle>-->
+        <Image x:Name="DragHandle" Source="pack://application:,,,/BetterGenshinImpact;component/Assets/drag.png" />
+
         <!--<ControlTemplate.Triggers>
             <Trigger Property="Selector.IsSelected" Value="False">
                 <Setter TargetName="DragHandle" Property="Fill" Value="Transparent" />
