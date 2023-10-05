@@ -36,13 +36,6 @@ namespace BetterGenshinImpact.View
 
         }
 
-        public override void OnApplyTemplate()
-        {
-            base.OnApplyTemplate();
-
-            // gets called finally
-        }
-
         public static MaskWindow Instance(IntPtr? hWnd = null)
         {
             _maskWindow ??= new MaskWindow();

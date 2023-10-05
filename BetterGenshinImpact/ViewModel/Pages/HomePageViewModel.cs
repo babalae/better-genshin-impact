@@ -38,6 +38,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
+
     public AllConfig Config { get; set; }
 
     private MaskWindow? _maskWindow;
@@ -63,6 +64,13 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     private void OnLoaded()
     {
         Debug.WriteLine("HomePageViewModel Loaded");
+#if DEBUG
+        var hWnd = SystemControl.FindGenshinImpactHandle();
+        if (hWnd != IntPtr.Zero)
+        {
+            OnStartTrigger();
+        }
+#endif
     }
 
     private void OnClosed()
@@ -76,12 +84,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnStartCaptureTest()
     {
-        if (Config.CaptureMode == null)
-        {
-            System.Windows.MessageBox.Show("请选择捕获方式");
-            return;
-        }
-
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
@@ -99,12 +101,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     private void OnStartTrigger()
     {
-        if (SelectedMode == null)
-        {
-            System.Windows.MessageBox.Show("请选择捕获方式");
-            return;
-        }
-
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
@@ -117,7 +113,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         {
             _mouseKeyMonitor.Subscribe(hWnd);
             _maskWindow = MaskWindow.Instance(hWnd);
-            _taskDispatcher.Start(hWnd, SelectedMode.ToCaptureMode());
+            _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode());
             _taskDispatcherEnabled = true;
             StartButtonVisibility = Visibility.Collapsed;
             StopButtonVisibility = Visibility.Visible;
@@ -146,6 +142,5 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     public void OnNavigatedFrom()
     {
-
     }
 }
