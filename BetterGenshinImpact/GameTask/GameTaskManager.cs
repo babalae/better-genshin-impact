@@ -1,9 +1,12 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.View.Drawable;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -42,6 +45,9 @@ namespace BetterGenshinImpact.GameTask
                 {
                     TriggerDictionary["AutoFishing"] = new AutoFishing.AutoFishingTrigger();
                 }
+                // 清理画布
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
+                VisionContext.Instance().DrawContent.ClearAll();
             }
         }
 

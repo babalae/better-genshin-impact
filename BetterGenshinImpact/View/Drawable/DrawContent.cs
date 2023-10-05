@@ -93,4 +93,15 @@ public class DrawContent
             MaskWindow.Instance().Refresh();
         }
     }
+
+
+    /// <summary>
+    /// 清理所有绘制内容
+    /// </summary>
+    public void ClearAll()
+    {
+        RectList.Clear();
+        TextList.Clear();
+        MaskWindow.Instance().Refresh();
+    }
 }

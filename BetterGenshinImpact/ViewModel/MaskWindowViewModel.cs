@@ -56,6 +56,13 @@ namespace BetterGenshinImpact.ViewModel
                         }
                     });
                 }
+                else if (msg.PropertyName == "RemoveAllButton")
+                {
+                    UIDispatcherHelper.Invoke(() =>
+                    {
+                        _maskButtons.Clear();
+                    });
+                }
             });
         }
 

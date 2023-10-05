@@ -20,7 +20,7 @@ using Pen = System.Drawing.Pen;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
-    public class AutoFishingTrigger : ITaskTrigger, IDisposable
+    public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         private readonly IOcrService _ocrService = OcrFactory.Create(OcrEngineType.WinRT);
@@ -91,6 +91,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
             }
         }
+
+
 
         /// <summary>
         /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
@@ -581,25 +583,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             VisionContext.Instance().DrawContent.PutOrRemoveRectList(list);
         }
 
-        /// <summary>
-        /// 清理画布
-        /// </summary>
-        public void ClearDraw()
-        {
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList(new List<(string, RectDrawable)>
-            {
-                ("FishingBarLeft", new RectDrawable(System.Windows.Rect.Empty)),
-                ("FishingBarCur", new RectDrawable(System.Windows.Rect.Empty)),
-                ("FishingBarRight", new RectDrawable(System.Windows.Rect.Empty))
-            });
-            VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-            VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
-            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
-        }
+        ///// <summary>
+        ///// 清理画布
+        ///// </summary>
+        //public void ClearDraw()
+        //{
+        //    VisionContext.Instance().DrawContent.PutOrRemoveRectList(new List<(string, RectDrawable)>
+        //    {
+        //        ("FishingBarLeft", new RectDrawable(System.Windows.Rect.Empty)),
+        //        ("FishingBarCur", new RectDrawable(System.Windows.Rect.Empty)),
+        //        ("FishingBarRight", new RectDrawable(System.Windows.Rect.Empty))
+        //    });
+        //    VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+        //    VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
+        //    WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
+        //}
 
-        public void Dispose()
-        {
-            ClearDraw();
-        }
+        //public void Stop()
+        //{
+        //    ClearDraw();
+        //}
     }
 }
