@@ -40,10 +40,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Service\Interface\" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\Fischless.WindowCapture\Fischless.WindowCapture.csproj" />
 	</ItemGroup>
 

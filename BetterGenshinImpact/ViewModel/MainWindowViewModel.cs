@@ -17,14 +17,18 @@ using System.Collections.ObjectModel;
 using BetterGenshinImpact.View.Pages;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.ViewModel
 {
     public partial class MainWindowViewModel : ObservableObject
     {
-        public MainWindowViewModel(INavigationService navigationService)
-        {
+        private readonly IConfigService _configService;
 
+        public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
+        {
+            _configService = configService;
         }
 
 
@@ -37,6 +41,7 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnClosed()
         {
+            _configService.Save();
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "Close", "", ""));
             Debug.WriteLine("MainWindowViewModel Closed");
             Application.Current.Shutdown();

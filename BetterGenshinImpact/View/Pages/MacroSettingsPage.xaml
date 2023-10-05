@@ -5,7 +5,9 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance Type=pages:MacroSettingsPageViewModel}"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -50,7 +52,9 @@
                         Text="轻松解除冻结" />
                 </Grid>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch Margin="0,0,36,0" />
+            <ui:ToggleSwitch 
+                Margin="0,0,36,0"
+                IsChecked="{Binding Config.MacroConfig.SpacePressHoldToContinuationEnabled, Mode=TwoWay}"/>
         </ui:CardControl>
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>
@@ -73,7 +77,9 @@
                         Text="快速拾取大量掉落物" />
                 </Grid>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch Margin="0,0,36,0" />
+            <ui:ToggleSwitch 
+                Margin="0,0,36,0"
+                IsChecked="{Binding Config.MacroConfig.FPressHoldToContinuationEnabled, Mode=TwoWay}"/>
         </ui:CardControl>
     </StackPanel>
 </Page>

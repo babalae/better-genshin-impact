@@ -1,5 +1,6 @@
 ﻿using OpenCvSharp;
 using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -7,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// 自动钓鱼配置
     /// </summary>
     [Serializable]
-    public class AutoFishingConfig
+    public partial class AutoFishingConfig : ObservableObject, ITaskConfig
     {
         /// <summary>
         /// 触发器是否启用
@@ -16,18 +17,23 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 2. 自动提杆
         /// 3. 自动拉条
         /// </summary>
-        public bool Enable { get; set; } = true;
+        [ObservableProperty] private bool _enabled = true;
 
         /// <summary>
         /// 鱼儿上钩文字识别区域
         /// 暂时无用
         /// </summary>
-        public Rect FishHookedRecognitionArea { get; set; } = Rect.Empty;
+        [ObservableProperty] private Rect _fishHookedRecognitionArea = Rect.Empty;
+
+        /// <summary>
+        /// 自动抛竿是否启用
+        /// </summary>
+        [ObservableProperty] private bool _autoThrowRodEnabled = true;
 
         /// <summary>
         /// 自动抛竿未上钩超时时间(秒)
         /// </summary>
-        public int AutoThrowRodTimeOut { get; set; } = 30;
+        [ObservableProperty] private int _autoThrowRodTimeOut = 30;
     }
 
 }

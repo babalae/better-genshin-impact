@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.View.Pages
 {
@@ -20,8 +21,11 @@ namespace BetterGenshinImpact.View.Pages
     /// </summary>
     public partial class MacroSettingsPage : Page
     {
-        public MacroSettingsPage()
+        MacroSettingsPageViewModel ViewModel { get; }
+
+        public MacroSettingsPage(MacroSettingsPageViewModel viewModel)
         {
+            DataContext = ViewModel = viewModel;
             InitializeComponent();
         }
     }

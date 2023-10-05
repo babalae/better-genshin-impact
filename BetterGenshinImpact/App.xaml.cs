@@ -9,6 +9,7 @@ using Serilog;
 using System;
 using System.IO;
 using System.Windows;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Configuration;
 using Serilog.Events;
@@ -65,6 +66,10 @@ namespace BetterGenshinImpact
                     services.AddSingleton<TriggerSettingsPage>();
                     services.AddSingleton<TriggerSettingsPageViewModel>();
                     services.AddSingleton<MacroSettingsPage>();
+                    services.AddSingleton<MacroSettingsPageViewModel>();
+
+                    // My Services
+                    services.AddSingleton<IConfigService, ConfigService>();
 
                     // Configuration
                     //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));

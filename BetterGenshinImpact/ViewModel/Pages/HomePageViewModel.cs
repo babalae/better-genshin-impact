@@ -18,6 +18,8 @@ using System.Windows;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using Wpf.Ui.Controls;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -36,6 +38,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
+    public AllConfig Config { get; set; }
 
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
@@ -43,8 +46,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     private readonly TaskDispatcher _taskDispatcher = new();
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
-    public HomePageViewModel()
+    public HomePageViewModel(IConfigService configService)
     {
+        Config = configService.Get();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "Close")
@@ -72,7 +76,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnStartCaptureTest()
     {
-        if (SelectedMode == null)
+        if (Config.CaptureMode == null)
         {
             System.Windows.MessageBox.Show("请选择捕获方式");
             return;
@@ -86,7 +90,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         }
 
         CaptureTestWindow captureTestWindow = new();
-        captureTestWindow.StartCapture(hWnd, SelectedMode.ToCaptureMode());
+        captureTestWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
         captureTestWindow.Show();
     }
 

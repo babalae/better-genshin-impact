@@ -4,8 +4,10 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" 
+      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -44,7 +46,8 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,24,0" />
+                        Margin="0,0,24,0"
+                        IsChecked="{Binding Config.AutoPickConfig.Enabled, Mode=TwoWay}"/>
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -134,7 +137,8 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,24,0" />
+                        Margin="0,0,24,0"
+                        IsChecked="{Binding Config.AutoSkipConfig.Enabled, Mode=TwoWay}"/>
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -163,7 +167,8 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,36,0"/>
+                        Margin="0,0,36,0"
+                        IsChecked="{Binding Config.AutoSkipConfig.QuicklySkipConversationsEnabled, Mode=TwoWay}"/>
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -195,7 +200,8 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,24,0" />
+                        Margin="0,0,24,0"
+                        IsChecked="{Binding Config.AutoFishingConfig.Enabled, Mode=TwoWay}"/>
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -224,7 +230,8 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,36,0" />
+                        Margin="0,0,36,0"
+                        IsChecked="{Binding Config.AutoFishingConfig.AutoThrowRodEnabled, Mode=TwoWay}"/>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -253,7 +260,7 @@
                         Grid.Column="1"
                         Maximum="60"
                         Minimum="5"
-                        Value="20"
+                        Value="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay}"
                         ValidationMode="InvalidInputOverwritten" />
                 </Grid>
             </StackPanel>
