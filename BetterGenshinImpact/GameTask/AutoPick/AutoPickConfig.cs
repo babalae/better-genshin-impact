@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace BetterGenshinImpact.GameTask.AutoPick
 {
     [Serializable]
-    public partial class AutoPickConfig : ObservableObject, ITaskConfig
+    public partial class AutoPickConfig : ObservableObject
     {
         /// <summary>
         /// 触发器是否启用

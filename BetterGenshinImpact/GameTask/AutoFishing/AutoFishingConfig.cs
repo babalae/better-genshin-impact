@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// 自动钓鱼配置
     /// </summary>
     [Serializable]
-    public partial class AutoFishingConfig : ObservableObject, ITaskConfig
+    public partial class AutoFishingConfig : ObservableObject
     {
         /// <summary>
         /// 触发器是否启用

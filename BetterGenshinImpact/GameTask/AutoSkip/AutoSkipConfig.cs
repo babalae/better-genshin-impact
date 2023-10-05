@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
     /// 自动跳过剧情配置
     /// </summary>
     [Serializable]
-    public partial class AutoSkipConfig : ObservableObject, ITaskConfig
+    public partial class AutoSkipConfig : ObservableObject
     {
         /// <summary>
         /// 触发器是否启用
