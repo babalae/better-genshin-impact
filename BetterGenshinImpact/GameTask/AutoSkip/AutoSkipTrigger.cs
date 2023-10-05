@@ -28,7 +28,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = true;
+        IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
     }
 
     public void OnCapture(CaptureContent content)

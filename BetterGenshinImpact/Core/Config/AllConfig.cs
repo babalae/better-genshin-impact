@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using System;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPick;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.WindowCapture;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Config
 {
@@ -52,5 +54,24 @@ namespace BetterGenshinImpact.Core.Config
         /// 脚本类配置
         /// </summary>
         public MacroConfig MacroConfig { get; set; } = new();
+
+        [JsonIgnore]
+        public Action? OnAnyChangedAction { get; set; }
+
+        public void InitEvent()
+        {
+            this.PropertyChanged += AnyPropertyChangedEvent;
+            MaskWindowConfig.PropertyChanged += AnyPropertyChangedEvent;
+            AutoPickConfig.PropertyChanged += AnyPropertyChangedEvent;
+            AutoSkipConfig.PropertyChanged += AnyPropertyChangedEvent;
+            AutoFishingConfig.PropertyChanged += AnyPropertyChangedEvent;
+            MacroConfig.PropertyChanged += AnyPropertyChangedEvent;
+        }
+
+        public void AnyPropertyChangedEvent(object? sender, EventArgs args)
+        {
+            GameTaskManager.RefreshTriggerConfigs();
+            OnAnyChangedAction?.Invoke();
+        }
     }
 }

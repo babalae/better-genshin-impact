@@ -9,6 +9,7 @@ namespace BetterGenshinImpact.Service;
 
 public class ConfigService : IConfigService
 {
+    private readonly object _locker = new(); // 只有UI线程会调用这个方法，lock好像意义不大，而且浪费了下面的读写锁hhh
     private readonly ReaderWriterLockSlim _rwLock = new();
     private readonly JsonSerializerOptions _options = new()
     {
@@ -20,23 +21,28 @@ public class ConfigService : IConfigService
     /// 写入只有UI线程会调用
     /// 多线程只会读，放心用static，不会丢失数据
     /// </summary>
-    public static AllConfig? DefaultConfig { get; private set; }
+    public static AllConfig? Config { get; private set; }
 
     public AllConfig Get()
     {
-        if (DefaultConfig == null)
+        lock (_locker)
         {
-            DefaultConfig =  Read();
-        }
+            if (Config == null)
+            {
+                Config = Read();
+                Config.OnAnyChangedAction = Save; // 略微影响性能
+                Config.InitEvent();
+            }
 
-        return DefaultConfig;
+            return Config;
+        }
     }
 
     public void Save()
     {
-        if (DefaultConfig != null)
+        if (Config != null)
         {
-            Write(DefaultConfig);
+            Write(Config);
         }
     }
 
@@ -58,7 +64,7 @@ public class ConfigService : IConfigService
                 return new AllConfig();
             }
 
-            DefaultConfig = config;
+            Config = config;
             return config;
         }
         finally

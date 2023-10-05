@@ -4,7 +4,9 @@ using System.Diagnostics;
 using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using System.Windows.Interop;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -45,9 +47,22 @@ namespace BetterGenshinImpact.GameTask
 
         public IntPtr MaskWindowHandle { get; set; }
 
-        public float DpiScale;
+        public float DpiScale { get; set; }
 
 
         public SystemInfo SystemInfo { get; set; }
+
+
+        public AllConfig Config
+        {
+            get
+            {
+                if (ConfigService.Config == null)
+                {
+                    throw new Exception("Config未初始化");
+                }
+                return ConfigService.Config;
+            }
+        }
     }
 }

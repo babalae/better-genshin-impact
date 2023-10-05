@@ -1,27 +1,48 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 
 namespace BetterGenshinImpact.GameTask
 {
     internal class GameTaskManager
     {
+        public static Dictionary<string, ITaskTrigger>? TriggerDictionary { get; set; }
+
         public static List<ITaskTrigger> LoadTriggers()
         {
-            List<ITaskTrigger> loadedTriggers = new()
+            TriggerDictionary = new Dictionary<string, ITaskTrigger>()
             {
-                new RecognitionTest.TestTrigger(),
-                new AutoPick.AutoPickTrigger(),
-                new AutoSkip.AutoSkipTrigger(),
-                new AutoFishing.AutoFishingTrigger()
+                { "RecognitionTest", new RecognitionTest.TestTrigger() },
+                { "AutoPick", new AutoPick.AutoPickTrigger() },
+                { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
+                { "AutoFishing", new AutoFishing.AutoFishingTrigger() }
             };
+
+            var loadedTriggers = TriggerDictionary.Values.ToList();
 
             loadedTriggers.ForEach(i => i.Init());
 
-            return loadedTriggers.OrderByDescending(i => i.Priority).ToList();
+            loadedTriggers = loadedTriggers.OrderByDescending(i => i.Priority).ToList();
+            return loadedTriggers;
+
+        }
+
+        public static void RefreshTriggerConfigs()
+        {
+            if (TriggerDictionary is { Count: > 0 })
+            {
+                TriggerDictionary["AutoPick"].IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
+                TriggerDictionary["AutoSkip"].IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
+                TriggerDictionary["AutoFishing"].IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
+                // 钓鱼有很多变量要初始化，直接重新new
+                if (TriggerDictionary["AutoFishing"].IsEnabled == false)
+                {
+                    TriggerDictionary["AutoFishing"] = new AutoFishing.AutoFishingTrigger();
+                }
+            }
         }
 
         /// <summary>
@@ -40,20 +61,24 @@ namespace BetterGenshinImpact.GameTask
             {
                 assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
             }
+
             if (!Directory.Exists(assetsFolder))
             {
                 throw new FileNotFoundException($"未找到{featName}的素材文件夹");
             }
+
             var filePath = Path.Combine(assetsFolder, assertName);
             if (!File.Exists(filePath))
             {
                 throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
             }
+
             var mat = new Mat(filePath); // ImreadModes.Color
             if (info.GameScreenSize.Width != 1920)
             {
                 mat = ResizeHelper.Resize(mat, info.AssetScale);
             }
+
             return mat;
         }
     }
