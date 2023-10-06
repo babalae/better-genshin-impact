@@ -99,7 +99,7 @@
         </ui:NavigationView>
 
         <ui:TitleBar
-            Title="更好的原神（内测版） · Alpha2"
+            Title="更好的原神（内测版） · Alpha2.1"
             Grid.Row="0" />
 
     </Grid>

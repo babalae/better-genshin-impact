@@ -98,7 +98,7 @@ public class AutoPickTrigger : ITaskTrigger
         // 填充到 384x32
         var padded = new Mat(new Size(384, 32), MatType.CV_8UC1, Scalar.Black);
         padded[new Rect(0, 0, mat.Width, mat.Height)] = mat;
-        Cv2.ImWrite(Global.Absolute("padded.png"), padded);
+        //Cv2.ImWrite(Global.Absolute("padded.png"), padded);
         return padded;
     }
 }

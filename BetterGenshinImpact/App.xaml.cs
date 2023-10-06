@@ -18,6 +18,7 @@ using Serilog.Filters;
 using System.Reflection;
 using System.Security.Principal;
 using BetterGenshinImpact.Core.Config;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact
 {
@@ -106,6 +107,7 @@ namespace BetterGenshinImpact
             if (principal.IsInRole(WindowsBuiltInRole.Administrator))
             {
                 //如果是管理员，则直接运行
+                RegisterEvents();
                 await _host.StartAsync();
             }
             else
@@ -141,6 +143,83 @@ namespace BetterGenshinImpact
             await _host.StopAsync();
 
             _host.Dispose();
+        }
+
+        /// <summary>
+        /// 注册事件
+        /// </summary>
+        private void RegisterEvents()
+        {
+            //Task线程内未捕获异常处理事件
+            TaskScheduler.UnobservedTaskException += TaskSchedulerUnobservedTaskException;
+
+            //UI线程未捕获异常处理事件（UI主线程）
+            this.DispatcherUnhandledException += AppDispatcherUnhandledException;
+
+            //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomainUnhandledException;
+        }
+
+        private static void TaskSchedulerUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            try
+            {
+                var exception = e.Exception as Exception;
+                HandleException(exception);
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+            }
+            finally
+            {
+                e.SetObserved();
+            }
+        }
+
+        //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)      
+        private static void CurrentDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                var exception = e.ExceptionObject as Exception;
+                if (exception != null)
+                {
+                    HandleException(exception);
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+            }
+            finally
+            {
+                //ignore
+            }
+        }
+
+        //UI线程未捕获异常处理事件（UI主线程）
+        private static void AppDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                HandleException(e.Exception);
+            }
+            catch (Exception ex)
+            {
+                HandleException(ex);
+            }
+            finally
+            {
+                //处理完后，我们需要将Handler=true表示已此异常已处理过
+                e.Handled = true;
+            }
+        }
+        private static void HandleException(Exception e)
+        {
+            MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+
+            // log
         }
     }
 }
