@@ -15,6 +15,9 @@ using Microsoft.Extensions.Configuration;
 using Serilog.Events;
 using Wpf.Ui;
 using Serilog.Filters;
+using System.Reflection;
+using System.Security.Principal;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact
 {
@@ -23,7 +26,6 @@ namespace BetterGenshinImpact
     /// </summary>
     public partial class App : Application
     {
-
         // The.NET Generic Host provides dependency injection, configuration, logging, and other services.
         // https://docs.microsoft.com/dotnet/core/extensions/generic-host
         // https://docs.microsoft.com/dotnet/core/extensions/dependency-injection
@@ -97,7 +99,38 @@ namespace BetterGenshinImpact
         /// </summary>
         private async void OnStartup(object sender, StartupEventArgs e)
         {
-            await _host.StartAsync();
+            // 获得当前登录的Windows用户标示
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            // 判断当前登录用户是否为管理员
+            if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                //如果是管理员，则直接运行
+                await _host.StartAsync();
+            }
+            else
+            {
+                //创建启动对象
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Environment.CurrentDirectory,
+                    FileName = Global.AppPath,
+                    //设置启动动作,确保以管理员身份运行
+                    Verb = "runas"
+                };
+                try
+                {
+                    System.Diagnostics.Process.Start(startInfo);
+                }
+                catch
+                {
+                    return;
+                }
+
+                //退出
+                Application.Current.Shutdown();
+            }
         }
 
         /// <summary>
