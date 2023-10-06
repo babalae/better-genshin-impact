@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
             FRo = new RecognitionObject
             {
                 Name = "F",
-                RecognitionType = RecognitionType.TemplateMatch,
+                RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoPick", "F.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 
                     info.CaptureAreaRect.Height / 3, 

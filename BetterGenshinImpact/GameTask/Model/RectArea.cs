@@ -228,7 +228,7 @@ public class RectArea
             throw new Exception("识别对象不能为null");
         }
 
-        if (RecognitionType.TemplateMatch.Equals(ro.RecognitionType))
+        if (RecognitionTypes.TemplateMatch.Equals(ro.RecognitionType))
         {
             if (ro.TemplateImageGreyMat == null)
             {
@@ -265,7 +265,7 @@ public class RectArea
                 return new RectArea();
             }
         }
-        else if (RecognitionType.Ocr.Equals(ro.RecognitionType))
+        else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
         {
             if (ro.ContainMatchText.Count == 0 && ro.RegexMatchText.Count == 0)
             {

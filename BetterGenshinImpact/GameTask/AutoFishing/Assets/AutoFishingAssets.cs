@@ -22,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             SpaceButtonRo = new RecognitionObject
             {
                 Name = "SpaceButton",
-                RecognitionType = RecognitionType.TemplateMatch,
+                RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "space.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 3,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 5,
@@ -34,7 +34,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             BaitButtonRo = new RecognitionObject
             {
                 Name = "BaitButton",
-                RecognitionType = RecognitionType.TemplateMatch,
+                RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "bait.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             WaitBiteButtonRo = new RecognitionObject
             {
                 Name = "WaitBiteButton",
-                RecognitionType = RecognitionType.TemplateMatch,
+                RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "wait_bite.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,

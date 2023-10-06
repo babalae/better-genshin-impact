@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.RecognitionTest
             _optionButtonRo = new RecognitionObject
             {
                 Name = "OptionButton",
-                RecognitionType = RecognitionType.TemplateMatch,
+                RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
                 DrawOnWindow = true
             }.InitTemplate();

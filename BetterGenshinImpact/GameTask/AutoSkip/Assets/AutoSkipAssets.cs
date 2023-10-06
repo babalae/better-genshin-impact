@@ -15,7 +15,7 @@ public class AutoSkipAssets
         StopAutoButtonRo = new RecognitionObject
         {
             Name = "StopAutoButton",
-            RecognitionType = RecognitionType.TemplateMatch,
+            RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "stop_auto.png"),
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 5, info.CaptureAreaRect.Height / 5),
             DrawOnWindow = true
@@ -24,7 +24,7 @@ public class AutoSkipAssets
         OptionButtonRo = new RecognitionObject
         {
             Name = "OptionButton",
-            RecognitionType = RecognitionType.TemplateMatch,
+            RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
             DrawOnWindow = false
@@ -33,7 +33,7 @@ public class AutoSkipAssets
         MenuRo = new RecognitionObject
         {
             Name = "Menu",
-            RecognitionType = RecognitionType.TemplateMatch,
+            RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "menu.png"),
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = false

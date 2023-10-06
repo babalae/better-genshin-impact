@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.Core.Recognition;
 [Serializable]
 public class RecognitionObject
 {
-    public RecognitionType RecognitionType { get; set; }
+    public RecognitionTypes RecognitionType { get; set; }
 
     /// <summary>
     /// 感兴趣的区域
@@ -115,7 +115,7 @@ public class RecognitionObject
     /// <summary>
     /// OCR 引擎。可选，默认 Media.Ocr。
     /// </summary>
-    public string? OcrEngine { get; set; }
+    public OcrEngineTypes OcrEngine { get; set; } = OcrEngineTypes.MediaOcr;
 
     /// <summary>
     /// 部分文字识别结果不准确，进行替换。可选。
@@ -134,23 +134,6 @@ public class RecognitionObject
     /// 多个值全匹配的情况下才算成功
     /// </summary>
     public List<string> RegexMatchText { get; set; } = new();
-
-    #endregion
-
-
-    #region 模型OCR识别
-
-    /// <summary>
-    /// 是否使用模型文字识别
-    /// </summary>
-    public bool UseModelTextRecognition { get; set; } = false;
-
-    /// <summary>
-    /// 圣遗物 Yas
-    /// 拾取 Yap
-    /// TODO 换成枚举
-    /// </summary>
-    public string? ModelTextRecognitionType { get; set; }
 
     #endregion
 }

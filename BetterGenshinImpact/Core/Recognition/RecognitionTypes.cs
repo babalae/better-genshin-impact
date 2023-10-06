@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Recognition;
 
-public enum RecognitionType
+public enum RecognitionTypes
 {
     None,
     TemplateMatch,
