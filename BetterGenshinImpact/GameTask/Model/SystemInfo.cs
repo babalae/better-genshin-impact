@@ -55,6 +55,11 @@ namespace BetterGenshinImpact.GameTask.Model
             // 注意截图区域要和游戏窗口实际区域一致
             // todo 窗口移动后？
             GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
+            if (GameScreenSize.Width < 800)
+            {
+                throw new ArgumentException("游戏窗口分辨率过低，请确认当前原神窗口是否处于最小化状态！");
+            }
+
             AssetScale = GameScreenSize.Width / 1920d;
             GameWindowRect = SystemControl.GetWindowRect(hWnd);
             CaptureAreaRect = GameWindowRect;

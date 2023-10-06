@@ -35,5 +35,16 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             }
             return src;
         }
+
+        public static Mat ResizeTo(Mat src, int width, int height)
+        {
+            if (src.Width != width || src.Height != height)
+            {
+                var dst = new Mat();
+                Cv2.Resize(src, dst, new Size(width, height));
+                return dst;
+            }
+            return src;
+        }
     }
 }

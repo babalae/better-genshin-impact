@@ -20,6 +20,8 @@ using CommunityToolkit.Mvvm.Messaging;
 using Wpf.Ui.Controls;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -65,11 +67,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     {
         Debug.WriteLine("HomePageViewModel Loaded");
 #if DEBUG
-        var hWnd = SystemControl.FindGenshinImpactHandle();
-        if (hWnd != IntPtr.Zero)
-        {
-            OnStartTrigger();
-        }
+        //var hWnd = SystemControl.FindGenshinImpactHandle();
+        //if (hWnd != IntPtr.Zero)
+        //{
+        //    OnStartTrigger();
+        //}
 #endif
     }
 
@@ -142,5 +144,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     public void OnNavigatedFrom()
     {
+    }
+
+    [RelayCommand]
+    private void OnSvtrTest()
+    {
+        var mat = new Mat(Global.Absolute("Config\\Model\\Yap\\0_2_「甜甜花」的种子_bin_38x227.jpg"), ImreadModes.Grayscale);
+        new SvtrModelRunner().RunInferenceMore(mat);
     }
 }
