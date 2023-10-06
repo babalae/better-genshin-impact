@@ -12,6 +12,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
     {
         /// <summary>
         /// 计算灰度图中某个颜色的像素个数
+        /// 快速遍历方法来自于: https://blog.csdn.net/TyroneKing/article/details/129108838
         /// </summary>
         /// <param name="mat"></param>
         /// <param name="color"></param>
@@ -56,7 +57,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             Cv2.CvtColor(src, rgbMat, ColorConversionCodes.BGR2RGB);
             Cv2.InRange(rgbMat, low, high, mask);
             Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary); //二值化
-            return mask;
+            return mask.Clone();
         }
 
         public static Mat Threshold(Mat src, Scalar s)

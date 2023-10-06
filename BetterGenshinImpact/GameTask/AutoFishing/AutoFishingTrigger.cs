@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private readonly IOcrService _ocrService = OcrFactory.Create(OcrEngineType.WinRT);
+        private readonly IOcrService _ocrService = OcrFactory.MediaOcr;
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }

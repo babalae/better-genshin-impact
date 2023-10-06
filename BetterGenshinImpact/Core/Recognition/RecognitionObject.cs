@@ -110,7 +110,7 @@ public class RecognitionObject
 
     #endregion
 
-    #region 普通OCR文字识别
+    #region OCR文字识别
 
     /// <summary>
     /// OCR 引擎。可选，默认 Media.Ocr。

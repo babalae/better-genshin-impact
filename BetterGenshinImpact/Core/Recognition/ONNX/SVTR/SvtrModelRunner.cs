@@ -39,7 +39,7 @@ public class SvtrModelRunner
         }
     }
 
-    public static Tensor<float> ToOnnxTensorUnsafe(Mat padded)
+    public static Tensor<float> ToOnnxTensor(Mat padded)
     {
         // Create the Tensor with the appropiate dimensions  for the NN
         Tensor<float> data = new DenseTensor<float>(new[] { 1, 1, padded.Height, padded.Width });
@@ -61,7 +61,7 @@ public class SvtrModelRunner
         return data;
     }
 
-    public static Tensor<float> ToOnnxTensorUnsafe2(Mat padded)
+    public static Tensor<float> ToOnnxTensorUnsafe(Mat padded)
     {
         var channels = padded.Channels();
         var nRows = padded.Rows;
@@ -94,7 +94,7 @@ public class SvtrModelRunner
     {
         // 将输入数据调整为 (1, 1, 32, 384) 形状的张量  
         //var reshapedInputData = new DenseTensor<float>(new Memory<float>(inputData), new int[] { 1, 1, 32, 384 });
-        var reshapedInputData = ToOnnxTensorUnsafe2(padded);
+        var reshapedInputData = ToOnnxTensorUnsafe(padded);
 
         var y = reshapedInputData.Dimensions[2];
         var x = reshapedInputData.Dimensions[3];
@@ -143,13 +143,13 @@ public class SvtrModelRunner
         Debug.Assert(mat.Depth() == MatType.CV_8UC1);
         //Cv2.ImShow("mat1", mat);
         mat = ResizeHelper.ResizeTo(mat, 221, 32);
-        Cv2.ImWrite(Global.Absolute("resized.bmp"), mat);
+        //Cv2.ImWrite(Global.Absolute("resized.bmp"), mat);
 
         var padded = new Mat(new Size(384, 32), MatType.CV_8UC1, Scalar.Black);
 
 
         padded[new Rect(0, 0, mat.Width, mat.Height)] = mat;
-        Cv2.ImWrite(Global.Absolute("padded.bmp"), padded);
+        //Cv2.ImWrite(Global.Absolute("padded.bmp"), padded);
 
         /*var channels = padded.Channels();
         var nRows = padded.Rows;
