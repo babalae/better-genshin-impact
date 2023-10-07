@@ -17,13 +17,16 @@ public class GraphicsCapture : IGameCapture
 
     public bool IsCapturing { get; private set; }
 
-    private ResourceRegion _region;
+    private ResourceRegion? _region;
 
     public void Dispose() => Stop();
 
     public void Start(nint hWnd)
     {
         _hWnd = hWnd;
+
+        User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
+        User32.SetForegroundWindow(hWnd);
 
         _region = GetGameScreenRegion(hWnd);
 
@@ -54,8 +57,15 @@ public class GraphicsCapture : IGameCapture
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    private ResourceRegion GetGameScreenRegion(nint hWnd)
+    private ResourceRegion? GetGameScreenRegion(nint hWnd)
     {
+        var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+        if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
+        {
+            return null;
+        }
+
+
         ResourceRegion region = new();
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
         User32.GetClientRect(_hWnd, out var clientRect);

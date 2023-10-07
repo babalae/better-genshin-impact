@@ -1,16 +1,9 @@
-﻿using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Windows.Controls;
-using System.Windows.Forms;
-using Fischless.GameCapture.DwmSharedSurface.Helpers;
+﻿using Fischless.GameCapture.DwmSharedSurface.Helpers;
 using Fischless.GameCapture.Graphics.Helpers;
-using SharpDX;
-using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+using System.Diagnostics;
 using Vanara.PInvoke;
-using Windows.Devices.HumanInterfaceDevice;
 using Device = SharpDX.Direct3D11.Device;
 
 namespace Fischless.GameCapture.DwmSharedSurface
@@ -24,11 +17,13 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         public bool IsCapturing { get; private set; }
 
-        private ResourceRegion _region;
+        private ResourceRegion? _region;
 
         public void Start(nint hWnd)
         {
             _hWnd = hWnd;
+            User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
+            User32.SetForegroundWindow(hWnd);
             _region = GetGameScreenRegion(hWnd);
             _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
 
@@ -43,8 +38,14 @@ namespace Fischless.GameCapture.DwmSharedSurface
         /// </summary>
         /// <param name="hWnd"></param>
         /// <returns></returns>
-        private ResourceRegion GetGameScreenRegion(nint hWnd)
+        private ResourceRegion? GetGameScreenRegion(nint hWnd)
         {
+            var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+            if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
+            {
+                return null;
+            }
+
             ResourceRegion region = new();
             User32.GetWindowRect(hWnd, out var windowWithShadowRect);
             DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
@@ -90,8 +91,8 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
             var staging = new Texture2D(_d3dDevice, new Texture2DDescription
             {
-                Width =  _region.Right - _region.Left,
-                Height = _region.Bottom - _region.Top,
+                Width = _region == null ? surfaceTexture.Description.Width : _region.Value.Right - _region.Value.Left,
+                Height = _region == null ? surfaceTexture.Description.Height : _region.Value.Bottom - _region.Value.Top,
                 MipLevels = 1,
                 ArraySize = 1,
                 Format = Format.B8G8R8A8_UNorm,
