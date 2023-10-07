@@ -1,78 +1,85 @@
 ﻿using System.Drawing;
 using Vision.WindowCapture.GraphicsCapture.Helpers;
+using Windows.Foundation.Metadata;
+using Windows.Graphics;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Win32.Foundation;
 
-namespace Vision.WindowCapture.GraphicsCapture
+namespace Vision.WindowCapture.GraphicsCapture;
+
+public class GraphicsCapture : IWindowCapture
 {
-    public class GraphicsCapture : IWindowCapture
+    private HWND _hWnd;
+
+    private Direct3D11CaptureFramePool? _captureFramePool;
+    private GraphicsCaptureItem? _captureItem;
+    private GraphicsCaptureSession? _captureSession;
+
+    public bool IsCapturing { get; private set; }
+
+    public async Task StartAsync(HWND hWnd)
     {
-        private HWND _hWnd;
+        _hWnd = hWnd;
+        /*
+        // if use GraphicsCapturePicker, need to set this window handle
+        // new WindowInteropHelper(this).Handle
+        var picker = new GraphicsCapturePicker();
+        picker.SetWindow(hWnd);
+        _captureItem = picker.PickSingleItemAsync().AsTask().Result;
+        */
 
-        private Direct3D11CaptureFramePool? _captureFramePool;
-        private GraphicsCaptureItem? _captureItem;
-        private GraphicsCaptureSession? _captureSession;
+        var device = Direct3D11Helper.CreateDevice();
 
-        public bool IsCapturing { get; private set; }
+        _captureItem = CaptureHelper.CreateItemForWindow(_hWnd) ?? throw new InvalidOperationException("Failed to create capture item.");
 
-        public void Start(HWND hWnd)
+        var size = _captureItem.Size;
+
+        if (size.Width < 480 || size.Height < 360)
         {
-            _hWnd = hWnd;
-            IsCapturing = true;
-
-            /*
-            // if use GraphicsCapturePicker, need to set this window handle
-            // new WindowInteropHelper(this).Handle
-            var picker = new GraphicsCapturePicker();
-            picker.SetWindow(hWnd);
-            _captureItem = picker.PickSingleItemAsync().AsTask().Result;
-            */
-
-            _captureItem = CaptureHelper.CreateItemForWindow(_hWnd);
-
-
-            if (_captureItem == null)
-            {
-                throw new InvalidOperationException("Failed to create capture item.");
-            }
-
-            _captureItem.Closed += OnCaptureItemClosed;
-
-            var device = Direct3D11Helper.CreateDevice();
-
-            _captureFramePool = Direct3D11CaptureFramePool.Create(device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2,
-                _captureItem.Size);
-            _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
-            _captureSession.StartCapture();
-            IsCapturing = true;
+            throw new InvalidOperationException("窗口画面大小小于480x360，无法使用");
         }
 
-        /// <summary>
-        /// How to handle window size changes?
-        /// </summary>
-        /// <returns></returns>
-        public Bitmap? Capture()
-        {
-            using var frame = _captureFramePool?.TryGetNextFrame();
-            return frame?.ToBitmap();
-        }
+        _captureItem.Closed += OnCaptureItemClosed;
 
-        public void Stop()
+        _captureFramePool = Direct3D11CaptureFramePool.Create(device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2, size);
+        _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
+        if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
         {
-            _captureSession?.Dispose();
-            _captureFramePool?.Dispose();
-            _captureSession = default;
-            _captureFramePool = default;
-            _captureItem = default;
-
-            _hWnd = HWND.Null;
-            IsCapturing = false;
+            await GraphicsCaptureAccess.RequestAccessAsync(GraphicsCaptureAccessKind.Borderless);
+            _captureSession.IsBorderRequired = false;
+            _captureSession.IsCursorCaptureEnabled = false;
         }
+        
+        _captureSession.StartCapture();
+        IsCapturing = true;
+    }
 
-        private void OnCaptureItemClosed(GraphicsCaptureItem sender, object args)
-        {
-            Stop();
-        }
+    /// <summary>
+    /// How to handle window size changes?
+    /// </summary>
+    /// <returns></returns>
+    public Bitmap? Capture()
+    {
+        using var frame = _captureFramePool?.TryGetNextFrame();
+        return frame?.ToBitmap();
+    }
+
+    public Task StopAsync()
+    {
+        _captureSession?.Dispose();
+        _captureFramePool?.Dispose();
+        _captureSession = default;
+        _captureFramePool = default;
+        _captureItem = default;
+
+        _hWnd = HWND.Null;
+        IsCapturing = false;
+        return Task.CompletedTask;
+    }
+
+    private void OnCaptureItemClosed(GraphicsCaptureItem sender, object args)
+    {
+        StopAsync();
     }
 }

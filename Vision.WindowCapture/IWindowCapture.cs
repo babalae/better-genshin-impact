@@ -7,9 +7,9 @@ public interface IWindowCapture
 {
     bool IsCapturing { get; }
     
-    void Start(HWND hWnd);
+    Task StartAsync(HWND hWnd);
 
     Bitmap? Capture();
 
-    void Stop();
+    Task StopAsync();
 }

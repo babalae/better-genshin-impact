@@ -12,10 +12,11 @@ namespace Vision.WindowCapture.BitBlt
 
         public bool IsCapturing { get; private set; }
 
-        public void Start(HWND hWnd)
+        public Task StartAsync(HWND hWnd)
         {
             _hWnd = hWnd;
             IsCapturing = true;
+            return Task.CompletedTask;
         }
 
         public Bitmap? Capture()
@@ -51,10 +52,11 @@ namespace Vision.WindowCapture.BitBlt
             }
         }
 
-        public void Stop()
+        public Task StopAsync()
         {
             _hWnd = HWND.Null;
             IsCapturing = false;
+            return Task.CompletedTask;
         }
     }
 }

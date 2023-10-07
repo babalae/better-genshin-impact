@@ -20,7 +20,7 @@ namespace Vision.WindowCapture.Test
             InitializeComponent();
         }
 
-        public void StartCapture(IntPtr hWnd, CaptureModeEnum captureMode)
+        public async void StartCapture(IntPtr hWnd, CaptureModeEnum captureMode)
         {
             if (hWnd == IntPtr.Zero)
             {
@@ -30,7 +30,7 @@ namespace Vision.WindowCapture.Test
 
 
             _capture = WindowCaptureFactory.Create(captureMode);
-            _capture.Start((HWND)hWnd);
+            await _capture.StartAsync((HWND)hWnd);
 
             CompositionTarget.Rendering += Loop;
         }
