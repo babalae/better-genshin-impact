@@ -52,6 +52,9 @@
 		<Compile Update="View\Pages\TriggerSettingsPage.xaml.cs">
 		  <SubType>Code</SubType>
 		</Compile>
+		<Compile Update="View\PickerWindow.xaml.cs">
+		  <SubType>Code</SubType>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>

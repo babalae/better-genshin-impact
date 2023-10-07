@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Core;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.View.Test;
 using BetterGenshinImpact.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,6 +21,8 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using OpenCvSharp;
+using System.Windows.Interop;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -86,16 +87,25 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnStartCaptureTest()
     {
-        var hWnd = SystemControl.FindGenshinImpactHandle();
-        if (hWnd == IntPtr.Zero)
-        {
-            System.Windows.MessageBox.Show("未找到原神窗口");
-            return;
-        }
+        //var hWnd = SystemControl.FindGenshinImpactHandle();
+        //if (hWnd == IntPtr.Zero)
+        //{
+        //    System.Windows.MessageBox.Show("未找到原神窗口");
+        //    return;
+        //}
 
-        CaptureTestWindow captureTestWindow = new();
-        captureTestWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
-        captureTestWindow.Show();
+        //CaptureTestWindow captureTestWindow = new();
+        //captureTestWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
+        //captureTestWindow.Show();
+
+        var picker = new PickerWindow();
+        var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
+        if (hWnd != IntPtr.Zero)
+        {
+            var captureWindow = new CaptureTestWindow();
+            captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
+            captureWindow.Show();
+        }
     }
 
     private bool CanStartTrigger() => StartButtonEnabled;

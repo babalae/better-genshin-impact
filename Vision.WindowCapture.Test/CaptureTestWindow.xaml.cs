@@ -15,9 +15,25 @@ namespace Vision.WindowCapture.Test
     public partial class CaptureTestWindow : Window
     {
         private IWindowCapture? _capture;
+
+        private long _captureTime;
+        private long _transferTime;
+        private long _captureCount;
+
         public CaptureTestWindow()
         {
+            _captureTime = 0;
+            _captureCount = 0;
             InitializeComponent();
+            Closed += (sender, args) =>
+            {
+                CompositionTarget.Rendering -= Loop;
+                _capture?.StopAsync();
+
+                Debug.WriteLine("平均截图耗时:" + _captureTime * 1.0 / _captureCount);
+                Debug.WriteLine("平均转换耗时:" + _transferTime * 1.0 / _captureCount);
+                Debug.WriteLine("平均总耗时:" + (_captureTime + _transferTime) * 1.0 / _captureCount);
+            };
         }
 
         public async void StartCapture(IntPtr hWnd, CaptureModeEnum captureMode)
@@ -42,18 +58,24 @@ namespace Vision.WindowCapture.Test
             var bitmap = _capture?.Capture();
             sw.Stop();
             Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
-
+            _captureTime += sw.ElapsedMilliseconds;
             if (bitmap != null)
             {
+                _captureCount++;
                 sw.Reset();
                 sw.Start();
                 DisplayCaptureResultImage.Source = ToBitmapImage(bitmap);
                 sw.Stop();
                 Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
+                _transferTime += sw.ElapsedMilliseconds;
+            }
+            else
+            {
+                Debug.WriteLine("截图失败");
             }
         }
 
-        public static BitmapImage ToBitmapImage( Bitmap bitmap)
+        public static BitmapImage ToBitmapImage(Bitmap bitmap)
         {
             var ms = new MemoryStream();
             bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
@@ -65,5 +87,4 @@ namespace Vision.WindowCapture.Test
             return image;
         }
     }
-
 }

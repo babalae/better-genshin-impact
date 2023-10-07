@@ -81,7 +81,8 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         public static RECT GetWindowRect(IntPtr hWnd)
         {
-            User32.GetWindowRect(hWnd, out var windowRect);
+            // User32.GetWindowRect(hWnd, out var windowRect);
+            DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
             return windowRect;
         }
 

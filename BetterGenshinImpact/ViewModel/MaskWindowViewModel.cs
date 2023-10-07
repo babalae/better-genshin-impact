@@ -1,28 +1,17 @@
-﻿using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View;
-using BetterGenshinImpact.View.Test;
+﻿using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fischless.WindowCapture;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Windows;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using Vanara.PInvoke;
-using System.Windows.Threading;
-using BetterGenshinImpact.Model;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
 
 namespace BetterGenshinImpact.ViewModel
 {
     public partial class MaskWindowViewModel : ObservableRecipient
     {
-        private ILogger<MaskWindowViewModel>? _logger;
-
         [ObservableProperty] private Rect _windowRect;
 
         [ObservableProperty] private ObservableCollection<MaskButton> _maskButtons = new();
@@ -69,8 +58,7 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnLoaded()
         {
-            _logger = App.GetLogger<MaskWindowViewModel>();
-            _logger.LogInformation("遮罩窗口启OnLoaded");
+
         }
     }
 }

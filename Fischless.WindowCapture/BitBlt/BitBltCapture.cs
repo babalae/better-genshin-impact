@@ -32,7 +32,7 @@ public class BitBltCapture : IWindowCapture
         {
             if (IsClientEnabled)
             {
-                _ = User32.GetWindowRect(_hWnd, out var windowRect);
+                _ = DwmApi.DwmGetWindowAttribute<RECT>(_hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
                 var width = windowRect.right - windowRect.left;
                 var height = windowRect.bottom - windowRect.top;
 

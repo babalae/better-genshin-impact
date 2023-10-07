@@ -33,15 +33,14 @@ namespace BetterGenshinImpact.View
         static MaskWindow()
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
-
         }
 
         public static MaskWindow Instance(IntPtr? hWnd = null)
         {
             _maskWindow ??= new MaskWindow();
-            if (hWnd != null && hWnd!=IntPtr.Zero)
+            if (hWnd != null && hWnd != IntPtr.Zero)
             {
-                User32.GetWindowRect(hWnd.Value, out var rect);
+                var rect = SystemControl.GetWindowRect(hWnd.Value);
                 double scale = DpiHelper.ScaleY;
                 _maskWindow.Left = (int)Math.Ceiling(rect.X * 1d / scale);
                 _maskWindow.Top = (int)Math.Ceiling(rect.Y * 1d / scale);
