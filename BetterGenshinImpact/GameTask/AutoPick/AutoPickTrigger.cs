@@ -38,7 +38,6 @@ public class AutoPickTrigger : ITaskTrigger
     public AutoPickTrigger()
     {
         _autoPickAssets = new AutoPickAssets();
-
     }
 
     public void Init()
@@ -49,6 +48,7 @@ public class AutoPickTrigger : ITaskTrigger
         {
             _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson) ?? new List<string>();
         }
+
         var whiteListJson = Global.ReadAllTextIfExist("Config\\pick_white_lists.json");
         if (!string.IsNullOrEmpty(whiteListJson))
         {
@@ -64,9 +64,16 @@ public class AutoPickTrigger : ITaskTrigger
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
             // 计算出文字区域
-            var textMat = new Mat(content.CaptureRectArea.SrcGreyMat,
-                new Rect(foundRectArea.X + (int)(config.FLeftOffset * scale), foundRectArea.Y,
-                    (int)((config.FRightOffset - config.FLeftOffset) * scale), foundRectArea.Height));
+            var textRect = new Rect(foundRectArea.X + (int)(config.FLeftOffset * scale), foundRectArea.Y,
+                (int)((config.FRightOffset - config.FLeftOffset) * scale), foundRectArea.Height);
+            if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width 
+                || textRect.Y + textRect.Height > content.CaptureRectArea.SrcGreyMat.Height)
+            {
+                Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
+                return;
+            }
+
+            var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
 
             var paddedMat = PreProcessForInference(textMat);
             var text = _pickTextInference.Inference(paddedMat);
@@ -74,15 +81,17 @@ public class AutoPickTrigger : ITaskTrigger
             {
                 if (_whiteList.Contains(text))
                 {
-                    _logger.LogInformation($"交互或拾取：{text}");
+                    _logger.LogInformation("交互或拾取：{Text}", text);
                     new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
                     return;
                 }
+
                 if (_blackList.Contains(text))
                 {
                     return;
                 }
-                _logger.LogInformation($"交互或拾取：{text}");
+
+                _logger.LogInformation("交互或拾取：{Text}", text);
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
             }
         });

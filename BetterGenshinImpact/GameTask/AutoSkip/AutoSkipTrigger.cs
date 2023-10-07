@@ -3,6 +3,8 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using OpenCvSharp;
+using Vanara.PInvoke;
 using WindowsInput;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
@@ -31,6 +33,12 @@ public class AutoSkipTrigger : ITaskTrigger
         IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
     }
 
+    /// <summary>
+    /// 用于日志只输出一次
+    /// frame最好取模,应对极端场景
+    /// </summary>
+    private int _prevClickFrameIndex = -1;
+
     public void OnCapture(CaptureContent content)
     {
         if (content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
@@ -52,7 +60,12 @@ public class AutoSkipTrigger : ITaskTrigger
             if (menuRectArea.IsEmpty())
             {
                 optionButtonRectArea.ClickCenter();
-                _logger.LogInformation("点击选项按钮");
+
+                if (_prevClickFrameIndex <= content.FrameIndex - 1 && _prevClickFrameIndex >= content.FrameIndex - 5)
+                {
+                    _logger.LogInformation("自动剧情：{Text}", "点击选项");
+                }
+                _prevClickFrameIndex = content.FrameIndex;
             }
         });
 

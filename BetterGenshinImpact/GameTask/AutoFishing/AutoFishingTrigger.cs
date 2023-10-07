@@ -93,7 +93,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
 
 
-
         /// <summary>
         /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
         /// </summary>
@@ -135,7 +134,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         var maskButton = new MaskButton("开始自动钓鱼", btnPosition, () =>
                         {
                             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
-                            _logger.LogInformation("自动钓鱼，启动！");
+                            _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                             // 点击下面的按钮
                             var rc = info.GameWindowRect;
                             new InputSimulator()
@@ -229,10 +228,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _isThrowRod = true;
                     }
                 }
+
                 if (baitRectArea.IsEmpty() && !waitBiteArea.IsEmpty() && _isThrowRod)
                 {
                     _switchBaitContinuouslyFrameNum = 0;
-                    _waitBiteContinuouslyFrameNum ++;
+                    _waitBiteContinuouslyFrameNum++;
                     _noFishActionContinuouslyFrameNum = 0;
                     _throwRodWaitFrameNum++;
 
@@ -565,7 +565,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (!IsExclusive)
             {
                 _isThrowRod = false;
-                _logger.LogInformation("退出钓鱼界面");
+                _logger.LogInformation("← {Text}", "退出钓鱼界面");
                 _fishBoxRect = Rect.Empty;
                 VisionContext.Instance().DrawContent.RemoveRect("FishBox");
             }
