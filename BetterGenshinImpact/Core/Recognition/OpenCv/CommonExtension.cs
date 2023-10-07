@@ -9,14 +9,14 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 {
     public static class CommonExtension
     {
-        public static OpenCvSharp.Point ToCvPoint(this Point point)
+        public static unsafe OpenCvSharp.Point ToCvPoint(this Point point)
         {
-            return new OpenCvSharp.Point(point.X, point.Y);
+            return *(OpenCvSharp.Point*)&point;
         }
 
-        public static Point ToDrawingPoint(this OpenCvSharp.Point point)
+        public static unsafe Point ToDrawingPoint(this OpenCvSharp.Point point)
         {
-            return new Point(point.X, point.Y);
+            return *(Point*)&point;
         }
 
         public static System.Windows.Point ToWindowsPoint(this OpenCvSharp.Point point)
@@ -24,9 +24,9 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             return new System.Windows.Point(point.X, point.Y);
         }
 
-        public static OpenCvSharp.Rect ToCvRect(this Rectangle rectangle)
+        public static unsafe OpenCvSharp.Rect ToCvRect(this Rectangle rectangle)
         {
-            return new OpenCvSharp.Rect(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
+            return *(OpenCvSharp.Rect*)&rectangle;
         }
 
         public static System.Windows.Rect ToWindowsRectangle(this OpenCvSharp.Rect rect)
@@ -39,9 +39,9 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             return new System.Windows.Rect(rect.X + offsetX, rect.Y + offsetY, rect.Width, rect.Height);
         }
 
-        public static Rectangle ToDrawingRectangle(this OpenCvSharp.Rect rect)
+        public static unsafe Rectangle ToDrawingRectangle(this OpenCvSharp.Rect rect)
         {
-            return new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
+            return *(Rectangle*)&rect;
         }
 
         public static Point GetCenterPoint(this Rectangle rectangle)
