@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BetterGenshinImpact.Win32",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.WindowCapture", "Fischless.WindowCapture\Fischless.WindowCapture.csproj", "{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vision.WindowCapture.Test", "Vision.WindowCapture.Test\Vision.WindowCapture.Test.csproj", "{D35CB953-C666-4E57-9A9A-3AAE5BF78402}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,14 @@ Global
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Release|Any CPU.Build.0 = Release|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Release|x64.ActiveCfg = Release|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Release|x64.Build.0 = Release|x64
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|x64.Build.0 = Debug|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|x64.ActiveCfg = Release|Any CPU
+		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

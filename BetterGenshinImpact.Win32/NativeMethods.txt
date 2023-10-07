@@ -21,6 +21,10 @@ GetWindowThreadProcessId
 mouse_event
 PostMessage
 ReleaseDC
+EnumWindows
+GetWindowText
+IsWindowVisible
+GetWindowTextLength
 
 // COM & WinRT
 D3D11CreateDevice
