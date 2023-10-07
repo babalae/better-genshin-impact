@@ -1,10 +1,10 @@
-﻿using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoSkip;
-using System;
-using BetterGenshinImpact.GameTask;
+﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoPick;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Fischless.WindowCapture;
+using Fischless.GameCapture;
+using System;
 using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Config

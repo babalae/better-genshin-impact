@@ -1,4 +1,4 @@
-﻿namespace Fischless.WindowCapture;
+﻿namespace Fischless.GameCapture;
 
 public static class CaptureModeExtensions
 {

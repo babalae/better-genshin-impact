@@ -4,8 +4,9 @@ using Windows.Graphics.Capture;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+using Windows.Devices.HumanInterfaceDevice;
 
-namespace Fischless.WindowCapture.Graphics.Helpers;
+namespace Fischless.GameCapture.Graphics.Helpers;
 
 public static class Texture2DExtensions
 {
@@ -30,16 +31,21 @@ public static class Texture2DExtensions
             OptionFlags = ResourceOptionFlags.None
         });
 
+        return staging.CreateBitmap(d3dDevice, texture2dBitmap, region);
+    }
+
+    public static Bitmap? CreateBitmap(this Texture2D staging, SharpDX.Direct3D11.Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null)
+    {
         try
         {
             // Copy data
             if (region != null)
             {
-                d3dDevice.ImmediateContext.CopySubresourceRegion(texture2dBitmap, 0, region, staging, 0);
+                d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, region, staging, 0);
             }
             else
             {
-                d3dDevice.ImmediateContext.CopyResource(texture2dBitmap, staging);
+                d3dDevice.ImmediateContext.CopyResource(surfaceTexture, staging);
             }
 
             var dataBox = d3dDevice.ImmediateContext.MapSubresource(staging, 0, 0, MapMode.Read,

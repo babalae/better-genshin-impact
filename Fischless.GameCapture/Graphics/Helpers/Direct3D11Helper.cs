@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using Windows.Graphics.DirectX.Direct3D11;
 using WinRT;
 
-namespace Fischless.WindowCapture.Graphics;
+namespace Fischless.GameCapture.Graphics.Helpers;
 
 [SuppressMessage("CodeQuality", "IDE0052:")]
 public static class Direct3D11Helper
@@ -99,7 +99,7 @@ public static class Direct3D11Helper
 
     public static SharpDX.Direct3D11.Device CreateSharpDXDevice(IDirect3DDevice device)
     {
-        var access = (IDirect3DDxgiInterfaceAccess)device;
+        var access = device.As<IDirect3DDxgiInterfaceAccess>();
         var d3dPointer = access.GetInterface(ID3D11Device);
         var d3dDevice = new SharpDX.Direct3D11.Device(d3dPointer);
         return d3dDevice;

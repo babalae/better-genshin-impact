@@ -1,9 +1,9 @@
-﻿using System;
+﻿using BetterGenshinImpact.Helpers.Extensions;
+using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
-using BetterGenshinImpact.Helpers.Extensions;
-using Fischless.WindowCapture;
+using Fischless.GameCapture;
 
 namespace BetterGenshinImpact.View
 {
@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.View
     /// </summary>
     public partial class CaptureTestWindow : Window
     {
-        private IWindowCapture? _capture;
+        private IGameCapture? _capture;
 
 
         private long _captureTime;
@@ -45,7 +45,7 @@ namespace BetterGenshinImpact.View
             }
 
 
-            _capture = WindowCaptureFactory.Create(captureMode);
+            _capture = GameCaptureFactory.Create(captureMode);
             //_capture.IsClientEnabled = true;
             _capture.Start(hWnd);
 

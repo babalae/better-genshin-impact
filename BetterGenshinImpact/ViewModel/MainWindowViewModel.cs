@@ -1,23 +1,12 @@
-﻿using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View;
+﻿using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Fischless.WindowCapture;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Diagnostics;
 using System.Windows;
-using BetterGenshinImpact.Core;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using Vanara.PInvoke;
-using System.Collections.ObjectModel;
-using BetterGenshinImpact.View.Pages;
 using Wpf.Ui;
-using Wpf.Ui.Controls;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.ViewModel
 {

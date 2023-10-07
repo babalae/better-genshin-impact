@@ -1,34 +1,28 @@
 ﻿using BetterGenshinImpact.Core;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fischless.WindowCapture;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
-using Wpf.Ui.Controls;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using System;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Interop;
-using BetterGenshinImpact.Helpers;
+using Fischless.GameCapture;
+using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ObservableObject, INavigationAware
 {
-    [ObservableProperty] private string[] _modeNames = WindowCaptureFactory.ModeNames();
+    [ObservableProperty] private string[] _modeNames = GameCaptureFactory.ModeNames();
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 

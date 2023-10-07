@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using WinRT;
 
-namespace Fischless.WindowCapture.Graphics;
+namespace Fischless.GameCapture.Graphics;
 
 #pragma warning disable CS0649
 

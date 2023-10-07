@@ -1,7 +1,8 @@
-﻿namespace Fischless.WindowCapture;
+﻿namespace Fischless.GameCapture;
 
 public enum CaptureModes
 {
     BitBlt,
     WindowsGraphicsCapture,
+    DwmGetDxSharedSurface
 }

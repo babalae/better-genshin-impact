@@ -1,16 +1,12 @@
-﻿using Fischless.WindowCapture;
+﻿using BetterGenshinImpact.View;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Windows;
-using BetterGenshinImpact.View;
+using Fischless.GameCapture;
 using Vanara.PInvoke;
-using System.Windows.Threading;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -21,7 +17,7 @@ namespace BetterGenshinImpact.GameTask
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
 
-        private IWindowCapture? _capture;
+        private IGameCapture? _capture;
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
@@ -49,7 +45,7 @@ namespace BetterGenshinImpact.GameTask
             _triggers = GameTaskManager.LoadTriggers();
 
             // 初始化截图器
-            _capture = WindowCaptureFactory.Create(mode);
+            _capture = GameCaptureFactory.Create(mode);
             //_capture.IsClientEnabled = true;
             _capture.Start(hWnd);
 

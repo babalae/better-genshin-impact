@@ -1,18 +1,13 @@
-﻿using System.Diagnostics;
-using System.Windows;
+﻿using Fischless.GameCapture.Graphics.Helpers;
+using SharpDX.Direct3D11;
+using System.Diagnostics;
 using Vanara.PInvoke;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
-using Fischless.WindowCapture.Graphics.Helpers;
-using SharpDX.Direct3D11;
-using System.Windows.Controls;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using System.Drawing;
-using static Vanara.PInvoke.Gdi32;
 
-namespace Fischless.WindowCapture.Graphics;
+namespace Fischless.GameCapture.Graphics;
 
-public class GraphicsCapture : IWindowCapture
+public class GraphicsCapture : IGameCapture
 {
     private nint _hWnd;
 
@@ -21,7 +16,6 @@ public class GraphicsCapture : IWindowCapture
     private GraphicsCaptureSession _captureSession = null!;
 
     public bool IsCapturing { get; private set; }
-    public bool IsClientEnabled { get; set; } = false;
 
     private ResourceRegion _region;
 
@@ -31,10 +25,7 @@ public class GraphicsCapture : IWindowCapture
     {
         _hWnd = hWnd;
 
-        if (!IsClientEnabled)
-        {
-            _region = GetGameScreenRegion(hWnd);
-        }
+        _region = GetGameScreenRegion(hWnd);
 
         IsCapturing = true;
 
@@ -58,6 +49,11 @@ public class GraphicsCapture : IWindowCapture
         IsCapturing = true;
     }
 
+    /// <summary>
+    /// 从 DwmGetWindowAttribute 的矩形 截取出 GetClientRect的矩形（游戏区域）
+    /// </summary>
+    /// <param name="hWnd"></param>
+    /// <returns></returns>
     private ResourceRegion GetGameScreenRegion(nint hWnd)
     {
         ResourceRegion region = new();
@@ -99,11 +95,6 @@ public class GraphicsCapture : IWindowCapture
             Debug.WriteLine(e);
         }
 
-        return null;
-    }
-
-    public Bitmap? Capture(int x, int y, int width, int height)
-    {
         return null;
     }
 

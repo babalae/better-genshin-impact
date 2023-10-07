@@ -38,7 +38,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Fischless.WindowCapture\Fischless.WindowCapture.csproj" />
+		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
