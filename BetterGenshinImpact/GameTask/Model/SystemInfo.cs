@@ -57,7 +57,7 @@ namespace BetterGenshinImpact.GameTask.Model
             GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
             if (GameScreenSize.Width < 800)
             {
-                throw new ArgumentException("游戏窗口分辨率过低，请确认当前原神窗口是否处于最小化状态！");
+                throw new ArgumentException("游戏窗口分辨率过低，原神窗口不能是最小化状态！请用Alt+Tab来切换窗口。");
             }
 
             AssetScale = GameScreenSize.Width / 1920d;

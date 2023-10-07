@@ -46,11 +46,14 @@ public class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-        // 找左上角剧情自动的按钮
-        content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo, (_) =>
+        if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
         {
-            new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
-        });
+            // 找左上角剧情自动的按钮
+            content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo, (_) =>
+            {
+                new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
+            });
+        }
 
         // 不存在则找右下的选项按钮
         content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
