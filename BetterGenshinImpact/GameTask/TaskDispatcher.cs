@@ -14,7 +14,7 @@ using System.Windows.Threading;
 
 namespace BetterGenshinImpact.GameTask
 {
-    public class TaskDispatcher
+    public class TaskDispatcher : IDisposable
     {
         private readonly ILogger<TaskDispatcher> _logger = App.GetLogger<TaskDispatcher>();
 
@@ -42,12 +42,15 @@ namespace BetterGenshinImpact.GameTask
         {
             // 初始化任务上下文(一定要在初始化触发器前完成)
             TaskContext.Instance().Init(hWnd);
+
+            PrintSystemInfo();
+
             // 初始化触发器
             _triggers = GameTaskManager.LoadTriggers();
 
             // 初始化截图器
             _capture = WindowCaptureFactory.Create(mode);
-            _capture.IsClientEnabled = true;
+            //_capture.IsClientEnabled = true;
             _capture.Start(hWnd);
 
             // 启动定时器
@@ -59,6 +62,20 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        private void PrintSystemInfo()
+        {
+            var systemInfo = TaskContext.Instance().SystemInfo;
+            var width = systemInfo.GameScreenSize.Width;
+            var height = systemInfo.GameScreenSize.Height;
+            _logger.LogInformation("当前游戏分辨率{Width}x{Height}，素材缩放比率{Scale}",
+                width, height, systemInfo.AssetScale.ToString("F"));
+
+            if (width * 9 != height * 16)
+            {
+                _logger.LogWarning("当前游戏分辨率不是16:9，部分功能可能无法正常使用");
+            }
+        }
+
         public void Stop()
         {
             _timer.Stop();
@@ -66,6 +83,8 @@ namespace BetterGenshinImpact.GameTask
             _gameRect = RECT.Empty;
             _prevGameActive = false;
         }
+
+        public void Dispose() => Stop();
 
         public void Tick(object? sender, EventArgs e)
         {
@@ -168,13 +187,19 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         private bool SyncMaskWindowPosition()
         {
-            var currentRect = SystemControl.GetWindowRect(TaskContext.Instance().GameHandle);
+            var currentRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
             if (_gameRect == RECT.Empty)
             {
                 _gameRect = new RECT(currentRect);
             }
             else if (_gameRect != currentRect)
             {
+                // 后面大概可以取消掉这个判断，支持随意移动变化窗口
+                if (_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
+                {
+                    _logger.LogError("游戏窗口大小发生变化, 请重新启动捕获程序!");
+                }
+
                 _gameRect = new RECT(currentRect);
                 var maskWindow = MaskWindow.Instance();
                 maskWindow.Invoke(() =>

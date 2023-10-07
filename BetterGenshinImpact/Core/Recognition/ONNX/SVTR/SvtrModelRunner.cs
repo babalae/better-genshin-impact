@@ -18,6 +18,10 @@ using System.Drawing.Imaging;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
+/// <summary>
+/// 测试代码
+/// </summary>
+[Obsolete]
 public class SvtrModelRunner
 {
     private readonly InferenceSession _session;

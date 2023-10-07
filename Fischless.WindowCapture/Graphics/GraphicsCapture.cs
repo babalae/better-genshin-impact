@@ -3,6 +3,12 @@ using System.Windows;
 using Vanara.PInvoke;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
+using Fischless.WindowCapture.Graphics.Helpers;
+using SharpDX.Direct3D11;
+using System.Windows.Controls;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Drawing;
+using static Vanara.PInvoke.Gdi32;
 
 namespace Fischless.WindowCapture.Graphics;
 
@@ -17,14 +23,19 @@ public class GraphicsCapture : IWindowCapture
     public bool IsCapturing { get; private set; }
     public bool IsClientEnabled { get; set; } = false;
 
-    public void Dispose()
-    {
-        Stop();
-    }
+    private ResourceRegion _region;
+
+    public void Dispose() => Stop();
 
     public void Start(nint hWnd)
     {
         _hWnd = hWnd;
+
+        if (!IsClientEnabled)
+        {
+            _region = GetGameScreenRegion(hWnd);
+        }
+
         IsCapturing = true;
 
         _captureItem = CaptureHelper.CreateItemForWindow(_hWnd);
@@ -47,6 +58,24 @@ public class GraphicsCapture : IWindowCapture
         IsCapturing = true;
     }
 
+    private ResourceRegion GetGameScreenRegion(nint hWnd)
+    {
+        ResourceRegion region = new();
+        DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
+        User32.GetClientRect(_hWnd, out var clientRect);
+        //POINT point = default; // 这个点和 DwmGetWindowAttribute 结果差1
+        //User32.ClientToScreen(hWnd, ref point);
+
+        region.Left = 0;
+        region.Top = windowRect.Height - clientRect.Height;
+        region.Right = clientRect.Width;
+        region.Bottom = windowRect.Height;
+        region.Front = 0;
+        region.Back = 1;
+
+        return region;
+    }
+
     public Bitmap? Capture()
     {
         if (_hWnd == IntPtr.Zero)
@@ -63,73 +92,18 @@ public class GraphicsCapture : IWindowCapture
                 return null;
             }
 
-            Bitmap? bitmap = frame.ToBitmap();
-
-            if (bitmap == null)
-            {
-                return null;
-            }
-
-            if (IsClientEnabled)
-            {
-                return bitmap;
-            }
-            else
-            {
-                _ = User32.GetClientRect(_hWnd, out var windowRect);
-                int border = Math.Max(SystemParameters.Border, 1);
-                int captionHeight = CaptionHelper.IsFullScreenMode(_hWnd)
-                    ? default
-                    : Math.Max(CaptionHelper.GetSystemCaptionHeight(), frame.ContentSize.Height - windowRect.Height - border * 2);
-
-                using (bitmap)
-                {
-                    return bitmap.Crop(
-                        border,
-                        border + captionHeight,
-                        frame.ContentSize.Width - border * 2,
-                        frame.ContentSize.Height - border * 2 - captionHeight
-                    );
-                }
-            }
+            return frame.ToBitmap(_region);
         }
         catch (Exception e)
         {
             Debug.WriteLine(e);
         }
+
         return null;
     }
 
     public Bitmap? Capture(int x, int y, int width, int height)
     {
-        if (_hWnd == IntPtr.Zero)
-        {
-            return null;
-        }
-
-        try
-        {
-            using var frame = _captureFramePool?.TryGetNextFrame();
-            using Bitmap bitmap = frame?.ToBitmap();
-            _ = User32.GetClientRect(_hWnd, out var windowRect);
-            int border = Math.Max(SystemParameters.Border, 1);
-            int captionHeight = CaptionHelper.IsFullScreenMode(_hWnd)
-                ? default
-                : Math.Max(CaptionHelper.GetSystemCaptionHeight()
-                    , frame.ContentSize.Height - windowRect.Height - border * 2
-            );
-
-            return bitmap.Crop(
-                border + x,
-                border + y + captionHeight,
-                width - border * 2,
-                height - border * 2 - captionHeight
-            );
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e);
-        }
         return null;
     }
 

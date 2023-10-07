@@ -60,15 +60,15 @@ namespace BetterGenshinImpact.Core.Config
 
         public void InitEvent()
         {
-            this.PropertyChanged += AnyPropertyChangedEvent;
-            MaskWindowConfig.PropertyChanged += AnyPropertyChangedEvent;
-            AutoPickConfig.PropertyChanged += AnyPropertyChangedEvent;
-            AutoSkipConfig.PropertyChanged += AnyPropertyChangedEvent;
-            AutoFishingConfig.PropertyChanged += AnyPropertyChangedEvent;
-            MacroConfig.PropertyChanged += AnyPropertyChangedEvent;
+            this.PropertyChanged += OnAnyPropertyChanged;
+            MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
+            AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
+            AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
+            AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
+            MacroConfig.PropertyChanged += OnAnyPropertyChanged;
         }
 
-        public void AnyPropertyChangedEvent(object? sender, EventArgs args)
+        public void OnAnyPropertyChanged(object? sender, EventArgs args)
         {
             GameTaskManager.RefreshTriggerConfigs();
             OnAnyChangedAction?.Invoke();

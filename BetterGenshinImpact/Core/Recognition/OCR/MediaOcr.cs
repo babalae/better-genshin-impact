@@ -14,12 +14,6 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
     {
         private static readonly OcrEngine Engine =
             OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans-CN"));
-        //public static string StartUpPath { get; private set; } = AppDomain.CurrentDomain.BaseDirectory;
-
-        //public static string Absolute(string relativePath)
-        //{
-        //    return Path.Combine(StartUpPath, relativePath);
-        //}
 
         /// <summary>
         /// 图片太小的时候这个方法会报错，无法判断图片类型

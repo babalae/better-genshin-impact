@@ -36,7 +36,7 @@ namespace BetterGenshinImpact
             .ConfigureServices(
                 (context, services) =>
                 {
-                    var logFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"log");
+                    var logFolder = Path.Combine(AppContext.BaseDirectory, @"log");
                     Directory.CreateDirectory(logFolder);
                     var logFile = Path.Combine(logFolder, $"better-genshin-impact.log");
 

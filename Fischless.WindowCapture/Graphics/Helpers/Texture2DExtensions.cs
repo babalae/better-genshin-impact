@@ -1,14 +1,15 @@
-﻿using SharpDX;
-using SharpDX.Direct3D11;
-using SharpDX.DXGI;
+﻿using System.Diagnostics;
 using System.Drawing.Imaging;
 using Windows.Graphics.Capture;
+using SharpDX;
+using SharpDX.Direct3D11;
+using SharpDX.DXGI;
 
-namespace Fischless.WindowCapture.Graphics;
+namespace Fischless.WindowCapture.Graphics.Helpers;
 
 public static class Texture2DExtensions
 {
-    public static Bitmap? ToBitmap(this Direct3D11CaptureFrame frame)
+    public static Bitmap? ToBitmap(this Direct3D11CaptureFrame frame, ResourceRegion? region = null)
     {
         var texture2dBitmap = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
 
@@ -17,8 +18,8 @@ public static class Texture2DExtensions
         // Create texture copy
         var staging = new Texture2D(d3dDevice, new Texture2DDescription
         {
-            Width = frame.ContentSize.Width,
-            Height = frame.ContentSize.Height,
+            Width = region == null ? frame.ContentSize.Width : region.Value.Right - region.Value.Left,
+            Height = region == null ? frame.ContentSize.Height : region.Value.Bottom - region.Value.Top,
             MipLevels = 1,
             ArraySize = 1,
             Format = texture2dBitmap.Description.Format,
@@ -32,7 +33,14 @@ public static class Texture2DExtensions
         try
         {
             // Copy data
-            d3dDevice.ImmediateContext.CopyResource(texture2dBitmap, staging);
+            if (region != null)
+            {
+                d3dDevice.ImmediateContext.CopySubresourceRegion(texture2dBitmap, 0, region, staging, 0);
+            }
+            else
+            {
+                d3dDevice.ImmediateContext.CopyResource(texture2dBitmap, staging);
+            }
 
             var dataBox = d3dDevice.ImmediateContext.MapSubresource(staging, 0, 0, MapMode.Read,
                 SharpDX.Direct3D11.MapFlags.None,
@@ -42,6 +50,12 @@ public static class Texture2DExtensions
                 PixelFormat.Format32bppArgb, dataBox.DataPointer);
 
             return bitmap;
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine("Failed to copy texture to bitmap.");
+            Debug.WriteLine(e.StackTrace);
+            return null;
         }
         finally
         {

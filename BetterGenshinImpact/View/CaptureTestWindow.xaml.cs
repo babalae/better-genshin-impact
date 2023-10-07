@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.View
 
 
             _capture = WindowCaptureFactory.Create(captureMode);
-            _capture.IsClientEnabled = true;
+            //_capture.IsClientEnabled = true;
             _capture.Start(hWnd);
 
             CompositionTarget.Rendering += Loop;
@@ -63,6 +63,7 @@ namespace BetterGenshinImpact.View
 
             if (bitmap != null)
             {
+                Debug.WriteLine($"Bitmap:{bitmap.Width}x{bitmap.Height}");
                 _captureCount++;
                 sw.Reset();
                 sw.Start();

@@ -8,21 +8,20 @@ namespace BetterGenshinImpact.GameTask.Model
 {
     public class SystemInfo
     {
-
         /// <summary>
         /// 显示器分辨率 无缩放
         /// </summary>
-        public Size DisplaySize { get;}
+        public Size DisplaySize { get; }
 
         /// <summary>
         /// 游戏窗口内分辨率
         /// </summary>
-        public RECT GameScreenSize { get;  }
+        public RECT GameScreenSize { get; }
 
         /// <summary>
         /// 素材缩放比例
         /// </summary>
-        public double AssetScale { get;  }
+        public double AssetScale { get; }
 
         /// <summary>
         /// 游戏窗口内分辨率
@@ -35,11 +34,11 @@ namespace BetterGenshinImpact.GameTask.Model
         /// </summary>
         public RECT CaptureAreaRect { get; }
 
-        public Process GameProcess { get;  }
+        public Process GameProcess { get; }
 
         public string GameProcessName { get; }
 
-        public int GameProcessId { get;}
+        public int GameProcessId { get; }
 
         public RectArea DesktopRectArea { get; }
 
@@ -51,18 +50,25 @@ namespace BetterGenshinImpact.GameTask.Model
             GameProcessId = GameProcess.Id;
 
             DisplaySize = PrimaryScreen.WorkingArea;
-            DesktopRectArea = new RectArea( 0, 0, DisplaySize.Width, DisplaySize.Height);
+            DesktopRectArea = new RectArea(0, 0, DisplaySize.Width, DisplaySize.Height);
+
+            // 判断最小化
+            if (User32.IsIconic(hWnd))
+            {
+                throw new ArgumentException("游戏窗口不能最小化");
+            }
+
             // 注意截图区域要和游戏窗口实际区域一致
             // todo 窗口移动后？
             GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
-            if (GameScreenSize.Width < 800)
+            if (GameScreenSize.Width < 800 || GameScreenSize.Height < 600)
             {
-                throw new ArgumentException("游戏窗口分辨率过低，原神窗口不能是最小化状态！请用Alt+Tab来切换窗口。");
+                throw new ArgumentException("游戏窗口分辨率不得小于 800x600 ！");
             }
 
             AssetScale = GameScreenSize.Width / 1920d;
             GameWindowRect = SystemControl.GetWindowRect(hWnd);
-            CaptureAreaRect = GameWindowRect;
+            CaptureAreaRect = GameScreenSize;
         }
     }
 }

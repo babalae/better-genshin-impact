@@ -40,7 +40,7 @@ namespace BetterGenshinImpact.View
             _maskWindow ??= new MaskWindow();
             if (hWnd != null && hWnd != IntPtr.Zero)
             {
-                var rect = SystemControl.GetWindowRect(hWnd.Value);
+                var rect = SystemControl.GetCaptureRect(hWnd.Value);
                 double scale = DpiHelper.ScaleY;
                 _maskWindow.Left = (int)Math.Ceiling(rect.X * 1d / scale);
                 _maskWindow.Top = (int)Math.Ceiling(rect.Y * 1d / scale);

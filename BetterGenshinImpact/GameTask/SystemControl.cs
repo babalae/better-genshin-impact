@@ -97,6 +97,23 @@ namespace BetterGenshinImpact.GameTask
             return clientRect;
         }
 
+        /// <summary>
+        /// GetWindowRect or GetGameScreenRect
+        /// </summary>
+        /// <param name="hWnd"></param>
+        /// <returns></returns>
+        public static RECT GetCaptureRect(IntPtr hWnd)
+        {
+            var windowRect = GetWindowRect(hWnd);
+            var gameScreenRect = GetGameScreenRect(hWnd);
+            var left = windowRect.Left;
+            var top = windowRect.Top + windowRect.Height - gameScreenRect.Height;
+            var right = left + gameScreenRect.Width;
+            var bottom = top + gameScreenRect.Height;
+            return new RECT(left, top, right, bottom);
+        }
+
+
         //public static int GetCaptionHeight()
         //{
         //    return User32.GetSystemMetrics(User32.SystemMetric.SM_CYFRAME) + User32.GetSystemMetrics(User32.SystemMetric.SM_CYCAPTION);
