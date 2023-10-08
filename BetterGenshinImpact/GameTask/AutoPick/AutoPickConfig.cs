@@ -19,12 +19,16 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         [ObservableProperty] private bool _enabled = true;
 
         /// <summary>
+        /// 1080p下拾取文字左边的起始偏移
+        /// </summary>
+        [ObservableProperty] private int _itemIconLeftOffset = 60;
+        /// <summary>
         /// 1080p下拾取文字的起始偏移
         /// </summary>
-        [ObservableProperty] private int _fLeftOffset = 115;
+        [ObservableProperty] private int _itemTextLeftOffset = 115;
         /// <summary>
         /// 1080p下拾取文字的终止偏移
         /// </summary>
-        [ObservableProperty] private int _fRightOffset = 400;
+        [ObservableProperty] private int _itemTextRightOffset = 400;
     }
 }

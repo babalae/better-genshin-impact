@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.Model;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using WindowsInput;
@@ -60,13 +61,24 @@ public class AutoPickTrigger : ITaskTrigger
     {
         content.CaptureRectArea.Find(_autoPickAssets.FRo, foundRectArea =>
         {
-            // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
+
+            // 识别到F键，开始识别物品图标
+            bool isChatIcon = false;
+            _autoPickAssets.OptionButtonRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
+            var iconRa = content.CaptureRectArea.Find(_autoPickAssets.OptionButtonRo);
+            if (!iconRa.IsEmpty())
+            {
+                // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
+                isChatIcon = true;
+            }
+
+            // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
             // 计算出文字区域
-            var textRect = new Rect(foundRectArea.X + (int)(config.FLeftOffset * scale), foundRectArea.Y,
-                (int)((config.FRightOffset - config.FLeftOffset) * scale), foundRectArea.Height);
-            if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width 
+            var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
+                (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
+            if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width
                 || textRect.Y + textRect.Height > content.CaptureRectArea.SrcGreyMat.Height)
             {
                 Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
@@ -83,6 +95,12 @@ public class AutoPickTrigger : ITaskTrigger
                 {
                     _logger.LogInformation("交互或拾取：{Text}", text);
                     new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                    return;
+                }
+
+                if (isChatIcon)
+                {
+                    //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
                     return;
                 }
 

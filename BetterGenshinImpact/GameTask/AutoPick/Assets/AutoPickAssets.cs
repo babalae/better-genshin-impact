@@ -12,6 +12,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
     public class AutoPickAssets
     {
         public RecognitionObject FRo;
+        public RecognitionObject OptionButtonRo;
 
         public AutoPickAssets()
         {
@@ -25,6 +26,14 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                     info.CaptureAreaRect.Height / 3, 
                     info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, 
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3),
+                DrawOnWindow = false
+            }.InitTemplate();
+
+            OptionButtonRo = new RecognitionObject
+            {
+                Name = "OptionButton",
+                RecognitionType = RecognitionTypes.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
                 DrawOnWindow = false
             }.InitTemplate();
         }
