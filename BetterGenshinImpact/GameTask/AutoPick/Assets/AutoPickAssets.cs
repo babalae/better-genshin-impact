@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height / 3,
                     info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
-                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3),
+                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 2),
                 DrawOnWindow = false
             }.InitTemplate();
 

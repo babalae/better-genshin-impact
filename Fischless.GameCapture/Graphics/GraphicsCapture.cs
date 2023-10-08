@@ -25,9 +25,6 @@ public class GraphicsCapture : IGameCapture
     {
         _hWnd = hWnd;
 
-        User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
-        User32.SetForegroundWindow(hWnd);
-
         _region = GetGameScreenRegion(hWnd);
 
         IsCapturing = true;

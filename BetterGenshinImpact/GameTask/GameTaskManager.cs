@@ -14,6 +14,10 @@ namespace BetterGenshinImpact.GameTask
     {
         public static Dictionary<string, ITaskTrigger>? TriggerDictionary { get; set; }
 
+        /// <summary>
+        /// 一定要在任务上下文初始化完毕后使用
+        /// </summary>
+        /// <returns></returns>
         public static List<ITaskTrigger> LoadTriggers()
         {
             TriggerDictionary = new Dictionary<string, ITaskTrigger>()

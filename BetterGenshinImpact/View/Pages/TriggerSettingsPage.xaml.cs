@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.View.Pages
 {
     public partial class TriggerSettingsPage
     {
-        TriggerSettingsPageViewModel ViewModel { get; }
+        private TriggerSettingsPageViewModel ViewModel { get; }
 
         public TriggerSettingsPage(TriggerSettingsPageViewModel viewModel)
         {

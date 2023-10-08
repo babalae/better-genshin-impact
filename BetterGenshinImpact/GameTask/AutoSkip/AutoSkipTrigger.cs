@@ -39,6 +39,11 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private int _prevClickFrameIndex = -1;
 
+    /// <summary>
+    /// 左上角剧情自动的按钮位置
+    /// </summary>
+    private Rect _prevButtonRect = Rect.Empty;
+
     public void OnCapture(CaptureContent content)
     {
         if (content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
@@ -46,14 +51,17 @@ public class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-        if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
+
+        // 找左上角剧情自动的按钮
+        content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo, foundRectArea =>
         {
-            // 找左上角剧情自动的按钮
-            content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo, (_) =>
+            _prevButtonRect = foundRectArea.ToRect();
+            if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
-            });
-        }
+            }
+        });
+
 
         // 不存在则找右下的选项按钮
         content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
@@ -68,6 +76,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 {
                     _logger.LogInformation("自动剧情：{Text}", "点击选项");
                 }
+
                 _prevClickFrameIndex = content.FrameIndex;
             }
         });
@@ -84,6 +93,5 @@ public class AutoSkipTrigger : ITaskTrigger
         }
 
         // TODO 自动交付材料
-
     }
 }

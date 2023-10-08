@@ -112,5 +112,11 @@ namespace BetterGenshinImpact.GameTask
             var bottom = top + gameScreenRect.Height;
             return new RECT(left, top, right, bottom);
         }
+
+        public static void ActivateWindow(IntPtr hWnd)
+        {
+            User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
+            User32.SetForegroundWindow(hWnd);
+        }
     }
 }

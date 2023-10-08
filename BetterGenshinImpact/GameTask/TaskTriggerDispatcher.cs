@@ -10,9 +10,9 @@ using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
 {
-    public class TaskDispatcher : IDisposable
+    public class TaskTriggerDispatcher : IDisposable
     {
-        private readonly ILogger<TaskDispatcher> _logger = App.GetLogger<TaskDispatcher>();
+        private readonly ILogger<TaskTriggerDispatcher> _logger = App.GetLogger<TaskTriggerDispatcher>();
 
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
@@ -28,7 +28,7 @@ namespace BetterGenshinImpact.GameTask
         public bool Enabled => _timer.Enabled;
 
 
-        public TaskDispatcher()
+        public TaskTriggerDispatcher()
         {
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
@@ -36,17 +36,19 @@ namespace BetterGenshinImpact.GameTask
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
-            // 初始化任务上下文(一定要在初始化触发器前完成)
-            TaskContext.Instance().Init(hWnd);
-
-            PrintSystemInfo();
-
-            // 初始化触发器
-            _triggers = GameTaskManager.LoadTriggers();
-
             // 初始化截图器
             _capture = GameCaptureFactory.Create(mode);
-            //_capture.IsClientEnabled = true;
+            // 激活窗口 保证后面能够正常获取窗口信息
+            SystemControl.ActivateWindow(hWnd);
+
+            // 初始化任务上下文(一定要在初始化触发器前完成)
+            TaskContext.Instance().Init(hWnd);
+            PrintSystemInfo();
+
+            // 初始化触发器(一定要在任务上下文初始化完毕后使用)
+            _triggers = GameTaskManager.LoadTriggers();
+
+            // 启动截图
             _capture.Start(hWnd);
 
             // 启动定时器
@@ -172,7 +174,10 @@ namespace BetterGenshinImpact.GameTask
                         sw.Start();
                         trigger.OnCapture(content);
                         sw.Stop();
-                        Debug.WriteLine($"{trigger.Name}耗时:" + sw.ElapsedMilliseconds);
+                        if (sw.ElapsedMilliseconds > 0)
+                        {
+                            Debug.WriteLine($"{trigger.Name}耗时:" + sw.ElapsedMilliseconds);
+                        }
                     }
                 }
             }

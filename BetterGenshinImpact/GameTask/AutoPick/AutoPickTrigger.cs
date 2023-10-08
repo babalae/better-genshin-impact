@@ -119,6 +119,7 @@ public class AutoPickTrigger : ITaskTrigger
     {
         // 二值化
         Cv2.Threshold(mat, mat, 0, 255, ThresholdTypes.Otsu | ThresholdTypes.Binary);
+        //Cv2.AdaptiveThreshold(mat, mat, 255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.Binary, 31, 3); // 效果不错 但是和模型不搭
         //mat = OpenCvCommonHelper.Threshold(mat, Scalar.FromRgb(235, 235, 235), Scalar.FromRgb(255, 255, 255)); // 识别物品不太行
         // 不知道为什么要强制拉伸到 221x32
         mat = ResizeHelper.ResizeTo(mat, 221, 32);

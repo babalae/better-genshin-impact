@@ -4,7 +4,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" 
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       mc:Ignorable="d"
       d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
@@ -41,13 +41,13 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="选项不在黑名单时，自动按下 F 拾取/对话" />
+                        Text="选项不是NPC对话且不在黑名单时，自动按下 F 拾取/交互" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,24,0"
-                        IsChecked="{Binding Config.AutoPickConfig.Enabled, Mode=TwoWay}"/>
+                        IsChecked="{Binding Config.AutoPickConfig.Enabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -77,7 +77,8 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Content="前往设置"
-                        Margin="0,0,36,0" />
+                        Margin="0,0,36,0"
+                        Command="{Binding EditBlacklistCommand}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -105,7 +106,8 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Content="前往设置"
-                        Margin="0,0,36,0" />
+                        Margin="0,0,36,0"
+                        Command="{Binding EditWhitelistCommand}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -138,7 +140,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,24,0"
-                        IsChecked="{Binding Config.AutoSkipConfig.Enabled, Mode=TwoWay}"/>
+                        IsChecked="{Binding Config.AutoSkipConfig.Enabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -168,7 +170,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,36,0"
-                        IsChecked="{Binding Config.AutoSkipConfig.QuicklySkipConversationsEnabled, Mode=TwoWay}"/>
+                        IsChecked="{Binding Config.AutoSkipConfig.QuicklySkipConversationsEnabled, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -201,7 +203,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,24,0"
-                        IsChecked="{Binding Config.AutoFishingConfig.Enabled, Mode=TwoWay}"/>
+                        IsChecked="{Binding Config.AutoFishingConfig.Enabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -231,7 +233,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,36,0"
-                        IsChecked="{Binding Config.AutoFishingConfig.AutoThrowRodEnabled, Mode=TwoWay}"/>
+                        IsChecked="{Binding Config.AutoFishingConfig.AutoThrowRodEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -265,7 +267,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon PlayingCards20}">
+        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon PlayingCards20}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -287,6 +289,6 @@
                 </Grid>
             </ui:CardControl.Header>
             <ui:ToggleSwitch Margin="0,0,36,0" />
-        </ui:CardControl>
+        </ui:CardControl>-->
     </StackPanel>
 </Page>
