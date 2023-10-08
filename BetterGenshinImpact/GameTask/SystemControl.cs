@@ -112,13 +112,5 @@ namespace BetterGenshinImpact.GameTask
             var bottom = top + gameScreenRect.Height;
             return new RECT(left, top, right, bottom);
         }
-
-
-        //public static int GetCaptionHeight()
-        //{
-        //    return User32.GetSystemMetrics(User32.SystemMetric.SM_CYFRAME) + User32.GetSystemMetrics(User32.SystemMetric.SM_CYCAPTION);
-        //}
-
-
     }
 }

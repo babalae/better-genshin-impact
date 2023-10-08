@@ -145,8 +145,12 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
+                var sw = new Stopwatch();
+                sw.Start();
                 // 捕获游戏画面
                 var bitmap = _capture.Capture();
+                sw.Stop();
+                //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
                 if (bitmap == null)
                 {
                     _logger.LogWarning("截图失败!");
@@ -164,7 +168,11 @@ namespace BetterGenshinImpact.GameTask
                 {
                     foreach (var trigger in _triggers.Where(trigger => trigger.IsEnabled))
                     {
+                        sw.Reset();
+                        sw.Start();
                         trigger.OnCapture(content);
+                        sw.Stop();
+                        Debug.WriteLine($"{trigger.Name}耗时:" + sw.ElapsedMilliseconds);
                     }
                 }
             }

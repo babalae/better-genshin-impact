@@ -28,7 +28,7 @@ public class CaptureContent
         FrameIndex = frameIndex;
         TimerInterval = interval;
         var systemInfo = TaskContext.Instance().SystemInfo;
-        CaptureRectArea = new RectArea(srcBitmap, systemInfo.GameWindowRect.X, systemInfo.GameWindowRect.Y, systemInfo.DesktopRectArea);
+        CaptureRectArea = new RectArea(srcBitmap, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y, systemInfo.DesktopRectArea);
     }
 
     /// <summary>

@@ -136,7 +136,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
                             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                             // 点击下面的按钮
-                            var rc = info.GameWindowRect;
+                            var rc = info.CaptureAreaRect;
                             new InputSimulator()
                                 .Mouse
                                 .MoveMouseTo(

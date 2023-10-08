@@ -24,12 +24,7 @@ namespace BetterGenshinImpact.GameTask.Model
         public double AssetScale { get; }
 
         /// <summary>
-        /// 游戏窗口内分辨率
-        /// </summary>
-        public RECT GameWindowRect { get; }
-
-        /// <summary>
-        /// 捕获窗口区域
+        /// 捕获窗口区域 现在已经和实际游戏画面一致
         /// CaptureAreaRect = GameScreenSize or GameWindowRect
         /// </summary>
         public RECT CaptureAreaRect { get; }
@@ -67,8 +62,7 @@ namespace BetterGenshinImpact.GameTask.Model
             }
 
             AssetScale = GameScreenSize.Width / 1920d;
-            GameWindowRect = SystemControl.GetWindowRect(hWnd);
-            CaptureAreaRect = GameScreenSize;
+            CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
         }
     }
 }

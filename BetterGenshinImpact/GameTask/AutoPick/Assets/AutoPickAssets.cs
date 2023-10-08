@@ -1,18 +1,13 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System.Drawing;
 using BetterGenshinImpact.Core.Recognition;
 using OpenCvSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoPick.Assets
 {
     public class AutoPickAssets
     {
         public RecognitionObject FRo;
-        public RecognitionObject OptionButtonRo;
+        public RecognitionObject ChatIconRo;
 
         public AutoPickAssets()
         {
@@ -22,19 +17,20 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                 Name = "F",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoPick", "F.png"),
-                RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 
-                    info.CaptureAreaRect.Height / 3, 
-                    info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, 
+                RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height / 3,
+                    info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3),
                 DrawOnWindow = false
             }.InitTemplate();
 
-            OptionButtonRo = new RecognitionObject
+            ChatIconRo = new RecognitionObject
             {
-                Name = "OptionButton",
+                Name = "ChatIcon",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
-                DrawOnWindow = false
+                DrawOnWindow = false,
+                DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();
         }
     }

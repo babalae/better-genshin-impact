@@ -66,8 +66,8 @@ public class AutoPickTrigger : ITaskTrigger
 
             // 识别到F键，开始识别物品图标
             bool isChatIcon = false;
-            _autoPickAssets.OptionButtonRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-            var iconRa = content.CaptureRectArea.Find(_autoPickAssets.OptionButtonRo);
+            _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
+            var iconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
             if (!iconRa.IsEmpty())
             {
                 // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
