@@ -77,26 +77,6 @@ public class AutoSkipTrigger : ITaskTrigger
         }
         else
         {
-            //if (_prevSkipButtonRect == Rect.Empty)
-            //{
-            //    // 没有进入自动剧情 跳过
-            //    return;
-            //}
-
-            //// 判断是否在等待选择对话选项场景
-            //// 取上次识别到的跳过按钮的区域
-            //var skipButtonAreaMat = content.CaptureRectArea.SrcGreyMat[_prevSkipButtonRect];
-            //Cv2.Threshold(skipButtonAreaMat, skipButtonAreaMat, 0, 255, ThresholdTypes.Otsu | ThresholdTypes.Binary);
-            //// 比较图片相似度
-            //Cv2.Absdiff(skipButtonAreaMat, _autoSkipAssets.BinaryStopAutoButtonMat, skipButtonAreaMat);
-            //var sameCount = OpenCvCommonHelper.CountGrayMatColor(skipButtonAreaMat, 0);
-            //var sameRate = sameCount * 1.0 / (skipButtonAreaMat.Width * skipButtonAreaMat.Height);
-            //Debug.WriteLine($"相似度：{sameRate}");
-            //if (sameRate > 0.9)
-            //{
-
-            //}
-
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
             var grayMat = content.CaptureRectArea.SrcGreyMat[0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2];
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
@@ -106,28 +86,8 @@ public class AutoSkipTrigger : ITaskTrigger
                 new InputSimulator().Mouse.LeftButtonClick();
                 Debug.WriteLine($"点击黑屏剧情：{rate}");
             }
+
+            // TODO 自动交付材料
         }
-
-
-        // 不存在则找右下的选项按钮
-        //content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
-        //{
-        //    // 不存在菜单的情况下 剧情在播放中
-        //    var menuRectArea = content.CaptureRectArea.Find(_autoSkipAssets.MenuRo);
-        //    if (menuRectArea.IsEmpty())
-        //    {
-        //        optionButtonRectArea.ClickCenter();
-
-        //        if (_prevClickFrameIndex <= content.FrameIndex - 1 && _prevClickFrameIndex >= content.FrameIndex - 5)
-        //        {
-        //            _logger.LogInformation("自动剧情：{Text}", "点击选项");
-        //        }
-
-        //        _prevClickFrameIndex = content.FrameIndex;
-        //    }
-        //});
-
-
-        // TODO 自动交付材料
     }
 }
