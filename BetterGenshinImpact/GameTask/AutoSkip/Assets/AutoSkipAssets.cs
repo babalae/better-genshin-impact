@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+﻿using System;
+using BetterGenshinImpact.Core.Recognition;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
@@ -8,6 +9,8 @@ public class AutoSkipAssets
     public RecognitionObject StopAutoButtonRo;
     public RecognitionObject OptionButtonRo;
     public RecognitionObject MenuRo;
+
+    public Mat BinaryStopAutoButtonMat;
 
     public AutoSkipAssets()
     {
@@ -19,8 +22,17 @@ public class AutoSkipAssets
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "stop_auto.png"),
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 5, info.CaptureAreaRect.Height / 5),
             DrawOnWindow = true
-        };
-        StopAutoButtonRo.InitTemplate();
+        }.InitTemplate();
+
+        // 二值化的跳过剧情按钮
+        if (StopAutoButtonRo.TemplateImageGreyMat == null)
+        {
+            throw new Exception("StopAutoButtonRo.TemplateImageGreyMat == null");
+        }
+        BinaryStopAutoButtonMat = StopAutoButtonRo.TemplateImageGreyMat.Clone();
+
+
+        Cv2.Threshold(BinaryStopAutoButtonMat, BinaryStopAutoButtonMat, 0, 255, ThresholdTypes.BinaryInv);
         OptionButtonRo = new RecognitionObject
         {
             Name = "OptionButton",
@@ -28,8 +40,7 @@ public class AutoSkipAssets
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
             DrawOnWindow = false
-        };
-        OptionButtonRo.InitTemplate();
+        }.InitTemplate();
         MenuRo = new RecognitionObject
         {
             Name = "Menu",
@@ -37,7 +48,6 @@ public class AutoSkipAssets
             TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "menu.png"),
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = false
-        };
-        MenuRo.InitTemplate();
+        }.InitTemplate();
     }
 }
