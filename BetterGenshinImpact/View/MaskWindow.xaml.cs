@@ -34,23 +34,22 @@ namespace BetterGenshinImpact.View
             DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
         }
 
-        public static MaskWindow Instance(IntPtr? hWnd = null)
+        public static MaskWindow Instance()
         {
-            _maskWindow ??= new MaskWindow();
-            if (hWnd != null && hWnd != IntPtr.Zero)
+            if (_maskWindow == null)
             {
-                var rect = SystemControl.GetCaptureRect(hWnd.Value);
-                double scale = DpiHelper.ScaleY;
-                _maskWindow.Left = (int)Math.Ceiling(rect.X * 1d / scale);
-                _maskWindow.Top = (int)Math.Ceiling(rect.Y * 1d / scale);
-                _maskWindow.Width = (int)Math.Ceiling(rect.Width * 1d / scale);
-                _maskWindow.Height = (int)Math.Ceiling(rect.Height * 1d / scale);
-                Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
-                Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{_maskWindow.Width} x {_maskWindow.Height}");
-                // todo 重新计算控件位置
+                throw new Exception("MaskWindow 未初始化");
             }
 
             return _maskWindow;
+        }
+
+
+        public void RefreshPosition(IntPtr hWnd)
+        {
+            var currentRect = SystemControl.GetCaptureRect(hWnd);
+            double scale = DpiHelper.ScaleY;
+            RefreshPosition(currentRect, scale);
         }
 
         public void RefreshPosition(RECT currentRect, double scale)
@@ -97,9 +96,20 @@ namespace BetterGenshinImpact.View
 
         protected override void OnRender(DrawingContext drawingContext)
         {
-            //Logger?.LogInformation("绘制识别结果");
             try
             {
+                var cnt = VisionContext.Instance().DrawContent.RectList.Count + VisionContext.Instance().DrawContent.TextList.Count;
+                if (cnt == 0)
+                {
+                    return;
+                }
+
+                // 先有上方判断的原因是，有可能Render的时候，配置还未初始化
+                if (!TaskContext.Instance().Config.MaskWindowConfig.DisplayRecognitionResultsOnMask)
+                {
+                    return;
+                }
+
                 foreach (var kv in VisionContext.Instance().DrawContent.RectList)
                 {
                     var drawable = kv.Value;

@@ -20,10 +20,10 @@ namespace BetterGenshinImpact.Core.Config
         /// </summary>
         [ObservableProperty] private string _captureMode = CaptureModes.BitBlt.ToString();
 
-        /// <summary>
-        /// 窗口捕获帧数/触发器触发频率
-        /// </summary>
-        [ObservableProperty] private int _frameRate = 30;
+        ///// <summary>
+        ///// 窗口捕获帧数/触发器触发频率
+        ///// </summary>
+        //[ObservableProperty] private int _frameRate = 30;
 
         /// <summary>
         /// 触发器触发频率(ms)

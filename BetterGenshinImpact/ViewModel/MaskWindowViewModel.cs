@@ -21,14 +21,10 @@ namespace BetterGenshinImpact.ViewModel
 
         public AllConfig Config { get; set; }
 
+        [ObservableProperty] private Visibility _logTextBoxVisibility = Visibility.Visible;
+
         public MaskWindowViewModel()
         {
-            //var configService = App.GetService<IConfigService>();
-            //if (configService != null)
-            //{
-            //    Config = configService.Get();
-            //}
-
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
             {
                 if (msg.PropertyName == "AddButton")
@@ -65,6 +61,13 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnLoaded()
         {
+            // 这个窗口比较特殊，无法直接使用构造函数依赖注入
+            var configService = App.GetService<IConfigService>();
+            if (configService != null)
+            {
+                Config = configService.Get();
+                LogTextBoxVisibility = Config.MaskWindowConfig.ShowLogBox ? Visibility.Visible: Visibility.Collapsed;
+            }
         }
     }
 }

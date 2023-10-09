@@ -19,6 +19,7 @@ using System.Reflection;
 using System.Security.Principal;
 using BetterGenshinImpact.Core.Config;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 
 namespace BetterGenshinImpact
 {
@@ -40,12 +41,15 @@ namespace BetterGenshinImpact
                     Directory.CreateDirectory(logFolder);
                     var logFile = Path.Combine(logFolder, $"better-genshin-impact.log");
 
+                    var maskWindow = new MaskWindow();
+                    services.AddSingleton(maskWindow);
+
                     Log.Logger = new LoggerConfiguration()
                         .WriteTo.File(path: logFile, outputTemplate: "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}", rollingInterval: RollingInterval.Day)
                         .MinimumLevel.Information()
                         .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                         .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
-                        .WriteTo.RichTextBox(MaskWindow.Instance().LogBox, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                        .WriteTo.RichTextBox(maskWindow.LogBox, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                         .CreateLogger();
                     services.AddLogging(c => c.AddSerilog());
 
@@ -70,6 +74,8 @@ namespace BetterGenshinImpact
                     services.AddSingleton<TriggerSettingsPageViewModel>();
                     services.AddSingleton<MacroSettingsPage>();
                     services.AddSingleton<MacroSettingsPageViewModel>();
+                    services.AddSingleton<CommonSettingsPage>();
+                    services.AddSingleton<CommonSettingsPageViewModel>();
 
                     // My Services
                     services.AddSingleton<IConfigService, ConfigService>();
@@ -215,6 +221,7 @@ namespace BetterGenshinImpact
                 e.Handled = true;
             }
         }
+
         private static void HandleException(Exception e)
         {
             MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);

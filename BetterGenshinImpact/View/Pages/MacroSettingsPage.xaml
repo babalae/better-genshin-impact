@@ -15,18 +15,6 @@
       d:DesignHeight="950"
       d:DesignWidth="800">
     <StackPanel Margin="42,16,42,12">
-        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Color24}">
-            <ui:CardControl.Header>
-                <Grid>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        FontTypography="Body"
-                        Text="自动拾取" />
-                </Grid>
-            </ui:CardControl.Header>
-            <ui:ToggleSwitch />
-        </ui:CardControl>-->
-
         <ui:TextBlock
             Margin="0,0,0,8"
             FontTypography="BodyStrong"

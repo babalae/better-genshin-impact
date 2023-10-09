@@ -90,7 +90,8 @@
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem
                     Content="设置"
-                    NavigationCacheMode="Enabled">
+                    NavigationCacheMode="Enabled"
+                    TargetPageType="{x:Type pages:CommonSettingsPage}" >
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Settings24" />
                     </ui:NavigationViewItem.Icon>

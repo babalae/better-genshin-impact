@@ -40,12 +40,12 @@ namespace BetterGenshinImpact.GameTask
             GameHandle = hWnd;
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
-            MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
+            //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
         }
 
         public IntPtr GameHandle { get; set; }
 
-        public IntPtr MaskWindowHandle { get; set; }
+        //public IntPtr MaskWindowHandle { get; set; }
 
         public float DpiScale { get; set; }
 

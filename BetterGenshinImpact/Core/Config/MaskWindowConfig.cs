@@ -38,13 +38,13 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 控件是否锁定（拖拽移动等）
         /// </summary>
-        [ObservableProperty] private bool _controlLocked = false;
+        [ObservableProperty] private bool _controlLocked = true;
 
 
         /// <summary>
         /// UID遮盖是否启用
         /// </summary>
-        [ObservableProperty] private bool _uidCoverEnabled = false;
+        [ObservableProperty] private bool _uidCoverEnabled = true;
 
         /// <summary>
         /// 1080p下UID遮盖的位置与大小

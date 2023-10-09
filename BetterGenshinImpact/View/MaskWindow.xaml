@@ -30,9 +30,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Window">
-                        <Border BorderBrush="BlueViolet" BorderThickness="1">
-                            <ContentPresenter />
-                        </Border>
+                        <ContentPresenter />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -69,7 +67,8 @@
                     FontSize="12"
                     FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                     BorderThickness="0"
-                    VerticalScrollBarVisibility="Hidden" />
+                    VerticalScrollBarVisibility="Hidden"
+                    Visibility="{Binding LogTextBoxVisibility}"/>
             </ContentControl>
 
             <!--<ContentControl Width="230"
