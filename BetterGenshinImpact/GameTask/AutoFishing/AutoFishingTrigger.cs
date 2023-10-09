@@ -64,9 +64,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return;
                 }
 
-                // 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
-                // 点击按钮进入独占模式
-                DisplayButtonOnStartFishPageForExclusive(content);
+                // 进入独占模式判断
+                CheckFishingUserInterface(content);
             }
             else
             {
@@ -83,6 +82,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     }
 
                     _fishBoxRect = GetFishBoxArea(content.CaptureRectArea.SrcMat);
+                    CheckFishingUserInterface(content);
                 }
                 else
                 {
@@ -95,9 +95,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         /// <summary>
         /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
+        /// 点击按钮进入独占模式
         /// </summary>
         /// <param name="content"></param>
         /// <returns></returns>
+        [Obsolete]
         private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
         {
             VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
@@ -176,15 +178,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         //}
 
         /// <summary>
-        /// 找右下角的 Space 按钮
+        /// 找右下角的退出钓鱼按钮
         /// 用于判断是否进入钓鱼界面
         /// 进入钓鱼界面时该触发器进入独占模式
         /// </summary>
         /// <param name="content"></param>
         /// <returns></returns>
-        private bool FindSpaceButtonForExclusive(CaptureContent content)
+        private bool FindButtonForExclusive(CaptureContent content)
         {
-            return !content.CaptureRectArea.Find(_autoFishingAssets.SpaceButtonRo).IsEmpty();
+            return !content.CaptureRectArea.Find(_autoFishingAssets.ExitFishingButtonRo).IsEmpty();
         }
 
 
@@ -266,7 +268,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _noFishActionContinuouslyFrameNum++;
                     if (_noFishActionContinuouslyFrameNum > content.FrameRate)
                     {
-                        CheckFishingInterface(content);
+                        CheckFishingUserInterface(content);
                     }
                 }
             }
@@ -533,7 +535,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     Thread.Sleep(1000);
                 }
 
-                CheckFishingInterface(content);
+                CheckFishingUserInterface(content);
             }
 
             // 提竿后没有钓鱼的情况
@@ -559,13 +561,22 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 检查是否退出钓鱼界面
         /// </summary>
         /// <param name="content"></param>
-        private void CheckFishingInterface(CaptureContent content)
+        private void CheckFishingUserInterface(CaptureContent content)
         {
-            IsExclusive = FindSpaceButtonForExclusive(content);
-            if (!IsExclusive)
+            var prevIsExclusive = IsExclusive;
+            IsExclusive = FindButtonForExclusive(content);
+            if (!prevIsExclusive && IsExclusive)
             {
+                _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
+                _switchBaitContinuouslyFrameNum = 0;
+                _waitBiteContinuouslyFrameNum = 0;
+                _noFishActionContinuouslyFrameNum = 0;
                 _isThrowRod = false;
+            }
+            else if (prevIsExclusive && !IsExclusive)
+            {
                 _logger.LogInformation("← {Text}", "退出钓鱼界面");
+                _isThrowRod = false;
                 _fishBoxRect = Rect.Empty;
                 VisionContext.Instance().DrawContent.RemoveRect("FishBox");
             }

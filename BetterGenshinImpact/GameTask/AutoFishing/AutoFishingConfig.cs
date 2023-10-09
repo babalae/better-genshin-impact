@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 2. 自动提杆
         /// 3. 自动拉条
         /// </summary>
-        [ObservableProperty] private bool _enabled = true;
+        [ObservableProperty] private bool _enabled = false;
 
         /// <summary>
         /// 鱼儿上钩文字识别区域

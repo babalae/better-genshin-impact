@@ -57,6 +57,9 @@
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\exit_fishing.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\space.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

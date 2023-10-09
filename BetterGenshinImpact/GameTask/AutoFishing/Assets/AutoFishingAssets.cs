@@ -15,6 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
 
         public RecognitionObject BaitButtonRo;
         public RecognitionObject WaitBiteButtonRo;
+        public RecognitionObject ExitFishingButtonRo;
 
         public AutoFishingAssets()
         {
@@ -53,6 +54,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                     info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height / 4),
                 Threshold = 0.7,
+                DrawOnWindow = true
+            }.InitTemplate();
+
+            var w = (int)(140 * info.AssetScale);
+            var h = (int)(150 * info.AssetScale);
+            ExitFishingButtonRo = new RecognitionObject
+            {
+                Name = "ExitFishingButton",
+                RecognitionType = RecognitionTypes.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "exit_fishing.png"),
+                RegionOfInterest = new Rect(info.CaptureAreaRect.Width - w,
+                    info.CaptureAreaRect.Height - h,
+                    w,
+                    h),
+                Threshold = 0.8,
                 DrawOnWindow = true
             }.InitTemplate();
         }
