@@ -39,11 +39,6 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private int _prevClickFrameIndex = -1;
 
-    /// <summary>
-    /// 左上角剧情自动的按钮位置
-    /// </summary>
-    private Rect _prevSkipButtonRect = Rect.Empty;
-
     public void OnCapture(CaptureContent content)
     {
         if (content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
@@ -51,12 +46,10 @@ public class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-
         // 找左上角剧情自动的按钮
         var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
         if (!foundRectArea.IsEmpty())
         {
-            _prevSkipButtonRect = foundRectArea.ToRect();
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
@@ -66,7 +59,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 {
                     optionButtonRectArea.ClickCenter();
 
-                    if (_prevClickFrameIndex <= content.FrameIndex - 1 && _prevClickFrameIndex >= content.FrameIndex - 5)
+                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
                     {
                         _logger.LogInformation("自动剧情：{Text}", "点击选项");
                     }
@@ -78,7 +71,7 @@ public class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            var grayMat = content.CaptureRectArea.SrcGreyMat[0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2];
+            var grayMat = content.CaptureRectArea.SrcGreyMat[new Rect(0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2)];
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
             if (rate > 0.8 && rate < 0.99)

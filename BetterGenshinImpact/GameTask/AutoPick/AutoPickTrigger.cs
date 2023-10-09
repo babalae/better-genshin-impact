@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using BetterGenshinImpact.Core.Config;
@@ -57,6 +58,16 @@ public class AutoPickTrigger : ITaskTrigger
         }
     }
 
+    /// <summary>
+    /// 用于日志只输出一次
+    /// </summary>
+    private string _lastText = string.Empty;
+
+    /// <summary>
+    /// 用于日志只输出一次
+    /// </summary>
+    private int _prevClickFrameIndex = -1;
+
     public void OnCapture(CaptureContent content)
     {
         content.CaptureRectArea.Find(_autoPickAssets.FRo, foundRectArea =>
@@ -93,7 +104,7 @@ public class AutoPickTrigger : ITaskTrigger
             {
                 if (_whiteList.Contains(text))
                 {
-                    _logger.LogInformation("交互或拾取：{Text}", text);
+                    LogPick(content, text);
                     new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
                     return;
                 }
@@ -109,7 +120,7 @@ public class AutoPickTrigger : ITaskTrigger
                     return;
                 }
 
-                _logger.LogInformation("交互或拾取：{Text}", text);
+                LogPick(content, text);
                 new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
             }
         });
@@ -128,5 +139,21 @@ public class AutoPickTrigger : ITaskTrigger
         padded[new Rect(0, 0, mat.Width, mat.Height)] = mat;
         //Cv2.ImWrite(Global.Absolute("padded.png"), padded);
         return padded;
+    }
+
+    /// <summary>
+    /// 相同文字前后3帧内只输出一次
+    /// </summary>
+    /// <param name="content"></param>
+    /// <param name="text"></param>
+    private void LogPick(CaptureContent content, string text)
+    {
+        if (_lastText != text || (_lastText == text && Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 5))
+        {
+            _logger.LogInformation("交互或拾取：{Text}", text);
+        }
+
+        _lastText = text;
+        _prevClickFrameIndex = content.FrameIndex;
     }
 }

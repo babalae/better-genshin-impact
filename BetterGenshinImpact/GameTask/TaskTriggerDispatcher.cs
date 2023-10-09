@@ -210,14 +210,8 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 _gameRect = new RECT(currentRect);
-                var maskWindow = MaskWindow.Instance();
-                maskWindow.Invoke(() =>
-                {
-                    maskWindow.Left = currentRect.left;
-                    maskWindow.Top = currentRect.top;
-                    maskWindow.Width = currentRect.Width;
-                    maskWindow.Height = currentRect.Height;
-                });
+                double scale = TaskContext.Instance().DpiScale;
+                MaskWindow.Instance().RefreshPosition(currentRect, scale);
                 return true;
             }
 

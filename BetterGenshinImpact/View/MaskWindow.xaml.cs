@@ -3,7 +3,6 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -48,13 +47,27 @@ namespace BetterGenshinImpact.View
                 _maskWindow.Height = (int)Math.Ceiling(rect.Height * 1d / scale);
                 Debug.WriteLine($"原神窗口大小：{rect.Width} x {rect.Height}");
                 Debug.WriteLine($"原神窗口大小(计算DPI缩放后)：{_maskWindow.Width} x {_maskWindow.Height}");
+                // todo 重新计算控件位置
             }
 
             return _maskWindow;
         }
 
-        private MaskWindow()
+        public void RefreshPosition(RECT currentRect, double scale)
         {
+            Invoke(() =>
+            {
+                Left = currentRect.Left * scale;
+                Top = currentRect.Top * scale;
+                Width = currentRect.Width * scale;
+                Height = currentRect.Height * scale;
+                // todo 重新计算控件位置
+            });
+        }
+
+        public MaskWindow()
+        {
+            _maskWindow = this;
             this.SetResourceReference(StyleProperty, typeof(MaskWindow));
             InitializeComponent();
             LogTextBox.TextChanged += LogTextBoxTextChanged;
