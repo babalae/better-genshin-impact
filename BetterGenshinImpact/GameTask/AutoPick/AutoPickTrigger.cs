@@ -76,13 +76,23 @@ public class AutoPickTrigger : ITaskTrigger
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
             // 识别到F键，开始识别物品图标
-            bool isChatIcon = false;
+            var isExcludeIcon = false;
             _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-            var iconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
-            if (!iconRa.IsEmpty())
+            var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+            if (!chatIconRa.IsEmpty())
             {
                 // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
-                isChatIcon = true;
+                isExcludeIcon = true;
+            }
+            else
+            {
+                _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
+                var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+                if (!settingsIconRa.IsEmpty())
+                {
+                    // 物品图标是设置图标，一般是解谜、活动、电梯等
+                    isExcludeIcon = true;
+                }
             }
 
             // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
@@ -109,7 +119,7 @@ public class AutoPickTrigger : ITaskTrigger
                     return;
                 }
 
-                if (isChatIcon)
+                if (isExcludeIcon)
                 {
                     //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
                     return;

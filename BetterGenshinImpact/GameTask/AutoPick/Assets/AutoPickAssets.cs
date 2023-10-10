@@ -8,6 +8,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
     {
         public RecognitionObject FRo;
         public RecognitionObject ChatIconRo;
+        public RecognitionObject SettingsIconRo;
 
         public AutoPickAssets()
         {
@@ -30,6 +31,14 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
                 DrawOnWindow = false,
+                DrawOnWindowPen = new Pen(Color.Chocolate, 2)
+            }.InitTemplate();
+            SettingsIconRo = new RecognitionObject
+            {
+                Name = "SettingsIcon",
+                RecognitionType = RecognitionTypes.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoPick", "settings.png"),
+                DrawOnWindow = true,
                 DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();
         }

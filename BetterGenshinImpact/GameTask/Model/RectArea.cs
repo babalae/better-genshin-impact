@@ -238,6 +238,7 @@ public class RectArea
             var roi = SrcGreyMat;
             if (ro.RegionOfInterest != Rect.Empty)
             {
+                // TODO roi 是可以加缓存的
                 roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
             }
 
