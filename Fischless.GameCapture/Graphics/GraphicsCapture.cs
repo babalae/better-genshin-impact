@@ -2,6 +2,7 @@
 using SharpDX.Direct3D11;
 using System.Diagnostics;
 using Vanara.PInvoke;
+using Windows.Foundation.Metadata;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 
@@ -44,7 +45,10 @@ public class GraphicsCapture : IGameCapture
             _captureItem.Size);
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
         _captureSession.IsCursorCaptureEnabled = false;
-        _captureSession.IsBorderRequired = false;
+        if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
+        {
+            _captureSession.IsBorderRequired = false;
+        }
         _captureSession.StartCapture();
         IsCapturing = true;
     }
