@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using OpenCvSharp;
 
@@ -20,10 +21,10 @@ namespace BetterGenshinImpact.Core.Config
         /// </summary>
         [ObservableProperty] private bool _displayRecognitionResultsOnMask = true;
 
-        /// <summary>
-        /// 显示遮罩窗口边框
-        /// </summary>
-        [ObservableProperty] private bool _showMaskBorder = false;
+        ///// <summary>
+        ///// 显示遮罩窗口边框
+        ///// </summary>
+        //[ObservableProperty] private bool _showMaskBorder = false;
 
         /// <summary>
         /// 显示日志窗口
@@ -49,6 +50,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 1080p下UID遮盖的位置与大小
         /// </summary>
-        [ObservableProperty] private Rect _uidCoverRect = new(1695, 1052, 168, 22);
+        [JsonIgnore] 
+        public Rect UidCoverRect = new(1695, 1052, 168, 22);
     }
 }

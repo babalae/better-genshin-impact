@@ -12,7 +12,7 @@
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ExtendsContentIntoTitleBar="True"
-                 Title="更好的原神Alpha2" Height="600" Width="900">
+                 Title="更好的原神" Height="600" Width="900">
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction
@@ -70,14 +70,14 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <!--<ui:NavigationViewItem
+                <ui:NavigationViewItem
                     Content="任务"
                     NavigationCacheMode="Enabled"
                     TargetPageType="{x:Type pages:TriggerSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>-->
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem
                     Content="辅助操控"
                     NavigationCacheMode="Enabled"
@@ -100,7 +100,7 @@
         </ui:NavigationView>
 
         <ui:TitleBar
-            Title="更好的原神（内测版） · Alpha2.1"
+            Title="更好的原神（内测版） · Alpha2.3"
             Grid.Row="0" />
 
     </Grid>

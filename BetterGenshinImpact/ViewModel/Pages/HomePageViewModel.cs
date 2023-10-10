@@ -118,9 +118,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         if (!_taskDispatcherEnabled)
         {
             _mouseKeyMonitor.Subscribe(hWnd);
+            _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode());
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
-            _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode());
             _taskDispatcherEnabled = true;
             StartButtonVisibility = Visibility.Collapsed;
             StopButtonVisibility = Visibility.Visible;
@@ -134,8 +134,8 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     {
         if (_taskDispatcherEnabled)
         {
-            _mouseKeyMonitor.Unsubscribe();
             _maskWindow?.Hide();
+            _mouseKeyMonitor.Unsubscribe();
             _taskDispatcher.Stop();
             _taskDispatcherEnabled = false;
             StartButtonVisibility = Visibility.Visible;

@@ -100,7 +100,7 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="需要主动按下F交互的内容，请配合黑名单使用" />
+                        Text="需要主动按下 F 交互的内容，请配合黑名单使用" />
                     <ui:Button
                         Grid.Row="0"
                         Grid.RowSpan="2"

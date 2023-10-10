@@ -2,6 +2,8 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -60,8 +62,10 @@ namespace BetterGenshinImpact.View
                 Top = currentRect.Top * scale;
                 Width = currentRect.Width * scale;
                 Height = currentRect.Height * scale;
-                // todo 重新计算控件位置
             });
+            // 重新计算控件位置
+            // shit code 预定了
+            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
         }
 
         public MaskWindow()

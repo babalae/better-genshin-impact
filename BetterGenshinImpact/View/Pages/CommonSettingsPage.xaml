@@ -6,8 +6,9 @@
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       mc:Ignorable="d" 
-      d:DataContext="{d:DesignInstance Type=pages:MacroSettingsPageViewModel}"
+      d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -78,9 +79,18 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,36,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}" />
+                        IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}" >
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Unchecked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ui:ToggleSwitch>
                 </Grid>
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -107,7 +117,7 @@
                         Grid.Column="1"
                         Margin="0,0,36,0"
                         IsChecked="{Binding Config.MaskWindowConfig.ShowMaskBorder, Mode=TwoWay}" />
-                </Grid>
+                </Grid>-->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -162,7 +172,16 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,36,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.UidCoverEnabled, Mode=TwoWay}" />
+                        IsChecked="{Binding Config.MaskWindowConfig.UidCoverEnabled, Mode=TwoWay}" >
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Unchecked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ui:ToggleSwitch>
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

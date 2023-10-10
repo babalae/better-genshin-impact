@@ -9,7 +9,8 @@
         WindowStyle="None"
         Topmost="True"
         Width="500"
-        Height="800">
+        Height="800"
+        ShowInTaskbar="False">
     <Window.DataContext>
         <viewModel:MaskWindowViewModel />
     </Window.DataContext>
@@ -20,7 +21,7 @@
                 Command="{Binding LoadedCommand}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
-    <!-- ShowInTaskbar="False" -->
+
     <Window.Background>
         <SolidColorBrush Color="#FFB0B0B0"
                          Opacity="0" />
@@ -68,7 +69,7 @@
                     FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                     BorderThickness="0"
                     VerticalScrollBarVisibility="Hidden"
-                    Visibility="{Binding LogTextBoxVisibility}"/>
+                    Visibility="{Binding LogTextBoxVisibility}" />
             </ContentControl>
 
             <!--<ContentControl Width="230"
@@ -90,8 +91,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemContainerStyle>
                     <Style>
-                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
                     </Style>
                 </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemTemplate>
@@ -102,6 +103,15 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!--uid遮盖-->
+            <Rectangle
+                Fill="White"
+                IsHitTestVisible="False"
+                Width="{Binding UidCoverRect.Width, Mode=OneWay}"
+                Height="{Binding UidCoverRect.Height, Mode=OneWay}"
+                Canvas.Left="{Binding UidCoverRect.X, Mode=OneWay}"
+                Canvas.Top="{Binding UidCoverRect.Y, Mode=OneWay}"
+                Visibility="{Binding UidCoverVisibility}"/>
         </Canvas>
     </AdornerDecorator>
 

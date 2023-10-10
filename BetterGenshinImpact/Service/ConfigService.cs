@@ -11,9 +11,11 @@ public class ConfigService : IConfigService
 {
     private readonly object _locker = new(); // 只有UI线程会调用这个方法，lock好像意义不大，而且浪费了下面的读写锁hhh
     private readonly ReaderWriterLockSlim _rwLock = new();
+
     private readonly JsonSerializerOptions _options = new()
     {
         NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true
     };
 

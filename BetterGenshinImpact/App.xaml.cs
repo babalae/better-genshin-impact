@@ -37,6 +37,11 @@ namespace BetterGenshinImpact
             .ConfigureServices(
                 (context, services) =>
                 {
+                    // 提前初始化配置
+                    var configService = new ConfigService();
+                    services.AddSingleton<IConfigService>(sp => configService);
+                    var all = configService.Get();
+
                     var logFolder = Path.Combine(AppContext.BaseDirectory, @"log");
                     Directory.CreateDirectory(logFolder);
                     var logFile = Path.Combine(logFolder, $"better-genshin-impact.log");
@@ -44,13 +49,16 @@ namespace BetterGenshinImpact
                     var maskWindow = new MaskWindow();
                     services.AddSingleton(maskWindow);
 
-                    Log.Logger = new LoggerConfiguration()
+                    var loggerConfiguration = new LoggerConfiguration()
                         .WriteTo.File(path: logFile, outputTemplate: "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}", rollingInterval: RollingInterval.Day)
                         .MinimumLevel.Information()
                         .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
-                        .WriteTo.RichTextBox(maskWindow.LogBox, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-                        .CreateLogger();
+                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
+                    if (all.MaskWindowConfig.MaskEnabled)
+                    {
+                        loggerConfiguration.WriteTo.RichTextBox(maskWindow.LogBox, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+                    }
+                    Log.Logger = loggerConfiguration.CreateLogger();
                     services.AddLogging(c => c.AddSerilog());
 
 
@@ -78,7 +86,7 @@ namespace BetterGenshinImpact
                     services.AddSingleton<CommonSettingsPageViewModel>();
 
                     // My Services
-                    services.AddSingleton<IConfigService, ConfigService>();
+
 
                     // Configuration
                     //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));

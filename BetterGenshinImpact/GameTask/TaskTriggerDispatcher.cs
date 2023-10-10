@@ -196,14 +196,15 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         private bool SyncMaskWindowPosition()
         {
-            var currentRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
+            var hWnd = TaskContext.Instance().GameHandle;
+            var currentRect = SystemControl.GetCaptureRect(hWnd);
             if (_gameRect == RECT.Empty)
             {
                 _gameRect = new RECT(currentRect);
             }
             else if (_gameRect != currentRect)
             {
-                // 后面大概可以取消掉这个判断，支持随意移动变化窗口
+                // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 不支持 需要考虑的问题太多了
                 if (_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                 {
                     _logger.LogError("游戏窗口大小发生变化, 请重新启动捕获程序!");

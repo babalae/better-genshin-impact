@@ -12,7 +12,7 @@ public class DpiHelper
     private static float GetScaleY()
     {
         if (Environment.OSVersion.Version >= new Version(6, 3)
-         && Application.Current?.MainWindow != null)
+         && UIDispatcherHelper.MainWindow != null)
         {
             HWND hWnd = new WindowInteropHelper(Application.Current?.MainWindow).Handle;
             HMONITOR hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
