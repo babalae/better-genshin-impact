@@ -38,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                 Name = "SettingsIcon",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoPick", "settings.png"),
-                DrawOnWindow = true,
+                DrawOnWindow = false,
                 DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();
         }

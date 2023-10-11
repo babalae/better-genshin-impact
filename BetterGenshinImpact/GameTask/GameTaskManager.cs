@@ -6,6 +6,7 @@ using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.View.Drawable;
 
 namespace BetterGenshinImpact.GameTask
@@ -22,7 +23,7 @@ namespace BetterGenshinImpact.GameTask
         {
             TriggerDictionary = new Dictionary<string, ITaskTrigger>()
             {
-                { "RecognitionTest", new RecognitionTest.TestTrigger() },
+                { "RecognitionTest", new TestTrigger() },
                 { "AutoPick", new AutoPick.AutoPickTrigger() },
                 { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
                 { "AutoFishing", new AutoFishing.AutoFishingTrigger() }

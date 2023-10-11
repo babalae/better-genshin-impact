@@ -18,7 +18,7 @@
         <ui:TextBlock
             Margin="0,0,0,8"
             FontTypography="BodyStrong"
-            Text="自动化任务设置" />
+            Text="实时自动化任务设置" />
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon HandWave24}">
             <ui:CardExpander.Header>
                 <Grid>

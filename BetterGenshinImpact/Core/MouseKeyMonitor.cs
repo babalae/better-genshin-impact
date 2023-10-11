@@ -50,7 +50,7 @@ public class MouseKeyMonitor
         _spaceTimer.Interval = si;
         _spaceTimer.Elapsed += (sender, args) =>
         {
-            MySimulator.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE);
+            Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE);
             _spaceTimer.Interval = _random.Next(si, si + 20);
         };
 
@@ -58,7 +58,7 @@ public class MouseKeyMonitor
         _fTimer.Interval = fi;
         _fTimer.Elapsed += (sender, args) =>
         {
-            MySimulator.PostMessage(_hWnd).KeyPress(User32.VK.VK_F);
+            Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F);
             _fTimer.Interval = _random.Next(fi, fi + 20);
         };
     }

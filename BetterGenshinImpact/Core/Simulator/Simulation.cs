@@ -1,11 +1,17 @@
 ﻿using System;
+using WindowsInput;
 
 namespace BetterGenshinImpact.Core.Simulator;
 
-public class MySimulator
+public class Simulation
 {
     public static PostMessageSimulator PostMessage(IntPtr hWnd)
     {
         return new PostMessageSimulator(hWnd);
+    }
+
+    public static InputSimulator SenInput()
+    {
+        return new InputSimulator();
     }
 }
