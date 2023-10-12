@@ -55,25 +55,25 @@
             </ui:NavigationView.Header>-->
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem
-                    Content="首页"
+                    Content="启动"
                     NavigationCacheMode="Enabled"
                     TargetPageType="{x:Type pages:HomePage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Home24" />
+                        <ui:SymbolIcon Symbol="Play24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem
-                    Content="自动化"
+                    Content="实时触发"
                     NavigationCacheMode="Enabled"
                     TargetPageType="{x:Type pages:TriggerSettingsPage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Flash24" />
+                        <ui:SymbolIcon Symbol="Timer24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem
-                    Content="任务"
+                    Content="独立任务"
                     NavigationCacheMode="Enabled"
-                    TargetPageType="{x:Type pages:TriggerSettingsPage}">
+                    TargetPageType="{x:Type pages:TaskSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
                     </ui:NavigationViewItem.Icon>
@@ -84,6 +84,14 @@
                     TargetPageType="{x:Type pages:MacroSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="XboxController24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem
+                    Content="快捷键"
+                    NavigationCacheMode="Enabled"
+                    TargetPageType="{x:Type pages:HotkeyPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>

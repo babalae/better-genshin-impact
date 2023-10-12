@@ -45,6 +45,9 @@
 		<Compile Update="View\MaskWindow.xaml.cs">
 			<SubType>Code</SubType>
 		</Compile>
+		<Compile Update="View\Pages\HotkeyPage.xaml.cs">
+		  <SubType>Code</SubType>
+		</Compile>
 		<Compile Update="View\Pages\TriggerSettingsPage.xaml.cs">
 		  <SubType>Code</SubType>
 		</Compile>

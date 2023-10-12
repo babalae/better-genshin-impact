@@ -1,0 +1,49 @@
+﻿<Page x:Class="BetterGenshinImpact.View.Pages.HotkeyPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      mc:Ignorable="d"
+      d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
+      ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+      ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      d:DesignHeight="850" d:DesignWidth="600"
+      Title="HotkeyPage">
+    <Page.Resources>
+        <DataTemplate x:Key="textBoxTemplate">
+            <TextBox Text="{Binding Path=Value}" Width="100"></TextBox>
+        </DataTemplate>
+
+        <DataTemplate x:Key="checkBoxTemplate">
+            <CheckBox IsChecked="{Binding Path=Value}" IsThreeState="False"></CheckBox>
+        </DataTemplate>
+
+        <local:SettingsTemplateSelector 
+            x:Key="settingsTemplateSelector" 
+            TextBoxTemplate="{StaticResource textBoxTemplate}" 
+            CheckBoxTemplate="{StaticResource checkBoxTemplate}" />
+
+    </Page.Resources>
+    <Grid Margin="42,16,42,12">
+
+
+        <ListView ItemsSource="{Binding Path=Settings}">
+            <ListView>
+                <GridView>
+                    <GridView.Columns>
+                        <GridViewColumn 
+                            Header="Name" 
+                            DisplayMemberBinding="{Binding Path=Name}" />
+                        <GridViewColumn 
+                            Header="Setting" 
+                            CellTemplateSelector="{StaticResource settingsTemplateSelector}" />
+                    </GridView.Columns>
+                </GridView>
+            </ListView>
+        </ListView>
+    </Grid>
+</Page>

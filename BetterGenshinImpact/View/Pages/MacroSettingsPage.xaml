@@ -40,9 +40,9 @@
                         Text="轻松解除冻结" />
                 </Grid>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch 
+            <ui:ToggleSwitch
                 Margin="0,0,36,0"
-                IsChecked="{Binding Config.MacroConfig.SpacePressHoldToContinuationEnabled, Mode=TwoWay}"/>
+                IsChecked="{Binding Config.MacroConfig.SpacePressHoldToContinuationEnabled, Mode=TwoWay}" />
         </ui:CardControl>
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>
@@ -65,9 +65,89 @@
                         Text="快速拾取大量掉落物" />
                 </Grid>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch 
+            <ui:ToggleSwitch
                 Margin="0,0,36,0"
-                IsChecked="{Binding Config.MacroConfig.FPressHoldToContinuationEnabled, Mode=TwoWay}"/>
+                IsChecked="{Binding Config.MacroConfig.FPressHoldToContinuationEnabled, Mode=TwoWay}" />
+        </ui:CardControl>
+        <!--水龙王转圈圈-->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="那维莱特 - 转圈圈【开发中】" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="快速水平平移鼠标，需要配置快捷键进行触发" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button
+                Margin="0,0,36,0" 
+                Content="绑定快捷键" />
+        </ui:CardControl>
+
+        <!-- 一键强化 -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="快速强化圣遗物【开发中】" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="自动点击“快捷放入”后“强化”，并且会跳过强化结果结果" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button
+                Margin="0,0,36,0" 
+                Content="绑定快捷键" />
+        </ui:CardControl>
+
+        <!-- 一键锻造 -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="快速锻造【开发中】" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="满收获队列时使用，自动收取并重新锻造水晶块" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button
+                Margin="0,0,36,0" 
+                Content="绑定快捷键" />
         </ui:CardControl>
     </StackPanel>
 </Page>
