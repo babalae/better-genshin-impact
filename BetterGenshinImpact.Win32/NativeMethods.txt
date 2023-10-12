@@ -30,7 +30,6 @@ GetWindowTextLength
 D3D11CreateDevice
 ID3D11Device3
 IDirect3DDxgiInterfaceAccess
-IGraphicsCaptureItemInterop
 
 // Constants
 D3D11_SDK_VERSION

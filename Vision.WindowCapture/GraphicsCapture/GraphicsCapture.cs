@@ -1,7 +1,6 @@
 ﻿using System.Drawing;
 using Vision.WindowCapture.GraphicsCapture.Helpers;
 using Windows.Foundation.Metadata;
-using Windows.Graphics;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Win32.Foundation;
