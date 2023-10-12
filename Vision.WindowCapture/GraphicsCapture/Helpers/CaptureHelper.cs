@@ -24,39 +24,23 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Windows.Graphics.Capture;
-using Windows.Win32;
+using Windows.UI;
 using Windows.Win32.Foundation;
-using Windows.Win32.System.WinRT.Graphics.Capture;
-using WinRT;
 using WinRT.Interop;
 
 namespace Vision.WindowCapture.GraphicsCapture.Helpers;
 
 public static class CaptureHelper
 {
-    static readonly Guid IGraphicsCaptureItemGuid = Guid.Parse("79C3F95B-31F7-4EC2-A464-632EF5D30760");
-
     public static void SetWindow(this GraphicsCapturePicker picker, IntPtr hwnd)
     {
         InitializeWithWindow.Initialize(picker, hwnd);
     }
 
     [return:MaybeNull]
-    public static GraphicsCaptureItem CreateItemForWindow(HWND hwnd)
+    public static unsafe GraphicsCaptureItem CreateItemForWindow(HWND hwnd)
     {
-        GraphicsCaptureItem
-            .As<IGraphicsCaptureItemInterop>()
-            .CreateForWindow(hwnd, IGraphicsCaptureItemGuid, out var thisPtr);
-
-        try
-        {
-            return GraphicsCaptureItem.FromAbi(thisPtr);
-        }
-        finally
-        {
-            // TODO: not sure if release is needed
-            MarshalInspectable<GraphicsCaptureItem>.DisposeAbi(thisPtr);
-        }
+        return GraphicsCaptureItem.TryCreateFromWindowId(*(WindowId*)&hwnd);
     }
 
     //public static GraphicsCaptureItem CreateItemForMonitor(IntPtr hmon)
