@@ -86,7 +86,8 @@ namespace BetterGenshinImpact
                     services.AddSingleton<CommonSettingsPageViewModel>();
                     services.AddSingleton<TaskSettingsPage>();
 
-                    services.AddSingleton<HotkeyPage>();
+                    services.AddSingleton<HotKeyPage>();
+                    services.AddSingleton<HotKeyPageViewModel>();
 
                     // My Services
 

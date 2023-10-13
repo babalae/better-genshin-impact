@@ -89,7 +89,7 @@
                 <ui:NavigationViewItem
                     Content="快捷键"
                     NavigationCacheMode="Enabled"
-                    TargetPageType="{x:Type pages:HotkeyPage}">
+                    TargetPageType="{x:Type pages:HotKeyPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>

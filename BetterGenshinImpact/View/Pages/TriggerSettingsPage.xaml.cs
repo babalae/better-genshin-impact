@@ -13,16 +13,15 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace BetterGenshinImpact.View.Pages
-{
-    public partial class TriggerSettingsPage
-    {
-        private TriggerSettingsPageViewModel ViewModel { get; }
+namespace BetterGenshinImpact.View.Pages;
 
-        public TriggerSettingsPage(TriggerSettingsPageViewModel viewModel)
-        {
-            DataContext = ViewModel = viewModel;
-            InitializeComponent();
-        }
+public partial class TriggerSettingsPage
+{
+    private TriggerSettingsPageViewModel ViewModel { get; }
+
+    public TriggerSettingsPage(TriggerSettingsPageViewModel viewModel)
+    {
+        DataContext = ViewModel = viewModel;
+        InitializeComponent();
     }
 }

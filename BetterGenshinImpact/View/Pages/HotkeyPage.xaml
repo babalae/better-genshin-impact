@@ -1,4 +1,4 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.HotkeyPage"
+﻿<Page x:Class="BetterGenshinImpact.View.Pages.HotKeyPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -6,44 +6,45 @@
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:models="clr-namespace:BetterGenshinImpact.Core.Config"
+      xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+      xmlns:src="BetterGenshinImpact.View.Controls.Hotkey"
       mc:Ignorable="d"
-      d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
+      d:DataContext="{d:DesignInstance Type=pages:HotKeyPageViewModel}"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       d:DesignHeight="850" d:DesignWidth="600"
       Title="HotkeyPage">
-    <Page.Resources>
-        <DataTemplate x:Key="textBoxTemplate">
-            <TextBox Text="{Binding Path=Value}" Width="100"></TextBox>
-        </DataTemplate>
 
-        <DataTemplate x:Key="checkBoxTemplate">
-            <CheckBox IsChecked="{Binding Path=Value}" IsThreeState="False"></CheckBox>
-        </DataTemplate>
-
-        <local:SettingsTemplateSelector 
-            x:Key="settingsTemplateSelector" 
-            TextBoxTemplate="{StaticResource textBoxTemplate}" 
-            CheckBoxTemplate="{StaticResource checkBoxTemplate}" />
-
-    </Page.Resources>
     <Grid Margin="42,16,42,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TextBlock
+            Grid.Row="0"
+            Margin="0,0,0,8"
+            FontTypography="BodyStrong"
+            Text="快捷键设置" />
 
-
-        <ListView ItemsSource="{Binding Path=Settings}">
-            <ListView>
-                <GridView>
-                    <GridView.Columns>
-                        <GridViewColumn 
-                            Header="Name" 
-                            DisplayMemberBinding="{Binding Path=Name}" />
-                        <GridViewColumn 
-                            Header="Setting" 
-                            CellTemplateSelector="{StaticResource settingsTemplateSelector}" />
-                    </GridView.Columns>
-                </GridView>
-            </ListView>
+        <ListView Grid.Row="1" ItemsSource="{Binding HotkeyConfigs}">
+            <ListView.ItemTemplate>
+                <DataTemplate DataType="{x:Type models:HotKeyConfig}">
+                    <Grid Margin="8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="180" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                        <controls:HotKeyTextBox
+                            Grid.Column="1" 
+                            Hotkey="{Binding Hotkey}" 
+                            TextAlignment="Center"
+                            Style="{DynamicResource PlaceholderTextBox}"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
         </ListView>
     </Grid>
 </Page>
