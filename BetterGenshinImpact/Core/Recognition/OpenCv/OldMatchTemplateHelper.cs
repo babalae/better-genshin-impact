@@ -1,13 +1,10 @@
-﻿using OpenCvSharp;
+﻿using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Point = OpenCvSharp.Point;
-using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv
 {

@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using OpenCvSharp.Extensions;
 using WindowsInput;
 using static Vanara.PInvoke.User32;
 using Color = System.Drawing.Color;
