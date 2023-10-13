@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask;
 /// 捕获的内容
 /// 以及一些多个trigger会用到的内容
 /// </summary>
-public class CaptureContent
+public class CaptureContent : IDisposable
 {
     public static readonly int MaxFrameIndexSecond = 60;
     public Bitmap SrcBitmap { get; }
@@ -45,5 +45,11 @@ public class CaptureContent
         }
         //Debug.WriteLine($"{FrameIndex}%{FrameRate * interval.TotalSeconds}={FrameIndex % (FrameRate * interval.TotalSeconds)}");
         return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
+    }
+
+    public void Dispose()
+    {
+        CaptureRectArea.Dispose();
+        SrcBitmap.Dispose();
     }
 }

@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.GameTask.Model;
 /// 桌面 -> 窗口捕获区域 -> 窗口内的矩形区域 -> 矩形区域内识别到的图像区域
 /// </summary>
 [Serializable]
-public class RectArea
+public class RectArea : IDisposable
 {
     /// <summary>
     /// 当前所属的坐标系名称
@@ -184,7 +184,7 @@ public class RectArea
 
     public bool IsEmpty()
     {
-        return Width == 0 && Height == 0 && X== 0 && Y == 0;
+        return Width == 0 && Height == 0 && X == 0 && Y == 0;
     }
 
     public bool HasImage()
@@ -245,7 +245,7 @@ public class RectArea
             var p = MatchTemplateHelper.MatchTemplate(roi, ro.TemplateImageGreyMat, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
             if (p is { X: > 0, Y: > 0 })
             {
-                var newRa = new RectArea(ro.TemplateImageGreyMat, p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
+                var newRa = new RectArea(ro.TemplateImageGreyMat.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
                     VisionContext.Instance().DrawContent.PutRect(ro.Name, newRa
@@ -299,6 +299,7 @@ public class RectArea
                     successContainCount++;
                 }
             }
+
             // 正则匹配
             foreach (var re in ro.RegexMatchText)
             {
@@ -383,5 +384,12 @@ public class RectArea
     public RectArea Crop(Rect rect)
     {
         return new RectArea(SrcMat[rect], this);
+    }
+
+    public void Dispose()
+    {
+        _srcGreyMat?.Dispose();
+        _srcMat?.Dispose();
+        _srcBitmap?.Dispose();
     }
 }

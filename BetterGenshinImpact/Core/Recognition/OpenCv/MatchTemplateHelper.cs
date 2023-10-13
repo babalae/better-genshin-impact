@@ -15,9 +15,6 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
     {
         private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
 
-        public static double WidthScale = 1;
-        public static double HeightScale = 1;
-
         /// <summary>
         /// 模板匹配
         /// </summary>
@@ -31,7 +28,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
         {
             try
             {
-                var result = new Mat();
+                using var result = new Mat();
                 if (maskMat == null)
                 {
                     Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using WindowsInput;
+using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -47,12 +48,12 @@ public class AutoSkipTrigger : ITaskTrigger
         }
 
         // 找左上角剧情自动的按钮
-        var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
+        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
         if (!foundRectArea.IsEmpty())
         {
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
-                new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.SPACE);
+                Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.SPACE);
 
                 // 找右下的对话选项按钮
                 content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
@@ -65,18 +66,19 @@ public class AutoSkipTrigger : ITaskTrigger
                     }
 
                     _prevClickFrameIndex = content.FrameIndex;
+                    optionButtonRectArea.Dispose();
                 });
             }
         }
         else
         {
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            var grayMat = content.CaptureRectArea.SrcGreyMat[new Rect(0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2)];
+            using var grayMat = content.CaptureRectArea.SrcGreyMat[new Rect(0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2)];
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
             if (rate > 0.8 && rate < 0.99)
             {
-                new InputSimulator().Mouse.LeftButtonClick();
+                Simulation.SendInput.Mouse.LeftButtonClick();
                 Debug.WriteLine($"点击黑屏剧情：{rate}");
             }
 

@@ -180,6 +180,11 @@ namespace BetterGenshinImpact.GameTask
                         }
                     }
                 }
+                //if (_frameIndex / content.FrameRate % 2 == 0)
+                //{
+                //    GC.Collect();
+                //}
+                content.Dispose();
             }
             finally
             {

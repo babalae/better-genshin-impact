@@ -5,6 +5,7 @@ using System.Text.Json;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using Microsoft.Extensions.Logging;
@@ -115,7 +116,7 @@ public class AutoPickTrigger : ITaskTrigger
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
-                    new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                    Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
                     return;
                 }
 
@@ -131,7 +132,7 @@ public class AutoPickTrigger : ITaskTrigger
                 }
 
                 LogPick(content, text);
-                new InputSimulator().Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
             }
         });
     }

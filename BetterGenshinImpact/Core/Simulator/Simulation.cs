@@ -10,8 +10,5 @@ public class Simulation
         return new PostMessageSimulator(hWnd);
     }
 
-    public static InputSimulator SenInput()
-    {
-        return new InputSimulator();
-    }
+    public static InputSimulator SendInput { get; } = new();
 }

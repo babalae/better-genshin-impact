@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
@@ -139,7 +140,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                             // 点击下面的按钮
                             var rc = info.CaptureAreaRect;
-                            new InputSimulator()
+                            Simulation.SendInput
                                 .Mouse
                                 .MoveMouseTo(
                                     (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 / info.DesktopRectArea.Width,
@@ -224,7 +225,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     if (!_isThrowRod)
                     {
-                        new InputSimulator().Mouse.LeftButtonClick();
+                        Simulation.SendInput.Mouse.LeftButtonClick();
                         Debug.WriteLine("自动抛竿");
                         Thread.Sleep(500);
                         _isThrowRod = true;
@@ -251,7 +252,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         // 30s 没有上钩，重新抛竿
                         if (_throwRodWaitFrameNum >= content.FrameRate * 20)
                         {
-                            new InputSimulator().Mouse.LeftButtonClick();
+                            Simulation.SendInput.Mouse.LeftButtonClick();
                             _throwRodWaitFrameNum = 0;
                             _waitBiteContinuouslyFrameNum = 0;
                             Debug.WriteLine("超时自动收竿");
@@ -386,7 +387,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             var text = _ocrService.Ocr(wordCaptureOriginMat.ToBitmap());
                             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
                             {
-                                new InputSimulator().Mouse.LeftButtonClick();
+                                Simulation.SendInput.Mouse.LeftButtonClick();
                                 _logger.LogInformation(@"┌------------------------┐");
                                 _logger.LogInformation("  自动提竿(OCR)");
                                 _isFishingProcess = true;
@@ -405,7 +406,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     if (_biteTipsExitCount >= content.FrameRate / 2d)
                     {
-                        new InputSimulator().Mouse.LeftButtonClick();
+                        Simulation.SendInput.Mouse.LeftButtonClick();
                         _logger.LogInformation(@"┌------------------------┐");
                         _logger.LogInformation("  自动提竿(文字块)");
                         _isFishingProcess = true;
@@ -434,7 +435,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
             {
-                var simulator = new InputSimulator();
+                var simulator = Simulation.SendInput;
                 if (rects.Count >= 2 && _prevMouseEvent == 0x0 && !_findFishBoxTips)
                 {
                     _findFishBoxTips = true;

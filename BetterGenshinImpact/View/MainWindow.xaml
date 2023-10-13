@@ -108,7 +108,7 @@
         </ui:NavigationView>
 
         <ui:TitleBar
-            Title="更好的原神（内测版） · Alpha2.3"
+            Title="BetterGI · 更好的原神 · 0.10"
             Grid.Row="0" />
 
     </Grid>
