@@ -33,27 +33,25 @@ public readonly partial record struct HotKey(Key Key, ModifierKeys Modifiers = M
     {
         var key = Key.None;
         var modifiers = ModifierKeys.None;
-        if (String.Equals(str, "< None >")) {
+        if (string.IsNullOrWhiteSpace(str) || string.Equals(str, "< None >"))
+        {
             return new HotKey(key, modifiers);
         }
 
-        if (!string.IsNullOrWhiteSpace(str))
+        var parts = str.Split('+');
+        foreach (var part in parts)
         {
-            var parts = str.Split('+');
-            foreach (var part in parts)
-            {
-                var trimmed = part.Trim();
-                if (trimmed == "Ctrl")
-                    modifiers |= ModifierKeys.Control;
-                else if (trimmed == "Shift")
-                    modifiers |= ModifierKeys.Shift;
-                else if (trimmed == "Alt")
-                    modifiers |= ModifierKeys.Alt;
-                else if (trimmed == "Win")
-                    modifiers |= ModifierKeys.Windows;
-                else
-                    key = (Key)Enum.Parse(typeof(Key), trimmed);
-            }
+            var trimmed = part.Trim();
+            if (trimmed == "Ctrl")
+                modifiers |= ModifierKeys.Control;
+            else if (trimmed == "Shift")
+                modifiers |= ModifierKeys.Shift;
+            else if (trimmed == "Alt")
+                modifiers |= ModifierKeys.Alt;
+            else if (trimmed == "Win")
+                modifiers |= ModifierKeys.Windows;
+            else
+                key = (Key)Enum.Parse(typeof(Key), trimmed);
         }
 
         return new HotKey(key, modifiers);

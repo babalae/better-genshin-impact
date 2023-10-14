@@ -37,7 +37,12 @@ public partial class HotKeyPageViewModel : ObservableObject
                     var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName, BindingFlags.Public | BindingFlags.Instance);
                     if (null != pi && pi.CanWrite)
                     {
-                        pi.SetValue(Config.HotKeyConfig, model.HotKey.ToString(), null);
+                        var str = model.HotKey.ToString();
+                        if (str == "< None >")
+                        {
+                            str = "";
+                        }
+                        pi.SetValue(Config.HotKeyConfig, str, null);
                     }
 
                     model.UnRegisterHotKey();
