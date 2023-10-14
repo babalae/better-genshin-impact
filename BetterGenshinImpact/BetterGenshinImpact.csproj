@@ -36,7 +36,7 @@
 		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.16" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.16" />
-		<PackageReference Include="WPF-UI" Version="3.0.0-preview.6" />
+		<PackageReference Include="WPF-UI" Version="3.0.0-preview.7" />
 	</ItemGroup>
 
 	<ItemGroup>
