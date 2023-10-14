@@ -2,12 +2,35 @@
 
 你喜欢钓鱼吗？你想玩七圣召唤吗？你是否想要跳过不爱看的剧情？你做完所有邀约了吗？是否对日复一日的重复点击感到疲劳？
 
-BetterGI 一个在计算机视觉与模拟操作技术下，意图让原神变的更好的项目。
+BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 > [!IMPORTANT]  
 > 本软件开源、免费，仅供学习交流使用。
 
-## 截图
+## 功能
+
+特色：
+
+自带一个遮罩窗口覆盖在游戏界面上，用于显示日志和图像识别结果。
+
+<img width="500px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/f7a3d0bf-dd04-418a-b106-5f06f3ab2de5"/>
+<br>
+<br>
+
+* 实时触发任务
+  * 自动拾取
+  * 自动剧情
+  * 自动钓鱼
+* 独立任务
+  *  自动七圣召唤（迁移中）
+  *  自动伐木（迁移中）
+* 操控辅助
+  * 空格连发
+  * F 连发
+  * 那维莱特 - 转圈圈
+  * 快速圣遗物强化
+
+## 界面截图
 
 ![image](https://github.com/babalae/better-genshin-impact/assets/15783049/813570c4-3816-4850-ac16-799af4f3cc5f)
 
@@ -24,7 +47,7 @@ BetterGI 一个在计算机视觉与模拟操作技术下，意图让原神变�
 
 你的系统需要满足以下条件：
   * Windows 10 或更高版本的64位系统
-  * [.NET 7 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime)
+  * [.NET 7 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
 
 注意：
 1. 窗口大小变化、切换游戏分辨率、切换显示器的时候请重启本软件。
