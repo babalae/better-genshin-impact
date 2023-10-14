@@ -52,6 +52,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             // 钓鱼变量初始化
             _findFishBoxTips = false;
+            _switchBaitContinuouslyFrameNum = 0;
+            _waitBiteContinuouslyFrameNum = 0;
+            _noFishActionContinuouslyFrameNum = 0;
+            _isThrowRod = false;
         }
 
         private Rect _fishBoxRect = Rect.Empty;

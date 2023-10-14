@@ -46,14 +46,14 @@ namespace BetterGenshinImpact.GameTask
                 // 用于刷新AutoPick的黑白名单
                 if (TriggerDictionary["AutoPick"].IsEnabled == false)
                 {
-                    TriggerDictionary["AutoPick"] = new AutoPick.AutoPickTrigger();
+                    TriggerDictionary["AutoPick"].Init();
                 }
                 TriggerDictionary["AutoSkip"].IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
                 TriggerDictionary["AutoFishing"].IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
                 // 钓鱼有很多变量要初始化，直接重新new
                 if (TriggerDictionary["AutoFishing"].IsEnabled == false)
                 {
-                    TriggerDictionary["AutoFishing"] = new AutoFishing.AutoFishingTrigger();
+                    TriggerDictionary["AutoFishing"].Init();
                 }
                 // 清理画布
                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
