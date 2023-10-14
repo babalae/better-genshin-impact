@@ -7,29 +7,36 @@ namespace BetterGenshinImpact.Core.Simulator;
 
 public class MouseEventSimulator
 {
-    public static void Move(int x, int y)
+    public void Move(int x, int y)
     {
         User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF.MOUSEEVENTF_MOVE,
-            x * 65535 / PrimaryScreen.DESKTOP.Width, y * 65535 / PrimaryScreen.DESKTOP.Height,
+            x * 65535 / PrimaryScreen.WorkingArea.Width, y * 65535 / PrimaryScreen.WorkingArea.Height,
             0, 0);
     }
 
-    public static void LeftButtonDown()
+    public void MoveAbsolute(int x, int y)
+    {
+        User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_ABSOLUTE | User32.MOUSEEVENTF.MOUSEEVENTF_MOVE,
+            x, y, 0, 0);
+    }
+
+    public void LeftButtonDown()
     {
         User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
     }
 
-    public static void LeftButtonUp()
+    public void LeftButtonUp()
     {
         User32.mouse_event(User32.MOUSEEVENTF.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
-    public static bool Click(int x, int y)
+    public bool Click(int x, int y)
     {
         if (x == 0 && y == 0)
         {
             return false;
         }
+
         Move(x, y);
         LeftButtonDown();
         Thread.Sleep(20);
@@ -37,12 +44,12 @@ public class MouseEventSimulator
         return true;
     }
 
-    public static bool Click(Point point)
+    public bool Click(Point point)
     {
         return Click((int)point.X, (int)point.Y);
     }
 
-    public static bool DoubleClick(Point point)
+    public bool DoubleClick(Point point)
     {
         Click(point);
         Thread.Sleep(200);

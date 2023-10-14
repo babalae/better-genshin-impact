@@ -11,4 +11,6 @@ public class Simulation
     }
 
     public static InputSimulator SendInput { get; } = new();
+
+    public static MouseEventSimulator MouseEvent { get; } = new();
 }

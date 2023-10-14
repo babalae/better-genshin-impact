@@ -1,13 +1,11 @@
-﻿using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Reflection;
-using System.Windows.Input;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.QuickEnhanceArtifact;
-using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.Macro;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Reflection;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -88,7 +86,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "那维莱特 - 转圈圈",
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
             Config.HotKeyConfig.TurnAroundHotkey,
-            hotKey => { QuickEnhanceArtifact.Done(); }
+            hotKey => { TurnAroundMacro.Done(); }
         );
         HotKeySettingModels.Add(turnAroundHotKeySettingModel);
 
@@ -96,7 +94,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "快速强化圣遗物",
             nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
             Config.HotKeyConfig.EnhanceArtifactHotkey,
-            hotKey => { Debug.WriteLine(Config.HotKeyConfig.EnhanceArtifactHotkey); }
+            hotKey => { QuickEnhanceArtifactMacro.Done(); }
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
     }

@@ -16,4 +16,10 @@ public static class ClickExtension
         Simulation.SendInput.Mouse.MoveMouseTo((rect.X + rect.Width * 1d / 2) * 65535 / PrimaryScreen.WorkingArea.Width,
             (rect.Y + rect.Height * 1d / 2) * 65535 / PrimaryScreen.WorkingArea.Height).LeftButtonClick();
     }
+
+    public static void Click(int x, int y)
+    {
+        Simulation.SendInput.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+            y * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonClick();
+    }
 }

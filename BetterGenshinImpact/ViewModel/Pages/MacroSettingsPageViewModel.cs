@@ -1,25 +1,37 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.Windows.Input;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
 
-namespace BetterGenshinImpact.ViewModel.Pages
+namespace BetterGenshinImpact.ViewModel.Pages;
+
+public partial class MacroSettingsPageViewModel : ObservableObject, INavigationAware
 {
-    public partial class MacroSettingsPageViewModel : ObservableObject, INavigationAware
+    public AllConfig Config { get; set; }
+
+    private readonly INavigationService _navigationService;
+
+    public MacroSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {
-        public AllConfig Config { get; set; }
+        Config = configService.Get();
+        _navigationService = navigationService;
+    }
 
-        public MacroSettingsPageViewModel(IConfigService configService)
-        {
-            Config = configService.Get();
-        }
+    public void OnNavigatedTo()
+    {
+    }
 
-        public void OnNavigatedTo()
-        {
-        }
+    public void OnNavigatedFrom()
+    {
+    }
 
-        public void OnNavigatedFrom()
-        {
-        }
+    [RelayCommand]
+    public void OnGoToHotKeyPage()
+    {
+        _navigationService.Navigate(typeof(HotKeyPage));
     }
 }

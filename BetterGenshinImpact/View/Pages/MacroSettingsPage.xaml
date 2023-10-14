@@ -82,7 +82,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="那维莱特 - 转圈圈【开发中】" />
+                        Text="那维莱特 - 转圈圈" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
@@ -93,7 +93,8 @@
             </ui:CardControl.Header>
             <ui:Button
                 Margin="0,0,36,0" 
-                Content="绑定快捷键" />
+                Content="绑定快捷键" 
+                Command="{Binding GoToHotKeyPageCommand}"/>
         </ui:CardControl>
 
         <!-- 一键强化 -->
@@ -109,22 +110,23 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="快速强化圣遗物【开发中】" />
+                        Text="快速强化圣遗物" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="自动点击“快捷放入”后“强化”，并且会跳过强化结果结果" />
+                        Text="快速跳过强化结果展示，需要配置快捷键进行触发" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button
                 Margin="0,0,36,0" 
-                Content="绑定快捷键" />
+                Content="绑定快捷键"
+                Command="{Binding GoToHotKeyPageCommand}"/>
         </ui:CardControl>
 
         <!-- 一键锻造 -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -148,6 +150,6 @@
             <ui:Button
                 Margin="0,0,36,0" 
                 Content="绑定快捷键" />
-        </ui:CardControl>
+        </ui:CardControl>-->
     </StackPanel>
 </Page>
