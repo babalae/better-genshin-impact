@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 空格连发时间间隔
         /// </summary>
-        [ObservableProperty] private int _spaceFireInterval = 50;
+        [ObservableProperty] private int _spaceFireInterval = 100;
 
         /// <summary>
         /// 长按F变F连发
@@ -28,6 +28,6 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// F连发时间间隔
         /// </summary>
-        [ObservableProperty] private int _fFireInterval = 50;
+        [ObservableProperty] private int _fFireInterval = 100;
     }
 }

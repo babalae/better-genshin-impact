@@ -14,7 +14,7 @@ public class MouseKeyMonitor
 
     private IKeyboardMouseEvents? _globalHook;
 
-    private readonly Random _random = new();
+    //private readonly Random _random = new();
 
     /// <summary>
     /// 长按空格变空格连发
@@ -51,7 +51,6 @@ public class MouseKeyMonitor
         _spaceTimer.Elapsed += (sender, args) =>
         {
             Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE);
-            _spaceTimer.Interval = _random.Next(si, si + 20);
         };
 
         var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
@@ -59,7 +58,6 @@ public class MouseKeyMonitor
         _fTimer.Elapsed += (sender, args) =>
         {
             Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F);
-            _fTimer.Interval = _random.Next(fi, fi + 20);
         };
     }
 
