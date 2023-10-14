@@ -14,9 +14,7 @@ BetterGI 一个在计算机视觉与模拟操作技术下，意图让原神变�
 
 ## 下载地址
 
-[📥Github下载（1.0）]()
-
-[📥蓝奏云下载]() 密码:coco
+[📥Github下载（0.10.0）](https://github.com/babalae/better-genshin-impact/releases/download/0.10.0/BetterGI.v0.10.0.zip)
 
 
 ## 使用方法
