@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.Macro
     {
         public static void Done()
         {
-            Simulation.SendInput.Mouse.MoveMouseBy(300, 300).MoveMouseTo(10000, 65535 / 2d);
+            Simulation.SendInput.Mouse.MoveMouseBy(300, 0);
         }
     }
 }

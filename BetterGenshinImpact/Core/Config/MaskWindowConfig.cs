@@ -45,7 +45,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// UID遮盖是否启用
         /// </summary>
-        [ObservableProperty] private bool _uidCoverEnabled = true;
+        [ObservableProperty] private bool _uidCoverEnabled = false;
 
         /// <summary>
         /// 1080p下UID遮盖的位置与大小
