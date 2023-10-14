@@ -1,14 +1,12 @@
 ﻿<Page x:Class="BetterGenshinImpact.View.Pages.HotKeyPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+      xmlns:model="clr-namespace:BetterGenshinImpact.Model"
+      xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      xmlns:models="clr-namespace:BetterGenshinImpact.Core.Config"
-      xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
-      xmlns:src="BetterGenshinImpact.View.Controls.Hotkey"
       mc:Ignorable="d"
       d:DataContext="{d:DesignInstance Type=pages:HotKeyPageViewModel}"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -28,20 +26,20 @@
             FontTypography="BodyStrong"
             Text="快捷键设置" />
 
-        <ListView Grid.Row="1" ItemsSource="{Binding HotkeyConfigs}">
+        <ListView Grid.Row="1" ItemsSource="{Binding HotKeySettingModels}">
             <ListView.ItemTemplate>
-                <DataTemplate DataType="{x:Type models:HotKeyConfig}">
+                <DataTemplate DataType="{x:Type model:HotKeySettingModel}">
                     <Grid Margin="8,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="180" />
                         </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Column="0" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="0" Text="{Binding FunctionName}" VerticalAlignment="Center" />
                         <controls:HotKeyTextBox
                             Grid.Column="1" 
-                            Hotkey="{Binding Hotkey}" 
-                            TextAlignment="Center"
-                            Style="{DynamicResource PlaceholderTextBox}"/>
+                            Hotkey="{Binding HotKey}" 
+                            TextAlignment="Center" 
+                            Style="{StaticResource DefaultTextBoxStyle}"/>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

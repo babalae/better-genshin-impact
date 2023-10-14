@@ -1,17 +1,18 @@
 ﻿using System.Windows;
 using System.Windows.Input;
+using BetterGenshinImpact.Model;
 using Wpf.Ui.Controls;
 
-namespace BetterGenshinImpact.View.Controls.HotKey;
+namespace BetterGenshinImpact.View.Controls;
 
 public class HotKeyTextBox : TextBox
 {
     public static readonly DependencyProperty HotkeyProperty = DependencyProperty.Register(
         nameof(Hotkey),
-        typeof(Model.HotKey),
+        typeof(HotKey),
         typeof(HotKeyTextBox),
         new FrameworkPropertyMetadata(
-            default(Model.HotKey),
+            default(HotKey),
             FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
             (sender, _) =>
             {
@@ -21,9 +22,9 @@ public class HotKeyTextBox : TextBox
         )
     );
 
-    public Model.HotKey Hotkey
+    public HotKey Hotkey
     {
-        get => (Model.HotKey)GetValue(HotkeyProperty);
+        get => (HotKey)GetValue(HotkeyProperty);
         set => SetValue(HotkeyProperty, value);
     }
 
@@ -93,7 +94,7 @@ public class HotKeyTextBox : TextBox
         // If Delete/Backspace/Escape is pressed without modifiers - clear current value and return
         if (key is Key.Delete or Key.Back or Key.Escape && modifiers == ModifierKeys.None)
         {
-            Hotkey = Model.HotKey.None;
+            Hotkey = HotKey.None;
             return;
         }
 
@@ -123,6 +124,6 @@ public class HotKeyTextBox : TextBox
             return;
 
         // Set value
-        Hotkey = new Model.HotKey(key, modifiers);
+        Hotkey = new HotKey(key, modifiers);
     }
 }

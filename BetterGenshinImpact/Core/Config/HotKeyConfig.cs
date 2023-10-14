@@ -1,14 +1,26 @@
-﻿using BetterGenshinImpact.Model;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Model;
+using System.Windows.Input;
 
 namespace BetterGenshinImpact.Core.Config;
 
 [Serializable]
-public class HotKeyConfig
+public partial class HotKeyConfig : ObservableObject
 {
-    public string? DisplayName { get; set; }
+    [ObservableProperty] private string _autoPickEnabledHotkey = "";
 
-    public string? FunctionClass { get; set; }
+    [ObservableProperty] private string _autoSkipEnabledHotkey = "Alt + F2";
 
-    public HotKey? Hotkey { get; set; }
+    [ObservableProperty] private string _autoFishingEnabledHotkey = "";
+
+    [ObservableProperty] private string _turnAroundHotkey = "Alt + F3";
+
+    [ObservableProperty] private string _enhanceArtifactHotkey = "";
+
+    [ObservableProperty] private string _autoGeniusInvokation = "";
 }

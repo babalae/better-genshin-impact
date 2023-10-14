@@ -5,7 +5,9 @@ using BetterGenshinImpact.GameTask.AutoSkip;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.Core.Config
 {
@@ -55,8 +57,12 @@ namespace BetterGenshinImpact.Core.Config
         /// </summary>
         public MacroConfig MacroConfig { get; set; } = new();
 
-        [JsonIgnore]
-        public Action? OnAnyChangedAction { get; set; }
+        /// <summary>
+        /// 快捷键配置
+        /// </summary>
+        public HotKeyConfig HotKeyConfig { get; set; } = new();
+
+        [JsonIgnore] public Action? OnAnyChangedAction { get; set; }
 
         public void InitEvent()
         {
@@ -66,6 +72,7 @@ namespace BetterGenshinImpact.Core.Config
             AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
             MacroConfig.PropertyChanged += OnAnyPropertyChanged;
+            HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
         }
 
         public void OnAnyPropertyChanged(object? sender, EventArgs args)

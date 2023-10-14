@@ -15,6 +15,7 @@ public class ConfigService : IConfigService
     private readonly JsonSerializerOptions _options = new()
     {
         NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true
     };
@@ -60,7 +61,7 @@ public class ConfigService : IConfigService
             }
 
             var json = File.ReadAllText(filePath);
-            var config = JsonSerializer.Deserialize<AllConfig>(json);
+            var config = JsonSerializer.Deserialize<AllConfig>(json, _options);
             if (config == null)
             {
                 return new AllConfig();
