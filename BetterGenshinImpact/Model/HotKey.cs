@@ -33,6 +33,9 @@ public readonly partial record struct HotKey(Key Key, ModifierKeys Modifiers = M
     {
         var key = Key.None;
         var modifiers = ModifierKeys.None;
+        if (String.Equals(str, "< None >")) {
+            return new HotKey(key, modifiers);
+        }
 
         if (!string.IsNullOrWhiteSpace(str))
         {
