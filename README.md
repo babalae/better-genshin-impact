@@ -18,17 +18,17 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
 <br>
 
 * 实时任务
-  * [自动拾取](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)
-  * [自动剧情](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)
-  * [自动钓鱼](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E4%B8%80%E9%94%AE%E9%94%BB%E9%80%A0%E5%8D%A0%E5%9D%91%E5%BC%80%E5%8F%91%E4%B8%AD)
+  * [自动拾取](https://github.com/babalae/better-genshin-impact/wiki/#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)
+  * [自动剧情](https://github.com/babalae/better-genshin-impact/wiki/#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)
+  * [自动钓鱼](https://github.com/babalae/better-genshin-impact/wiki/#%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)
 * 独立任务
   *  自动七圣召唤（迁移中）
   *  自动伐木（迁移中）
 * 操控辅助
-  * [空格连发](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
-  * [F 连发](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#f%E8%BF%9E%E5%8F%91)
-  * [那维莱特 - 转圈圈](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9---%E8%BD%AC%E5%9C%88%E5%9C%88)
-  * [快速圣遗物强化](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E5%BF%AB%E9%80%9F%E5%9C%A3%E9%81%97%E7%89%A9%E5%BC%BA%E5%8C%96)
+  * [空格连发](https://github.com/babalae/better-genshin-impact/wiki/#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
+  * [F 连发](https://github.com/babalae/better-genshin-impact/wiki/#f%E8%BF%9E%E5%8F%91)
+  * [那维莱特 - 转圈圈](https://github.com/babalae/better-genshin-impact/wiki/#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9---%E8%BD%AC%E5%9C%88%E5%9C%88)
+  * [快速圣遗物强化](https://github.com/babalae/better-genshin-impact/wiki/#%E5%BF%AB%E9%80%9F%E5%9C%A3%E9%81%97%E7%89%A9%E5%BC%BA%E5%8C%96)
 
 ## 界面截图
 
@@ -53,7 +53,7 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
   * Windows 10 或更高版本的64位系统
   * [.NET 7 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
 
-**注意：**
+**⚠️注意：**
 1. 窗口大小变化、切换游戏分辨率、切换显示器的时候请重启本软件。
 2. 不支持任何画面滤镜（HDR、N卡滤镜等）。游戏亮度请保持默认。
 3. 当前只支持 `16:9` 的分辨率，推荐在 `1920x1080` 窗口化游戏下使用。
