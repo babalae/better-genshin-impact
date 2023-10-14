@@ -18,17 +18,17 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
 <br>
 
 * 实时任务
-  * 自动拾取
-  * 自动剧情
+  * [自动拾取](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)
+  * [自动剧情](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)
   * 自动钓鱼
 * 独立任务
   *  自动七圣召唤（迁移中）
   *  自动伐木（迁移中）
 * 操控辅助
-  * 空格连发
-  * F 连发
-  * 那维莱特 - 转圈圈
-  * 快速圣遗物强化
+  * [空格连发](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
+  * [F 连发](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#f%E8%BF%9E%E5%8F%91)
+  * [那维莱特 - 转圈圈](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9---%E8%BD%AC%E5%9C%88%E5%9C%88)
+  * [快速圣遗物强化](https://github.com/babalae/better-genshin-impact/wiki/Home/_edit#%E5%BF%AB%E9%80%9F%E5%9C%A3%E9%81%97%E7%89%A9%E5%BC%BA%E5%8C%96)
 
 ## 界面截图
 
