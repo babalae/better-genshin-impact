@@ -23,6 +23,9 @@ public class QuickEnhanceArtifactMacro
             MessageBox.Show("请先启动");
             return;
         }
+
+        SystemControl.ActivateWindow(TaskContext.Instance().GameHandle);
+
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 

@@ -60,14 +60,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnLoaded()
     {
-        Debug.WriteLine("HomePageViewModel Loaded");
-#if DEBUG
-        //var hWnd = SystemControl.FindGenshinImpactHandle();
-        //if (hWnd != IntPtr.Zero)
-        //{
-        //    OnStartTrigger();
-        //}
-#endif
     }
 
     private void OnClosed()
@@ -75,7 +67,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         OnStopTrigger();
         // 等待任务结束
         _maskWindow?.Close();
-        Debug.WriteLine("HomePageViewModel Closed");
     }
 
     [RelayCommand]
@@ -151,10 +142,10 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     {
     }
 
-    [RelayCommand]
-    private void OnSvtrTest()
-    {
-        var mat = new Mat(Global.Absolute("Config\\Model\\Yap\\0_2_「甜甜花」的种子_bin_38x227.jpg"), ImreadModes.Grayscale);
-        new SvtrModelRunner().RunInferenceMore(mat);
-    }
+    // [RelayCommand]
+    // private void OnSvtrTest()
+    // {
+    //     var mat = new Mat(Global.Absolute("Config\\Model\\Yap\\0_2_「甜甜花」的种子_bin_38x227.jpg"), ImreadModes.Grayscale);
+    //     new SvtrModelRunner().RunInferenceMore(mat);
+    // }
 }

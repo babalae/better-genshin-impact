@@ -49,6 +49,11 @@ namespace BetterGenshinImpact.View
 
         public void RefreshPosition(IntPtr hWnd)
         {
+            //if (SystemControl.IsFullScreenMode(hWnd))
+            //{
+            //    Hide();
+            //}
+
             var currentRect = SystemControl.GetCaptureRect(hWnd);
             double scale = DpiHelper.ScaleY;
             RefreshPosition(currentRect, scale);
@@ -147,57 +152,5 @@ namespace BetterGenshinImpact.View
         }
 
         public RichTextBox LogBox => LogTextBox;
-
-        public Canvas Panel => WholeCanvas;
-
-        public void AddAreaSettingsControl(string name)
-        {
-            var control = new ContentControl();
-            control.Width = 100;
-            control.Height = 100;
-            control.Style = (Style)FindResource("DraggableResizableItemStyle");
-
-            var grid = new Grid();
-            grid.Children.Add(new Rectangle
-            {
-                Fill = Brushes.White,
-                Opacity = 0.2,
-                IsHitTestVisible = false
-            });
-            grid.Children.Add(new TextBlock
-            {
-                Text = name,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                TextAlignment = TextAlignment.Center,
-                Foreground = Brushes.White,
-                TextWrapping = TextWrapping.Wrap
-            });
-            control.Content = grid;
-
-
-            Canvas.SetTop(control, 200);
-            Canvas.SetLeft(control, 20);
-            WholeCanvas.Children.Add(control);
-        }
-
-        private void OnClick(object sender, RoutedEventArgs args)
-        {
-            CheckBox selectionCheckBox = sender as CheckBox;
-            if (selectionCheckBox != null && selectionCheckBox.IsChecked == true)
-            {
-                foreach (Control child in WholeCanvas.Children)
-                {
-                    Selector.SetIsSelected(child, true);
-                }
-            }
-            else
-            {
-                foreach (Control child in WholeCanvas.Children)
-                {
-                    Selector.SetIsSelected(child, false);
-                }
-            }
-        }
     }
 }

@@ -18,9 +18,9 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty] private string _autoFishingEnabledHotkey = "";
 
-    [ObservableProperty] private string _turnAroundHotkey = "Alt + F3";
+    [ObservableProperty] private string _turnAroundHotkey = "F3";
 
-    [ObservableProperty] private string _enhanceArtifactHotkey = "";
+    [ObservableProperty] private string _enhanceArtifactHotkey = "F4";
 
     [ObservableProperty] private string _autoGeniusInvokation = "";
 }

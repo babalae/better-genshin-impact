@@ -50,7 +50,7 @@ public partial class HotKeyPageViewModel : ObservableObject
     private void BuildHotKeySettingModelList()
     {
         var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
-            "自动拾取",
+            "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),
             Config.HotKeyConfig.AutoPickEnabledHotkey,
             hotKey =>
@@ -61,7 +61,7 @@ public partial class HotKeyPageViewModel : ObservableObject
         HotKeySettingModels.Add(autoPickEnabledHotKeySettingModel);
 
         var autoSkipEnabledHotKeySettingModel = new HotKeySettingModel(
-            "自动剧情",
+            "自动剧情开关",
             nameof(Config.HotKeyConfig.AutoSkipEnabledHotkey),
             Config.HotKeyConfig.AutoSkipEnabledHotkey,
             hotKey =>
@@ -72,7 +72,7 @@ public partial class HotKeyPageViewModel : ObservableObject
         HotKeySettingModels.Add(autoSkipEnabledHotKeySettingModel);
 
         var autoFishingEnabledHotKeySettingModel = new HotKeySettingModel(
-            "自动钓鱼",
+            "自动钓鱼开关",
             nameof(Config.HotKeyConfig.AutoFishingEnabledHotkey),
             Config.HotKeyConfig.AutoFishingEnabledHotkey,
             hotKey =>
@@ -83,7 +83,7 @@ public partial class HotKeyPageViewModel : ObservableObject
         HotKeySettingModels.Add(autoFishingEnabledHotKeySettingModel);
 
         var turnAroundHotKeySettingModel = new HotKeySettingModel(
-            "那维莱特 - 转圈圈",
+            "长按旋转视角 - 那维莱特转圈",
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
             Config.HotKeyConfig.TurnAroundHotkey,
             hotKey => { TurnAroundMacro.Done(); }
@@ -91,7 +91,7 @@ public partial class HotKeyPageViewModel : ObservableObject
         HotKeySettingModels.Add(turnAroundHotKeySettingModel);
 
         var enhanceArtifactHotKeySettingModel = new HotKeySettingModel(
-            "快速强化圣遗物",
+            "按下快速强化圣遗物",
             nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
             Config.HotKeyConfig.EnhanceArtifactHotkey,
             hotKey => { QuickEnhanceArtifactMacro.Done(); }

@@ -28,7 +28,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 自动抛竿是否启用
         /// </summary>
-        [ObservableProperty] private bool _autoThrowRodEnabled = true;
+        [ObservableProperty] private bool _autoThrowRodEnabled = false;
 
         /// <summary>
         /// 自动抛竿未上钩超时时间(秒)
