@@ -6,18 +6,21 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HotKeyPageViewModel : ObservableObject
 {
+    private readonly ILogger<HotKeyPageViewModel> _logger;
     public AllConfig Config { get; set; }
 
     [ObservableProperty] private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
 
-    public HotKeyPageViewModel(IConfigService configService)
+    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger)
     {
+        _logger = logger;
         // 获取配置
         Config = configService.Get();
 
@@ -42,6 +45,7 @@ public partial class HotKeyPageViewModel : ObservableObject
                         {
                             str = "";
                         }
+
                         pi.SetValue(Config.HotKeyConfig, str, null);
                     }
 
@@ -61,6 +65,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             hotKey =>
             {
                 TaskContext.Instance().Config.AutoPickConfig.Enabled = !TaskContext.Instance().Config.AutoPickConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动拾取", ToChinese(TaskContext.Instance().Config.AutoPickConfig.Enabled));
             }
         );
         HotKeySettingModels.Add(autoPickEnabledHotKeySettingModel);
@@ -72,6 +77,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             hotKey =>
             {
                 TaskContext.Instance().Config.AutoSkipConfig.Enabled = !TaskContext.Instance().Config.AutoSkipConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动剧情", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.Enabled));
             }
         );
         HotKeySettingModels.Add(autoSkipEnabledHotKeySettingModel);
@@ -83,6 +89,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             hotKey =>
             {
                 TaskContext.Instance().Config.AutoFishingConfig.Enabled = !TaskContext.Instance().Config.AutoFishingConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动钓鱼", ToChinese(TaskContext.Instance().Config.AutoFishingConfig.Enabled));
             }
         );
         HotKeySettingModels.Add(autoFishingEnabledHotKeySettingModel);
@@ -102,5 +109,10 @@ public partial class HotKeyPageViewModel : ObservableObject
             hotKey => { QuickEnhanceArtifactMacro.Done(); }
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
+    }
+
+    private string ToChinese(bool enabled)
+    {
+        return enabled ? "开启" : "关闭";
     }
 }
