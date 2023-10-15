@@ -1,9 +1,7 @@
-﻿using OpenCvSharp.Internal;
+﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
@@ -22,6 +20,7 @@ namespace BetterGenshinImpact.View
         public PickerWindow()
         {
             InitializeComponent();
+            this.InitializeDpiAwareness();
             Loaded += OnLoaded;
         }
 

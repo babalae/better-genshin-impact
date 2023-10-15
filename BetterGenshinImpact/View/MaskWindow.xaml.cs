@@ -1,19 +1,18 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Drawable;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
@@ -78,6 +77,8 @@ namespace BetterGenshinImpact.View
             _maskWindow = this;
             this.SetResourceReference(StyleProperty, typeof(MaskWindow));
             InitializeComponent();
+            this.InitializeDpiAwareness();
+
             LogTextBox.TextChanged += LogTextBoxTextChanged;
             //AddAreaSettingsControl("测试识别窗口");
         }

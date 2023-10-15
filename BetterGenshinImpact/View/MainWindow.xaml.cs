@@ -1,6 +1,6 @@
-﻿using System;
+﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
-using System.Windows.Navigation;
+using System;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -18,6 +18,7 @@ public partial class MainWindow : INavigationWindow
         DataContext = ViewModel = viewModel;
 
         InitializeComponent();
+        this.InitializeDpiAwareness();
 
         SetPageService(pageService);
         navigationService.SetNavigationControl(RootNavigation);
