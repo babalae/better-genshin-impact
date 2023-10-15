@@ -54,21 +54,20 @@ public class AutoSkipTrigger : ITaskTrigger
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
                 Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.SPACE);
-
-                // 找右下的对话选项按钮
-                content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
-                {
-                    optionButtonRectArea.ClickCenter();
-
-                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
-                    {
-                        _logger.LogInformation("自动剧情：{Text}", "点击选项");
-                    }
-
-                    _prevClickFrameIndex = content.FrameIndex;
-                    optionButtonRectArea.Dispose();
-                });
             }
+            // 找右下的对话选项按钮
+            content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
+            {
+                optionButtonRectArea.ClickCenter();
+
+                if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                {
+                    _logger.LogInformation("自动剧情：{Text}", "点击选项");
+                }
+
+                _prevClickFrameIndex = content.FrameIndex;
+                optionButtonRectArea.Dispose();
+            });
         }
         else
         {

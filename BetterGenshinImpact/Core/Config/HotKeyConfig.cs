@@ -12,9 +12,9 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class HotKeyConfig : ObservableObject
 {
-    [ObservableProperty] private string _autoPickEnabledHotkey = "";
+    [ObservableProperty] private string _autoPickEnabledHotkey = "F1";
 
-    [ObservableProperty] private string _autoSkipEnabledHotkey = "Alt + F2";
+    [ObservableProperty] private string _autoSkipEnabledHotkey = "F2";
 
     [ObservableProperty] private string _autoFishingEnabledHotkey = "";
 
