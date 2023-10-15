@@ -55,18 +55,18 @@ namespace BetterGenshinImpact.View
             //}
 
             var currentRect = SystemControl.GetCaptureRect(hWnd);
-            double scale = DpiHelper.ScaleY;
-            RefreshPosition(currentRect, scale);
+            double dpiScale = DpiHelper.ScaleY;
+            RefreshPosition(currentRect, dpiScale);
         }
 
-        public void RefreshPosition(RECT currentRect, double scale)
+        public void RefreshPosition(RECT currentRect, double dpiScale)
         {
             Invoke(() =>
             {
-                Left = currentRect.Left * scale;
-                Top = currentRect.Top * scale;
-                Width = currentRect.Width * scale;
-                Height = currentRect.Height * scale;
+                Left = currentRect.Left / dpiScale;
+                Top = currentRect.Top / dpiScale;
+                Width = currentRect.Width /dpiScale;
+                Height = currentRect.Height / dpiScale;
             });
             // 重新计算控件位置
             // shit code 预定了
