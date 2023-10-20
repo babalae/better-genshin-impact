@@ -25,8 +25,6 @@ namespace BetterGenshinImpact.GameTask
         private RECT _gameRect = RECT.Empty;
         private bool _prevGameActive;
 
-        public bool Enabled => _timer.Enabled;
-
 
         public TaskTriggerDispatcher()
         {
@@ -80,6 +78,22 @@ namespace BetterGenshinImpact.GameTask
             _capture?.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
+        }
+
+        public void StartTimer()
+        {
+            if (!_timer.Enabled)
+            {
+                _timer.Start();
+            }
+        }
+
+        public void StopTimer()
+        {
+            if (_timer.Enabled)
+            {
+                _timer.Stop();
+            }
         }
 
         public void Dispose() => Stop();
@@ -217,6 +231,7 @@ namespace BetterGenshinImpact.GameTask
 
                 _gameRect = new RECT(currentRect);
                 double scale = TaskContext.Instance().DpiScale;
+                TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
                 MaskWindow.Instance().RefreshPosition(currentRect, scale);
                 return true;
             }
