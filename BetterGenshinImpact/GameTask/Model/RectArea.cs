@@ -193,22 +193,22 @@ public class RectArea : IDisposable
         return _srcBitmap != null || _srcMat != null;
     }
 
-    /// <summary>
-    /// 在本区域内查找目标图像
-    /// </summary>
-    /// <param name="targetImageMat"></param>
-    /// <returns></returns>
-    [Obsolete]
-    public RectArea Find(Mat targetImageMat)
-    {
-        if (!HasImage())
-        {
-            throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
-        }
+    ///// <summary>
+    ///// 在本区域内查找目标图像
+    ///// </summary>
+    ///// <param name="targetImageMat"></param>
+    ///// <returns></returns>
+    //[Obsolete]
+    //public RectArea Find(Mat targetImageMat)
+    //{
+    //    if (!HasImage())
+    //    {
+    //        throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
+    //    }
 
-        var p = OldMatchTemplateHelper.FindSingleTarget(SrcGreyMat, targetImageMat);
-        return p is { X: > 0, Y: > 0 } ? new RectArea(targetImageMat, p.X - targetImageMat.Width / 2, p.Y - targetImageMat.Height / 2, this) : new RectArea();
-    }
+    //    var p = OldMatchTemplateHelper.FindSingleTarget(SrcGreyMat, targetImageMat);
+    //    return p is { X: > 0, Y: > 0 } ? new RectArea(targetImageMat, p.X - targetImageMat.Width / 2, p.Y - targetImageMat.Height / 2, this) : new RectArea();
+    //}
 
     /// <summary>
     /// 在本区域内查找识别对象
@@ -343,22 +343,22 @@ public class RectArea : IDisposable
         return ra;
     }
 
-    /// <summary>
-    /// 找到图像并点击中心
-    /// </summary>
-    /// <param name="targetImageMat"></param>
-    /// <returns></returns>
-    [Obsolete]
-    public RectArea ClickCenter(Mat targetImageMat)
-    {
-        var ra = Find(targetImageMat);
-        if (!ra.IsEmpty())
-        {
-            ra.ClickCenter();
-        }
+    ///// <summary>
+    ///// 找到图像并点击中心
+    ///// </summary>
+    ///// <param name="targetImageMat"></param>
+    ///// <returns></returns>
+    //[Obsolete]
+    //public RectArea ClickCenter(Mat targetImageMat)
+    //{
+    //    var ra = Find(targetImageMat);
+    //    if (!ra.IsEmpty())
+    //    {
+    //        ra.ClickCenter();
+    //    }
 
-        return ra;
-    }
+    //    return ra;
+    //}
 
     /// <summary>
     /// 当前对象点击中心

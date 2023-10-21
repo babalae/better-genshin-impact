@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing;
+using OpenCvSharp;
+using Vanara.PInvoke;
+using Point = System.Drawing.Point;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv
 {
@@ -52,6 +55,27 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             }
 
             return new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+        }
+
+
+        public static OpenCvSharp.Point GetCenterPoint(this RECT rectangle)
+        {
+            if (rectangle.IsEmpty)
+            {
+                throw new ArgumentException("rectangle is empty");
+            }
+
+            return new OpenCvSharp.Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+        }
+
+        public static OpenCvSharp.Point GetCenterPoint(this Rect rectangle)
+        {
+            if (rectangle == Rect.Empty)
+            {
+                throw new ArgumentException("rectangle is empty");
+            }
+
+            return new OpenCvSharp.Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
         }
 
 

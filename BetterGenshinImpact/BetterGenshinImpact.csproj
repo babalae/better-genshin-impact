@@ -71,6 +71,108 @@
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\wait_bite.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_anemo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_cryo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_dendro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_electro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_geo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_hydro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_omni.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_pyro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_anemo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_cryo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_dendro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_electro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_geo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_hydro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_omni.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_pyro.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\元素调和.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\元素骰子不足.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\冻结.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\出战角色.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\回合结束.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\回合结算阶段.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\对方行动中.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\满能量.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\确定.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\确定_1600x900.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\空能量.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色死亡.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色状态_冻结.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色状态_冻结2.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色状态_水泡.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色血量上方.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色被打败.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\退出挑战.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoPick\Assets\1920x1080\F.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

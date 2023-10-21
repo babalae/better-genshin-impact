@@ -14,21 +14,9 @@ public class TestTrigger : ITaskTrigger
     public int Priority => 9999;
     public bool IsExclusive { get; private set; }
 
-    private readonly RecognitionObject _optionButtonRo;
-
-    private readonly AutoFishingAssets _autoFishingAssets;
-
     public TestTrigger()
     {
         var info = TaskContext.Instance().SystemInfo;
-        _optionButtonRo = new RecognitionObject
-        {
-            Name = "OptionButton",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
-            DrawOnWindow = true
-        }.InitTemplate();
-        _autoFishingAssets = new AutoFishingAssets();
     }
 
     public void Init()

@@ -1,13 +1,8 @@
-﻿using OpenCvSharp;
+﻿using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Point = OpenCvSharp.Point;
-using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv
 {
@@ -17,12 +12,13 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 
         /// <summary>
         /// 模板匹配
+        /// TODO 算法不一样的的时候找点的方法也不一样
         /// </summary>
-        /// <param name="srcMat"></param>
-        /// <param name="dstMat"></param>
-        /// <param name="matchMode"></param>
-        /// <param name="maskMat"></param>
-        /// <param name="threshold"></param>
+        /// <param name="srcMat">原图像</param>
+        /// <param name="dstMat">模板</param>
+        /// <param name="matchMode">匹配方式</param>
+        /// <param name="maskMat">遮罩</param>
+        /// <param name="threshold">阈值</param>
         /// <returns>左上角的标点</returns>
         public static Point MatchTemplate(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat = null, double threshold = 0.8)
         {
@@ -52,6 +48,61 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
                 _logger.LogError(ex.ToString());
                 return new Point();
             }
+        }
+
+        /// <summary>
+        /// 模板匹配多个结果
+        /// </summary>
+        /// <param name="srcMat"></param>
+        /// <param name="dstMat"></param>
+        /// <param name="matchMode"></param>
+        /// <param name="maskMat"></param>
+        /// <param name="threshold"></param>
+        /// <returns></returns>
+        public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode = TemplateMatchModes.CCoeffNormed, Mat? maskMat = null, double threshold = 0.8)
+        {
+            var points = new List<Point>();
+            try
+            {
+                using var result = new Mat();
+                if (maskMat == null)
+                {
+                    Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
+                }
+                else
+                {
+                    Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
+                }
+
+                while (true)
+                {
+                    Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc);
+
+                    if (maxValue >= threshold)
+                    {
+                        points.Add(new Point(maxLoc.X, maxLoc.Y));
+
+                        //Fill in the res Mat so you don't find the same area again in the MinMaxLoc
+                        Cv2.FloodFill(result, maxLoc, new Scalar(0), out _, new Scalar(0.1), new Scalar(1.0));
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                return points;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("{Ex}", ex);
+                return points;
+            }
+        }
+
+        public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, double threshold)
+        {
+            return MatchTemplateMulti(srcMat, dstMat, TemplateMatchModes.CCoeffNormed, null, threshold);
         }
     }
 }

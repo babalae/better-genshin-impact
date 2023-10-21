@@ -12,8 +12,7 @@ public class SystemControl
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
 
-    [Obsolete]
-    public static bool IsGenshinImpactActiveOld()
+    public static bool IsGenshinImpactActiveByProcess()
     {
         var name = GetActiveProcessName();
         return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
@@ -117,6 +116,15 @@ public class SystemControl
     {
         User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
         User32.SetForegroundWindow(hWnd);
+    }
+
+    public static void ActivateWindow()
+    {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            throw new Exception("请先启动BetterGI");
+        }
+        ActivateWindow(TaskContext.Instance().GameHandle);
     }
 
     public static bool IsFullScreenMode(IntPtr hWnd)

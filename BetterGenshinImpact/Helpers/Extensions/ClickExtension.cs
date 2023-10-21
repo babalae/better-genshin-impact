@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using OpenCvSharp;
+using WindowsInput;
 
 namespace BetterGenshinImpact.Helpers.Extensions;
 
@@ -17,9 +18,20 @@ public static class ClickExtension
             (rect.Y + rect.Height * 1d / 2) * 65535 / PrimaryScreen.WorkingArea.Height).LeftButtonClick();
     }
 
-    public static void Click(int x, int y)
+    public static IMouseSimulator Click(int x, int y)
     {
-        Simulation.SendInput.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+        return Simulation.SendInput.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             y * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonClick();
+    }
+
+    public static IMouseSimulator Move(double x, double y)
+    {
+        return Simulation.SendInput.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+            y * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonClick();
+    }
+
+    public static IMouseSimulator Move(Point p)
+    {
+        return Move(p.X, p.Y);
     }
 }

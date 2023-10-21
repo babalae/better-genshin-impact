@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.Model
         /// 捕获窗口区域 现在已经和实际游戏画面一致
         /// CaptureAreaRect = GameScreenSize or GameWindowRect
         /// </summary>
-        public RECT CaptureAreaRect { get; }
+        public RECT CaptureAreaRect { get; set; }
 
         public Process GameProcess { get; }
 
