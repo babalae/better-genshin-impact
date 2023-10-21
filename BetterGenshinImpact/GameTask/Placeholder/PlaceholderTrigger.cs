@@ -1,5 +1,10 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+﻿using System.Diagnostics;
+using System.Windows;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
+using BetterGenshinImpact.View.Drawable;
 
 namespace BetterGenshinImpact.GameTask.Placeholder;
 
@@ -14,9 +19,12 @@ public class TestTrigger : ITaskTrigger
     public int Priority => 9999;
     public bool IsExclusive { get; private set; }
 
+    //private readonly AutoGeniusInvokationAssets _autoGeniusInvokationAssets;
+
     public TestTrigger()
     {
         var info = TaskContext.Instance().SystemInfo;
+        //_autoGeniusInvokationAssets = new AutoGeniusInvokationAssets();
     }
 
     public void Init()
@@ -27,16 +35,24 @@ public class TestTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
-        //content.CaptureRectArea.Find(_optionButtonRo, (optionButtonRectArea) =>
+        //var dictionary = GeniusInvokationControl.FindMultiPicFromOneImage2OneByOne(content.CaptureRectArea.SrcGreyMat, _autoGeniusInvokationAssets.RollPhaseDiceMats, 0.7);
+        //if (dictionary.Count > 0)
         //{
-        //});
+        //    int i = 0;
+        //    foreach (var pair in dictionary)
+        //    {
+        //        var list = pair.Value;
 
-        //content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo, (rectArea) =>
-        //{
-        //});
-
-        //content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo, (rectArea) =>
-        //{
-        //});
+        //        foreach (var p in list)
+        //        {
+        //            i++;
+        //            VisionContext.Instance().DrawContent.PutRect("i" + i,
+        //                new RectDrawable(new Rect(p.X, p.Y,
+        //                    _autoGeniusInvokationAssets.RollPhaseDiceMats[pair.Key].Width,
+        //                    _autoGeniusInvokationAssets.RollPhaseDiceMats[pair.Key].Height)));
+        //        }
+        //    }
+        //    Debug.WriteLine("找到了" + i + "个");
+        //}
     }
 }

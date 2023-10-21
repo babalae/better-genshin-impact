@@ -100,6 +100,10 @@ public class DrawContent
     /// </summary>
     public void ClearAll()
     {
+        if (RectList.IsEmpty && TextList.IsEmpty)
+        {
+            return;
+        }
         RectList.Clear();
         TextList.Clear();
         MaskWindow.Instance().Refresh();

@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.View.Drawable;
 using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -259,6 +260,7 @@ public class Duel
         }
         finally
         {
+            VisionContext.Instance().DrawContent.ClearAll();
             _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
             taskParam.Dispatcher.StartTimer();
         }

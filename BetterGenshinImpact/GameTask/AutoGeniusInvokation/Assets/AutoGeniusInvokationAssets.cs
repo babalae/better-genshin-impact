@@ -99,7 +99,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             }.InitTemplate();
 
 
-            CharacterDefeatedMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色被打败.png");
+            CharacterDefeatedMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色被打败.png", ImreadModes.Grayscale);
 
             InCharacterPickRo = new RecognitionObject
             {
@@ -120,9 +120,9 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             }.InitTemplate();
 
 
-            CharacterStatusFreezeMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色状态_冻结.png");
-            CharacterStatusDizzinessMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色状态_水泡.png");
-            CharacterEnergyOnMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\满能量.png");
+            CharacterStatusFreezeMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色状态_冻结.png", ImreadModes.Grayscale);
+            CharacterStatusDizzinessMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色状态_水泡.png", ImreadModes.Grayscale);
+            CharacterEnergyOnMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\满能量.png", ImreadModes.Grayscale);
 
             // 投掷期间的骰子
             RollPhaseDiceMats = new Dictionary<string, Mat>()

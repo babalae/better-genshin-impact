@@ -109,6 +109,9 @@ namespace BetterGenshinImpact.GameTask
             }
 
             StopTimer();
+            var maskWindow = MaskWindow.Instance();
+            maskWindow.LogBox.IsHitTestVisible = false;
+            maskWindow.Invoke(() => { maskWindow.Show(); });
             if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
             {
                 AutoGeniusInvokationTask.Start((GeniusInvokationTaskParam)param);

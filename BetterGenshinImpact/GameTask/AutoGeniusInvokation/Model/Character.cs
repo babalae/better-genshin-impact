@@ -77,7 +77,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         {
             var p = GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint());
             // 选择角色
-            ClickExtension.Move(p).LeftButtonClick();
+            p.Click();
 
             // 点击切人按钮
             GeniusInvokationControl.GetInstance().ActionPhasePressSwitchButton();
@@ -93,16 +93,16 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             _logger.LogInformation("有角色被打败,当前选择{Name}出战", Name);
             var p = GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint());
             // 选择角色
-            ClickExtension.Move(p).LeftButtonClick();
+            p.Click();
             // 双击切人
             GeniusInvokationControl.GetInstance().Sleep(500);
-            ClickExtension.Move(p).LeftButtonClick();
+            p.Click();
             GeniusInvokationControl.GetInstance().Sleep(300);
         }
 
         public bool UseSkill(int skillIndex, Duel duel)
         {
-            bool res = GeniusInvokationControl.GetInstance()
+            var res = GeniusInvokationControl.GetInstance()
                 .ActionPhaseAutoUseSkill(skillIndex, Skills[skillIndex].SpecificElementCost, Skills[skillIndex].Type, duel);
             if (res)
             {

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using SharpDX;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv
@@ -52,14 +54,15 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 
         /// <summary>
         /// 模板匹配多个结果
+        /// 不好用
         /// </summary>
         /// <param name="srcMat"></param>
         /// <param name="dstMat"></param>
-        /// <param name="matchMode"></param>
         /// <param name="maskMat"></param>
         /// <param name="threshold"></param>
+        /// <param name="maxCount"></param>
         /// <returns></returns>
-        public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode = TemplateMatchModes.CCoeffNormed, Mat? maskMat = null, double threshold = 0.8)
+        public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, Mat? maskMat = null, double threshold = 0.8, int maxCount = 8)
         {
             var points = new List<Point>();
             try
@@ -67,23 +70,42 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
                 using var result = new Mat();
                 if (maskMat == null)
                 {
-                    Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
+                    Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed);
                 }
                 else
                 {
-                    Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
+                    Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed, maskMat);
                 }
 
+                //while (true)
+                //{
+                //    Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc);
+
+                //    if (maxValue >= threshold)
+                //    {
+                //        points.Add(maxLoc);
+
+                //        //Fill in the res Mat so you don't find the same area again in the MinMaxLoc
+                //        Cv2.FloodFill(result, maxLoc, new Scalar(0), out _, new Scalar(0.1), new Scalar(1.0));
+                //    }
+                //    else
+                //    {
+                //        break;
+                //    }
+                //}
+
+
+                var mask = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.White);
+                var maskSub = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.Black);
                 while (true)
                 {
-                    Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc);
-
+                    Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc, mask);
+                    var maskRect = new Rect(maxLoc.X, maxLoc.Y, dstMat.Width, dstMat.Height);
+                    maskSub.Rectangle(maskRect, Scalar.White, -1);
+                    mask -= maskSub;
                     if (maxValue >= threshold)
                     {
-                        points.Add(new Point(maxLoc.X, maxLoc.Y));
-
-                        //Fill in the res Mat so you don't find the same area again in the MinMaxLoc
-                        Cv2.FloodFill(result, maxLoc, new Scalar(0), out _, new Scalar(0.1), new Scalar(1.0));
+                        points.Add(maxLoc);
                     }
                     else
                     {
@@ -102,7 +124,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 
         public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, double threshold)
         {
-            return MatchTemplateMulti(srcMat, dstMat, TemplateMatchModes.CCoeffNormed, null, threshold);
+            return MatchTemplateMulti(srcMat, dstMat, null, threshold);
         }
     }
 }
