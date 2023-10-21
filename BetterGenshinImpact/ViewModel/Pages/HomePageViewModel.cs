@@ -41,11 +41,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
-    private readonly TaskTriggerDispatcher _taskDispatcher = new();
+    private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
-    public HomePageViewModel(IConfigService configService)
+    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
+        _taskDispatcher = taskTriggerDispatcher;
         Config = configService.Get();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {

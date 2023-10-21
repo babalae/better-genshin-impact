@@ -7,7 +7,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       mc:Ignorable="d"
-      d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
+      d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -111,8 +111,8 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,24,0"
-                        Content="启动"
-                        Command="{Binding GoToHotKeyPageCommand}" />
+                        Content="{Binding SwitchAutoGeniusInvokationButtonText}"
+                        Command="{Binding SwitchAutoGeniusInvokationCommand}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -142,6 +142,8 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,36,0"
+                        ItemsSource="{Binding StrategyList}"
+                        SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}"
                         Width="180"/>
                 </Grid>
             </StackPanel>
@@ -206,7 +208,7 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="循环伐木多少次，输入负数则为无限循环直到手动终止" />
+                        Text="循环伐木多少次，输入 0 则为无限循环直到手动终止" />
                     <ui:NumberBox
                         Grid.Row="0"
                         Grid.RowSpan="2"

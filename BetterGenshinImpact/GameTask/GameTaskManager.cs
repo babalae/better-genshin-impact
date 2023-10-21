@@ -67,9 +67,10 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         /// <param name="featName">任务名称</param>
         /// <param name="assertName">素材文件名</param>
+        /// <param name="flags"></param>
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
-        public static Mat LoadAssertImage(string featName, string assertName)
+        public static Mat LoadAssertImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
         {
             var info = TaskContext.Instance().SystemInfo;
             var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{info.GameScreenSize.Width}x{info.GameScreenSize.Height}");
@@ -89,7 +90,7 @@ namespace BetterGenshinImpact.GameTask
                 throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
             }
 
-            var mat = new Mat(filePath); // ImreadModes.Color
+            var mat = new Mat(filePath, flags);
             if (info.GameScreenSize.Width != 1920)
             {
                 mat = ResizeHelper.Resize(mat, info.AssetScale);

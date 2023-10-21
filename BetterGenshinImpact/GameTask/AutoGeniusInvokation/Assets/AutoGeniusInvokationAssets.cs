@@ -127,27 +127,27 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             // 投掷期间的骰子
             RollPhaseDiceMats = new Dictionary<string, Mat>()
             {
-                { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_anemo.png") },
-                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_geo.png.png") },
-                { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_electro.png.png") },
-                { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_dendro.png.png") },
-                { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_hydro.png.png") },
-                { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_pyro.png.png") },
-                { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_cryo.png.png") },
-                { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_omni.png.png") },
+                { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_anemo.png", ImreadModes.Grayscale) },
+                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_geo.png", ImreadModes.Grayscale) },
+                { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_electro.png", ImreadModes.Grayscale) },
+                { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_dendro.png", ImreadModes.Grayscale) },
+                { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_hydro.png", ImreadModes.Grayscale) },
+                { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_pyro.png", ImreadModes.Grayscale) },
+                { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_cryo.png", ImreadModes.Grayscale) },
+                { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_omni.png", ImreadModes.Grayscale) },
             };
 
             // 主界面骰子
             ActionPhaseDiceMats = new Dictionary<string, Mat>()
             {
-                { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_anemo.png.png") },
-                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_geo.png.png") },
-                { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_electro.png.png") },
-                { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_dendro.png.png") },
-                { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_hydro.png.png") },
-                { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_pyro.png.png") },
-                { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_cryo.png.png") },
-                { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_omni.png.png") },
+                { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_anemo.png", ImreadModes.Grayscale) },
+                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_geo.png", ImreadModes.Grayscale) },
+                { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_electro.png", ImreadModes.Grayscale) },
+                { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_dendro.png", ImreadModes.Grayscale) },
+                { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_hydro.png", ImreadModes.Grayscale) },
+                { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_pyro.png", ImreadModes.Grayscale) },
+                { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_cryo.png", ImreadModes.Grayscale) },
+                { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_omni.png", ImreadModes.Grayscale) },
             };
         }
     }

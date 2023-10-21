@@ -8,6 +8,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
 namespace BetterGenshinImpact.Core.Config
 {
@@ -51,6 +52,11 @@ namespace BetterGenshinImpact.Core.Config
         /// 自动钓鱼配置
         /// </summary>
         public AutoFishingConfig AutoFishingConfig { get; set; } = new();
+
+        /// <summary>
+        /// 自动打牌配置
+        /// </summary>
+        public AutoGeniusInvokationConfig AutoGeniusInvokationConfig { get; set; } = new();
 
         /// <summary>
         /// 脚本类配置

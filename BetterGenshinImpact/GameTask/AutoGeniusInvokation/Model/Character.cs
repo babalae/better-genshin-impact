@@ -67,7 +67,10 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
 
         public void ChooseFirst()
         {
-            ClickExtension.Move(GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint())).LeftButtonDoubleClick();
+            ClickExtension.Move(GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint()))
+                .LeftButtonClick()
+                .Sleep(200)
+                .LeftButtonClick();
         }
 
         public bool SwitchLater()

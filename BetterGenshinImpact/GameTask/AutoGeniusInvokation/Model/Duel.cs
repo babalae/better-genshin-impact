@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
+/// <summary>
+/// 对局
+/// </summary>
 public class Duel
 {
     private readonly ILogger<Duel> _logger = App.GetLogger<Duel>();
@@ -46,20 +49,20 @@ public class Duel
     public CancellationTokenSource Cts { get; set; }
 
 
-    public async Task CustomStrategyRunAsync(CancellationTokenSource cts1)
+    public async Task RunAsync(GeniusInvokationTaskParam taskParam)
     {
-        await Task.Run(() => { CustomStrategyRun(cts1); });
+        await Task.Run(() => { Run(taskParam); });
     }
 
-    public void CustomStrategyRun(CancellationTokenSource cts1)
+    public void Run(GeniusInvokationTaskParam taskParam)
     {
-        Cts = cts1;
+        Cts = taskParam.Cts;
         try
         {
             _logger.LogInformation("========================================"); 
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
 
-            GeniusInvokationControl.GetInstance().Init(Cts);
+            GeniusInvokationControl.GetInstance().Init(taskParam);
             SystemControl.ActivateWindow();
 
             // 对局准备 选择初始手牌
@@ -248,7 +251,7 @@ public class Duel
         catch (DuelEndException ex)
         {
             _logger.LogInformation(ex.Message);
-            _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
+            _logger.LogInformation("对局结束");
         }
         catch (System.Exception ex)
         {
@@ -256,7 +259,8 @@ public class Duel
         }
         finally
         {
-            _logger.LogInformation("========================================");
+            _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
+            taskParam.Dispatcher.StartTimer();
         }
     }
 

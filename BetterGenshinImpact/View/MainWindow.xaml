@@ -70,14 +70,14 @@
                         <ui:SymbolIcon Symbol="Timer24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <!--<ui:NavigationViewItem
+                <ui:NavigationViewItem
                     Content="独立任务"
                     NavigationCacheMode="Enabled"
                     TargetPageType="{x:Type pages:TaskSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>-->
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem
                     Content="辅助操控"
                     NavigationCacheMode="Enabled"
@@ -108,7 +108,7 @@
         </ui:NavigationView>
 
         <ui:TitleBar
-            Title="BetterGI · 更好的原神 · 0.10"
+            Title="BetterGI · 更好的原神 · 0.11"
             Grid.Row="0" />
 
     </Grid>

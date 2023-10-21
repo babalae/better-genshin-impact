@@ -20,6 +20,7 @@ using System.Security.Principal;
 using BetterGenshinImpact.Core.Config;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact
 {
@@ -85,12 +86,13 @@ namespace BetterGenshinImpact
                     services.AddSingleton<CommonSettingsPage>();
                     services.AddSingleton<CommonSettingsPageViewModel>();
                     services.AddSingleton<TaskSettingsPage>();
+                    services.AddSingleton<TaskSettingsPageViewModel>();
 
                     services.AddSingleton<HotKeyPage>();
                     services.AddSingleton<HotKeyPageViewModel>();
 
                     // My Services
-
+                    services.AddSingleton<TaskTriggerDispatcher>();
 
                     // Configuration
                     //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));

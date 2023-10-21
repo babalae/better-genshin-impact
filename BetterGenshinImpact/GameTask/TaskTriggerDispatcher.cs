@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using Fischless.GameCapture;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -17,7 +19,7 @@ namespace BetterGenshinImpact.GameTask
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
 
-        private IGameCapture? _capture;
+        public IGameCapture? GameCapture { get; private set; }
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
@@ -35,7 +37,7 @@ namespace BetterGenshinImpact.GameTask
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
-            _capture = GameCaptureFactory.Create(mode);
+            GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
             SystemControl.ActivateWindow(hWnd);
 
@@ -47,7 +49,7 @@ namespace BetterGenshinImpact.GameTask
             _triggers = GameTaskManager.LoadTriggers();
 
             // 启动截图
-            _capture.Start(hWnd);
+            GameCapture.Start(hWnd);
 
             // 启动定时器
             _frameIndex = 0;
@@ -75,7 +77,7 @@ namespace BetterGenshinImpact.GameTask
         public void Stop()
         {
             _timer.Stop();
-            _capture?.Stop();
+            GameCapture?.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
         }
@@ -96,6 +98,23 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        /// <summary>
+        /// 启动独立任务
+        /// </summary>
+        public void StartIndependentTask(IndependentTaskEnum taskType, BaseTaskParam param)
+        {
+            if (!_timer.Enabled)
+            {
+                throw new Exception("请先启动BetterGI");
+            }
+
+            StopTimer();
+            if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
+            {
+                AutoGeniusInvokationTask.Start((GeniusInvokationTaskParam)param);
+            }
+        }
+
         public void Dispose() => Stop();
 
         public void Tick(object? sender, EventArgs e)
@@ -111,7 +130,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查截图器是否初始化
-                if (_capture == null || !_capture.IsCapturing)
+                if (GameCapture == null || !GameCapture.IsCapturing)
                 {
                     _logger.LogError("截图器未初始化!");
                     Stop();
@@ -164,7 +183,7 @@ namespace BetterGenshinImpact.GameTask
                 var sw = new Stopwatch();
                 sw.Start();
                 // 捕获游戏画面
-                var bitmap = _capture.Capture();
+                var bitmap = GameCapture.Capture();
                 sw.Stop();
                 //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
                 if (bitmap == null)
