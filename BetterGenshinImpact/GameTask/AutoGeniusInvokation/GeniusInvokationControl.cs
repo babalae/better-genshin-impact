@@ -75,6 +75,11 @@ public class GeniusInvokationControl
     {
         CheckTask();
         Thread.Sleep(millisecondsTimeout);
+        var sleepDelay = TaskContext.Instance().Config.AutoGeniusInvokationConfig.SleepDelay;
+        if (sleepDelay > 0)
+        {
+            Thread.Sleep(sleepDelay);
+        }
     }
 
     public Mat CaptureGameMat()

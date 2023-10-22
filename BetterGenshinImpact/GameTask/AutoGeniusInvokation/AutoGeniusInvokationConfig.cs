@@ -16,6 +16,8 @@ public partial class AutoGeniusInvokationConfig : ObservableObject
 {
     [ObservableProperty] private string _strategyName = "1.莫娜砂糖琴";
 
+    [ObservableProperty] private int _sleepDelay = 0;
+
     public List<Rect> DefaultCharacterCardRects { get; set; } = new List<Rect>()
     {
         new(667, 632, 165, 282),
