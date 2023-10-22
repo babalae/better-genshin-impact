@@ -59,7 +59,7 @@
                       HorizontalAlignment="Left"
                       VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />-->
 
-            <ContentControl Height="188" Canvas.Left="20" Canvas.Top="500" Width="477"
+            <ContentControl x:Name="LogTextBoxWrapper" Height="188" Canvas.Left="20" Canvas.Top="500" Width="477"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
                 <RichTextBox
                     x:Name="LogTextBox"

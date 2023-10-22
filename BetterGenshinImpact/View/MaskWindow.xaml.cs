@@ -71,8 +71,10 @@ namespace BetterGenshinImpact.View
             {
                 Left = currentRect.Left / dpiScale;
                 Top = currentRect.Top / dpiScale;
-                Width = currentRect.Width /dpiScale;
+                Width = currentRect.Width / dpiScale;
                 Height = currentRect.Height / dpiScale;
+
+                Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
             });
             // 重新计算控件位置
             // shit code 预定了

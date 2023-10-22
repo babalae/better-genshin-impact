@@ -19,6 +19,8 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         private ResourceRegion? _region;
 
+        public CaptureModes Mode => CaptureModes.DwmGetDxSharedSurface;
+
         public void Start(nint hWnd)
         {
             _hWnd = hWnd;

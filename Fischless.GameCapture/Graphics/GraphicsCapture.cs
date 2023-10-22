@@ -16,6 +16,7 @@ public class GraphicsCapture : IGameCapture
     private GraphicsCaptureItem _captureItem = null!;
     private GraphicsCaptureSession _captureSession = null!;
 
+    public CaptureModes Mode => CaptureModes.WindowsGraphicsCapture;
     public bool IsCapturing { get; private set; }
 
     private ResourceRegion? _region;

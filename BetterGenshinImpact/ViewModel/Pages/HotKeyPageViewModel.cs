@@ -14,13 +14,15 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class HotKeyPageViewModel : ObservableObject
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
+    private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     public AllConfig Config { get; set; }
 
     [ObservableProperty] private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
 
-    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger)
+    public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
     {
         _logger = logger;
+        _taskSettingsPageViewModel = taskSettingsPageViewModel;
         // 获取配置
         Config = configService.Get();
 
@@ -109,6 +111,13 @@ public partial class HotKeyPageViewModel : ObservableObject
             hotKey => { QuickEnhanceArtifactMacro.Done(); }
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "启动/停止自动七圣召唤",
+            nameof(Config.HotKeyConfig.AutoGeniusInvokation),
+            Config.HotKeyConfig.AutoGeniusInvokation,
+            hotKey => { _taskSettingsPageViewModel.OnSwitchAutoGeniusInvokation(); }
+        ));
     }
 
     private string ToChinese(bool enabled)

@@ -6,6 +6,9 @@ namespace Fischless.GameCapture.BitBlt;
 public class BitBltCapture : IGameCapture
 {
     private nint _hWnd;
+
+    public CaptureModes Mode => CaptureModes.BitBlt;
+
     public bool IsCapturing { get; private set; }
 
     public void Dispose() => Stop();

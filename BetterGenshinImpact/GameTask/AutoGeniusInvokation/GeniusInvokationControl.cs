@@ -82,6 +82,16 @@ public class GeniusInvokationControl
         VisionContext.Instance().DrawContent.ClearAll();
         CheckTask();
         var bitmap = _gameCapture?.Capture();
+        // wgc 缓冲区设置的2 所以至少截图3次
+        if (_gameCapture?.Mode == CaptureModes.WindowsGraphicsCapture)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                bitmap = _gameCapture?.Capture();
+                Sleep(50);
+            }
+        }
+
         if (bitmap == null)
         {
             _logger.LogWarning("截图失败!");
@@ -545,7 +555,7 @@ public class GeniusInvokationControl
     public bool ActionPhaseElementalTuningConfirm()
     {
         var ra = CaptureGameRectArea();
-        //Cv2.ImWrite("log\\" + DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")  + ".png", ra.SrcMat);
+        // Cv2.ImWrite("log\\" + DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff") + ".png", ra.SrcMat);
         var foundRectArea = ra.Find(_assets.ElementalTuningConfirmButtonRo);
         if (!foundRectArea.IsEmpty())
         {

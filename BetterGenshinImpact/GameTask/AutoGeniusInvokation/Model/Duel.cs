@@ -81,8 +81,9 @@ public class Duel
                 // ignored
             }
 
-            if (CharacterCardRects.Count != 3)
+            if (CharacterCardRects is not { Count: 3 })
             {
+                CharacterCardRects = new List<Rect>();
                 var defaultCharacterCardRects = TaskContext.Instance().Config.AutoGeniusInvokationConfig.DefaultCharacterCardRects;
                 var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
                 for (var i = 0; i < defaultCharacterCardRects.Count; i++)
@@ -270,7 +271,7 @@ public class Duel
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(ex.ToString());
+            _logger.LogError(ex.Message);
         }
         finally
         {
