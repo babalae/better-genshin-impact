@@ -146,9 +146,6 @@
 		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\确定.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\确定_1600x900.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
 		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\空能量.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

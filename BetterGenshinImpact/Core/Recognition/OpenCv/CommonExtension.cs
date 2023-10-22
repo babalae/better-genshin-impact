@@ -78,11 +78,20 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             return new OpenCvSharp.Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
         }
 
+        public static Rect Multiply(this Rect rect, double assetScale)
+        {
+            if (rect == Rect.Empty)
+            {
+                throw new ArgumentException("rect is empty");
+            }
+
+            return new Rect((int)(rect.X * assetScale), (int)(rect.Y * assetScale), (int)(rect.Width * assetScale), (int)(rect.Height * assetScale));
+        }
+
 
         public static System.Windows.Media.Color ToWindowsColor(this Color color)
         {
             return System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
         }
     }
-
 }

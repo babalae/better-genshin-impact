@@ -9,6 +9,7 @@ using Fischless.GameCapture;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using System.Windows;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -163,7 +164,13 @@ namespace BetterGenshinImpact.GameTask
                 {
                     if (!_prevGameActive)
                     {
-                        maskWindow.Invoke(() => { maskWindow.Show(); });
+                        maskWindow.Invoke(() =>
+                        {
+                            if (!maskWindow.IsClosed)
+                            {
+                                maskWindow.Show();
+                            }
+                        });
                     }
 
                     _prevGameActive = active;
@@ -216,6 +223,7 @@ namespace BetterGenshinImpact.GameTask
                         }
                     }
                 }
+
                 //if (_frameIndex / content.FrameRate % 2 == 0)
                 //{
                 //    GC.Collect();

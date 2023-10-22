@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -86,6 +87,7 @@ public class GeniusInvokationControl
             _logger.LogWarning("截图失败!");
             throw new RetryException("截图失败");
         }
+
         return bitmap.ToMat();
     }
 
@@ -112,6 +114,7 @@ public class GeniusInvokationControl
             {
                 return;
             }
+
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
@@ -156,28 +159,31 @@ public class GeniusInvokationControl
     /// <returns></returns>
     public List<Rect> GetCharacterRects()
     {
-        Mat srcMat = CaptureGameMat();
-        int halfHeight = srcMat.Height / 2;
-        Mat bottomMat = new Mat(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
+        var srcMat = CaptureGameMat();
+        var halfHeight = srcMat.Height / 2;
+        var bottomMat = new Mat(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
 
         var lowPurple = new Scalar(235, 245, 198);
         var highPurple = new Scalar(255, 255, 236);
-        Mat gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
+        var gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
 
         // 水平投影到y轴 正常只有一个连续区域
-        int[] h = ArithmeticHelper.HorizontalProjection(gray);
+        var h = ArithmeticHelper.HorizontalProjection(gray);
 
         // y轴 从上到下确认连续区域
         int y1 = 0, y2 = 0;
         int start = 0;
-        bool inLine = false;
+        var inLine = false;
         for (int i = 0; i < h.Length; i++)
         {
+            // 直方图
+            if (OutputImageWhenError)
+            {
+                Cv2.Line(bottomMat, 0, i, h[i], i, Scalar.Yellow);
+            }
+
             if (h[i] > h.Average() * 10)
             {
-                // 直方图
-                Cv2.Line(bottomMat, 0, i, h[i], i, Scalar.Yellow);
-
                 if (!inLine)
                 {
                     //由空白进入字符区域了，记录标记
@@ -217,7 +223,7 @@ public class GeniusInvokationControl
             _logger.LogWarning("未识别到角色卡牌区域（Y轴）");
             if (OutputImageWhenError)
             {
-                Cv2.ImWrite("logs\\character_card_error.jpg", bottomMat);
+                Cv2.ImWrite("log\\character_card_error.jpg", bottomMat);
             }
 
             throw new RetryException("未获取到角色区域");
@@ -228,7 +234,7 @@ public class GeniusInvokationControl
         //    MyLogger.Warn("识别的角色卡牌区域（Y轴）错误：y1:{} y2:{}", y1, y2);
         //    if (OutputImageWhenError)
         //    {
-        //        Cv2.ImWrite("logs\\character_card_error.jpg", bottomMat);
+        //        Cv2.ImWrite("log\\character_card_error.jpg", bottomMat);
         //    }
 
         //    throw new RetryException("未获取到角色区域");
@@ -236,22 +242,22 @@ public class GeniusInvokationControl
 
 
         // 垂直投影
-        int[] v = ArithmeticHelper.VerticalProjection(gray);
+        var v = ArithmeticHelper.VerticalProjection(gray);
 
 
         inLine = false;
         start = 0;
-        List<int> colLines = new List<int>();
+        var colLines = new List<int>();
         //开始根据投影值识别分割点
         for (int i = 0; i < v.Length; ++i)
         {
-            if (v[i] > h.Average() * 10)
+            if (OutputImageWhenError)
             {
-                if (OutputImageWhenError)
-                {
-                    Cv2.Line(bottomMat, i, 0, i, v[i], Scalar.Yellow);
-                }
+                Cv2.Line(bottomMat, i, 0, i, v[i], Scalar.Yellow);
+            }
 
+            if (v[i] > h.Average() * 5)
+            {
                 if (!inLine)
                 {
                     //由空白进入字符区域了，记录标记
@@ -274,17 +280,17 @@ public class GeniusInvokationControl
 
         if (colLines.Count != 6)
         {
-            _logger.LogWarning("未识别到角色卡牌区域（X轴存在{Count}个识别点）", colLines.Count);
+            _logger.LogWarning("未识别到角色卡牌区域（X轴识别点{Count}个）", colLines.Count);
             if (OutputImageWhenError)
             {
-                Cv2.ImWrite("logs\\character_card_error.jpg", bottomMat);
+                Cv2.ImWrite("log\\character_card_error.jpg", bottomMat);
             }
 
             throw new RetryException("未获取到角色区域");
         }
 
         var rects = new List<Rect>();
-        for (int i = 0; i < colLines.Count - 1; i++)
+        for (var i = 0; i < colLines.Count - 1; i++)
         {
             if (i % 2 == 0)
             {
@@ -299,7 +305,10 @@ public class GeniusInvokationControl
             throw new RetryException("未获取到角色区域");
         }
 
-        //Cv2.ImWrite("logs\\character_card_success.jpg", bottomMat);
+
+        //_logger.LogInformation("识别到角色卡牌区域:{Rects}", rects);
+
+        //Cv2.ImWrite("log\\character_card_success.jpg", bottomMat);
         return rects;
     }
 
@@ -362,6 +371,7 @@ public class GeniusInvokationControl
                     break;
                 }
             }
+
             dictionary.Add(kvp.Key, list);
         }
 
@@ -388,6 +398,28 @@ public class GeniusInvokationControl
         else
         {
             _logger.LogInformation("投骰子界面识别到了{Count}个骰子", count);
+        }
+
+        int upper = 0, lower = 0;
+        foreach (var kvp in dictionary)
+        {
+            foreach (var point in kvp.Value)
+            {
+                if (point.Y < gameSnapshot.Height / 2)
+                {
+                    upper++;
+                }
+                else
+                {
+                    lower++;
+                }
+            }
+        }
+
+        if (upper != 4 || lower != 4)
+        {
+            _logger.LogInformation("骰子识别位置错误,重试");
+            return false;
         }
 
         foreach (var kvp in dictionary)
@@ -477,7 +509,7 @@ public class GeniusInvokationControl
     {
         var srcMat = CaptureGameGreyMat();
         // 切割图片后再识别 加快速度 位置没啥用，所以切割后比较方便
-        var dictionary = FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _assets.ActionPhaseDiceMats);
+        var dictionary = FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _assets.ActionPhaseDiceMats, 0.7);
 
         var msg = "";
         var result = new Dictionary<string, int>();
@@ -512,7 +544,9 @@ public class GeniusInvokationControl
     /// </summary>
     public bool ActionPhaseElementalTuningConfirm()
     {
-        var foundRectArea = CaptureGameRectArea().Find(_assets.ElementalTuningConfirmButtonRo);
+        var ra = CaptureGameRectArea();
+        //Cv2.ImWrite("log\\" + DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")  + ".png", ra.SrcMat);
+        var foundRectArea = ra.Find(_assets.ElementalTuningConfirmButtonRo);
         if (!foundRectArea.IsEmpty())
         {
             foundRectArea.ClickCenter();
@@ -551,7 +585,7 @@ public class GeniusInvokationControl
         var x = info.CaptureAreaRect.X + info.CaptureAreaRect.Width - 100 * info.AssetScale * skillIndex;
         var y = info.CaptureAreaRect.Y + info.CaptureAreaRect.Height - 120 * info.AssetScale;
         ClickExtension.Click(x, y);
-        Sleep(1000); // 等待动画彻底弹出
+        Sleep(1200); // 等待动画彻底弹出
 
         var foundRectArea = CaptureGameRectArea().Find(_assets.ElementalDiceLackWarningRo);
         if (foundRectArea.IsEmpty())
@@ -561,8 +595,11 @@ public class GeniusInvokationControl
             ClickExtension.Click(x, y);
             Sleep(200);
             ClickExtension.Click(x, y);
+            Sleep(100);
+            ClickGameWindowCenter(); // 复位
             return true;
         }
+
         return false;
     }
 
@@ -629,26 +666,28 @@ public class GeniusInvokationControl
 
             for (var i = 0; i < needSpecifyElementDiceCount; i++)
             {
-                duel.CurrentCardCount--;
-                _logger.LogInformation("- {Count} 烧牌", i + 1);
+                _logger.LogInformation("- 烧第{Count}张牌", i + 1);
                 ActionPhaseElementalTuning();
-                Sleep(100);
+                Sleep(1200);
                 var res = ActionPhaseElementalTuningConfirm();
                 if (res == false)
                 {
                     _logger.LogWarning("烧牌失败，重试");
                     i--;
+                    ClickGameWindowCenter(); // 复位
                     Sleep(1000);
                     continue;
                 }
+
                 Sleep(1000); // 烧牌动画
                 ClickGameWindowCenter(); // 复位
                 Sleep(500);
+                duel.CurrentCardCount--;
                 // 最后一张牌的回正速度较慢，多等一会
                 if (duel.CurrentCardCount <= 1)
                 {
                     ClickGameWindowCenter(); // 复位
-                    Sleep(1000);
+                    Sleep(1200);
                 }
             }
         }
@@ -892,7 +931,7 @@ public class GeniusInvokationControl
             }
 
             retryCount++;
-            if (retryCount >= 30)
+            if (retryCount >= 60)
             {
                 throw new System.Exception("等待对方行动超时,停止自动打牌！");
             }
@@ -951,6 +990,7 @@ public class GeniusInvokationControl
         {
             character.StatusList.Add(CharacterStatusEnum.Frozen);
         }
+
         var pCharacterStatusDizziness = MatchTemplateHelper.MatchTemplate(characterMat, _assets.CharacterStatusDizzinessMat, TemplateMatchModes.CCoeffNormed);
         if (pCharacterStatusDizziness != new Point())
         {
@@ -958,7 +998,7 @@ public class GeniusInvokationControl
         }
 
         // 识别角色能量
-        var energyPointList = MatchTemplateHelper.MatchTemplateMulti(characterMat.Clone(),_assets.CharacterEnergyOnMat, 0.8);
+        var energyPointList = MatchTemplateHelper.MatchTemplateMulti(characterMat.Clone(), _assets.CharacterEnergyOnMat, 0.8);
         character.EnergyByRecognition = energyPointList.Count;
 
         _logger.LogInformation("当前出战{Character}", character);
@@ -1025,19 +1065,19 @@ public class GeniusInvokationControl
 
                         Cv2.Rectangle(srcMat, rect1, Scalar.Yellow);
                         Cv2.Rectangle(srcMat, duel.CharacterCardRects[i], Scalar.Blue, 2);
-                        OutputImage(duel, rects, bottomMat, halfHeight, "logs\\active_character2_success.jpg");
+                        OutputImage(duel, rects, bottomMat, halfHeight, "log\\active_character2_success.jpg");
                         return duel.CurrentCharacter;
                     }
                 }
             }
 
-            OutputImage(duel, rects, bottomMat, halfHeight, "logs\\active_character2_no_overlap_error.jpg");
+            OutputImage(duel, rects, bottomMat, halfHeight, "log\\active_character2_no_overlap_error.jpg");
         }
         else
         {
             if (OutputImageWhenError)
             {
-                Cv2.ImWrite("logs\\active_character2_no_rects_error.jpg", gray);
+                Cv2.ImWrite("log\\active_character2_no_rects_error.jpg", gray);
             }
         }
 

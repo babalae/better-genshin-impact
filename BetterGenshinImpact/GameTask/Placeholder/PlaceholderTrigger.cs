@@ -54,5 +54,16 @@ public class TestTrigger : ITaskTrigger
         //    }
         //    Debug.WriteLine("找到了" + i + "个");
         //}
+
+
+        //var foundRectArea = content.CaptureRectArea.Find(_autoGeniusInvokationAssets.ElementalTuningConfirmButtonRo);
+        //if (!foundRectArea.IsEmpty())
+        //{
+        //    Debug.WriteLine("找到了");
+        //}
+        //else
+        //{
+        //    Debug.WriteLine("没找到");
+        //}
     }
 }

@@ -45,6 +45,13 @@ namespace BetterGenshinImpact.View
             return _maskWindow;
         }
 
+        public bool IsClosed { get; private set; }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
+            IsClosed = true;
+        }
 
         public void RefreshPosition(IntPtr hWnd)
         {

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
@@ -71,11 +72,24 @@ public class Duel
 
 
             // 获取角色区域
-            CharacterCardRects = Retry.Do(() => GeniusInvokationControl.GetInstance().GetCharacterRects(),
-                TimeSpan.FromSeconds(1.5), 20);
-            if (CharacterCardRects == null || CharacterCardRects.Count != 3)
+            try
             {
-                throw new DuelEndException("未成功获取到角色区域");
+                CharacterCardRects = Retry.Do(() => GeniusInvokationControl.GetInstance().GetCharacterRects(), TimeSpan.FromSeconds(1.5), 3);
+            }
+            catch
+            {
+                // ignored
+            }
+
+            if (CharacterCardRects.Count != 3)
+            {
+                var defaultCharacterCardRects = TaskContext.Instance().Config.AutoGeniusInvokationConfig.DefaultCharacterCardRects;
+                var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+                for (var i = 0; i < defaultCharacterCardRects.Count; i++)
+                {
+                    CharacterCardRects.Add(defaultCharacterCardRects[i].Multiply(assetScale));
+                }
+                _logger.LogInformation("获取角色区域失败，使用默认区域");
             }
 
             for (var i = 1; i < 4; i++)

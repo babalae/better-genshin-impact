@@ -102,8 +102,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
 
         public bool UseSkill(int skillIndex, Duel duel)
         {
-            var res = GeniusInvokationControl.GetInstance()
-                .ActionPhaseAutoUseSkill(skillIndex, Skills[skillIndex].SpecificElementCost, Skills[skillIndex].Type, duel);
+            var res = GeniusInvokationControl.GetInstance().ActionPhaseAutoUseSkill(skillIndex, Skills[skillIndex].SpecificElementCost, Skills[skillIndex].Type, duel);
             if (res)
             {
                 return true;

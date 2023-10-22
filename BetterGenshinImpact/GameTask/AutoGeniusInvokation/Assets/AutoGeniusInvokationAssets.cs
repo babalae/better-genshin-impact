@@ -55,6 +55,8 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
                 Name = "ElementalTuningConfirmButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\元素调和.png"),
+                RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height/2, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height/2),
+                Threshold = 0.9,
                 DrawOnWindow = true
             }.InitTemplate();
             ExitDuelButtonRo = new RecognitionObject
@@ -128,12 +130,12 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             RollPhaseDiceMats = new Dictionary<string, Mat>()
             {
                 { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_anemo.png", ImreadModes.Grayscale) },
-                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_geo.png", ImreadModes.Grayscale) },
                 { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_electro.png", ImreadModes.Grayscale) },
                 { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_dendro.png", ImreadModes.Grayscale) },
                 { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_hydro.png", ImreadModes.Grayscale) },
                 { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_pyro.png", ImreadModes.Grayscale) },
                 { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_cryo.png", ImreadModes.Grayscale) },
+                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_geo.png", ImreadModes.Grayscale) },
                 { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_omni.png", ImreadModes.Grayscale) },
             };
 
@@ -141,12 +143,12 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             ActionPhaseDiceMats = new Dictionary<string, Mat>()
             {
                 { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_anemo.png", ImreadModes.Grayscale) },
-                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_geo.png", ImreadModes.Grayscale) },
                 { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_electro.png", ImreadModes.Grayscale) },
                 { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_dendro.png", ImreadModes.Grayscale) },
                 { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_hydro.png", ImreadModes.Grayscale) },
                 { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_pyro.png", ImreadModes.Grayscale) },
                 { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_cryo.png", ImreadModes.Grayscale) },
+                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_geo.png", ImreadModes.Grayscale) },
                 { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_omni.png", ImreadModes.Grayscale) },
             };
         }

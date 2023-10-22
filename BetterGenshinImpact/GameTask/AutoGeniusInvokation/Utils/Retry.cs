@@ -48,6 +48,10 @@ namespace GeniusInvokationAutoToy.Utils
                 }
             }
 
+            if (exceptions.Count > 0)
+            {
+                throw exceptions.Last();
+            }
             throw new AggregateException(exceptions);
         }
     }
