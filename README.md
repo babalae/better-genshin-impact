@@ -22,7 +22,7 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
   * [自动剧情](https://github.com/babalae/better-genshin-impact/wiki/#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)
   * [自动钓鱼](https://github.com/babalae/better-genshin-impact/wiki/#%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)
 * 独立任务
-  *  自动七圣召唤（迁移中）
+  *  [自动七圣召唤](https://github.com/babalae/better-genshin-impact/wiki#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)
   *  自动伐木（迁移中）
 * 操控辅助
   * [空格连发](https://github.com/babalae/better-genshin-impact/wiki/#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
