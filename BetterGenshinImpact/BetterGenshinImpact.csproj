@@ -21,7 +21,7 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
 		<PackageReference Include="GlobalHotkeys" Version="1.0.0.6" />
-		<PackageReference Include="H.InputSimulator" Version="1.4.0" />
+		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
@@ -34,9 +34,10 @@
 		<PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
-		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.16" />
-		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.16" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.17" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
 		<PackageReference Include="WPF-UI" Version="3.0.0-preview.7" />
+		<PackageReference Include="YoloV8" Version="2.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

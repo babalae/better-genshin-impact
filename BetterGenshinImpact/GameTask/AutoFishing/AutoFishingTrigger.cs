@@ -588,16 +588,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
+        private readonly Pen _pen = new(Color.Red, 1);
+
         private void PutRects(Rect left, Rect cur, Rect right)
         {
-            Pen pen = new(Color.Red, 1);
-            var list = new List<(string, RectDrawable)>
+            var list = new List<RectDrawable>
             {
-                ("FishingBarLeft", left.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(pen)),
-                ("FishingBarCur", cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(pen)),
-                ("FishingBarRight", right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(pen))
+                left.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen),
+                cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen),
+                right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen)
             };
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList(list);
+            VisionContext.Instance().DrawContent.PutOrRemoveRectList("FishingBar", list);
         }
 
         ///// <summary>

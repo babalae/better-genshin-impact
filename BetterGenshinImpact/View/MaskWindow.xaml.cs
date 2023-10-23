@@ -131,25 +131,29 @@ namespace BetterGenshinImpact.View
 
                 foreach (var kv in VisionContext.Instance().DrawContent.RectList)
                 {
-                    var drawable = kv.Value;
-                    if (!drawable.IsEmpty)
+                    foreach (var drawable in kv.Value)
                     {
-                        drawingContext.DrawRectangle(Brushes.Transparent,
-                            new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
-                            drawable.Rect);
+                        if (!drawable.IsEmpty)
+                        {
+                            drawingContext.DrawRectangle(Brushes.Transparent,
+                                new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
+                                drawable.Rect);
+                        }
                     }
                 }
 
                 foreach (var kv in VisionContext.Instance().DrawContent.TextList)
                 {
-                    var drawable = kv.Value;
-                    if (!drawable.IsEmpty)
+                    foreach (var drawable in kv.Value)
                     {
-                        drawingContext.DrawText(new FormattedText(drawable.Text,
-                            CultureInfo.GetCultureInfo("zh-cn"),
-                            FlowDirection.LeftToRight,
-                            MyTypeface,
-                            36, Brushes.Black, 1), drawable.Point);
+                        if (!drawable.IsEmpty)
+                        {
+                            drawingContext.DrawText(new FormattedText(drawable.Text,
+                                CultureInfo.GetCultureInfo("zh-cn"),
+                                FlowDirection.LeftToRight,
+                                MyTypeface,
+                                36, Brushes.Black, 1), drawable.Point);
+                        }
                     }
                 }
             }
