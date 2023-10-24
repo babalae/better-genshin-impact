@@ -63,6 +63,18 @@
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\fake fly bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\false worm bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\fruit paste bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\redrot bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\exit_fishing.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

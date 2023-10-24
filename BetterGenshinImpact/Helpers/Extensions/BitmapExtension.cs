@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Media.Imaging;
 using OpenCvSharp;
@@ -18,6 +19,14 @@ namespace BetterGenshinImpact.Helpers.Extensions
             image.StreamSource = ms;
             image.EndInit();
             return image;
+        }
+
+        public static MemoryStream ToStream(this Bitmap bitmap)
+        {
+            using var memoryStream = new MemoryStream();
+            bitmap.Save(memoryStream, ImageFormat.Bmp);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            return memoryStream;
         }
 
         public static Scalar ToScalar(this Color color)

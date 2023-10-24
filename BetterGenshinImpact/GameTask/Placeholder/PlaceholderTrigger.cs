@@ -31,7 +31,7 @@ public class TestTrigger : ITaskTrigger
 
     //private readonly AutoGeniusInvokationAssets _autoGeniusInvokationAssets;
 
-    private YoloV8 _predictor = new(Global.Absolute("Config\\Model\\Fish\\bgi_fish.onnx"));
+    //private readonly YoloV8 _predictor = new(Global.Absolute("Config\\Model\\Fish\\bgi_fish.onnx"));
 
     public TestTrigger()
     {
@@ -41,13 +41,13 @@ public class TestTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = true;
+        IsEnabled = false;
         IsExclusive = true;
     }
 
     public void OnCapture(CaptureContent content)
     {
-        Detect(content);
+        //Detect(content);
 
 
         //var dictionary = GeniusInvokationControl.FindMultiPicFromOneImage2OneByOne(content.CaptureRectArea.SrcGreyMat, _autoGeniusInvokationAssets.RollPhaseDiceMats, 0.7);
@@ -82,20 +82,20 @@ public class TestTrigger : ITaskTrigger
         //}
     }
 
-    private void Detect(CaptureContent content)
-    {
-        using var memoryStream = new MemoryStream();
-        content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = _predictor.Detect(memoryStream);
-        Debug.WriteLine(result);
-        var list = new List<RectDrawable>();
-        foreach (var box in result.Boxes)
-        {
-            var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-            list.Add(new RectDrawable(rect, _pen));
-        }
+    //private void Detect(CaptureContent content)
+    //{
+    //    using var memoryStream = new MemoryStream();
+    //    content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+    //    memoryStream.Seek(0, SeekOrigin.Begin);
+    //    var result = _predictor.Detect(memoryStream);
+    //    Debug.WriteLine(result);
+    //    var list = new List<RectDrawable>();
+    //    foreach (var box in result.Boxes)
+    //    {
+    //        var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+    //        list.Add(new RectDrawable(rect, _pen));
+    //    }
 
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("Box", list);
-    }
+    //    VisionContext.Instance().DrawContent.PutOrRemoveRectList("Box", list);
+    //}
 }
