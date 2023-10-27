@@ -60,7 +60,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait.png">
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\lift_rod.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\switch_bait.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\fake fly bait.png">

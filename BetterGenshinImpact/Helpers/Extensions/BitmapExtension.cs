@@ -21,14 +21,6 @@ namespace BetterGenshinImpact.Helpers.Extensions
             return image;
         }
 
-        public static MemoryStream ToStream(this Bitmap bitmap)
-        {
-            using var memoryStream = new MemoryStream();
-            bitmap.Save(memoryStream, ImageFormat.Bmp);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            return memoryStream;
-        }
-
         public static Scalar ToScalar(this Color color)
         {
             return new Scalar(color.R, color.G, color.B);

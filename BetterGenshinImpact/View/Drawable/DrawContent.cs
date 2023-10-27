@@ -48,6 +48,7 @@ public class DrawContent
             else
             {
                 // 不逐一比较了，使用这个方法的地方，都是在每一帧都会刷新的
+                RectList[key] = list;
                 changed = true;
             }
         }

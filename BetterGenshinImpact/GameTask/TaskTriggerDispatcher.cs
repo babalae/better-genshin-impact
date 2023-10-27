@@ -142,6 +142,8 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查游戏是否在前台
+                var sw = new Stopwatch();
+                sw.Start();
                 var active = SystemControl.IsGenshinImpactActive();
                 var maskWindow = MaskWindow.Instance();
                 if (!active)
@@ -180,6 +182,9 @@ namespace BetterGenshinImpact.GameTask
                         return;
                     }
                 }
+                sw.Stop();
+                Debug.WriteLine("检查游戏是否在前台耗时:" + sw.ElapsedMilliseconds);
+
 
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
@@ -190,12 +195,15 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-                var sw = new Stopwatch();
+
+
+
+                sw.Reset();
                 sw.Start();
                 // 捕获游戏画面
                 var bitmap = GameCapture.Capture();
                 sw.Stop();
-                //Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
+                Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
                 if (bitmap == null)
                 {
                     _logger.LogWarning("截图失败!");
@@ -203,7 +211,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {

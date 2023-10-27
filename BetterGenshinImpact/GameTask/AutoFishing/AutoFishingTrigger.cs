@@ -13,6 +13,9 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Threading;
 using OpenCvSharp.Extensions;
 using WindowsInput;
@@ -21,6 +24,13 @@ using Color = System.Drawing.Color;
 using Pen = System.Drawing.Pen;
 using BetterGenshinImpact.Core.Config;
 using Compunet.YoloV8;
+using BetterGenshinImpact.Core.Recognition.ONNX.YOLO;
+using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.GameTask.AutoFishing.Model;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using Fischless.GameCapture;
+using BetterGenshinImpact.GameTask.Model;
+using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -59,6 +69,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _waitBiteContinuouslyFrameNum = 0;
             _noFishActionContinuouslyFrameNum = 0;
             _isThrowRod = false;
+            _selectedBaitName = string.Empty;
         }
 
         private Rect _fishBoxRect = Rect.Empty;
@@ -200,7 +211,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
 
         private int _throwRodWaitFrameNum = 0; // 抛竿等待的时间(帧数)
-        private int _switchBaitContinuouslyFrameNum = 0; // 切换鱼饵的持续时间(帧数)
+        private int _switchBaitContinuouslyFrameNum = 0; // 切换鱼饵按钮图标的持续时间(帧数)
         private int _waitBiteContinuouslyFrameNum = 0; // 等待上钩的持续时间(帧数)
         private int _noFishActionContinuouslyFrameNum = 0; // 无钓鱼三种场景的持续时间(帧数)
         private bool _isThrowRod = false; // 是否已经抛竿
@@ -210,6 +221,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 1. 未抛竿 BaitButtonRo存在 && WaitBiteButtonRo不存在
         /// 2. 抛竿后未拉条 WaitBiteButtonRo存在 && BaitButtonRo不存在
         /// 3. 上钩拉条 _isFishingProcess && _biteTipsExitCount > 0
+        ///
+        /// 新AI钓鱼
+        /// 前提：必须要正面面对鱼塘，没有识别到鱼的时候不会自动抛竿
+        /// 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
+        /// 2. 根据第一步的观察结果，提前选择鱼饵
+        /// 3. 
         /// </summary>
         /// <param name="content"></param>
         private void ThrowRod(CaptureContent content)
@@ -229,14 +246,50 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         _isThrowRod = false;
                         _switchBaitContinuouslyFrameNum = 0;
+                        _logger.LogInformation("当前仍在抛竿页");
                     }
 
                     if (!_isThrowRod)
                     {
-                        Simulation.SendInput.Mouse.LeftButtonClick();
-                        Debug.WriteLine("自动抛竿");
-                        Thread.Sleep(500);
-                        _isThrowRod = true;
+                        // 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
+                        using var memoryStream = new MemoryStream();
+                        content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+                        memoryStream.Seek(0, SeekOrigin.Begin);
+                        var result = _predictor.Detect(memoryStream);
+                        var fishpond = new Fishpond(result);
+                        if (fishpond.FishpondRect == Rect.Empty)
+                        {
+                            Thread.Sleep(2000);
+                            return;
+                        }
+                        else
+                        {
+                            var centerX = content.SrcBitmap.Width / 2;
+                            // 往左移动是正数，往右移动是负数
+                            if (fishpond.FishpondRect.Left > centerX)
+                            {
+                                Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                            }
+
+                            if (fishpond.FishpondRect.Right < centerX)
+                            {
+                                Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
+                            }
+
+                            if ((fishpond.FishpondRect.Left < centerX && fishpond.FishpondRect.Right > centerX) || fishpond.FishpondRect.Width < content.SrcBitmap.Width / 4)
+                            {
+                                // 鱼塘在中心，选择鱼饵
+                                if (string.IsNullOrEmpty(_selectedBaitName))
+                                {
+                                    _selectedBaitName = ChooseBait(content, fishpond);
+                                }
+
+                                // 抛竿
+                                ApproachFishAndThrowRod(content);
+
+                                Thread.Sleep(2000);
+                            }
+                        }
                     }
                 }
 
@@ -258,7 +311,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     if (_isThrowRod)
                     {
                         // 30s 没有上钩，重新抛竿
-                        if (_throwRodWaitFrameNum >= content.FrameRate * 20)
+                        if (_throwRodWaitFrameNum >= content.FrameRate * TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut)
                         {
                             Simulation.SendInput.Mouse.LeftButtonClick();
                             _throwRodWaitFrameNum = 0;
@@ -289,6 +342,249 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _throwRodWaitFrameNum = 0;
                 _isThrowRod = false;
             }
+        }
+
+
+        private string _selectedBaitName = string.Empty;
+
+        /// <summary>
+        /// 选择鱼饵
+        /// </summary>
+        /// <param name="content"></param>
+        /// <param name="fishpond"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private string ChooseBait(CaptureContent content, Fishpond fishpond)
+        {
+            // 打开换饵界面
+            Simulation.SendInput.Mouse.RightButtonClick();
+            Thread.Sleep(500);
+
+            // 截图
+            var bitmap = CaptureGameBitmap(content.Dispatcher.GameCapture);
+            _selectedBaitName = fishpond.Fishes[0].FishType.BaitName;
+            _logger.LogInformation("选择鱼饵 {Text}", _selectedBaitName);
+
+            // 寻找鱼饵
+            var ro = new RecognitionObject()
+            {
+                Name = "ChooseBait",
+                RecognitionType = RecognitionTypes.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", $"bait\\{_selectedBaitName}.png"),
+                Threshold = 0.9,
+                DrawOnWindow = false
+            }.InitTemplate();
+
+            var systemInfo = TaskContext.Instance().SystemInfo;
+            var ra = new RectArea(bitmap, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y, systemInfo.DesktopRectArea);
+            var resRa = ra.Find(ro);
+            if (resRa.IsEmpty())
+            {
+                _logger.LogWarning("没有找到目标鱼饵");
+                _selectedBaitName = string.Empty;
+                throw new Exception("没有找到目标鱼饵");
+            }
+            else
+            {
+                resRa.ClickCenter();
+                Thread.Sleep(500);
+                // 可能重复点击，所以固定界面点击下
+                var rect = systemInfo.CaptureAreaRect;
+                ClickExtension.Click(rect.X + 1300 * systemInfo.AssetScale, rect.Y + 400 * systemInfo.AssetScale);
+                Thread.Sleep(200);
+                // 偷懒 固定点击确定
+                ClickExtension.Click(rect.X + 1180 * systemInfo.AssetScale, rect.Y + 760 * systemInfo.AssetScale);
+                Thread.Sleep(500); // 等待界面切换
+            }
+
+            return _selectedBaitName;
+        }
+
+
+        private readonly Random rd = new();
+
+        /// <summary>
+        /// 抛竿
+        /// </summary>
+        /// <param name="content"></param>
+        private void ApproachFishAndThrowRod(CaptureContent content)
+        {
+            // 预抛竿
+            Simulation.SendInput.Mouse.LeftButtonDown();
+            _logger.LogInformation("长按预抛竿");
+            Thread.Sleep(3000);
+
+            var noTargetFishTimes = 0;
+
+            while (true)
+            {
+                // 截图
+                var bitmap = CaptureGameBitmap(content.Dispatcher.GameCapture);
+
+                // 找 鱼饵落点
+                using var memoryStream = new MemoryStream();
+                bitmap.Save(memoryStream, ImageFormat.Bmp);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                var result = _predictor.Detect(memoryStream);
+                var fishpond = new Fishpond(result);
+                if (fishpond.TargetRect == Rect.Empty)
+                {
+                    Debug.WriteLine("历次未找到鱼饵落点,随机移动");
+                    var moveX = 10;
+                    if (rd.Next(1, 3) == 1)
+                    {
+                        moveX = -moveX;
+                    }
+
+                    Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                    continue;
+                }
+
+                // 落点接近鱼
+                var targetFishList = fishpond.FilterByBaitName(_selectedBaitName);
+                if (targetFishList.Count == 0)
+                {
+                    Debug.WriteLine("无目标鱼");
+                    noTargetFishTimes++;
+                    if (noTargetFishTimes > 20)
+                    {
+                        // 20次都没有找到目标鱼，重新选择鱼饵
+                        _logger.LogInformation("没有找到目标鱼，1.直接抛竿");
+                        Simulation.SendInput.Mouse.LeftButtonUp();
+                        Thread.Sleep(1500);
+                        _logger.LogInformation("没有找到目标鱼，2.收杆");
+                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        Thread.Sleep(1500);
+                        _logger.LogInformation("没有找到目标鱼，3.准备重新选择鱼饵");
+                        _selectedBaitName = string.Empty;
+                        _isThrowRod = false;
+                        break;
+                    }
+
+                    continue;
+                }
+                else
+                {
+                    var min = MoveMouseToFish(fishpond.TargetRect, targetFishList[0].Rect);
+                    VisionContext.Instance().DrawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
+                    VisionContext.Instance().DrawContent.PutRect("Fish", targetFishList[0].Rect.ToRectDrawable());
+                    if (min <= 100)
+                    {
+                        Simulation.SendInput.Mouse.LeftButtonUp();
+                        _logger.LogInformation("尝试钓取 {Text}", targetFishList[0].FishType.ChineseName);
+                        _isThrowRod = true;
+                        VisionContext.Instance().DrawContent.RemoveRect("Target");
+                        VisionContext.Instance().DrawContent.RemoveRect("Fish");
+                        break;
+                    }
+                }
+
+                Thread.Sleep(80);
+            }
+        }
+
+        //private void MoveMouseToFish(Rect fish)
+        //{
+        //    ClickExtension.Move(fish.X, fish.Y);
+        //    Thread.Sleep(1000);
+        //    Simulation.SendInput.Mouse.LeftButtonUp();
+        //}
+
+        private int MoveMouseToFish(Rect rect1, Rect rect2)
+        {
+            int minDistance;
+
+            //首先计算两个矩形中心点
+            Point c1, c2;
+            c1.X = rect1.X + (rect1.Width / 2);
+            c1.Y = rect1.Y + (rect1.Height / 2);
+            c2.X = rect2.X + (rect2.Width / 2);
+            c2.Y = rect2.Y + (rect2.Height / 2);
+
+            // 分别计算两矩形中心点在X轴和Y轴方向的距离
+            var dx = Math.Abs(c2.X - c1.X);
+            var dy = Math.Abs(c2.Y - c1.Y);
+
+            //两矩形不相交，在X轴方向有部分重合的两个矩形
+            if ((dx < ((rect1.Width + rect2.Width) / 2)) && (dy >= ((rect1.Height + rect2.Height) / 2)))
+            {
+                minDistance = dy - ((rect1.Height + rect2.Height) / 2);
+                var moveY = 10;
+                if (c1.Y > c2.Y)
+                {
+                    moveY = -moveY;
+                }
+
+                _logger.LogInformation("移动鼠标 {X} {Y}", 0, moveY);
+                Simulation.SendInput.Mouse.MoveMouseBy(0, moveY);
+            }
+
+            //两矩形不相交，在Y轴方向有部分重合的两个矩形
+            else if ((dx >= ((rect1.Width + rect2.Width) / 2)) && (dy < ((rect1.Height + rect2.Height) / 2)))
+            {
+                minDistance = dx - ((rect1.Width + rect2.Width) / 2);
+                var moveX = 10;
+                if (c1.X > c2.X)
+                {
+                    moveX = -moveX;
+                }
+
+                _logger.LogInformation("移动鼠标 {X} {Y}", moveX, 0);
+                Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+            }
+
+            //两矩形不相交，在X轴和Y轴方向无重合的两个矩形
+            else if ((dx >= ((rect1.Width + rect2.Width) / 2)) && (dy >= ((rect1.Height + rect2.Height) / 2)))
+            {
+                var moveX = dx - ((rect1.Width + rect2.Width) / 2);
+                var moveY = dy - ((rect1.Height + rect2.Height) / 2);
+                minDistance = (int)Math.Sqrt(moveX * moveX + moveY * moveY);
+                moveX = 10;
+                moveY = 10;
+                if (c1.Y > c2.Y)
+                {
+                    moveY = -moveY;
+                }
+
+                if (c1.X > c2.X)
+                {
+                    moveX = -moveX;
+                }
+
+                _logger.LogInformation("移动鼠标 {X} {Y}", moveX, moveY);
+                Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
+            }
+
+            //两矩形相交
+            else
+            {
+                _logger.LogInformation("无需移动鼠标");
+                minDistance = -1;
+            }
+
+            return minDistance;
+        }
+
+        public Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+        {
+            var bitmap = gameCapture?.Capture();
+            // wgc 缓冲区设置的2 所以至少截图3次
+            if (gameCapture?.Mode == CaptureModes.WindowsGraphicsCapture)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    bitmap = gameCapture?.Capture();
+                    Thread.Sleep(50);
+                }
+            }
+
+            if (bitmap == null)
+            {
+                _logger.LogWarning("截图失败!");
+                throw new Exception("截图失败");
+            }
+
+            return bitmap;
         }
 
 
@@ -392,6 +688,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                         if (_biteTipsExitCount >= content.FrameRate / 4d)
                         {
+                            // 图像提竿判断
+                            var liftRodButtonRa = content.CaptureRectArea.Find(_autoFishingAssets.LiftRodButtonRo);
+                            if (!liftRodButtonRa.IsEmpty())
+                            {
+                                Simulation.SendInput.Mouse.LeftButtonClick();
+                                _logger.LogInformation(@"┌------------------------┐");
+                                _logger.LogInformation("  自动提竿(图像识别)");
+                                _isFishingProcess = true;
+                                _biteTipsExitCount = 0;
+                                _baseBiteTips = Rect.Empty;
+                                VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                                return;
+                            }
+
+                            // OCR 提竿判断
                             var text = _ocrService.Ocr(wordCaptureOriginMat.ToBitmap());
                             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
                             {
@@ -581,6 +892,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _waitBiteContinuouslyFrameNum = 0;
                 _noFishActionContinuouslyFrameNum = 0;
                 _isThrowRod = false;
+                _selectedBaitName = string.Empty;
             }
             else if (prevIsExclusive && !IsExclusive)
             {
@@ -601,7 +913,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen),
                 right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen)
             };
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList("FishingBar", list);
+            VisionContext.Instance().DrawContent.PutOrRemoveRectList("FishingBarAll", list);
         }
 
         ///// <summary>

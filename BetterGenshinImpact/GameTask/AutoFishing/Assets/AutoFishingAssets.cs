@@ -15,6 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
 
         public RecognitionObject BaitButtonRo;
         public RecognitionObject WaitBiteButtonRo;
+        public RecognitionObject LiftRodButtonRo;
         public RecognitionObject ExitFishingButtonRo;
 
         public AutoFishingAssets()
@@ -36,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             {
                 Name = "BaitButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "bait.png"),
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "switch_bait.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
                     info.CaptureAreaRect.Width / 2,
@@ -49,6 +50,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                 Name = "WaitBiteButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "wait_bite.png"),
+                RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
+                    info.CaptureAreaRect.Width / 2,
+                    info.CaptureAreaRect.Height / 4),
+                Threshold = 0.7,
+                DrawOnWindow = true
+            }.InitTemplate();
+            LiftRodButtonRo = new RecognitionObject
+            {
+                Name = "LiftRodButton",
+                RecognitionType = RecognitionTypes.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "lift_rod.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
                     info.CaptureAreaRect.Width / 2,
