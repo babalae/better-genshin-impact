@@ -5,6 +5,8 @@ namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
+    public static string Version = "0.12.0";
+
     public static string StartUpPath { get; private set; } = AppContext.BaseDirectory;
 
     public static string AppPath { get; private set; } = Absolute("BetterGenshinImpact.exe");

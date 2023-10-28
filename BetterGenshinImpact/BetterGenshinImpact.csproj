@@ -8,14 +8,18 @@
 		<UseWindowsForms>True</UseWindowsForms>
 		<LangVersion>11.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <None Remove="Assets\drag.png" />
+	  <None Remove="Assets\logo.png" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Resource Include="Assets\drag.png" />
+	  <Resource Include="Assets\logo.png" />
+	  <Content Include="Assets\logo.ico" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Service.Interface;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -14,6 +15,7 @@ namespace BetterGenshinImpact.ViewModel
     {
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly IConfigService _configService;
+        public string Title => $"BetterGI · 更好的原神 · {Global.Version}";
 
         public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
         {
@@ -25,7 +27,7 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private void OnLoaded()
         {
-            _logger.LogInformation("更好的原神({Text}) Alpha {Ver}","内测版", 2.2);
+            _logger.LogInformation("更好的原神 {Version}", Global.Version);
         }
 
         [RelayCommand]

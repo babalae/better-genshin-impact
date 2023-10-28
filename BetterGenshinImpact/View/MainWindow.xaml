@@ -36,8 +36,7 @@
             x:Name="RootNavigation" Grid.Row="1"
             OpenPaneLength="150"
             IsBackButtonVisible="Collapsed"
-            IsPaneToggleVisible="True"
-            >
+            IsPaneToggleVisible="True">
             <!--<ui:NavigationView.AutoSuggestBox>
                 <ui:AutoSuggestBox x:Name="AutoSuggestBox" PlaceholderText="Search">
                     <ui:AutoSuggestBox.Icon>
@@ -99,7 +98,7 @@
                 <ui:NavigationViewItem
                     Content="设置"
                     NavigationCacheMode="Enabled"
-                    TargetPageType="{x:Type pages:CommonSettingsPage}" >
+                    TargetPageType="{x:Type pages:CommonSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Settings24" />
                     </ui:NavigationViewItem.Icon>
@@ -108,8 +107,9 @@
         </ui:NavigationView>
 
         <ui:TitleBar
-            Title="BetterGI · 更好的原神 · 0.11"
-            Grid.Row="0" />
+            Title="{Binding Title, Mode=OneWay}"
+            Grid.Row="0"
+            Icon="pack://application:,,,/Assets/logo.png" />
 
     </Grid>
 </ui:FluentWindow>
