@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
             {
                 Name = "F",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoPick", "F.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "F.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2,
                     (int)(330 * info.AssetScale),
                     info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
             {
                 Name = "ChatIcon",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoSkip", "option.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "option.png"),
                 DrawOnWindow = false,
                 DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();
@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
             {
                 Name = "SettingsIcon",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoPick", "settings.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "settings.png"),
                 DrawOnWindow = false,
                 DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();

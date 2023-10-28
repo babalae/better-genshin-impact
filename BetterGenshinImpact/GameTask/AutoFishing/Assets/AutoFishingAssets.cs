@@ -25,7 +25,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             {
                 Name = "SpaceButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "space.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "space.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 3,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 5,
                     info.CaptureAreaRect.Width / 3,
@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             {
                 Name = "BaitButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "switch_bait.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "switch_bait.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
                     info.CaptureAreaRect.Width / 2,
@@ -49,7 +49,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             {
                 Name = "WaitBiteButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "wait_bite.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "wait_bite.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
                     info.CaptureAreaRect.Width / 2,
@@ -61,7 +61,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             {
                 Name = "LiftRodButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "lift_rod.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "lift_rod.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4,
                     info.CaptureAreaRect.Width / 2,
@@ -76,7 +76,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
             {
                 Name = "ExitFishingButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", "exit_fishing.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "exit_fishing.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - w,
                     info.CaptureAreaRect.Height - h,
                     w,

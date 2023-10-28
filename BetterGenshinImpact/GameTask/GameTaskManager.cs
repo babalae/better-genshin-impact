@@ -70,7 +70,7 @@ namespace BetterGenshinImpact.GameTask
         /// <param name="flags"></param>
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
-        public static Mat LoadAssertImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
+        public static Mat LoadAssetImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
         {
             var info = TaskContext.Instance().SystemInfo;
             var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{info.GameScreenSize.Width}x{info.GameScreenSize.Height}");

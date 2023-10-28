@@ -39,14 +39,14 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "ConfirmButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\确定.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\确定.png"),
                 DrawOnWindow = true
             }.InitTemplate();
             RoundEndButtonRo = new RecognitionObject
             {
                 Name = "RoundEndButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\回合结束.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\回合结束.png"),
                 RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 5, info.CaptureAreaRect.Height),
                 DrawOnWindow = true
             }.InitTemplate();
@@ -54,7 +54,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "ElementalTuningConfirmButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\元素调和.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\元素调和.png"),
                 RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height/2, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height/2),
                 Threshold = 0.9,
                 DrawOnWindow = true
@@ -63,7 +63,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "ExitDuelButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\退出挑战.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\退出挑战.png"),
                 RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 2, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 2),
                 DrawOnWindow = true
             }.InitTemplate();
@@ -71,7 +71,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "InOpponentAction",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\对方行动中.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\对方行动中.png"),
                 RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 5, info.CaptureAreaRect.Height),
                 DrawOnWindow = true
             }.InitTemplate();
@@ -79,7 +79,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "EndPhase",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\回合结算阶段.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\回合结算阶段.png"),
                 RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 5, info.CaptureAreaRect.Height),
                 DrawOnWindow = true
             }.InitTemplate();
@@ -87,7 +87,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "ElementalDiceLackWarning",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\元素骰子不足.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\元素骰子不足.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, 0,
                     info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
                 DrawOnWindow = true
@@ -96,18 +96,18 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "CharacterTakenOut",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色死亡.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色死亡.png"),
                 DrawOnWindow = true
             }.InitTemplate();
 
 
-            CharacterDefeatedMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色被打败.png", ImreadModes.Grayscale);
+            CharacterDefeatedMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色被打败.png", ImreadModes.Grayscale);
 
             InCharacterPickRo = new RecognitionObject
             {
                 Name = "InCharacterPick",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\出战角色.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\出战角色.png"),
                 RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height / 2, 
                     info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 2),
@@ -117,39 +117,39 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
             {
                 Name = "CharacterHpUpper",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色血量上方.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色血量上方.png"),
                 DrawOnWindow = true
             }.InitTemplate();
 
 
-            CharacterStatusFreezeMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色状态_冻结.png", ImreadModes.Grayscale);
-            CharacterStatusDizzinessMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\角色状态_水泡.png", ImreadModes.Grayscale);
-            CharacterEnergyOnMat = GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"other\满能量.png", ImreadModes.Grayscale);
+            CharacterStatusFreezeMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色状态_冻结.png", ImreadModes.Grayscale);
+            CharacterStatusDizzinessMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色状态_水泡.png", ImreadModes.Grayscale);
+            CharacterEnergyOnMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\满能量.png", ImreadModes.Grayscale);
 
             // 投掷期间的骰子
             RollPhaseDiceMats = new Dictionary<string, Mat>()
             {
-                { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_anemo.png", ImreadModes.Grayscale) },
-                { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_electro.png", ImreadModes.Grayscale) },
-                { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_dendro.png", ImreadModes.Grayscale) },
-                { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_hydro.png", ImreadModes.Grayscale) },
-                { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_pyro.png", ImreadModes.Grayscale) },
-                { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_cryo.png", ImreadModes.Grayscale) },
-                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_geo.png", ImreadModes.Grayscale) },
-                { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\roll_omni.png", ImreadModes.Grayscale) },
+                { "anemo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_anemo.png", ImreadModes.Grayscale) },
+                { "electro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_electro.png", ImreadModes.Grayscale) },
+                { "dendro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_dendro.png", ImreadModes.Grayscale) },
+                { "hydro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_hydro.png", ImreadModes.Grayscale) },
+                { "pyro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_pyro.png", ImreadModes.Grayscale) },
+                { "cryo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_cryo.png", ImreadModes.Grayscale) },
+                { "geo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_geo.png", ImreadModes.Grayscale) },
+                { "omni", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\roll_omni.png", ImreadModes.Grayscale) },
             };
 
             // 主界面骰子
             ActionPhaseDiceMats = new Dictionary<string, Mat>()
             {
-                { "anemo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_anemo.png", ImreadModes.Grayscale) },
-                { "electro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_electro.png", ImreadModes.Grayscale) },
-                { "dendro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_dendro.png", ImreadModes.Grayscale) },
-                { "hydro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_hydro.png", ImreadModes.Grayscale) },
-                { "pyro", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_pyro.png", ImreadModes.Grayscale) },
-                { "cryo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_cryo.png", ImreadModes.Grayscale) },
-                { "geo", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_geo.png", ImreadModes.Grayscale) },
-                { "omni", GameTaskManager.LoadAssertImage("AutoGeniusInvokation", @"dice\action_omni.png", ImreadModes.Grayscale) },
+                { "anemo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_anemo.png", ImreadModes.Grayscale) },
+                { "electro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_electro.png", ImreadModes.Grayscale) },
+                { "dendro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_dendro.png", ImreadModes.Grayscale) },
+                { "hydro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_hydro.png", ImreadModes.Grayscale) },
+                { "pyro", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_pyro.png", ImreadModes.Grayscale) },
+                { "cryo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_cryo.png", ImreadModes.Grayscale) },
+                { "geo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_geo.png", ImreadModes.Grayscale) },
+                { "omni", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_omni.png", ImreadModes.Grayscale) },
             };
         }
     }

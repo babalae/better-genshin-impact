@@ -377,7 +377,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 Name = "ChooseBait",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssertImage("AutoFishing", $"bait\\{_selectedBaitName}.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{_selectedBaitName}.png"),
                 Threshold = _selectedBaitName == "redrot bait" ? 0.92 : 0.9,  // redrot bait 老是识别错误，两种饵料太像了
                 DrawOnWindow = false
             }.InitTemplate();
