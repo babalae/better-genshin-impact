@@ -197,7 +197,7 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="自动提竿、自动完成钓鱼进度" />
+                        Text="自动识别鱼类选择鱼饵，全自动抛竿、提竿、完成钓鱼进度" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -221,13 +221,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="愿者上钩 - 自动抛竿" />
+                        Text="自动选择鱼饵并抛竿" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="自动循环选择饵料并抛竿 【开发中..】" />
+                        Text="基于 AI 技术（YOLOv8）的鱼类识别，暂不支持须弥、枫丹鱼类" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -249,13 +249,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="愿者上钩 - 超时时间" />
+                        Text="上钩等待超时时间" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="超过这个时间将自动提竿，并重新选择鱼饵重新抛竿" />
+                        Text="超过这个时间将自动提竿，并重新识别并选择鱼饵进行抛竿" />
                     <ui:NumberBox
                         Grid.Row="0"
                         Grid.RowSpan="2"
