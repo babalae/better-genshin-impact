@@ -43,7 +43,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                     info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height / 4),
                 Threshold = 0.7,
-                DrawOnWindow = true
+                DrawOnWindow = false
             }.InitTemplate();
             WaitBiteButtonRo = new RecognitionObject
             {
@@ -55,7 +55,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                     info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height / 4),
                 Threshold = 0.7,
-                DrawOnWindow = true
+                DrawOnWindow = false
             }.InitTemplate();
             LiftRodButtonRo = new RecognitionObject
             {
@@ -67,7 +67,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                     info.CaptureAreaRect.Width / 2,
                     info.CaptureAreaRect.Height / 4),
                 Threshold = 0.7,
-                DrawOnWindow = true
+                DrawOnWindow = false
             }.InitTemplate();
 
             var w = (int)(140 * info.AssetScale);
@@ -82,7 +82,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing.Assets
                     w,
                     h),
                 Threshold = 0.8,
-                DrawOnWindow = true
+                DrawOnWindow = false
             }.InitTemplate();
         }
     }

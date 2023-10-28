@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using Compunet.YoloV8.Data;
 using OpenCvSharp;
 
@@ -94,5 +95,61 @@ public class Fishpond
     public List<OneFish> FilterByBaitName(string baitName)
     {
         return Fishes.Where(fish => fish.FishType.BaitName == baitName).ToList();
+    }
+
+    public OneFish? FilterByBaitNameAndRecently(string baitName, Rect prevTargetFishRect)
+    {
+        var fishes = FilterByBaitName(baitName);
+        if (fishes.Count == 0)
+        {
+            return null;
+        }
+
+        var min = double.MaxValue;
+        var c1 = prevTargetFishRect.GetCenterPoint();
+        OneFish? result = null;
+        foreach (var fish in fishes)
+        {
+            var c2 = fish.Rect.GetCenterPoint();
+            var distance = Math.Sqrt(Math.Pow(c1.X - c2.X, 2) + Math.Pow(c1.Y - c2.Y, 2));
+            if (distance < min)
+            {
+                min = distance;
+                result = fish;
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 最多的鱼吃的鱼饵名称
+    /// </summary>
+    /// <returns></returns>
+    public string MostMatchBait()
+    {
+        Dictionary<string, int> dict = new();
+        foreach (var fish in Fishes)
+        {
+            if (dict.ContainsKey(fish.FishType.BaitName))
+            {
+                dict[fish.FishType.BaitName]++;
+            }
+            else
+            {
+                dict[fish.FishType.BaitName] = 1;
+            }
+        }
+
+        var max = 0;
+        var result = "";
+        foreach (var (key, value) in dict)
+        {
+            if (value > max)
+            {
+                max = value;
+                result = key;
+            }
+        }
+        return result;
     }
 }
