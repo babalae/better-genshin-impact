@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using WindowsInput;
@@ -47,6 +48,7 @@ public class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         // 找左上角剧情自动的按钮
         using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
         if (!foundRectArea.IsEmpty())
@@ -55,8 +57,34 @@ public class AutoSkipTrigger : ITaskTrigger
             {
                 Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.SPACE);
             }
+
+            var dailyRewardIconRa = content.CaptureRectArea.Find(_autoSkipAssets.DailyRewardIconRo);
+            if (!dailyRewardIconRa.IsEmpty())
+            {
+                var config = TaskContext.Instance().Config.AutoSkipConfig;
+                var textRect = new Rect(dailyRewardIconRa.X + dailyRewardIconRa.Width, dailyRewardIconRa.Y, (int)(config.ChatOptionTextWidth * assetScale), dailyRewardIconRa.Height);
+                using var mat = new Mat(content.CaptureRectArea.SrcMat, textRect);
+                // 只提取橙色
+                using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 504));
+                var text = OcrFactory.Paddle.Ocr(bMat);
+
+                if (text.Contains("每日委托"))
+                {
+                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                    {
+                        _logger.LogInformation("自动选择：{Text}", text);
+                    }
+
+                    dailyRewardIconRa.ClickCenter();
+                }
+
+                _prevClickFrameIndex = content.FrameIndex;
+                dailyRewardIconRa.Dispose();
+                return;
+            }
+
             // 找右下的对话选项按钮
-            content.CaptureRectArea.Find(_autoSkipAssets.OptionButtonRo, (optionButtonRectArea) =>
+            content.CaptureRectArea.Find(_autoSkipAssets.OptionIconRo, (optionButtonRectArea) =>
             {
                 optionButtonRectArea.ClickCenter();
 

@@ -1,16 +1,15 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Drawing;
 using System.Text.RegularExpressions;
-using BetterGenshinImpact.Helpers;
-using OpenCvSharp.Extensions;
 using Point = OpenCvSharp.Point;
-using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
@@ -280,7 +279,7 @@ public class RectArea : IDisposable
                 roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
-            var text = OcrFactory.MediaOcr.Ocr(roi.ToBitmap());
+            var text = OcrFactory.Media.Ocr(roi.ToBitmap());
             text = StringUtils.RemoveAllSpace(text);
             // 替换可能出错的文本
             foreach (var entry in ro.ReplaceDictionary)

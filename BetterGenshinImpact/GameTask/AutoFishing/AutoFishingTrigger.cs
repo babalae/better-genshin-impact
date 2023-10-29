@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private readonly IOcrService _ocrService = OcrFactory.MediaOcr;
+        private readonly IOcrService _ocrService = OcrFactory.Media;
         private readonly YoloV8 _predictor = new(Global.Absolute("Config\\Model\\Fish\\bgi_fish.onnx"));
 
         public string Name => "自动钓鱼";

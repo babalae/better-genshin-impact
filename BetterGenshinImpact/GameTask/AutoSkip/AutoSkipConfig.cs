@@ -26,5 +26,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// 快速跳过对话
         /// </summary>
         [ObservableProperty] private bool _quicklySkipConversationsEnabled = true;
+
+        public int ChatOptionTextWidth { get; set; }= 280;
     }
 }

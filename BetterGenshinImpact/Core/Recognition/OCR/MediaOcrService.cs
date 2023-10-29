@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Storage.Streams;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR
 {
-    public class MediaOcr : BetterGenshinImpact.Core.Recognition.OCR.IOcrService
+    public class MediaOcrService : IOcrService
     {
         private static readonly OcrEngine Engine =
             OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans-CN"));
@@ -109,9 +110,14 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
             }
             else
             {
-                Debug.WriteLine("文字识别结果：" + ocrResult.Text);
+                Debug.WriteLine("MediaOcr结果: " + ocrResult.Text);
                 return ocrResult.Text;
             }
+        }
+
+        public string Ocr(Mat mat)
+        {
+            throw new NotImplementedException();
         }
     }
 }

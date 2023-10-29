@@ -8,13 +8,16 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
         {
             switch (type)
             {
-                case OcrEngineTypes.MediaOcr:
-                    return new BetterGenshinImpact.Core.Recognition.OCR.MediaOcr();
+                case OcrEngineTypes.Media:
+                    return new MediaOcrService();
+                case OcrEngineTypes.Paddle:
+                    return new PaddleOcrService();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
         }
 
-        public static IOcrService MediaOcr = Create(OcrEngineTypes.MediaOcr);
+        public static IOcrService Media = Create(OcrEngineTypes.Media);
+        public static IOcrService Paddle = Create(OcrEngineTypes.Paddle);
     }
 }

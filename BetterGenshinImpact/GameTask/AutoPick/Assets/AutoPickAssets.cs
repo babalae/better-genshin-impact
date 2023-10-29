@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
             {
                 Name = "ChatIcon",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "option.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
                 DrawOnWindow = false,
                 DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();
@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
             {
                 Name = "SettingsIcon",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "settings.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "icon_settings.png"),
                 DrawOnWindow = false,
                 DrawOnWindowPen = new Pen(Color.Chocolate, 2)
             }.InitTemplate();

@@ -7,8 +7,11 @@ namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
 public class AutoSkipAssets
 {
     public RecognitionObject StopAutoButtonRo;
-    public RecognitionObject OptionButtonRo;
     public RecognitionObject MenuRo;
+
+    public RecognitionObject OptionIconRo;
+    public RecognitionObject DailyRewardIconRo;
+    public RecognitionObject ExploreIconRo;
 
     public Mat BinaryStopAutoButtonMat;
 
@@ -33,14 +36,31 @@ public class AutoSkipAssets
 
 
         Cv2.Threshold(BinaryStopAutoButtonMat, BinaryStopAutoButtonMat, 0, 255, ThresholdTypes.BinaryInv);
-        OptionButtonRo = new RecognitionObject
+        OptionIconRo = new RecognitionObject
         {
             Name = "OptionButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "option.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
+        DailyRewardIconRo = new RecognitionObject
+        {
+            Name = "OptionButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_daily_reward.png"),
+            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        ExploreIconRo = new RecognitionObject
+        {
+            Name = "OptionButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_explore.png"),
+            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+
         MenuRo = new RecognitionObject
         {
             Name = "Menu",
