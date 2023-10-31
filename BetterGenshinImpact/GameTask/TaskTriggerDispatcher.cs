@@ -10,6 +10,7 @@ using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using System.Windows;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -142,8 +143,6 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查游戏是否在前台
-                var sw = new Stopwatch();
-                sw.Start();
                 var active = SystemControl.IsGenshinImpactActive();
                 var maskWindow = MaskWindow.Instance();
                 if (!active)
@@ -182,9 +181,6 @@ namespace BetterGenshinImpact.GameTask
                         return;
                     }
                 }
-                sw.Stop();
-                Debug.WriteLine("检查游戏是否在前台耗时:" + sw.ElapsedMilliseconds);
-
 
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
@@ -198,12 +194,11 @@ namespace BetterGenshinImpact.GameTask
 
 
 
-                sw.Reset();
-                sw.Start();
+                var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
                 var bitmap = GameCapture.Capture();
-                sw.Stop();
-                Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
+                speedTimer.Record("截图");
+
                 if (bitmap == null)
                 {
                     _logger.LogWarning("截图失败!");
@@ -221,17 +216,11 @@ namespace BetterGenshinImpact.GameTask
                 {
                     foreach (var trigger in _triggers.Where(trigger => trigger.IsEnabled))
                     {
-                        sw.Reset();
-                        sw.Start();
                         trigger.OnCapture(content);
-                        sw.Stop();
-                        if (sw.ElapsedMilliseconds > 0)
-                        {
-                            Debug.WriteLine($"{trigger.Name}耗时:" + sw.ElapsedMilliseconds);
-                        }
+                        speedTimer.Record(trigger.Name);
                     }
                 }
-
+                speedTimer.DebugPrint();
                 //if (_frameIndex / content.FrameRate % 2 == 0)
                 //{
                 //    GC.Collect();
