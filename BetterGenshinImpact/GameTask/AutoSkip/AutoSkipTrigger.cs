@@ -58,30 +58,44 @@ public class AutoSkipTrigger : ITaskTrigger
                 Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.SPACE);
             }
 
+            // 领取每日委托奖励
             var dailyRewardIconRa = content.CaptureRectArea.Find(_autoSkipAssets.DailyRewardIconRo);
             if (!dailyRewardIconRa.IsEmpty())
             {
                 var config = TaskContext.Instance().Config.AutoSkipConfig;
                 var textRect = new Rect(dailyRewardIconRa.X + dailyRewardIconRa.Width, dailyRewardIconRa.Y, (int)(config.ChatOptionTextWidth * assetScale), dailyRewardIconRa.Height);
-                using var mat = new Mat(content.CaptureRectArea.SrcMat, textRect);
+                using var mat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+                //using var mat = new Mat(content.CaptureRectArea.SrcMat, textRect);
                 // 只提取橙色
-                using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 504));
-                var text = OcrFactory.Paddle.Ocr(bMat);
+                //using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 504));
+                //var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
+                //if (whiteCount * 1.0 / (bMat.Width * bMat.Height) <= 0.1)
+                //{
+                //    dailyRewardIconRa.Dispose();
+                //    // 凯瑟琳聊天框不自动退出
+                //    return;
+                //}
 
-                if (text.Contains("每日委托"))
-                {
-                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
-                    {
-                        _logger.LogInformation("自动选择：{Text}", text);
-                    }
+                var text = OcrFactory.Paddle.Ocr(mat);
 
-                    dailyRewardIconRa.ClickCenter();
-                }
+                //if (text.Contains("每日委托"))
+                //{
+                //    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                //    {
+                //        _logger.LogInformation("自动选择：{Text}", text);
+                //    }
+
+                //    dailyRewardIconRa.ClickCenter();
+                //}
+                _logger.LogInformation("自动选择：{Text}", text);
 
                 _prevClickFrameIndex = content.FrameIndex;
                 dailyRewardIconRa.Dispose();
                 return;
             }
+
+            // 领取探索派遣奖励
+
 
             // 找右下的对话选项按钮
             content.CaptureRectArea.Find(_autoSkipAssets.OptionIconRo, (optionButtonRectArea) =>

@@ -35,9 +35,10 @@
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
-		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.mkl" Version="2.5.1" />
+		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
+		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.5.1" />
 		<PackageReference Include="Sdcb.PaddleOCR" Version="2.7.0" />
-		<PackageReference Include="Sdcb.PaddleOCR.Models.Local" Version="2.7.0" />
+		<PackageReference Include="Sdcb.PaddleOCR.Models.Online" Version="2.7.0.1" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />

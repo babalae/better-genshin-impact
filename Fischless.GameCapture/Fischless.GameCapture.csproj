@@ -13,11 +13,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
-		<PackageReference Include="Vanara.PInvoke.DwmApi" Version="3.4.16" />
-		<PackageReference Include="Vanara.PInvoke.Gdi32" Version="3.4.16" />
-		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.16" />
-		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.16" />
-		<PackageReference Include="Vanara.Windows.Extensions" Version="3.4.16" />
+		<PackageReference Include="Vanara.PInvoke.DwmApi" Version="3.4.17" />
+		<PackageReference Include="Vanara.PInvoke.Gdi32" Version="3.4.17" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.17" />
+		<PackageReference Include="Vanara.Windows.Extensions" Version="3.4.17" />
 	</ItemGroup>
 
 </Project>

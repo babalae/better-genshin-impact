@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Debug.WriteLine(e.Message);
                 return null;
             }
         }
@@ -56,7 +56,7 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Debug.WriteLine(e.Message);
                 return null;
             }
         }
