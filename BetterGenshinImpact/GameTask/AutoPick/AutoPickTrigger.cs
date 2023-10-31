@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using SharpDX;
 using WindowsInput;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
@@ -71,8 +72,12 @@ public class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
         content.CaptureRectArea.Find(_autoPickAssets.FRo, foundRectArea =>
         {
+            stopwatch.Stop();
+            Debug.WriteLine($"识别到 F 耗时 {stopwatch.ElapsedMilliseconds}ms");
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
@@ -116,7 +121,7 @@ public class AutoPickTrigger : ITaskTrigger
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
-                    //Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                    Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
                     return;
                 }
 
@@ -132,7 +137,7 @@ public class AutoPickTrigger : ITaskTrigger
                 }
 
                 LogPick(content, text);
-                //Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
             }
         });
     }

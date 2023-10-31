@@ -1,17 +1,10 @@
 ﻿using OpenCvSharp;
+using Sdcb.PaddleInference;
+using Sdcb.PaddleOCR;
+using Sdcb.PaddleOCR.Models.Online;
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using Sdcb.PaddleOCR;
-using Sdcb.PaddleOCR.Models;
-using Sdcb.PaddleOCR.Models.Online;
-using Sdcb.PaddleOCR.Models.Details;
-using System.Threading;
-using BetterGenshinImpact.Core.Config;
-using Sdcb.PaddleInference;
-using Vanara.PInvoke;
-using Microsoft.ML.OnnxRuntime.Tensors;
-using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 

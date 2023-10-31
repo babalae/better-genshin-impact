@@ -18,9 +18,9 @@ namespace BetterGenshinImpact.GameTask.AutoPick.Assets
                 Name = "F",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "F.png"),
-                RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2,
+                RegionOfInterest = new Rect((int)(1090 * info.AssetScale),
                     (int)(330 * info.AssetScale),
-                    info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2,
+                    (int)(60 * info.AssetScale),
                     (int)(420 * info.AssetScale)),
                 DrawOnWindow = false
             }.InitTemplate();

@@ -64,29 +64,29 @@ public class AutoSkipTrigger : ITaskTrigger
             {
                 var config = TaskContext.Instance().Config.AutoSkipConfig;
                 var textRect = new Rect(dailyRewardIconRa.X + dailyRewardIconRa.Width, dailyRewardIconRa.Y, (int)(config.ChatOptionTextWidth * assetScale), dailyRewardIconRa.Height);
-                using var mat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
-                //using var mat = new Mat(content.CaptureRectArea.SrcMat, textRect);
+                //using var mat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+                using var mat = new Mat(content.CaptureRectArea.SrcMat, textRect);
                 // 只提取橙色
-                //using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 504));
-                //var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
-                //if (whiteCount * 1.0 / (bMat.Width * bMat.Height) <= 0.1)
-                //{
-                //    dailyRewardIconRa.Dispose();
-                //    // 凯瑟琳聊天框不自动退出
-                //    return;
-                //}
+                using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 504));
+                var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
+                if (whiteCount * 1.0 / (bMat.Width * bMat.Height) <= 0.1)
+                {
+                    dailyRewardIconRa.Dispose();
+                    // 凯瑟琳聊天框不自动退出
+                    return;
+                }
 
-                var text = OcrFactory.Paddle.Ocr(mat);
+                var text = OcrFactory.Paddle.Ocr(bMat);
 
-                //if (text.Contains("每日委托"))
-                //{
-                //    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
-                //    {
-                //        _logger.LogInformation("自动选择：{Text}", text);
-                //    }
+                if (text.Contains("每日委托"))
+                {
+                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                    {
+                        _logger.LogInformation("自动选择：{Text}", text);
+                    }
 
-                //    dailyRewardIconRa.ClickCenter();
-                //}
+                    dailyRewardIconRa.ClickCenter();
+                }
                 _logger.LogInformation("自动选择：{Text}", text);
 
                 _prevClickFrameIndex = content.FrameIndex;
