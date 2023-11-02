@@ -47,13 +47,13 @@ public class AutoPickTrigger : ITaskTrigger
     public void Init()
     {
         IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
-        var blackListJson = Global.ReadAllTextIfExist("Config\\pick_black_lists.json");
+        var blackListJson = Global.ReadAllTextIfExist("User\\pick_black_lists.json");
         if (!string.IsNullOrEmpty(blackListJson))
         {
             _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson) ?? new List<string>();
         }
 
-        var whiteListJson = Global.ReadAllTextIfExist("Config\\pick_white_lists.json");
+        var whiteListJson = Global.ReadAllTextIfExist("User\\pick_white_lists.json");
         if (!string.IsNullOrEmpty(whiteListJson))
         {
             _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson) ?? new List<string>();

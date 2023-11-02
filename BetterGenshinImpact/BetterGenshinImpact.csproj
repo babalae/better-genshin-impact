@@ -9,6 +9,7 @@
 		<LangVersion>11.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+		<AssemblyName>BetterGI</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -67,6 +68,57 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="Assets\Model\Fish\bgi_fish.onnx">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Fish\label.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdiparams">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdiparams.info">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdmodel">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\inference.pdiparams">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\inference.pdiparams.info">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\inference.pdmodel">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\._inference.pdmodel">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\inference.pdiparams">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\inference.pdiparams.info">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\inference.pdmodel">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ppocr_keys_v1.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\test_ocr.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Yap\all_list.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Yap\index_2_word.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Yap\model_training.onnx">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\lift_rod.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -214,6 +266,22 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\2.刻晴雷神甘雨.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\pick_black_lists.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\pick_white_lists.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Assets\Model\" />
 	</ItemGroup>
 
 </Project>

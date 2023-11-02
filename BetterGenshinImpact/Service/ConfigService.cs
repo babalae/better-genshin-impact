@@ -54,7 +54,7 @@ public class ConfigService : IConfigService
         _rwLock.EnterReadLock();
         try
         {
-            var filePath = Global.Absolute(@"Config/config.json");
+            var filePath = Global.Absolute(@"User/config.json");
             if (!File.Exists(filePath))
             {
                 return new AllConfig();
@@ -81,7 +81,7 @@ public class ConfigService : IConfigService
         _rwLock.EnterWriteLock();
         try
         {
-            var path = Global.Absolute("Config");
+            var path = Global.Absolute("User");
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);

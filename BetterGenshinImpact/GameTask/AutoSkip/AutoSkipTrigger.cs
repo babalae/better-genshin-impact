@@ -87,7 +87,6 @@ public class AutoSkipTrigger : ITaskTrigger
 
                     dailyRewardIconRa.ClickCenter();
                 }
-                _logger.LogInformation("自动选择：{Text}", text);
 
                 _prevClickFrameIndex = content.FrameIndex;
                 dailyRewardIconRa.Dispose();

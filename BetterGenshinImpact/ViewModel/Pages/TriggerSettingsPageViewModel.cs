@@ -33,12 +33,12 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     [RelayCommand]
     private void OnEditBlacklist()
     {
-        Process.Start("notepad.exe", Global.Absolute(@"Config\pick_black_lists.json"));
+        Process.Start("notepad.exe", Global.Absolute(@"User\pick_black_lists.json"));
     }
 
     [RelayCommand]
     private void OnEditWhitelist()
     {
-        Process.Start("notepad.exe", Global.Absolute(@"Config\pick_white_lists.json"));
+        Process.Start("notepad.exe", Global.Absolute(@"User\pick_white_lists.json"));
     }
 }

@@ -44,7 +44,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     private string[] LoadCustomScript()
     {
-        var files = Directory.GetFiles(Global.Absolute(@"Config\AutoGeniusInvokation"), "*.*",
+        var files = Directory.GetFiles(Global.Absolute(@"User\AutoGeniusInvokation"), "*.*",
             SearchOption.AllDirectories);
 
         var strategyList = new string[files.Length];
@@ -87,7 +87,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                     return;
                 }
 
-                var path = Global.Absolute(@"Config\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
+                var path = Global.Absolute(@"User\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
 
                 if (!File.Exists(path))
                 {

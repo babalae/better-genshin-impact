@@ -1,16 +1,15 @@
-﻿using BetterGenshinImpact.View;
+﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View;
+using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Fischless.GameCapture;
 using Vanara.PInvoke;
-using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
-using System.Windows;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask
 {

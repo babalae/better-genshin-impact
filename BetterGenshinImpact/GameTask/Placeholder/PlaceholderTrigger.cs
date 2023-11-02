@@ -31,7 +31,7 @@ public class TestTrigger : ITaskTrigger
 
     //private readonly AutoGeniusInvokationAssets _autoGeniusInvokationAssets;
 
-    //private readonly YoloV8 _predictor = new(Global.Absolute("Config\\Model\\Fish\\bgi_fish.onnx"));
+    //private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Fish\\bgi_fish.onnx"));
 
     public TestTrigger()
     {

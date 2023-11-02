@@ -6,7 +6,10 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using OpenCvSharp;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel
@@ -28,6 +31,11 @@ namespace BetterGenshinImpact.ViewModel
         private void OnLoaded()
         {
             _logger.LogInformation("更好的原神 {Version}", Global.Version);
+            Task.Run(() =>
+            {
+                var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
+                Debug.WriteLine("PaddleOcr预热结果:" + s);
+            });
         }
 
         [RelayCommand]

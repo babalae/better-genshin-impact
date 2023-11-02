@@ -43,6 +43,6 @@
         </StackPanel>
 
         <ui:Button x:Name="StartCaptureTest"  Margin="0,20,0,0" Content="测试图像捕获" Command="{Binding StartCaptureTestCommand}" />
-        <!-- <ui:Button x:Name="SvtrTest"  Margin="0,20,0,0" Content="SVTR测试" Command="{Binding SvtrTestCommand}" /> -->
+        <ui:Button x:Name="Test"  Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />
     </StackPanel>
 </Page>

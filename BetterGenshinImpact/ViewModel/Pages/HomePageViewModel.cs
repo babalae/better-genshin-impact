@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Core;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
@@ -9,13 +8,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
 using System;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
-using Fischless.GameCapture;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -143,10 +140,8 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     {
     }
 
-    // [RelayCommand]
-    // private void OnSvtrTest()
-    // {
-    //     var mat = new Mat(Global.Absolute("Config\\Model\\Yap\\0_2_「甜甜花」的种子_bin_38x227.jpg"), ImreadModes.Grayscale);
-    //     new SvtrModelRunner().RunInferenceMore(mat);
-    // }
+    [RelayCommand]
+    private void OnTest()
+    {
+    }
 }
