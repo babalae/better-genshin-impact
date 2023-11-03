@@ -8,8 +8,6 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
         {
             switch (type)
             {
-                case OcrEngineTypes.Media:
-                    return new MediaOcrService();
                 case OcrEngineTypes.Paddle:
                     return new PaddleOcrService();
                 default:
@@ -17,7 +15,7 @@ namespace BetterGenshinImpact.Core.Recognition.OCR
             }
         }
 
-        public static IOcrService Media = Create(OcrEngineTypes.Media);
+        // public static IOcrService Media = Create(OcrEngineTypes.Media);
         public static IOcrService Paddle = Create(OcrEngineTypes.Paddle);
     }
 }

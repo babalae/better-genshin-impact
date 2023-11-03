@@ -34,18 +34,18 @@ public class PaddleOcrService : IOcrService
         };
     }
 
-    public string Ocr(Bitmap bitmap)
+    public string Ocr(Mat mat)
     {
-        throw new NotImplementedException();
+        return OcrResult(mat).Text;
     }
 
-    public string Ocr(Mat mat)
+    public PaddleOcrResult OcrResult(Mat mat)
     {
         var stopwatch = new Stopwatch();
         stopwatch.Start();
         var result = _paddleOcrAll.Run(mat);
         stopwatch.Stop();
         Debug.WriteLine($"PaddleOcr 耗时 {stopwatch.ElapsedMilliseconds}ms 结果: {result.Text}");
-        return result.Text;
+        return result;
     }
 }

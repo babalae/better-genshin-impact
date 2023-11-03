@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text.Json;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.Model;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using SharpDX;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text.Json;
 using WindowsInput;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 

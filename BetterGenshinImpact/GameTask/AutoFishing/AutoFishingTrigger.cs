@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-        private readonly IOcrService _ocrService = OcrFactory.Media;
+        private readonly IOcrService _ocrService = OcrFactory.Paddle;
         private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Fish\\bgi_fish.onnx"));
 
         public string Name => "自动钓鱼";
@@ -744,10 +744,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 content.CaptureRectArea.SrcMat.Height / 2);
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
             var wordCaptureMat = new Mat(content.CaptureRectArea.SrcMat, liftingWordsAreaRect);
-            var wordCaptureOriginMat = wordCaptureMat.Clone();
-            var currentBiteWordsTips =
-                AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat,
-                    liftingWordsAreaRect);
+            var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
             if (currentBiteWordsTips != Rect.Empty)
             {
                 if (_baseBiteTips == Rect.Empty)
@@ -784,7 +781,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             }
 
                             // OCR 提竿判断
-                            var text = _ocrService.Ocr(wordCaptureOriginMat.ToBitmap());
+                            var text = _ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat, 
+                                new Rect(currentBiteWordsTips.X+ liftingWordsAreaRect.X, 
+                                    currentBiteWordsTips.Y+liftingWordsAreaRect.Y, 
+                                    currentBiteWordsTips.Width, currentBiteWordsTips.Height)));
                             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
                             {
                                 Simulation.SendInput.Mouse.LeftButtonClick();

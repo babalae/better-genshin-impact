@@ -40,6 +40,7 @@ public class AutoSkipTrigger : ITaskTrigger
     /// frame最好取模,应对极端场景
     /// </summary>
     private int _prevClickFrameIndex = -1;
+    private int _prevOtherClickFrameIndex = -1;
 
     public void OnCapture(CaptureContent content)
     {
@@ -80,7 +81,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
                 if (text.Contains("每日委托"))
                 {
-                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                    if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
                     {
                         _logger.LogInformation("自动选择：{Text}", text);
                     }
@@ -88,7 +89,7 @@ public class AutoSkipTrigger : ITaskTrigger
                     dailyRewardIconRa.ClickCenter();
                 }
 
-                _prevClickFrameIndex = content.FrameIndex;
+                _prevOtherClickFrameIndex = content.FrameIndex;
                 dailyRewardIconRa.Dispose();
                 return;
             }

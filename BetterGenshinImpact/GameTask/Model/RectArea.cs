@@ -279,7 +279,7 @@ public class RectArea : IDisposable
                 roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
-            var text = OcrFactory.Media.Ocr(roi.ToBitmap());
+            var text = OcrFactory.Paddle.Ocr(roi);
             text = StringUtils.RemoveAllSpace(text);
             // 替换可能出错的文本
             foreach (var entry in ro.ReplaceDictionary)

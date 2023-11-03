@@ -115,7 +115,7 @@ public class RecognitionObject
     /// <summary>
     /// OCR 引擎。可选，默认 Media.Ocr。
     /// </summary>
-    public OcrEngineTypes OcrEngine { get; set; } = OcrEngineTypes.Media;
+    public OcrEngineTypes OcrEngine { get; set; } = OcrEngineTypes.Paddle;
 
     /// <summary>
     /// 部分文字识别结果不准确，进行替换。可选。
