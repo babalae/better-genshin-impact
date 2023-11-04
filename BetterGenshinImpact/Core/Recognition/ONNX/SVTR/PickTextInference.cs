@@ -43,6 +43,8 @@ public class PickTextInference : ITextInference
 
     public string Inference(Mat mat)
     {
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
         // 将输入数据调整为 (1, 1, 32, 384) 形状的张量  
         var reshapedInputData = ToTensorUnsafe(mat);
 
@@ -81,7 +83,8 @@ public class PickTextInference : ITextInference
             lastWord = word;
         }
 
-        Debug.WriteLine("Yap模型识别结果:" + ans);
+        stopwatch.Stop();
+        Debug.WriteLine($"Yap模型识别 耗时{stopwatch.ElapsedMilliseconds}ms 结果: {ans}");
         return ans;
     }
 

@@ -30,5 +30,12 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         /// 1080p下拾取文字的终止偏移
         /// </summary>
         [ObservableProperty] private int _itemTextRightOffset = 400;
+
+        /// <summary>
+        /// 急速模式
+        /// 无视文字识别结果，直接拾取
+        /// </summary>
+
+        [ObservableProperty] private bool _fastModeEnabled = false;
     }
 }

@@ -67,6 +67,8 @@ public class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private int _prevClickFrameIndex = -1;
 
+    //private int _fastModePickCount = 0;
+
     public void OnCapture(CaptureContent content)
     {
         var stopwatch = new Stopwatch();
@@ -97,6 +99,18 @@ public class AutoPickTrigger : ITaskTrigger
                     isExcludeIcon = true;
                 }
             }
+
+            //if (config.FastModeEnabled && !isExcludeIcon)
+            //{
+            //    _fastModePickCount++;
+            //    if (_fastModePickCount > 2)
+            //    {
+            //        _fastModePickCount = 0;
+            //        LogPick(content, "急速拾取");
+            //        Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+            //    }
+            //    return;
+            //}
 
             // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
             // 计算出文字区域
