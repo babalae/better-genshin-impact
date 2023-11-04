@@ -9,6 +9,7 @@ using OpenCvSharp.Extensions;
 using System;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using Sdcb.PaddleOCR;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.Model;
@@ -97,6 +98,7 @@ public class RectArea : IDisposable
     {
     }
 
+
     public RectArea(int x, int y, int width, int height, RectArea? owner = null)
     {
         X = x;
@@ -125,17 +127,20 @@ public class RectArea : IDisposable
     {
     }
 
-
-    public RectArea(Mat mat, RectArea? owner = null)
+    public RectArea(Rect rect, RectArea? owner = null) : this(rect.X, rect.Y, rect.Width, rect.Height, owner)
     {
-        _srcMat = mat;
-        X = 0;
-        Y = 0;
-        Width = mat.Width;
-        Height = mat.Height;
-        Owner = owner;
-        CoordinateLevelNum = owner?.CoordinateLevelNum + 1 ?? 0;
     }
+
+    //public RectArea(Mat mat, RectArea? owner = null)
+    //{
+    //    _srcMat = mat;
+    //    X = 0;
+    //    Y = 0;
+    //    Width = mat.Width;
+    //    Height = mat.Height;
+    //    Owner = owner;
+    //    CoordinateLevelNum = owner?.CoordinateLevelNum + 1 ?? 0;
+    //}
 
     public Rect ConvertRelativePositionTo(int coordinateLevelNum)
     {
@@ -191,23 +196,6 @@ public class RectArea : IDisposable
     {
         return _srcBitmap != null || _srcMat != null;
     }
-
-    ///// <summary>
-    ///// 在本区域内查找目标图像
-    ///// </summary>
-    ///// <param name="targetImageMat"></param>
-    ///// <returns></returns>
-    //[Obsolete]
-    //public RectArea Find(Mat targetImageMat)
-    //{
-    //    if (!HasImage())
-    //    {
-    //        throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
-    //    }
-
-    //    var p = OldMatchTemplateHelper.FindSingleTarget(SrcGreyMat, targetImageMat);
-    //    return p is { X: > 0, Y: > 0 } ? new RectArea(targetImageMat, p.X - targetImageMat.Width / 2, p.Y - targetImageMat.Height / 2, this) : new RectArea();
-    //}
 
     /// <summary>
     /// 在本区域内查找识别对象
@@ -383,8 +371,28 @@ public class RectArea : IDisposable
     /// <returns></returns>
     public RectArea Crop(Rect rect)
     {
-        return new RectArea(SrcMat[rect], this);
+        return new RectArea(SrcMat[rect], rect.X, rect.Y, this);
     }
+
+    /// <summary>
+    /// 派生区域（无图片）
+    /// </summary>
+    /// <param name="rect"></param>
+    /// <returns></returns>
+    public RectArea Derive(Rect rect)
+    {
+        return new RectArea(rect, this);
+    }
+
+    /// <summary>
+    /// OCR识别
+    /// </summary>
+    /// <returns>所有结果</returns>
+    public PaddleOcrResult OcrResult()
+    {
+        return OcrFactory.Paddle.OcrResult(SrcGreyMat);
+    }
+
 
     public void Dispose()
     {

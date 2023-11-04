@@ -11,8 +11,11 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using OpenCvSharp;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -143,5 +146,10 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnTest()
     {
+        var result = OcrFactory.Paddle.OcrResult(new Mat("E:\\HuiTask\\更好的原神\\自动派遣\\Clip_20231030_235235.png", ImreadModes.Grayscale));
+        foreach (var region in result.Regions)
+        {
+            Debug.WriteLine($"{region.Text}");
+        }
     }
 }

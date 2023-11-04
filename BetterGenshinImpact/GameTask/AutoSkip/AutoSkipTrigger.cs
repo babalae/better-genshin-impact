@@ -3,11 +3,13 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Threading;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using WindowsInput;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -40,6 +42,7 @@ public class AutoSkipTrigger : ITaskTrigger
     /// frame最好取模,应对极端场景
     /// </summary>
     private int _prevClickFrameIndex = -1;
+
     private int _prevOtherClickFrameIndex = -1;
 
     public void OnCapture(CaptureContent content)
@@ -49,6 +52,7 @@ public class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
+        var config = TaskContext.Instance().Config.AutoSkipConfig;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         // 找左上角剧情自动的按钮
         using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
@@ -63,21 +67,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var dailyRewardIconRa = content.CaptureRectArea.Find(_autoSkipAssets.DailyRewardIconRo);
             if (!dailyRewardIconRa.IsEmpty())
             {
-                var config = TaskContext.Instance().Config.AutoSkipConfig;
-                var textRect = new Rect(dailyRewardIconRa.X + dailyRewardIconRa.Width, dailyRewardIconRa.Y, (int)(config.ChatOptionTextWidth * assetScale), dailyRewardIconRa.Height);
-                //using var mat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
-                using var mat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-                // 只提取橙色
-                using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 504));
-                var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
-                if (whiteCount * 1.0 / (bMat.Width * bMat.Height) <= 0.1)
-                {
-                    dailyRewardIconRa.Dispose();
-                    // 凯瑟琳聊天框不自动退出
-                    return;
-                }
-
-                var text = OcrFactory.Paddle.Ocr(bMat);
+                var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, dailyRewardIconRa, (int)(config.ChatOptionTextWidth * assetScale));
 
                 if (text.Contains("每日委托"))
                 {
@@ -87,15 +77,39 @@ public class AutoSkipTrigger : ITaskTrigger
                     }
 
                     dailyRewardIconRa.ClickCenter();
+                    dailyRewardIconRa.Dispose();
+                    return;
                 }
 
                 _prevOtherClickFrameIndex = content.FrameIndex;
                 dailyRewardIconRa.Dispose();
-                return;
             }
 
             // 领取探索派遣奖励
+            var exploreIconRa = content.CaptureRectArea.Find(_autoSkipAssets.ExploreIconRo);
+            if (!exploreIconRa.IsEmpty())
+            {
+                var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, exploreIconRa, (int)(config.ExpeditionOptionTextWidth * assetScale));
+                if (text.Contains("探索派遣"))
+                {
+                    if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
+                    {
+                        _logger.LogInformation("自动选择：{Text}", text);
+                    }
 
+                    exploreIconRa.ClickCenter();
+
+                    // 等待探索派遣界面打开
+                    Thread.Sleep(1000);
+                    new ExpeditionTask().Run(content);
+                    exploreIconRa.Dispose();
+                    return;
+                }
+
+                _prevOtherClickFrameIndex = content.FrameIndex;
+                exploreIconRa.Dispose();
+                return;
+            }
 
             // 找右下的对话选项按钮
             content.CaptureRectArea.Find(_autoSkipAssets.OptionIconRo, (optionButtonRectArea) =>
@@ -125,5 +139,30 @@ public class AutoSkipTrigger : ITaskTrigger
 
             // TODO 自动交付材料
         }
+    }
+
+    /// <summary>
+    /// 获取橙色选项的文字
+    /// </summary>
+    /// <param name="captureMat"></param>
+    /// <param name="foundIconRectArea"></param>
+    /// <returns></returns>
+    private string GetOrangeOptionText(Mat captureMat, RectArea foundIconRectArea, int chatOptionTextWidth)
+    {
+        var textRect = new Rect(foundIconRectArea.X + foundIconRectArea.Width, foundIconRectArea.Y, chatOptionTextWidth, foundIconRectArea.Height);
+        using var mat = new Mat(captureMat, textRect);
+        // 只提取橙色
+        using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
+        Cv2.ImWrite("bMat2.png", bMat);
+        var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
+        var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
+        if (rate < 0.1)
+        {
+            Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
+            return string.Empty;
+        }
+
+        var text = OcrFactory.Paddle.Ocr(bMat);
+        return text;
     }
 }

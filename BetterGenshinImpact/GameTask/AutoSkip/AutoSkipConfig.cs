@@ -28,5 +28,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         [ObservableProperty] private bool _quicklySkipConversationsEnabled = true;
 
         public int ChatOptionTextWidth { get; set; }= 280;
+
+        public int ExpeditionOptionTextWidth { get; set; } = 130;
     }
 }

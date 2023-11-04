@@ -38,7 +38,7 @@ public class AutoSkipAssets
         Cv2.Threshold(BinaryStopAutoButtonMat, BinaryStopAutoButtonMat, 0, 255, ThresholdTypes.BinaryInv);
         OptionIconRo = new RecognitionObject
         {
-            Name = "OptionButton",
+            Name = "OptionIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
@@ -46,19 +46,19 @@ public class AutoSkipAssets
         }.InitTemplate();
         DailyRewardIconRo = new RecognitionObject
         {
-            Name = "OptionButton",
+            Name = "DailyRewardIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_daily_reward.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
-            DrawOnWindow = false
+            DrawOnWindow = true
         }.InitTemplate();
         ExploreIconRo = new RecognitionObject
         {
-            Name = "OptionButton",
+            Name = "ExploreIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_explore.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
-            DrawOnWindow = false
+            DrawOnWindow = true
         }.InitTemplate();
 
         MenuRo = new RecognitionObject

@@ -138,4 +138,5 @@ public class SystemControl
 
         return (exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0;
     }
+
 }
