@@ -98,13 +98,17 @@
         </ui:CardControl>
 
         <!-- 一键强化 -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
-            <ui:CardControl.Header>
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <ui:TextBlock
                         Grid.Row="0"
                         Grid.Column="0"
@@ -117,13 +121,51 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
                         Text="快速跳过强化结果展示，需要配置快捷键进行触发" />
+                    <ui:Button
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,24,0"
+                        Content="绑定快捷键"
+                        Command="{Binding GoToHotKeyPageCommand}"/>
                 </Grid>
-            </ui:CardControl.Header>
-            <ui:Button
-                Margin="0,0,36,0" 
-                Content="绑定快捷键"
-                Command="{Binding GoToHotKeyPageCommand}"/>
-        </ui:CardControl>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="强化的额外等待时间（毫秒）" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="高延迟下无法跳过强化结果显示时，需要延长这个时间配置" />
+                    <ui:NumberBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,24,0"
+                        Maximum="1000"
+                        Minimum="0"
+                        Value="{Binding Config.MacroConfig.EnhanceWaitDelay, Mode=TwoWay}"
+                        ValidationMode="InvalidInputOverwritten" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
+
 
         <!-- 一键锻造 -->
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">

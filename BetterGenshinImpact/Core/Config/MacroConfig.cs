@@ -29,5 +29,11 @@ namespace BetterGenshinImpact.Core.Config
         /// F连发时间间隔
         /// </summary>
         [ObservableProperty] private int _fFireInterval = 100;
+
+        /// <summary>
+        /// 高延迟下强化的额外等待时间
+        /// https://github.com/babalae/better-genshin-impact/issues/9
+        /// </summary>
+        [ObservableProperty] private int _enhanceWaitDelay = 0;
     }
 }

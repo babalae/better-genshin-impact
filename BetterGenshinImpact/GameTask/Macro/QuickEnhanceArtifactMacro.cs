@@ -28,6 +28,7 @@ public class QuickEnhanceArtifactMacro
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var config = TaskContext.Instance().Config.MacroConfig;
 
         var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
 
@@ -36,7 +37,7 @@ public class QuickEnhanceArtifactMacro
         Thread.Sleep(100);
         // 强化 1760x1020
         clickOffset.Click(1760, 1020);
-        Thread.Sleep(100);
+        Thread.Sleep(100 + config.EnhanceWaitDelay);
         // 详情菜单 150x150
         clickOffset.Click(150, 150);
         Thread.Sleep(100);
