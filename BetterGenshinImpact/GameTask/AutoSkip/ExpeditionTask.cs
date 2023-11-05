@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 /// </summary>
 public class ExpeditionTask
 {
-    private static readonly List<string> ExpeditionCharacterList = new() { "菲谢尔", "班尼特" };
+    private static readonly List<string> ExpeditionCharacterList = new() { "菲谢尔", "班尼特", "夜兰", "申鹤", "久岐忍" };
 
     //private static readonly List<string> GameAreaNames = new() { "蒙德", "璃月", "稻妻", "须弥", "枫丹" };
 
@@ -50,7 +50,7 @@ public class ExpeditionTask
             }
             else
             {
-                TaskControl.Sleep(500);
+                TaskControl.Sleep(800);
                 content.CaptureRectArea
                     .Derive(new Rect((int)(110 * assetScale), (int)((145 + 70 * i) * assetScale),
                         (int)(60 * assetScale), (int)(33 * assetScale)))
@@ -58,7 +58,7 @@ public class ExpeditionTask
                 ReExplorationGameArea(content);
             }
         }
-
+        TaskControl.Logger.LogInformation("探索派遣：{Text}", "重新派遣完成");
         VisionContext.Instance().DrawContent.ClearAll();
     }
 
@@ -71,10 +71,12 @@ public class ExpeditionTask
         {
             var result = CaptureAndOcr(content, new Rect(0, 0, captureRect.Width - (int)(480 * assetScale), captureRect.Height));
             var rect = result.FindRectByText("探险完成");
+            // TODO i>1 的时候,可以通过关键词“探索派遣限制 4 / 5 ”判断是否已经派遣完成？
             if (rect != Rect.Empty)
             {
-                // 点击探险完成
+                // 点击探险完成下方的人物头像
                 content.CaptureRectArea.Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale))).ClickCenter();
+                TaskControl.Sleep(500);
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
                 rect = result.FindRectByText("领取");
@@ -116,13 +118,18 @@ public class ExpeditionTask
 
     private bool SelectCharacter(CaptureContent content)
     {
-        var result = CaptureAndOcr(content);
+        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var result = CaptureAndOcr(content, new Rect(0, 0, captureRect.Width / 2, captureRect.Height));
         if (result.RegionHasText("角色选择"))
         {
             var cards = GetCharacterCards(result);
             if (cards.Count > 0)
             {
-                var card = cards.First(c => c.Idle);
+                var card = cards.FirstOrDefault(c => c.Idle && c.Name != null && ExpeditionCharacterList.Contains(c.Name));
+                if (card == null)
+                {
+                    card = cards.First(c => c.Idle);
+                }
                 var rect = card.Rects.First();
 
                 using var ra = content.CaptureRectArea.Derive(rect);
@@ -163,7 +170,7 @@ public class ExpeditionTask
                 foreach (var ocrResultRect2 in ocrResultRects)
                 {
                     if (ocrResultRect2.Rect.Y > ocrResultRect.Rect.Y - 50 * assetScale
-                        && ocrResultRect2.Rect.Y + ocrResultRect2.Rect.Height > ocrResultRect.Rect.Y)
+                        && ocrResultRect2.Rect.Y + ocrResultRect2.Rect.Height < ocrResultRect.Rect.Y + ocrResultRect.Rect.Height)
                     {
                         if (ocrResultRect2.Text.Contains("探险完成"))
                         {
@@ -174,16 +181,23 @@ public class ExpeditionTask
                                 card.Name = name;
                             }
                         }
-                        else
+                        else if (!ocrResultRect2.Text.Contains("时间缩短") && !ocrResultRect2.Text.Contains("奖励增加") && !ocrResultRect2.Text.Contains("暂无加成"))
                         {
                             card.Name = ocrResultRect2.Text;
                         }
 
-                        card.Rects.Add(ocrResultRect.Rect);
+                        card.Rects.Add(ocrResultRect2.Rect);
                     }
                 }
 
-                cards.Add(card);
+                if (!string.IsNullOrEmpty(card.Name))
+                {
+                    cards.Add(card);
+                }
+                else
+                {
+                    TaskControl.Logger.LogWarning("探索派遣：存在未找到角色命的识别内容");
+                }
             }
         }
 
@@ -198,7 +212,7 @@ public class ExpeditionTask
         using var mat = bitmap.ToMat();
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList());
+        //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList());
         return result;
     }
 
@@ -209,7 +223,7 @@ public class ExpeditionTask
         using var mat = new Mat(bitmap.ToMat(), rect);
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
+        //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 }

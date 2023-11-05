@@ -50,7 +50,7 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_daily_reward.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
         ExploreIconRo = new RecognitionObject
         {
@@ -58,7 +58,7 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_explore.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
 
         MenuRo = new RecognitionObject

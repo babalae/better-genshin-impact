@@ -146,7 +146,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnTest()
     {
-        var result = OcrFactory.Paddle.OcrResult(new Mat("E:\\HuiTask\\更好的原神\\自动派遣\\Clip_20231030_235235.png", ImreadModes.Grayscale));
+        var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\七圣召唤\Clip_20231105_143729.png", ImreadModes.Grayscale));
         foreach (var region in result.Regions)
         {
             Debug.WriteLine($"{region.Text}");

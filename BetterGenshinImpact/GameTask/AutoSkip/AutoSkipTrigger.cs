@@ -64,51 +64,57 @@ public class AutoSkipTrigger : ITaskTrigger
             }
 
             // 领取每日委托奖励
-            var dailyRewardIconRa = content.CaptureRectArea.Find(_autoSkipAssets.DailyRewardIconRo);
-            if (!dailyRewardIconRa.IsEmpty())
+            if (config.AutoGetDailyRewardsEnabled)
             {
-                var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, dailyRewardIconRa, (int)(config.ChatOptionTextWidth * assetScale));
-
-                if (text.Contains("每日委托"))
+                var dailyRewardIconRa = content.CaptureRectArea.Find(_autoSkipAssets.DailyRewardIconRo);
+                if (!dailyRewardIconRa.IsEmpty())
                 {
-                    if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
+                    var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, dailyRewardIconRa, (int)(config.ChatOptionTextWidth * assetScale));
+
+                    if (text.Contains("每日委托"))
                     {
-                        _logger.LogInformation("自动选择：{Text}", text);
+                        if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
+                        {
+                            _logger.LogInformation("自动选择：{Text}", text);
+                        }
+
+                        dailyRewardIconRa.ClickCenter();
+                        dailyRewardIconRa.Dispose();
+                        return;
                     }
 
-                    dailyRewardIconRa.ClickCenter();
+                    _prevOtherClickFrameIndex = content.FrameIndex;
                     dailyRewardIconRa.Dispose();
-                    return;
                 }
-
-                _prevOtherClickFrameIndex = content.FrameIndex;
-                dailyRewardIconRa.Dispose();
             }
 
             // 领取探索派遣奖励
-            var exploreIconRa = content.CaptureRectArea.Find(_autoSkipAssets.ExploreIconRo);
-            if (!exploreIconRa.IsEmpty())
+            if (config.AutoReExploreEnabled)
             {
-                var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, exploreIconRa, (int)(config.ExpeditionOptionTextWidth * assetScale));
-                if (text.Contains("探索派遣"))
+                var exploreIconRa = content.CaptureRectArea.Find(_autoSkipAssets.ExploreIconRo);
+                if (!exploreIconRa.IsEmpty())
                 {
-                    if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
+                    var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, exploreIconRa, (int)(config.ExpeditionOptionTextWidth * assetScale));
+                    if (text.Contains("探索派遣"))
                     {
-                        _logger.LogInformation("自动选择：{Text}", text);
+                        if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
+                        {
+                            _logger.LogInformation("自动选择：{Text}", text);
+                        }
+
+                        exploreIconRa.ClickCenter();
+
+                        // 等待探索派遣界面打开
+                        Thread.Sleep(1000);
+                        new ExpeditionTask().Run(content);
+                        exploreIconRa.Dispose();
+                        return;
                     }
 
-                    exploreIconRa.ClickCenter();
-
-                    // 等待探索派遣界面打开
-                    Thread.Sleep(1000);
-                    new ExpeditionTask().Run(content);
+                    _prevOtherClickFrameIndex = content.FrameIndex;
                     exploreIconRa.Dispose();
                     return;
                 }
-
-                _prevOtherClickFrameIndex = content.FrameIndex;
-                exploreIconRa.Dispose();
-                return;
             }
 
             // 找右下的对话选项按钮

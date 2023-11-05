@@ -30,5 +30,16 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         public int ChatOptionTextWidth { get; set; }= 280;
 
         public int ExpeditionOptionTextWidth { get; set; } = 130;
+
+
+        /// <summary>
+        /// 自动领取每日委托奖励
+        /// </summary>
+        [ObservableProperty] private bool _autoGetDailyRewardsEnabled = true;
+
+        /// <summary>
+        /// 自动重新派遣
+        /// </summary>
+        [ObservableProperty] private bool _autoReExploreEnabled = false;
     }
 }
