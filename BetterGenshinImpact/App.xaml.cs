@@ -21,6 +21,7 @@ using BetterGenshinImpact.Core.Config;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using BetterGenshinImpact.GameTask;
+using System.Diagnostics;
 
 namespace BetterGenshinImpact
 {
@@ -118,7 +119,30 @@ namespace BetterGenshinImpact
         /// <summary>
         /// Occurs when the application is loading.
         /// </summary>
-        private async void OnStartup(object sender, StartupEventArgs e)
+        private void OnStartup(object sender, StartupEventArgs e)
+        {
+            StartUp();
+        }
+
+        private async void StartUp()
+        {
+            try
+            {
+                await StartUpCoreAsync();
+            }
+            catch (Exception ex)
+            {
+                // DEBUG only, no overhead
+                Debug.WriteLine(ex);
+
+                if (Debugger.IsAttached)
+                {
+                    Debugger.Break();
+                }
+            }
+        }
+
+        private async Task StartUpCoreAsync()
         {
             // 获得当前登录的Windows用户标示
             var identity = WindowsIdentity.GetCurrent();
@@ -151,7 +175,7 @@ namespace BetterGenshinImpact
                 }
 
                 //退出
-                Application.Current.Shutdown();
+                Current.Shutdown();
             }
         }
 
