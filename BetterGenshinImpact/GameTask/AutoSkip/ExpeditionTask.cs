@@ -50,7 +50,7 @@ public class ExpeditionTask
             }
             else
             {
-                TaskControl.Sleep(800);
+                TaskControl.Sleep(1500);
                 content.CaptureRectArea
                     .Derive(new Rect((int)(110 * assetScale), (int)((145 + 70 * i) * assetScale),
                         (int)(60 * assetScale), (int)(33 * assetScale)))
