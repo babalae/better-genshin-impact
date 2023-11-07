@@ -1,27 +1,23 @@
-﻿using BetterGenshinImpact.Service;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System;
-using System.IO;
-using System.Windows;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.ViewModel.Pages;
-using Microsoft.Extensions.Configuration;
 using Serilog.Events;
-using Wpf.Ui;
-using Serilog.Filters;
-using System.Reflection;
-using System.Security.Principal;
-using BetterGenshinImpact.Core.Config;
-using System.Threading.Tasks;
-using System.Windows.Controls;
-using BetterGenshinImpact.GameTask;
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.Security.Principal;
+using System.Threading.Tasks;
+using System.Windows;
+using Wpf.Ui;
 
 namespace BetterGenshinImpact
 {
@@ -157,20 +153,21 @@ namespace BetterGenshinImpact
             else
             {
                 //创建启动对象
-                var startInfo = new System.Diagnostics.ProcessStartInfo
+                var startInfo = new ProcessStartInfo
                 {
                     UseShellExecute = true,
-                    WorkingDirectory = Environment.CurrentDirectory,
-                    FileName = Global.AppPath,
+                    WorkingDirectory = Global.StartUpPath,
+                    FileName = "BetterGI.exe",
                     //设置启动动作,确保以管理员身份运行
                     Verb = "runas"
                 };
                 try
                 {
-                    System.Diagnostics.Process.Start(startInfo);
+                    Process.Start(startInfo);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.WriteLine(ex);
                     return;
                 }
 

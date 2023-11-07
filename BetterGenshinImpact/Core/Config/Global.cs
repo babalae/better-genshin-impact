@@ -9,7 +9,7 @@ public class Global
 
     public static string StartUpPath { get; private set; } = AppContext.BaseDirectory;
 
-    public static string AppPath { get; private set; } = Absolute("BetterGenshinImpact.exe");
+    public static string AppPath { get; private set; } = Absolute("BetterGI.exe");
 
     public static string Absolute(string relativePath)
     {
