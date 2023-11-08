@@ -152,7 +152,7 @@ namespace BetterGenshinImpact.GameTask
                     }
 
                     var pName = SystemControl.GetActiveProcessName();
-                    if (pName != "BetterGenshinImpact" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                    if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
                     {
                         maskWindow.Invoke(() => { maskWindow.Hide(); });
                     }
