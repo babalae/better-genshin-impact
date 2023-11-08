@@ -29,16 +29,11 @@ public class ExpeditionTask
 {
     private static readonly List<string> ExpeditionCharacterList = new() { "菲谢尔", "班尼特", "夜兰", "申鹤", "久岐忍" };
 
-    //private static readonly List<string> GameAreaNames = new() { "蒙德", "璃月", "稻妻", "须弥", "枫丹" };
-
-    //private static readonly List<Point> GameAreaNamePoints = new() { new Point(140,165), new Point(140, 235), new Point(140, 305), new Point(140, 165), new Point(140, 165) };
-
-    //private static readonly Point FirstGameAreaNamePoint = new(140, 165);
-
     private int _expeditionCount = 0;
 
     public void Run(CaptureContent content)
     {
+        TaskControl.Sleep(3000);
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         ReExplorationGameArea(content);
         for (var i = 0; i <= 4; i++)
@@ -50,11 +45,11 @@ public class ExpeditionTask
             }
             else
             {
-                TaskControl.Sleep(1500);
                 content.CaptureRectArea
                     .Derive(new Rect((int)(110 * assetScale), (int)((145 + 70 * i) * assetScale),
                         (int)(60 * assetScale), (int)(33 * assetScale)))
                     .ClickCenter();
+                TaskControl.Sleep(800);
                 ReExplorationGameArea(content);
             }
         }
@@ -111,6 +106,10 @@ public class ExpeditionTask
             }
             else
             {
+                if (i == 0)
+                {
+                    TaskControl.Logger.LogInformation("当前地区没有探险完成的角色");
+                }
                 break;
             }
         }
@@ -212,7 +211,7 @@ public class ExpeditionTask
         using var mat = bitmap.ToMat();
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
-        //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList());
+        VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 
@@ -223,7 +222,7 @@ public class ExpeditionTask
         using var mat = new Mat(bitmap.ToMat(), rect);
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
-        //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
+        VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 }
