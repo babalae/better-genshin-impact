@@ -33,7 +33,6 @@ public class ExpeditionTask
 
     public void Run(CaptureContent content)
     {
-        TaskControl.Sleep(3000);
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         ReExplorationGameArea(content);
         for (var i = 0; i <= 4; i++)
@@ -49,7 +48,7 @@ public class ExpeditionTask
                     .Derive(new Rect((int)(110 * assetScale), (int)((145 + 70 * i) * assetScale),
                         (int)(60 * assetScale), (int)(33 * assetScale)))
                     .ClickCenter();
-                TaskControl.Sleep(800);
+                TaskControl.Sleep(500);
                 ReExplorationGameArea(content);
             }
         }
@@ -79,7 +78,7 @@ public class ExpeditionTask
                 {
                     using var ra = content.CaptureRectArea.Derive(rect);
                     ra.ClickCenter();
-                    TaskControl.Logger.LogInformation("探索派遣：点击{Text}", "领取");
+                    //TaskControl.Logger.LogInformation("探索派遣：点击{Text}", "领取");
                     TaskControl.Sleep(300);
                     // 点击空白区域继续
                     ra.ClickCenter();
@@ -106,10 +105,6 @@ public class ExpeditionTask
             }
             else
             {
-                if (i == 0)
-                {
-                    TaskControl.Logger.LogInformation("当前地区没有探险完成的角色");
-                }
                 break;
             }
         }
@@ -133,7 +128,7 @@ public class ExpeditionTask
 
                 using var ra = content.CaptureRectArea.Derive(rect);
                 ra.ClickCenter();
-                TaskControl.Logger.LogInformation("探索派遣：选择角色 {Name}", card.Name);
+                TaskControl.Logger.LogInformation("探索派遣：派遣 {Name}", card.Name);
                 TaskControl.Sleep(500);
                 return true;
             }
