@@ -15,6 +15,9 @@ public class AutoSkipAssets
     public RecognitionObject DailyRewardIconRo;
     public RecognitionObject ExploreIconRo;
 
+    public RecognitionObject PageCloseRo;
+
+
     //public Mat BinaryStopAutoButtonMat;
 
     public AutoSkipAssets()
@@ -83,6 +86,15 @@ public class AutoSkipAssets
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "menu.png"),
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = false
+        }.InitTemplate();
+
+        PageCloseRo = new RecognitionObject
+        {
+            Name = "PageClose",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "page_close.png"),
+            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 8 , 0, info.CaptureAreaRect.Width / 8, info.CaptureAreaRect.Height / 8),
+            DrawOnWindow = true
         }.InitTemplate();
     }
 }

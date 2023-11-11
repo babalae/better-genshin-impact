@@ -61,17 +61,32 @@ public class AutoSkipTrigger : ITaskTrigger
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         // 找左上角剧情自动的按钮
         using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
-        
+
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
         // 播放中图标消失3s内OCR判断文字
         if (!isPlaying && Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) <= content.FrameRate * 3)
         {
             // 找播放中的文字
-            content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ =>
+            content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
+
+            if (!isPlaying)
             {
-                isPlaying = true;
-            });
+                // 关闭弹出页
+                content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
+                {
+                    pageCloseRoRa.ClickCenter();
+
+                    if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                    {
+                        _logger.LogInformation("自动剧情：{Text}", "关闭弹出页");
+                    }
+
+                    _prevClickFrameIndex = content.FrameIndex;
+                    isPlaying = true;
+                    pageCloseRoRa.Dispose();
+                });
+            }
         }
 
         if (isPlaying)
@@ -153,13 +168,18 @@ public class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            using var grayMat = content.CaptureRectArea.SrcGreyMat[new Rect(0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2)];
+            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
-            if (rate > 0.8 && rate < 0.99)
+            if (rate >= 0.8 && rate < 0.99)
             {
                 Simulation.SendInput.Mouse.LeftButtonClick();
-                Debug.WriteLine($"点击黑屏剧情：{rate}");
+                if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
+                {
+                    _logger.LogInformation("自动剧情：{Text}", "点击黑屏");
+                }
+
+                _prevClickFrameIndex = content.FrameIndex;
             }
 
             // TODO 自动交付材料
@@ -171,6 +191,7 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     /// <param name="captureMat"></param>
     /// <param name="foundIconRectArea"></param>
+    /// <param name="chatOptionTextWidth"></param>
     /// <returns></returns>
     private string GetOrangeOptionText(Mat captureMat, RectArea foundIconRectArea, int chatOptionTextWidth)
     {
