@@ -256,19 +256,19 @@ public class RectArea : IDisposable
         }
         else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
         {
-            if (ro.ContainMatchText.Count == 0 && ro.RegexMatchText.Count == 0)
+            if (ro.AllContainMatchText.Count == 0 && ro.OneContainMatchText.Count == 0 && ro.RegexMatchText.Count == 0)
             {
                 throw new Exception($"[OCR]识别对象{ro.Name}的匹配文本不能全为空");
             }
 
-            var roi = SrcMat;
+            var roi = SrcGreyMat;
             if (ro.RegionOfInterest != Rect.Empty)
             {
-                roi = new Mat(SrcMat, ro.RegionOfInterest);
+                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
             }
 
-            var text = OcrFactory.Paddle.Ocr(roi);
-            text = StringUtils.RemoveAllSpace(text);
+            var result = OcrFactory.Paddle.OcrResult(roi);
+            var text = StringUtils.RemoveAllSpace(result.Text);
             // 替换可能出错的文本
             foreach (var entry in ro.ReplaceDictionary)
             {
@@ -278,13 +278,24 @@ public class RectArea : IDisposable
                 }
             }
 
-            // 包含匹配
             int successContainCount = 0, successRegexCount = 0;
-            foreach (var s in ro.ContainMatchText)
+            bool successOneContain = false;
+            // 包含匹配 全部包含才成功
+            foreach (var s in ro.AllContainMatchText)
             {
                 if (text.Contains(s))
                 {
                     successContainCount++;
+                }
+            }
+
+            // 包含匹配 包含一个就成功
+            foreach (var s in ro.OneContainMatchText)
+            {
+                if (text.Contains(s))
+                {
+                    successOneContain = true;
+                    break;
                 }
             }
 
@@ -297,14 +308,26 @@ public class RectArea : IDisposable
                 }
             }
 
-            if (successContainCount == ro.ContainMatchText.Count && successRegexCount == ro.RegexMatchText.Count)
+            if (successContainCount == ro.AllContainMatchText.Count
+                && successRegexCount == ro.RegexMatchText.Count
+                && (ro.OneContainMatchText.Count == 0 || successOneContain))
             {
                 var newRa = new RectArea(roi, X + ro.RegionOfInterest.X, Y + ro.RegionOfInterest.Y, this);
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, result.ToRectDrawableListOffset(ro.RegionOfInterest.X, ro.RegionOfInterest.Y));
+                }
+
                 action?.Invoke(newRa);
                 return newRa;
             }
             else
             {
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                }
+
                 return new RectArea();
             }
         }

@@ -1,22 +1,14 @@
-﻿using BetterGenshinImpact.GameTask.Common;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Documents;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
-using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using Sdcb.PaddleOCR;
-using System.Xml.Linq;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -206,7 +198,7 @@ public class ExpeditionTask
         using var mat = bitmap.ToMat();
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
+        //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 
@@ -217,7 +209,7 @@ public class ExpeditionTask
         using var mat = new Mat(bitmap.ToMat(), rect);
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
+        //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 }

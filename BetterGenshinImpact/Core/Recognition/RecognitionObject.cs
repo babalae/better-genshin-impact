@@ -127,7 +127,13 @@ public class RecognitionObject
     /// 多个值全匹配的情况下才算成功
     /// 复杂情况请用下面的正则匹配
     /// </summary>
-    public List<string> ContainMatchText { get; set; } = new();
+    public List<string> AllContainMatchText { get; set; } = new();
+
+    /// <summary>
+    /// 包含匹配
+    /// 一个值匹配就算成功
+    /// </summary>
+    public List<string> OneContainMatchText { get; set; } = new();
 
     /// <summary>
     /// 正则匹配

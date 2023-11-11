@@ -73,9 +73,13 @@ public static class PaddleOcrResultExtension
         return result.Regions.Select(item => item.Rect.BoundingRect().ToRectDrawable(pen)).ToList();
     }
 
+    public static List<RectDrawable> ToRectDrawableListOffset(this PaddleOcrResult result, int offsetX, int offsetY, Pen? pen = null)
+    {
+        return result.Regions.Select(item => item.Rect.BoundingRect().ToRectDrawable(offsetX, offsetY, pen)).ToList();
+    }
+
     public static PaddleOcrResultRect ToOcrResultRect(this PaddleOcrResultRegion region)
     {
         return new PaddleOcrResultRect(region.Rect.BoundingRect(), region.Text, region.Score);
     }
-
 }

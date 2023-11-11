@@ -66,5 +66,12 @@ namespace BetterGenshinImpact.View.Drawable
             OpenCvSharp.Rect newRect = new((int)(rect.X / scale), (int)(rect.Y / scale), (int)(rect.Width / scale), (int)(rect.Height / scale));
             return new RectDrawable(newRect.ToWindowsRectangle(), pen, name);
         }
+
+        public static RectDrawable ToRectDrawable(this OpenCvSharp.Rect rect, int offsetX, int offsetY, Pen? pen = null, string? name = null)
+        {
+            var scale = TaskContext.Instance().DpiScale;
+            OpenCvSharp.Rect newRect = new(offsetX + (int)(rect.X / scale), offsetY + (int)(rect.Y / scale), (int)(rect.Width / scale), (int)(rect.Height / scale));
+            return new RectDrawable(newRect.ToWindowsRectangle(), pen, name);
+        }
     }
 }

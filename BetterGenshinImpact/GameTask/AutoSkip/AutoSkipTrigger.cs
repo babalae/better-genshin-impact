@@ -45,6 +45,11 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private int _prevOtherClickFrameIndex = -1;
 
+    /// <summary>
+    /// 上一次播放中的帧
+    /// </summary>
+    private int _prevPlayingFrameIndex = -1;
+
     public void OnCapture(CaptureContent content)
     {
         if (content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
@@ -56,8 +61,22 @@ public class AutoSkipTrigger : ITaskTrigger
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         // 找左上角剧情自动的按钮
         using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
-        if (!foundRectArea.IsEmpty())
+        
+        var isPlaying = !foundRectArea.IsEmpty(); // 播放中
+
+        // 播放中图标消失3s内OCR判断文字
+        if (!isPlaying && Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) <= content.FrameRate * 3)
         {
+            // 找播放中的文字
+            content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ =>
+            {
+                isPlaying = true;
+            });
+        }
+
+        if (isPlaying)
+        {
+            _prevPlayingFrameIndex = content.FrameIndex;
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
                 Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.SPACE);

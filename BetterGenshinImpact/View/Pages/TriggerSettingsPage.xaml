@@ -236,23 +236,30 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="凯瑟琳 - 自动重新派遣（不稳定...）" />
+                        Text="凯瑟琳 - 自动重新派遣" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
                         Text="自动领取已完成探索的奖励，并按照配置进行重新派遣" />
-                    <ui:ToggleSwitch
+                    <ui:Button
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
+                        Content="配置"
+                        Margin="0,0,16,0"/>
+                    <ui:ToggleSwitch
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="2"
                         Margin="0,0,36,0"
                         IsChecked="{Binding Config.AutoSkipConfig.AutoReExploreEnabled, Mode=TwoWay}" />
                 </Grid>
