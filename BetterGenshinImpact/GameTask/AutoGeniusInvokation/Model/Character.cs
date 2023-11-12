@@ -31,6 +31,12 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// </summary>
         public int Energy { get; set; }
 
+        /// <summary>
+        /// hp
+        /// -2 未识别到
+        /// </summary>
+        public int Hp { get; set; } = -2;
+
 
         /// <summary>
         /// 充能点来自于图像识别
@@ -56,6 +62,10 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         {
             StringBuilder sb = new StringBuilder();
             sb.Append($"角色{Index}，");
+            if (Hp != -2)
+            {
+                sb.Append($"Hp={Hp}，");
+            }
             sb.Append($"充能={EnergyByRecognition}，");
             if (StatusList?.Count > 0)
             {

@@ -15,6 +15,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp.Extensions;
 using Point = OpenCvSharp.Point;
@@ -34,9 +35,12 @@ public class GeniusInvokationControl
     // 定义一个标识确保线程同步
     private static readonly object _locker = new();
 
+    private AutoGeniusInvokationConfig _config;
+
     // 定义私有构造函数，使外界不能创建该类实例
     private GeniusInvokationControl()
     {
+        _config = TaskContext.Instance().Config.AutoGeniusInvokationConfig;
     }
 
     /// <summary>
@@ -990,7 +994,7 @@ public class GeniusInvokationControl
         Sleep(2000); // 切人动画
     }
 
-    public void AppendCharacterStatus(Character character, Mat srcMat)
+    public void AppendCharacterStatus(Character character, Mat srcMat, int hp = -1)
     {
         using var gray = new Mat();
         Cv2.CvtColor(srcMat, gray, ColorConversionCodes.BGR2GRAY);
@@ -1016,19 +1020,22 @@ public class GeniusInvokationControl
         var energyPointList = MatchTemplateHelper.MatchTemplateMulti(characterMat.Clone(), _assets.CharacterEnergyOnMat, 0.8);
         character.EnergyByRecognition = energyPointList.Count;
 
+        character.Hp = hp;
+
         _logger.LogInformation("当前出战{Character}", character);
     }
 
     public Character WhichCharacterActiveWithRetry(Duel duel)
     {
         // 检查角色是否被击败 // 这里又检查一次是因为最后一个角色存活的情况下，会自动出战
+        // TODO 这个击败识别有问题，需要优化
         var defeatedArray = WhatCharacterDefeated(duel.CharacterCardRects);
         for (var i = defeatedArray.Length - 1; i >= 0; i--)
         {
             duel.Characters[i + 1].IsDefeated = defeatedArray[i];
         }
 
-        return Retry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
+        return WhichCharacterActiveByHpOcr(duel);
     }
 
     public Character WhichCharacterActiveByHpWord(Duel duel)
@@ -1097,6 +1104,56 @@ public class GeniusInvokationControl
         }
 
         throw new RetryException("未识别到个出战角色");
+    }
+
+    public Character WhichCharacterActiveByHpOcr(Duel duel)
+    {
+        if (duel.CharacterCardRects == null || duel.CharacterCardRects.Count != 3)
+        {
+            throw new System.Exception("未能获取到我方角色卡位置");
+        }
+
+        var srcMat = CaptureGameMat();
+
+        var hpArray = new int[3]; // 1 代表未出战 2 代表出战
+        for (var i = 0; i < duel.CharacterCardRects.Count; i++)
+        {
+            var cardRect = duel.CharacterCardRects[i];
+            // 未出战角色的hp区域
+            var hpMat = new Mat(srcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
+                cardRect.Y + _config.CharacterCardExtendHpRect.Y,
+                _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
+            var text = OcrFactory.Paddle.Ocr(hpMat);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                hpArray[i] = 1;
+            }
+
+            hpMat = new Mat(srcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
+                cardRect.Y + _config.CharacterCardExtendHpRect.Y - _config.ActiveCharacterCardSpace,
+                _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
+            text = OcrFactory.Paddle.Ocr(hpMat);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                hpArray[i] = 2;
+                duel.CurrentCharacter = duel.Characters[i + 1];
+                AppendCharacterStatus(duel.CurrentCharacter, srcMat);
+                return duel.CurrentCharacter;
+            }
+        }
+
+        if (hpArray.Count(x => x == 1) == 2)
+        {
+            // 找到并不等1的
+            var index = hpArray.ToList().FindIndex(x => x != 1);
+            duel.CurrentCharacter = duel.Characters[index];
+            AppendCharacterStatus(duel.CurrentCharacter, srcMat);
+            return duel.CurrentCharacter;
+        }
+
+        // 上面判断失效
+        _logger.LogWarning("通过OCR HP的方式未识别到出战角色 {Array}", hpArray);
+        return Retry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
     }
 
     private static void OutputImage(Duel duel, List<Rect> rects, Mat bottomMat, int halfHeight, string fileName)
