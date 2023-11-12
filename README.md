@@ -22,6 +22,7 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
   * [自动剧情](https://github.com/babalae/better-genshin-impact/wiki/#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)
     * [自动领取『每日委托』奖励](https://github.com/babalae/better-genshin-impact/wiki#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E5%A5%96%E5%8A%B1)
     * [自动重新派遣](https://github.com/babalae/better-genshin-impact/wiki#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E6%8E%A2%E7%B4%A2%E6%B4%BE%E9%81%A3%E5%A5%96%E5%8A%B1%E5%B9%B6%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
+  * 自动邀约（下次邀约开启进入开发）
   * [全自动钓鱼(YOLOv8)](https://github.com/babalae/better-genshin-impact/wiki#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)
 * 独立任务
   *  [自动七圣召唤](https://github.com/babalae/better-genshin-impact/wiki#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)
@@ -31,6 +32,8 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
   * [F 连发](https://github.com/babalae/better-genshin-impact/wiki/#f%E8%BF%9E%E5%8F%91)
   * [那维莱特 - 转圈圈](https://github.com/babalae/better-genshin-impact/wiki/#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9---%E8%BD%AC%E5%9C%88%E5%9C%88)
   * [快速圣遗物强化](https://github.com/babalae/better-genshin-impact/wiki/#%E5%BF%AB%E9%80%9F%E5%9C%A3%E9%81%97%E7%89%A9%E5%BC%BA%E5%8C%96)
+
+更多功能筹备中...[Wiki](https://github.com/babalae/better-genshin-impact/wiki)
 
 ## 界面截图
 
