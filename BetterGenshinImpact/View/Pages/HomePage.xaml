@@ -24,25 +24,45 @@
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
-    <StackPanel Margin="42">
+    <StackPanel Margin="42,16,42,12">
+        <ui:TextBlock
+            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+            TextWrapping="Wrap"
+            Margin="0 0 0 12"
+            FontSize="20">
+            更好的原神：
+            <Hyperlink 
+                Command="{Binding GoToWikiUrlCommand}"
+                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                点击查看使用教程
+            </Hyperlink>
+        </ui:TextBlock>
+
         <Label Content="截图模式：" Target="{Binding ElementName=CaptureModeComboBox}" />
         <ComboBox x:Name="CaptureModeComboBox" Margin="0,4,0,0" ItemsSource="{Binding ModeNames}"
                   SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+        <Label Content="触发器间隔（毫秒）：" Target="{Binding ElementName=IntervalNumberBox}" />
+        <ui:TextBox x:Name="IntervalNumberBox"
+                    Margin="0,4,0,0"
+                    Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
 
         <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
             <ui:Button
                 Icon="{ui:SymbolIcon Play24}"
                 Content="启动"
                 Command="{Binding StartTriggerCommand}"
-                Visibility="{Binding StartButtonVisibility}"/>
+                Visibility="{Binding StartButtonVisibility}" />
             <ui:Button
                 Icon="{ui:SymbolIcon Dismiss24}"
                 Content="停止"
                 Command="{Binding StopTriggerCommand}"
-                Visibility="{Binding StopButtonVisibility}"/>
+                Visibility="{Binding StopButtonVisibility}" />
         </StackPanel>
 
-        <ui:Button x:Name="StartCaptureTest"  Margin="0,20,0,0" Content="测试图像捕获" Command="{Binding StartCaptureTestCommand}" />
-        <!-- <ui:Button x:Name="Test"  Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" /> -->
+        <ui:Button x:Name="StartCaptureTest" Margin="0,20,0,0" Content="测试图像捕获"
+                   Command="{Binding StartCaptureTestCommand}" />
+        <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
+
+
     </StackPanel>
 </Page>

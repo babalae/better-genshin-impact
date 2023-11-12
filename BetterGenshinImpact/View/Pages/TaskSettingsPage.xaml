@@ -11,7 +11,7 @@
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      d:DesignHeight="850" d:DesignWidth="650"
+      d:DesignHeight="850" d:DesignWidth="750"
       Title="TaskSettingsPage">
 
     <!--<Grid Margin="42,16,42,12">

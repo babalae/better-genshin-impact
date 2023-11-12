@@ -31,7 +31,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 触发器触发频率(ms)
         /// </summary>
-        [ObservableProperty] private int _triggerInterval = 100;
+        [ObservableProperty] private int _triggerInterval = 50;
 
         /// <summary>
         /// 遮罩窗口配置

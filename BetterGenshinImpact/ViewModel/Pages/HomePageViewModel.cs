@@ -12,11 +12,17 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 using Wpf.Ui.Controls;
+using Compunet.YoloV8;
+using System.Drawing.Imaging;
+using System.IO;
+using MessageBox = System.Windows.MessageBox;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -110,7 +116,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         if (!_taskDispatcherEnabled)
         {
             _mouseKeyMonitor.Subscribe(hWnd);
-            _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode());
+            _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
             _taskDispatcherEnabled = true;
@@ -144,12 +150,33 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
+    public void OnGoToWikiUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://github.com/babalae/better-genshin-impact/wiki") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
     private void OnTest()
     {
-        var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\七圣召唤\Clip_20231105_143729.png", ImreadModes.Grayscale));
-        foreach (var region in result.Regions)
-        {
-            Debug.WriteLine($"{region.Text}");
-        }
+        //var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\七圣召唤\d4.png", ImreadModes.Grayscale));
+        //foreach (var region in result.Regions)
+        //{
+        //    Debug.WriteLine($"{region.Text}");
+        //}
+
+        //try
+        //{
+        //    YoloV8 predictor = new(Global.Absolute("Assets\\Model\\Fish\\bgi_fish.onnx"));
+        //    using var memoryStream = new MemoryStream();
+        //    new Bitmap(Global.Absolute("test_yolo.png")).Save(memoryStream, ImageFormat.Bmp);
+        //    memoryStream.Seek(0, SeekOrigin.Begin);
+        //    var result = predictor.Detect(memoryStream);
+        //    MessageBox.Show(JsonSerializer.Serialize(result));
+        //}
+        //catch (Exception e)
+        //{
+        //    MessageBox.Show(e.StackTrace);
+        //}
+
     }
 }
