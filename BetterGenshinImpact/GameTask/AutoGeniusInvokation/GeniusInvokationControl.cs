@@ -1131,7 +1131,7 @@ public class GeniusInvokationControl
                 cardRect.Y + _config.CharacterCardExtendHpRect.Y,
                 _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
             var text = OcrFactory.Paddle.Ocr(hpMat);
-            Cv2.ImWrite($"log\\hp_n_{i}.jpg", hpMat);
+            //Cv2.ImWrite($"log\\hp_n_{i}.jpg", hpMat);
             Debug.WriteLine($"角色{i}未出战HP位置识别结果{text}");
             if (!string.IsNullOrWhiteSpace(text))
             {
@@ -1144,7 +1144,7 @@ public class GeniusInvokationControl
                     cardRect.Y + _config.CharacterCardExtendHpRect.Y - _config.ActiveCharacterCardSpace,
                     _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
                 text = OcrFactory.Paddle.Ocr(hpMat);
-                Cv2.ImWrite($"log\\hp_active_{i}.jpg", hpMat);
+                //Cv2.ImWrite($"log\\hp_active_{i}.jpg", hpMat);
                 Debug.WriteLine($"角色{i}出战HP位置识别结果{text}");
                 if (!string.IsNullOrWhiteSpace(text))
                 {
@@ -1211,7 +1211,7 @@ public class GeniusInvokationControl
         _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
         if (string.IsNullOrWhiteSpace(text))
         {
-            Cv2.ImWrite("log\\dice_count_empty.jpg", diceCountMap);
+            Cv2.ImWrite($"log\\dice_count_empty{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
             return -10;
         }
         else if (Regex.IsMatch(text, @"^[0-9]+$"))
@@ -1220,7 +1220,7 @@ public class GeniusInvokationControl
         }
         else
         {
-            Cv2.ImWrite("log\\dice_count_error.jpg", diceCountMap);
+            Cv2.ImWrite($"log\\dice_count_error_{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
             return -10;
         }
     }

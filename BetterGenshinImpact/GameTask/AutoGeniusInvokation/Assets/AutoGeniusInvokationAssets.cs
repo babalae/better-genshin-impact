@@ -40,7 +40,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
                 Name = "ConfirmButton",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\确定.png"),
-                DrawOnWindow = true
+                DrawOnWindow = false
             }.InitTemplate();
             RoundEndButtonRo = new RecognitionObject
             {
@@ -57,7 +57,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
                 TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\元素调和.png"),
                 RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height/2, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height/2),
                 Threshold = 0.9,
-                DrawOnWindow = true
+                DrawOnWindow = false
             }.InitTemplate();
             ExitDuelButtonRo = new RecognitionObject
             {
