@@ -61,7 +61,7 @@ public class Duel
         Cts = taskParam.Cts;
         try
         {
-            _logger.LogInformation("========================================"); 
+            _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
 
             GeniusInvokationControl.GetInstance().Init(taskParam);
@@ -90,6 +90,7 @@ public class Duel
                 {
                     CharacterCardRects.Add(defaultCharacterCardRects[i].Multiply(assetScale));
                 }
+
                 _logger.LogInformation("获取角色区域失败，使用默认区域");
             }
 
@@ -141,6 +142,20 @@ public class Duel
 
                     // 每次行动前都要检查当前角色
                     CurrentCharacter = GeniusInvokationControl.GetInstance().WhichCharacterActiveWithRetry(this);
+
+                    // 行动前重新确认骰子数量
+                    var diceCountFromOcr = GeniusInvokationControl.GetInstance().GetDiceCountByOcr();
+                    var diceDiff = Math.Abs(CurrentDiceCount - diceCountFromOcr);
+                    if (diceDiff is > 0 and <= 2)
+                    {
+                        _logger.LogInformation("可能存在场地牌影响了骰子数[{CurrentDiceCount}] -> [{DiceCountFromOcr}]", CurrentDiceCount, diceCountFromOcr);
+                        CurrentDiceCount = diceCountFromOcr;
+                    }
+                    else if (diceDiff > 2)
+                    {
+                        _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
+                    }
+
 
                     var alreadyExecutedActionIndex = new List<int>();
                     var alreadyExecutedActionCommand = new List<ActionCommand>();
@@ -213,7 +228,6 @@ public class Duel
                             break;
                         }
                     }
-
 
 
                     if (alreadyExecutedActionIndex.Count != 0)

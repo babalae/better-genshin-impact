@@ -19,6 +19,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp.Extensions;
 using Point = OpenCvSharp.Point;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -1113,7 +1114,7 @@ public class GeniusInvokationControl
             throw new System.Exception("未能获取到我方角色卡位置");
         }
 
-        var srcMat = CaptureGameMat();
+        var srcMat = CaptureGameGreyMat();
 
         var hpArray = new int[3]; // 1 代表未出战 2 代表出战
         for (var i = 0; i < duel.CharacterCardRects.Count; i++)
@@ -1174,6 +1175,30 @@ public class GeniusInvokationControl
 
 
             Cv2.ImWrite(fileName, bottomMat);
+        }
+    }
+
+    /// <summary>
+    /// 通过OCR识别当前骰子数量
+    /// </summary>
+    /// <param name="duel"></param>
+    /// <returns></returns>
+    public int GetDiceCountByOcr()
+    {
+        var srcMat = CaptureGameGreyMat();
+        var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
+        var text = OcrFactory.Paddle.Ocr(diceCountMap);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return -10;
+        }
+        else if (Regex.IsMatch(text, @"^[0-9]+$"))
+        {
+            return int.Parse(text);
+        }
+        else
+        {
+            return -10;
         }
     }
 }
