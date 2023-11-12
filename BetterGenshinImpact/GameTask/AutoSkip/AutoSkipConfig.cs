@@ -40,6 +40,11 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// <summary>
         /// 自动重新派遣
         /// </summary>
-        [ObservableProperty] private bool _autoReExploreEnabled = false;
+        [ObservableProperty] private bool _autoReExploreEnabled = true;
+
+        /// <summary>
+        /// 自动重新派遣使用角色配置，逗号分割
+        /// </summary>
+        [ObservableProperty] private string _autoReExploreCharacter = "";
     }
 }

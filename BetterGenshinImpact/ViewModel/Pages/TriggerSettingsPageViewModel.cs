@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
@@ -38,15 +39,10 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     }
 
     [RelayCommand]
-    private async void OnOpenCustomMessageBox(object sender)
+    private void OnOpenReExploreCharacterBox(object sender)
     {
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "WPF UI Message Box",
-            Content =
-                "Never gonna give you up, never gonna let you down Never gonna run around and desert you Never gonna make you cry, never gonna say goodbye",
-        };
-
-        var result = await uiMessageBox.ShowDialogAsync();
+        var str = PromptDialog.Prompt("请使用派遣界面展示的角色名，英文逗号分割，从左往右优先级依次降低。\n示例：菲谢尔,班尼特,夜兰,申鹤,久岐忍", 
+            "派遣角色优先级配置", Config.AutoSkipConfig.AutoReExploreCharacter);
+         Config.AutoSkipConfig.AutoReExploreCharacter = str.Replace("，", ",").Replace(" ","");
     }
 }

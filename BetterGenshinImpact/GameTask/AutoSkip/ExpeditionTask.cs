@@ -19,12 +19,13 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 /// </summary>
 public class ExpeditionTask
 {
-    private static readonly List<string> ExpeditionCharacterList = new() { "菲谢尔", "班尼特", "夜兰", "申鹤", "久岐忍" };
+    private static readonly List<string> ExpeditionCharacterList = new();
 
     private int _expeditionCount = 0;
 
     public void Run(CaptureContent content)
     {
+        InitConfig();
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         ReExplorationGameArea(content);
         for (var i = 0; i <= 4; i++)
@@ -44,8 +45,21 @@ public class ExpeditionTask
                 ReExplorationGameArea(content);
             }
         }
+
         TaskControl.Logger.LogInformation("探索派遣：{Text}", "重新派遣完成");
         VisionContext.Instance().DrawContent.ClearAll();
+    }
+
+    private void InitConfig()
+    {
+        var str = TaskContext.Instance().Config.AutoSkipConfig.AutoReExploreCharacter;
+        if (!string.IsNullOrEmpty(str))
+        {
+            ExpeditionCharacterList.Clear();
+            str = str.Replace("，", ",");
+            str.Split(',').ToList().ForEach(x => ExpeditionCharacterList.Add(x.Trim()));
+            TaskContext.Instance().Config.AutoSkipConfig.AutoReExploreCharacter = string.Join(",", ExpeditionCharacterList);
+        }
     }
 
     private void ReExplorationGameArea(CaptureContent content)
@@ -116,6 +130,7 @@ public class ExpeditionTask
                 {
                     card = cards.First(c => c.Idle);
                 }
+
                 var rect = card.Rects.First();
 
                 using var ra = content.CaptureRectArea.Derive(rect);
