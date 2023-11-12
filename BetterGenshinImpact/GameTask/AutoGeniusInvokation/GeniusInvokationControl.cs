@@ -511,8 +511,8 @@ public class GeniusInvokationControl
         // 鼠标移动到中心
         ClickGameWindowCenter();
 
-        _logger.LogInformation("等待10s对方重投");
-        Sleep(10000);
+        _logger.LogInformation("等待5s对方重投");
+        Sleep(5000);
     }
 
     public Point MakeOffset(Point p)
@@ -995,12 +995,10 @@ public class GeniusInvokationControl
         Sleep(2000); // 切人动画
     }
 
-    public void AppendCharacterStatus(Character character, Mat srcMat, int hp = -1)
+    public void AppendCharacterStatus(Character character, Mat greyMat, int hp = -2)
     {
-        using var gray = new Mat();
-        Cv2.CvtColor(srcMat, gray, ColorConversionCodes.BGR2GRAY);
         // 截取出战角色区域扩展
-        using var characterMat = new Mat(gray, new Rect(character.Area.X,
+        using var characterMat = new Mat(greyMat, new Rect(character.Area.X,
             character.Area.Y,
             character.Area.Width + 40,
             character.Area.Height + 10));
@@ -1029,7 +1027,6 @@ public class GeniusInvokationControl
     public Character WhichCharacterActiveWithRetry(Duel duel)
     {
         // 检查角色是否被击败 // 这里又检查一次是因为最后一个角色存活的情况下，会自动出战
-        // TODO 这个击败识别有问题，需要优化
         var defeatedArray = WhatCharacterDefeated(duel.CharacterCardRects);
         for (var i = defeatedArray.Length - 1; i >= 0; i--)
         {
@@ -1084,7 +1081,9 @@ public class GeniusInvokationControl
                     {
                         // 首个相交矩形就是出战角色
                         duel.CurrentCharacter = duel.Characters[i + 1];
-                        AppendCharacterStatus(duel.CurrentCharacter, srcMat);
+                        var grayMat = new Mat();
+                        Cv2.CvtColor(srcMat, grayMat, ColorConversionCodes.BGR2GRAY);
+                        AppendCharacterStatus(duel.CurrentCharacter, grayMat);
 
                         Cv2.Rectangle(srcMat, rect1, Scalar.Yellow);
                         Cv2.Rectangle(srcMat, duel.CharacterCardRects[i], Scalar.Blue, 2);
@@ -1119,27 +1118,47 @@ public class GeniusInvokationControl
         var hpArray = new int[3]; // 1 代表未出战 2 代表出战
         for (var i = 0; i < duel.CharacterCardRects.Count; i++)
         {
+            if (duel.Characters[i + 1].IsDefeated)
+            {
+                // 已经被击败的角色肯定未出战
+                hpArray[i] = 1;
+                continue;
+            }
+
             var cardRect = duel.CharacterCardRects[i];
             // 未出战角色的hp区域
             var hpMat = new Mat(srcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
                 cardRect.Y + _config.CharacterCardExtendHpRect.Y,
                 _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
             var text = OcrFactory.Paddle.Ocr(hpMat);
-            if (string.IsNullOrWhiteSpace(text))
+            Cv2.ImWrite($"log\\hp_n_{i}.jpg", hpMat);
+            Debug.WriteLine($"角色{i}未出战HP位置识别结果{text}");
+            if (!string.IsNullOrWhiteSpace(text))
             {
+                // 说明这个角色未出战
                 hpArray[i] = 1;
             }
-
-            hpMat = new Mat(srcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
-                cardRect.Y + _config.CharacterCardExtendHpRect.Y - _config.ActiveCharacterCardSpace,
-                _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
-            text = OcrFactory.Paddle.Ocr(hpMat);
-            if (string.IsNullOrWhiteSpace(text))
+            else
             {
-                hpArray[i] = 2;
-                duel.CurrentCharacter = duel.Characters[i + 1];
-                AppendCharacterStatus(duel.CurrentCharacter, srcMat);
-                return duel.CurrentCharacter;
+                hpMat = new Mat(srcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
+                    cardRect.Y + _config.CharacterCardExtendHpRect.Y - _config.ActiveCharacterCardSpace,
+                    _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
+                text = OcrFactory.Paddle.Ocr(hpMat);
+                Cv2.ImWrite($"log\\hp_active_{i}.jpg", hpMat);
+                Debug.WriteLine($"角色{i}出战HP位置识别结果{text}");
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var hp = -2;
+                    if (Regex.IsMatch(text, @"^[0-9]+$"))
+                    {
+                        hp = int.Parse(text);
+                    }
+
+                    hpArray[i] = 2;
+                    duel.CurrentCharacter = duel.Characters[i + 1];
+                    AppendCharacterStatus(duel.CurrentCharacter, srcMat, hp);
+                    return duel.CurrentCharacter;
+                }
             }
         }
 
@@ -1147,7 +1166,8 @@ public class GeniusInvokationControl
         {
             // 找到并不等1的
             var index = hpArray.ToList().FindIndex(x => x != 1);
-            duel.CurrentCharacter = duel.Characters[index];
+            Debug.WriteLine($"通过OCR HP的方式没有识别到出战角色，但是通过排除法确认角色{index + 1}处于出战状态！");
+            duel.CurrentCharacter = duel.Characters[index + 1];
             AppendCharacterStatus(duel.CurrentCharacter, srcMat);
             return duel.CurrentCharacter;
         }
@@ -1181,15 +1201,17 @@ public class GeniusInvokationControl
     /// <summary>
     /// 通过OCR识别当前骰子数量
     /// </summary>
-    /// <param name="duel"></param>
     /// <returns></returns>
     public int GetDiceCountByOcr()
     {
         var srcMat = CaptureGameGreyMat();
         var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
         var text = OcrFactory.Paddle.Ocr(diceCountMap);
+        text = text.Replace(" ", "");
+        _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
         if (string.IsNullOrWhiteSpace(text))
         {
+            Cv2.ImWrite("log\\dice_count_empty.jpg", diceCountMap);
             return -10;
         }
         else if (Regex.IsMatch(text, @"^[0-9]+$"))
@@ -1198,6 +1220,7 @@ public class GeniusInvokationControl
         }
         else
         {
+            Cv2.ImWrite("log\\dice_count_error.jpg", diceCountMap);
             return -10;
         }
     }

@@ -64,7 +64,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             sb.Append($"角色{Index}，");
             if (Hp != -2)
             {
-                sb.Append($"Hp={Hp}，");
+                sb.Append($"HP={Hp}，");
             }
             sb.Append($"充能={EnergyByRecognition}，");
             if (StatusList?.Count > 0)

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -145,17 +146,20 @@ public class Duel
 
                     // 行动前重新确认骰子数量
                     var diceCountFromOcr = GeniusInvokationControl.GetInstance().GetDiceCountByOcr();
-                    var diceDiff = Math.Abs(CurrentDiceCount - diceCountFromOcr);
-                    if (diceDiff is > 0 and <= 2)
+                    if (diceCountFromOcr != -10)
                     {
-                        _logger.LogInformation("可能存在场地牌影响了骰子数[{CurrentDiceCount}] -> [{DiceCountFromOcr}]", CurrentDiceCount, diceCountFromOcr);
-                        CurrentDiceCount = diceCountFromOcr;
-                    }
-                    else if (diceDiff > 2)
-                    {
-                        _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
-                    }
+                        var diceDiff = Math.Abs(CurrentDiceCount - diceCountFromOcr);
+                        if (diceDiff is > 0 and <= 2)
+                        {
+                            _logger.LogInformation("可能存在场地牌影响了骰子数[{CurrentDiceCount}] -> [{DiceCountFromOcr}]", CurrentDiceCount, diceCountFromOcr);
+                            CurrentDiceCount = diceCountFromOcr;
+                        }
+                        else if (diceDiff > 2)
+                        {
+                            _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
+                        }
 
+                    }
 
                     var alreadyExecutedActionIndex = new List<int>();
                     var alreadyExecutedActionCommand = new List<ActionCommand>();
@@ -286,6 +290,7 @@ public class Duel
         catch (System.Exception ex)
         {
             _logger.LogError(ex.Message);
+            Debug.WriteLine(ex.StackTrace);
         }
         finally
         {
