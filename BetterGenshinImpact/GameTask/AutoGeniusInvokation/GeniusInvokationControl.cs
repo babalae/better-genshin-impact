@@ -706,7 +706,7 @@ public class GeniusInvokationControl
                 if (duel.CurrentCardCount <= 1)
                 {
                     ClickGameWindowCenter(); // 复位
-                    Sleep(1200);
+                    Sleep(2000);
                 }
             }
         }
