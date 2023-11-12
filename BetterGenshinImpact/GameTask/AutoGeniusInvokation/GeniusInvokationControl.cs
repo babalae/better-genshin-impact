@@ -1211,7 +1211,7 @@ public class GeniusInvokationControl
         _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
         if (string.IsNullOrWhiteSpace(text))
         {
-            Cv2.ImWrite($"log\\dice_count_empty{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
+            //Cv2.ImWrite($"log\\dice_count_empty{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
             return -10;
         }
         else if (Regex.IsMatch(text, @"^[0-9]+$"))
@@ -1220,7 +1220,7 @@ public class GeniusInvokationControl
         }
         else
         {
-            Cv2.ImWrite($"log\\dice_count_error_{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
+            //Cv2.ImWrite($"log\\dice_count_error_{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
             return -10;
         }
     }
