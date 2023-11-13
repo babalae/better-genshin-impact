@@ -173,10 +173,10 @@ public class ExpeditionTask
                     if (ocrResultRect2.Rect.Y > ocrResultRect.Rect.Y - 50 * assetScale
                         && ocrResultRect2.Rect.Y + ocrResultRect2.Rect.Height < ocrResultRect.Rect.Y + ocrResultRect.Rect.Height)
                     {
-                        if (ocrResultRect2.Text.Contains("探险完成"))
+                        if (ocrResultRect2.Text.Contains("探险完成") || ocrResultRect2.Text.Contains("探险中"))
                         {
                             card.Idle = false;
-                            var name = ocrResultRect2.Text.Replace("探险完成", "").Replace("/", "").Trim();
+                            var name = ocrResultRect2.Text.Replace("探险完成", "").Replace("探险中", "").Replace("/", "").Trim();
                             if (!string.IsNullOrEmpty(name))
                             {
                                 card.Name = name;
