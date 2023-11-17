@@ -1,14 +1,19 @@
 <p>
   <img src="https://github.com/babalae/better-genshin-impact/assets/15783049/c3fe6d01-6932-46ae-a570-fd3027e5a2a5" align="right" width="220" hspace="5" vspace="5">
   <h1>🍨 BetterGI · 更好的原神</h1>
-  <p>你喜欢钓鱼吗？你想玩七圣召唤吗？</p>
-  <p>你是否想要跳过不爱看的剧情？你做完所有邀约了吗？</p>
+  <p>
+    <img alt="" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square&color=4096d8" />
+    <img alt="" src="https://img.shields.io/github/last-commit/babalae/better-genshin-impact?style=flat-square&color=f18cb9" />
+    <img alt="" src="https://img.shields.io/github/v/release/babalae/better-genshin-impact?style=flat-square&color=4096d8" />
+  </p>
+  <p>你喜欢钓鱼吗？你想玩七圣召唤吗？你是否想要跳过不爱看的剧情？你做完所有邀约了吗？</p>
   <p>是否对日复一日的重复点击感到疲劳？</p>
   <p><b>BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的项目。</b></p>
 </p>
 <!-- https://github.com/babalae/better-genshin-impact/assets/15783049/483cb63b-f21c-4946-bb19-64249aa7d5fb -->
 
 ## 功能
+
 
 特色：
 
