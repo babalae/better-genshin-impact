@@ -76,7 +76,7 @@ public class ExpeditionTask
             {
                 // 点击探险完成下方的人物头像
                 content.CaptureRectArea.Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale))).ClickCenter();
-                TaskControl.Sleep(500);
+                TaskControl.Sleep(100);
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
                 rect = result.FindRectByText("领取");
@@ -85,10 +85,10 @@ public class ExpeditionTask
                     using var ra = content.CaptureRectArea.Derive(rect);
                     ra.ClickCenter();
                     //TaskControl.Logger.LogInformation("探索派遣：点击{Text}", "领取");
-                    TaskControl.Sleep(300);
+                    TaskControl.Sleep(200);
                     // 点击空白区域继续
                     ra.ClickCenter();
-                    TaskControl.Sleep(200);
+                    TaskControl.Sleep(250);
 
                     // 选择角色
                     result = CaptureAndOcr(content);
@@ -96,7 +96,7 @@ public class ExpeditionTask
                     if (rect != Rect.Empty)
                     {
                         content.CaptureRectArea.Derive(rect).ClickCenter();
-                        TaskControl.Sleep(800); // 等待动画
+                        TaskControl.Sleep(400); // 等待动画
                         var success = SelectCharacter(content);
                         if (success)
                         {

@@ -72,7 +72,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
             if (!isPlaying)
             {
-                // 关闭弹出页
+                // 关闭弹出页 //todo 可能会误判关闭传送窗口，可以加上二次判断
                 content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
                 {
                     pageCloseRoRa.ClickCenter();
