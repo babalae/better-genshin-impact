@@ -1,19 +1,25 @@
-# 🍨 BetterGI · 更好的原神
-
-你喜欢钓鱼吗？你想玩七圣召唤吗？你是否想要跳过不爱看的剧情？你做完所有邀约了吗？是否对日复一日的重复点击感到疲劳？
-
-BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的项目。
-
-> [!IMPORTANT]  
-> 本软件开源、免费，仅供学习交流使用。
+<p>
+  <img src="https://github.com/babalae/better-genshin-impact/assets/15783049/c3fe6d01-6932-46ae-a570-fd3027e5a2a5" align="right" width="220" hspace="5" vspace="5">
+  <h1>🍨 BetterGI · 更好的原神</h1>
+  <p>
+    <img alt="" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square&color=4096d8" />
+    <img alt="" src="https://img.shields.io/github/last-commit/babalae/better-genshin-impact?style=flat-square&color=f18cb9" />
+    <img alt="" src="https://img.shields.io/github/v/release/babalae/better-genshin-impact?style=flat-square&color=4096d8" />
+  </p>
+  <p>你喜欢钓鱼吗？你想玩七圣召唤吗？你是否想要跳过不爱看的剧情？你做完所有邀约了吗？</p>
+  <p>是否对日复一日的重复点击感到疲劳？</p>
+  <p><b>BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的项目。</b></p>
+</p>
+<!-- https://github.com/babalae/better-genshin-impact/assets/15783049/483cb63b-f21c-4946-bb19-64249aa7d5fb -->
 
 ## 功能
+
 
 特色：
 
 自带一个遮罩窗口覆盖在游戏界面上，用于显示日志和图像识别结果。
 
-<img width="500px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/f7a3d0bf-dd04-418a-b106-5f06f3ab2de5"/>
+<img width="580px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/57ab7c3c-709a-4cf3-8f64-1c78764c364c"/>
 <br>
 <br>
 
@@ -37,8 +43,7 @@ BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的�
 
 ## 界面截图
 
-![image](https://github.com/babalae/better-genshin-impact/assets/15783049/813570c4-3816-4850-ac16-799af4f3cc5f)
-
+<img width="780px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/813570c4-3816-4850-ac16-799af4f3cc5f"/>
 
 ## 下载地址
 
