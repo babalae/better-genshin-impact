@@ -1,5 +1,5 @@
 <p>
-  <img src="https://github.com/babalae/better-genshin-impact/assets/15783049/c3fe6d01-6932-46ae-a570-fd3027e5a2a5" align="right" width="220" hspace="5" vspace="5">
+  <a href="https://bgi.huiyadan.com/"><img src="https://github.com/babalae/better-genshin-impact/assets/15783049/c3fe6d01-6932-46ae-a570-fd3027e5a2a5" align="right" width="220" hspace="5" vspace="5"></a>
   <h1>🍨 BetterGI · 更好的原神</h1>
   <p>
     <img alt="" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square&color=4096d8" />
