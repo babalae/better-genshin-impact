@@ -100,7 +100,7 @@
 
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
