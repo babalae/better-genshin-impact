@@ -13,7 +13,7 @@
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Title="HomePage"
-      d:DesignHeight="450"
+      d:DesignHeight="850"
       d:DesignWidth="800">
 
     <b:Interaction.Triggers>
@@ -25,42 +25,192 @@
     </b:Interaction.Triggers>
 
     <StackPanel Margin="42,16,42,12">
-        <ui:TextBlock
-            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-            TextWrapping="Wrap"
-            Margin="0 0 0 12"
-            FontSize="20">
-            更好的原神：
-            <Hyperlink 
-                Command="{Binding GoToWikiUrlCommand}"
-                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                点击查看使用教程
-            </Hyperlink>
-        </ui:TextBlock>
 
-        <Label Content="截图模式：" Target="{Binding ElementName=CaptureModeComboBox}" />
-        <ComboBox x:Name="CaptureModeComboBox" Margin="0,4,0,0" ItemsSource="{Binding ModeNames}"
-                  SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
-        <Label Content="触发器间隔（毫秒）：" Target="{Binding ElementName=IntervalNumberBox}" />
-        <ui:TextBox x:Name="IntervalNumberBox"
-                    Margin="0,4,0,0"
-                    Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
+        <Border
+            Height="200"
+            CornerRadius="8">
+            <Border.Background>
+                <ImageBrush
+                    ImageSource="pack://application:,,,/Assets/mona.jpg"
+                    RenderOptions.BitmapScalingMode="HighQuality"
+                    Stretch="UniformToFill" />
+            </Border.Background>
+            <Border CornerRadius="8">
+                <Border.Background>
+                    <RadialGradientBrush>
+                        <GradientStop Offset="0" Color="#1F000000" />
+                        <GradientStop Offset="1" Color="#4F000000" />
+                    </RadialGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <StackPanel
+                        Margin="48,0"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Background="Transparent">
+                        <ui:TextBlock
+                            FontTypography="Title"
+                            Foreground="#FFFFFF"
+                            Text="BetterGI" />
+                        <ui:TextBlock
+                            FontTypography="Subtitle"
+                            Foreground="#B7FFFFFF">
+                            更好的原神，免费且开源
+                        </ui:TextBlock>
+                        <ui:TextBlock
+                            FontTypography="BodyStrong"
+                            Foreground="#B7FFFFFF"
+                            >
+                            <Hyperlink 
+                                Command="{Binding GoToWikiUrlCommand}"
+                                Foreground="#B7FFFFFF">
+                                点击查看教程
+                            </Hyperlink>
+                        </ui:TextBlock>
+                    </StackPanel>
+                    <!--<ui:TextBlock
+                        Margin="12"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        FontTypography="Caption"
+                        Foreground="#57FFFFFF"
+                        Text="Made with ❤ by huiyadanli" />-->
+                </Grid>
+            </Border>
+        </Border>
 
-        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-            <ui:Button
-                Icon="{ui:SymbolIcon Play24}"
-                Content="启动"
-                Command="{Binding StartTriggerCommand}"
-                Visibility="{Binding StartButtonVisibility}" />
-            <ui:Button
-                Icon="{ui:SymbolIcon Dismiss24}"
-                Content="停止"
-                Command="{Binding StopTriggerCommand}"
-                Visibility="{Binding StopButtonVisibility}" />
-        </StackPanel>
+        <!-- 原神，启动！ -->
+        <ui:CardExpander Margin="0,12,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Play24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="更好的原神，启动！" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="无论你要做什么，请先启动" />
+                    <StackPanel
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Orientation="Horizontal" Margin="0,0,24,0">
+                        <ui:Button
+                            Icon="{ui:SymbolIcon Play24}"
+                            Content="启动"
+                            Command="{Binding StartTriggerCommand}"
+                            Visibility="{Binding StartButtonVisibility}" />
+                        <ui:Button
+                            Icon="{ui:SymbolIcon Dismiss24}"
+                            Content="停止"
+                            Command="{Binding StopTriggerCommand}"
+                            Visibility="{Binding StopButtonVisibility}" />
+                    </StackPanel>
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="截图模式" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="如果可用的话，推荐选择 BitBlt，问题较少" />
+                    <ComboBox 
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        x:Name="CaptureModeComboBox" Margin="0,0,36,0" 
+                        ItemsSource="{Binding ModeNames}"
+                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="触发器间隔（毫秒）" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="默认50ms，机器性能一般的情况下不建议调整这个值" />
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        x:Name="IntervalNumberBox"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="测试图像捕获" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="测试功能，测试几种截图模式的效果" />
+                    <ui:Button
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        x:Name="StartCaptureTest" Margin="0,0,36,0" Content="测试图像捕获"
+                               Command="{Binding StartCaptureTestCommand}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
-        <ui:Button x:Name="StartCaptureTest" Margin="0,20,0,0" Content="测试图像捕获"
-                   Command="{Binding StartCaptureTestCommand}" />
         <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
 
 
