@@ -69,7 +69,8 @@
                     FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                     BorderThickness="0"
                     VerticalScrollBarVisibility="Hidden"
-                    Visibility="{Binding LogTextBoxVisibility}" />
+                    Visibility="{Binding LogTextBoxVisibility}"
+                    IsHitTestVisible="False" />
             </ContentControl>
 
             <!--<ContentControl Width="230"
