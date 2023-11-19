@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using BetterGenshinImpact.Helpers;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.Macro;
 
@@ -43,5 +34,7 @@ public class QuickEnhanceArtifactMacro
         Thread.Sleep(100);
         // 强化菜单 150x220
         clickOffset.Click(150, 220);
+        // 移动回快捷放入 #30
+        clickOffset.Move(1760, 770);
     }
 }
