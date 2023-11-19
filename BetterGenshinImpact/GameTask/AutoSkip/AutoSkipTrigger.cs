@@ -48,7 +48,7 @@ public class AutoSkipTrigger : ITaskTrigger
     /// <summary>
     /// 上一次播放中的帧
     /// </summary>
-    private int _prevPlayingFrameIndex = -1;
+    private DateTime _prevPlayingTime = DateTime.MinValue;
 
     public void OnCapture(CaptureContent content)
     {
@@ -65,14 +65,14 @@ public class AutoSkipTrigger : ITaskTrigger
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
         // 播放中图标消失3s内OCR判断文字
-        if (!isPlaying && Math.Abs(content.FrameIndex - _prevPlayingFrameIndex) <= content.FrameRate * 2)
+        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 2)
         {
             // 找播放中的文字
             content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
 
             if (!isPlaying)
             {
-                // 关闭弹出页 //todo 可能会误判关闭传送窗口，可以加上二次判断
+                // 关闭弹出页
                 content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
                 {
                     pageCloseRoRa.ClickCenter();
@@ -91,7 +91,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
         if (isPlaying)
         {
-            _prevPlayingFrameIndex = content.FrameIndex;
+            _prevPlayingTime = DateTime.Now;
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
                 Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.SPACE);
