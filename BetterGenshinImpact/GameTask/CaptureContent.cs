@@ -37,9 +37,16 @@ public class CaptureContent : IDisposable
     /// <summary>
     /// 达到了什么时间间隔
     /// 最大MaxFrameIndexSecond秒
+    ///
+    /// 这代码有bug
+    /// 这代码有bug
+    /// 这代码有bug
+    ///
+    /// 不用了
     /// </summary>
     /// <param name="interval"></param>
     /// <returns></returns>
+    [Obsolete]
     public bool IsReachInterval(TimeSpan interval)
     {
         if (interval.TotalSeconds > MaxFrameIndexSecond)

@@ -74,15 +74,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private Rect _fishBoxRect = Rect.Empty;
 
+        private DateTime _prevExecute = DateTime.MinValue;
+
         public void OnCapture(CaptureContent content)
         {
             // 进入独占的判定
             if (!IsExclusive)
             {
-                if (!content.IsReachInterval(TimeSpan.FromMilliseconds(300)))
+                if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
                 {
                     return;
                 }
+                _prevExecute = DateTime.Now;
 
                 // 进入独占模式判断
                 CheckFishingUserInterface(content);
@@ -96,10 +99,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 进入钓鱼界面先尝试获取钓鱼框的位置
                 if (_fishBoxRect.Width == 0)
                 {
-                    if (!content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
+                    if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
                     {
                         return;
                     }
+                    _prevExecute = DateTime.Now;
 
                     _fishBoxRect = GetFishBoxArea(content.CaptureRectArea.SrcMat);
                     CheckFishingUserInterface(content);

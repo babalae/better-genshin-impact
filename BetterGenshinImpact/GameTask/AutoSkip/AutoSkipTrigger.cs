@@ -50,12 +50,15 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private DateTime _prevPlayingTime = DateTime.MinValue;
 
+    private DateTime _prevExecute = DateTime.MinValue;
+
     public void OnCapture(CaptureContent content)
     {
-        if (content.IsReachInterval(TimeSpan.FromMilliseconds(200)))
+        if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
         {
             return;
         }
+        _prevExecute = DateTime.Now;
 
         var config = TaskContext.Instance().Config.AutoSkipConfig;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;

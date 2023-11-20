@@ -34,6 +34,7 @@ public class QuickEnhanceArtifactMacro
         Thread.Sleep(100);
         // 强化菜单 150x220
         clickOffset.Click(150, 220);
+        Thread.Sleep(100);
         // 移动回快捷放入 #30
         clickOffset.Move(1760, 770);
     }
