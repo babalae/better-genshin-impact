@@ -19,11 +19,11 @@ public partial class AutoFishingConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _enabled = false;
 
-    /// <summary>
-    /// 鱼儿上钩文字识别区域
-    /// 暂时无用
-    /// </summary>
-    [ObservableProperty] private Rect _fishHookedRecognitionArea = Rect.Empty;
+    ///// <summary>
+    ///// 鱼儿上钩文字识别区域
+    ///// 暂时无用
+    ///// </summary>
+    //[ObservableProperty] private Rect _fishHookedRecognitionArea = Rect.Empty;
 
     /// <summary>
     /// 自动抛竿是否启用

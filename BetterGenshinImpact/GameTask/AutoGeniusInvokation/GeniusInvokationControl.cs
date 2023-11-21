@@ -1205,7 +1205,7 @@ public class GeniusInvokationControl
     public int GetDiceCountByOcr()
     {
         var srcMat = CaptureGameGreyMat();
-        var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
+        var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect.ToRect());
         var text = OcrFactory.Paddle.Ocr(diceCountMap);
         text = text.Replace(" ", "");
         _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);

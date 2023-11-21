@@ -34,7 +34,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 日志窗口位置与大小
         /// </summary>
-        [ObservableProperty] private Rect _logBoxLocation = Rect.Empty;
+        [ObservableProperty] private RectConfig _logBoxLocation = new();
 
         /// <summary>
         /// 控件是否锁定（拖拽移动等）
@@ -50,7 +50,6 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 1080p下UID遮盖的位置与大小
         /// </summary>
-        [JsonIgnore] 
-        public Rect UidCoverRect = new(1695, 1052, 168, 22);
+        public RectConfig UidCoverRect { get; set; } = new(1695, 1052, 168, 22);
     }
 }
