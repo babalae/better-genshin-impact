@@ -110,12 +110,26 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         catch (System.Exception ex)
         {
             MessageBox.Show(ex.Message);
-        }   
+        }
     }
 
     [RelayCommand]
     public void OnGoToAutoGeniusInvokationUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4") { UseShellExecute = true });
+    }
+
+    public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
+    {
+        var instance = App.GetService<TaskSettingsPageViewModel>();
+        if (instance == null) { return; }
+        if (running)
+        {
+            instance.SwitchAutoGeniusInvokationButtonText = "停止";
+        }
+        else
+        {
+            instance.SwitchAutoGeniusInvokationButtonText = "启动";
+        }
     }
 }
