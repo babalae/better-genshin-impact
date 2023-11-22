@@ -59,7 +59,6 @@ namespace BetterGenshinImpact
                     Log.Logger = loggerConfiguration.CreateLogger();
                     services.AddLogging(c => c.AddSerilog());
 
-
                     // App Host
                     services.AddHostedService<ApplicationHostService>();
 

@@ -12,17 +12,9 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.Windows;
 using System.Windows.Interop;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using OpenCvSharp;
 using Wpf.Ui.Controls;
-using Compunet.YoloV8;
-using System.Drawing.Imaging;
-using System.IO;
-using MessageBox = System.Windows.MessageBox;
-using System.Text.Json;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -177,6 +169,5 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         //{
         //    MessageBox.Show(e.StackTrace);
         //}
-
     }
 }
