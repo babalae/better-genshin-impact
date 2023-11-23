@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
 using System;
+using System.Windows.Media;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -9,7 +10,7 @@ namespace BetterGenshinImpact.View;
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
-public partial class MainWindow : INavigationWindow
+public partial class MainWindow : FluentWindow, INavigationWindow
 {
     public MainWindowViewModel ViewModel { get; }
 
@@ -22,6 +23,17 @@ public partial class MainWindow : INavigationWindow
 
         SetPageService(pageService);
         navigationService.SetNavigationControl(RootNavigation);
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
+        {
+            Background = new SolidColorBrush(Colors.Transparent);
+            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Mica);
+        }
     }
 
     public INavigationView GetNavigation() => RootNavigation;
