@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
@@ -295,6 +296,7 @@ public class Duel
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
+            TaskSettingsPageViewModel.SetSwitchAutoGeniusInvokationButtonText(false);
             _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
             taskParam.Dispatcher.StartTimer();
         }
