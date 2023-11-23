@@ -12,8 +12,10 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using Windows.System;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -90,6 +92,15 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
             captureWindow.Show();
         }
+    }
+
+    [RelayCommand]
+    private async Task OpenDisplayAdvancedGraphicsSettingsAsync()
+    {
+        // ms-settings:display
+        // ms-settings:display-advancedgraphics
+        // ms-settings:display-advancedgraphics-default
+        await Launcher.LaunchUriAsync(new Uri("ms-settings:display-advancedgraphics"));
     }
 
     private bool CanStartTrigger() => StartButtonEnabled;
