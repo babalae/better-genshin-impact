@@ -1,7 +1,9 @@
 ﻿using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.Core.Config;
 
+[Obsolete("Replace with original OpenCvSharp.Rect")]
 public class RectConfig
 {
     public int X { get; set; }
