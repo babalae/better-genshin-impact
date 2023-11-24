@@ -77,6 +77,12 @@ public class ConfigService : IConfigService
             Config = config;
             return config;
         }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            Console.WriteLine(e.StackTrace);
+            return new AllConfig();
+        }
         finally
         {
             _rwLock.ExitReadLock();
