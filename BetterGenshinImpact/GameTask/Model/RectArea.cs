@@ -218,22 +218,35 @@ public class RectArea : IDisposable
 
         if (RecognitionTypes.TemplateMatch.Equals(ro.RecognitionType))
         {
-            if (ro.TemplateImageGreyMat == null)
+            Mat roi;
+            Mat? template;
+            if (ro.Use3Channels)
+            {
+                template = ro.TemplateImageMat;
+                roi = SrcMat;
+                Cv2.CvtColor(roi, roi, ColorConversionCodes.BGRA2BGR);
+            }
+            else
+            {
+                template = ro.TemplateImageGreyMat;
+                roi = SrcGreyMat;
+            }
+
+            if (template == null)
             {
                 throw new Exception($"[TemplateMatch]识别对象{ro.Name}的模板图片不能为null");
             }
 
-            var roi = SrcGreyMat;
             if (ro.RegionOfInterest != Rect.Empty)
             {
                 // TODO roi 是可以加缓存的
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(roi, ro.RegionOfInterest);
             }
 
-            var p = MatchTemplateHelper.MatchTemplate(roi, ro.TemplateImageGreyMat, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
+            var p = MatchTemplateHelper.MatchTemplate(roi, template, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
             if (p is { X: > 0, Y: > 0 })
             {
-                var newRa = new RectArea(ro.TemplateImageGreyMat.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
+                var newRa = new RectArea(template.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
                     VisionContext.Instance().DrawContent.PutRect(ro.Name, newRa
