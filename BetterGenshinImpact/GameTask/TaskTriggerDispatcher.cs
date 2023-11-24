@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Windows;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -52,12 +54,34 @@ namespace BetterGenshinImpact.GameTask
             // 启动截图
             GameCapture.Start(hWnd);
 
+            // 读取游戏注册表配置
+            ReadGameSettings();
+
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
             if (!_timer.Enabled)
             {
                 _timer.Start();
+            }
+        }
+
+        private void ReadGameSettings()
+        {
+            try
+            {
+                SettingsContainer settings = new();
+                settings.FromReg();
+                var lang = settings.Language?.TextLang;
+                if (lang != null && lang != TextLanguage.SimplifiedChinese)
+                {
+                    _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用", lang);
+                    _logger.LogWarning("The game language is not Simplified Chinese, some functions may not work properly");
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             }
         }
 
@@ -191,8 +215,6 @@ namespace BetterGenshinImpact.GameTask
                 }
 
 
-
-
                 var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
                 var bitmap = GameCapture.Capture();
@@ -219,6 +241,7 @@ namespace BetterGenshinImpact.GameTask
                         speedTimer.Record(trigger.Name);
                     }
                 }
+
                 speedTimer.DebugPrint();
                 //if (_frameIndex / content.FrameRate % 2 == 0)
                 //{

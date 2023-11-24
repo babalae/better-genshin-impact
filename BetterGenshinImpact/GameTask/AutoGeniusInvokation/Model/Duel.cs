@@ -63,6 +63,7 @@ public class Duel
         Cts = taskParam.Cts;
         try
         {
+            LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
 
@@ -159,7 +160,6 @@ public class Duel
                         {
                             _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
                         }
-
                     }
 
                     var alreadyExecutedActionIndex = new List<int>();
@@ -404,21 +404,31 @@ public class Duel
         return orderList;
     }
 
-    /// <summary>
-    /// 获取角色存活数量
-    /// </summary>
-    /// <returns></returns>
-    public int GetCharacterAliveNum()
-    {
-        int num = 0;
-        foreach (var character in Characters)
-        {
-            if (character != null && !character.IsDefeated)
-            {
-                num++;
-            }
-        }
+    ///// <summary>
+    ///// 获取角色存活数量
+    ///// </summary>
+    ///// <returns></returns>
+    //public int GetCharacterAliveNum()
+    //{
+    //    int num = 0;
+    //    foreach (var character in Characters)
+    //    {
+    //        if (character != null && !character.IsDefeated)
+    //        {
+    //            num++;
+    //        }
+    //    }
 
-        return num;
+    //    return num;
+    //}
+
+
+    private void LogScreenResolution()
+    {
+        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+        if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
+        {
+            _logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动七圣召唤 !", gameScreenSize.Width, gameScreenSize.Height);
+        }
     }
 }
