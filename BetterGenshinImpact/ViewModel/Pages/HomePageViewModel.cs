@@ -111,7 +111,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            System.Windows.MessageBox.Show("未找到原神窗口");
+            System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
             return;
         }
 

@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
@@ -32,18 +33,33 @@ namespace BetterGenshinImpact.ViewModel
 
 
         [RelayCommand]
-        private void OnLoaded()
+        private async void OnLoaded()
         {
             _logger.LogInformation("更好的原神 {Version}", Global.Version);
-            Task.Run(() =>
+            try
             {
-                var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
-                Debug.WriteLine("PaddleOcr预热结果:" + s);
-            });
+                await Task.Run(() =>
+                {
+                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
+                    Debug.WriteLine("PaddleOcr预热结果:" + s);
+                });
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show("PaddleOcr预热失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            }
 
-            Task.Run(GetNewestInfo);
+
+            try
+            {
+                await Task.Run(GetNewestInfo);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                _logger.LogWarning("获取 BetterGI 最新版本信息失败");
+            }
         }
-
 
         private async void GetNewestInfo()
         {
