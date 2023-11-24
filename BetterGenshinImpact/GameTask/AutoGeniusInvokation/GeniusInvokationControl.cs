@@ -404,7 +404,8 @@ public class GeniusInvokationControl
     /// <param name="holdElementalTypes">保留的元素类型</param>
     public bool RollPhaseReRoll(params ElementalType[] holdElementalTypes)
     {
-        var gameSnapshot = CaptureGameGreyMat();
+        var gameSnapshot = CaptureGameMat();
+        Cv2.CvtColor(gameSnapshot, gameSnapshot, ColorConversionCodes.BGRA2BGR);
         var dictionary = FindMultiPicFromOneImage2OneByOne(gameSnapshot, _assets.RollPhaseDiceMats, 0.73);
 
         var count = dictionary.Sum(kvp => kvp.Value.Count);
@@ -527,7 +528,8 @@ public class GeniusInvokationControl
     /// <returns></returns>
     public Dictionary<string, int> ActionPhaseDice()
     {
-        var srcMat = CaptureGameGreyMat();
+        var srcMat = CaptureGameMat();
+        Cv2.CvtColor(srcMat, srcMat, ColorConversionCodes.BGRA2BGR);
         // 切割图片后再识别 加快速度 位置没啥用，所以切割后比较方便
         var dictionary = FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _assets.ActionPhaseDiceMats, 0.7);
 
