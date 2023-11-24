@@ -90,7 +90,7 @@ public class Duel
                 var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
                 for (var i = 0; i < defaultCharacterCardRects.Count; i++)
                 {
-                    CharacterCardRects.Add(defaultCharacterCardRects[i].ToRect().Multiply(assetScale));
+                    CharacterCardRects.Add(defaultCharacterCardRects[i].Multiply(assetScale));
                 }
 
                 _logger.LogInformation("获取角色区域失败，使用默认区域");
