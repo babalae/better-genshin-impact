@@ -24,11 +24,14 @@ public class AutoWoodTask
 
     private readonly ClickOffset _clickOffset;
 
+    private readonly Login3rdParty _login3rdParty;
+
     public AutoWoodTask()
     {
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
+        _login3rdParty = new();
     }
 
     public void Start(WoodTaskParam taskParam)
@@ -45,6 +48,12 @@ public class AutoWoodTask
                     break;
                 }
 
+                _login3rdParty.RefreshAvailabled();
+                if (_login3rdParty.Type == Login3rdParty.The3rdPartyType.Bilibili)
+                {
+                    // TODO
+                    throw new NormalEndException("暂未支持B服伐木，后续将会增加支持！");
+                }
                 Felling(taskParam);
                 VisionContext.Instance().DrawContent.ClearAll();
                 Sleep(500, taskParam.Cts);
@@ -79,7 +88,6 @@ public class AutoWoodTask
         // 3. 等待进入游戏
         EnterGame(taskParam);
     }
-
 
     private void PressZ(WoodTaskParam taskParam)
     {

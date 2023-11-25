@@ -312,9 +312,4 @@
 		</None>
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="Assets\Model\" />
-		<Folder Include="Genshin\" />
-	</ItemGroup>
-
 </Project>
