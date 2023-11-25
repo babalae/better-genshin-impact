@@ -112,16 +112,14 @@ public partial class App : Application
     /// <summary>
     /// Occurs when the application is loading.
     /// </summary>
-    private void OnStartup(object sender, StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
-        StartUp();
-    }
+        base.OnStartup(e);
 
-    private async void StartUp()
-    {
         try
         {
-            await StartUpCoreAsync();
+            RegisterEvents();
+            await _host.StartAsync();
             await UrlProtocolHelper.RegisterAsync();
         }
         catch (Exception ex)
@@ -136,19 +134,14 @@ public partial class App : Application
         }
     }
 
-    private async Task StartUpCoreAsync()
-    {
-        RegisterEvents();
-        await _host.StartAsync();
-    }
-
     /// <summary>
     /// Occurs when the application is closing.
     /// </summary>
-    private async void OnExit(object sender, ExitEventArgs e)
+    protected override async void OnExit(ExitEventArgs e)
     {
-        await _host.StopAsync();
+        base.OnExit(e);
 
+        await _host.StopAsync();
         _host.Dispose();
     }
 
