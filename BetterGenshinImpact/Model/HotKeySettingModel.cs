@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using System.Windows;
 using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fischless.HotkeyCapture;
+using Gma.System.MouseKeyHook.HotKeys;
 
 namespace BetterGenshinImpact.Model;
 
@@ -18,11 +20,11 @@ public partial class HotKeySettingModel : ObservableObject
 
     public string ConfigPropertyName { get; set; }
 
-    public Action<mrousavy.HotKey> OnKeyAction { get; set; }
+    public Action<object?, KeyPressedEventArgs> OnKeyAction { get; set; }
 
-    public mrousavy.HotKey? KeyBindInfo { get; set; }
+    public HotkeyHook? KeyBindInfo { get; set; }
 
-    public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, Action<mrousavy.HotKey> onKeyAction)
+    public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, Action<object?, KeyPressedEventArgs> onKeyAction)
     {
         FunctionName = functionName;
         ConfigPropertyName = configPropertyName;
@@ -39,12 +41,14 @@ public partial class HotKeySettingModel : ObservableObject
 
         try
         {
-            KeyBindInfo = new mrousavy.HotKey(
-                HotKey.Modifiers,
-                HotKey.Key,
-                UIDispatcherHelper.MainWindow,
-                OnKeyAction
-            );
+            Fischless.HotkeyCapture.Hotkey hotkey = new(HotKey.ToString());
+
+            KeyBindInfo?.Dispose();
+            KeyBindInfo = new HotkeyHook();
+            KeyBindInfo.KeyPressed -= OnKeyPressed;
+            KeyBindInfo.KeyPressed += OnKeyPressed;
+            KeyBindInfo.RegisterHotKey(hotkey.ModifierKey, hotkey.Key);
+
         }
         catch (Exception e)
         {
@@ -52,6 +56,11 @@ public partial class HotKeySettingModel : ObservableObject
             HotKey = HotKey.None;
         }
 
+    }
+
+    private  void OnKeyPressed(object? sender, KeyPressedEventArgs e)
+    {
+        OnKeyAction.Invoke(sender, e);
     }
 
     public void UnRegisterHotKey()
