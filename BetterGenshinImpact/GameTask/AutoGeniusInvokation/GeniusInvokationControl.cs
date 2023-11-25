@@ -1,25 +1,25 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.GameCapture;
 using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.View.Drawable;
-using OpenCvSharp.Extensions;
 using Point = OpenCvSharp.Point;
-using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -549,10 +549,19 @@ public class GeniusInvokationControl
     /// <summary>
     ///  烧牌
     /// </summary>
-    public void ActionPhaseElementalTuning()
+    public void ActionPhaseElementalTuning(int currentCardCount)
     {
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var m = ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
+        var m = Simulation.SendInput.Mouse;
+        if (currentCardCount == 1)
+        {
+            // 最后一张牌在右侧，而不是中间
+            ClickExtension.Click(rect.X + rect.Width / 2d + 120, rect.Y + rect.Height - 50);
+        }
+        else
+        {
+            ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
+        }
         Sleep(1500);
         m.LeftButtonDown();
         Sleep(100);
@@ -689,7 +698,7 @@ public class GeniusInvokationControl
             for (var i = 0; i < needSpecifyElementDiceCount; i++)
             {
                 _logger.LogInformation("- 烧第{Count}张牌", i + 1);
-                ActionPhaseElementalTuning();
+                ActionPhaseElementalTuning(duel.CurrentCardCount);
                 Sleep(1200);
                 var res = ActionPhaseElementalTuningConfirm();
                 if (res == false)
@@ -709,7 +718,7 @@ public class GeniusInvokationControl
                 if (duel.CurrentCardCount <= 1)
                 {
                     ClickGameWindowCenter(); // 复位
-                    Sleep(2000);
+                    Sleep(500);
                 }
             }
         }
