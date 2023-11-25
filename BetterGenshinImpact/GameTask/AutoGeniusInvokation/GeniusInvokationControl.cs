@@ -494,7 +494,7 @@ public class GeniusInvokationControl
 
             if (IsDuelEnd())
             {
-                throw new DuelEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException("对战已结束,停止自动打牌！");
             }
 
             //MyLogger.Debug("识别骰子数量不正确,第{}次重试中...", retryCount);
@@ -903,7 +903,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new DuelEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException("对战已结束,停止自动打牌！");
             }
 
             retryCount++;
@@ -946,7 +946,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new DuelEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException("对战已结束,停止自动打牌！");
             }
             else
             {
@@ -976,7 +976,7 @@ public class GeniusInvokationControl
     /// 角色被打败后要切换角色
     /// </summary>
     /// <param name="duel"></param>
-    /// <exception cref="DuelEndException"></exception>
+    /// <exception cref="NormalEndException"></exception>
     public void DoWhenCharacterDefeated(Duel duel)
     {
         _logger.LogInformation("当前出战角色被打败，需要选择新的出战角色");
@@ -990,7 +990,7 @@ public class GeniusInvokationControl
         var orderList = duel.GetCharacterSwitchOrder();
         if (orderList.Count == 0)
         {
-            throw new DuelEndException("后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)");
+            throw new NormalEndException("后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)");
         }
 
         foreach (var j in orderList)

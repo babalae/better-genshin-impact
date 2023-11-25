@@ -180,7 +180,7 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon LeafThree24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon LeafThree24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -202,9 +202,9 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap">
-                        需要装备「王树瑞佑」 - 
+                        需要装备「王树瑞佑」 -
                         <Hyperlink 
-                            NavigateUri="http://www.baidu.com"
+                            Command="{Binding GoToAutoWoodUrlCommand}"
                             Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
@@ -214,8 +214,8 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,24,0"
-                        Content="启动"
-                        Command="{Binding GoToHotKeyPageCommand}" />
+                        Content="{Binding SwitchAutoWoodButtonText}"
+                        Command="{Binding SwitchAutoWoodCommand}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -240,20 +240,18 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
                         Text="循环伐木多少次，输入 0 则为无限循环直到手动终止" />
-                    <ui:NumberBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,24,0"
-                        Maximum="60"
-                        Minimum="5"
-                        Value="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay}"
-                        ValidationMode="InvalidInputOverwritten" />
+                    <ui:TextBox x:Name="IntervalNumberBox"
+                                Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,24,0"
+                                Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Accessibility24}">
+        <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Accessibility24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>

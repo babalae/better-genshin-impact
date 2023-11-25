@@ -265,7 +265,7 @@ public class Duel
 
                     if (ActionCommandQueue.Count == 0)
                     {
-                        throw new DuelEndException("策略中所有指令已经执行完毕，结束自动打牌");
+                        throw new NormalEndException("策略中所有指令已经执行完毕，结束自动打牌");
                     }
                 }
 
@@ -283,7 +283,7 @@ public class Duel
         {
             _logger.LogInformation(ex.Message);
         }
-        catch (DuelEndException ex)
+        catch (NormalEndException ex)
         {
             _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");

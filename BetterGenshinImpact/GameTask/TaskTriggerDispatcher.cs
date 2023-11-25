@@ -10,7 +10,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoWood;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -130,7 +132,7 @@ namespace BetterGenshinImpact.GameTask
         {
             if (!_timer.Enabled)
             {
-                throw new Exception("请先启动BetterGI");
+                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
             }
 
             StopTimer();
@@ -140,6 +142,13 @@ namespace BetterGenshinImpact.GameTask
             if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
             {
                 AutoGeniusInvokationTask.Start((GeniusInvokationTaskParam)param);
+            }
+            else if (taskType == IndependentTaskEnum.AutoWood)
+            {
+                Task.Run(() =>
+                {
+                    new AutoWoodTask().Start((WoodTaskParam)param);
+                });
             }
         }
 

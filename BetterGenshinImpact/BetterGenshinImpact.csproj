@@ -271,6 +271,18 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\character_guide.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\confirm.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\enter_game.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\TheBoonOfTheElderTree.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
