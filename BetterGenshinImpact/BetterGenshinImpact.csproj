@@ -289,6 +289,21 @@
 		<None Update="User\AutoGeniusInvokation\2.刻晴雷神甘雨.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\AutoGeniusInvokation\3.雷神阿贝多丘丘王.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\4.重云雷神申鹤.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\5.迪希雅白术皇女.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\6.皇女科莱莫娜.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\7.莫娜皇女白术.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

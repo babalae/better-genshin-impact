@@ -136,7 +136,8 @@ public class AutoWoodTask
 
         // 点击退出
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        _clickOffset.Click(50, captureArea.Height - 50);
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        _clickOffset.Click((int)(50 * assetScale), captureArea.Height - (int)(50 * assetScale));
 
         Sleep(500, taskParam.Cts);
 
