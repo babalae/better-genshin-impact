@@ -1,9 +1,15 @@
-﻿using System.Diagnostics;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Helpers.Extensions;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Vanara.PInvoke;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoWood.Utils;
 
@@ -71,8 +77,68 @@ internal sealed class Login3rdParty
         }
     }
 
-    public void Login()
+    public async void Login(CancellationTokenSource cts)
     {
-        // TODO
+        await Task.Run(() =>
+        {
+            while (!LoginPrivate(cts))
+            {
+                Sleep(500, cts);
+            }
+        }, cts.Token);
+    }
+
+    private bool LoginPrivate(CancellationTokenSource cts)
+    {
+        if (Type == The3rdPartyType.Bilibili)
+        {
+            if (Process.GetProcessesByName("YuanShen").FirstOrDefault() is Process process)
+            {
+                nint hwndLogin = IntPtr.Zero;
+
+                _ = User32.EnumWindows((HWND hWnd, nint lParam) =>
+                {
+                    try
+                    {
+                        _ = User32.GetWindowThreadProcessId(hWnd, out uint pid);
+
+                        if (pid == process.Id)
+                        {
+                            int capacity = User32.GetWindowTextLength(hWnd);
+                            StringBuilder title = new(capacity + 1);
+                            _ = User32.GetWindowText(hWnd, title, title.Capacity);
+
+                            if (!string.IsNullOrEmpty(title.ToString()))
+                            {
+                                hwndLogin = (nint)hWnd;
+                                return false;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+                    return true;
+                }, 0);
+
+                if (hwndLogin == IntPtr.Zero)
+                {
+                    return false;
+                }
+
+                // Just for login WebUI chattering
+                Sleep(400, cts);
+
+                var p = TaskContext.Instance().SystemInfo.CaptureAreaRect.GetCenterPoint();
+                p.Add(new(0, 125)).Click();
+                return true;
+            }
+            return false;
+        }
+        else
+        {
+            // Ignore and exit with OK
+            return true;
+        }
     }
 }

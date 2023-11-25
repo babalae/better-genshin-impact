@@ -51,8 +51,7 @@ public class AutoWoodTask
                 _login3rdParty.RefreshAvailabled();
                 if (_login3rdParty.Type == Login3rdParty.The3rdPartyType.Bilibili)
                 {
-                    // TODO
-                    throw new NormalEndException("暂未支持B服伐木，后续将会增加支持！");
+                    Logger.LogInformation("自动伐木启用B服模式");
                 }
                 Felling(taskParam);
                 VisionContext.Instance().DrawContent.ClearAll();
@@ -159,6 +158,13 @@ public class AutoWoodTask
         NewRetry.Do(() =>
         {
             Sleep(1, taskParam.Cts);
+
+            if (_login3rdParty.IsAvailabled)
+            {
+                _login3rdParty.Login(taskParam.Cts);
+                Sleep(2000, taskParam.Cts);
+            }
+
             var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
             var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
             if (ra.IsEmpty())
