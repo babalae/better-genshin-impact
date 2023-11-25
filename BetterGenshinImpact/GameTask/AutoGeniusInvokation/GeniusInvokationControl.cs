@@ -553,16 +553,13 @@ public class GeniusInvokationControl
     {
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var m = Simulation.SendInput.Mouse;
+        ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
+        Sleep(1500);
         if (currentCardCount == 1)
         {
             // 最后一张牌在右侧，而不是中间
-            ClickExtension.Click(rect.X + rect.Width / 2d + 120, rect.Y + rect.Height - 50);
+            ClickExtension.Move(rect.X + rect.Width / 2d + 120, rect.Y + rect.Height - 50);
         }
-        else
-        {
-            ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
-        }
-        Sleep(1500);
         m.LeftButtonDown();
         Sleep(100);
         m = ClickExtension.Move(rect.X + rect.Width - 50, rect.Y + rect.Height / 2d);
