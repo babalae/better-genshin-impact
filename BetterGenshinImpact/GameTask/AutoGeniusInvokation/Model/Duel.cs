@@ -331,7 +331,7 @@ public class Duel
                 }
                 else
                 {
-                    elementSet.Add(actionCommand.GetDiceUseElementType());
+                    // elementSet.Add(actionCommand.GetDiceUseElementType());
                     //executeActionIndex.Add(-actionCommand.Character.Index);
                 }
             }
