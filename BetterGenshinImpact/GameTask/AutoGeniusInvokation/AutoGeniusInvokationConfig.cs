@@ -19,7 +19,7 @@ public partial class AutoGeniusInvokationConfig : ObservableObject
 
     [ObservableProperty] private int _sleepDelay = 0;
 
-    public List<RectConfig> DefaultCharacterCardRects { get; set; } = new()
+    public List<Rect> DefaultCharacterCardRects { get; set; } = new()
     {
         new(667, 632, 165, 282),
         new(877, 632, 165, 282),
@@ -30,7 +30,7 @@ public partial class AutoGeniusInvokationConfig : ObservableObject
     /// <summary>
     /// 骰子数量文字识别区域
     /// </summary>
-    public RectConfig MyDiceCountRect { get; set; } = new(58, 632, 45, 47); // 42,47
+    public Rect MyDiceCountRect { get; set; } = new(58, 632, 45, 47); // 42,47
 
     ///// <summary>
     ///// 角色卡牌区域向左扩展距离，包含HP区域
@@ -50,5 +50,5 @@ public partial class AutoGeniusInvokationConfig : ObservableObject
     /// <summary>
     /// HP区域 在 角色卡牌区域 的相对位置
     /// </summary>
-    public RectConfig CharacterCardExtendHpRect { get; } = new(-20, 0, 60, 55);
+    public Rect CharacterCardExtendHpRect { get; } = new(-20, 0, 60, 55);
 }

@@ -20,6 +20,8 @@ public class PaddleOcrService : IOcrService
     /// </summary>
     private readonly PaddleOcrAll _paddleOcrAll;
 
+    private static readonly object locker = new();
+
     public PaddleOcrService()
     {
         var path = Global.Absolute("Assets\\Model\\PaddleOcr");
@@ -41,11 +43,14 @@ public class PaddleOcrService : IOcrService
 
     public PaddleOcrResult OcrResult(Mat mat)
     {
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
-        var result = _paddleOcrAll.Run(mat);
-        stopwatch.Stop();
-        Debug.WriteLine($"PaddleOcr 耗时 {stopwatch.ElapsedMilliseconds}ms 结果: {result.Text}");
-        return result;
+        lock (locker)
+        {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            var result = _paddleOcrAll.Run(mat);
+            stopwatch.Stop();
+            Debug.WriteLine($"PaddleOcr 耗时 {stopwatch.ElapsedMilliseconds}ms 结果: {result.Text}");
+            return result;
+        }
     }
 }

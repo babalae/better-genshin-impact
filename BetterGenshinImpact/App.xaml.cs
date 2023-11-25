@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
+﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
@@ -15,7 +14,6 @@ using Serilog.Events;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
 using Wpf.Ui;
@@ -30,6 +28,8 @@ public partial class App : Application
     // https://docs.microsoft.com/dotnet/core/extensions/configuration
     // https://docs.microsoft.com/dotnet/core/extensions/logging
     private static readonly IHost _host = Host.CreateDefaultBuilder()
+        .UseElevated()
+        .UseSingleInstance("BetterGI")
         .ConfigureServices(
             (context, services) =>
             {
@@ -38,9 +38,9 @@ public partial class App : Application
                 services.AddSingleton<IConfigService>(sp => configService);
                 var all = configService.Get();
 
-                var logFolder = Path.Combine(AppContext.BaseDirectory, @"log");
+                var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
-                var logFile = Path.Combine(logFolder, $"better-genshin-impact.log");
+                var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
 
                 var maskWindow = new MaskWindow();
                 services.AddSingleton(maskWindow);
@@ -112,16 +112,14 @@ public partial class App : Application
     /// <summary>
     /// Occurs when the application is loading.
     /// </summary>
-    private void OnStartup(object sender, StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
-        StartUp();
-    }
+        base.OnStartup(e);
 
-    private async void StartUp()
-    {
         try
         {
-            await StartUpCoreAsync();
+            RegisterEvents();
+            await _host.StartAsync();
             await UrlProtocolHelper.RegisterAsync();
         }
         catch (Exception ex)
@@ -136,51 +134,14 @@ public partial class App : Application
         }
     }
 
-    private async Task StartUpCoreAsync()
-    {
-        // 获得当前登录的Windows用户标示
-        var identity = WindowsIdentity.GetCurrent();
-        var principal = new WindowsPrincipal(identity);
-        // 判断当前登录用户是否为管理员
-        if (principal.IsInRole(WindowsBuiltInRole.Administrator))
-        {
-            //如果是管理员，则直接运行
-            RegisterEvents();
-            await _host.StartAsync();
-        }
-        else
-        {
-            //创建启动对象
-            var startInfo = new ProcessStartInfo
-            {
-                UseShellExecute = true,
-                WorkingDirectory = Global.StartUpPath,
-                FileName = "BetterGI.exe",
-                //设置启动动作,确保以管理员身份运行
-                Verb = "runas"
-            };
-            try
-            {
-                Process.Start(startInfo);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-                return;
-            }
-
-            //退出
-            Current.Shutdown();
-        }
-    }
-
     /// <summary>
     /// Occurs when the application is closing.
     /// </summary>
-    private async void OnExit(object sender, ExitEventArgs e)
+    protected override async void OnExit(ExitEventArgs e)
     {
-        await _host.StopAsync();
+        base.OnExit(e);
 
+        await _host.StopAsync();
         _host.Dispose();
     }
 
@@ -203,8 +164,7 @@ public partial class App : Application
     {
         try
         {
-            var exception = e.Exception as Exception;
-            HandleException(exception);
+            HandleException(e.Exception);
         }
         catch (Exception ex)
         {
@@ -221,8 +181,7 @@ public partial class App : Application
     {
         try
         {
-            var exception = e.ExceptionObject as Exception;
-            if (exception != null)
+            if (e.ExceptionObject is Exception exception)
             {
                 HandleException(exception);
             }

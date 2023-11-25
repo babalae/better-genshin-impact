@@ -54,6 +54,17 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             {
                 OnClosed();
             }
+            else if (msg.PropertyName == "SwitchTriggerStatus")
+            {
+                if (_taskDispatcherEnabled)
+                {
+                    OnStopTrigger();
+                }
+                else
+                {
+                    OnStartTrigger();
+                }
+            }
         });
     }
 
@@ -111,7 +122,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            System.Windows.MessageBox.Show("未找到原神窗口");
+            System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
             return;
         }
 

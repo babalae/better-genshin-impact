@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 长按空格变空格连发
         /// </summary>
-        [ObservableProperty] private bool _spacePressHoldToContinuationEnabled = true;
+        [ObservableProperty] private bool _spacePressHoldToContinuationEnabled = false;
 
         /// <summary>
         /// 空格连发时间间隔
@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 长按F变F连发
         /// </summary>
-        [ObservableProperty] private bool _fPressHoldToContinuationEnabled = true;
+        [ObservableProperty] private bool _fPressHoldToContinuationEnabled = false;
 
         /// <summary>
         /// F连发时间间隔

@@ -12,6 +12,7 @@ public class AutoGeniusInvokationTask
 {
     public static void Start(GeniusInvokationTaskParam taskParam)
     {
+        // 读取策略信息
         var duel = ScriptParser.Parse(taskParam.StrategyContent);
         SystemControl.ActivateWindow();
         duel.RunAsync(taskParam);

@@ -9,5 +9,6 @@ namespace BetterGenshinImpact.GameTask.Model;
 public enum IndependentTaskEnum
 {
 
-    AutoGeniusInvokation
+    AutoGeniusInvokation,
+    AutoWood,
 }

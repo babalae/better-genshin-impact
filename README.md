@@ -31,14 +31,14 @@
   * [全自动钓鱼(AI)](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)
 * 独立任务
     * [自动七圣召唤](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)
-    * 自动伐木（迁移中）
+    * [自动伐木](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)
 * 操控辅助
     * [空格连发](https://bgi.huiyadan.com/doc.html#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
     * [F 连发](https://bgi.huiyadan.com/doc.html#f%E8%BF%9E%E5%8F%91)
     * [那维莱特 - 转圈圈](https://bgi.huiyadan.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)
     * [快速圣遗物强化](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)
 
-[更多功能](https://bgi.huiyadan.com/feat.html)筹备中...
+[更多功能研发中...](https://bgi.huiyadan.com/feat.html)
 
 ## 界面截图
 

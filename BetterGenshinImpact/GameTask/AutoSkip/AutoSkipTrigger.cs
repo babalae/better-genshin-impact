@@ -58,6 +58,7 @@ public class AutoSkipTrigger : ITaskTrigger
         {
             return;
         }
+
         _prevExecute = DateTime.Now;
 
         var config = TaskContext.Instance().Config.AutoSkipConfig;
@@ -171,10 +172,10 @@ public class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, 0, content.CaptureRectArea.SrcGreyMat.Width / 2, content.CaptureRectArea.SrcGreyMat.Height / 2));
+            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Width / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
-            if (rate >= 0.8 && rate < 0.99)
+            if (rate >= 0.7 && rate < 0.999)
             {
                 Simulation.SendInput.Mouse.LeftButtonClick();
                 if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
@@ -202,7 +203,7 @@ public class AutoSkipTrigger : ITaskTrigger
         using var mat = new Mat(captureMat, textRect);
         // 只提取橙色
         using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
-        Cv2.ImWrite("bMat2.png", bMat);
+        // Cv2.ImWrite("bMat2.png", bMat);
         var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
         var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
         if (rate < 0.1)

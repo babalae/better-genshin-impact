@@ -63,6 +63,7 @@ public class Duel
         Cts = taskParam.Cts;
         try
         {
+            LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
 
@@ -90,7 +91,7 @@ public class Duel
                 var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
                 for (var i = 0; i < defaultCharacterCardRects.Count; i++)
                 {
-                    CharacterCardRects.Add(defaultCharacterCardRects[i].ToRect().Multiply(assetScale));
+                    CharacterCardRects.Add(defaultCharacterCardRects[i].Multiply(assetScale));
                 }
 
                 _logger.LogInformation("获取角色区域失败，使用默认区域");
@@ -159,7 +160,6 @@ public class Duel
                         {
                             _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
                         }
-
                     }
 
                     var alreadyExecutedActionIndex = new List<int>();
@@ -265,7 +265,7 @@ public class Duel
 
                     if (ActionCommandQueue.Count == 0)
                     {
-                        throw new DuelEndException("策略中所有指令已经执行完毕，结束自动打牌");
+                        throw new NormalEndException("策略中所有指令已经执行完毕，结束自动打牌");
                     }
                 }
 
@@ -283,7 +283,7 @@ public class Duel
         {
             _logger.LogInformation(ex.Message);
         }
-        catch (DuelEndException ex)
+        catch (NormalEndException ex)
         {
             _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");
@@ -331,7 +331,7 @@ public class Duel
                 }
                 else
                 {
-                    elementSet.Add(actionCommand.GetDiceUseElementType());
+                    // elementSet.Add(actionCommand.GetDiceUseElementType());
                     //executeActionIndex.Add(-actionCommand.Character.Index);
                 }
             }
@@ -404,21 +404,31 @@ public class Duel
         return orderList;
     }
 
-    /// <summary>
-    /// 获取角色存活数量
-    /// </summary>
-    /// <returns></returns>
-    public int GetCharacterAliveNum()
-    {
-        int num = 0;
-        foreach (var character in Characters)
-        {
-            if (character != null && !character.IsDefeated)
-            {
-                num++;
-            }
-        }
+    ///// <summary>
+    ///// 获取角色存活数量
+    ///// </summary>
+    ///// <returns></returns>
+    //public int GetCharacterAliveNum()
+    //{
+    //    int num = 0;
+    //    foreach (var character in Characters)
+    //    {
+    //        if (character != null && !character.IsDefeated)
+    //        {
+    //            num++;
+    //        }
+    //    }
 
-        return num;
+    //    return num;
+    //}
+
+
+    private void LogScreenResolution()
+    {
+        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+        if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
+        {
+            _logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动七圣召唤 !", gameScreenSize.Width, gameScreenSize.Height);
+        }
     }
 }

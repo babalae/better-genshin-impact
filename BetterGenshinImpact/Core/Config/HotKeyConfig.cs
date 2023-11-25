@@ -12,6 +12,8 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class HotKeyConfig : ObservableObject
 {
+    [ObservableProperty] private string _bgiEnabledHotkey = "F11";
+
     [ObservableProperty] private string _autoPickEnabledHotkey = "F1";
 
     [ObservableProperty] private string _autoSkipEnabledHotkey = "F2";

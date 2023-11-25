@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -60,11 +62,23 @@ public partial class HotKeyPageViewModel : ObservableObject
 
     private void BuildHotKeySettingModelList()
     {
+
+        var bgiEnabledHotKeySettingModel = new HotKeySettingModel(
+            "启动停止 BetterGI",
+            nameof(Config.HotKeyConfig.BgiEnabledHotkey),
+            Config.HotKeyConfig.BgiEnabledHotkey,
+            (_, _) =>
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SwitchTriggerStatus", "", ""));
+            }
+        );
+        HotKeySettingModels.Add(bgiEnabledHotKeySettingModel);
+
         var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),
             Config.HotKeyConfig.AutoPickEnabledHotkey,
-            hotKey =>
+            (_, _) =>
             {
                 TaskContext.Instance().Config.AutoPickConfig.Enabled = !TaskContext.Instance().Config.AutoPickConfig.Enabled;
                 _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动拾取", ToChinese(TaskContext.Instance().Config.AutoPickConfig.Enabled));
@@ -76,7 +90,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "自动剧情开关",
             nameof(Config.HotKeyConfig.AutoSkipEnabledHotkey),
             Config.HotKeyConfig.AutoSkipEnabledHotkey,
-            hotKey =>
+            (_, _) =>
             {
                 TaskContext.Instance().Config.AutoSkipConfig.Enabled = !TaskContext.Instance().Config.AutoSkipConfig.Enabled;
                 _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动剧情", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.Enabled));
@@ -88,7 +102,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "自动钓鱼开关",
             nameof(Config.HotKeyConfig.AutoFishingEnabledHotkey),
             Config.HotKeyConfig.AutoFishingEnabledHotkey,
-            hotKey =>
+            (_, _) =>
             {
                 TaskContext.Instance().Config.AutoFishingConfig.Enabled = !TaskContext.Instance().Config.AutoFishingConfig.Enabled;
                 _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动钓鱼", ToChinese(TaskContext.Instance().Config.AutoFishingConfig.Enabled));
@@ -100,7 +114,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "长按旋转视角 - 那维莱特转圈",
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
             Config.HotKeyConfig.TurnAroundHotkey,
-            hotKey => { TurnAroundMacro.Done(); }
+            (_, _) => { TurnAroundMacro.Done(); }
         );
         HotKeySettingModels.Add(turnAroundHotKeySettingModel);
 
@@ -108,7 +122,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "按下快速强化圣遗物",
             nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
             Config.HotKeyConfig.EnhanceArtifactHotkey,
-            hotKey => { QuickEnhanceArtifactMacro.Done(); }
+            (_, _) => { QuickEnhanceArtifactMacro.Done(); }
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
 
@@ -116,7 +130,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "启动/停止自动七圣召唤",
             nameof(Config.HotKeyConfig.AutoGeniusInvokation),
             Config.HotKeyConfig.AutoGeniusInvokation,
-            hotKey => { _taskSettingsPageViewModel.OnSwitchAutoGeniusInvokation(); }
+            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoGeniusInvokation(); }
         ));
     }
 

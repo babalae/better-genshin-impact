@@ -13,6 +13,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.GameCapture", "Fi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vision.WindowCapture.Test", "Vision.WindowCapture.Test\Vision.WindowCapture.Test.csproj", "{D35CB953-C666-4E57-9A9A-3AAE5BF78402}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.HotkeyCapture", "Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj", "{08152E44-2564-46C5-B5B2-54DD43C01A79}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.KeyboardCapture", "Fischless.KeyboardCapture\Fischless.KeyboardCapture.csproj", "{10A48327-7E58-4B51-B1FC-55506C703C8F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -39,6 +43,14 @@ Global
 		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|x64.Build.0 = Debug|x64
 		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|x64.ActiveCfg = Release|x64
 		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|x64.Build.0 = Release|x64
+		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Debug|x64.ActiveCfg = Debug|x64
+		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Debug|x64.Build.0 = Debug|x64
+		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Release|x64.ActiveCfg = Release|x64
+		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Release|x64.Build.0 = Release|x64
+		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Debug|x64.ActiveCfg = Debug|x64
+		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Debug|x64.Build.0 = Debug|x64
+		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Release|x64.ActiveCfg = Release|x64
+		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

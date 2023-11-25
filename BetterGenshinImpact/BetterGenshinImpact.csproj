@@ -26,7 +26,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="GlobalHotkeys" Version="1.0.0.6" />
 		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
@@ -52,6 +51,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
+		<ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -271,11 +271,38 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\character_guide.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\confirm.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\enter_game.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\TheBoonOfTheElderTree.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\AutoGeniusInvokation\2.刻晴雷神甘雨.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\3.雷神阿贝多丘丘王.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\4.重云雷神申鹤.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\5.迪希雅白术皇女.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\6.皇女科莱莫娜.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\7.莫娜皇女白术.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

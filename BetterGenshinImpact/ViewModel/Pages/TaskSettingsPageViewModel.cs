@@ -1,19 +1,17 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using System.Windows.Documents;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Windows.Input;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using BetterGenshinImpact.GameTask.AutoWood;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
-using System.IO;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
-using BetterGenshinImpact.GameTask.Model;
-using System.Threading;
 using MessageBox = System.Windows.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -31,6 +29,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string[] _strategyList;
     [ObservableProperty] private string _switchAutoGeniusInvokationButtonText;
 
+    [ObservableProperty] private int _autoWoodRoundNum;
+    [ObservableProperty] private string _switchAutoWoodButtonText;
+
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -40,6 +41,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         _strategyList = LoadCustomScript();
         _switchAutoGeniusInvokationButtonText = "启动";
+
+        _switchAutoWoodButtonText = "启动";
+
     }
 
     private string[] LoadCustomScript()
@@ -119,17 +123,47 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4") { UseShellExecute = true });
     }
 
+    [RelayCommand]
+    public void OnSwitchAutoWood()
+    {
+        try
+        {
+            if (SwitchAutoWoodButtonText == "启动")
+            {
+                _cts = new CancellationTokenSource();
+                var param = new WoodTaskParam(_cts, _taskDispatcher, AutoWoodRoundNum);
+                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
+                SwitchAutoWoodButtonText = "停止";
+            }
+            else
+            {
+                _cts?.Cancel();
+                SwitchAutoWoodButtonText = "启动";
+            }
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoWoodUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8") { UseShellExecute = true });
+    }
+
     public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
     {
         var instance = App.GetService<TaskSettingsPageViewModel>();
         if (instance == null) { return; }
-        if (running)
-        {
-            instance.SwitchAutoGeniusInvokationButtonText = "停止";
-        }
-        else
-        {
-            instance.SwitchAutoGeniusInvokationButtonText = "启动";
-        }
+        instance.SwitchAutoGeniusInvokationButtonText = running ? "停止" : "启动";
+    }
+
+    public static void SetSwitchAutoWoodButtonText(bool running)
+    {
+        var instance = App.GetService<TaskSettingsPageViewModel>();
+        if (instance == null) { return; }
+        instance.SwitchAutoWoodButtonText = running ? "停止" : "启动";
     }
 }

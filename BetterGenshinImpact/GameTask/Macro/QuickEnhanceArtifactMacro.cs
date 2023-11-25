@@ -15,7 +15,7 @@ public class QuickEnhanceArtifactMacro
             return;
         }
 
-        SystemControl.ActivateWindow(TaskContext.Instance().GameHandle);
+        // SystemControl.ActivateWindow(TaskContext.Instance().GameHandle);
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;

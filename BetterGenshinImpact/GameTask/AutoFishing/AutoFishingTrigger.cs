@@ -76,8 +76,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private DateTime _prevExecute = DateTime.MinValue;
 
+        private CaptureContent _currContent;
+
         public void OnCapture(CaptureContent content)
         {
+            this._currContent = content;
             // 进入独占的判定
             if (!IsExclusive)
             {
@@ -382,7 +385,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 Name = "ChooseBait",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{_selectedBaitName}.png"),
-                Threshold = _selectedBaitName == "redrot bait" ? 0.92 : 0.9,  // redrot bait 老是识别错误，两种饵料太像了
+                Threshold = 0.9,
+                Use3Channels = true,
                 DrawOnWindow = false
             }.InitTemplate();
 
@@ -655,7 +659,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _logger.LogWarning("截图失败!");
                 throw new Exception("截图失败");
             }
-
+            // 更新当前捕获内容
+            _currContent = new CaptureContent(bitmap, _currContent.FrameIndex, _currContent.TimerInterval, _currContent.Dispatcher);
             return bitmap;
         }
 
@@ -669,6 +674,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     throw new RetryException("当前获取焦点的窗口不是原神");
                 }
             }, TimeSpan.FromSeconds(1), 100);
+            CheckFishingUserInterface(_currContent);
             Thread.Sleep(millisecondsTimeout);
         }
 

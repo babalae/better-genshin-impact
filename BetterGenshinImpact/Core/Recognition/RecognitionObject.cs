@@ -44,6 +44,11 @@ public class RecognitionObject
     public double Threshold { get; set; } = 0.8;
 
     /// <summary>
+    /// 是否使用 3 通道匹配。可选，默认 false 。
+    /// </summary>
+    public bool Use3Channels { get; set; } = false;
+
+    /// <summary>
     /// 模板匹配算法。可选，默认 CCoeffNormed 。
     /// https://docs.opencv.org/4.x/df/dfb/group__imgproc__object.html
     /// </summary>

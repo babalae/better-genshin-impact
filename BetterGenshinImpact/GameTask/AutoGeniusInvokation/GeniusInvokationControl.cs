@@ -1,25 +1,25 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.GameCapture;
 using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.View.Drawable;
-using OpenCvSharp.Extensions;
 using Point = OpenCvSharp.Point;
-using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -404,7 +404,8 @@ public class GeniusInvokationControl
     /// <param name="holdElementalTypes">保留的元素类型</param>
     public bool RollPhaseReRoll(params ElementalType[] holdElementalTypes)
     {
-        var gameSnapshot = CaptureGameGreyMat();
+        var gameSnapshot = CaptureGameMat();
+        Cv2.CvtColor(gameSnapshot, gameSnapshot, ColorConversionCodes.BGRA2BGR);
         var dictionary = FindMultiPicFromOneImage2OneByOne(gameSnapshot, _assets.RollPhaseDiceMats, 0.73);
 
         var count = dictionary.Sum(kvp => kvp.Value.Count);
@@ -493,7 +494,7 @@ public class GeniusInvokationControl
 
             if (IsDuelEnd())
             {
-                throw new DuelEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException("对战已结束,停止自动打牌！");
             }
 
             //MyLogger.Debug("识别骰子数量不正确,第{}次重试中...", retryCount);
@@ -527,7 +528,8 @@ public class GeniusInvokationControl
     /// <returns></returns>
     public Dictionary<string, int> ActionPhaseDice()
     {
-        var srcMat = CaptureGameGreyMat();
+        var srcMat = CaptureGameMat();
+        Cv2.CvtColor(srcMat, srcMat, ColorConversionCodes.BGRA2BGR);
         // 切割图片后再识别 加快速度 位置没啥用，所以切割后比较方便
         var dictionary = FindMultiPicFromOneImage2OneByOne(CutRight(srcMat, srcMat.Width / 5), _assets.ActionPhaseDiceMats, 0.7);
 
@@ -547,11 +549,17 @@ public class GeniusInvokationControl
     /// <summary>
     ///  烧牌
     /// </summary>
-    public void ActionPhaseElementalTuning()
+    public void ActionPhaseElementalTuning(int currentCardCount)
     {
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var m = ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
+        var m = Simulation.SendInput.Mouse;
+        ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
         Sleep(1500);
+        if (currentCardCount == 1)
+        {
+            // 最后一张牌在右侧，而不是中间
+            ClickExtension.Move(rect.X + rect.Width / 2d + 120, rect.Y + rect.Height - 50);
+        }
         m.LeftButtonDown();
         Sleep(100);
         m = ClickExtension.Move(rect.X + rect.Width - 50, rect.Y + rect.Height / 2d);
@@ -687,7 +695,7 @@ public class GeniusInvokationControl
             for (var i = 0; i < needSpecifyElementDiceCount; i++)
             {
                 _logger.LogInformation("- 烧第{Count}张牌", i + 1);
-                ActionPhaseElementalTuning();
+                ActionPhaseElementalTuning(duel.CurrentCardCount);
                 Sleep(1200);
                 var res = ActionPhaseElementalTuningConfirm();
                 if (res == false)
@@ -707,7 +715,7 @@ public class GeniusInvokationControl
                 if (duel.CurrentCardCount <= 1)
                 {
                     ClickGameWindowCenter(); // 复位
-                    Sleep(2000);
+                    Sleep(500);
                 }
             }
         }
@@ -892,7 +900,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new DuelEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException("对战已结束,停止自动打牌！");
             }
 
             retryCount++;
@@ -935,7 +943,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new DuelEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException("对战已结束,停止自动打牌！");
             }
             else
             {
@@ -965,7 +973,7 @@ public class GeniusInvokationControl
     /// 角色被打败后要切换角色
     /// </summary>
     /// <param name="duel"></param>
-    /// <exception cref="DuelEndException"></exception>
+    /// <exception cref="NormalEndException"></exception>
     public void DoWhenCharacterDefeated(Duel duel)
     {
         _logger.LogInformation("当前出战角色被打败，需要选择新的出战角色");
@@ -979,7 +987,7 @@ public class GeniusInvokationControl
         var orderList = duel.GetCharacterSwitchOrder();
         if (orderList.Count == 0)
         {
-            throw new DuelEndException("后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)");
+            throw new NormalEndException("后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)");
         }
 
         foreach (var j in orderList)
@@ -1205,7 +1213,7 @@ public class GeniusInvokationControl
     public int GetDiceCountByOcr()
     {
         var srcMat = CaptureGameGreyMat();
-        var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect.ToRect());
+        var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
         var text = OcrFactory.Paddle.Ocr(diceCountMap);
         text = text.Replace(" ", "");
         _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
