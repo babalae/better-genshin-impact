@@ -54,6 +54,17 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             {
                 OnClosed();
             }
+            else if (msg.PropertyName == "SwitchTriggerStatus")
+            {
+                if (_taskDispatcherEnabled)
+                {
+                    OnStopTrigger();
+                }
+                else
+                {
+                    OnStartTrigger();
+                }
+            }
         });
     }
 

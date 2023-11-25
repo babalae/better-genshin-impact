@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -60,6 +62,18 @@ public partial class HotKeyPageViewModel : ObservableObject
 
     private void BuildHotKeySettingModelList()
     {
+
+        var bgiEnabledHotKeySettingModel = new HotKeySettingModel(
+            "启动停止 BetterGI",
+            nameof(Config.HotKeyConfig.BgiEnabledHotkey),
+            Config.HotKeyConfig.BgiEnabledHotkey,
+            (_, _) =>
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SwitchTriggerStatus", "", ""));
+            }
+        );
+        HotKeySettingModels.Add(bgiEnabledHotKeySettingModel);
+
         var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),
