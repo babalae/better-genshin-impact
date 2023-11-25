@@ -34,6 +34,11 @@ namespace BetterGenshinImpact.Core.Config
         [ObservableProperty] private int _triggerInterval = 50;
 
         /// <summary>
+        /// 不展示新版本提示的最新版本
+        /// </summary>
+        [ObservableProperty] private string _notShowNewVersionNoticeEndVersion = "";
+
+        /// <summary>
         /// 遮罩窗口配置
         /// </summary>
         public MaskWindowConfig MaskWindowConfig { get; set; } = new();

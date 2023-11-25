@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version = "0.16.0";
+    public static string Version = "0.13.0";
 
     public static string StartUpPath { get; private set; } = AppContext.BaseDirectory;
 
@@ -26,10 +26,15 @@ public class Global
         return null;
     }
 
-    public static bool IsNewVersion(string version)
+    public static bool IsNewVersion(string currentVersion)
     {
-        var currentVersionArr =Version.Split('.');
-        var newVersionArr = version.Split('.');
+        return IsNewVersion(Version, currentVersion);
+    }
+
+    public static bool IsNewVersion(string oldVersion, string currentVersion)
+    {
+        var currentVersionArr = oldVersion.Split('.');
+        var newVersionArr = currentVersion.Split('.');
         if (currentVersionArr.Length != newVersionArr.Length)
         {
             return false;

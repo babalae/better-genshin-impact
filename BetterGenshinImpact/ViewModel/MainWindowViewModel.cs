@@ -25,9 +25,12 @@ namespace BetterGenshinImpact.ViewModel
         private readonly IConfigService _configService;
         public string Title => $"BetterGI · 更好的原神 · {Global.Version}";
 
+        public AllConfig Config { get; set; }
+
         public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
         {
             _configService = configService;
+            Config = configService.Get();
             _logger = App.GetLogger<MainWindowViewModel>();
         }
 
@@ -69,6 +72,12 @@ namespace BetterGenshinImpact.ViewModel
             {
                 if (Global.IsNewVersion(notice.Version))
                 {
+                    if (!string.IsNullOrEmpty(Config.NotShowNewVersionNoticeEndVersion)
+                        && !Global.IsNewVersion(Config.NotShowNewVersionNoticeEndVersion, notice.Version))
+                    {
+                        return;
+                    }
+
                     await UIDispatcherHelper.Invoke(async () =>
                     {
                         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
@@ -76,6 +85,7 @@ namespace BetterGenshinImpact.ViewModel
                             Title = "更新提示",
                             Content = $"存在最新版本 {notice.Version}，点击确定前往下载页面下载最新版本",
                             PrimaryButtonText = "确定",
+                            SecondaryButtonText = "不再提示",
                             CloseButtonText = "取消",
                         };
 
@@ -83,6 +93,10 @@ namespace BetterGenshinImpact.ViewModel
                         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
                         {
                             Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/download.html") { UseShellExecute = true });
+                        }
+                        else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
+                        {
+                            Config.NotShowNewVersionNoticeEndVersion = notice.Version;
                         }
                     });
                 }
@@ -97,6 +111,5 @@ namespace BetterGenshinImpact.ViewModel
             Debug.WriteLine("MainWindowViewModel Closed");
             Application.Current.Shutdown();
         }
-
     }
 }
