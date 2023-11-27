@@ -1,6 +1,8 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Simulator;
+using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -10,6 +12,14 @@ public class SystemControl
     public static nint FindGenshinImpactHandle()
     {
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
+    }
+
+    public static nint StartFromLocal(string path)
+    {
+        // 使用 path 在新的线程中启动游戏
+        var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        Thread.Sleep(10000);
+        return FindGenshinImpactHandle();
     }
 
     public static bool IsGenshinImpactActiveByProcess()
