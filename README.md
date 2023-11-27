@@ -90,4 +90,4 @@
 
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/genius-invokation-auto-toy/issues) 或 QQ群[894935931](https://qm.qq.com/cgi-bin/qm/qr?k=u9Ij0HrDVQhvcoFvaiQGv38V3R7ZNY6K&jump_from=webapi&authKey=N++f74HhGHDzFje1dDD6E8vzuf45jmSFaPiVbc3Z7x/nTUWGwZ3UdSPqYQqPfOXK)
+提 [Issue](https://github.com/babalae/genius-invokation-auto-toy/issues) 或 QQ群[694769138](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=hneYjH2EgI1-pQI1em3uaVG7l-7vz8ye&authKey=q9lhYjjNQ6Tiw7uBvL1%2BWZZewa0%2B1H6PNFv1ETsQQBWlLpXqUx1bGeD7iK4iLfpv&noverify=0&group_code=694769138)
