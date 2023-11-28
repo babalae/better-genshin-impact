@@ -1,9 +1,14 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
+using Fischless.GameCapture;
+using Microsoft.Xaml.Behaviors.Media;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Vanara.PInvoke;
+using WindowsInput;
+using Wpf.Ui.Appearance;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -16,9 +21,20 @@ public class SystemControl
 
     public static nint StartFromLocal(string path)
     {
-        // 使用 path 在新的线程中启动游戏
-        var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-        Thread.Sleep(10000);
+        if (path.EndsWith("YuanShen.exe"))
+        {
+            DirectStartFromYuanShen(path);
+            Thread.Sleep(10000);
+        } 
+        if (path.EndsWith("launcher.exe"))
+        {
+            StartFromLauncher(path);
+            Thread.Sleep(10000);
+        }
+        if (path.EndsWith("Genshin Impact Cloud Game.exe"))
+        {
+            StartCloudYaunShen(path);
+        }
         return FindGenshinImpactHandle();
     }
 
@@ -149,4 +165,37 @@ public class SystemControl
         return (exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0;
     }
 
+    private static void DirectStartFromYuanShen(string path)
+    {
+        // 直接exe启动
+        var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+    }
+    private static void StartFromLauncher(string path)
+    {
+        // 通过launcher启动
+        var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        Thread.Sleep(1000);
+        // 获取launcher窗口句柄
+        var hWnd = FindHandleByProcessName("launcher");
+        var rect = GetWindowRect(hWnd);
+        var dpiScale = Helpers.DpiHelper.ScaleY;
+        // 对于launcher，启动按钮的位置时固定的，在launcher窗口的右下角
+        Thread.Sleep(1000);
+        Simulation.MouseEvent.Click((int)((float)rect.right * dpiScale) - (rect.Width / 5), (int)((float)rect.bottom * dpiScale) - (rect.Height / 8));
+    }
+
+    private static void StartCloudYaunShen(string path)
+    {
+        // 通过launcher启动
+        var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        Thread.Sleep(10000);
+        // 获取launcher窗口句柄
+        var hWnd = FindHandleByProcessName("Genshin Impact Cloud Game");
+        var rect = GetWindowRect(hWnd);
+        var dpiScale = Helpers.DpiHelper.ScaleY;
+        // 对于launcher，启动按钮的位置时固定的，在launcher窗口的右下角
+        Simulation.MouseEvent.Click(rect.right - (rect.Width / 6), rect.bottom - (rect.Height / 13 * 3));
+        // TODO：点完之后有个15s的倒计时，好像不处理也没什么问题，直接睡个20s吧
+        Thread.Sleep(20000);
+    }
 }
