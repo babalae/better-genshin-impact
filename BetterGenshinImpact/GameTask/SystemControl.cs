@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -14,11 +15,15 @@ public class SystemControl
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
 
-    public static nint StartFromLocal(string path)
+    public static async Task<nint> StartFromLocalAsync(string path)
     {
         // 使用 path 在新的线程中启动游戏
-        var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-        Thread.Sleep(10000);
+        _ = Process.Start(new ProcessStartInfo(path)
+        {
+            UseShellExecute = true,
+            Verb = "runas",
+        });
+        await Task.Delay(10000);
         return FindGenshinImpactHandle();
     }
 
@@ -148,5 +153,4 @@ public class SystemControl
 
         return (exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0;
     }
-
 }

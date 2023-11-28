@@ -10,14 +10,14 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using Windows.Gaming.Input;
 using Windows.System;
 using Wpf.Ui.Controls;
 
@@ -33,10 +33,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [ObservableProperty] private Visibility _startButtonVisibility = Visibility.Visible;
     [ObservableProperty] private Visibility _stopButtonVisibility = Visibility.Collapsed;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
 
     public AllConfig Config { get; set; }
@@ -65,12 +67,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 }
                 else
                 {
-                    OnStartTrigger();
+                    OnStartTriggerAsync();
                 }
             }
         });
     }
-
 
     [RelayCommand]
     private void OnLoaded()
@@ -120,23 +121,21 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     private bool CanStartTrigger() => StartButtonEnabled;
 
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
-    private void OnStartTrigger()
+    private async Task OnStartTriggerAsync()
     {
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            if (! string.IsNullOrEmpty(Config.InstallPath))
+            if (File.Exists(Config.InstallPath))
             {
-                var path = Path.Combine(Config.InstallPath, "Yuanshen.exe");
-                hWnd = SystemControl.StartFromLocal(path);
+                hWnd = await SystemControl.StartFromLocalAsync(Config.InstallPath);
             }
-            if (hWnd ==IntPtr.Zero)
+            if (hWnd == IntPtr.Zero)
             {
                 System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
                 return;
             }
         }
-
 
         if (!_taskDispatcherEnabled)
         {
@@ -204,31 +203,44 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         //}
     }
 
-
     [RelayCommand]
-    public async Task SelectInstallPathAsync()
+    public void SelectInstallPath()
     {
-        await Task.Run(() =>
-        {
-            // 弹出选择文件夹对话框
-            var dialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
-            if (dialog.ShowDialog() == true)
-            {
-                var path = dialog.SelectedPath;
-                if (string.IsNullOrEmpty(path))
-                {
-                    return;
-                }
-                // 检查是否有Yuanshen.exe
-                var gamePath = Path.Combine(path, "Yuanshen.exe");
-                if (!File.Exists(gamePath))
-                {
-                    System.Windows.MessageBox.Show("请选择正确的原神安装目录");
-                    return;
-                }
-                Config.InstallPath = path;
-            }
-        });
-    }
+        string? gamePath = Config.InstallPath;
+        string? restoreDirName = null;
+        string? restoreName = null;
 
+        if (!string.IsNullOrWhiteSpace(gamePath))
+        {
+            FileInfo gameFileInfo = new(gamePath);
+
+            restoreDirName = gameFileInfo.DirectoryName;
+            restoreName = gameFileInfo.Name;
+        }
+
+        OpenFileDialog dialog = new()
+        {
+            Title = "选择 Yuanshen.exe 或 GenshinImpact.exe",
+            RestoreDirectory = true,
+            InitialDirectory = restoreDirName,
+            FileName = restoreName,
+            DefaultExt = "*.exe",
+            Filter = "*.exe|*.exe",
+        };
+
+        if (dialog.ShowDialog() ?? false)
+        {
+            FileInfo fileInfo = new(dialog.FileName!);
+
+            if (fileInfo.Name.Equals("Yuanshen.exe", StringComparison.OrdinalIgnoreCase)
+             || fileInfo.Name.Equals("GenshinImpact.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                Config.InstallPath = dialog.FileName!;
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("选择 Yuanshen.exe 或 GenshinImpact.exe");
+            }
+        }
+    }
 }
