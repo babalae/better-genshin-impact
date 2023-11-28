@@ -67,10 +67,22 @@ public class TaskControl
         if (bitmap == null)
         {
             Logger.LogWarning("截图失败!");
-            throw new Exception("截图失败");
+            // 重试5次
+            for (var i = 0; i < 5; i++)
+            {
+                bitmap = gameCapture?.Capture();
+                if (bitmap != null)
+                {
+                    return bitmap;
+                }
+                Sleep(20);
+            }
+            throw new Exception("尝试多次后,截图失败!");
         }
-
-        return bitmap;
+        else
+        {
+            return bitmap;
+        }
     }
 
     public static CaptureContent CaptureToContent(IGameCapture? gameCapture)

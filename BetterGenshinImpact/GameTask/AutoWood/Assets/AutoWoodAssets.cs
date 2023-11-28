@@ -7,7 +7,8 @@ namespace BetterGenshinImpact.GameTask.AutoWood.Assets
     public class AutoWoodAssets
     {
         public RecognitionObject TheBoonOfTheElderTreeRo;
-        public RecognitionObject CharacterGuideRo;
+        // public RecognitionObject CharacterGuideRo;
+        public RecognitionObject MenuBagRo;
         public RecognitionObject ConfirmRo;
         public RecognitionObject EnterGameRo;
 
@@ -25,11 +26,20 @@ namespace BetterGenshinImpact.GameTask.AutoWood.Assets
                 DrawOnWindow = false
             }.InitTemplate();
 
-            CharacterGuideRo = new RecognitionObject
+            // CharacterGuideRo = new RecognitionObject
+            // {
+            //     Name = "CharacterGuide",
+            //     RecognitionType = RecognitionTypes.TemplateMatch,
+            //     TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "character_guide.png"),
+            //     RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            //     DrawOnWindow = false
+            // }.InitTemplate();
+
+            MenuBagRo = new RecognitionObject
             {
-                Name = "CharacterGuide",
+                Name = "MenuBag",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "character_guide.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "menu_bag.png"),
                 RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
                 DrawOnWindow = false
             }.InitTemplate();
