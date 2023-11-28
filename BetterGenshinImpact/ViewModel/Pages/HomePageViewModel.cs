@@ -12,6 +12,9 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
@@ -122,8 +125,16 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
-            return;
+            if (! string.IsNullOrEmpty(Config.InstallPath))
+            {
+                var path = Path.Combine(Config.InstallPath, "Yuanshen.exe");
+                hWnd = SystemControl.StartFromLocal(path);
+            }
+            if (hWnd ==IntPtr.Zero)
+            {
+                System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
+                return;
+            }
         }
 
 
@@ -192,4 +203,32 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         //    MessageBox.Show(e.StackTrace);
         //}
     }
+
+
+    [RelayCommand]
+    public async Task SelectInstallPathAsync()
+    {
+        await Task.Run(() =>
+        {
+            // 弹出选择文件夹对话框
+            var dialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
+            if (dialog.ShowDialog() == true)
+            {
+                var path = dialog.SelectedPath;
+                if (string.IsNullOrEmpty(path))
+                {
+                    return;
+                }
+                // 检查是否有Yuanshen.exe
+                var gamePath = Path.Combine(path, "Yuanshen.exe");
+                if (!File.Exists(gamePath))
+                {
+                    System.Windows.MessageBox.Show("请选择正确的原神安装目录");
+                    return;
+                }
+                Config.InstallPath = path;
+            }
+        });
+    }
+
 }

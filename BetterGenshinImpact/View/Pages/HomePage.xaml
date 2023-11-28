@@ -106,6 +106,35 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
+                <Grid Margin="16" >
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock 
+                        Grid.Row="0"
+                        Margin="0,0,0,5"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        Text="安装位置"
+                        TextWrapping="Wrap" />
+                    <ui:TextBox x:Name="InstallPathTextBox"
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        MinWidth="90"
+                        Margin="0,0,10,0"
+                        Text="{Binding Config.InstallPath, Mode=TwoWay}" />
+                    <ui:Button x:Name="SelectInstallPathButton"
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        Margin="0,0,36,0"
+                        Command="{Binding SelectInstallPathCommand}"
+                        Content="..." />
+                </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
