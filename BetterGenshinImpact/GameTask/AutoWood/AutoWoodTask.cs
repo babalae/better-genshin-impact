@@ -128,18 +128,25 @@ public class AutoWoodTask
         Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.ESCAPE);
         Sleep(800, taskParam.Cts);
         // 确认在菜单界面
-        NewRetry.Do(() =>
+        try
         {
-            Sleep(1, taskParam.Cts);
-            var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-            var ra = content.CaptureRectArea.Find(_assets.CharacterGuideRo);
-            if (ra.IsEmpty())
+            NewRetry.Do(() =>
             {
-                throw new RetryException("未检测到弹出菜单");
-            }
+                Sleep(1, taskParam.Cts);
+                var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+                var ra = content.CaptureRectArea.Find(_assets.MenuBagRo);
+                if (ra.IsEmpty())
+                {
+                    throw new RetryException("未检测到弹出菜单");
+                }
+            }, TimeSpan.FromSeconds(1), 3);
+        }
+        catch (Exception e)
+        {
+            Logger.LogInformation(e.Message);
+            Logger.LogInformation("仍旧点击退出按钮");
+        }
 
-            Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_Z);
-        }, TimeSpan.FromSeconds(1), 3);
 
         // 点击退出
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
