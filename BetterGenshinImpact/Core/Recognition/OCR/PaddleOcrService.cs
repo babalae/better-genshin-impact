@@ -34,6 +34,10 @@ public class PaddleOcrService : IOcrService
             AllowRotateDetection = false, /* 允许识别有角度的文字 */
             Enable180Classification = false, /* 允许识别旋转角度大于90度的文字 */
         };
+
+        // System.AccessViolationException
+        // https://github.com/babalae/better-genshin-impact/releases/latest
+        // 下载并解压到相同目录下
     }
 
     public string Ocr(Mat mat)

@@ -28,12 +28,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
-        {
-            Background = new SolidColorBrush(Colors.Transparent);
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Mica);
-        }
+        TryApplySystemBackdrop();
     }
 
     public INavigationView GetNavigation() => RootNavigation;
@@ -53,4 +48,27 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     public void ShowWindow() => Show();
 
     public void CloseWindow() => Close();
+
+    private void TryApplySystemBackdrop()
+    {
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Tabbed))
+        {
+            Background = new SolidColorBrush(Colors.Transparent);
+            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
+            return;
+        }
+
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
+        {
+            Background = new SolidColorBrush(Colors.Transparent);
+            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Mica);
+            return;
+        }
+
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))
+        {
+            Background = new SolidColorBrush(Colors.Transparent);
+            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Acrylic);
+        }
+    }
 }
