@@ -35,21 +35,6 @@
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            OpenPaneLength="150">
-            <!--<ui:NavigationView.AutoSuggestBox>
-                <ui:AutoSuggestBox x:Name="AutoSuggestBox" PlaceholderText="Search">
-                    <ui:AutoSuggestBox.Icon>
-                        <ui:IconSourceElement>
-                            <ui:SymbolIconSource Symbol="Search24" />
-                        </ui:IconSourceElement>
-                    </ui:AutoSuggestBox.Icon>
-                </ui:AutoSuggestBox>
-            </ui:NavigationView.AutoSuggestBox>-->
-            <!--<ui:NavigationView.Header>
-                <ui:BreadcrumbBar
-                    Margin="42,32,0,0"
-                    FontSize="28"
-                    FontWeight="DemiBold" />
-            </ui:NavigationView.Header>-->
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"
