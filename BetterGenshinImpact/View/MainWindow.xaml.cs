@@ -69,7 +69,6 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         {
             Background = new SolidColorBrush(Colors.Transparent);
             WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Acrylic);
-            return;
         }
     }
 }

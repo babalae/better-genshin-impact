@@ -16,25 +16,13 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
-    <Page.Resources>
-        <Style BasedOn="{StaticResource DefaultButtonStyle}" TargetType="{x:Type ui:Button}">
-            <Setter Property="MinWidth" Value="128" />
-        </Style>
-        <Style BasedOn="{StaticResource DefaultComboBoxStyle}" TargetType="{x:Type ComboBox}">
-            <Setter Property="MinWidth" Value="128" />
-        </Style>
-        <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type ui:TextBox}">
-            <Setter Property="MinWidth" Value="128" />
-        </Style>
-    </Page.Resources>
-
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
-    <StackPanel Margin="42">
+    <StackPanel Margin="42,16,42,12">
 
         <Border Height="200" CornerRadius="8">
             <Grid>
@@ -77,8 +65,7 @@
         <!--  原神，启动！  -->
         <ui:CardExpander Margin="0,12,0,12"
                          ContentPadding="0"
-                         Icon="{ui:SymbolIcon Play24}"
-                         IsExpanded="True">
+                         Icon="{ui:SymbolIcon Play24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -97,7 +84,6 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Style="{StaticResource CaptionTextBlockStyle}"
                                   Text="启动后才能使用各项功能，点击展开启动相关配置。"
                                   TextWrapping="Wrap" />
                     <StackPanel Grid.Row="0"
@@ -116,113 +102,144 @@
                     </StackPanel>
                 </Grid>
             </ui:CardExpander.Header>
-            <StackPanel Margin="36,0,36,0" UseLayoutRounding="True">
-                <Grid MinHeight="40" Margin="16,8">
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body"
-                                      Text="安装位置"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Margin="0,2,0,0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Style="{DynamicResource CaptionTextBlockStyle}"
-                                      Text="{Binding Config.InstallPath, Mode=TwoWay}" />
-                    </StackPanel>
-
-                    <ui:Button Grid.Column="1"
-                               Command="{Binding SelectInstallPathCommand}"
-                               Content="浏览文件" />
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        Text="安装位置"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Text="{Binding Config.InstallPath, Mode=TwoWay}"
+                        TextWrapping="Wrap" />
+                    <ui:Button
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,36,0"
+                        Command="{Binding SelectInstallPathCommand}"
+                        Content="浏览" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid MinHeight="40" Margin="16,8">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body"
-                                      Text="截图模式"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Margin="0,2,0,0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Style="{StaticResource CaptionTextBlockStyle}"
-                                      Text="如果可用的话，推荐选择 BitBlt，问题较少"
-                                      TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <ComboBox Grid.Column="1"
-                              ItemsSource="{Binding ModeNames}"
-                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="截图模式"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="如果可用的话，推荐选择 BitBlt，问题较少"
+                                  TextWrapping="Wrap" />
+                    <ComboBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,36,0"
+                        ItemsSource="{Binding ModeNames}"
+                        SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid MinHeight="40" Margin="16,8">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body"
-                                      Text="触发器间隔（毫秒）"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Margin="0,2,0,0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Style="{StaticResource CaptionTextBlockStyle}"
-                                      Text="默认50ms，机器性能一般的情况下不建议调整这个值"
-                                      TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <ui:TextBox Grid.Column="1"
-                                VerticalAlignment="Center"
-                                Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="触发器间隔（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="默认50ms，机器性能一般的情况下不建议调整这个值"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        MinWidth="90"
+                        Margin="0,0,36,0"
+                        Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid MinHeight="40" Margin="16,8">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body"
-                                      Text="测试图像捕获"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Margin="0,2,0,0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Style="{StaticResource CaptionTextBlockStyle}"
-                                      Text="测试功能，测试几种截图模式的效果"
-                                      TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <ui:Button x:Name="StartCaptureTest"
-                               Grid.Row="0"
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="测试图像捕获"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="测试功能，测试几种截图模式的效果"
+                                  TextWrapping="Wrap" />
+                    <ui:Button
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,36,0"
+                        Command="{Binding StartCaptureTestCommand}"
+                        Content="测试图像捕获" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="系统图形设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="可在此处关闭 Windows11 窗口化优化以支持 BitBlt"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
-                               Command="{Binding StartCaptureTestCommand}"
-                               Content="测试图像捕获" />
-                </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid MinHeight="40" Margin="16,8">
-
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="系统图形设置"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Margin="0,2,0,0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Style="{StaticResource CaptionTextBlockStyle}"
-                                      Text="可在此处关闭 Windows11 窗口化优化以支持 BitBlt"
-                                      TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <ui:Button Grid.Column="1"
+                               Margin="0,0,36,0"
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
                                Content="开始设置" />
                 </Grid>
