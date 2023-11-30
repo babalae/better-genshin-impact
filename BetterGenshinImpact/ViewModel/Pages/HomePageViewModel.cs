@@ -37,10 +37,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [ObservableProperty] private Visibility _startButtonVisibility = Visibility.Visible;
     [ObservableProperty] private Visibility _stopButtonVisibility = Visibility.Collapsed;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
 
     public AllConfig Config { get; set; }
@@ -86,12 +88,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 }
                 else
                 {
-                    OnStartTrigger();
+                    _ = OnStartTriggerAsync();
                 }
             }
         });
     }
-
 
     [RelayCommand]
     private void OnLoaded()
@@ -141,22 +142,21 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     private bool CanStartTrigger() => StartButtonEnabled;
 
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
-    private void OnStartTrigger()
+    private async Task OnStartTriggerAsync()
     {
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            if (! string.IsNullOrEmpty(Config.InstallPath))
+            if (!string.IsNullOrEmpty(Config.InstallPath))
             {
-                hWnd = SystemControl.StartFromLocal(Config.InstallPath);
+                hWnd = await SystemControl.StartFromLocalAsync(Config.InstallPath);
             }
-            if (hWnd ==IntPtr.Zero)
+            if (hWnd == IntPtr.Zero)
             {
                 System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
                 return;
             }
         }
-
 
         if (!_taskDispatcherEnabled)
         {
@@ -224,7 +224,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         //}
     }
 
-
     [RelayCommand]
     public async Task SelectInstallPathAsync()
     {
@@ -243,11 +242,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 if (path.EndsWith("YuanShen.exe") || path.EndsWith("Genshin Impact Cloud Game.exe") || path.EndsWith("launcher.exe"))
                 {
                     Config.InstallPath = path;
-                } else
+                }
+                else
                 {
                     System.Windows.MessageBox.Show("请选择有效的文件！");
                 }
-
             }
         });
     }
@@ -271,7 +270,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 }
             }
             // 如果没读取到，就使用launcher的路径
-            installPath = Path.Combine(path,"launcher.exe");
+            installPath = Path.Combine(path, "launcher.exe");
             return true;
         }
         // 如果没有读取到原神的路径，尝试读取云原神
@@ -299,5 +298,4 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         }
         return value.ToString();
     }
-
 }

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Vanara.PInvoke;
 using WindowsInput;
 using Wpf.Ui.Appearance;
@@ -19,17 +20,17 @@ public class SystemControl
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
 
-    public static nint StartFromLocal(string path)
+    public static async Task<nint> StartFromLocalAsync(string path)
     {
         if (path.EndsWith("YuanShen.exe"))
         {
             DirectStartFromYuanShen(path);
-            Thread.Sleep(10000);
-        } 
+            await Task.Delay(10000);
+        }
         if (path.EndsWith("launcher.exe"))
         {
             StartFromLauncher(path);
-            Thread.Sleep(10000);
+            await Task.Delay(10000);
         }
         if (path.EndsWith("Genshin Impact Cloud Game.exe"))
         {
@@ -170,6 +171,7 @@ public class SystemControl
         // 直接exe启动
         var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
+
     private static void StartFromLauncher(string path)
     {
         // 通过launcher启动
