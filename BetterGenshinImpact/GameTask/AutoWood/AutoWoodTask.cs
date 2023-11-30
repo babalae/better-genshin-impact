@@ -102,7 +102,7 @@ public class AutoWoodTask
             var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
             if (ra.IsEmpty())
             {
-#if TEST_WITHOUT_Z_ITEM
+#if !TEST_WITHOUT_Z_ITEM
                 throw new NormalEndException("请先装备小道具「王树瑞佑」！");
 #else
                 Thread.Sleep(2000);
@@ -127,7 +127,7 @@ public class AutoWoodTask
                 var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
                 if (ra.IsEmpty())
                 {
-#if TEST_WITHOUT_Z_ITEM
+#if !TEST_WITHOUT_Z_ITEM
                     throw new RetryException("未找到「王树瑞佑」");
 #else
                     Thread.Sleep(15000);
