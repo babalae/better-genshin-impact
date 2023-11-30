@@ -1,15 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
-using Fischless.GameCapture;
-using Microsoft.Xaml.Behaviors.Media;
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
-using WindowsInput;
-using Wpf.Ui.Appearance;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -51,9 +46,9 @@ public class SystemControl
         return hWnd == TaskContext.Instance().GameHandle;
     }
 
-    public static IntPtr GetForegroundWindowHandle()
+    public static nint GetForegroundWindowHandle()
     {
-        return (IntPtr)User32.GetForegroundWindow();
+        return (nint)User32.GetForegroundWindow();
     }
 
     public static nint FindHandleByProcessName(params string[] names)
@@ -85,7 +80,7 @@ public class SystemControl
         }
     }
 
-    public static Process? GetProcessByHandle(IntPtr hWnd)
+    public static Process? GetProcessByHandle(nint hWnd)
     {
         try
         {
@@ -105,7 +100,7 @@ public class SystemControl
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    public static RECT GetWindowRect(IntPtr hWnd)
+    public static RECT GetWindowRect(nint hWnd)
     {
         // User32.GetWindowRect(hWnd, out var windowRect);
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
@@ -117,7 +112,7 @@ public class SystemControl
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    public static RECT GetGameScreenRect(IntPtr hWnd)
+    public static RECT GetGameScreenRect(nint hWnd)
     {
         User32.GetClientRect(hWnd, out var clientRect);
         return clientRect;
@@ -128,7 +123,7 @@ public class SystemControl
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    public static RECT GetCaptureRect(IntPtr hWnd)
+    public static RECT GetCaptureRect(nint hWnd)
     {
         var windowRect = GetWindowRect(hWnd);
         var gameScreenRect = GetGameScreenRect(hWnd);
@@ -139,7 +134,7 @@ public class SystemControl
         return new RECT(left, top, right, bottom);
     }
 
-    public static void ActivateWindow(IntPtr hWnd)
+    public static void ActivateWindow(nint hWnd)
     {
         User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
         User32.SetForegroundWindow(hWnd);
@@ -152,6 +147,20 @@ public class SystemControl
             throw new Exception("请先启动BetterGI");
         }
         ActivateWindow(TaskContext.Instance().GameHandle);
+    }
+
+    public static void Focus(nint hWnd)
+    {
+        if (User32.IsWindow(hWnd))
+        {
+            _ = User32.SendMessage(hWnd, User32.WindowMessage.WM_SYSCOMMAND, User32.SysCommand.SC_RESTORE, 0);
+            _ = User32.SetForegroundWindow(hWnd);
+            while (User32.IsIconic(hWnd))
+            {
+                continue;
+            }
+            _ = User32.BringWindowToTop(hWnd);
+        }
     }
 
     public static bool IsFullScreenMode(IntPtr hWnd)

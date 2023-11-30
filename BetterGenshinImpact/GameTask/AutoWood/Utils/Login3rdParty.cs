@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -77,15 +76,23 @@ internal sealed class Login3rdParty
         }
     }
 
-    public async void Login(CancellationTokenSource cts)
+    public void Login(CancellationTokenSource cts)
     {
-        await Task.Run(() =>
+        int failCount = default;
+
+        while (!LoginPrivate(cts))
         {
-            while (!LoginPrivate(cts))
+            // It is necessary to support exitable trying.
+            // Can exit trying when over than 10s.
+            if (++failCount > 20)
             {
-                Sleep(500, cts);
+                Debug.WriteLine("[AutoWood] Give up to check login button and don't try again.");
+                break;
             }
-        }, cts.Token);
+            Debug.WriteLine($"[AutoWood] Fail to check login button {failCount} time(s).");
+            Sleep(500, cts);
+        }
+        Debug.WriteLine("[AutoWood] Exit while check login button.");
     }
 
     private bool LoginPrivate(CancellationTokenSource cts)
@@ -127,10 +134,11 @@ internal sealed class Login3rdParty
                 }
 
                 // Just for login WebUI chattering
-                Sleep(400, cts);
+                Sleep(2000, cts);
 
                 var p = TaskContext.Instance().SystemInfo.CaptureAreaRect.GetCenterPoint();
                 p.Add(new(0, 125)).Click();
+                Debug.WriteLine("[AutoWood] Click login button for the B one");
                 return true;
             }
             return false;
