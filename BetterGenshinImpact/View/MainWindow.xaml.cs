@@ -51,13 +51,6 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     private void TryApplySystemBackdrop()
     {
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Tabbed))
-        {
-            Background = new SolidColorBrush(Colors.Transparent);
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
-            return;
-        }
-
         if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
         {
             Background = new SolidColorBrush(Colors.Transparent);
@@ -65,10 +58,11 @@ public partial class MainWindow : FluentWindow, INavigationWindow
             return;
         }
 
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Tabbed))
         {
             Background = new SolidColorBrush(Colors.Transparent);
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Acrylic);
+            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
+            return;
         }
     }
 }
