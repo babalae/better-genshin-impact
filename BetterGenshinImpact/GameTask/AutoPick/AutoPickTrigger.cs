@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
+using BetterGenshinImpact.Helpers;
 using WindowsInput;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
@@ -71,12 +72,10 @@ public class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
+        var speedTimer = new SpeedTimer();  
         content.CaptureRectArea.Find(_autoPickAssets.FRo, foundRectArea =>
         {
-            stopwatch.Stop();
-            Debug.WriteLine($"识别到 F 耗时 {stopwatch.ElapsedMilliseconds}ms");
+            speedTimer.Record("识别到 F 拾取键");
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
@@ -84,6 +83,7 @@ public class AutoPickTrigger : ITaskTrigger
             var isExcludeIcon = false;
             _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
             var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+            speedTimer.Record("识别聊天图标");
             if (!chatIconRa.IsEmpty())
             {
                 // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
@@ -93,6 +93,7 @@ public class AutoPickTrigger : ITaskTrigger
             {
                 _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
                 var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+                speedTimer.Record("识别设置图标");
                 if (!settingsIconRa.IsEmpty())
                 {
                     // 物品图标是设置图标，一般是解谜、活动、电梯等
@@ -127,14 +128,22 @@ public class AutoPickTrigger : ITaskTrigger
 
             var paddedMat = PreProcessForInference(textMat);
             var text = _pickTextInference.Inference(paddedMat);
+            speedTimer.Record("文字识别");
             if (!string.IsNullOrEmpty(text))
             {
+                // 唯一一个动态拾取项，特殊处理，不拾取
+                if (text.Contains("尚需生长时间"))
+                {
+                    return;
+                }
+                
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
                     Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
                     return;
                 }
+                speedTimer.Record("白名单判断");
 
                 if (isExcludeIcon)
                 {
@@ -146,11 +155,13 @@ public class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
+                speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);
                 Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
             }
         });
+        speedTimer.DebugPrint();
     }
 
     private Mat PreProcessForInference(Mat mat)
