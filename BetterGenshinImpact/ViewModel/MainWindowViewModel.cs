@@ -66,40 +66,48 @@ namespace BetterGenshinImpact.ViewModel
 
         private async void GetNewestInfo()
         {
-            var httpClient = new HttpClient();
-            var notice = await httpClient.GetFromJsonAsync<Notice>(@"https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json");
-            if (notice != null && !string.IsNullOrWhiteSpace(notice.Version))
+            try
             {
-                if (Global.IsNewVersion(notice.Version))
+                var httpClient = new HttpClient();
+                var notice = await httpClient.GetFromJsonAsync<Notice>(@"https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json");
+                if (notice != null && !string.IsNullOrWhiteSpace(notice.Version))
                 {
-                    if (!string.IsNullOrEmpty(Config.NotShowNewVersionNoticeEndVersion)
-                        && !Global.IsNewVersion(Config.NotShowNewVersionNoticeEndVersion, notice.Version))
+                    if (Global.IsNewVersion(notice.Version))
                     {
-                        return;
+                        if (!string.IsNullOrEmpty(Config.NotShowNewVersionNoticeEndVersion)
+                            && !Global.IsNewVersion(Config.NotShowNewVersionNoticeEndVersion, notice.Version))
+                        {
+                            return;
+                        }
+
+                        await UIDispatcherHelper.Invoke(async () =>
+                        {
+                            var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+                            {
+                                Title = "更新提示",
+                                Content = $"存在最新版本 {notice.Version}，点击确定前往下载页面下载最新版本",
+                                PrimaryButtonText = "确定",
+                                SecondaryButtonText = "不再提示",
+                                CloseButtonText = "取消",
+                            };
+
+                            var result = await uiMessageBox.ShowDialogAsync();
+                            if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+                            {
+                                Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/download.html") { UseShellExecute = true });
+                            }
+                            else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
+                            {
+                                Config.NotShowNewVersionNoticeEndVersion = notice.Version;
+                            }
+                        });
                     }
-
-                    await UIDispatcherHelper.Invoke(async () =>
-                    {
-                        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-                        {
-                            Title = "更新提示",
-                            Content = $"存在最新版本 {notice.Version}，点击确定前往下载页面下载最新版本",
-                            PrimaryButtonText = "确定",
-                            SecondaryButtonText = "不再提示",
-                            CloseButtonText = "取消",
-                        };
-
-                        var result = await uiMessageBox.ShowDialogAsync();
-                        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-                        {
-                            Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/download.html") { UseShellExecute = true });
-                        }
-                        else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
-                        {
-                            Config.NotShowNewVersionNoticeEndVersion = notice.Version;
-                        }
-                    });
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                _logger.LogWarning("获取 BetterGI 最新版本信息失败");
             }
         }
 
