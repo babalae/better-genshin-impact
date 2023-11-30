@@ -171,7 +171,7 @@ public class AutoWoodTask
         // 点击退出
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        _clickOffset.Click((int)(50 * assetScale), captureArea.Height - (int)(50 * assetScale));
+        _clickOffset.ClickWithoutScale((int)(50 * assetScale), captureArea.Height - (int)(50 * assetScale));
         Debug.WriteLine("[AutoWood] Click exit button");
 
         Sleep(500, taskParam.Cts);

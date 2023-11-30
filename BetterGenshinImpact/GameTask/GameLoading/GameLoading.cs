@@ -41,7 +41,7 @@ namespace BetterGenshinImpact.GameTask.GameLoading
             },
                 DrawOnWindow = true
             }.InitTemplate();
-            IsEnabled = true;
+            IsEnabled = false;
         }
 
         public void OnCapture(CaptureContent content)
