@@ -91,7 +91,7 @@ namespace BetterGenshinImpact.GameTask
                 throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
             }
 
-            var mat = new Mat(filePath, flags);
+            var mat = Mat.FromStream(File.OpenRead(filePath), flags);
             if (info.GameScreenSize.Width != 1920)
             {
                 mat = ResizeHelper.Resize(mat, info.AssetScale);
