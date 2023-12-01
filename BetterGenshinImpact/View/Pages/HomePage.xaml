@@ -52,7 +52,7 @@
                             <Hyperlink Command="{Binding GoToWikiUrlCommand}"
                                        Foreground="#B7FFFFFF"
                                        TextDecorations="None">
-                                <Run>点击查看教程</Run>
+                                <Run>点击查看文档与教程</Run>
                                 <Run FontFamily="{StaticResource FluentSystemIcons}" FontWeight="Light">&#xEE7A;</Run>
                             </Hyperlink>
 
@@ -178,7 +178,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认50ms，机器性能一般的情况下不建议调整这个值"
+                                  Text="默认50ms，普通用户不建议调整这个值，具体调整方式见文档"
                                   TextWrapping="Wrap" />
                     <ui:TextBox
                         Grid.Row="0"

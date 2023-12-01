@@ -988,6 +988,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (!prevIsExclusive && IsExclusive)
             {
                 _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
+                var autoThrowRodEnabled = TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled;
+                _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", autoThrowRodEnabled.ToChinese());
+                if (autoThrowRodEnabled)
+                {
+                    _logger.LogInformation("枫丹、须弥地区暂不支持自动抛竿，如果在这两个地区钓鱼请关闭自动抛竿功能");
+                }
                 _switchBaitContinuouslyFrameNum = 0;
                 _waitBiteContinuouslyFrameNum = 0;
                 _noFishActionContinuouslyFrameNum = 0;

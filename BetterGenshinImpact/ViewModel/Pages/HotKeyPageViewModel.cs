@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
+using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -136,6 +137,6 @@ public partial class HotKeyPageViewModel : ObservableObject
 
     private string ToChinese(bool enabled)
     {
-        return enabled ? "开启" : "关闭";
+        return enabled.ToChinese();
     }
 }
