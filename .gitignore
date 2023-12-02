@@ -24,3 +24,5 @@ bld/
 Tmp/
 /packages/
 node_modules/
+
+*.zip
