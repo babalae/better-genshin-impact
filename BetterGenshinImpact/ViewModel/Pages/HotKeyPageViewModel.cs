@@ -133,6 +133,13 @@ public partial class HotKeyPageViewModel : ObservableObject
             Config.HotKeyConfig.AutoGeniusInvokation,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoGeniusInvokation(); }
         ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "启动/停止自动伐木",
+            nameof(Config.HotKeyConfig.AutoWoodHotkey),
+            Config.HotKeyConfig.AutoWoodHotkey,
+            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoWood(); }
+        ));
     }
 
     private string ToChinese(bool enabled)
