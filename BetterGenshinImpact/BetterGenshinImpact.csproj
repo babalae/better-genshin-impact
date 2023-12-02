@@ -299,6 +299,12 @@
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Mansion.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapChoose.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapCloseButton.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapScaleButton.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

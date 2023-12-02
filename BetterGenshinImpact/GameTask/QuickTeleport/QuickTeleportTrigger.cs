@@ -13,6 +13,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
     public bool IsExclusive => false;
 
     private readonly QuickTeleportAssets _assets;
+    private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
 
     public QuickTeleportTrigger()
     {
@@ -21,7 +22,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = false;
+        IsEnabled = true;
     }
 
     public void OnCapture(CaptureContent content)
@@ -34,6 +35,19 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
             if (!hasTeleportButton)
             {
+                // 存在地图关闭按钮，说明未选中传送点，直接返回
+                var mapCloseRa = content.CaptureRectArea.Find(_assets.MapCloseButtonRo);
+                if (!mapCloseRa.IsEmpty())
+                {
+                    return;
+                }
+                // 存在地图选择按钮，说明未选中传送点，直接返回
+                var mapChooseRa = content.CaptureRectArea.Find(_assets.MapChooseRo);
+                if (!mapChooseRa.IsEmpty())
+                {
+                    return;
+                }
+
                 // 3. 循环判断选项列表是否有传送点
                 var hasMapChooseIcon = CheckMapChooseIcon(content);
                 if (hasMapChooseIcon)
@@ -53,7 +67,11 @@ internal class QuickTeleportTrigger : ITaskTrigger
         {
             ra.ClickCenter();
             hasTeleportButton = true;
-            TaskControl.Logger.LogInformation("快速传送");
+            if ((DateTime.Now - _prevClickTeleportButtonTime).TotalSeconds > 1)
+            {
+                TaskControl.Logger.LogInformation("快速传送");
+            }
+            _prevClickTeleportButtonTime = DateTime.Now;
         });
         return hasTeleportButton;
     }
@@ -69,6 +87,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 TaskControl.Sleep(200);
                 hasMapChooseIcon = true;
                 ra.ClickCenter();
+               
                 break;
             }
         }

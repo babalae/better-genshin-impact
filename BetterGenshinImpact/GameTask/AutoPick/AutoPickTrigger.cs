@@ -132,7 +132,7 @@ public class AutoPickTrigger : ITaskTrigger
             if (!string.IsNullOrEmpty(text))
             {
                 // 唯一一个动态拾取项，特殊处理，不拾取
-                if (text.Contains("尚需生长时间"))
+                if (text.Contains("生长时间"))
                 {
                     return;
                 }
