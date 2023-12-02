@@ -245,7 +245,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         MinWidth="90"
-                        Margin="0,0,24,0"
+                        Margin="0,0,36,0"
                         Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -274,7 +274,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         MinWidth="90"
-                        Margin="0,0,24,0"
+                        Margin="0,0,36,0"
                         Text="{Binding Config.AutoWoodConfig.AfterZSleepDelay, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>

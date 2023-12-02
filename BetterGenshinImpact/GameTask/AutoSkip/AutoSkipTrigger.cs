@@ -4,11 +4,13 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using WindowsInput;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
@@ -158,6 +160,7 @@ public class AutoSkipTrigger : ITaskTrigger
             // 找右下的对话选项按钮
             content.CaptureRectArea.Find(_autoSkipAssets.OptionIconRo, (optionButtonRectArea) =>
             {
+                TaskControl.Sleep(config.AfterChooseOptionSleepDelay);
                 optionButtonRectArea.ClickCenter();
 
                 if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)

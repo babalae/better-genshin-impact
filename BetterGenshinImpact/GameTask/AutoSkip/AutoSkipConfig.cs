@@ -31,6 +31,11 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
 
         public int ExpeditionOptionTextWidth { get; set; } = 130;
 
+        /// <summary>
+        /// 选择选项前的延迟（毫秒）
+        /// </summary>
+        [ObservableProperty] private int _afterChooseOptionSleepDelay = 0;
+
 
         /// <summary>
         /// 自动领取每日委托奖励
