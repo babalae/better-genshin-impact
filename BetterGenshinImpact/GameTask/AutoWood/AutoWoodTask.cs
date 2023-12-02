@@ -141,6 +141,7 @@ public class AutoWoodTask
         }
 
         Sleep(300, taskParam.Cts);
+        Sleep(TaskContext.Instance().Config.AutoWoodConfig.AfterZSleepDelay, taskParam.Cts);
     }
 
     private void PressEsc(WoodTaskParam taskParam)

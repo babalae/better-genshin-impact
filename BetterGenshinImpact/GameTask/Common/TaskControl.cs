@@ -32,6 +32,10 @@ public class TaskControl
         {
             throw new NormalEndException("取消自动伐木任务");
         }
+        if (millisecondsTimeout <= 0)
+        {
+            return;
+        }
         Retry.Do(() =>
         {
             if (cts.IsCancellationRequested)

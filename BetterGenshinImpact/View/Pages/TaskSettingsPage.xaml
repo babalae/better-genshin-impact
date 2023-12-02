@@ -99,8 +99,8 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap">
-                        全自动打牌 - 
-                        <Hyperlink 
+                        全自动打牌 -
+                        <Hyperlink
                             Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
                             Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
@@ -144,7 +144,7 @@
                         Margin="0,0,36,0"
                         ItemsSource="{Binding StrategyList}"
                         SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}"
-                        Width="180"/>
+                        Width="180" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -203,7 +203,7 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap">
                         需要装备「王树瑞佑」 -
-                        <Hyperlink 
+                        <Hyperlink
                             Command="{Binding GoToAutoWoodUrlCommand}"
                             Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
@@ -240,13 +240,42 @@
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
                         Text="循环伐木多少次，输入 0 则为无限循环直到手动终止" />
-                    <ui:TextBox x:Name="IntervalNumberBox"
-                                Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,24,0"
-                                Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        MinWidth="90"
+                        Margin="0,0,24,0"
+                        Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="使用小道具后的额外延迟（毫秒）" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="如果希望看到使用小道具后获得木材的提示，可以调整这个值" />
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        MinWidth="90"
+                        Margin="0,0,24,0"
+                        Text="{Binding Config.AutoWoodConfig.AfterZSleepDelay, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
