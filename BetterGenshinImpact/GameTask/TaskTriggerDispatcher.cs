@@ -21,6 +21,8 @@ namespace BetterGenshinImpact.GameTask
     {
         private readonly ILogger<TaskTriggerDispatcher> _logger = App.GetLogger<TaskTriggerDispatcher>();
 
+        private static TaskTriggerDispatcher? _instance;
+
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
 
@@ -35,8 +37,27 @@ namespace BetterGenshinImpact.GameTask
 
         public TaskTriggerDispatcher()
         {
+            _instance = this;
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
+        }
+
+        public static IGameCapture GlobalGameCapture
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
+                }
+
+                if (_instance.GameCapture == null)
+                {
+                    throw new Exception("截图器未初始化!");
+                }
+
+                return _instance.GameCapture;
+            }
         }
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
@@ -145,10 +166,7 @@ namespace BetterGenshinImpact.GameTask
             }
             else if (taskType == IndependentTaskEnum.AutoWood)
             {
-                Task.Run(() =>
-                {
-                    new AutoWoodTask().Start((WoodTaskParam)param);
-                });
+                Task.Run(() => { new AutoWoodTask().Start((WoodTaskParam)param); });
             }
         }
 
@@ -219,7 +237,7 @@ namespace BetterGenshinImpact.GameTask
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
-                    Debug.WriteLine("没有可用的触发器, 不再进行截屏");
+                    // Debug.WriteLine("没有可用的触发器, 不再进行截屏");
                     return;
                 }
 

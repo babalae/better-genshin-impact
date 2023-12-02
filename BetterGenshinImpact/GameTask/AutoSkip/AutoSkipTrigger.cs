@@ -1,17 +1,16 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using OpenCvSharp;
-using Vanara.PInvoke;
 using WindowsInput;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -93,6 +92,10 @@ public class AutoSkipTrigger : ITaskTrigger
                     pageCloseRoRa.Dispose();
                 });
             }
+        }
+        else
+        {
+            VisionContext.Instance().DrawContent.RemoveRect("PlayingText");
         }
 
         if (isPlaying)

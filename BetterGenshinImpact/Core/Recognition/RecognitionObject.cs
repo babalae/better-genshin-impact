@@ -56,7 +56,7 @@ public class RecognitionObject
 
     /// <summary>
     /// 匹配模板遮罩，指定图片中的某种色彩不需要匹配
-    /// 使用时，需要将模板图片的背景色设置为纯黑色，即 #000000
+    /// 使用时，需要将模板图片的背景色设置为纯绿色，即 (0, 255, 0)
     /// </summary>
     public bool UseMask { get; set; } = false;
 

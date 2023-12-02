@@ -89,9 +89,19 @@ public class TaskControl
         }
     }
 
+    public static Bitmap CaptureGameBitmap()
+    {
+        return CaptureGameBitmap(TaskTriggerDispatcher.GlobalGameCapture);
+    }
+
     public static CaptureContent CaptureToContent(IGameCapture? gameCapture)
     {
         var bitmap = CaptureGameBitmap(gameCapture);
         return new CaptureContent(bitmap, 0, 0, null!);
+    }
+
+    public static CaptureContent CaptureToContent()
+    {
+        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
     }
 }

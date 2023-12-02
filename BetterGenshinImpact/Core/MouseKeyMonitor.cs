@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.QuickTeleport;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core;
@@ -48,17 +49,11 @@ public class MouseKeyMonitor
         _firstSpaceKeyDownTime = DateTime.MaxValue;
         var si = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
         _spaceTimer.Interval = si;
-        _spaceTimer.Elapsed += (sender, args) =>
-        {
-            Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE);
-        };
+        _spaceTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE); };
 
         var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
         _fTimer.Interval = fi;
-        _fTimer.Elapsed += (sender, args) =>
-        {
-            Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F);
-        };
+        _fTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F); };
     }
 
 
@@ -135,10 +130,12 @@ public class MouseKeyMonitor
 
     //private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
     //{
-    //    Debug.WriteLine("MouseDown: \t{0}; \t System Timestamp: \t{1}", e.Button, e.Timestamp);
+    //    Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
     //    // uncommenting the following line will suppress the middle mouse button click
-    //    // if (e.Buttons == MouseButtons.Middle) { e.Handled = true; }
+    //    if (e.Button == MouseButtons.Left)
+    //    {
+    //    }
     //}
 
     public void Unsubscribe()

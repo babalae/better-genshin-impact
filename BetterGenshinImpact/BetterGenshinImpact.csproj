@@ -287,6 +287,36 @@
 		<None Update="GameTask\AutoWood\Assets\1920x1080\TheBoonOfTheElderTree.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Domain.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Domain2.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\GoTeleport.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Mansion.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapScaleButton.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\PortableWaypoint.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\ScaleWithMask.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\StatueOfTheSeven.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\SubSpaceWaypoint.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\TeleportWaypoint.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

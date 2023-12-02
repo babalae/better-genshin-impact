@@ -25,9 +25,9 @@ namespace BetterGenshinImpact.GameTask
             {
                 { "RecognitionTest", new TestTrigger() },
                 { "AutoPick", new AutoPick.AutoPickTrigger() },
+                { "QuickTeleport", new QuickTeleport.QuickTeleportTrigger() },
                 { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
-                { "AutoFishing", new AutoFishing.AutoFishingTrigger() },
-                { "GameLoading", new GameLoading.GameLoadingTrigger() }
+                { "AutoFishing", new AutoFishing.AutoFishingTrigger() }
             };
 
             var loadedTriggers = TriggerDictionary.Values.ToList();
