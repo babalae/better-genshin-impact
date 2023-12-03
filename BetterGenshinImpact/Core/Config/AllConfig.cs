@@ -41,6 +41,11 @@ namespace BetterGenshinImpact.Core.Config
         [ObservableProperty] private string _notShowNewVersionNoticeEndVersion = "";
 
         /// <summary>
+        /// 详细的错误日志
+        /// </summary>
+        [ObservableProperty] private bool _detailedErrorLogs = false;
+
+        /// <summary>
         /// 遮罩窗口配置
         /// </summary>
         public MaskWindowConfig MaskWindowConfig { get; set; } = new();

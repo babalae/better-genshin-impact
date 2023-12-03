@@ -292,6 +292,10 @@ public class Duel
         {
             _logger.LogError(ex.Message);
             Debug.WriteLine(ex.StackTrace);
+            if (TaskContext.Instance().Config.DetailedErrorLogs)
+            {
+                _logger.LogError(ex.StackTrace);
+            }
         }
         finally
         {
