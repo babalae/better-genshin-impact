@@ -103,7 +103,7 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -131,7 +131,7 @@
                         Margin="0,0,36,0"
                         Command="{Binding SelectInstallPathCommand}"
                         Content="浏览" />
-                </Grid>
+                </Grid>-->
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

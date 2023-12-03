@@ -147,10 +147,10 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            if (!string.IsNullOrEmpty(Config.InstallPath))
-            {
-                hWnd = await SystemControl.StartFromLocalAsync(Config.InstallPath);
-            }
+            //if (!string.IsNullOrEmpty(Config.InstallPath))
+            //{
+            //    hWnd = await SystemControl.StartFromLocalAsync(Config.InstallPath);
+            //}
             if (hWnd == IntPtr.Zero)
             {
                 System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
