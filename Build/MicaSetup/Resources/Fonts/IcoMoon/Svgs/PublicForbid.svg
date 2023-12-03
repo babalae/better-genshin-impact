@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 63.1 (92452) - https://sketch.com -->
+    <title>Public/ic_public_forbid</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <path d="M12,1 C18.0751322,1 23,5.92486775 23,12 C23,14.9143925 21.8666105,17.5640678 20.0165552,19.532302 L19.7651925,19.7911352 C17.7756182,21.7741259 15.0309682,23 12,23 C5.92486775,23 1,18.0751322 1,12 C1,9.08560747 2.13338952,6.43593224 3.98344482,4.46769805 L4.23480753,4.20886478 C6.22438177,2.2258741 8.96903176,1 12,1 Z M2.5,12 C2.5,17.2467051 6.75329488,21.5 12,21.5 C14.3534071,21.5 16.5069434,20.6442512 18.1664151,19.2269473 L4.77305273,5.83358488 C3.35574883,7.49305656 2.5,9.64659286 2.5,12 Z M12,2.5 C9.64659286,2.5 7.49305656,3.35574883 5.83358488,4.77305273 L19.2269473,18.1664151 C20.6442512,16.5069434 21.5,14.3534071 21.5,12 C21.5,6.75329488 17.2467051,2.5 12,2.5 Z" id="path-1"></path>
+    </defs>
+    <g id="Public/ic_public_forbid" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <mask id="mask-2" fill="white">
+            <use xlink:href="#path-1"></use>
+        </mask>
+        <use id="形状" fill="#000000" fill-rule="nonzero" xlink:href="#path-1"></use>
+    </g>
+</svg>

@@ -1,0 +1,88 @@
+﻿<UserControl x:Class="MicaSetup.Views.FinishPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:control="clr-namespace:MicaSetup.Design.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:MicaSetup.Design"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:local="clr-namespace:MicaSetup.Views"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignHeight="400"
+             d:DesignWidth="500"
+             FontSize="15"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <design:ResourceResourceDictionary />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <StackPanel>
+            <StackPanel>
+                <Grid Grid.Row="0" Margin="0,8,0,8">
+                    <i:Interaction.Behaviors>
+                        <control:WindowDragMoveBehavior />
+                    </i:Interaction.Behaviors>
+                    <Image Width="120"
+                           Height="120"
+                           VerticalAlignment="Top"
+                           RenderOptions.BitmapScalingMode="Fant"
+                           Source="pack://application:,,,/MicaSetup;component/Resources/Images/Favicon.png">
+                        <Image.Effect>
+                            <DropShadowEffect BlurRadius="7"
+                                              Direction="275"
+                                              Opacity="0.2"
+                                              ShadowDepth="2"
+                                              Color="DimGray" />
+                        </Image.Effect>
+                    </Image>
+                </Grid>
+                <TextBlock Grid.Row="1"
+                           Margin="0,8,0,8"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           Text="{DynamicResource InstallFinishTips}" />
+                <StackPanel Grid.Row="2"
+                            Margin="0,56,0,0"
+                            HorizontalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Button Height="38"
+                            MinWidth="140"
+                            Margin="0,10,0,0"
+                            Padding="10,0,10,0"
+                            HorizontalAlignment="Center"
+                            Command="{Binding CloseCommand}"
+                            FontSize="16"
+                            IsEnabled="{Binding CanStart}">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Text="{DynamicResource Finish}" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button Height="38"
+                            MinWidth="140"
+                            Margin="16,10,0,0"
+                            Padding="10,0,10,0"
+                            HorizontalAlignment="Center"
+                            Command="{Binding OpenCommand}"
+                            FontSize="16"
+                            IsEnabled="{Binding CanStart}"
+                            Style="{StaticResource PrimaryButtonStyle}">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Text="{DynamicResource Open}" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

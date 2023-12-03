@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 24 24" version="1.1">
+    <title>ic_celiakeyboard_en_associate</title>
+    <g id="_ic_celiakeyboard_en_associate" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M19,19.75 C19.4142136,19.75 19.75,20.0857864 19.75,20.5 C19.75,20.8796958 19.4678461,21.193491 19.1017706,21.2431534 L19,21.25 L5,21.25 C4.58578644,21.25 4.25,20.9142136 4.25,20.5 C4.25,20.1203042 4.53215388,19.806509 4.89822944,19.7568466 L5,19.75 L19,19.75 Z" id="_直线" fill="#000000" fill-rule="nonzero"/>
+        <path d="M7.3,17.68 L8.84,13.48 L14.9,13.48 L16.52,17.68 L18.5,17.68 L12.62,3.04 L11.12,3.04 L5.5,17.68 L7.3,17.68 Z M14.28,11.88 L9.44,11.88 L11.8,5.42 L14.28,11.88 Z" id="_A" fill="#000000" fill-rule="nonzero"/>
+    </g>
+</svg>

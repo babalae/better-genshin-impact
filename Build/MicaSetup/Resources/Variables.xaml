@@ -1,0 +1,24 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <sys:Double x:Key="DefaultIconFontSize">16</sys:Double>
+
+    <sys:Double x:Key="ControlContentThemeFontSize">14</sys:Double>
+    <CornerRadius x:Key="ControlCornerRadius">4,4,4,4</CornerRadius>
+
+    <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
+    <Thickness x:Key="TextControlBorderThemeThicknessFocused">2</Thickness>
+    <Thickness x:Key="TextControlThemePadding">10,8,10,7</Thickness>
+
+    <sys:Double x:Key="ContentControlFontSize">14</sys:Double>
+    <sys:Double x:Key="TextControlThemeMinHeight">24</sys:Double>
+    <sys:Double x:Key="TextControlThemeMinWidth">0</sys:Double>
+
+    <Thickness x:Key="ComboBoxEditableTextPadding">10,0,30,0</Thickness>
+
+    <sys:Double x:Key="ComboBoxMinHeight">24</sys:Double>
+    <Thickness x:Key="ComboBoxPadding">12,1,0,3</Thickness>
+
+</ResourceDictionary>

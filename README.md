@@ -84,6 +84,7 @@
 * [Yap](https://github.com/Alex-Beng/Yap)
 * [genshin-woodmen](https://github.com/genshin-matrix/genshin-woodmen)
 * [Fischless](https://github.com/genshin-matrix/Fischless)
+* [MicaSetup](https://github.com/lemutec/MicaSetup)
 
 另外特别感谢 [@Lightczx](https://github.com/Lightczx) 和 [@emako](https://github.com/emako) 对本项目的指导与贡献
 

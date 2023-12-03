@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24" viewBox="0 0 24 24" version="1.1">
+    <title>ic_reboot</title>
+    <g id="_ic_reboot" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="_icon">
+            <polygon id="_Fill-1" points="0 24 24 24 24 0 0 0"/>
+            <g id="_Group" transform="translate(2.800040, 2.800040)" stroke="#000000" stroke-linecap="round" stroke-width="1.6">
+                <line x1="9.19996" y1="3.5234" x2="9.19996" y2="0" id="_Stroke-6"/>
+                <line x1="9.19996" y1="14.87652" x2="9.19996" y2="18.39992" id="_Stroke-8"/>
+                <line x1="13.21382" y1="5.1861" x2="15.70542" y2="2.6945" id="_Stroke-11"/>
+                <line x1="5.1861" y1="13.21382" x2="2.6945" y2="15.70542" id="_Stroke-12"/>
+                <line x1="3.5234" y1="9.19996" x2="0" y2="9.19996" id="_Stroke-13"/>
+                <line x1="14.87652" y1="9.19996" x2="18.39992" y2="9.19996" id="_Stroke-15"/>
+                <line x1="5.1861" y1="5.1861" x2="2.6945" y2="2.6945" id="_Stroke-18"/>
+                <line x1="13.21382" y1="13.21382" x2="15.70542" y2="15.70542" id="_Stroke-19"/>
+            </g>
+        </g>
+    </g>
+</svg>

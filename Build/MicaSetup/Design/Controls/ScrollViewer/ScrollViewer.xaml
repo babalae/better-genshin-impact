@@ -1,0 +1,206 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:design="clr-namespace:MicaSetup.Design"
+    xmlns:local="clr-namespace:MicaSetup.Design.Controls">
+    <ResourceDictionary.MergedDictionaries>
+        <design:ResourceResourceDictionary />
+    </ResourceDictionary.MergedDictionaries>
+
+    <Style x:Key="DefaultScrollBarStyle" TargetType="{x:Type ScrollBar}">
+        <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false" />
+        <Setter Property="Stylus.IsFlicksEnabled" Value="false" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Height" Value="Auto" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Border Background="{Binding Path=(local:ScrollViewerHelper.TrackBrush), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CornerRadius="{Binding Path=(local:ScrollViewerHelper.ScrollBarCornerRadius), RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                        <Track
+                            x:Name="PART_Track"
+                            IsDirectionReversed="true"
+                            IsEnabled="{TemplateBinding IsMouseOver}">
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="{Binding Path=(local:ScrollViewerHelper.ThumbBrush), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CornerRadius="{Binding Path=(local:ScrollViewerHelper.ScrollBarCornerRadius), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Margin" Value="1,0,1,1" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Border Background="{Binding Path=(local:ScrollViewerHelper.TrackBrush), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CornerRadius="{Binding Path=(local:ScrollViewerHelper.ScrollBarCornerRadius), RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                <Track x:Name="PART_Track" IsEnabled="{TemplateBinding IsMouseOver}">
+                                    <Track.Thumb>
+                                        <Thumb>
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Border Background="{Binding Path=(local:ScrollViewerHelper.ThumbBrush), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CornerRadius="{Binding Path=(local:ScrollViewerHelper.ScrollBarCornerRadius), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                </Track>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="DefaultScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="local:ScrollViewerHelper.TrackBrush" Value="Transparent" />
+        <Setter Property="local:ScrollViewerHelper.ThumbBrush" Value="#CCCCCC" />
+        <Setter Property="local:ScrollViewerHelper.ScrollBarCornerRadius" Value="4" />
+        <Setter Property="local:ScrollViewerHelper.ScrollBarThickness" Value="8" />
+        <Setter Property="local:ScrollViewerHelper.ScrollViewerHook" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ScrollContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                VirtualizingStackPanel.IsVirtualizing="{Binding Path=(VirtualizingStackPanel.IsVirtualizing), RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                VirtualizingStackPanel.VirtualizationMode="{Binding Path=(VirtualizingStackPanel.VirtualizationMode), RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                            <ScrollBar
+                                x:Name="PART_VerticalScrollBar"
+                                Grid.Column="1"
+                                Width="{Binding Path=(local:ScrollViewerHelper.ScrollBarThickness), RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                Maximum="{TemplateBinding ScrollableHeight}"
+                                Opacity="0.5"
+                                ViewportSize="{TemplateBinding ViewportHeight}"
+                                Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                Value="{TemplateBinding VerticalOffset}" />
+                            <ScrollBar
+                                x:Name="PART_HorizontalScrollBar"
+                                Grid.Row="1"
+                                Height="{Binding Path=(local:ScrollViewerHelper.ScrollBarThickness), RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                Maximum="{TemplateBinding ScrollableWidth}"
+                                Opacity="0.5"
+                                Orientation="Horizontal"
+                                ViewportSize="{TemplateBinding ViewportWidth}"
+                                Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                Value="{TemplateBinding HorizontalOffset}" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <EventTrigger RoutedEvent="ScrollChanged">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="PART_VerticalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.9"
+                                        Duration="0:0:0.15" />
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="PART_HorizontalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.9"
+                                        Duration="0:0:0.15" />
+                                    <DoubleAnimation
+                                        BeginTime="0:0:1.5"
+                                        Storyboard.TargetName="PART_VerticalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.5"
+                                        Duration="0:0:0.15" />
+                                    <DoubleAnimation
+                                        BeginTime="0:0:1.5"
+                                        Storyboard.TargetName="PART_HorizontalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.5"
+                                        Duration="0:0:0.15" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseEnter" SourceName="PART_VerticalScrollBar">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="PART_VerticalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.9"
+                                        Duration="0:0:0.15" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseLeave" SourceName="PART_VerticalScrollBar">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="PART_VerticalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.5"
+                                        Duration="0:0:0.15" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseEnter" SourceName="PART_HorizontalScrollBar">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="PART_HorizontalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.9"
+                                        Duration="0:0:0.15" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseLeave" SourceName="PART_HorizontalScrollBar">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation
+                                        Storyboard.TargetName="PART_HorizontalScrollBar"
+                                        Storyboard.TargetProperty="Opacity"
+                                        To="0.5"
+                                        Duration="0:0:0.15" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style BasedOn="{StaticResource DefaultScrollBarStyle}" TargetType="{x:Type ScrollBar}" />
+
+    <Style BasedOn="{StaticResource DefaultScrollViewerStyle}" TargetType="{x:Type ScrollViewer}" />
+
+    <Style BasedOn="{StaticResource DefaultScrollViewerStyle}" TargetType="{x:Type local:SmoothScrollViewer}" />
+
+</ResourceDictionary>

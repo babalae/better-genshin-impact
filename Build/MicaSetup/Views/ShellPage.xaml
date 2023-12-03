@@ -1,0 +1,9 @@
+﻿<UserControl
+    x:Class="MicaSetup.Views.ShellPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:control="clr-namespace:MicaSetup.Design.Controls">
+    <Grid>
+        <control:ShellControl Route="{Binding Route}" />
+    </Grid>
+</UserControl>

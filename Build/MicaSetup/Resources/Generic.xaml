@@ -1,0 +1,10 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:control="clr-namespace:MicaSetup.Design.Controls">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/MicaSetup;component/Design/Controls/Button/Button.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/MicaSetup;component/Design/Controls/TextBox/TextBox.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/MicaSetup;component/Design/Controls/Window/WindowX.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/MicaSetup;component/Design/Controls/CheckBox/CheckBox.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/MicaSetup;component/Design/Controls/ScrollViewer/ScrollViewer.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/MicaSetup;component/Design/Controls/ProgressBar/ProgressBar.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

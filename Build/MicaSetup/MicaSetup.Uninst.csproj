@@ -1,0 +1,86 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>11.0</LangVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWinUI>false</UseWinUI>
+    <Platforms>AnyCPU;x64</Platforms>
+    <ApplicationIcon>Resources\Images\FaviconUninst.ico</ApplicationIcon>
+    <StartupObject>MicaSetup.Program</StartupObject>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <AssemblyName>MicaSetup</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyInfoFile>Program.un.cs</AssemblyInfoFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <AnalysisLevel>6.0-recommended</AnalysisLevel>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>app.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\Fonts\*.ttf" />
+    <None Remove="Resources\Fonts\IcoMoon\Output\fonts\icomoon.ttf" />
+    <None Remove="Resources\Images\*.ico" />
+    <None Remove="Resources\Images\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\Fonts\*.ttf" />
+    <Resource Include="Resources\Fonts\IcoMoon\Output\fonts\icomoon.ttf" />
+    <Resource Include="Resources\Images\*.ico" />
+    <Resource Include="Resources\Images\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="ViewModels\Inst\**" />
+    <Content Remove="ViewModels\Inst\**" />
+    <EmbeddedResource Remove="ViewModels\Inst\**" />
+    <None Remove="ViewModels\Inst\**" />
+    <Page Remove="ViewModels\Inst\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Views\Inst\**" />
+    <Content Remove="Views\Inst\**" />
+    <EmbeddedResource Remove="Views\Inst\**" />
+    <None Remove="Views\Inst\**" />
+    <Page Remove="Views\Inst\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Natives\Shell\Dialogs\**" />
+    <Content Remove="Natives\Shell\Dialogs\**" />
+    <EmbeddedResource Remove="Shell\Dialogs\**" />
+    <None Remove="Natives\Shell\Dialogs\**" />
+    <Page Remove="Natives\Shell\Dialogs\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Program.cs" />
+    <None Remove="Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="5.7.0" Condition=" '$(Configuration)' == 'Release'">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>compile; runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39" />
+    <PackageReference Include="SharpCompress" Version="0.33.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+</Project>
