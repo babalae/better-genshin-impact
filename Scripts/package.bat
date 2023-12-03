@@ -33,6 +33,7 @@ cd /d ..\BetterGenshinImpact\bin\x64\Release\net7.0-windows10.0.22621.0
 
 xcopy * "%tmpfolder%" /E /C /I /Y
 
+rd /s /q "%tmpfolder%\log"
 rd /s /q "%tmpfolder%\runtimes\android"
 rd /s /q "%tmpfolder%\runtimes\ios"
 rd /s /q "%tmpfolder%\runtimes\linux-arm64"

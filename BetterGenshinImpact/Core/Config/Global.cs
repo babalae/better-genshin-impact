@@ -26,11 +26,22 @@ public class Global
         return null;
     }
 
+    /// <summary>
+    /// 新获取到的版本号与当前版本号比较，判断是否为新版本
+    /// </summary>
+    /// <param name="currentVersion">新获取到的版本</param>
+    /// <returns></returns>
     public static bool IsNewVersion(string currentVersion)
     {
         return IsNewVersion(Version, currentVersion);
     }
 
+    /// <summary>
+    /// 新获取到的版本号与当前版本号比较，判断是否为新版本
+    /// </summary>
+    /// <param name="oldVersion">老版本</param>
+    /// <param name="currentVersion">新获取到的版本</param>
+    /// <returns>是否需要更新</returns>
     public static bool IsNewVersion(string oldVersion, string currentVersion)
     {
         var currentVersionArr = oldVersion.Split('.');
@@ -40,10 +51,18 @@ public class Global
             return false;
         }
 
-        for (int i = 0; i < currentVersionArr.Length; i++)
+        for (var i = 0; i < currentVersionArr.Length; i++)
         {
+
+            if (int.Parse(currentVersionArr[i]) > int.Parse(newVersionArr[i]))
+            {
+                // 不需要更新
+                return false;
+            }
+
             if (int.Parse(currentVersionArr[i]) < int.Parse(newVersionArr[i]))
             {
+                // 需要更新
                 return true;
             }
         }
