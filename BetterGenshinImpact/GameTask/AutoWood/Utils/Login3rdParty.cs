@@ -101,45 +101,64 @@ internal sealed class Login3rdParty
         {
             if (Process.GetProcessesByName("YuanShen").FirstOrDefault() is Process process)
             {
-                nint hwndLogin = IntPtr.Zero;
-
-                _ = User32.EnumWindows((HWND hWnd, nint lParam) =>
+                static nint GetBHWnd(Process process)
                 {
-                    try
+                    nint bHWnd = IntPtr.Zero;
+
+                    _ = User32.EnumWindows((HWND hWnd, nint lParam) =>
                     {
-                        _ = User32.GetWindowThreadProcessId(hWnd, out uint pid);
-
-                        if (pid == process.Id)
+                        try
                         {
-                            int capacity = User32.GetWindowTextLength(hWnd);
-                            StringBuilder title = new(capacity + 1);
-                            _ = User32.GetWindowText(hWnd, title, title.Capacity);
+                            _ = User32.GetWindowThreadProcessId(hWnd, out uint pid);
 
-                            if (!string.IsNullOrEmpty(title.ToString()))
+                            if (pid == process.Id)
                             {
-                                hwndLogin = (nint)hWnd;
-                                return false;
+                                int capacity = User32.GetWindowTextLength(hWnd);
+                                StringBuilder title = new(capacity + 1);
+                                _ = User32.GetWindowText(hWnd, title, title.Capacity);
+
+                                Debug.WriteLine($"[AutoWood] Enum Windows result is {title}");
+                                if (title.ToString().Contains("bilibili", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    bHWnd = (nint)hWnd;
+                                    return false;
+                                }
                             }
                         }
-                    }
-                    catch
-                    {
-                    }
-                    return true;
-                }, 0);
+                        catch
+                        {
+                            ///
+                        }
+                        return true;
+                    }, IntPtr.Zero);
 
-                if (hwndLogin == IntPtr.Zero)
-                {
-                    return false;
+                    return bHWnd;
                 }
 
-                // Just for login WebUI chattering
-                Sleep(3000, cts);
+                if (GetBHWnd(process) != IntPtr.Zero)
+                {
+                    // Just for login WebUI fadein chattering
+                    Sleep(4000, cts);
 
-                var p = TaskContext.Instance().SystemInfo.CaptureAreaRect.GetCenterPoint();
-                p.Add(new(0, 125)).Click();
-                Debug.WriteLine("[AutoWood] Click login button for the B one");
-                return true;
+                    var p = TaskContext.Instance()
+                        .SystemInfo.CaptureAreaRect.GetCenterPoint()
+                        .Add(new(0, 125));
+
+                    p.Click();
+                    Debug.WriteLine("[AutoWood] Click login button for the B one");
+
+                    // Just for login WebUI fadeout chattering
+                    Sleep(3000, cts);
+
+                    if (GetBHWnd(process) != IntPtr.Zero)
+                    {
+                        p.Click();
+                        Debug.WriteLine("[AutoWood] Click login button for the B one [LAST CHANCE]");
+                    }
+
+                    return true;
+                }
+                return false;
             }
             return false;
         }
