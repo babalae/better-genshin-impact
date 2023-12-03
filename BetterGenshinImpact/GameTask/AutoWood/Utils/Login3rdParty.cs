@@ -134,7 +134,7 @@ internal sealed class Login3rdParty
                 }
 
                 // Just for login WebUI chattering
-                Sleep(2000, cts);
+                Sleep(3000, cts);
 
                 var p = TaskContext.Instance().SystemInfo.CaptureAreaRect.GetCenterPoint();
                 p.Add(new(0, 125)).Click();

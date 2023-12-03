@@ -51,11 +51,12 @@ namespace BetterGenshinImpact.GameTask
                 }
                 TriggerDictionary["AutoSkip"].IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
                 TriggerDictionary["AutoFishing"].IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
-                // 钓鱼有很多变量要初始化，直接重新new
+                // 钓鱼有很多变量要初始化，直接重新newZA
                 if (TriggerDictionary["AutoFishing"].IsEnabled == false)
                 {
                     TriggerDictionary["AutoFishing"].Init();
                 }
+                TriggerDictionary["QuickTeleport"].IsEnabled = TaskContext.Instance().Config.QuickTeleportConfig.Enabled;
                 // 清理画布
                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
                 VisionContext.Instance().DrawContent.ClearAll();

@@ -93,7 +93,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="黑名单" />
+                        Text="黑名单（修改后需要重启软件生效）" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
@@ -122,7 +122,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="白名单" />
+                        Text="白名单（修改后需要重启软件生效）" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
@@ -285,8 +285,7 @@
                         Grid.Column="1"
                         Content="配置"
                         Margin="0,0,16,0"
-                        Command="{Binding OpenReExploreCharacterBoxCommand}"
-                        />
+                        Command="{Binding OpenReExploreCharacterBoxCommand}" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -382,7 +381,7 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,24,0"
+                        Margin="0,0,36,0"
                         Maximum="60"
                         Minimum="5"
                         Value="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay}"
@@ -390,28 +389,99 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon PlayingCards20}">
-            <ui:CardControl.Header>
+
+        <!-- 快速传送 -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon DoorArrowLeft24}">
+            <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <ui:TextBlock
                         Grid.Row="0"
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="自动七圣召唤" />
+                        Text="快速传送" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="全自动打牌" />
+                        Text="在大地图上点击传送点（或列表中有传送点）时，自动点击传送" />
+                    <ui:ToggleSwitch
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,24,0"
+                        IsChecked="{Binding Config.QuickTeleportConfig.Enabled, Mode=TwoWay}" />
                 </Grid>
-            </ui:CardControl.Header>
-            <ui:ToggleSwitch Margin="0,0,36,0" />
-        </ui:CardControl>-->
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="点击候选列表传送点的间隔时间（毫秒）" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="普通用户请不要修改此配置，不建议低于200ms，太低会导致点击失败" />
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        MinWidth="90"
+                        Margin="0,0,36,0"
+                        Text="{Binding Config.QuickTeleportConfig.TeleportListClickDelay, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="等待右侧传送弹出界面的时间（毫秒）" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="普通用户请不要修改此配置，不建议低于100ms，太低会导致传送按钮识别不到" />
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        MinWidth="90"
+                        Margin="0,0,36,0"
+                        Text="{Binding Config.QuickTeleportConfig.WaitTeleportPanelDelay, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
     </StackPanel>
 </Page>

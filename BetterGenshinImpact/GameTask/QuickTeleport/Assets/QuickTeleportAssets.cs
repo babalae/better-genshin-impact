@@ -1,12 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using OpenCvSharp;
-using static Vanara.PInvoke.Gdi32;
-using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 
@@ -68,7 +62,7 @@ public class QuickTeleportAssets
                 (int)(440 * info.AssetScale),
                 (int)(40 * info.AssetScale),
                 (int)(200 * info.AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
 
         MapCloseButtonRo = new RecognitionObject
@@ -80,7 +74,7 @@ public class QuickTeleportAssets
                 (int)(19 * info.AssetScale),
                 (int)(58 * info.AssetScale),
                 (int)(58 * info.AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
 
         MapChooseRo = new RecognitionObject
@@ -92,7 +86,7 @@ public class QuickTeleportAssets
                 0,
                 (int)(100 * info.AssetScale),
                 (int)(70 * info.AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
     }
 
@@ -116,7 +110,7 @@ public class QuickTeleportAssets
                 (int)(100 * info.AssetScale),
                 (int)(50 * info.AssetScale),
                 info.CaptureAreaRect.Height - (int)(200 * info.AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
     }
 }

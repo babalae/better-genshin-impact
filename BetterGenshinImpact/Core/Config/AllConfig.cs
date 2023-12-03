@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.QuickTeleport;
 
 namespace BetterGenshinImpact.Core.Config
 {
@@ -60,6 +61,11 @@ namespace BetterGenshinImpact.Core.Config
         public AutoFishingConfig AutoFishingConfig { get; set; } = new();
 
         /// <summary>
+        /// 自动钓鱼配置
+        /// </summary>
+        public QuickTeleportConfig QuickTeleportConfig { get; set; } = new();
+
+        /// <summary>
         /// 自动打牌配置
         /// </summary>
         public AutoGeniusInvokationConfig AutoGeniusInvokationConfig { get; set; } = new();
@@ -94,8 +100,10 @@ namespace BetterGenshinImpact.Core.Config
             AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
+            QuickTeleportConfig.PropertyChanged += OnAnyPropertyChanged;
             MacroConfig.PropertyChanged += OnAnyPropertyChanged;
             HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
+            AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         }
 
         public void OnAnyPropertyChanged(object? sender, EventArgs args)

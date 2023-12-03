@@ -10,26 +10,32 @@ internal class QuickTeleportTrigger : ITaskTrigger
     public string Name => "快速传送";
     public bool IsEnabled { get; set; }
     public int Priority => 21;
-    public bool IsExclusive => false;
+    public bool IsExclusive { get; set; }
 
     private readonly QuickTeleportAssets _assets;
     private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
+    private readonly QuickTeleportConfig _config;
 
     public QuickTeleportTrigger()
     {
         _assets = new QuickTeleportAssets();
+        _config = TaskContext.Instance().Config.QuickTeleportConfig;
     }
 
     public void Init()
     {
-        IsEnabled = true;
+        IsEnabled = _config.Enabled;
+        IsExclusive = false;
     }
 
     public void OnCapture(CaptureContent content)
     {
+        IsExclusive = false;
         // 1.判断是否在地图界面
         content.CaptureRectArea.Find(_assets.MapScaleButtonRo, _ =>
         {
+            IsExclusive = true;
+
             // 2. 判断是否有传送按钮
             var hasTeleportButton = CheckTeleportButton(content);
 
@@ -52,7 +58,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 var hasMapChooseIcon = CheckMapChooseIcon(content);
                 if (hasMapChooseIcon)
                 {
-                    TaskControl.Sleep(200);
+                    TaskControl.Sleep(_config.WaitTeleportPanelDelay);
                     content = TaskControl.CaptureToContent();
                     CheckTeleportButton(content);
                 }
@@ -84,7 +90,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
             var ra = content.CaptureRectArea.Find(ro);
             if (!ra.IsEmpty())
             {
-                TaskControl.Sleep(200);
+                TaskControl.Sleep(_config.TeleportListClickDelay);
                 hasMapChooseIcon = true;
                 ra.ClickCenter();
                
