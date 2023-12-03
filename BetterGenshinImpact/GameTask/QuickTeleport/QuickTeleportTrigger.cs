@@ -1,7 +1,12 @@
-﻿using BetterGenshinImpact.GameTask.Common;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
+using System.Diagnostics;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -13,7 +18,9 @@ internal class QuickTeleportTrigger : ITaskTrigger
     public bool IsExclusive { get; set; }
 
     private readonly QuickTeleportAssets _assets;
-    private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
+    private DateTime _prevClickOptionButtonTime = DateTime.MinValue;
+    // private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
+    private DateTime _prevExecute = DateTime.MinValue;
     private readonly QuickTeleportConfig _config;
 
     public QuickTeleportTrigger()
@@ -30,6 +37,13 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 300)
+        {
+            return;
+        }
+
+        _prevExecute = DateTime.Now;
+
         IsExclusive = false;
         // 1.判断是否在地图界面
         content.CaptureRectArea.Find(_assets.MapScaleButtonRo, _ =>
@@ -73,11 +87,11 @@ internal class QuickTeleportTrigger : ITaskTrigger
         {
             ra.ClickCenter();
             hasTeleportButton = true;
-            if ((DateTime.Now - _prevClickTeleportButtonTime).TotalSeconds > 1)
-            {
-                TaskControl.Logger.LogInformation("快速传送");
-            }
-            _prevClickTeleportButtonTime = DateTime.Now;
+            // if ((DateTime.Now - _prevClickTeleportButtonTime).TotalSeconds > 1)
+            // {
+            //     TaskControl.Logger.LogInformation("快速传送：传送");
+            // }
+            // _prevClickTeleportButtonTime = DateTime.Now;
         });
         return hasTeleportButton;
     }
@@ -90,6 +104,16 @@ internal class QuickTeleportTrigger : ITaskTrigger
             var ra = content.CaptureRectArea.Find(ro);
             if (!ra.IsEmpty())
             {
+                var text = GetOptionText(content.CaptureRectArea.SrcGreyMat, ra, 200);
+                if (string.IsNullOrEmpty(text))
+                {
+                    continue;
+                }
+                if ((DateTime.Now - _prevClickOptionButtonTime).TotalMilliseconds > 500)
+                {
+                    TaskControl.Logger.LogInformation("快速传送：点击 {Option}", text);
+                }
+                _prevClickOptionButtonTime = DateTime.Now;
                 TaskControl.Sleep(_config.TeleportListClickDelay);
                 hasMapChooseIcon = true;
                 ra.ClickCenter();
@@ -99,5 +123,20 @@ internal class QuickTeleportTrigger : ITaskTrigger
         }
 
         return hasMapChooseIcon;
+    }
+
+    /// <summary>
+    /// 获取选项的文字
+    /// </summary>
+    /// <param name="captureMat"></param>
+    /// <param name="foundIconRectArea"></param>
+    /// <param name="chatOptionTextWidth"></param>
+    /// <returns></returns>
+    private string GetOptionText(Mat captureMat, RectArea foundIconRectArea, int chatOptionTextWidth)
+    {
+        var textRect = new Rect(foundIconRectArea.X + foundIconRectArea.Width, foundIconRectArea.Y, chatOptionTextWidth, foundIconRectArea.Height);
+        using var mat = new Mat(captureMat, textRect);
+        var text = OcrFactory.Paddle.Ocr(mat);
+        return text;
     }
 }
