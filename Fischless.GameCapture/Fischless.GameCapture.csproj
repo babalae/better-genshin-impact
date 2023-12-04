@@ -7,7 +7,7 @@
 		<Platforms>x64</Platforms>
 		<UseWindowsForms>True</UseWindowsForms>
 		<UseWPF>True</UseWPF>
-		<LangVersion>11.0</LangVersion>
+		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
