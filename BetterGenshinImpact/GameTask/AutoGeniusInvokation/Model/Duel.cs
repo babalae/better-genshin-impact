@@ -52,6 +52,8 @@ public class Duel
 
     public CancellationTokenSource Cts { get; set; }
 
+    private int _keqingECount = 0;
+
 
     public async Task RunAsync(GeniusInvokationTaskParam taskParam)
     {
@@ -222,6 +224,19 @@ public class Duel
                                 alreadyExecutedActionIndex.Add(i);
                                 alreadyExecutedActionCommand.Add(actionCommand);
                                 _logger.LogInformation("→指令执行完成：{Action}", actionCommand);
+                                // 刻晴的E加手牌 
+                                if (actionCommand.Character.Name == "刻晴" && actionCommand.TargetIndex == 2)
+                                {
+                                    _keqingECount++;
+                                    if (_keqingECount % 2 == 0)
+                                    {
+                                        CurrentCardCount -= 1;
+                                    }
+                                    else
+                                    {
+                                        CurrentCardCount += 1;
+                                    }
+                                }
                             }
                             else
                             {
