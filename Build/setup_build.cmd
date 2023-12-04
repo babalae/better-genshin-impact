@@ -32,9 +32,11 @@ cd /d %~dp0
 cd /d ..\BetterGenshinImpact\bin\x64\Release\net7.0-windows10.0.22621.0\publish\win-x64\
 xcopy * "%tmpfolder%" /E /C /I /Y
 cd /d %~dp0
+del /f /q %tmpfolder%\*.lib
+del /f /q %tmpfolder%\*ffmpeg*.dll
 MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\ -t7z -mx=5 -mf=BCJ2 -r -y
 copy /y publish.7z .\MicaSetup\Resources\Setups\publish.7z
-if exist "%zipFile%" ( del /f /s /q "%zipfile%" )
+if exist "%zipFile%" ( del /f /q "%zipfile%" )
 rename publish.7z %archiveFile%
 
 @echo [build uninst using vs2022]
@@ -45,7 +47,7 @@ copy /y .\MicaSetup\bin\Release\net472\MicaSetup.exe .\MicaSetup\Resources\Setup
 msbuild MicaSetup\MicaSetup.csproj /t:Build /p:Configuration=Release /p:DeployOnBuild=true /p:PublishProfile=FolderProfile /restore
 
 @echo [finish]
-del MicaSetup.exe
+del /f /q MicaSetup.exe
 copy /y .\MicaSetup\bin\Release\net472\MicaSetup.exe .\
 rename MicaSetup.exe %setupFile%
 rd /s /q dist\BetterGI
