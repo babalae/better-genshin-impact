@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -12,7 +13,8 @@ public class SystemControl
 {
     public static nint FindGenshinImpactHandle()
     {
-        return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
+        var handle = FindHandleByWindowName();
+        return handle != 0 ? handle : FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
 
     public static async Task<nint> StartFromLocalAsync(string path)
@@ -22,15 +24,18 @@ public class SystemControl
             DirectStartFromYuanShen(path);
             await Task.Delay(10000);
         }
+
         if (path.EndsWith("launcher.exe"))
         {
             StartFromLauncher(path);
             await Task.Delay(10000);
         }
+
         if (path.EndsWith("Genshin Impact Cloud Game.exe"))
         {
             StartCloudYaunShen(path);
         }
+
         return FindGenshinImpactHandle();
     }
 
@@ -60,6 +65,29 @@ public class SystemControl
             {
                 return pros[0].MainWindowHandle;
             }
+        }
+
+        return 0;
+    }
+
+    public static nint FindHandleByWindowName()
+    {
+        var handle = (nint)User32.FindWindow("UnityWndClass", "原神");
+        if (handle != 0)
+        {
+            return handle;
+        }
+
+        handle = (nint)User32.FindWindow("UnityWndClass", "Genshin Impact");
+        if (handle != 0)
+        {
+            return handle;
+        }
+
+        handle = (nint)User32.FindWindow("Qt5152QWindowIcon", "云·原神");
+        if (handle != 0)
+        {
+            return handle;
         }
 
         return 0;
@@ -146,6 +174,7 @@ public class SystemControl
         {
             throw new Exception("请先启动BetterGI");
         }
+
         ActivateWindow(TaskContext.Instance().GameHandle);
     }
 
@@ -159,6 +188,7 @@ public class SystemControl
             {
                 continue;
             }
+
             _ = User32.BringWindowToTop(hWnd);
         }
     }
