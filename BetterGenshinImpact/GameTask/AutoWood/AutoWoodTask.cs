@@ -47,6 +47,7 @@ public class AutoWoodTask
             {
                 Logger.LogInformation("自动伐木启用B服模式");
             }
+
             SystemControl.ActivateWindow();
             for (var i = 0; i < taskParam.WoodRoundNum; i++)
             {
@@ -146,6 +147,7 @@ public class AutoWoodTask
 
     private void PressEsc(WoodTaskParam taskParam)
     {
+        SystemControl.Focus(TaskContext.Instance().GameHandle);
         Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.ESCAPE);
         Debug.WriteLine("[AutoWood] Esc");
         Sleep(800, taskParam.Cts);
@@ -194,22 +196,34 @@ public class AutoWoodTask
             _login3rdParty.Login(taskParam.Cts);
         }
 
-        NewRetry.Do(() =>
+        var clickCnt = 0;
+        for (var i = 0; i < 50; i++)
         {
             Sleep(1, taskParam.Cts);
 
             var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
             var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
-            if (ra.IsEmpty())
+            if (!ra.IsEmpty())
             {
-                throw new RetryException("未检测进入游戏字样");
+                clickCnt++;
+                _clickOffset.Click(955, 666);
+                Debug.WriteLine("[AutoWood] Click entry");
             }
             else
             {
-                Simulation.SendInput.Mouse.LeftButtonClick();
-                Sleep(5000, taskParam.Cts);
-                Debug.WriteLine("[AutoWood] Click entry text");
+                if (clickCnt > 2)
+                {
+                    Sleep(5000, taskParam.Cts);
+                    break;
+                }
             }
-        }, TimeSpan.FromSeconds(1), 50);
+
+            Sleep(1000, taskParam.Cts);
+        }
+
+        if (clickCnt == 0)
+        {
+            throw new RetryException("未检测进入游戏界面");
+        }
     }
 }

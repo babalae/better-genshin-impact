@@ -281,6 +281,9 @@
 		<None Update="GameTask\AutoWood\Assets\1920x1080\enter_game.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoWood\Assets\1920x1080\exit_welcome.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoWood\Assets\1920x1080\menu_bag.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
