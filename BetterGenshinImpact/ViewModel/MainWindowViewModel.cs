@@ -43,8 +43,26 @@ namespace BetterGenshinImpact.ViewModel
             {
                 await Task.Run(() =>
                 {
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
-                    Debug.WriteLine("PaddleOcr预热结果:" + s);
+                    try
+                    {
+                        var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
+                        Debug.WriteLine("PaddleOcr预热结果:" + s);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        _logger.LogError("PaddleOcr预热异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                        var innerException = e.InnerException;
+                        if (innerException != null)
+                        {
+                            _logger.LogError("PaddleOcr预热内部异常：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+                            throw innerException;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
                 });
             }
             catch (Exception e)
