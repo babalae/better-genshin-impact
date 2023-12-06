@@ -34,6 +34,7 @@ namespace BetterGenshinImpact.GameTask
         private RECT _gameRect = RECT.Empty;
         private bool _prevGameActive;
 
+        private DateTime _prevManualGc = DateTime.MinValue;
 
         public TaskTriggerDispatcher()
         {
@@ -278,6 +279,12 @@ namespace BetterGenshinImpact.GameTask
             }
             finally
             {
+                if ((DateTime.Now - _prevManualGc).TotalSeconds > 2)
+                {
+                    GC.Collect();
+                    _prevManualGc = DateTime.Now;
+                }
+
                 if (hasLock)
                 {
                     Monitor.Exit(_locker);
