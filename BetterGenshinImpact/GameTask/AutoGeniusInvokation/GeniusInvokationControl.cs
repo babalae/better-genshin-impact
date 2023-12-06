@@ -105,10 +105,24 @@ public class GeniusInvokationControl
         if (bitmap == null)
         {
             _logger.LogWarning("截图失败!");
-            throw new RetryException("截图失败");
+            // 重试5次
+            for (var i = 0; i < 5; i++)
+            {
+                bitmap = _gameCapture?.Capture();
+                if (bitmap != null)
+                {
+                    return bitmap.ToMat();
+                }
+                Sleep(20);
+            }
+            throw new RetryException("尝试多次后,截图失败!");
+        }
+        else
+        {
+
+            return bitmap.ToMat();
         }
 
-        return bitmap.ToMat();
     }
 
     public Mat CaptureGameGreyMat()
