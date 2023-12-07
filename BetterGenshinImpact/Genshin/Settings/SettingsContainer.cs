@@ -15,6 +15,11 @@ internal class SettingsContainer
     public ResolutionSettings? Resolution;
     public InputDataSettings? InputData;
 
+    public SettingsContainer()
+    {
+        FromReg();
+    }
+
     public void FromReg()
     {
         if (GenshinRegistry.GetRegistryKey() is not { } hk)

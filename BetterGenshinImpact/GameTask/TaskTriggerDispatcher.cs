@@ -95,7 +95,6 @@ namespace BetterGenshinImpact.GameTask
             try
             {
                 SettingsContainer settings = new();
-                settings.FromReg();
                 var lang = settings.Language?.TextLang;
                 if (lang != null && lang != TextLanguage.SimplifiedChinese)
                 {
