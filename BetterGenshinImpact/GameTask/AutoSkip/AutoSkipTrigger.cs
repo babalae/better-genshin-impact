@@ -178,15 +178,15 @@ public class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Width / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
+            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
-            var rate = blackCount * 1.0 / (grayMat.Width * grayMat.Height);
-            if (rate >= 0.7 && rate < 0.999)
+            var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
+            if (rate is >= 0.5 and < 0.999)
             {
                 Simulation.SendInput.Mouse.LeftButtonClick();
                 if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
                 {
-                    _logger.LogInformation("自动剧情：{Text}", "点击黑屏");
+                    _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
                 }
 
                 _prevClickFrameIndex = content.FrameIndex;
