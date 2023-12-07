@@ -21,6 +21,11 @@ internal class InputDataSettings
     {
         try
         {
+            if (string.IsNullOrEmpty(data.InputData))
+            {
+                return;
+            }
+
             this.data = JsonSerializer.Deserialize<InputDataConfig>(data.InputData);
         }
         catch (Exception e)
