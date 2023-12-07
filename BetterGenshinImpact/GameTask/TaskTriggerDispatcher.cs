@@ -105,7 +105,7 @@ namespace BetterGenshinImpact.GameTask
             }
             catch (Exception e)
             {
-                MessageBox.Show("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             }
         }
 
