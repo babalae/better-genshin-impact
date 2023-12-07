@@ -15,7 +15,11 @@ internal class ResolutionSettings
 
     public ResolutionSettings()
     {
-        using RegistryKey hk = GenshinRegistry.GetRegistryKey();
+        if (GenshinRegistry.GetRegistryKey() is not { } hk)
+        {
+            return;
+        }
+
         string[] names = hk.GetValueNames();
 
         foreach (string name in names)
@@ -33,12 +37,6 @@ internal class ResolutionSettings
                 fullscreen_name = name;
             }
         }
-        Read();
-    }
-
-    private void Read()
-    {
-        using RegistryKey hk = GenshinRegistry.GetRegistryKey();
 
         Height = Convert.ToInt32(hk.GetValue(height_name));
         Width = Convert.ToInt32(hk.GetValue(width_name));
