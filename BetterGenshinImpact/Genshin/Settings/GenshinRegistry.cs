@@ -6,7 +6,7 @@ namespace BetterGenshinImpact.Genshin.Settings;
 
 internal class GenshinRegistry
 {
-    public static RegistryKey GetRegistryKey()
+    public static RegistryKey? GetRegistryKey()
     {
         try
         {
@@ -25,6 +25,6 @@ internal class GenshinRegistry
         {
             Debug.WriteLine(e.ToString());
         }
-        return null!;
+        return null;
     }
 }
