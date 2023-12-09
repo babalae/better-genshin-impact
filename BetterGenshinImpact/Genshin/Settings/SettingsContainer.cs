@@ -14,6 +14,7 @@ internal class SettingsContainer
     public LanguageSettings? Language;
     public ResolutionSettings? Resolution;
     public InputDataSettings? InputData;
+    public OverrideControllerSettings? OverrideController;
 
     public SettingsContainer()
     {
@@ -63,6 +64,7 @@ internal class SettingsContainer
             Language = new LanguageSettings(data);
             Resolution = new ResolutionSettings();
             InputData = new InputDataSettings(data);
+            OverrideController = new OverrideControllerSettings(data);
         }
         catch (Exception e)
         {

@@ -2,7 +2,7 @@
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
-public class MainJson
+public sealed class MainJson
 {
     [JsonPropertyName("deviceLanguageType")]
     public int DeviceLanguageType { get; set; }
@@ -12,4 +12,10 @@ public class MainJson
 
     [JsonPropertyName("inputData")]
     public string? InputData { get; set; }
+
+    [JsonPropertyName("_overrideControllerMapKeyList")]
+    public string[]? OverrideControllerMapKeyList { get; set; }
+
+    [JsonPropertyName("_overrideControllerMapValueList")]
+    public string[]? OverrideControllerMapValueList { get; set; }
 }
