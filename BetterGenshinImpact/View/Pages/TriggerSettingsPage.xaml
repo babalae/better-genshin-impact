@@ -272,7 +272,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="凯瑟琳 - 自动重新派遣" />
+                        Text="凯瑟琳 - 自动重新派遣（4.3需要更新）" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"

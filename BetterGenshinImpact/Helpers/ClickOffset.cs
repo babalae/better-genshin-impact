@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Helpers.Extensions;
+﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,19 @@ public class ClickOffset
     public int OffsetY { get; set; }
     public double AssetScale { get; set; }
 
+
+    public ClickOffset()
+    {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            throw new Exception("请先启动");
+        }
+        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        OffsetX = captureArea.X;
+        OffsetY = captureArea.Y;
+        AssetScale = assetScale;
+    }
 
     public ClickOffset(int offsetX, int offsetY, double assetScale)
     {

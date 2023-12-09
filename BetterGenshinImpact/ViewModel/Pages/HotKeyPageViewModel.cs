@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
+using BetterGenshinImpact.GameTask.QucikBuy;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -126,6 +127,14 @@ public partial class HotKeyPageViewModel : ObservableObject
             (_, _) => { QuickEnhanceArtifactMacro.Done(); }
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "按下快速购买商店物品",
+            nameof(Config.HotKeyConfig.QuickBuyHotkey),
+            Config.HotKeyConfig.QuickBuyHotkey,
+            (_, _) => { QuickBuyTask.Done(); }
+        ));
+
 
         HotKeySettingModels.Add(new HotKeySettingModel(
             "启动/停止自动七圣召唤",

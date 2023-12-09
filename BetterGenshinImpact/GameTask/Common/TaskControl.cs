@@ -13,6 +13,17 @@ public class TaskControl
 {
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
+
+    public static void CheckAndSleep(int millisecondsTimeout)
+    {
+        if (!SystemControl.IsGenshinImpactActiveByProcess())
+        {
+            Logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
+            throw new NormalEndException("当前获取焦点的窗口不是原神");
+        }
+        Thread.Sleep(millisecondsTimeout);
+    }
+
     public static void Sleep(int millisecondsTimeout)
     {
         Retry.Do(() =>

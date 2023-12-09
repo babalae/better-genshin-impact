@@ -114,7 +114,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="快速强化圣遗物" />
+                        Text="快速强化圣遗物（4.3下线）" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
@@ -165,7 +165,33 @@
             </StackPanel>
         </ui:CardExpander>
 
-
+        <!-- 一键购买 -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="一键购买（请不要长按）" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="在物品购买/兑换页按下快捷键使用，从选中物品处买几类就点按多少次" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button
+                Margin="0,0,36,0" 
+                Content="绑定快捷键" 
+                Command="{Binding GoToHotKeyPageCommand}"/>
+        </ui:CardControl>
 
         <!-- 一键锻造 -->
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
