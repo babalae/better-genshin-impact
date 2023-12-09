@@ -184,7 +184,7 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="在物品购买/兑换页按下快捷键使用，从选中物品处买几类就点按多少次" />
+                        Text="在物品购买/兑换页使用，从选中物品处开始，想要买几次就点按多少次" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button
