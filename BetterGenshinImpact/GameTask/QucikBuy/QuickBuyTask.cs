@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,10 @@ public class QuickBuyTask
         if (!TaskContext.Instance().IsInitialized)
         {
             MessageBox.Show("请先启动");
+            return;
+        }
+        if (!SystemControl.IsGenshinImpactActiveByProcess())
+        {
             return;
         }
 
@@ -42,7 +47,7 @@ public class QuickBuyTask
             TaskControl.CheckAndSleep(100);
 
             // 点击弹出页的购买/兑换 1100x780
-            clickOffset.ClickWithoutScale(1100, 780);
+            clickOffset.Click(1100, 780);
             TaskControl.CheckAndSleep(200); // 等待窗口消失
             clickOffset.ClickWithoutScale(captureArea.Width - (int)(225 * assetScale), captureArea.Height - (int)(60 * assetScale));
             TaskControl.CheckAndSleep(200);
