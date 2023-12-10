@@ -11,18 +11,11 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-using SharpDX.Direct3D11;
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
-using Windows.Graphics.Printing.PrintSupport;
 using Windows.System;
 using Wpf.Ui.Controls;
 
