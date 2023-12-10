@@ -123,7 +123,7 @@ public partial class MaskWindow : Window
     {
         try
         {
-            var cnt = VisionContext.Instance().DrawContent.RectList.Count + VisionContext.Instance().DrawContent.TextList.Count;
+            var cnt = VisionContext.Instance().DrawContent.RectList.Count + VisionContext.Instance().DrawContent.LineList.Count + VisionContext.Instance().DrawContent.TextList.Count;
             if (cnt == 0)
             {
                 return;
@@ -145,6 +145,14 @@ public partial class MaskWindow : Window
                             new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
                             drawable.Rect);
                     }
+                }
+            }
+
+            foreach (var kv in VisionContext.Instance().DrawContent.LineList)
+            {
+                foreach (var drawable in kv.Value)
+                {
+                    drawingContext.DrawLine(new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width), drawable.P1, drawable.P2);
                 }
             }
 
@@ -195,6 +203,7 @@ file static class MaskWindowExtension
             style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
             style &= ~(int)User32.WindowStylesEx.WS_EX_LAYERED;
         }
+
         _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
     }
 }

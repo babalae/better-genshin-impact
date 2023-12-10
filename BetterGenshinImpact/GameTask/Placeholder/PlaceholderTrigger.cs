@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using BetterGenshinImpact.View.Drawable;
+using OpenCvSharp;
+using System;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Windows;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
-using BetterGenshinImpact.View.Drawable;
-using Compunet.YoloV8;
-using Compunet.YoloV8.Data;
+using System.Linq;
+using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Placeholder;
 
@@ -47,6 +38,7 @@ public class TestTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        TestArrow(content);
         //Detect(content);
 
 
@@ -98,4 +90,75 @@ public class TestTrigger : ITaskTrigger
 
     //    VisionContext.Instance().DrawContent.PutOrRemoveRectList("Box", list);
     //}
+
+    public static void TestArrow(CaptureContent content)
+    {
+        var mat = new Mat(content.CaptureRectArea.SrcMat, new Rect(0,0,300,240));
+        Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
+        var splitMat = mat.Split();
+
+
+        // 红蓝通道按位与
+        var red = new Mat(mat.Size(), MatType.CV_8UC1);
+        Cv2.InRange(splitMat[0], new Scalar(205), new Scalar(255), red);
+        var blue = new Mat(mat.Size(), MatType.CV_8UC1);
+        Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(50), blue);
+        var andMat = red & blue;
+
+        Triangle(andMat);
+    }
+
+    public static void Triangle(Mat gray)
+    {
+        Cv2.FindContours(gray, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxNone);
+        Mat dst = Mat.Zeros(gray.Size(), MatType.CV_8UC3);
+        for (int i = 0; i < contours.Length; i++)
+        {
+            Cv2.DrawContours(dst, contours, i, new Scalar(0, 255, 0), 1, LineTypes.Link4, hierarchy);
+        }
+
+        // 遍历轮廓
+        for (int i = 0; i < contours.Length; i++)
+        {
+            // 计算轮廓的周长
+            double perimeter = Cv2.ArcLength(contours[i], true);
+
+            // 近似多边形拟合
+            OpenCvSharp.Point[] approx = Cv2.ApproxPolyDP(contours[i], 0.04 * perimeter, true);
+
+            // 如果拟合的多边形有三个顶点，认为是三角形
+            if (approx.Length == 3)
+            {
+                // 计算三条边的长度
+                var sideLengths = new double[3];
+                sideLengths[0] = Distance(approx[1], approx[2]);
+                sideLengths[1] = Distance(approx[2], approx[0]);
+                sideLengths[2] = Distance(approx[0], approx[1]);
+
+                var result = sideLengths
+                    .Select((value, index) => new { Value = value, Index = index })
+                    .OrderBy(item => item.Value)
+                    .First();
+
+                // 计算最短线的中点
+                var residue = approx.ToList();
+                residue.RemoveAt(result.Index);
+                var midPoint = new OpenCvSharp.Point((residue[0].X + residue[1].X) / 2, (residue[0].Y + residue[1].Y) / 2);
+
+                // 在图像上绘制直线
+                //Cv2.Line(dst2, approx[result.Index], midPoint, Scalar.Red, 1);
+
+                VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(midPoint, approx[result.Index] + (approx[result.Index] - midPoint) * 3));
+            }
+        }
+
+    }
+
+    static double Distance(OpenCvSharp.Point pt1, OpenCvSharp.Point pt2)
+    {
+        int deltaX = Math.Abs(pt2.X - pt1.X);
+        int deltaY = Math.Abs(pt2.Y - pt1.Y);
+
+        return Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+    }
 }
