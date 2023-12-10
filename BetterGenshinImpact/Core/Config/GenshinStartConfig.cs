@@ -9,6 +9,12 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class GenshinStartConfig : ObservableObject
 {
+
+    /// <summary>
+    /// 联动启动原神本体
+    /// </summary>
+    [ObservableProperty] private bool _linkedStartEnabled = true;
+
     /// <summary>
     /// 原神安装路径
     /// </summary>

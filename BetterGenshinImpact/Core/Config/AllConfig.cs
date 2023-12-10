@@ -51,6 +51,11 @@ namespace BetterGenshinImpact.Core.Config
         public MaskWindowConfig MaskWindowConfig { get; set; } = new();
 
         /// <summary>
+        /// 原神启动配置
+        /// </summary>
+        public GenshinStartConfig GenshinStartConfig { get; set; } = new();
+
+        /// <summary>
         /// 自动拾取配置
         /// </summary>
         public AutoPickConfig AutoPickConfig { get; set; } = new();
@@ -90,18 +95,14 @@ namespace BetterGenshinImpact.Core.Config
         /// </summary>
         public HotKeyConfig HotKeyConfig { get; set; } = new();
 
-        /// <summary>
-        /// 原神安装路径
-        /// </summary>
-        [ObservableProperty]
-        private string _installPath = "";
-
         [JsonIgnore] public Action? OnAnyChangedAction { get; set; }
 
         public void InitEvent()
         {
             this.PropertyChanged += OnAnyPropertyChanged;
             MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
+            GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
+
             AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;

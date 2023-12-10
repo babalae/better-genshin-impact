@@ -62,7 +62,7 @@
             </Grid>
         </Border>
 
-        <!--  原神，启动！  -->
+        <!--  更好的原神，启动！  -->
         <ui:CardExpander Margin="0,12,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon Play24}">
@@ -79,13 +79,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="更好的原神，启动！"
+                                  Text="BetterGI · 更好的原神，启动！"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动后才能使用各项功能，点击展开启动相关配置。"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        启动后才能使用各项功能，
+                        <Run FontWeight="Bold" TextDecorations="Underline">
+                            点击展开启动相关配置
+                        </Run>
+                        。
+                    </ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -103,35 +108,6 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        Text="安装位置"
-                        TextWrapping="Wrap" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{Binding Config.InstallPath, Mode=TwoWay}"
-                        TextWrapping="Wrap" />
-                    <ui:Button
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        Command="{Binding SelectInstallPathCommand}"
-                        Content="浏览" />
-                </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -242,6 +218,101 @@
                                Margin="0,0,36,0"
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
                                Content="开始设置" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
+        <!--  原神，启动！  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon LinkSquare24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="同时启动原神" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="启动 BetterGI 时，如果原神未启动，则自动启动原神。" />
+                    <ui:ToggleSwitch
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,24,0"
+                        IsChecked="{Binding Config.GenshinStartConfig.LinkedStartEnabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        Text="原神安装位置（不支持云原神的联动启动）"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Text="{Binding Config.GenshinStartConfig.InstallPath, Mode=TwoWay}"
+                        TextWrapping="Wrap" />
+                    <ui:Button
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,36,0"
+                        Command="{Binding SelectInstallPathCommand}"
+                        Content="浏览" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Text="启动参数" />
+                    <ui:TextBlock
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="如果你不知道什么是启动参数请不要填写。" />
+                    <!--常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080-->
+                    <ui:TextBox
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        MinWidth="300"
+                        Margin="0,0,24,0"
+                        Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

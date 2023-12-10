@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
@@ -57,23 +58,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     {
         _taskDispatcher = taskTriggerDispatcher;
         Config = configService.Get();
-        // 检查用户是否配置了原神安装目录，如果没有，尝试从注册表中读取
-        if (string.IsNullOrEmpty(Config.InstallPath))
-        {
-            string installPath = string.Empty;
-            if (ReadGameInstallPath(out installPath))
-            {
-                // 检查文件是否存在
-                if (!File.Exists(installPath))
-                {
-                    System.Windows.MessageBox.Show("未找到原神安装目录，请手动选择！");
-                }
-                else
-                {
-                    Config.InstallPath = installPath;
-                }
-            }
-        }
+        ReadGameInstallPath();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "Close")
@@ -97,6 +82,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnLoaded()
     {
+
     }
 
     private void OnClosed()
@@ -147,9 +133,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            if (!string.IsNullOrEmpty(Config.InstallPath))
+            if (!string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
             {
-                hWnd = await SystemControl.StartFromLocalAsync(Config.InstallPath);
+                hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
             }
             if (hWnd == IntPtr.Zero)
             {
@@ -230,8 +216,10 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         await Task.Run(() =>
         {
             // 弹出选择文件夹对话框
-            var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog();
-            dialog.Filter = "原神|YuanShen.exe|云原神|Genshin Impact Cloud Game.exe|启动器|launcher.exe|所有文件|*.*";
+            var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
+            {
+                Filter = "原神|YuanShen.exe|原神国际服|GenshinImpact.exe|所有文件|*.*"
+            };
             if (dialog.ShowDialog() == true)
             {
                 var path = dialog.FileName;
@@ -239,9 +227,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 {
                     return;
                 }
-                if (path.EndsWith("YuanShen.exe") || path.EndsWith("Genshin Impact Cloud Game.exe") || path.EndsWith("launcher.exe"))
+                if (path.EndsWith("YuanShen.exe") || path.EndsWith("GenshinImpact.exe"))
                 {
-                    Config.InstallPath = path;
+                    Config.GenshinStartConfig.InstallPath = path;
                 }
                 else
                 {
@@ -251,51 +239,16 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         });
     }
 
-    private bool ReadGameInstallPath(out string installPath)
+    private void ReadGameInstallPath()
     {
-        // 首先尝试获取原神路径
-        var path = ReadFromRegistry(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\原神", "InstallPath");
-        if (!string.IsNullOrEmpty(path))
+        // 检查用户是否配置了原神安装目录，如果没有，尝试从注册表中读取
+        if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
         {
-            // 这里拿到了launcher的安装目录，读取同目录下的config.ini文件，获取游戏的安装目录
-            var configIniPath = Path.Combine(path, "config.ini");
-            if (File.Exists(configIniPath))
+            var path = GameExePath.GetWithoutCloud();
+            if (!string.IsNullOrEmpty(path))
             {
-                var lines = File.ReadAllLines(configIniPath);
-                var gameInstallPath = lines.FirstOrDefault(x => x.StartsWith("game_install_path"));
-                if (!string.IsNullOrEmpty(gameInstallPath))
-                {
-                    installPath = Path.Combine(gameInstallPath.Split('=')[1], "Yuanshen.exe").Replace("/", "\\");
-                    return true;
-                }
+                Config.GenshinStartConfig.InstallPath = path;
             }
-            // 如果没读取到，就使用launcher的路径
-            installPath = Path.Combine(path, "launcher.exe");
-            return true;
         }
-        // 如果没有读取到原神的路径，尝试读取云原神
-        path = ReadFromRegistry(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\云·原神", "InstallPath");
-        if (!string.IsNullOrEmpty(path))
-        {
-            installPath = Path.Combine(path, "Genshin Impact Cloud Game.exe");
-            return true;
-        }
-        installPath = string.Empty;
-        return false;
-    }
-
-    private string ReadFromRegistry(string key, string keyName)
-    {
-        var regKey = Registry.LocalMachine.OpenSubKey(key);
-        if (regKey == null)
-        {
-            return string.Empty;
-        }
-        var value = regKey.GetValue(keyName);
-        if (value == null)
-        {
-            return string.Empty;
-        }
-        return value.ToString();
     }
 }
