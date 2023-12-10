@@ -1,9 +1,8 @@
 ﻿using System;
-using Microsoft.Win32;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
-internal class ResolutionSettings
+public class ResolutionSettings
 {
     protected string? height_name = null;
     protected string? width_name = null;

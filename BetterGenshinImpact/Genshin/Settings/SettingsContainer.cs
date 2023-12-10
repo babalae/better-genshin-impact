@@ -8,7 +8,7 @@ using Microsoft.Win32;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
-internal class SettingsContainer
+public class SettingsContainer
 {
     protected MainJson? data = null;
     public LanguageSettings? Language;

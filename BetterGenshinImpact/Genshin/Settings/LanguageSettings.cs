@@ -1,6 +1,6 @@
 ﻿namespace BetterGenshinImpact.Genshin.Settings;
 
-internal class LanguageSettings
+public class LanguageSettings
 {
     public TextLanguage TextLang { get; protected set; }
     public VoiceLanguage VoiceLang { get; protected set; }

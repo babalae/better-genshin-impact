@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Genshin.Settings;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -67,5 +68,7 @@ namespace BetterGenshinImpact.GameTask
                 return ConfigService.Config;
             }
         }
+
+        public SettingsContainer? GameSettings { get; set; }
     }
 }

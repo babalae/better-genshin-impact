@@ -2,14 +2,15 @@
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
+using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Windows;
+using System.Linq;
+using System.Windows.Forms;
 using WindowsInput;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -28,12 +29,26 @@ public class AutoWoodTask
 
     private readonly Login3rdParty _login3rdParty;
 
+    private readonly VirtualKeyCode _zKey = VirtualKeyCode.VK_Z;
+
     public AutoWoodTask()
     {
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _login3rdParty = new();
+
+        // try
+        // {
+        //     if (TaskContext.Instance().GameSettings?.OverrideController?.KeyboardMap?.ActionElementMap.Where(item => item.ActionId == ActionId.Gadget).FirstOrDefault()?.KeyboardKeyCode is Keys key)
+        //     {
+        //         _zKey = (VirtualKeyCode)key;
+        //     }
+        // }
+        // catch (Exception e)
+        // {
+        //     Logger.LogError(e, "获取键位失败");
+        // }
     }
 
     public void Start(WoodTaskParam taskParam)
@@ -69,7 +84,7 @@ public class AutoWoodTask
         catch (Exception e)
         {
             Logger.LogInformation(e.Message);
-            MessageBox.Show("自动伐木时异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            System.Windows.MessageBox.Show("自动伐木时异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
         finally
         {
@@ -114,7 +129,7 @@ public class AutoWoodTask
             }
             else
             {
-                Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_Z);
+                Simulation.SendInput.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
             }

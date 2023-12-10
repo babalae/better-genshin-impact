@@ -8,7 +8,7 @@ using System.Xml.Linq;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
-internal sealed class OverrideControllerSettings
+public sealed class OverrideControllerSettings
 {
     public KeyboardMap? KeyboardMap;
 
@@ -42,7 +42,7 @@ internal sealed class OverrideControllerSettings
     }
 }
 
-internal sealed class KeyboardMap
+public sealed class KeyboardMap
 {
     private readonly int? sourceMapId = null;
     private readonly int? categoryId = null;
@@ -89,7 +89,7 @@ internal sealed class KeyboardMap
     }
 }
 
-internal sealed class ActionElementMap
+public sealed class ActionElementMap
 {
     private readonly int? actionCategoryId = null;
     private readonly int? actionId = null;
@@ -211,7 +211,7 @@ file static class XmlParseExtension
     }
 }
 
-internal enum ActionId
+public enum ActionId
 {
     SideMovement = 0,
     ForwardMovement = 1,
@@ -345,7 +345,7 @@ internal enum ActionId
     CreateCustomSuite = 141,
 }
 
-internal enum ElementIdentifierId
+public enum ElementIdentifierId
 {
     None = 0,
     Backspace = 55,

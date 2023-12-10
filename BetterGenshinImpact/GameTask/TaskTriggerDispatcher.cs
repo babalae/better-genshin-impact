@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
@@ -11,8 +12,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using BetterGenshinImpact.GameTask.AutoWood;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -95,6 +94,7 @@ namespace BetterGenshinImpact.GameTask
             try
             {
                 SettingsContainer settings = new();
+                TaskContext.Instance().GameSettings = settings;
                 var lang = settings.Language?.TextLang;
                 if (lang != null && lang != TextLanguage.SimplifiedChinese)
                 {
