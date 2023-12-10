@@ -622,6 +622,8 @@ public class GeniusInvokationControl
     /// <returns>元素骰子是否充足</returns>
     public bool ActionPhaseUseSkill(int skillIndex)
     {
+        ClickGameWindowCenter(); // 复位
+        Sleep(500);
         // 技能坐标写死 (w - 100 * n, h - 120)
         var info = TaskContext.Instance().SystemInfo;
         var x = info.CaptureAreaRect.X + info.CaptureAreaRect.Width - 100 * info.AssetScale * skillIndex;
@@ -635,9 +637,7 @@ public class GeniusInvokationControl
             // 多点几次保证点击到
             _logger.LogInformation("使用技能{SkillIndex}", skillIndex);
             ClickExtension.Click(x, y);
-            Sleep(200);
-            ClickExtension.Click(x, y);
-            Sleep(100);
+            Sleep(500);
             ClickGameWindowCenter(); // 复位
             return true;
         }
@@ -1071,7 +1071,7 @@ public class GeniusInvokationControl
         Mat bottomMat = new Mat(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
 
         var lowPurple = new Scalar(239, 239, 239);
-        var highPurple = new Scalar(242, 242, 250);
+        var highPurple = new Scalar(255, 255, 255);
         Mat gray = OpenCvCommonHelper.Threshold(bottomMat, lowPurple, highPurple);
 
         var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(15, 10), new OpenCvSharp.Point(-1, -1));

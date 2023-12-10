@@ -85,6 +85,8 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
 
         public bool SwitchLater()
         {
+            GeniusInvokationControl.GetInstance().ClickGameWindowCenter();
+            GeniusInvokationControl.GetInstance().Sleep(800);
             var p = GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint());
             // 选择角色
             p.Click();
