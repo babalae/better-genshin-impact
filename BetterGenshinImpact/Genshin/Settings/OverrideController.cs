@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using Vanara.PInvoke;
+using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
@@ -208,6 +211,251 @@ file static class XmlParseExtension
     public static IEnumerable<XElement> ParseList([In] this XElement xml, [In] string keyName)
     {
         return xml.Descendants().Where(el => el.Name.LocalName == keyName);
+    }
+}
+
+public static class ElementIdentifierIdConverter
+{
+    public static string ToName(this ElementIdentifierId self)
+    {
+        return self switch
+        {
+            ElementIdentifierId.None => "None",
+            ElementIdentifierId.Equal => "=",
+            ElementIdentifierId.Backspace => "Backspace",
+            ElementIdentifierId.Tab => "Tab",
+            ElementIdentifierId.Clear => "Clear",
+            ElementIdentifierId.Enter => "Enter",
+            ElementIdentifierId.Pause => "Pause",
+            ElementIdentifierId.ESC => "Esc",
+            ElementIdentifierId.Space => "Space",
+            ElementIdentifierId.Apostrophe => "'",
+            ElementIdentifierId.Comma => ",",
+            ElementIdentifierId.Minus => "-",
+            ElementIdentifierId.Period => ".",
+            ElementIdentifierId.Slash => "/",
+            ElementIdentifierId.D0 => "0",
+            ElementIdentifierId.D1 => "1",
+            ElementIdentifierId.D2 => "2",
+            ElementIdentifierId.D3 => "3",
+            ElementIdentifierId.D4 => "4",
+            ElementIdentifierId.D5 => "5",
+            ElementIdentifierId.D6 => "6",
+            ElementIdentifierId.D7 => "7",
+            ElementIdentifierId.D8 => "8",
+            ElementIdentifierId.D9 => "9",
+            ElementIdentifierId.Semicolon => ";",
+            ElementIdentifierId.LeftSquareBracket => "[",
+            ElementIdentifierId.Backslash => @"\",
+            ElementIdentifierId.RightSquareBracket => "]",
+            ElementIdentifierId.Tilde => "`",
+            ElementIdentifierId.A => "A",
+            ElementIdentifierId.B => "B",
+            ElementIdentifierId.C => "C",
+            ElementIdentifierId.D => "D",
+            ElementIdentifierId.E => "E",
+            ElementIdentifierId.F => "F",
+            ElementIdentifierId.G => "G",
+            ElementIdentifierId.H => "H",
+            ElementIdentifierId.I => "I",
+            ElementIdentifierId.J => "J",
+            ElementIdentifierId.K => "K",
+            ElementIdentifierId.L => "L",
+            ElementIdentifierId.M => "M",
+            ElementIdentifierId.N => "N",
+            ElementIdentifierId.O => "O",
+            ElementIdentifierId.P => "P",
+            ElementIdentifierId.Q => "Q",
+            ElementIdentifierId.R => "R",
+            ElementIdentifierId.S => "S",
+            ElementIdentifierId.T => "T",
+            ElementIdentifierId.U => "U",
+            ElementIdentifierId.V => "V",
+            ElementIdentifierId.W => "W",
+            ElementIdentifierId.X => "X",
+            ElementIdentifierId.Y => "Y",
+            ElementIdentifierId.Z => "Z",
+            ElementIdentifierId.Delete => "Del",
+            ElementIdentifierId.Numpad0 => "Num 0",
+            ElementIdentifierId.Numpad1 => "Num 1",
+            ElementIdentifierId.Numpad2 => "Num 2",
+            ElementIdentifierId.Numpad3 => "Num 3",
+            ElementIdentifierId.Numpad4 => "Num 4",
+            ElementIdentifierId.Numpad5 => "Num 5",
+            ElementIdentifierId.Numpad6 => "Num 6",
+            ElementIdentifierId.Numpad7 => "Num 7",
+            ElementIdentifierId.Numpad8 => "Num 8",
+            ElementIdentifierId.Numpad9 => "Num 9",
+            ElementIdentifierId.NumpadDot => "Num .",
+            ElementIdentifierId.NumpadSlash => "Num /",
+            ElementIdentifierId.NumpadAsterisk => "Num *",
+            ElementIdentifierId.NumpadMinus => "Num -",
+            ElementIdentifierId.NumpadPlus => "Num +",
+            ElementIdentifierId.NumpadEnter => "NumEnter",
+            ElementIdentifierId.ArrowUp => "↑",
+            ElementIdentifierId.ArrowDown => "↓",
+            ElementIdentifierId.ArrowRight => "→",
+            ElementIdentifierId.ArrowLeft => "←",
+            ElementIdentifierId.Insert => "Insert",
+            ElementIdentifierId.Home => "Home",
+            ElementIdentifierId.End => "End",
+            ElementIdentifierId.PageUp => "PgUp",
+            ElementIdentifierId.PageDown => "PgDn",
+            ElementIdentifierId.F1 => "F1",
+            ElementIdentifierId.F2 => "F2",
+            ElementIdentifierId.F3 => "F3",
+            ElementIdentifierId.F4 => "F4",
+            ElementIdentifierId.F5 => "F5",
+            ElementIdentifierId.F6 => "F6",
+            ElementIdentifierId.F7 => "F7",
+            ElementIdentifierId.F8 => "F8",
+            ElementIdentifierId.F9 => "F9",
+            ElementIdentifierId.F10 => "F10",
+            ElementIdentifierId.F11 => "F11",
+            ElementIdentifierId.F12 => "F12",
+            ElementIdentifierId.F13 => "F13",
+            ElementIdentifierId.F14 => "F14",
+            ElementIdentifierId.F15 => "F15",
+            ElementIdentifierId.NumLock => "NumLock",
+            ElementIdentifierId.CapsLock => "CapsLock",
+            ElementIdentifierId.ScrollLock => "ScrollLock",
+            ElementIdentifierId.RightShift => "Right Shift",
+            ElementIdentifierId.LeftShift => "Left Shift",
+            ElementIdentifierId.RightCtrl => "Right Ctrl",
+            ElementIdentifierId.LeftCtrl => "Left Ctrl",
+            ElementIdentifierId.RightAlt => "Right Alt",
+            ElementIdentifierId.LeftAlt => "Left Alt",
+            ElementIdentifierId.RightWin => "Right Win",
+            ElementIdentifierId.LeftWin => "Left Win",
+            ElementIdentifierId.Help => "Help",
+            ElementIdentifierId.Print => "Print",
+            _ => "Unknown",
+        };
+    }
+
+    public static VK ToVK(this ElementIdentifierId self)
+    {
+        return self switch
+        {
+            ElementIdentifierId.Equal => VK.VK_OEM_PLUS, // =
+            ElementIdentifierId.Backspace => VK.VK_BACK,
+            ElementIdentifierId.Tab => VK.VK_TAB,
+            ElementIdentifierId.Clear => VK.VK_CLEAR,
+            ElementIdentifierId.Enter => VK.VK_RETURN,
+            ElementIdentifierId.Pause => VK.VK_PAUSE,
+            ElementIdentifierId.ESC => VK.VK_ESCAPE,
+            ElementIdentifierId.Space => VK.VK_SPACE,
+            ElementIdentifierId.Apostrophe => VK.VK_OEM_7, // '
+            ElementIdentifierId.Comma => VK.VK_OEM_COMMA, // ,
+            ElementIdentifierId.Minus => VK.VK_OEM_MINUS, // -
+            ElementIdentifierId.Period => VK.VK_OEM_PERIOD, // .
+            ElementIdentifierId.Slash => VK.VK_OEM_2, // /
+            ElementIdentifierId.D0 => VK.VK_0,
+            ElementIdentifierId.D1 => VK.VK_1,
+            ElementIdentifierId.D2 => VK.VK_2,
+            ElementIdentifierId.D3 => VK.VK_3,
+            ElementIdentifierId.D4 => VK.VK_4,
+            ElementIdentifierId.D5 => VK.VK_5,
+            ElementIdentifierId.D6 => VK.VK_6,
+            ElementIdentifierId.D7 => VK.VK_7,
+            ElementIdentifierId.D8 => VK.VK_8,
+            ElementIdentifierId.D9 => VK.VK_9,
+            ElementIdentifierId.Semicolon => VK.VK_OEM_1, // ;
+            ElementIdentifierId.LeftSquareBracket => VK.VK_OEM_4, // [
+            ElementIdentifierId.Backslash => VK.VK_OEM_102, //?
+            ElementIdentifierId.RightSquareBracket => VK.VK_OEM_6, // ]
+            ElementIdentifierId.Tilde => VK.VK_OEM_3, // `
+            ElementIdentifierId.A => VK.VK_A,
+            ElementIdentifierId.B => VK.VK_B,
+            ElementIdentifierId.C => VK.VK_C,
+            ElementIdentifierId.D => VK.VK_D,
+            ElementIdentifierId.E => VK.VK_E,
+            ElementIdentifierId.F => VK.VK_F,
+            ElementIdentifierId.G => VK.VK_G,
+            ElementIdentifierId.H => VK.VK_H,
+            ElementIdentifierId.I => VK.VK_I,
+            ElementIdentifierId.J => VK.VK_J,
+            ElementIdentifierId.K => VK.VK_K,
+            ElementIdentifierId.L => VK.VK_L,
+            ElementIdentifierId.M => VK.VK_M,
+            ElementIdentifierId.N => VK.VK_N,
+            ElementIdentifierId.O => VK.VK_O,
+            ElementIdentifierId.P => VK.VK_P,
+            ElementIdentifierId.Q => VK.VK_Q,
+            ElementIdentifierId.R => VK.VK_R,
+            ElementIdentifierId.S => VK.VK_S,
+            ElementIdentifierId.T => VK.VK_T,
+            ElementIdentifierId.U => VK.VK_U,
+            ElementIdentifierId.V => VK.VK_V,
+            ElementIdentifierId.W => VK.VK_W,
+            ElementIdentifierId.X => VK.VK_X,
+            ElementIdentifierId.Y => VK.VK_Y,
+            ElementIdentifierId.Z => VK.VK_Z,
+            ElementIdentifierId.Delete => VK.VK_DELETE,
+            ElementIdentifierId.Numpad0 => VK.VK_NUMPAD0,
+            ElementIdentifierId.Numpad1 => VK.VK_NUMPAD1,
+            ElementIdentifierId.Numpad2 => VK.VK_NUMPAD2,
+            ElementIdentifierId.Numpad3 => VK.VK_NUMPAD3,
+            ElementIdentifierId.Numpad4 => VK.VK_NUMPAD4,
+            ElementIdentifierId.Numpad5 => VK.VK_NUMPAD5,
+            ElementIdentifierId.Numpad6 => VK.VK_NUMPAD6,
+            ElementIdentifierId.Numpad7 => VK.VK_NUMPAD7,
+            ElementIdentifierId.Numpad8 => VK.VK_NUMPAD8,
+            ElementIdentifierId.Numpad9 => VK.VK_NUMPAD9,
+            ElementIdentifierId.NumpadDot => VK.VK_DECIMAL,
+            ElementIdentifierId.NumpadSlash => VK.VK_DIVIDE,
+            ElementIdentifierId.NumpadAsterisk => VK.VK_MULTIPLY,
+            ElementIdentifierId.NumpadMinus => VK.VK_SUBTRACT,
+            ElementIdentifierId.NumpadPlus => VK.VK_ADD,
+            ElementIdentifierId.NumpadEnter => VK.VK_RETURN,
+            ElementIdentifierId.ArrowUp => VK.VK_UP,
+            ElementIdentifierId.ArrowDown => VK.VK_DOWN,
+            ElementIdentifierId.ArrowRight => VK.VK_RIGHT,
+            ElementIdentifierId.ArrowLeft => VK.VK_LEFT,
+            ElementIdentifierId.Insert => VK.VK_INSERT,
+            ElementIdentifierId.Home => VK.VK_HOME,
+            ElementIdentifierId.End => VK.VK_END,
+            ElementIdentifierId.PageUp => VK.VK_PRIOR,
+            ElementIdentifierId.PageDown => VK.VK_NEXT,
+            ElementIdentifierId.F1 => VK.VK_F1,
+            ElementIdentifierId.F2 => VK.VK_F2,
+            ElementIdentifierId.F3 => VK.VK_F3,
+            ElementIdentifierId.F4 => VK.VK_F4,
+            ElementIdentifierId.F5 => VK.VK_F5,
+            ElementIdentifierId.F6 => VK.VK_F6,
+            ElementIdentifierId.F7 => VK.VK_F7,
+            ElementIdentifierId.F8 => VK.VK_F8,
+            ElementIdentifierId.F9 => VK.VK_F9,
+            ElementIdentifierId.F10 => VK.VK_F10,
+            ElementIdentifierId.F11 => VK.VK_F11,
+            ElementIdentifierId.F12 => VK.VK_F12,
+            ElementIdentifierId.F13 => VK.VK_F13,
+            ElementIdentifierId.F14 => VK.VK_F14,
+            ElementIdentifierId.F15 => VK.VK_F15,
+            ElementIdentifierId.NumLock => VK.VK_NUMLOCK,
+            ElementIdentifierId.CapsLock => VK.VK_CAPITAL,
+            ElementIdentifierId.ScrollLock => VK.VK_SCROLL,
+            ElementIdentifierId.RightShift => VK.VK_RSHIFT,
+            ElementIdentifierId.LeftShift => VK.VK_LSHIFT,
+            ElementIdentifierId.RightCtrl => VK.VK_RCONTROL,
+            ElementIdentifierId.LeftCtrl => VK.VK_LCONTROL,
+            ElementIdentifierId.RightAlt => VK.VK_RMENU,
+            ElementIdentifierId.LeftAlt => VK.VK_LMENU,
+            ElementIdentifierId.RightWin => VK.VK_RWIN,
+            ElementIdentifierId.LeftWin => VK.VK_LWIN,
+            ElementIdentifierId.Help => VK.VK_HELP,
+            ElementIdentifierId.Print => VK.VK_PRINT,
+            _ => default,
+        };
+    }
+
+    public static bool? ToIsExt(this ElementIdentifierId self)
+    {
+        return self switch
+        {
+            ElementIdentifierId.NumpadEnter => true,
+            _ => null,
+        };
     }
 }
 
@@ -418,6 +666,7 @@ public enum ElementIdentifierId
     NumpadAsterisk = 49,
     NumpadMinus = 50,
     NumpadPlus = 51,
+    NumpadEnter = 52,
     ArrowUp = 89,
     ArrowDown = 90,
     ArrowRight = 91,
