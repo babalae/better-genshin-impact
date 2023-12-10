@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Platforms>x64</Platforms>
+		<LangVersion>12.0</LangVersion>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
+	</ItemGroup>
+
+</Project>
