@@ -1,24 +1,49 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Diagnostics;
-using Microsoft.Win32;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
 internal class GenshinRegistry
 {
-    public static RegistryKey? GetRegistryKey()
+    public static RegistryKey? GetRegistryKey(GenshinRegistryType type = GenshinRegistryType.Auto)
     {
         try
         {
             using RegistryKey hkcu = Registry.CurrentUser;
 
-            if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
+            if (type == GenshinRegistryType.Auto)
             {
-                return sk;
+                {
+                    if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
+                    {
+                        return sk;
+                    }
+                }
+                {
+                    if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\Genshin Impact", true) is RegistryKey sk)
+                    {
+                        return sk;
+                    }
+                }
             }
-            else if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\Genshin Impact", true) is RegistryKey sk2)
+            else if (type == GenshinRegistryType.Chinese)
             {
-                return sk2;
+                if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
+                {
+                    return sk;
+                }
+            }
+            else if (type == GenshinRegistryType.Global)
+            {
+                if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\Genshin Impact", true) is RegistryKey sk)
+                {
+                    return sk;
+                }
+            }
+            else if (type == GenshinRegistryType.Cloud)
+            {
+                throw new NotImplementedException();
             }
         }
         catch (Exception e)
@@ -27,4 +52,12 @@ internal class GenshinRegistry
         }
         return null;
     }
+}
+
+public enum GenshinRegistryType
+{
+    Auto,
+    Chinese,
+    Global,
+    Cloud,
 }
