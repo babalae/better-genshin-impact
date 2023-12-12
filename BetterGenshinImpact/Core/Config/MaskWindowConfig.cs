@@ -51,5 +51,15 @@ namespace BetterGenshinImpact.Core.Config
         /// 1080p下UID遮盖的位置与大小
         /// </summary>
         public Rect UidCoverRect { get; set; } = new(1695, 1052, 168, 22);
+
+        /// <summary>
+        /// 方位提示是否启用
+        /// </summary>
+        [ObservableProperty] private bool _directionsEnabled = true;
+
+        public Point EastPoint { get; set; } = new(274, 109);
+        public Point SouthPoint { get; set; } = new(150, 233);
+        public Point WestPoint { get; set; } = new(32, 109);
+        public Point NorthPoint { get; set; } = new(150, -9);
     }
 }
