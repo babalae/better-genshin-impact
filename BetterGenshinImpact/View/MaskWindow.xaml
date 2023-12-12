@@ -113,6 +113,36 @@
                 Canvas.Left="{Binding UidCoverRect.X, Mode=OneWay}"
                 Canvas.Top="{Binding UidCoverRect.Y, Mode=OneWay}"
                 Visibility="{Binding UidCoverVisibility}"/>
+
+            <!-- 方位 -->
+            <Label Content="东" Foreground="White" HorizontalAlignment="Center"
+                   FontSize="38"
+                   FontWeight="DemiBold"
+                   FontStretch="Medium"
+                   Canvas.Left="{Binding EastPoint.X, Mode=OneWay}"
+                   Canvas.Top="{Binding EastPoint.Y, Mode=OneWay}"
+                   Visibility="{Binding DirectionsVisibility}"/>
+            <Label Content="南" Foreground="White" HorizontalAlignment="Center"
+                   FontSize="38"
+                   FontWeight="DemiBold"
+                   FontStretch="Medium"
+                   Canvas.Left="{Binding SouthPoint.X, Mode=OneWay}"
+                   Canvas.Top="{Binding SouthPoint.Y, Mode=OneWay}"
+                   Visibility="{Binding DirectionsVisibility}"/>
+            <Label Content="西" Foreground="White" HorizontalAlignment="Center"
+                   FontSize="38"
+                   FontWeight="DemiBold"
+                   FontStretch="Medium"
+                   Canvas.Left="{Binding WestPoint.X, Mode=OneWay}"
+                   Canvas.Top="{Binding WestPoint.Y, Mode=OneWay}"
+                   Visibility="{Binding DirectionsVisibility}"/>
+            <Label Content="北" Foreground="White" HorizontalAlignment="Center"
+                   FontSize="38"
+                   FontWeight="DemiBold"
+                   FontStretch="Medium"
+                   Canvas.Left="{Binding NorthPoint.X, Mode=OneWay}"
+                   Canvas.Top="{Binding NorthPoint.Y, Mode=OneWay}"
+                   Visibility="{Binding DirectionsVisibility}"/>
         </Canvas>
     </AdornerDecorator>
 
