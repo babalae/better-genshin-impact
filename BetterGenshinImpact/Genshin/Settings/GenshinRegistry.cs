@@ -6,6 +6,11 @@ namespace BetterGenshinImpact.Genshin.Settings;
 
 internal class GenshinRegistry
 {
+    /// <summary>
+    /// TODO 结合进程名字判断当前是获取国服配置还是国际服配置
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
     public static RegistryKey? GetRegistryKey(GenshinRegistryType type = GenshinRegistryType.Auto)
     {
         try

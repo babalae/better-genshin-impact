@@ -99,8 +99,7 @@ namespace BetterGenshinImpact.GameTask
                 var lang = settings.Language?.TextLang;
                 if (lang != null && lang != TextLanguage.SimplifiedChinese)
                 {
-                    _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用", lang);
-                    _logger.LogWarning("The game language is not Simplified Chinese, some functions may not work properly");
+                    _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
                 }
             }
             catch (Exception e)
