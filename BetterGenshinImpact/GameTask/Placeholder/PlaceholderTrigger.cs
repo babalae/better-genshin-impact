@@ -3,6 +3,7 @@ using OpenCvSharp;
 using System;
 using System.Drawing;
 using System.Linq;
+using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Placeholder;
@@ -100,12 +101,35 @@ public class TestTrigger : ITaskTrigger
 
         // 红蓝通道按位与
         var red = new Mat(mat.Size(), MatType.CV_8UC1);
-        Cv2.InRange(splitMat[0], new Scalar(205), new Scalar(255), red);
+        Cv2.InRange(splitMat[0], new Scalar(250), new Scalar(255), red);
         var blue = new Mat(mat.Size(), MatType.CV_8UC1);
-        Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(50), blue);
+        Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(10), blue);
         var andMat = red & blue;
 
         Triangle(andMat);
+    }
+
+    public static void Rectangle(Mat andMat)
+    {
+        //腐蚀
+        var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
+        var res = new Mat(andMat.Size(), MatType.CV_8UC1);
+        Cv2.Erode(andMat, res, kernel);
+        Cv2.ImShow("erode", res);
+
+        Cv2.FindContours(res, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxNone);
+        for (int i = 0; i < contours.Length; i++)
+        {
+            // 最小外接矩形
+            var rect = Cv2.MinAreaRect(contours[i]);
+            // 矩形的四个顶点
+            var points = Cv2.BoxPoints(rect);
+            // 绘制矩形
+            for (int j = 0; j < 4; ++j)
+            {
+                //Cv2.Line(mat, (Point)points[j], (Point)points[(j + 1) % 4], Scalar.Red, 1);
+            }
+        }
     }
 
     public static void Triangle(Mat gray)
