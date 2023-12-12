@@ -28,6 +28,14 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private Visibility _uidCoverVisibility = Visibility.Visible;
         [ObservableProperty] private Rect _uidCoverRect = new(0, 0, 200, 30);
 
+
+        [ObservableProperty] private Visibility _directionsVisibility = Visibility.Visible;
+        [ObservableProperty] private Point _eastPoint = new(274, 109);
+        [ObservableProperty] private Point _southPoint = new(150, 233);
+        [ObservableProperty] private Point _westPoint = new(32, 109);
+        [ObservableProperty] private Point _northPoint = new(150, -9);
+
+
         public MaskWindowViewModel()
         {
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -83,6 +91,7 @@ namespace BetterGenshinImpact.ViewModel
 
                 // UID遮盖
                 UidCoverVisibility = Config.MaskWindowConfig.UidCoverEnabled ? Visibility.Visible : Visibility.Collapsed;
+                DirectionsVisibility = Config.MaskWindowConfig.DirectionsEnabled ? Visibility.Visible : Visibility.Collapsed;
                 // 比较特殊，必须要启动过任务调度器才能够获取到缩放信息
                 if (TaskContext.Instance().SystemInfo != null)
                 {
@@ -92,6 +101,14 @@ namespace BetterGenshinImpact.ViewModel
                         Config.MaskWindowConfig.UidCoverRect.Y * assetScale / dpiScale,
                         Config.MaskWindowConfig.UidCoverRect.Width * assetScale / dpiScale,
                         Config.MaskWindowConfig.UidCoverRect.Height * assetScale / dpiScale);
+                    EastPoint = new Point(Config.MaskWindowConfig.EastPoint.X * assetScale / dpiScale,
+                        Config.MaskWindowConfig.EastPoint.Y * assetScale / dpiScale);
+                    SouthPoint = new Point(Config.MaskWindowConfig.SouthPoint.X * assetScale / dpiScale,
+                        Config.MaskWindowConfig.SouthPoint.Y * assetScale / dpiScale);
+                    WestPoint = new Point(Config.MaskWindowConfig.WestPoint.X * assetScale / dpiScale,
+                        Config.MaskWindowConfig.WestPoint.Y * assetScale / dpiScale);
+                    NorthPoint = new Point(Config.MaskWindowConfig.NorthPoint.X * assetScale / dpiScale,
+                        Config.MaskWindowConfig.NorthPoint.Y * assetScale / dpiScale);
                 }
             }
         }

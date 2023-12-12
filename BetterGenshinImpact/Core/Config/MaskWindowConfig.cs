@@ -55,11 +55,11 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 方位提示是否启用
         /// </summary>
-        [ObservableProperty] private bool _directionsEnabled = true;
+        [ObservableProperty] private bool _directionsEnabled = false;
 
-        public Point EastPoint { get; set; } = new(274, 109);
-        public Point SouthPoint { get; set; } = new(150, 233);
-        public Point WestPoint { get; set; } = new(32, 109);
-        public Point NorthPoint { get; set; } = new(150, -9);
+        public System.Windows.Point EastPoint { get; set; } = new(274, 109);
+        public System.Windows.Point SouthPoint { get; set; } = new(150, 233);
+        public System.Windows.Point WestPoint { get; set; } = new(32, 109);
+        public System.Windows.Point NorthPoint { get; set; } = new(150, -9);
     }
 }
