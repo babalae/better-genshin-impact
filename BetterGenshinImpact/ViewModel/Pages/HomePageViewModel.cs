@@ -220,14 +220,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 {
                     return;
                 }
-                if (path.EndsWith("YuanShen.exe") || path.EndsWith("GenshinImpact.exe"))
-                {
-                    Config.GenshinStartConfig.InstallPath = path;
-                }
-                else
-                {
-                    System.Windows.MessageBox.Show("请选择有效的文件！");
-                }
+                Config.GenshinStartConfig.InstallPath = path;
             }
         });
     }
