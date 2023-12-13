@@ -18,7 +18,6 @@ public class CharacterOrientationTest
         var highScalar = new Scalar(0, 208, 255);
         var gray = OpenCvCommonHelper.Threshold(mat, lowScalar, highScalar);
         Cv2.ImShow("gray", gray);
-
     }
 
 
@@ -45,13 +44,13 @@ public class CharacterOrientationTest
         return new Point2f(midX, midY);
     }
 
-    public static void Triangle(Mat gray)
+    public static void Triangle(Mat src, Mat gray)
     {
         Cv2.FindContours(gray, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxNone);
         Mat dst = Mat.Zeros(gray.Size(), MatType.CV_8UC3);
         for (int i = 0; i < contours.Length; i++)
         {
-            Cv2.DrawContours(dst, contours, i, new Scalar(0, 255, 0), 1, LineTypes.Link4, hierarchy);
+            Cv2.DrawContours(src, contours, i, Scalar.Red, 1, LineTypes.Link4, hierarchy);
         }
         // Cv2.ImShow("目标", dst);
 
@@ -69,7 +68,7 @@ public class CharacterOrientationTest
             if (approx.Length == 3)
             {
                 // 在图像上绘制三角形的轮廓
-                Cv2.DrawContours(dst2, new OpenCvSharp.Point[][] { approx }, -1, Scalar.Green, 1);
+                Cv2.DrawContours(src, new OpenCvSharp.Point[][] { approx }, -1, Scalar.Green, 1);
                 // 计算三条边的长度
                 var sideLengths = new double[3];
                 sideLengths[0] = Distance(approx[1], approx[2]);
@@ -87,19 +86,19 @@ public class CharacterOrientationTest
                 var midPoint = new OpenCvSharp.Point((residue[0].X + residue[1].X) / 2, (residue[0].Y + residue[1].Y) / 2);
 
                 // 在图像上绘制直线
-                Cv2.Line(dst2, midPoint, approx[result.Index] + (approx[result.Index]- midPoint)*3, Scalar.Red, 1);
+                Cv2.Line(src, midPoint, approx[result.Index] + (approx[result.Index] - midPoint) * 3, Scalar.Red, 1);
 
                 Debug.WriteLine(CalculateAngle(midPoint, approx[result.Index]));
             }
         }
 
-        Cv2.ImShow("目标2", dst2);
+        Cv2.ImShow("目标2", src);
     }
 
 
     public static void TestArrow2()
     {
-        var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\e3.png", ImreadModes.Color);
+        var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\s1.png", ImreadModes.Color);
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         var splitMat = mat.Split();
 
@@ -117,13 +116,12 @@ public class CharacterOrientationTest
         //Cv2.ImShow("blue", blue);
         var andMat = red & blue;
         Cv2.ImShow("andMat2", andMat);
-
-        Triangle(andMat);
+        Triangle(mat, andMat);
     }
 
     public static void TestArrow3()
     {
-        var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\e3.png", ImreadModes.Color);
+        var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\s1.png", ImreadModes.Color);
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         var splitMat = mat.Split();
 
@@ -177,6 +175,7 @@ public class CharacterOrientationTest
                 Debug.WriteLine(CalculateAngle(points[1], points[2]));
             }
         }
+
         Cv2.ImShow("目标", mat);
 
         TestArrow2();
@@ -194,5 +193,28 @@ public class CharacterOrientationTest
         }
 
         return angleDegrees;
+    }
+
+
+    public static void Watershed()
+    {
+        var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\s1.png", ImreadModes.Color);
+        Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
+        var splitMat = mat.Split();
+
+        //for (int i = 0; i < splitMat.Length; i++)
+        //{
+        //    Cv2.ImShow($"splitMat{i}", splitMat[i]);
+        //}
+
+        // 红蓝通道按位与
+        var red = new Mat(mat.Size(), MatType.CV_8UC1);
+        Cv2.InRange(splitMat[0], new Scalar(250), new Scalar(255), red);
+        //Cv2.ImShow("red", red);
+        var blue = new Mat(mat.Size(), MatType.CV_8UC1);
+        Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(10), blue);
+        //Cv2.ImShow("blue", blue);
+        var andMat = red & blue;
+        Cv2.ImShow("andMat2", andMat);
     }
 }

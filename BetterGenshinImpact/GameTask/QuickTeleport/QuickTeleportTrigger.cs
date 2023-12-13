@@ -1,12 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 

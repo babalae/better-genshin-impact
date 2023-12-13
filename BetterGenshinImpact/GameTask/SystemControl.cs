@@ -1,10 +1,7 @@
-﻿using BetterGenshinImpact.Core.Simulator;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -13,8 +10,7 @@ public class SystemControl
 {
     public static nint FindGenshinImpactHandle()
     {
-        var handle = FindHandleByWindowName();
-        return handle != 0 ? handle : FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
+        return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
 
     public static async Task<nint> StartFromLocalAsync(string path)
@@ -31,10 +27,13 @@ public class SystemControl
             var handle = FindGenshinImpactHandle();
             if (handle != 0)
             {
+                await Task.Delay(2333);
+                handle = FindGenshinImpactHandle();
+                await Task.Delay(2577);
                 return handle;
             }
 
-            await Task.Delay(3000);
+            await Task.Delay(5577);
         }
         return FindGenshinImpactHandle();
     }

@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.Test
         {
             InitializeComponent();
             // CharacterOrientationTest.TestArrow();
-            CharacterOrientationTest.TestArrow3();
+            CharacterOrientationTest.Watershed();
         }
     }
 }
