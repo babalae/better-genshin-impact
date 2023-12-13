@@ -19,8 +19,10 @@ namespace BetterGenshinImpact.Test
         public MainWindow()
         {
             InitializeComponent();
+
+            // new HsvTestWindow().Run();
             // CharacterOrientationTest.TestArrow();
-            CharacterOrientationTest.Watershed();
+            CharacterOrientationTest.Hsv();
         }
     }
 }

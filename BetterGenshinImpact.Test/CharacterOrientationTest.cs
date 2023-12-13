@@ -37,11 +37,18 @@ public class CharacterOrientationTest
         return Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
     }
 
-    static Point2f Midpoint(Point2f p1, Point2f p2)
+    // static Point2f Midpoint(Point2f p1, Point2f p2)
+    // {
+    //     var midX = (p1.X + p2.X) / 2;
+    //     var midY = (p1.Y + p2.Y) / 2;
+    //     return new Point2f(midX, midY);
+    // }
+
+    static Point Midpoint(Point p1, Point p2)
     {
         var midX = (p1.X + p2.X) / 2;
         var midY = (p1.Y + p2.Y) / 2;
-        return new Point2f(midX, midY);
+        return new Point(midX, midY);
     }
 
     public static void Triangle(Mat src, Mat gray)
@@ -196,7 +203,7 @@ public class CharacterOrientationTest
     }
 
 
-    public static void Watershed()
+    public static void FloodFill()
     {
         var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\s1.png", ImreadModes.Color);
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
@@ -207,14 +214,159 @@ public class CharacterOrientationTest
         //    Cv2.ImShow($"splitMat{i}", splitMat[i]);
         //}
 
-        // 红蓝通道按位与
+        // 1. 红蓝通道按位与
         var red = new Mat(mat.Size(), MatType.CV_8UC1);
         Cv2.InRange(splitMat[0], new Scalar(250), new Scalar(255), red);
         //Cv2.ImShow("red", red);
         var blue = new Mat(mat.Size(), MatType.CV_8UC1);
         Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(10), blue);
         //Cv2.ImShow("blue", blue);
-        var andMat = red & blue;
+        var andMat = new Mat(mat.Size(), MatType.CV_8UC1);
+
+        Cv2.BitwiseAnd(red, blue, andMat);
         Cv2.ImShow("andMat2", andMat);
+
+        // 寻找轮廓
+        Cv2.FindContours(andMat, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Mat dst = Mat.Zeros(andMat.Size(), MatType.CV_8UC3);
+        for (int i = 0; i < contours.Length; i++)
+        {
+            Cv2.DrawContours(dst, contours, i, Scalar.Red, 1, LineTypes.Link4, hierarchy);
+        }
+
+        Cv2.ImShow("寻找轮廓", dst);
+
+        // 计算最大外接矩形
+        if (contours.Length > 0)
+        {
+            var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Height >= 2);
+            var boxArray = boxes as Rect[] ?? boxes.ToArray();
+            if (boxArray.Count() != 1)
+            {
+                throw new Exception("找到多个外接矩形");
+            }
+
+            var box = boxArray.First();
+
+            // 剪裁出准备泛洪的区域（放大4倍的区域）
+            var newSrcMat = new Mat(mat, new Rect(box.X - box.Width / 2, box.Y - box.Height / 2, box.Width * 2, box.Height * 2));
+            Cv2.ImShow("剪裁出准备泛洪的区域", newSrcMat);
+
+            // 中心点作为种子点
+            var seedPoint = new Point(newSrcMat.Width / 2, newSrcMat.Height / 2);
+
+            // 泛洪填充
+            Cv2.FloodFill(newSrcMat, seedPoint, Scalar.White, out _, new Scalar());
+        }
+    }
+
+
+    public static void Hsv()
+    {
+        var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\e1.png", ImreadModes.Color);
+        // Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
+        var splitMat = mat.Split();
+
+        // 1. 红蓝通道按位与
+        var red = new Mat(mat.Size(), MatType.CV_8UC1);
+        Cv2.InRange(splitMat[0], new Scalar(250), new Scalar(255), red);
+        var blue = new Mat(mat.Size(), MatType.CV_8UC1);
+        Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(10), blue);
+        var andMat = new Mat(mat.Size(), MatType.CV_8UC1);
+
+        Cv2.BitwiseAnd(red, blue, andMat);
+        Cv2.ImShow("andMat2", andMat);
+
+        // 寻找轮廓
+        Cv2.FindContours(andMat, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Mat dst = Mat.Zeros(andMat.Size(), MatType.CV_8UC3);
+        for (int i = 0; i < contours.Length; i++)
+        {
+            Cv2.DrawContours(dst, contours, i, Scalar.Red, 1, LineTypes.Link4, hierarchy);
+        }
+
+        Cv2.ImShow("寻找轮廓", dst);
+
+        // 计算最大外接矩形
+
+        if (contours.Length > 0)
+        {
+            var maxRect = Rect.Empty;
+            var maxIndex = 0;
+            for (int i = 0; i < contours.Length; i++)
+            {
+                var box = Cv2.BoundingRect(contours[i]);
+                if (box.Width * box.Height > maxRect.Width * maxRect.Height)
+                {
+                    maxRect = box;
+                    maxIndex = i;
+                }
+            }
+
+            var maxContour = contours[maxIndex];
+
+            // 计算轮廓的周长
+            var perimeter = Cv2.ArcLength(maxContour, true);
+
+            // 近似多边形拟合
+            var approx = Cv2.ApproxPolyDP(maxContour, 0.08 * perimeter, true);
+
+            // 如果拟合的多边形有三个顶点，认为是三角形
+            if (approx.Length == 3)
+            {
+                // 在图像上绘制三角形的轮廓
+                Cv2.DrawContours(mat, new OpenCvSharp.Point[][] { approx }, -1, Scalar.Green, 1);
+
+                // 剪裁出三角形所在区域
+                var newSrcMat = new Mat(mat, maxRect);
+              
+
+                // HSV 阈值取出中心飞镖
+                var hsvMat = new Mat();
+                Cv2.CvtColor(newSrcMat, hsvMat, ColorConversionCodes.BGR2HSV);
+                // var lowScalar = new Scalar(95, 255, 255);
+                // var highScalar = new Scalar(255, 255, 255);
+                var lowScalar = new Scalar(93, 155, 170);
+                var highScalar = new Scalar(255, 255, 255);
+                var hsvThresholdMat = new Mat();
+                Cv2.InRange(hsvMat, lowScalar, highScalar, hsvThresholdMat);
+                Cv2.ImShow("剪裁出三角形所在区域", hsvMat);
+                Cv2.ImShow("HSV 阈值取出中心飞镖", hsvThresholdMat);
+
+                // 循环计算三条边的中点,并计算中点到顶点的所有点中连续黑色像素的个数
+                var maxBlackCount = 0;
+                Point correctP1 = new(), correctP2 = new();
+                var offset = new Point(maxRect.X, maxRect.Y);
+                for (int i = 0; i < 3; i++)
+                {
+                    var midPoint = Midpoint(approx[i], approx[(i + 1) % 3]);
+                    var targetPoint = approx[(i + 2) % 3];
+
+                    // 中点到顶点的所有点
+                    var lineIterator = new LineIterator(hsvThresholdMat, midPoint - offset, targetPoint - offset, PixelConnectivity.Connectivity8);
+
+                    // 计算连续黑色像素的个数
+                    var blackCount = 0;
+                    foreach (var item in lineIterator)
+                    {
+                        if (item.GetValue<Vec2b>().Item0 == 255)
+                        {
+                            break;
+                        }
+
+                        blackCount++;
+                    }
+
+                    if (blackCount > maxBlackCount)
+                    {
+                        maxBlackCount = blackCount;
+                        correctP1 = midPoint;
+                        correctP2 = targetPoint;
+                    }
+                }
+                Cv2.Line(mat, correctP1, correctP2 + (correctP2 - correctP1) * 3, Scalar.Red, 1);
+                Cv2.ImShow("最终结果", mat);
+            }
+        }
     }
 }

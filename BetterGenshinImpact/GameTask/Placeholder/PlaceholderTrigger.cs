@@ -1,8 +1,10 @@
 ﻿using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
+using SharpDX;
 using System;
 using System.Drawing;
 using System.Linq;
+using System.Net;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
@@ -95,94 +97,102 @@ public class TestTrigger : ITaskTrigger
     public static void TestArrow(CaptureContent content)
     {
         var mat = new Mat(content.CaptureRectArea.SrcMat, new Rect(0,0,300,240));
-        Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
+
         var splitMat = mat.Split();
 
-
-        // 红蓝通道按位与
+        // 1. 红蓝通道按位与
         var red = new Mat(mat.Size(), MatType.CV_8UC1);
         Cv2.InRange(splitMat[0], new Scalar(250), new Scalar(255), red);
         var blue = new Mat(mat.Size(), MatType.CV_8UC1);
         Cv2.InRange(splitMat[2], new Scalar(0), new Scalar(10), blue);
-        var andMat = red & blue;
+        var andMat = new Mat(mat.Size(), MatType.CV_8UC1);
 
-        Triangle(andMat);
-    }
+        Cv2.BitwiseAnd(red, blue, andMat);
 
-    public static void Rectangle(Mat andMat)
-    {
-        //腐蚀
-        var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
-        var res = new Mat(andMat.Size(), MatType.CV_8UC1);
-        Cv2.Erode(andMat, res, kernel);
-        Cv2.ImShow("erode", res);
+        // 寻找轮廓
+        Cv2.FindContours(andMat, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Mat dst = Mat.Zeros(andMat.Size(), MatType.CV_8UC3);
 
-        Cv2.FindContours(res, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxNone);
-        for (int i = 0; i < contours.Length; i++)
+        // 计算最大外接矩形
+
+        if (contours.Length > 0)
         {
-            // 最小外接矩形
-            var rect = Cv2.MinAreaRect(contours[i]);
-            // 矩形的四个顶点
-            var points = Cv2.BoxPoints(rect);
-            // 绘制矩形
-            for (int j = 0; j < 4; ++j)
+            var maxRect = Rect.Empty;
+            var maxIndex = 0;
+            for (int i = 0; i < contours.Length; i++)
             {
-                //Cv2.Line(mat, (Point)points[j], (Point)points[(j + 1) % 4], Scalar.Red, 1);
+                var box = Cv2.BoundingRect(contours[i]);
+                if (box.Width * box.Height > maxRect.Width * maxRect.Height)
+                {
+                    maxRect = box;
+                    maxIndex = i;
+                }
             }
-        }
-    }
 
-    public static void Triangle(Mat gray)
-    {
-        Cv2.FindContours(gray, out var contours, out var hierarchy, RetrievalModes.External, ContourApproximationModes.ApproxNone);
-        Mat dst = Mat.Zeros(gray.Size(), MatType.CV_8UC3);
-        for (int i = 0; i < contours.Length; i++)
-        {
-            Cv2.DrawContours(dst, contours, i, new Scalar(0, 255, 0), 1, LineTypes.Link4, hierarchy);
-        }
+            var maxContour = contours[maxIndex];
 
-        // 遍历轮廓
-        for (int i = 0; i < contours.Length; i++)
-        {
             // 计算轮廓的周长
-            double perimeter = Cv2.ArcLength(contours[i], true);
+            var perimeter = Cv2.ArcLength(maxContour, true);
 
             // 近似多边形拟合
-            OpenCvSharp.Point[] approx = Cv2.ApproxPolyDP(contours[i], 0.04 * perimeter, true);
+            var approx = Cv2.ApproxPolyDP(maxContour, 0.08 * perimeter, true);
 
             // 如果拟合的多边形有三个顶点，认为是三角形
             if (approx.Length == 3)
             {
-                // 计算三条边的长度
-                var sideLengths = new double[3];
-                sideLengths[0] = Distance(approx[1], approx[2]);
-                sideLengths[1] = Distance(approx[2], approx[0]);
-                sideLengths[2] = Distance(approx[0], approx[1]);
+                // 剪裁出三角形所在区域
+                var newSrcMat = new Mat(mat, maxRect);
 
-                var result = sideLengths
-                    .Select((value, index) => new { Value = value, Index = index })
-                    .OrderBy(item => item.Value)
-                    .First();
+                // HSV 阈值取出中心飞镖
+                var hsvMat = new Mat();
+                Cv2.CvtColor(newSrcMat, hsvMat, ColorConversionCodes.BGR2HSV);
+                // var lowScalar = new Scalar(95, 255, 255);
+                // var highScalar = new Scalar(255, 255, 255);
+                var lowScalar = new Scalar(93, 155, 170);
+                var highScalar = new Scalar(255, 255, 255);
+                var hsvThresholdMat = new Mat();
+                Cv2.InRange(hsvMat, lowScalar, highScalar, hsvThresholdMat);
 
-                // 计算最短线的中点
-                var residue = approx.ToList();
-                residue.RemoveAt(result.Index);
-                var midPoint = new OpenCvSharp.Point((residue[0].X + residue[1].X) / 2, (residue[0].Y + residue[1].Y) / 2);
+                // 循环计算三条边的中点,并计算中点到顶点的所有点中连续黑色像素的个数
+                var maxBlackCount = 0;
+                Point correctP1 = new(), correctP2 = new();
+                var offset = new Point(maxRect.X, maxRect.Y);
+                for (int i = 0; i < 3; i++)
+                {
+                    var midPoint = Midpoint(approx[i], approx[(i + 1) % 3]);
+                    var targetPoint = approx[(i + 2) % 3];
 
-                // 在图像上绘制直线
-                //Cv2.Line(dst2, approx[result.Index], midPoint, Scalar.Red, 1);
+                    // 中点到顶点的所有点
+                    var lineIterator = new LineIterator(hsvThresholdMat, midPoint - offset, targetPoint - offset, PixelConnectivity.Connectivity8);
 
-                VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(midPoint, approx[result.Index] + (approx[result.Index] - midPoint) * 3));
+                    // 计算连续黑色像素的个数
+                    var blackCount = 0;
+                    foreach (var item in lineIterator)
+                    {
+                        if (item.GetValue<Vec2b>().Item0 == 255)
+                        {
+                            break;
+                        }
+
+                        blackCount++;
+                    }
+
+                    if (blackCount > maxBlackCount)
+                    {
+                        maxBlackCount = blackCount;
+                        correctP1 = midPoint;
+                        correctP2 = targetPoint;
+                    }
+                }
+                VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(correctP1, correctP2 + (correctP2 - correctP1) * 3));
             }
         }
-
     }
 
-    static double Distance(OpenCvSharp.Point pt1, OpenCvSharp.Point pt2)
+    static Point Midpoint(Point p1, Point p2)
     {
-        int deltaX = Math.Abs(pt2.X - pt1.X);
-        int deltaY = Math.Abs(pt2.Y - pt1.Y);
-
-        return Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+        var midX = (p1.X + p2.X) / 2;
+        var midY = (p1.Y + p2.Y) / 2;
+        return new Point(midX, midY);
     }
 }
