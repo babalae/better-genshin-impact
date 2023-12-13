@@ -105,7 +105,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
             if (!ra.IsEmpty())
             {
                 var text = GetOptionText(content.CaptureRectArea.SrcGreyMat, ra, 200);
-                if (string.IsNullOrEmpty(text))
+                if (string.IsNullOrEmpty(text) || text.Length == 1)
                 {
                     continue;
                 }
