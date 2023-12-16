@@ -36,7 +36,7 @@ public class TestTrigger : ITaskTrigger
     public void Init()
     {
         IsEnabled = false;
-        IsExclusive = true;
+        IsExclusive = false;
     }
 
     public void OnCapture(CaptureContent content)
