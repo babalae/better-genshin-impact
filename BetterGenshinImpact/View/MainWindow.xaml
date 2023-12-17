@@ -3,6 +3,8 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -10,11 +12,15 @@
                  Title="更好的原神"
                  Width="900"
                  Height="600"
+                 d:Background="#D2D2D2"
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  mc:Ignorable="d">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
@@ -62,6 +68,15 @@
                                        TargetPageType="{x:Type pages:MacroSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="XboxController24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="脚本控制"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:ScriptControlPage}"
+                                       Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                                     Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="WebAsset16" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="快捷键"

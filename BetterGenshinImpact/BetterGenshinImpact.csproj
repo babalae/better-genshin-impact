@@ -50,6 +50,11 @@
 		<PackageReference Include="YoloV8" Version="2.0.1" />
 	</ItemGroup>
 
+	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
+		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.4" />
+		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.4" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
 		<ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
