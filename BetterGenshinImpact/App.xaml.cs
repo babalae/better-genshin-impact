@@ -73,6 +73,8 @@ public partial class App : Application
                 // Views and ViewModels
                 services.AddSingleton<HomePage>();
                 services.AddSingleton<HomePageViewModel>();
+                services.AddSingleton<ScriptControlPage>();
+                services.AddSingleton<ScriptControlViewModel>();
                 services.AddSingleton<TriggerSettingsPage>();
                 services.AddSingleton<TriggerSettingsPageViewModel>();
                 services.AddSingleton<MacroSettingsPage>();

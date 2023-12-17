@@ -85,12 +85,10 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        启动后才能使用各项功能，
-                        <Run FontWeight="Bold" TextDecorations="Underline">
+                        启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
                             点击展开启动相关配置
                         </Run>
-                        。
-                    </ui:TextBlock>
+                        。</ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -128,13 +126,12 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="如果可用的话，推荐选择 BitBlt，问题较少"
                                   TextWrapping="Wrap" />
-                    <ComboBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        ItemsSource="{Binding ModeNames}"
-                        SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding ModeNames}"
+                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -156,13 +153,12 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="默认50ms，普通用户不建议调整这个值，具体调整方式见文档"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        MinWidth="90"
-                        Margin="0,0,36,0"
-                        Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -184,13 +180,12 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="测试功能，测试几种截图模式的效果"
                                   TextWrapping="Wrap" />
-                    <ui:Button
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        Command="{Binding StartCaptureTestCommand}"
-                        Content="测试图像捕获" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding StartCaptureTestCommand}"
+                               Content="测试图像捕获" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -223,7 +218,9 @@
         </ui:CardExpander>
 
         <!--  原神，启动！  -->
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon LinkSquare24}">
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon LinkSquare24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -234,24 +231,21 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="同时启动原神" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="启动 BetterGI 时，如果原神未启动，则自动启动原神。" />
-                    <ui:ToggleSwitch
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,24,0"
-                        IsChecked="{Binding Config.GenshinStartConfig.LinkedStartEnabled, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="同时启动原神"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="启动 BetterGI 时，如果原神未启动，则自动启动原神。"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.GenshinStartConfig.LinkedStartEnabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -264,25 +258,22 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        Text="原神安装位置（不支持云原神的联动启动）"
-                        TextWrapping="Wrap" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        Text="{Binding Config.GenshinStartConfig.InstallPath, Mode=TwoWay}"
-                        TextWrapping="Wrap" />
-                    <ui:Button
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        Command="{Binding SelectInstallPathCommand}"
-                        Content="浏览" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="原神安装位置（不支持云原神的联动启动）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding Config.GenshinStartConfig.InstallPath, Mode=TwoWay}"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding SelectInstallPathCommand}"
+                               Content="浏览" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -293,26 +284,25 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="启动参数" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="如果你不知道什么是启动参数请不要填写。" />
-                    <!--常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080-->
-                    <ui:TextBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        MinWidth="300"
-                        Margin="0,0,24,0"
-                        Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启动参数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="如果你不知道什么是启动参数请不要填写。"
+                                  TextWrapping="Wrap" />
+                    <!--  常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080  -->
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
+                                TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

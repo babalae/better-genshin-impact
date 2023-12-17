@@ -1,18 +1,19 @@
 ﻿<Page x:Class="BetterGenshinImpact.View.Pages.TaskSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      mc:Ignorable="d"
+      Title="TaskSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
+      d:DesignHeight="850"
+      d:DesignWidth="750"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      d:DesignHeight="850" d:DesignWidth="750"
-      Title="TaskSettingsPage">
+      mc:Ignorable="d">
 
     <!--<Grid Margin="42,16,42,12">
         <Grid.RowDefinitions>
@@ -73,11 +74,12 @@
 
 
     <StackPanel Margin="42,16,42,12">
-        <ui:TextBlock
-            Margin="0,0,0,8"
-            FontTypography="BodyStrong"
-            Text="独立任务设置" />
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon PlayingCards20}">
+        <ui:TextBlock Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="独立任务设置" />
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon PlayingCards20}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -88,31 +90,25 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="自动七圣召唤" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap">
-                        全自动打牌 -
-                        <Hyperlink
-                            Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
-                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动七圣召唤"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        全自动打牌 -<Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <ui:Button
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,24,0"
-                        Content="{Binding SwitchAutoGeniusInvokationButtonText}"
-                        Command="{Binding SwitchAutoGeniusInvokationCommand}" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,24,0"
+                               Command="{Binding SwitchAutoGeniusInvokationCommand}"
+                               Content="{Binding SwitchAutoGeniusInvokationButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -125,26 +121,23 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="选择卡组" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="选择你想要使用的卡组与策略" />
-                    <ComboBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        ItemsSource="{Binding StrategyList}"
-                        SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}"
-                        Width="180" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="选择卡组"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="选择你想要使用的卡组与策略"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="180"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding StrategyList}"
+                              SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -155,32 +148,31 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="设置延时（毫秒）" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="如果频繁出现操作速度过快，操作动画未播放完毕的情况可以添加延时" />
-                    <ui:NumberBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,24,0"
-                        Maximum="5000"
-                        Minimum="0"
-                        Value="{Binding Config.AutoGeniusInvokationConfig.SleepDelay, Mode=TwoWay}"
-                        ValidationMode="InvalidInputOverwritten" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="设置延时（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="如果频繁出现操作速度过快，操作动画未播放完毕的情况可以添加延时"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Margin="0,0,36,0"
+                                  Maximum="5000"
+                                  Minimum="0"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding Config.AutoGeniusInvokationConfig.SleepDelay, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon LeafThree24}">
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon LeafThree24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -191,31 +183,25 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="自动伐木" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap">
-                        需要装备「王树瑞佑」 -
-                        <Hyperlink
-                            Command="{Binding GoToAutoWoodUrlCommand}"
-                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动伐木"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        需要装备「王树瑞佑」 -<Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <ui:Button
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,24,0"
-                        Content="{Binding SwitchAutoWoodButtonText}"
-                        Command="{Binding SwitchAutoWoodCommand}" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,24,0"
+                               Command="{Binding SwitchAutoWoodCommand}"
+                               Content="{Binding SwitchAutoWoodButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -228,25 +214,22 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="循环次数" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="循环伐木多少次，输入 0 则为无限循环直到手动终止" />
-                    <ui:TextBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        MinWidth="90"
-                        Margin="0,0,36,0"
-                        Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="循环次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="循环伐木多少次，输入 0 则为无限循环直到手动终止"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -257,25 +240,22 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="使用小道具后的额外延迟（毫秒）" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="如果希望看到使用小道具后获得木材的提示，可以调整这个值" />
-                    <ui:TextBox
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        MinWidth="90"
-                        Margin="0,0,36,0"
-                        Text="{Binding Config.AutoWoodConfig.AfterZSleepDelay, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="使用小道具后的额外延迟（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="如果希望看到使用小道具后获得木材的提示，可以调整这个值"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoWoodConfig.AfterZSleepDelay, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
