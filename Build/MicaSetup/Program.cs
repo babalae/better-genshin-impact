@@ -43,7 +43,7 @@ internal class Program
                 option.IsUseRegistryPreferX86 = null!;
                 option.IsAllowFullFolderSecurity = true;
                 option.IsAllowFirewall = true;
-                option.IsRefreshExplorer = false;
+                option.IsRefreshExplorer = true;
                 option.IsInstallCertificate = false;
                 option.OverlayInstallRemoveExt = "exe,dll,pdb";
                 option.UnpackingPassword = null!;

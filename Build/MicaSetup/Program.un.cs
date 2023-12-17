@@ -39,7 +39,7 @@ internal class Program
                 option.IsCreateAsAutoRun = false;
                 option.IsUseRegistryPreferX86 = null!;
                 option.IsAllowFirewall = true;
-                option.IsRefreshExplorer = false;
+                option.IsRefreshExplorer = true;
                 option.IsInstallCertificate = false;
                 option.ExeName = @"BetterGI\BetterGI.exe";
                 option.KeyName = "BetterGI";
