@@ -1,13 +1,6 @@
-﻿using System.Text;
+﻿using OxyPlot;
+using OxyPlot.Series;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace BetterGenshinImpact.Test
 {
@@ -16,12 +9,14 @@ namespace BetterGenshinImpact.Test
     /// </summary>
     public partial class MainWindow : Window
     {
+
         public MainWindow()
         {
+
             InitializeComponent();
             
             // new HsvTestWindow().Run();
-            CameraOrientationTest.Test1();
+          
         }
     }
 }
