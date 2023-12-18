@@ -7,12 +7,12 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
 {
     public InputBuilder()
     {
-        _inputList = new List<User32.INPUT>();
+        _inputList = [];
     }
 
     public User32.INPUT[] ToArray()
     {
-        return _inputList.ToArray();
+        return [.. _inputList];
     }
 
     public IEnumerator<User32.INPUT> GetEnumerator()
@@ -25,22 +25,41 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
         return GetEnumerator();
     }
 
-    public User32.INPUT this[int position]
-    {
-        get
-        {
-            return _inputList[position];
-        }
-    }
+    public User32.INPUT this[int position] => _inputList[position];
 
     public static bool IsExtendedKey(User32.VK keyCode)
     {
-        return keyCode == User32.VK.VK_MENU || keyCode == User32.VK.VK_LMENU || keyCode == User32.VK.VK_RMENU || keyCode == User32.VK.VK_CONTROL || keyCode == User32.VK.VK_RCONTROL || keyCode == User32.VK.VK_INSERT || keyCode == User32.VK.VK_DELETE || keyCode == User32.VK.VK_HOME || keyCode == User32.VK.VK_END || keyCode == User32.VK.VK_PRIOR || keyCode == User32.VK.VK_NEXT || keyCode == User32.VK.VK_RIGHT || keyCode == User32.VK.VK_UP || keyCode == User32.VK.VK_LEFT || keyCode == User32.VK.VK_DOWN || keyCode == User32.VK.VK_NUMLOCK || keyCode == User32.VK.VK_CANCEL || keyCode == User32.VK.VK_SNAPSHOT || keyCode == User32.VK.VK_DIVIDE;
+        return
+            keyCode == User32.VK.VK_MENU
+         || keyCode == User32.VK.VK_LMENU
+         || keyCode == User32.VK.VK_RMENU
+         || keyCode == User32.VK.VK_CONTROL
+         || keyCode == User32.VK.VK_RCONTROL
+         || keyCode == User32.VK.VK_INSERT
+         || keyCode == User32.VK.VK_DELETE
+         || keyCode == User32.VK.VK_HOME
+         || keyCode == User32.VK.VK_END
+         || keyCode == User32.VK.VK_PRIOR
+         || keyCode == User32.VK.VK_NEXT
+         || keyCode == User32.VK.VK_RIGHT
+         || keyCode == User32.VK.VK_UP
+         || keyCode == User32.VK.VK_LEFT
+         || keyCode == User32.VK.VK_DOWN
+         || keyCode == User32.VK.VK_NUMLOCK
+         || keyCode == User32.VK.VK_CANCEL
+         || keyCode == User32.VK.VK_SNAPSHOT
+         || keyCode == User32.VK.VK_DIVIDE;
     }
 
     public InputBuilder AddKeyDown(User32.VK keyCode, bool? isExtendedKey = null)
     {
         bool isUseExtendedKey = isExtendedKey == null ? IsExtendedKey(keyCode) : isExtendedKey.Value;
+
+        if ((VK2)keyCode == VK2.NumEnter)
+        {
+            keyCode = User32.VK.VK_RETURN;
+            isUseExtendedKey = true;
+        }
 
         User32.INPUT input = new()
         {
@@ -48,7 +67,7 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
             ki = new User32.KEYBDINPUT()
             {
                 wVk = (ushort)keyCode,
-                wScan = 0,
+                wScan = (ushort)(User32.MapVirtualKey((uint)keyCode, 0) & 0xFFU),
                 dwFlags = (isUseExtendedKey ? User32.KEYEVENTF.KEYEVENTF_EXTENDEDKEY : 0),
                 time = 0,
                 dwExtraInfo = IntPtr.Zero,
@@ -63,13 +82,19 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
     {
         bool isUseExtendedKey = isExtendedKey == null ? IsExtendedKey(keyCode) : isExtendedKey.Value;
 
+        if ((VK2)keyCode == VK2.NumEnter)
+        {
+            keyCode = User32.VK.VK_RETURN;
+            isUseExtendedKey = true;
+        }
+
         User32.INPUT input = new()
         {
             type = User32.INPUTTYPE.INPUT_KEYBOARD,
             ki = new User32.KEYBDINPUT()
             {
                 wVk = (ushort)keyCode,
-                wScan = 0,
+                wScan = (ushort)(User32.MapVirtualKey((uint)keyCode, 0) & 0xFFU),
                 dwFlags = (isUseExtendedKey ? User32.KEYEVENTF.KEYEVENTF_EXTENDEDKEY : 0) | User32.KEYEVENTF.KEYEVENTF_KEYUP,
                 time = 0,
                 dwExtraInfo = IntPtr.Zero,
@@ -332,4 +357,15 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
     }
 
     private readonly List<User32.INPUT> _inputList;
+}
+
+/// <summary>
+/// https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+/// </summary>
+public enum VK2
+{
+    /// <summary>
+    ///  The Unassigned code: The Num ENTER key.
+    /// </summary>
+    NumEnter = 0x0E,
 }

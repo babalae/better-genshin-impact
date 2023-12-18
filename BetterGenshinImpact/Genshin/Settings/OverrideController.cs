@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.Genshin.Settings;
@@ -362,7 +360,7 @@ public static class ElementIdentifierIdConverter
             ElementIdentifierId.D9 => VK.VK_9,
             ElementIdentifierId.Semicolon => VK.VK_OEM_1, // ;
             ElementIdentifierId.LeftSquareBracket => VK.VK_OEM_4, // [
-            ElementIdentifierId.Backslash => VK.VK_OEM_102, //?
+            ElementIdentifierId.Backslash => VK.VK_OEM_102, // \
             ElementIdentifierId.RightSquareBracket => VK.VK_OEM_6, // ]
             ElementIdentifierId.Tilde => VK.VK_OEM_3, // `
             ElementIdentifierId.A => VK.VK_A,
