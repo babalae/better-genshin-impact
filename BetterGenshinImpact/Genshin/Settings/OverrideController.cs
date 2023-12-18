@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Fischless.WindowsInput;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -405,7 +406,7 @@ public static class ElementIdentifierIdConverter
             ElementIdentifierId.NumpadAsterisk => VK.VK_MULTIPLY,
             ElementIdentifierId.NumpadMinus => VK.VK_SUBTRACT,
             ElementIdentifierId.NumpadPlus => VK.VK_ADD,
-            ElementIdentifierId.NumpadEnter => VK.VK_RETURN,
+            ElementIdentifierId.NumpadEnter => (VK)VK2.VK_NUMPAD_ENTER,
             ElementIdentifierId.ArrowUp => VK.VK_UP,
             ElementIdentifierId.ArrowDown => VK.VK_DOWN,
             ElementIdentifierId.ArrowRight => VK.VK_RIGHT,

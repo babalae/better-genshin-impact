@@ -30,8 +30,6 @@ public class AutoWoodTask
 
     private VK _zKey = VK.VK_Z;
 
-    private bool? _zIsExt = null;
-
     public AutoWoodTask()
     {
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
@@ -59,7 +57,6 @@ public class AutoWoodTask
                 if (key != ElementIdentifierId.Z)
                 {
                     _zKey = key.ToVK();
-                    _zIsExt = key.ToIsExt();
                     Logger.LogInformation($"自动伐木检测到用户改键 {ElementIdentifierId.Z.ToName()} 改为 {key.ToName()}");
                     if (key == ElementIdentifierId.LeftShift || key == ElementIdentifierId.RightShift)
                     {
@@ -127,14 +124,14 @@ public class AutoWoodTask
                 throw new NormalEndException("请先装备小道具「王树瑞佑」！");
 #else
                 Thread.Sleep(2000);
-                Simulation.SendInputEx.Keyboard.KeyPress(_zIsExt, _zKey);
+                Simulation.SendInputEx.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
 #endif
             }
             else
             {
-                Simulation.SendInputEx.Keyboard.KeyPress(_zIsExt, _zKey);
+                Simulation.SendInputEx.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
             }
@@ -155,7 +152,7 @@ public class AutoWoodTask
 #endif
                 }
 
-                Simulation.SendInputEx.Keyboard.KeyPress(_zIsExt, _zKey);
+                Simulation.SendInputEx.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 Sleep(500, taskParam.Cts);
             }, TimeSpan.FromSeconds(1), 120);

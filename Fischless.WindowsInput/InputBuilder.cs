@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.User32;
 
 namespace Fischless.WindowsInput;
 
@@ -55,7 +56,7 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
     {
         bool isUseExtendedKey = isExtendedKey == null ? IsExtendedKey(keyCode) : isExtendedKey.Value;
 
-        if ((VK2)keyCode == VK2.NumEnter)
+        if ((VK2)keyCode == VK2.VK_NUMPAD_ENTER)
         {
             keyCode = User32.VK.VK_RETURN;
             isUseExtendedKey = true;
@@ -82,7 +83,7 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
     {
         bool isUseExtendedKey = isExtendedKey == null ? IsExtendedKey(keyCode) : isExtendedKey.Value;
 
-        if ((VK2)keyCode == VK2.NumEnter)
+        if ((VK2)keyCode == VK2.VK_NUMPAD_ENTER)
         {
             keyCode = User32.VK.VK_RETURN;
             isUseExtendedKey = true;
@@ -365,7 +366,12 @@ internal class InputBuilder : IEnumerable<User32.INPUT>, IEnumerable
 public enum VK2
 {
     /// <summary>
+    ///  ENTER key
+    /// </summary>
+    VK_ENTER = VK.VK_RETURN,
+
+    /// <summary>
     ///  The Unassigned code: The Num ENTER key.
     /// </summary>
-    NumEnter = 0x0E,
+    VK_NUMPAD_ENTER = 0x0E,
 }
