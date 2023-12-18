@@ -6,11 +6,11 @@ namespace Fischless.KeyboardCapture;
 
 public sealed class KeyboardHook : IDisposable
 {
-    public event KeyEventHandler KeyDown = null!;
+    public event KeyboardEventHandler KeyDown = null!;
 
-    public event KeyPressEventHandler KeyPress = null!;
+    public event KeyboardPressEventHandler KeyPress = null!;
 
-    public event KeyEventHandler KeyUp = null!;
+    public event KeyboardEventHandler KeyUp = null!;
 
     private User32.SafeHHOOK hook = new(IntPtr.Zero);
     private User32.HookProc? hookProc;
@@ -68,8 +68,8 @@ public sealed class KeyboardHook : IDisposable
 
                 if (KeyDown != null && (wParam == (nint)User32.WindowMessage.WM_KEYDOWN || wParam == (nint)User32.WindowMessage.WM_SYSKEYDOWN))
                 {
-                    Keys keyData = (Keys)hookStruct.vkCode;
-                    KeyEventArgs e = new(keyData);
+                    KeyboardKeys keyData = (KeyboardKeys)hookStruct.vkCode;
+                    KeyboardEventArgs e = new(keyData);
                     KeyDown(this, e);
                 }
 
@@ -80,15 +80,15 @@ public sealed class KeyboardHook : IDisposable
 
                     if (User32.ToAscii(hookStruct.vkCode, hookStruct.scanCode, keyState, out ushort lpChar, hookStruct.flags) == 1)
                     {
-                        KeyPressEventArgs e = new((char)lpChar);
+                        KeyboardPressEventArgs e = new((char)lpChar);
                         KeyPress(this, e);
                     }
                 }
 
                 if (KeyUp != null && (wParam == (nint)User32.WindowMessage.WM_KEYUP || wParam == (nint)User32.WindowMessage.WM_SYSKEYUP))
                 {
-                    Keys keyData = (Keys)hookStruct.vkCode;
-                    KeyEventArgs e = new(keyData);
+                    KeyboardKeys keyData = (KeyboardKeys)hookStruct.vkCode;
+                    KeyboardEventArgs e = new(keyData);
                     KeyUp(this, e);
                 }
             }
