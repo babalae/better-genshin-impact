@@ -13,7 +13,7 @@ public class LineDrawable
 
     public Point P2 { get; set; }
 
-    public Pen Pen { get; } = new(Color.Red, 2);
+    public Pen Pen { get; set; } = new(Color.Red, 2);
 
     public LineDrawable(Point p1, Point p2)
     {

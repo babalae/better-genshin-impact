@@ -66,6 +66,7 @@ public class CameraOrientationTest
             sum = sum.Zip(all, (x, y) => x + y).ToArray();
         }
 
+        // 卷积
         var result = new int[360];
         for (var i = -2; i <= 2; i++)
         {
