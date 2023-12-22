@@ -17,6 +17,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using OpenCvSharp;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -75,7 +77,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnLoaded()
     {
-
+        // OnTest();
     }
 
     private void OnClosed()
@@ -182,11 +184,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnTest()
     {
-        //var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\七圣召唤\d4.png", ImreadModes.Grayscale));
-        //foreach (var region in result.Regions)
-        //{
-        //    Debug.WriteLine($"{region.Text}");
-        //}
+        // var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\自动战斗\队伍识别\2.png", ImreadModes.Grayscale));
+        // foreach (var region in result.Regions)
+        // {
+        //     Debug.WriteLine($"{region.Text}");
+        // }
 
         //try
         //{
