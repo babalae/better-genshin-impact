@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.ViewModel
     {
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly IConfigService _configService;
-        public string Title => $"BetterGI · 更好的原神 · {Global.Version}";
+        public string Title { get; set; } = $"BetterGI · 更好的原神 · {Global.Version}";
 
         public AllConfig Config { get; set; }
 
@@ -32,6 +32,9 @@ namespace BetterGenshinImpact.ViewModel
             _configService = configService;
             Config = configService.Get();
             _logger = App.GetLogger<MainWindowViewModel>();
+#if DEBUG
+            Title += " · Dev";
+#endif
         }
 
 

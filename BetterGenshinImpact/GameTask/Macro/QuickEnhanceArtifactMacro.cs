@@ -1,9 +1,11 @@
-﻿using BetterGenshinImpact.Helpers;
+﻿using System;
+using BetterGenshinImpact.Helpers;
 using System.Threading;
 using System.Windows;
 
 namespace BetterGenshinImpact.GameTask.Macro;
 
+[Obsolete]
 public class QuickEnhanceArtifactMacro
 {
 
