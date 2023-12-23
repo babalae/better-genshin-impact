@@ -17,6 +17,9 @@ public class AutoSkipAssets
 
     public RecognitionObject PageCloseRo;
 
+    public RecognitionObject CollectRo;
+    public RecognitionObject ReRo;
+
 
     //public Mat BinaryStopAutoButtonMat;
 
@@ -94,6 +97,24 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "page_close.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 8 , 0, info.CaptureAreaRect.Width / 8, info.CaptureAreaRect.Height / 8),
+            DrawOnWindow = true
+        }.InitTemplate();
+
+        // 一键派遣
+        CollectRo = new RecognitionObject
+        {
+            Name = "Collect",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "collect.png"),
+            RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 3),
+            DrawOnWindow = true
+        }.InitTemplate();
+        ReRo = new RecognitionObject
+        {
+            Name = "Re",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "re.png"),
+            RegionOfInterest = new Rect(info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = true
         }.InitTemplate();
     }

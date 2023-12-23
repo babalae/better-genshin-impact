@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using Sdcb.PaddleOCR;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -16,7 +17,10 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 /// 重新探索派遣
 ///
 /// 必须在已经有探索派遣完成的情况下使用
+///
+/// 于 4.3 版本废弃
 /// </summary>
+[Obsolete]
 public class ExpeditionTask
 {
     private static readonly List<string> ExpeditionCharacterList = new();

@@ -148,8 +148,8 @@ public class AutoSkipTrigger : ITaskTrigger
                         exploreIconRa.ClickCenter();
 
                         // 等待探索派遣界面打开
-                        Thread.Sleep(1000);
-                        new ExpeditionTask().Run(content);
+                        Thread.Sleep(800);
+                        new OneKeyExpeditionTask().Run(_autoSkipAssets);
                         exploreIconRa.Dispose();
                         return;
                     }

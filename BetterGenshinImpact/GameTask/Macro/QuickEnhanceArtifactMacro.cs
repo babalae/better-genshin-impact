@@ -5,6 +5,9 @@ using System.Windows;
 
 namespace BetterGenshinImpact.GameTask.Macro;
 
+/// <summary>
+/// 于 4.3 版本废弃
+/// </summary>
 [Obsolete]
 public class QuickEnhanceArtifactMacro
 {
