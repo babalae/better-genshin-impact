@@ -153,12 +153,12 @@ public class Duel
                     if (diceCountFromOcr != -10)
                     {
                         var diceDiff = Math.Abs(CurrentDiceCount - diceCountFromOcr);
-                        if (diceDiff is > 0 and <= 2)
+                        if (diceDiff is > 0 and <= 4)
                         {
                             _logger.LogInformation("可能存在场地牌影响了骰子数[{CurrentDiceCount}] -> [{DiceCountFromOcr}]", CurrentDiceCount, diceCountFromOcr);
                             CurrentDiceCount = diceCountFromOcr;
                         }
-                        else if (diceDiff > 2)
+                        else if (diceDiff > 4)
                         {
                             _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
                         }
