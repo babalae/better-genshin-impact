@@ -107,7 +107,7 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "collect.png"),
             RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 3),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
         ReRo = new RecognitionObject
         {
@@ -115,7 +115,7 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "re.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
     }
 }

@@ -272,20 +272,20 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="凯瑟琳 - 自动重新派遣（4.3需要更新）" />
+                        Text="凯瑟琳 - 自动重新派遣" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="自动领取已完成探索的奖励，并按照配置进行重新派遣" />
-                    <ui:Button
+                        Text="自动领取已完成探索的奖励，并重新派遣" />
+                    <!--<ui:Button
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Content="配置"
                         Margin="0,0,16,0"
-                        Command="{Binding OpenReExploreCharacterBoxCommand}" />
+                        Command="{Binding OpenReExploreCharacterBoxCommand}" />-->
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"

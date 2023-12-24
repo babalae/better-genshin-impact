@@ -16,7 +16,7 @@ public class OneKeyExpeditionTask
         {
             ra.ClickCenter();
             TaskControl.Logger.LogInformation("探索派遣：{Text}", "全部领取");
-            TaskControl.Sleep(1000);
+            TaskControl.Sleep(1100);
             // 2.重新派遣
             content = TaskControl.CaptureToContent();
             content.CaptureRectArea.Find(assets.ReRo, ra2 =>
@@ -25,5 +25,6 @@ public class OneKeyExpeditionTask
                 TaskControl.Logger.LogInformation("探索派遣：{Text}", "再次派遣");
             });
         });
+        VisionContext.Instance().DrawContent.ClearAll();
     }
 }
