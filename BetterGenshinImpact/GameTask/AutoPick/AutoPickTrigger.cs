@@ -136,7 +136,12 @@ public class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
-                
+                // 单个字符不拾取
+                if (text.Length <= 1)
+                {
+                    return;
+                }
+
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);

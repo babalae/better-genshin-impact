@@ -36,7 +36,7 @@ public class TestTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = true;
+        IsEnabled = false;
         IsExclusive = false;
     }
 
