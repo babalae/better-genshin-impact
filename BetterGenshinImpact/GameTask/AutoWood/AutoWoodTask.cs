@@ -74,7 +74,7 @@ public class AutoWoodTask
                     break;
                 }
 
-                Felling(taskParam);
+                Felling(taskParam, i + 1 == taskParam.WoodRoundNum);
                 VisionContext.Instance().DrawContent.ClearAll();
                 Sleep(500, taskParam.Cts);
             }
@@ -97,10 +97,15 @@ public class AutoWoodTask
         }
     }
 
-    private void Felling(WoodTaskParam taskParam)
+    private void Felling(WoodTaskParam taskParam, bool isLast = false)
     {
         // 1. 按 z 触发「王树瑞佑」
         PressZ(taskParam);
+
+        if (isLast)
+        {
+            return;
+        }
 
         // 2. 按下 ESC 打开菜单 并退出游戏
         PressEsc(taskParam);
