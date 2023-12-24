@@ -359,12 +359,31 @@
 		<None Update="User\AutoGeniusInvokation\7.莫娜皇女白术.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\AutoGeniusInvokation\8.雷神柯莱刻晴[推荐].txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]东东.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]巴哈拉克.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]马鲁夫.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]黄衫.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\pick_white_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="GameTask\AutoDomain\" />
 	</ItemGroup>
 
 </Project>
