@@ -65,6 +65,12 @@ public class PostMessageSimulator
         return this;
     }
 
+    public PostMessageSimulator KeyDown(User32.VK vk)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
+        return this;
+    }
+
     public PostMessageSimulator KeyUp(User32.VK vk)
     {
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);

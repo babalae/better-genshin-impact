@@ -149,6 +149,13 @@ public partial class HotKeyPageViewModel : ObservableObject
             Config.HotKeyConfig.AutoWoodHotkey,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoWood(); }
         ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "启动/停止自动秘境",
+            nameof(Config.HotKeyConfig.AutoDomainHotkey),
+            Config.HotKeyConfig.AutoDomainHotkey,
+            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
+        ));
     }
 
     private string ToChinese(bool enabled)

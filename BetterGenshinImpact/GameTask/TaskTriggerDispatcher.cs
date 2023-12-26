@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -43,14 +44,21 @@ namespace BetterGenshinImpact.GameTask
             //_timer.Tick += Tick;
         }
 
+        public static TaskTriggerDispatcher Instance()
+        {
+            if (_instance == null)
+            {
+                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
+            }
+
+            return _instance;
+        }
+
         public static IGameCapture GlobalGameCapture
         {
             get
             {
-                if (_instance == null)
-                {
-                    throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
-                }
+                _instance = Instance();
 
                 if (_instance.GameCapture == null)
                 {
@@ -167,6 +175,10 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoWood)
             {
                 Task.Run(() => { new AutoWoodTask().Start((WoodTaskParam)param); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoDomain)
+            {
+                Task.Run(() => { new AutoDomainTask((AutoDomainParam)param).Start(); });
             }
         }
 

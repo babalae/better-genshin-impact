@@ -11,4 +11,5 @@ public enum IndependentTaskEnum
 
     AutoGeniusInvokation,
     AutoWood,
+    AutoDomain,
 }

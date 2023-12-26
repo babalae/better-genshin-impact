@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoWood;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -32,6 +33,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private int _autoWoodRoundNum;
     [ObservableProperty] private string _switchAutoWoodButtonText;
 
+    [ObservableProperty] private int _autoDomainRoundNum;
+    [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
+
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -43,7 +47,6 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         _switchAutoGeniusInvokationButtonText = "启动";
 
         _switchAutoWoodButtonText = "启动";
-
     }
 
     private string[] LoadCustomScript()
@@ -100,6 +103,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
 
                 var content = File.ReadAllText(path);
+                _cts?.Cancel();
                 _cts = new CancellationTokenSource();
                 var param = new GeniusInvokationTaskParam(_cts, _taskDispatcher, content);
                 _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoGeniusInvokation, param);
@@ -130,6 +134,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             if (SwitchAutoWoodButtonText == "启动")
             {
+                _cts?.Cancel();
                 _cts = new CancellationTokenSource();
                 var param = new WoodTaskParam(_cts, _taskDispatcher, AutoWoodRoundNum);
                 _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
@@ -152,6 +157,40 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8") { UseShellExecute = true });
     }
+
+
+    [RelayCommand]
+    public void OnSwitchAutoDomain()
+    {
+        try
+        {
+            if (SwitchAutoDomainButtonText == "启动")
+            {
+                _cts?.Cancel();
+                _cts = new CancellationTokenSource();
+                var param = new AutoDomainParam(_cts, AutoWoodRoundNum);
+                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
+                SwitchAutoDomainButtonText = "停止";
+            }
+            else
+            {
+                _cts?.Cancel();
+                SwitchAutoDomainButtonText = "启动";
+            }
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoDomainUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8") { UseShellExecute = true });
+    }
+
+
 
     public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
     {

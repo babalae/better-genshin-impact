@@ -41,7 +41,7 @@ public class TaskControl
     {
         if (cts.IsCancellationRequested)
         {
-            throw new NormalEndException("取消自动伐木任务");
+            throw new NormalEndException("取消自动任务");
         }
         if (millisecondsTimeout <= 0)
         {
@@ -51,7 +51,7 @@ public class TaskControl
         {
             if (cts.IsCancellationRequested)
             {
-                throw new NormalEndException("取消自动伐木任务");
+                throw new NormalEndException("取消自动任务");
             }
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
@@ -62,7 +62,7 @@ public class TaskControl
         Thread.Sleep(millisecondsTimeout);
         if (cts.IsCancellationRequested)
         {
-            throw new NormalEndException("取消自动伐木任务");
+            throw new NormalEndException("取消自动任务");
         }
     }
 
