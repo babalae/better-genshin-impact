@@ -98,7 +98,7 @@
         </ui:CardControl>
 
         <!-- 一键强化 -->
-        <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Cursor24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Cursor24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -114,7 +114,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="快速强化圣遗物（4.3下线）" />
+                        Text="快速强化圣遗物" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
@@ -163,7 +163,7 @@
                         ValidationMode="InvalidInputOverwritten" />
                 </Grid>
             </StackPanel>
-        </ui:CardExpander>-->
+        </ui:CardExpander>
 
         <!-- 一键购买 -->
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">

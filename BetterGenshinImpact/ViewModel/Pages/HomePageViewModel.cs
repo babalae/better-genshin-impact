@@ -128,7 +128,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            if (!string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
+            if (Config.GenshinStartConfig.LinkedStartEnabled && !string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
             {
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
             }

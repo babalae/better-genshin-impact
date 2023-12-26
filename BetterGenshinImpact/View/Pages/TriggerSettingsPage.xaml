@@ -342,7 +342,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="自动选择鱼饵并抛竿" />
+                        Text="自动选择鱼饵并抛竿（实验功能）" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"

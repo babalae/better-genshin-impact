@@ -120,13 +120,13 @@ public partial class HotKeyPageViewModel : ObservableObject
         );
         HotKeySettingModels.Add(turnAroundHotKeySettingModel);
 
-        // var enhanceArtifactHotKeySettingModel = new HotKeySettingModel(
-        //     "按下快速强化圣遗物",
-        //     nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
-        //     Config.HotKeyConfig.EnhanceArtifactHotkey,
-        //     (_, _) => { QuickEnhanceArtifactMacro.Done(); }
-        // );
-        // HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
+        var enhanceArtifactHotKeySettingModel = new HotKeySettingModel(
+            "按下快速强化圣遗物",
+            nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
+            Config.HotKeyConfig.EnhanceArtifactHotkey,
+            (_, _) => { QuickEnhanceArtifactMacro.Done(); }
+        );
+        HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
 
         HotKeySettingModels.Add(new HotKeySettingModel(
             "按下快速购买商店物品",
