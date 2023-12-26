@@ -22,7 +22,7 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty] private string _turnAroundHotkey = "F3";
 
-    // [ObservableProperty] private string _enhanceArtifactHotkey = "F4";
+    [ObservableProperty] private string _enhanceArtifactHotkey = "F4";
 
     [ObservableProperty] private string _quickBuyHotkey = "";
 
