@@ -383,7 +383,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="GameTask\AutoDomain\" />
+	  <Folder Include="GameTask\AutoDomain\Model\" />
 	</ItemGroup>
 
 </Project>
