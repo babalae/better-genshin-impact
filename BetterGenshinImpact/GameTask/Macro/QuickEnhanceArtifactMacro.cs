@@ -6,9 +6,8 @@ using System.Windows;
 namespace BetterGenshinImpact.GameTask.Macro;
 
 /// <summary>
-/// 于 4.3 版本废弃
+/// 一键强化圣遗物
 /// </summary>
-[Obsolete]
 public class QuickEnhanceArtifactMacro
 {
 
