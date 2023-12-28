@@ -7,14 +7,17 @@ using BetterGenshinImpact.View;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -36,6 +39,15 @@ namespace BetterGenshinImpact.GameTask
         private bool _prevGameActive;
 
         private DateTime _prevManualGc = DateTime.MinValue;
+
+        /// <summary>
+        /// 捕获结果队列
+        /// </summary>
+        private ConcurrentQueue<Bitmap> _bitmapQueue = new();
+        /// <summary>
+        /// 仅捕获模式
+        /// </summary>
+        private bool _onlyCaptureModeEnabled = false;
 
         public TaskTriggerDispatcher()
         {
@@ -265,6 +277,11 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
+                if (IsOnlyCapture(bitmap))
+                {
+                    return;
+                }
+
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
                 var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
@@ -332,6 +349,45 @@ namespace BetterGenshinImpact.GameTask
             }
 
             return false;
+        }
+
+        private bool IsOnlyCapture(Bitmap bitmap)
+        {
+            _bitmapQueue.Enqueue(bitmap);
+            while (_bitmapQueue.Count > 1)
+            {
+                _bitmapQueue.TryDequeue(out _);
+            }
+            return _onlyCaptureModeEnabled;
+        }
+
+        public void SetOnlyCaptureMode(bool enabled)
+        {
+            _onlyCaptureModeEnabled = enabled;
+            if (!enabled)
+            {
+                _bitmapQueue.Clear();
+            }
+        }
+
+        public Bitmap? GetLastCaptureBitmap()
+        {
+            if (_bitmapQueue.TryPeek(out var bitmap))
+            {
+                return bitmap;
+            }
+
+            return null;
+        }
+
+        public CaptureContent? GetLastCaptureContent()
+        {
+            var bitmap = GetLastCaptureBitmap();
+            if (bitmap == null)
+            {
+                return null;
+            }
+            return new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
         }
     }
 }

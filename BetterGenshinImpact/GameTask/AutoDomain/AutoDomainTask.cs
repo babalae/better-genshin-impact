@@ -39,6 +39,10 @@ public class AutoDomainTask
             SystemControl.ActivateWindow();
             // 1. 走到钥匙处启动
             WalkToStartDomain();
+
+            // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
+
+            // 3. 旋转视角后寻找石化古树
         }
         catch (Exception e)
         {
