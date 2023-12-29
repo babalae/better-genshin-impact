@@ -1,18 +1,11 @@
-﻿using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.View.Drawable;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoWood.Utils;
-using Microsoft.Extensions.Logging;
-using Vanara.PInvoke;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
+﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View.Drawable;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
@@ -35,10 +28,11 @@ public class AutoDomainTask
     {
         try
         {
-            Logger.LogInformation("→ {Text} 设置总次数：{Cnt}", "自动秘境，启动！", _taskParam.DomainRoundNum);
-            SystemControl.ActivateWindow();
+            Init();
+            var combatScenes = new CombatScenes();
+            combatScenes.InitializeTeam(GetContentFromDispatcher());
             // 1. 走到钥匙处启动
-            WalkToStartDomain();
+            // WalkToStartDomain();
 
             // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
 
@@ -51,8 +45,16 @@ public class AutoDomainTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().StartTimer();
+            TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(false);
+            Logger.LogInformation("→ {Text}", "自动秘境结束");
         }
+    }
+
+    private void Init()
+    {
+        Logger.LogInformation("→ {Text} 设置总次数：{Cnt}", "自动秘境，启动！", _taskParam.DomainRoundNum);
+        SystemControl.ActivateWindow();
+        TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(true);
     }
 
     private async void WalkToStartDomain()
@@ -64,7 +66,7 @@ public class AutoDomainTask
             {
                 while (true)
                 {
-                    var content = CaptureToContent();
+                    var content = GetContentFromDispatcher();
                     var fRectArea = content.CaptureRectArea.Find(_autoPickAssets.FRo);
                     if (fRectArea.IsEmpty())
                     {

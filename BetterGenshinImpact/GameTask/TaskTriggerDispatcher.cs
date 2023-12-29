@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.Gdi32;
 
@@ -43,11 +44,13 @@ namespace BetterGenshinImpact.GameTask
         /// <summary>
         /// 捕获结果队列
         /// </summary>
-        private ConcurrentQueue<Bitmap> _bitmapQueue = new();
+        private Bitmap _bitmap = new(10,10);
         /// <summary>
         /// 仅捕获模式
         /// </summary>
         private bool _onlyCaptureModeEnabled = false;
+
+        private static readonly object _bitmapLocker = new();
 
         public TaskTriggerDispatcher()
         {
@@ -176,7 +179,6 @@ namespace BetterGenshinImpact.GameTask
                 throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
             }
 
-            StopTimer();
             var maskWindow = MaskWindow.Instance();
             maskWindow.LogBox.IsHitTestVisible = false;
             maskWindow.Invoke(() => { maskWindow.Show(); });
@@ -353,40 +355,29 @@ namespace BetterGenshinImpact.GameTask
 
         private bool IsOnlyCapture(Bitmap bitmap)
         {
-            _bitmapQueue.Enqueue(bitmap);
-            while (_bitmapQueue.Count > 1)
+            lock (_bitmapLocker)
             {
-                _bitmapQueue.TryDequeue(out _);
+                _bitmap = new Bitmap(bitmap) ;
+                return _onlyCaptureModeEnabled;
             }
-            return _onlyCaptureModeEnabled;
         }
 
         public void SetOnlyCaptureMode(bool enabled)
         {
             _onlyCaptureModeEnabled = enabled;
-            if (!enabled)
-            {
-                _bitmapQueue.Clear();
-            }
         }
 
-        public Bitmap? GetLastCaptureBitmap()
+        public Bitmap GetLastCaptureBitmap()
         {
-            if (_bitmapQueue.TryPeek(out var bitmap))
+            lock (_bitmapLocker)
             {
-                return bitmap;
+                return _bitmap;
             }
-
-            return null;
         }
 
-        public CaptureContent? GetLastCaptureContent()
+        public CaptureContent GetLastCaptureContent()
         {
             var bitmap = GetLastCaptureBitmap();
-            if (bitmap == null)
-            {
-                return null;
-            }
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
         }
     }

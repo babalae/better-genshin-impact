@@ -42,6 +42,7 @@ public class AutoWoodTask
     {
         try
         {
+            TaskTriggerDispatcher.Instance().StopTimer();
             Logger.LogInformation("→ {Text} 设置伐木总次数：{Cnt}", "自动伐木，启动！", taskParam.WoodRoundNum);
 
             _login3rdParty.RefreshAvailabled();
