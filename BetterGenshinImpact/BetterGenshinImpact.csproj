@@ -128,6 +128,9 @@
 		<None Update="Assets\Model\Yap\model_training.onnx">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -387,7 +390,6 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\AutoDomain\Model\" />
-	  <Folder Include="GameTask\AutoFight\Assets\1920x1080\" />
 	</ItemGroup>
 
 </Project>

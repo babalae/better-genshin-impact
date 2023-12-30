@@ -15,6 +15,7 @@ public class DefaultAutoFightConfig
 {
     public static List<CombatAvatar> CombatAvatars { get; set; }
     public static List<string> CombatAvatarNames { get; set; }
+    public static Dictionary<string, CombatAvatar> CombatAvatarMap { get; set; }
 
     static DefaultAutoFightConfig()
     {
@@ -22,5 +23,6 @@ public class DefaultAutoFightConfig
         var config = JsonSerializer.Deserialize<List<CombatAvatar>>(json, ConfigService.JsonOptions);
         CombatAvatars = config ?? throw new Exception("combat_avatar.json deserialize failed");
         CombatAvatarNames = config.Select(x => x.Name).ToList();
+        CombatAvatarMap = config.ToDictionary(x => x.Name);
     }
 }
