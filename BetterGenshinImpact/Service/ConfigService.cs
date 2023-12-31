@@ -14,7 +14,7 @@ public class ConfigService : IConfigService
     private readonly object _locker = new(); // 只有UI线程会调用这个方法，lock好像意义不大，而且浪费了下面的读写锁hhh
     private readonly ReaderWriterLockSlim _rwLock = new();
 
-    private readonly JsonSerializerOptions _options = new()
+    public static readonly JsonSerializerOptions JsonOptions = new()
     {
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -68,7 +68,7 @@ public class ConfigService : IConfigService
             }
 
             var json = File.ReadAllText(filePath);
-            var config = JsonSerializer.Deserialize<AllConfig>(json, _options);
+            var config = JsonSerializer.Deserialize<AllConfig>(json, JsonOptions);
             if (config == null)
             {
                 return new AllConfig();
@@ -101,7 +101,7 @@ public class ConfigService : IConfigService
             }
 
             var file = Path.Combine(path, "config.json");
-            File.WriteAllText(file, JsonSerializer.Serialize(config, _options));
+            File.WriteAllText(file, JsonSerializer.Serialize(config, JsonOptions));
         }
         catch (Exception e)
         {

@@ -1,11 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Drawing;
-using System.Threading;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Fischless.GameCapture;
 using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Drawing;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -21,6 +20,7 @@ public class TaskControl
             Logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
             throw new NormalEndException("当前获取焦点的窗口不是原神");
         }
+
         Thread.Sleep(millisecondsTimeout);
     }
 
@@ -41,18 +41,21 @@ public class TaskControl
     {
         if (cts.IsCancellationRequested)
         {
-            throw new NormalEndException("取消自动伐木任务");
+            throw new NormalEndException("取消自动任务");
         }
+
         if (millisecondsTimeout <= 0)
         {
             return;
         }
+
         Retry.Do(() =>
         {
             if (cts.IsCancellationRequested)
             {
-                throw new NormalEndException("取消自动伐木任务");
+                throw new NormalEndException("取消自动任务");
             }
+
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
@@ -62,7 +65,7 @@ public class TaskControl
         Thread.Sleep(millisecondsTimeout);
         if (cts.IsCancellationRequested)
         {
-            throw new NormalEndException("取消自动伐木任务");
+            throw new NormalEndException("取消自动任务");
         }
     }
 
@@ -90,8 +93,10 @@ public class TaskControl
                 {
                     return bitmap;
                 }
+
                 Sleep(20);
             }
+
             throw new Exception("尝试多次后,截图失败!");
         }
         else
@@ -114,5 +119,10 @@ public class TaskControl
     public static CaptureContent CaptureToContent()
     {
         return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
+    }
+
+    public static CaptureContent GetContentFromDispatcher()
+    {
+        return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
     }
 }

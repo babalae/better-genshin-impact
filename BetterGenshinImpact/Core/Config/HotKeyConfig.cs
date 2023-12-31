@@ -29,4 +29,6 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty] private string _autoGeniusInvokation = "";
 
     [ObservableProperty] private string _autoWoodHotkey = "";
+
+    [ObservableProperty] private string _autoDomainHotkey = "";
 }

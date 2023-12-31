@@ -7,13 +7,18 @@ using BetterGenshinImpact.View;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -36,6 +41,17 @@ namespace BetterGenshinImpact.GameTask
 
         private DateTime _prevManualGc = DateTime.MinValue;
 
+        /// <summary>
+        /// 捕获结果队列
+        /// </summary>
+        private Bitmap _bitmap = new(10,10);
+        /// <summary>
+        /// 仅捕获模式
+        /// </summary>
+        private bool _onlyCaptureModeEnabled = false;
+
+        private static readonly object _bitmapLocker = new();
+
         public TaskTriggerDispatcher()
         {
             _instance = this;
@@ -43,14 +59,21 @@ namespace BetterGenshinImpact.GameTask
             //_timer.Tick += Tick;
         }
 
+        public static TaskTriggerDispatcher Instance()
+        {
+            if (_instance == null)
+            {
+                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
+            }
+
+            return _instance;
+        }
+
         public static IGameCapture GlobalGameCapture
         {
             get
             {
-                if (_instance == null)
-                {
-                    throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
-                }
+                _instance = Instance();
 
                 if (_instance.GameCapture == null)
                 {
@@ -156,7 +179,6 @@ namespace BetterGenshinImpact.GameTask
                 throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
             }
 
-            StopTimer();
             var maskWindow = MaskWindow.Instance();
             maskWindow.LogBox.IsHitTestVisible = false;
             maskWindow.Invoke(() => { maskWindow.Show(); });
@@ -167,6 +189,10 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoWood)
             {
                 Task.Run(() => { new AutoWoodTask().Start((WoodTaskParam)param); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoDomain)
+            {
+                Task.Run(() => { new AutoDomainTask((AutoDomainParam)param).Start(); });
             }
         }
 
@@ -253,6 +279,11 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
+                if (IsOnlyCapture(bitmap))
+                {
+                    return;
+                }
+
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
                 var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
@@ -320,6 +351,34 @@ namespace BetterGenshinImpact.GameTask
             }
 
             return false;
+        }
+
+        private bool IsOnlyCapture(Bitmap bitmap)
+        {
+            lock (_bitmapLocker)
+            {
+                _bitmap = new Bitmap(bitmap);
+                return _onlyCaptureModeEnabled;
+            }
+        }
+
+        public void SetOnlyCaptureMode(bool enabled)
+        {
+            _onlyCaptureModeEnabled = enabled;
+        }
+
+        public Bitmap GetLastCaptureBitmap()
+        {
+            lock (_bitmapLocker)
+            {
+                return new Bitmap(_bitmap);
+            }
+        }
+
+        public CaptureContent GetLastCaptureContent()
+        {
+            var bitmap = GetLastCaptureBitmap();
+            return new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
         }
     }
 }

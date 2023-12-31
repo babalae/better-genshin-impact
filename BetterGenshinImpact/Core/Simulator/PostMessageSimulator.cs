@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Formats.Asn1;
 using System.Threading;
 using Vanara.PInvoke;
 
@@ -38,6 +37,15 @@ public class PostMessageSimulator
         return this;
     }
 
+    public PostMessageSimulator LeftButtonClick()
+    {
+        IntPtr p = (16 << 16) | 16;
+        User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero, p);
+        Thread.Sleep(100);
+        User32.PostMessage(_hWnd, WM_LBUTTONUP, IntPtr.Zero, p);
+        return this;
+    }
+
     /// <summary>
     /// 默认位置左键按下
     /// </summary>
@@ -62,6 +70,21 @@ public class PostMessageSimulator
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        return this;
+    }
+
+    public PostMessageSimulator LongKeyPress(User32.VK vk)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
+        Thread.Sleep(1000);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        return this;
+    }
+
+    public PostMessageSimulator KeyDown(User32.VK vk)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         return this;
     }
 
