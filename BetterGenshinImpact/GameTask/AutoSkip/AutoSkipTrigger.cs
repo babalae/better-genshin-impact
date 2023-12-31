@@ -74,6 +74,19 @@ public class AutoSkipTrigger : ITaskTrigger
         {
             // 找播放中的文字
             content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
+            if (!isPlaying)
+            {
+                var textRa = content.CaptureRectArea.Crop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
+                // 过滤出白色
+                var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(textRa.SrcMat, new Scalar(0, 0, 170), new Scalar(255, 80, 245));
+                var result = OcrFactory.Paddle.Ocr(hsvFilterMat);
+                if (result.Contains("播") || result.Contains("番") || result.Contains("放") || result.Contains("中") || result.Contains("潘") || result.Contains("故"))
+                {
+                    VisionContext.Instance().DrawContent.PutRect("PlayingText", textRa.ConvertRelativePositionToCaptureArea().ToRectDrawable());
+                    isPlaying = true;
+                }
+            }
+
 
             if (!isPlaying)
             {

@@ -38,7 +38,6 @@ public class CombatScenes
         var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
         // 过滤出白色
         var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210),new Scalar(255, 30, 255));
-        Cv2.ImWrite("hsvFilterMat.png", hsvFilterMat);
 
         // 识别队伍内角色
         var result = OcrFactory.Paddle.OcrResult(hsvFilterMat);
