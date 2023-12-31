@@ -357,7 +357,7 @@ namespace BetterGenshinImpact.GameTask
         {
             lock (_bitmapLocker)
             {
-                _bitmap = new Bitmap(bitmap) ;
+                _bitmap = new Bitmap(bitmap);
                 return _onlyCaptureModeEnabled;
             }
         }
@@ -371,7 +371,7 @@ namespace BetterGenshinImpact.GameTask
         {
             lock (_bitmapLocker)
             {
-                return _bitmap;
+                return new Bitmap(_bitmap);
             }
         }
 

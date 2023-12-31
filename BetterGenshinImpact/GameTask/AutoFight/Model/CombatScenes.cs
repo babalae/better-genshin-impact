@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -26,7 +27,7 @@ public class CombatScenes
     /// 通过OCR识别队伍内角色
     /// </summary>
     /// <param name="content">完整游戏画面的捕获截图</param>
-    public void InitializeTeam(CaptureContent content)
+    public CombatScenes InitializeTeam(CaptureContent content)
     {
         // 剪裁出队伍区域
         var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
@@ -34,6 +35,7 @@ public class CombatScenes
         // 识别队伍内角色
         var result = OcrFactory.Paddle.OcrResult(teamRa.SrcGreyMat);
         ParseTeamOcrResult(result, teamRa);
+        return this;
     }
 
     private void ParseTeamOcrResult(PaddleOcrResult result, RectArea rectArea)
@@ -52,6 +54,7 @@ public class CombatScenes
         if (names.Count < 3 || names.Count > 5)
         {
             Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
+            throw new Exception("队伍识别失败");
         }
 
 
@@ -62,6 +65,7 @@ public class CombatScenes
             if (wanderer.IsEmpty())
             {
                 Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
+                throw new Exception("队伍识别失败");
             }
             else
             {

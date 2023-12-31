@@ -37,6 +37,15 @@ public class PostMessageSimulator
         return this;
     }
 
+    public PostMessageSimulator LeftButtonClick()
+    {
+        IntPtr p = (16 << 16) | 16;
+        User32.PostMessage(_hWnd, WM_LBUTTONDOWN, IntPtr.Zero, p);
+        Thread.Sleep(100);
+        User32.PostMessage(_hWnd, WM_LBUTTONUP, IntPtr.Zero, p);
+        return this;
+    }
+
     /// <summary>
     /// 默认位置左键按下
     /// </summary>

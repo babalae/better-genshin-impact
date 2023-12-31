@@ -8,6 +8,7 @@ public class AutoFightAssets
     public Rect TeamRect;
     public Rect ERect;
     public Rect QRect;
+    public Rect EndTipsRect;
     public RecognitionObject WandererIconRa;
 
 
@@ -23,6 +24,9 @@ public class AutoFightAssets
             (int)(77 * assetScale), (int)(77 * assetScale));
         QRect = new Rect(captureRect.Width - (int)(157 * assetScale), captureRect.Height - (int)(165 * assetScale),
             (int)(110 * assetScale), (int)(110 * assetScale));
+        // 结束提示从中间开始找相对位置
+        EndTipsRect = new Rect(captureRect.Width / 2 - (int)(200 * assetScale), captureRect.Height - (int)(160 * assetScale),
+            (int)(400 * assetScale), (int)(80 * assetScale));
 
         WandererIconRa = new RecognitionObject
         {

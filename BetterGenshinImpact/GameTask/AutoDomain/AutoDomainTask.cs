@@ -3,11 +3,15 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight;
+using OpenCvSharp;
+using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -25,33 +29,18 @@ public class AutoDomainTask
         _simulator = AutoFightContext.Instance().Simulator;
     }
 
-    public void Start()
+    public async void Start()
     {
         try
         {
             Init();
-            var combatScenes = new CombatScenes();
-            combatScenes.InitializeTeam(GetContentFromDispatcher());
-            // test code
-            for (int i = 3 - 1; i >= 0; i--)
-            {
-                combatScenes.Avatars[0].Switch();
-                combatScenes.Avatars[0].UseSkill();
-                combatScenes.Avatars[1].Switch();
-                combatScenes.Avatars[1].UseSkill();
-                combatScenes.Avatars[2].Switch();
-                combatScenes.Avatars[2].UseSkill(hold:true);
-                combatScenes.Avatars[3].Switch();
-                combatScenes.Avatars[3].UseSkill();
-                combatScenes.Avatars[3].UseSkill();
-                combatScenes.Avatars[3].UseSkill();
-                Sleep(3000);
-            }
+            var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 1. 走到钥匙处启动
-            // WalkToStartDomain();
+            await WalkToStartDomain();
 
             // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
+            await StartFight(combatScenes);
 
             // 3. 旋转视角后寻找石化古树
         }
@@ -74,7 +63,10 @@ public class AutoDomainTask
         TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(true);
     }
 
-    private async void WalkToStartDomain()
+    /// <summary>
+    /// 走到钥匙处启动
+    /// </summary>
+    private async Task WalkToStartDomain()
     {
         await Task.Run(() =>
         {
@@ -102,5 +94,84 @@ public class AutoDomainTask
                 _simulator.KeyUp(VK.VK_W);
             }
         });
+    }
+
+    private Task StartFight(CombatScenes combatScenes)
+    {
+        CancellationTokenSource cts = new();
+        // 战斗操作
+        var combatTask = new Task(() =>
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                // 钟离
+                combatScenes.Avatars[2].Switch();
+                combatScenes.Avatars[3].Walk("s", 200);
+                combatScenes.Avatars[2].UseSkill(hold: true);
+                combatScenes.Avatars[1].UseBurst();
+                combatScenes.Avatars[3].Walk("w", 150);
+
+                // 八重
+                combatScenes.Avatars[3].Switch();
+                combatScenes.Avatars[3].UseSkill();
+                Sleep(200, cts);
+                combatScenes.Avatars[3].Dash();
+
+                // 夜兰
+                combatScenes.Avatars[1].Switch();
+                combatScenes.Avatars[1].UseSkill();
+                combatScenes.Avatars[1].UseBurst();
+
+                // 宵宫
+                combatScenes.Avatars[0].Switch();
+                combatScenes.Avatars[0].UseSkill();
+                combatScenes.Avatars[0].Attack(8000);
+            }
+        }, cts.Token);
+
+        // 视角操作
+
+        // 对局结束检测
+        var domainEndTask = DomainEndDetectionTask(cts);
+
+        combatTask.Start();
+        domainEndTask.Start();
+
+        return Task.WhenAll(combatTask, domainEndTask);
+    }
+
+    /// <summary>
+    /// 对局结束检测
+    /// </summary>
+    private Task DomainEndDetectionTask(CancellationTokenSource cts)
+    {
+        return new Task(() =>
+        {
+            while (true)
+            {
+                if (IsDomainEnd())
+                {
+                    cts.Cancel();
+                    break;
+                }
+
+                Sleep(1000);
+            }
+        });
+    }
+
+    private bool IsDomainEnd()
+    {
+        var content = GetContentFromDispatcher();
+        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsRect);
+        var result = OcrFactory.Paddle.OcrResult(endTipsRect.SrcGreyMat);
+        var rect = result.FindRectByText("自动退出");
+        if (rect == Rect.Empty)
+        {
+            return false;
+        }
+
+        Logger.LogInformation("检测到秘境结束提示，结束秘境");
+        return true;
     }
 }

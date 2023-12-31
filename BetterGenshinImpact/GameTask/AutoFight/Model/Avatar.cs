@@ -133,7 +133,6 @@ public class Avatar
             var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
-            Cv2.ImWrite("indexBlock_" + Name + ".png", indexBlock.SrcMat);
             int count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.7)
             {
@@ -146,37 +145,43 @@ public class Avatar
     }
 
     /// <summary>
+    /// 普通攻击
+    /// </summary>
+    /// <param name="ms">攻击时长，建议是200的倍数</param>
+    public void Attack(int ms)
+    {
+        while (ms > 0)
+        {
+            AutoFightContext.Instance().Simulator.LeftButtonClick();
+            ms -= 200;
+            Sleep(200);
+        }
+    }
+
+    /// <summary>
     /// 使用元素战技 E
     /// </summary>
     public void UseSkill(bool hold = false)
     {
-        var cd = GetSkillCurrentCd(GetContentFromDispatcher());
-        if (cd > 0)
+        for (var i = 0; i < 5; i++)
         {
-            Logger.LogInformation("{Name} 元素战技仍在CD中，还剩{Cd}s，跳过此操作", Name, cd);
-        }
-        else
-        {
-            for (var i = 0; i < 10; i++)
+            if (hold)
             {
-                if (hold)
-                {
-                    AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
-                }
-                else
-                {
-                    AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
-                }
+                AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
+            }
+            else
+            {
+                AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
+            }
 
-                cd = GetSkillCurrentCd(GetContentFromDispatcher());
-                if (cd > 0)
-                {
-                    Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
-                    // todo 把cd加入执行队列
-                    return;
-                }
+            Sleep(500);
 
-                Thread.Sleep(500);
+            var cd = GetSkillCurrentCd(GetContentFromDispatcher());
+            if (cd > 0)
+            {
+                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
+                // todo 把cd加入执行队列
+                return;
             }
         }
     }
@@ -198,25 +203,16 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
-        var cd = GetBurstCurrentCd(GetContentFromDispatcher());
-        if (cd > 0)
+        for (var i = 0; i < 5; i++)
         {
-            Logger.LogInformation("{Name} 元素爆发仍在CD中，还剩{Cd}s，跳过此操作", Name, cd);
-        }
-        else
-        {
-            for (var i = 0; i < 10; i++)
+            AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
+            Sleep(500);
+            var cd = GetBurstCurrentCd(GetContentFromDispatcher());
+            if (cd > 0)
             {
-                AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
-                cd = GetBurstCurrentCd(GetContentFromDispatcher());
-                if (cd > 0)
-                {
-                    Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
-                    // todo  把cd加入执行队列
-                    return;
-                }
-
-                Thread.Sleep(500);
+                Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
+                // todo  把cd加入执行队列
+                return;
             }
         }
     }
@@ -231,5 +227,44 @@ public class Avatar
         var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.QRect);
         var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
         return StringUtils.TryParseDouble(text);
+    }
+
+    /// <summary>
+    /// 冲刺
+    /// </summary>
+    public void Dash()
+    {
+        AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SHIFT);
+    }
+
+
+    public void Walk(string key, int ms)
+    {
+        User32.VK vk = User32.VK.VK_NONAME;
+        if (key == "w")
+        {
+            vk = User32.VK.VK_W;
+        }
+        else if (key == "s")
+        {
+            vk = User32.VK.VK_S;
+        }
+        else if (key == "a")
+        {
+            vk = User32.VK.VK_A;
+        }
+        else if (key == "d")
+        {
+            vk = User32.VK.VK_D;
+        }
+
+        if (vk == User32.VK.VK_NONAME)
+        {
+            return;
+        }
+
+        AutoFightContext.Instance().Simulator.KeyDown(vk);
+        Sleep(ms);
+        AutoFightContext.Instance().Simulator.KeyUp(vk);
     }
 }
