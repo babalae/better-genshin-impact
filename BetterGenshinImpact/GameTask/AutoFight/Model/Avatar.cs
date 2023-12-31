@@ -1,4 +1,11 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Config;
+﻿using System.Linq;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
+using OpenCvSharp;
+using System.Threading;
+using Microsoft.Extensions.Logging;
+using Vanara.PInvoke;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -43,19 +50,25 @@ public class Avatar
     public double BurstCd { get; set; }
 
     /// <summary>
-    /// 元素战技是否就绪
-    /// </summary>
-    public bool IsSkillReady { get; set; }
-
-    /// <summary>
     /// 元素爆发是否就绪
     /// </summary>
     public bool IsBurstReady { get; set; }
 
-    public Avatar(string name, int index)
+    /// <summary>
+    /// 名字所在矩形位置
+    /// </summary>
+    public Rect NameRect { get; set; }
+
+    /// <summary>
+    /// 名字右边的编号位置
+    /// </summary>
+    public Rect IndexRect { get; set; }
+
+    public Avatar(string name, int index, Rect nameRect)
     {
         Name = name;
         Index = index;
+        NameRect = nameRect;
 
         var ca = DefaultAutoFightConfig.CombatAvatarMap[name];
         NameEn = ca.NameEn;
@@ -63,5 +76,155 @@ public class Avatar
         SkillCd = ca.SkillCd;
         SkillHoldCd = ca.SkillHoldCd;
         BurstCd = ca.BurstCd;
+    }
+
+    /// <summary>
+    /// 切换到本角色
+    /// 切换cd是1秒，如果切换失败，会尝试再次切换，最多尝试5次
+    /// </summary>
+    public void Switch()
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            if (IsActive(GetContentFromDispatcher()))
+            {
+                return;
+            }
+
+            AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            Thread.Sleep(1050); // 比1秒多一点，给截图留出时间
+        }
+    }
+
+    /// <summary>
+    /// 是否出战状态
+    /// </summary>
+    /// <returns></returns>
+    public bool IsActive(CaptureContent content)
+    {
+        // 通过寻找右侧人物编号来判断是否出战
+        if (IndexRect == Rect.Empty)
+        {
+            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+            // 剪裁出队伍区域
+            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
+            var blockX = NameRect.X + NameRect.Width * 2 - 10;
+            var block = teamRa.Crop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
+            // 取白色区域
+            var bMat = OpenCvCommonHelper.Threshold(block.SrcMat, new Scalar(255, 255, 255), new Scalar(255, 255, 255));
+            // 矩形识别
+            Cv2.FindContours(bMat, out var contours, out _, RetrievalModes.External,
+                ContourApproximationModes.ApproxSimple);
+            if (contours.Length > 0)
+            {
+                var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale).OrderByDescending(w => w.Width).ToList();
+                if (boxes.Any())
+                {
+                    IndexRect = boxes.First();
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            // 剪裁出IndexRect区域
+            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
+            var blockX = NameRect.X + NameRect.Width * 2 - 10;
+            var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
+            Cv2.ImWrite("indexBlock_" + Name + ".png", indexBlock.SrcMat);
+            int count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
+            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.7)
+            {
+                return false;
+            }
+        }
+
+        Logger.LogInformation("{Name} 当前出战", Name);
+        return true;
+    }
+
+    /// <summary>
+    /// 使用元素战技 E
+    /// </summary>
+    public void UseSkill(bool hold = false)
+    {
+        var cd = GetSkillCurrentCd(GetContentFromDispatcher());
+        if (cd > 0)
+        {
+            Logger.LogInformation("{Name} 元素战技仍在CD中，还剩{Cd}s，跳过此操作", Name, cd);
+        }
+        else
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                if (hold)
+                {
+                    AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
+                }
+                else
+                {
+                    AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
+                }
+
+                cd = GetSkillCurrentCd(GetContentFromDispatcher());
+                if (cd > 0)
+                {
+                    Logger.LogInformation(hold ? "{Name} 长按元素战技" : "{Name} 点按元素战技", Name);
+                    // todo 把cd加入执行队列
+                    return;
+                }
+
+                Thread.Sleep(500);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 元素战技是否正在CD中
+    /// 右下 267x132
+    /// 77x77
+    /// </summary>
+    public double GetSkillCurrentCd(CaptureContent content)
+    {
+        var eRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.ERect);
+        return 0;
+    }
+
+    /// <summary>
+    /// 使用元素爆发 Q
+    /// </summary>
+    public void UseBurst()
+    {
+        var cd = GetBurstCurrentCd(GetContentFromDispatcher());
+        if (cd > 0)
+        {
+            Logger.LogInformation("{Name} 元素爆发仍在CD中，还剩{Cd}s，跳过此操作", Name, cd);
+        }
+        else
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
+                cd = GetBurstCurrentCd(GetContentFromDispatcher());
+                if (cd > 0)
+                {
+                    Logger.LogInformation("{Name} 释放元素爆发", Name);
+                    // todo  把cd加入执行队列
+                    return;
+                }
+
+                Thread.Sleep(500);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 元素爆发是否正在CD中
+    /// 右下 157x165
+    /// 110x110
+    /// </summary>
+    public double GetBurstCurrentCd(CaptureContent content)
+    {
+        return 0;
     }
 }

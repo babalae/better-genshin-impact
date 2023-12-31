@@ -1,13 +1,9 @@
-﻿using BetterGenshinImpact.GameTask.Model;
-using System;
-using System.Diagnostics;
-using BetterGenshinImpact.Helpers;
-using Vanara.PInvoke;
-using System.Windows.Interop;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.View;
-using BetterGenshinImpact.Service;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Genshin.Settings;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
+using System;
 
 namespace BetterGenshinImpact.GameTask
 {

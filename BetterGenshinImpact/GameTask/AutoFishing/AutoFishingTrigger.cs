@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -17,7 +18,6 @@ using Fischless.GameCapture;
 using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,12 +25,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using static Vanara.PInvoke.User32;
 using Color = System.Drawing.Color;
 using Pen = System.Drawing.Pen;
 using Point = OpenCvSharp.Point;
-using System.Runtime.Intrinsics.Arm;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {

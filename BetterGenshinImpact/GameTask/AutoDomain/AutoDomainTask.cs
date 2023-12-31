@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -16,12 +17,12 @@ public class AutoDomainTask
 
     private AutoDomainParam _taskParam;
 
-    private readonly PostMessageSimulator _postMessage;
+    private readonly PostMessageSimulator _simulator;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
-        _postMessage = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+        _simulator = AutoFightContext.Instance().Simulator;
     }
 
     public void Start()
@@ -31,6 +32,16 @@ public class AutoDomainTask
             Init();
             var combatScenes = new CombatScenes();
             combatScenes.InitializeTeam(GetContentFromDispatcher());
+            // test code
+            for (int i = 3 - 1; i >= 0; i--)
+            {
+                combatScenes.Avatars[0].Switch();
+                combatScenes.Avatars[1].Switch();
+                combatScenes.Avatars[2].Switch();
+                combatScenes.Avatars[3].Switch();
+                Sleep(3000);
+            }
+
             // 1. 走到钥匙处启动
             // WalkToStartDomain();
 
@@ -61,7 +72,7 @@ public class AutoDomainTask
     {
         await Task.Run(() =>
         {
-            _postMessage.KeyDown(VK.VK_W);
+            _simulator.KeyDown(VK.VK_W);
             try
             {
                 while (true)
@@ -82,7 +93,7 @@ public class AutoDomainTask
             }
             finally
             {
-                _postMessage.KeyUp(VK.VK_W);
+                _simulator.KeyUp(VK.VK_W);
             }
         });
     }
