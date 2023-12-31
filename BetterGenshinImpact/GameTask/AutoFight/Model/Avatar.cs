@@ -2,10 +2,12 @@
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using OpenCvSharp;
 using System.Threading;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -159,7 +161,7 @@ public class Avatar
             {
                 if (hold)
                 {
-                    AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
+                    AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
                 }
                 else
                 {
@@ -169,7 +171,7 @@ public class Avatar
                 cd = GetSkillCurrentCd(GetContentFromDispatcher());
                 if (cd > 0)
                 {
-                    Logger.LogInformation(hold ? "{Name} 长按元素战技" : "{Name} 点按元素战技", Name);
+                    Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
                     // todo 把cd加入执行队列
                     return;
                 }
@@ -187,7 +189,8 @@ public class Avatar
     public double GetSkillCurrentCd(CaptureContent content)
     {
         var eRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.ERect);
-        return 0;
+        var text = OcrFactory.Paddle.Ocr(eRa.SrcGreyMat);
+        return StringUtils.TryParseDouble(text);
     }
 
     /// <summary>
@@ -208,7 +211,7 @@ public class Avatar
                 cd = GetBurstCurrentCd(GetContentFromDispatcher());
                 if (cd > 0)
                 {
-                    Logger.LogInformation("{Name} 释放元素爆发", Name);
+                    Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
                     // todo  把cd加入执行队列
                     return;
                 }
@@ -225,6 +228,8 @@ public class Avatar
     /// </summary>
     public double GetBurstCurrentCd(CaptureContent content)
     {
-        return 0;
+        var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.QRect);
+        var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
+        return StringUtils.TryParseDouble(text);
     }
 }

@@ -36,9 +36,15 @@ public class AutoDomainTask
             for (int i = 3 - 1; i >= 0; i--)
             {
                 combatScenes.Avatars[0].Switch();
+                combatScenes.Avatars[0].UseSkill();
                 combatScenes.Avatars[1].Switch();
+                combatScenes.Avatars[1].UseSkill();
                 combatScenes.Avatars[2].Switch();
+                combatScenes.Avatars[2].UseSkill(hold:true);
                 combatScenes.Avatars[3].Switch();
+                combatScenes.Avatars[3].UseSkill();
+                combatScenes.Avatars[3].UseSkill();
+                combatScenes.Avatars[3].UseSkill();
                 Sleep(3000);
             }
 

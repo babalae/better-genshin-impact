@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BetterGenshinImpact.Helpers
 {
@@ -32,6 +33,22 @@ namespace BetterGenshinImpact.Helpers
                 return false;
             }
             return System.Text.RegularExpressions.Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
+        }
+
+        public static double TryParseDouble(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return 0;
+            }
+            try
+            {
+                return double.Parse(text);
+            }
+            catch
+            {
+                return 0;
+            }
         }
     }
 }
