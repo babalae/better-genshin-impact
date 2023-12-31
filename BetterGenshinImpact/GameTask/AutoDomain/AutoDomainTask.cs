@@ -1,17 +1,17 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.GameTask.AutoFight.Model;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
-using BetterGenshinImpact.GameTask.AutoFight;
-using OpenCvSharp;
-using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -52,6 +52,7 @@ public class AutoDomainTask
         {
             VisionContext.Instance().DrawContent.ClearAll();
             TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(false);
+            TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
             Logger.LogInformation("→ {Text}", "自动秘境结束");
         }
     }
@@ -99,6 +100,7 @@ public class AutoDomainTask
     private Task StartFight(CombatScenes combatScenes)
     {
         CancellationTokenSource cts = new();
+        combatScenes.BeforeTask(cts);
         // 战斗操作
         var combatTask = new Task(() =>
         {
@@ -111,11 +113,10 @@ public class AutoDomainTask
                 combatScenes.Avatars[1].UseBurst();
                 combatScenes.Avatars[3].Walk("w", 150);
 
-                // 八重
+                // 4号位
                 combatScenes.Avatars[3].Switch();
                 combatScenes.Avatars[3].UseSkill();
-                Sleep(200, cts);
-                combatScenes.Avatars[3].Dash();
+                combatScenes.Avatars[3].UseBurst();
 
                 // 夜兰
                 combatScenes.Avatars[1].Switch();

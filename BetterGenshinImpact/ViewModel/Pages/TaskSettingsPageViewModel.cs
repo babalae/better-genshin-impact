@@ -205,4 +205,11 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         if (instance == null) { return; }
         instance.SwitchAutoWoodButtonText = running ? "停止" : "启动";
     }
+
+    public static void SetSwitchAutoDomainButtonText(bool running)
+    {
+        var instance = App.GetService<TaskSettingsPageViewModel>();
+        if (instance == null) { return; }
+        instance.SwitchAutoDomainButtonText = running ? "停止" : "启动";
+    }
 }

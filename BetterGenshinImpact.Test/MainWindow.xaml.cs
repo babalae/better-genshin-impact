@@ -1,6 +1,4 @@
-﻿using OxyPlot;
-using OxyPlot.Series;
-using System.Windows;
+﻿using System.Windows;
 
 namespace BetterGenshinImpact.Test
 {
@@ -15,7 +13,7 @@ namespace BetterGenshinImpact.Test
 
             InitializeComponent();
             
-            // new HsvTestWindow().Run();
+            new HsvTestWindow().Run();
           
         }
     }

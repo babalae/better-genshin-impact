@@ -8,6 +8,7 @@ using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Helpers;
+using static SharpDX.Utilities;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -66,6 +67,11 @@ public class Avatar
     /// </summary>
     public Rect IndexRect { get; set; }
 
+    /// <summary>
+    /// 任务取消令牌
+    /// </summary>
+    public CancellationTokenSource? Cts { get; set; }
+
     public Avatar(string name, int index, Rect nameRect)
     {
         Name = name;
@@ -88,6 +94,11 @@ public class Avatar
     {
         for (var i = 0; i < 5; i++)
         {
+            if (Cts is { IsCancellationRequested: true })
+            {
+                return;
+            }
+
             if (IsActive(GetContentFromDispatcher()))
             {
                 return;
@@ -152,6 +163,10 @@ public class Avatar
     {
         while (ms > 0)
         {
+            if (Cts is { IsCancellationRequested: true })
+            {
+                return;
+            }
             AutoFightContext.Instance().Simulator.LeftButtonClick();
             ms -= 200;
             Sleep(200);
@@ -165,6 +180,10 @@ public class Avatar
     {
         for (var i = 0; i < 5; i++)
         {
+            if (Cts is { IsCancellationRequested: true })
+            {
+                return;
+            }
             if (hold)
             {
                 AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
@@ -205,6 +224,10 @@ public class Avatar
     {
         for (var i = 0; i < 5; i++)
         {
+            if (Cts is { IsCancellationRequested: true })
+            {
+                return;
+            }
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
             Sleep(500);
             var cd = GetBurstCurrentCd(GetContentFromDispatcher());
@@ -234,12 +257,20 @@ public class Avatar
     /// </summary>
     public void Dash()
     {
+        if (Cts is { IsCancellationRequested: true })
+        {
+            return;
+        }
         AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SHIFT);
     }
 
 
     public void Walk(string key, int ms)
     {
+        if (Cts is { IsCancellationRequested: true })
+        {
+            return;
+        }
         User32.VK vk = User32.VK.VK_NONAME;
         if (key == "w")
         {

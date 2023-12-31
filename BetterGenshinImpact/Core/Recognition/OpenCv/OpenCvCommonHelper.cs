@@ -44,8 +44,8 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
                         }
                     }
                 }
-
             }
+
             return sum;
         }
 
@@ -60,14 +60,13 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             return mask.Clone();
         }
 
-        public static Mat ThresholdHsv(Mat src, Scalar low, Scalar high)
+        public static Mat InRangeHsv(Mat src, Scalar low, Scalar high)
         {
             using var mask = new Mat();
             using var rgbMat = new Mat();
 
             Cv2.CvtColor(src, rgbMat, ColorConversionCodes.BGR2HSV);
             Cv2.InRange(rgbMat, low, high, mask);
-            Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary); //二值化
             return mask.Clone();
         }
 
