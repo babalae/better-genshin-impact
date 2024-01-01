@@ -77,6 +77,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="Assets\Model\Domain\bgi_tree.onnx">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Domain\bgi_tree.pt">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="Assets\Model\Fish\bgi_fish.onnx">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

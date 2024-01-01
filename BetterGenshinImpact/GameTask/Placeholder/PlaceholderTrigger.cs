@@ -1,13 +1,18 @@
-﻿using BetterGenshinImpact.View.Drawable;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.View.Drawable;
+using Compunet.YoloV8;
 using OpenCvSharp;
-using SharpDX;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
-using System.Net;
+using BetterGenshinImpact.GameTask.Common.MiniMap;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
+using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask.Placeholder;
 
@@ -26,7 +31,7 @@ public class TestTrigger : ITaskTrigger
 
     //private readonly AutoGeniusInvokationAssets _autoGeniusInvokationAssets;
 
-    //private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Fish\\bgi_fish.onnx"));
+    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
 
     public TestTrigger()
     {
@@ -42,9 +47,25 @@ public class TestTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
-        TestArrow(content);
-        TestCamera(content);
-        //Detect(content);
+        // TestArrow(content);
+        // TestCamera(content);
+        Detect(content);
+        var angle = CameraOrientation.Compute(content);
+        Debug.WriteLine(angle);
+        if (angle < 180)
+        {
+            // 左移视角
+            Simulation.SendInputEx.Mouse.MoveMouseBy(-angle, 0);
+        }
+        else if (angle is > 180 and < 360)
+        {
+            // 右移视角
+            Simulation.SendInputEx.Mouse.MoveMouseBy(360 - angle, 0);
+        }
+        else
+        {
+            // 360 度 东方向视角
+        }
 
 
         //var dictionary = GeniusInvokationControl.FindMultiPicFromOneImage2OneByOne(content.CaptureRectArea.SrcGreyMat, _autoGeniusInvokationAssets.RollPhaseDiceMats, 0.7);
@@ -79,22 +100,22 @@ public class TestTrigger : ITaskTrigger
         //}
     }
 
-    //private void Detect(CaptureContent content)
-    //{
-    //    using var memoryStream = new MemoryStream();
-    //    content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-    //    memoryStream.Seek(0, SeekOrigin.Begin);
-    //    var result = _predictor.Detect(memoryStream);
-    //    Debug.WriteLine(result);
-    //    var list = new List<RectDrawable>();
-    //    foreach (var box in result.Boxes)
-    //    {
-    //        var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-    //        list.Add(new RectDrawable(rect, _pen));
-    //    }
+    private void Detect(CaptureContent content)
+    {
+        using var memoryStream = new MemoryStream();
+        content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        var result = _predictor.Detect(memoryStream);
+        Debug.WriteLine(result);
+        var list = new List<RectDrawable>();
+        foreach (var box in result.Boxes)
+        {
+            var rect = new System.Windows.Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+            list.Add(new RectDrawable(rect, _pen));
+        }
 
-    //    VisionContext.Instance().DrawContent.PutOrRemoveRectList("Box", list);
-    //}
+        VisionContext.Instance().DrawContent.PutOrRemoveRectList("TreeBox", list);
+    }
 
     public static void TestArrow(CaptureContent content)
     {

@@ -47,6 +47,7 @@ internal class HsvTestWindow
 
         //Cv2.NamedWindow(WindowCaptureName);
         Cv2.NamedWindow(_windowDetectionName);
+        Cv2.ResizeWindow(_windowDetectionName, 900, 900);
         // Trackbars to set thresholds for HSV values
         Cv2.CreateTrackbar("Low H", _windowDetectionName, ref _lowH, MaxValueH, on_low_H_thresh_trackbar);
         Cv2.CreateTrackbar("High H", _windowDetectionName, ref _highH, MaxValueH, on_high_H_thresh_trackbar);
@@ -54,7 +55,7 @@ internal class HsvTestWindow
         Cv2.CreateTrackbar("High S", _windowDetectionName, ref _highS, MaxValue, on_high_S_thresh_trackbar);
         Cv2.CreateTrackbar("Low V", _windowDetectionName, ref _lowV, MaxValue, on_low_V_thresh_trackbar);
         Cv2.CreateTrackbar("High V", _windowDetectionName, ref _highV, MaxValue, on_high_V_thresh_trackbar);
-        var frame = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\视角朝向识别\1_p.png", ImreadModes.Color);
+        var frame = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\bsz1.png", ImreadModes.Color);
         Mat frameHsv = new Mat();
         // Convert from BGR to HSV colorspace
         Cv2.CvtColor(frame, frameHsv, ColorConversionCodes.BGR2HSV);

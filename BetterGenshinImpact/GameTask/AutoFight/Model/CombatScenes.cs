@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Sdcb.PaddleOCR;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -23,6 +23,8 @@ public class CombatScenes
     /// </summary>
     public Avatar[] Avatars { get; set; } = new Avatar[5];
 
+    public int AvatarCount { get; set; }
+
     /// <summary>
     /// 通过OCR识别队伍内角色
     /// </summary>
@@ -31,9 +33,11 @@ public class CombatScenes
     {
         // 剪裁出队伍区域
         var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
+        // 过滤出白色
+        var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210),new Scalar(255, 30, 255));
 
         // 识别队伍内角色
-        var result = OcrFactory.Paddle.OcrResult(teamRa.SrcGreyMat);
+        var result = OcrFactory.Paddle.OcrResult(hsvFilterMat);
         ParseTeamOcrResult(result, teamRa);
         return this;
     }
@@ -44,9 +48,10 @@ public class CombatScenes
         List<Rect> nameRects = new();
         foreach (var item in result.Regions)
         {
-            if (DefaultAutoFightConfig.CombatAvatarNames.Contains(item.Text))
+            var name = StringUtils.ExtractChinese(item.Text);
+            if (IsGenshinAvatarName(name))
             {
-                names.Add(item.Text);
+                names.Add(name);
                 nameRects.Add(item.Rect.BoundingRect());
             }
         }
@@ -60,6 +65,7 @@ public class CombatScenes
 
         if (names.Count == 3)
         {
+            // 流浪者特殊处理
             // 4人以上的队伍，不支持流浪者的识别
             var wanderer = rectArea.Find(AutoFightContext.Instance().FightAssets.WandererIconRa);
             if (wanderer.IsEmpty())
@@ -72,16 +78,17 @@ public class CombatScenes
                 names.Clear();
                 foreach (var item in result.Regions)
                 {
-                    if (DefaultAutoFightConfig.CombatAvatarNames.Contains(item.Text))
+                    var name = StringUtils.ExtractChinese(item.Text);
+                    if (IsGenshinAvatarName(name))
                     {
-                        names.Add(item.Text);
+                        names.Add(name);
                         nameRects.Add(item.Rect.BoundingRect());
                     }
 
                     var rect = item.Rect.BoundingRect();
-                    if (rect.Y > wanderer.Y && wanderer.Y + wanderer.Height > rect.Y + rect.Height && StringUtils.IsChinese(item.Text))
+                    if (rect.Y > wanderer.Y && wanderer.Y + wanderer.Height > rect.Y + rect.Height)
                     {
-                        names.Add(item.Text);
+                        names.Add("流浪者");
                         nameRects.Add(item.Rect.BoundingRect());
                     }
                 }
@@ -97,14 +104,33 @@ public class CombatScenes
         Avatars = BuildAvatars(names, nameRects);
     }
 
+    private bool IsGenshinAvatarName(string name)
+    {
+        if (DefaultAutoFightConfig.CombatAvatarNames.Contains(name))
+        {
+            return true;
+        }
+        return false;
+    }
+
     private Avatar[] BuildAvatars(List<string> names, List<Rect> nameRects)
     {
+        AvatarCount = names.Count;
         var avatars = new Avatar[5];
-        for (var i = 0; i < names.Count; i++)
+        for (var i = 0; i < AvatarCount; i++)
         {
             avatars[i] = new Avatar(names[i], i + 1, nameRects[i]);
         }
-
+       
         return avatars;
+    }
+
+    public void BeforeTask(CancellationTokenSource cts)
+    {
+        for (var i = 0; i < AvatarCount; i++)
+        {
+            Avatars[i].Cts = cts;
+        }
+
     }
 }

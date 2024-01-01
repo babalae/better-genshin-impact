@@ -184,7 +184,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnTest()
     {
-        // var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\自动战斗\队伍识别\2.png", ImreadModes.Grayscale));
+        // var result = OcrFactory.Paddle.OcrResult(new Mat(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\x2.png", ImreadModes.Grayscale));
         // foreach (var region in result.Regions)
         // {
         //     Debug.WriteLine($"{region.Text}");
