@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Helpers;
 using static SharpDX.Utilities;
 
@@ -167,6 +168,7 @@ public class Avatar
             {
                 return;
             }
+
             AutoFightContext.Instance().Simulator.LeftButtonClick();
             ms -= 200;
             Sleep(200);
@@ -178,12 +180,13 @@ public class Avatar
     /// </summary>
     public void UseSkill(bool hold = false)
     {
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 1; i++)
         {
             if (Cts is { IsCancellationRequested: true })
             {
                 return;
             }
+
             if (hold)
             {
                 AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
@@ -193,7 +196,7 @@ public class Avatar
                 AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
             }
 
-            Sleep(500);
+            Sleep(200);
 
             var cd = GetSkillCurrentCd(GetContentFromDispatcher());
             if (cd > 0)
@@ -222,14 +225,15 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 1; i++)
         {
             if (Cts is { IsCancellationRequested: true })
             {
                 return;
             }
+
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
-            Sleep(500);
+            Sleep(200);
             var cd = GetBurstCurrentCd(GetContentFromDispatcher());
             if (cd > 0)
             {
@@ -261,6 +265,7 @@ public class Avatar
         {
             return;
         }
+
         AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SHIFT);
     }
 
@@ -271,6 +276,7 @@ public class Avatar
         {
             return;
         }
+
         User32.VK vk = User32.VK.VK_NONAME;
         if (key == "w")
         {
@@ -297,5 +303,15 @@ public class Avatar
         AutoFightContext.Instance().Simulator.KeyDown(vk);
         Sleep(ms);
         AutoFightContext.Instance().Simulator.KeyUp(vk);
+    }
+    
+    /// <summary>
+    /// 移动摄像机
+    /// </summary>
+    /// <param name="pixelDeltaX">负数是左移，正数是右移</param>
+    /// <param name="pixelDeltaY"></param>
+    public void MoveCamera(int pixelDeltaX, int pixelDeltaY)
+    {
+        Simulation.SendInputEx.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
     }
 }

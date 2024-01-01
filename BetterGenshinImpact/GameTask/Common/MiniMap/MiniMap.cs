@@ -1,11 +1,16 @@
-﻿using System;
+﻿using BetterGenshinImpact.View.Drawable;
+using OpenCvSharp;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Point = OpenCvSharp.Point;
+using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Common.MiniMap;
 
 public class MiniMap
 {
+
+
 }
