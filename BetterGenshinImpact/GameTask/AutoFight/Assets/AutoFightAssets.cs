@@ -10,6 +10,8 @@ public class AutoFightAssets
     public Rect QRect;
     public Rect EndTipsRect;
     public RecognitionObject WandererIconRa;
+    public RecognitionObject ConfirmRa;
+    public RecognitionObject ClickAnyCloseTipRa;
 
 
     public AutoFightAssets()
@@ -32,8 +34,28 @@ public class AutoFightAssets
         {
             Name = "WandererIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon.png"), 
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon.png"),
             DrawOnWindow = false
         }.InitTemplate();
-    }   
+
+        // 右下角的按钮
+        ConfirmRa = new RecognitionObject
+        {
+            Name = "Confirm",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "confirm.png"),
+            RegionOfInterest = new Rect(captureRect.Width / 2, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 点击任意处关闭提示
+        ClickAnyCloseTipRa = new RecognitionObject
+        {
+            Name = "ClickAnyCloseTip",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "click_any_close_tip.png"),
+            RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width, captureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+    }
 }

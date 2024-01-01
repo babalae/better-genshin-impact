@@ -134,6 +134,12 @@
 		<None Update="Assets\Model\Yap\model_training.onnx">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\click_any_close_tip.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\confirm.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

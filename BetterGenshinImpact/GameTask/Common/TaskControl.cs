@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Threading;
+using static SharpDX.Utilities;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -37,9 +38,9 @@ public class TaskControl
         Thread.Sleep(millisecondsTimeout);
     }
 
-    public static void Sleep(int millisecondsTimeout, CancellationTokenSource cts)
+    public static void Sleep(int millisecondsTimeout, CancellationTokenSource? cts)
     {
-        if (cts.IsCancellationRequested)
+        if (cts is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
         }
@@ -51,7 +52,7 @@ public class TaskControl
 
         Retry.Do(() =>
         {
-            if (cts.IsCancellationRequested)
+            if (cts is { IsCancellationRequested: true })
             {
                 throw new NormalEndException("取消自动任务");
             }

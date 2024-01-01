@@ -106,7 +106,7 @@ public class Avatar
             }
 
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
-            Thread.Sleep(1050); // 比1秒多一点，给截图留出时间
+            Sleep(1050, Cts); // 比1秒多一点，给截图留出时间
         }
     }
 
@@ -171,7 +171,7 @@ public class Avatar
 
             AutoFightContext.Instance().Simulator.LeftButtonClick();
             ms -= 200;
-            Sleep(200);
+            Sleep(200, Cts);
         }
     }
 
@@ -196,7 +196,7 @@ public class Avatar
                 AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
             }
 
-            Sleep(200);
+            Sleep(200, Cts);
 
             var cd = GetSkillCurrentCd(GetContentFromDispatcher());
             if (cd > 0)
@@ -233,12 +233,13 @@ public class Avatar
             }
 
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
-            Sleep(200);
+            Sleep(200, Cts);
             var cd = GetBurstCurrentCd(GetContentFromDispatcher());
             if (cd > 0)
             {
                 Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
                 // todo  把cd加入执行队列
+                Sleep(2000, Cts);
                 return;
             }
         }
@@ -301,10 +302,10 @@ public class Avatar
         }
 
         AutoFightContext.Instance().Simulator.KeyDown(vk);
-        Sleep(ms);
+        Sleep(ms, Cts);
         AutoFightContext.Instance().Simulator.KeyUp(vk);
     }
-    
+
     /// <summary>
     /// 移动摄像机
     /// </summary>

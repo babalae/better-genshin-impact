@@ -21,7 +21,7 @@ public class CombatScenes
     /// <summary>
     /// 当前配队
     /// </summary>
-    public Avatar[] Avatars { get; set; } = new Avatar[5];
+    public Avatar[] Avatars { get; set; } = new Avatar[1];
 
     public int AvatarCount { get; set; }
 
@@ -42,6 +42,15 @@ public class CombatScenes
         return this;
     }
 
+    public bool CheckTeamInitialized()
+    {
+        if (Avatars.Length < 4)
+        {
+            return false;
+        }
+        return true;
+    }
+
     private void ParseTeamOcrResult(PaddleOcrResult result, RectArea rectArea)
     {
         List<string> names = new();
@@ -59,7 +68,6 @@ public class CombatScenes
         if (names.Count < 3 || names.Count > 5)
         {
             Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
-            throw new Exception("队伍识别失败");
         }
 
 
@@ -71,7 +79,6 @@ public class CombatScenes
             if (wanderer.IsEmpty())
             {
                 Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
-                throw new Exception("队伍识别失败");
             }
             else
             {
@@ -116,7 +123,7 @@ public class CombatScenes
     private Avatar[] BuildAvatars(List<string> names, List<Rect> nameRects)
     {
         AvatarCount = names.Count;
-        var avatars = new Avatar[5];
+        var avatars = new Avatar[AvatarCount];
         for (var i = 0; i < AvatarCount; i++)
         {
             avatars[i] = new Avatar(names[i], i + 1, nameRects[i]);
