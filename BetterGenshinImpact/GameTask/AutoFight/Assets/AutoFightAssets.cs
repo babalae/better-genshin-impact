@@ -11,8 +11,9 @@ public class AutoFightAssets
     public Rect EndTipsRect;
     public RecognitionObject WandererIconRa;
     public RecognitionObject ConfirmRa;
+    public RecognitionObject ExitRa;
     public RecognitionObject ClickAnyCloseTipRa;
-
+    public RecognitionObject UseCondensedResinRa;
 
     public AutoFightAssets()
     {
@@ -55,6 +56,24 @@ public class AutoFightAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "click_any_close_tip.png"),
             RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width, captureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        UseCondensedResinRa = new RecognitionObject
+        {
+            Name = "UseCondensedResin",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "use_condensed_resin.png"),
+            RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        ExitRa = new RecognitionObject
+        {
+            Name = "Exit",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "exit.png"),
+            RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
     }

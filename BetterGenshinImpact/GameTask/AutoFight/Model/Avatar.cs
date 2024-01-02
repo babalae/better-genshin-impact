@@ -1,15 +1,14 @@
-﻿using System.Linq;
-using BetterGenshinImpact.GameTask.AutoFight.Config;
-using OpenCvSharp;
-using System.Threading;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using Microsoft.Extensions.Logging;
-using Vanara.PInvoke;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.Helpers;
-using static SharpDX.Utilities;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using System.Linq;
+using System.Threading;
+using Vanara.PInvoke;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -145,8 +144,9 @@ public class Avatar
             var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
-            int count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
-            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.7)
+            Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
+            var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
+            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.8)
             {
                 return false;
             }
@@ -170,8 +170,8 @@ public class Avatar
             }
 
             AutoFightContext.Instance().Simulator.LeftButtonClick();
-            ms -= 200;
-            Sleep(200, Cts);
+            ms -= 400;
+            Sleep(400, Cts);
         }
     }
 
@@ -239,7 +239,7 @@ public class Avatar
             {
                 Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
                 // todo  把cd加入执行队列
-                Sleep(2000, Cts);
+                Sleep(3000, Cts);
                 return;
             }
         }

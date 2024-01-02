@@ -140,6 +140,12 @@
 		<None Update="GameTask\AutoFight\Assets\1920x1080\confirm.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\exit.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\use_condensed_resin.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
