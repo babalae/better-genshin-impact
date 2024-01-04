@@ -501,7 +501,7 @@ public class AutoDomainTask
                 {
                     // 左移视角
                     var moveAngle = angle;
-                    if (moveAngle > 0)
+                    if (moveAngle > 2)
                     {
                         moveAngle *= 2;
                     }
@@ -513,7 +513,7 @@ public class AutoDomainTask
                 {
                     // 右移视角
                     var moveAngle = 360 - angle;
-                    if (moveAngle > 0)
+                    if (moveAngle > 2)
                     {
                         moveAngle *= 2;
                     }

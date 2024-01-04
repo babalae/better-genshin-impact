@@ -123,8 +123,10 @@ public class Avatar
             var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var block = teamRa.Crop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
+            Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
             // 取白色区域
             var bMat = OpenCvCommonHelper.Threshold(block.SrcMat, new Scalar(255, 255, 255), new Scalar(255, 255, 255));
+            Cv2.ImWrite($"block_b_{Name}.png", bMat);
             // 矩形识别
             Cv2.FindContours(bMat, out var contours, out _, RetrievalModes.External,
                 ContourApproximationModes.ApproxSimple);
@@ -146,7 +148,7 @@ public class Avatar
             var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
             Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
-            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.8)
+            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {
                 return false;
             }
