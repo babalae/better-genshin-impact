@@ -10,6 +10,7 @@ using OpenCvSharp;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Vanara.PInvoke;
 using WindowsInput;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
@@ -136,6 +137,8 @@ public class AutoSkipTrigger : ITaskTrigger
 
                         dailyRewardIconRa.ClickCenter();
                         dailyRewardIconRa.Dispose();
+                        Thread.Sleep(800);
+                        Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                         return;
                     }
 
