@@ -94,6 +94,24 @@ public class Avatar
     }
 
     /// <summary>
+    /// 是否存在角色被击败
+    /// 通过判断确认按钮
+    /// </summary>
+    /// <param name="content"></param>
+    /// <returns></returns>
+    public void ThrowWhenDefeated(CaptureContent content)
+    {
+        var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
+        if (!confirmRectArea.IsEmpty())
+        {
+            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            Sleep(600, Cts);
+            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_M);
+            throw new Exception("存在角色被击败，按 M 键打开地图，并停止自动秘境。");
+        }
+    }
+
+    /// <summary>
     /// 切换到本角色
     /// 切换cd是1秒，如果切换失败，会尝试再次切换，最多尝试5次
     /// </summary>
@@ -107,9 +125,9 @@ public class Avatar
             }
 
             var content = GetContentFromDispatcher();
+            ThrowWhenDefeated(content);
+
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(content));
-
-
             if (IsActive(content) && notActiveCount == 3)
             {
                 return;
@@ -239,7 +257,9 @@ public class Avatar
 
             Sleep(200, Cts);
 
-            var cd = GetSkillCurrentCd(GetContentFromDispatcher());
+            var content = GetContentFromDispatcher();
+            ThrowWhenDefeated(content);
+            var cd = GetSkillCurrentCd(content);
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
@@ -263,10 +283,12 @@ public class Avatar
 
     /// <summary>
     /// 使用元素爆发 Q
+    /// Q释放等待 2s 超时认为没有Q技能
     /// </summary>
     public void UseBurst()
     {
-        for (var i = 0; i < 1; i++)
+        // var isBurstReleased = false;
+        for (var i = 0; i < 10; i++)
         {
             if (Cts is { IsCancellationRequested: true })
             {
@@ -275,14 +297,29 @@ public class Avatar
 
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
             Sleep(200, Cts);
-            var cd = GetBurstCurrentCd(GetContentFromDispatcher());
-            if (cd > 0)
+
+            var content = GetContentFromDispatcher();
+            ThrowWhenDefeated(content);
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(content));
+            if (notActiveCount == 0)
             {
-                Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
-                // todo  把cd加入执行队列
-                Sleep(3000, Cts);
+                // isBurstReleased = true;
+                Sleep(200, Cts);
                 return;
             }
+            // else
+            // {
+            //     if (!isBurstReleased)
+            //     {
+            //         var cd = GetBurstCurrentCd(content);
+            //         if (cd > 0)
+            //         {
+            //             Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
+            //             // todo  把cd加入执行队列
+            //             return;
+            //         }
+            //     }
+            // }
         }
     }
 

@@ -178,6 +178,7 @@ public class AutoDomainTask
             // todo 添加小地图角标位置检测 防止有人手点了
             Sleep(1000, _taskParam.Cts);
         }
+
         Sleep(1500, _taskParam.Cts);
     }
 
@@ -190,6 +191,7 @@ public class AutoDomainTask
         {
             return;
         }
+
         await Task.Run(() =>
         {
             _simulator.KeyDown(VK.VK_W);
@@ -280,7 +282,8 @@ public class AutoDomainTask
             }
             catch (Exception e)
             {
-                Logger.LogError(e.Message);
+                Logger.LogWarning(e.Message);
+                throw;
             }
         }, cts.Token);
 
@@ -539,6 +542,7 @@ public class AutoDomainTask
 
                 Sleep(100);
             }
+
             Logger.LogInformation("锁定东方向视角线程结束");
             VisionContext.Instance().DrawContent.ClearAll();
         });
@@ -571,19 +575,59 @@ public class AutoDomainTask
             var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
-                confirmRectArea.ClickCenter();
-                break;
-            }
-
-            // TODO 需要判断体力余量
-            var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
-            if (!exitRectArea.IsEmpty())
-            {
-                exitRectArea.ClickCenter();
-                break;
+                var (condensedResinCount, fragileResinCount) = GetRemainResinStatus();
+                if (condensedResinCount == 0 && fragileResinCount < 20)
+                {
+                    // 没有体力了退出
+                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
+                    if (!exitRectArea.IsEmpty())
+                    {
+                        exitRectArea.ClickCenter();
+                        break;
+                    }
+                }
+                else
+                {
+                    // 有体力继续
+                    confirmRectArea.ClickCenter();
+                    break;
+                }
             }
 
             Sleep(300, _taskParam.Cts);
         }
+    }
+
+    /// <summary>
+    /// 获取剩余树脂状态
+    /// </summary>
+    private (int, int) GetRemainResinStatus()
+    {
+        var condensedResinCount = 0;
+        var fragileResinCount = 0;
+
+        var content = GetContentFromDispatcher();
+        // 浓缩树脂
+        var condensedResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.CondensedResinCountRa);
+        if (!condensedResinCountRa.IsEmpty())
+        {
+            // 图像右侧就是浓缩树脂数量
+            var countArea = content.CaptureRectArea.Crop(new Rect(condensedResinCountRa.X + condensedResinCountRa.Width, condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height));
+            var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
+            condensedResinCount = StringUtils.TryParseInt(count);
+        }
+
+        // 脆弱树脂
+        var fragileResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.FragileResinCountRa);
+        if (!fragileResinCountRa.IsEmpty())
+        {
+            // 图像右侧就是脆弱树脂数量
+            var countArea = content.CaptureRectArea.Crop(new Rect(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 2.5), fragileResinCountRa.Height));
+            var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
+            fragileResinCount = StringUtils.TryParseInt(count);
+        }
+
+        Logger.LogInformation("剩余：浓缩树脂 {CondensedResinCount} 脆弱树脂 {FragileResinCount}", condensedResinCount, fragileResinCount);
+        return (condensedResinCount, fragileResinCount);
     }
 }

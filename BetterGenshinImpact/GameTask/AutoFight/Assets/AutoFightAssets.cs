@@ -17,6 +17,10 @@ public class AutoFightAssets
     public RecognitionObject ClickAnyCloseTipRa;
     public RecognitionObject UseCondensedResinRa;
 
+    // 树脂状态
+    public RecognitionObject CondensedResinCountRa;
+    public RecognitionObject FragileResinCountRa;
+
     public AutoFightAssets()
     {
         var info = TaskContext.Instance().SystemInfo;
@@ -36,10 +40,10 @@ public class AutoFightAssets
 
         AvatarIndexRectList = new List<Rect>
         {
-            new(captureRect.Width - (int)(61 * assetScale),(int)(256 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
-            new(captureRect.Width - (int)(61 * assetScale),(int)(352 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
-            new(captureRect.Width - (int)(61 * assetScale),(int)(448 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
-            new(captureRect.Width - (int)(61 * assetScale),(int)(544 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale), (int)(256 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale), (int)(352 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale), (int)(448 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale), (int)(544 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
         };
 
         WandererIconRa = new RecognitionObject
@@ -85,6 +89,23 @@ public class AutoFightAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "exit.png"),
             RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        CondensedResinCountRa = new RecognitionObject
+        {
+            Name = "CondensedResinCount",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_count.png"),
+            RegionOfInterest = new Rect(captureRect.Width / 2, captureRect.Height / 3 * 2, captureRect.Width / 2, captureRect.Height / 3),
+            DrawOnWindow = false
+        }.InitTemplate();
+        FragileResinCountRa = new RecognitionObject
+        {
+            Name = "FragileResinCount",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "fragile_resin_count.png"),
+            RegionOfInterest = new Rect(captureRect.Width / 2, captureRect.Height / 3 * 2, captureRect.Width / 2, captureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }

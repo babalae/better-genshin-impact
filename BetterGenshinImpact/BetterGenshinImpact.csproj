@@ -62,6 +62,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Update="GameTask\TaskContext.cs">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Compile>
 		<Compile Update="View\MaskWindow.xaml.cs">
 			<SubType>Code</SubType>
 		</Compile>
@@ -137,10 +140,16 @@
 		<None Update="GameTask\AutoFight\Assets\1920x1080\click_any_close_tip.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\condensed_resin_count.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\confirm.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\exit.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\fragile_resin_count.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\use_condensed_resin.png">
@@ -408,6 +417,7 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\AutoDomain\Model\" />
+	  <Folder Include="GameTask\Common\Exception\" />
 	</ItemGroup>
 
 </Project>

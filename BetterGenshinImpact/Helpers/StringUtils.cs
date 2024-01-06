@@ -72,4 +72,21 @@ public class StringUtils
             return 0;
         }
     }
+
+    public static int TryParseInt(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        try
+        {
+            return int.Parse(text);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
 }
