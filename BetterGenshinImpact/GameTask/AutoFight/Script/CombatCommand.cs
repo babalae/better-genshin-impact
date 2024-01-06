@@ -33,9 +33,9 @@ public class CombatCommand
                 var s = double.Parse(Args[1]);
                 AssertUtils.IsTrue(s > 0, "行走时间必须大于0");
             }
-            else if(Method == Method.W || Method == Method.A || Method == Method.S || Method == Method.D )
+            else if (Method == Method.W || Method == Method.A || Method == Method.S || Method == Method.D)
             {
-                AssertUtils.IsTrue(Args.Count == 2, "w/a/s/d方法必须有一个入参，代表行走时间。例：d(0.5)");
+                AssertUtils.IsTrue(Args.Count == 1, "w/a/s/d方法必须有一个入参，代表行走时间。例：d(0.5)");
             }
         }
         else
@@ -51,6 +51,7 @@ public class CombatCommand
         {
             return;
         }
+
         avatar.Switch();
         if (Method == Method.Skill)
         {
@@ -64,7 +65,7 @@ public class CombatCommand
         else if (Method == Method.Attack)
         {
             var s = double.Parse(Args![0]);
-            avatar.Attack(TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Attack((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.Charge)
         {
@@ -73,32 +74,32 @@ public class CombatCommand
         else if (Method == Method.Walk)
         {
             var s = double.Parse(Args![1]);
-            avatar.Walk(Args![0], TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Walk(Args![0], (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.W)
         {
             var s = double.Parse(Args![0]);
-            avatar.Walk("w", TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Walk("w", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.A)
         {
             var s = double.Parse(Args![0]);
-            avatar.Walk("a", TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Walk("a", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.S)
         {
             var s = double.Parse(Args![0]);
-            avatar.Walk("s", TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Walk("s", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.D)
         {
             var s = double.Parse(Args![0]);
-            avatar.Walk("d", TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Walk("d", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.Wait)
         {
             var s = double.Parse(Args![0]);
-            avatar.Wait(TimeSpan.FromSeconds(s).Milliseconds);
+            avatar.Wait((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.Aim)
         {

@@ -7,6 +7,7 @@ using Fischless.GameCapture;
 using System;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoWood;
@@ -86,6 +87,11 @@ namespace BetterGenshinImpact.Core.Config
         public AutoWoodConfig AutoWoodConfig { get; set; } = new();
 
         /// <summary>
+        /// 自动战斗配置
+        /// </summary>
+        public AutoFightConfig AutoFightConfig { get; set; } = new();
+
+        /// <summary>
         /// 脚本类配置
         /// </summary>
         public MacroConfig MacroConfig { get; set; } = new();
@@ -110,6 +116,7 @@ namespace BetterGenshinImpact.Core.Config
             MacroConfig.PropertyChanged += OnAnyPropertyChanged;
             HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
+            AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         }
 
         public void OnAnyPropertyChanged(object? sender, EventArgs args)

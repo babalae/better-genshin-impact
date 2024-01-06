@@ -33,6 +33,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private int _autoWoodRoundNum;
     [ObservableProperty] private string _switchAutoWoodButtonText;
 
+
+    [ObservableProperty] private string[] _combatStrategyList;
     [ObservableProperty] private int _autoDomainRoundNum;
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
 
@@ -44,6 +46,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         _taskDispatcher = taskTriggerDispatcher;
 
         _strategyList = LoadCustomScript();
+        _combatStrategyList = LoadCustomCombatScript();
         _switchAutoGeniusInvokationButtonText = "启动";
 
         _switchAutoWoodButtonText = "启动";
@@ -52,6 +55,24 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private string[] LoadCustomScript()
     {
         var files = Directory.GetFiles(Global.Absolute(@"User\AutoGeniusInvokation"), "*.*",
+            SearchOption.AllDirectories);
+
+        var strategyList = new string[files.Length];
+        for (var i = 0; i < files.Length; i++)
+        {
+            if (files[i].EndsWith(".txt"))
+            {
+                var fileName = Path.GetFileNameWithoutExtension(files[i]);
+                strategyList[i] = fileName;
+            }
+        }
+
+        return strategyList;
+    }
+
+    private string[] LoadCustomCombatScript()
+    {
+        var files = Directory.GetFiles(Global.Absolute(@"User\AutoFight"), "*.*",
             SearchOption.AllDirectories);
 
         var strategyList = new string[files.Length];
@@ -166,9 +187,25 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             if (SwitchAutoDomainButtonText == "启动")
             {
+                if (string.IsNullOrEmpty(Config.AutoFightConfig.StrategyName))
+                {
+                    MessageBox.Show("请先选择战斗策略");
+                    return;
+                }
+
+                var path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
+
+                if (!File.Exists(path))
+                {
+                    MessageBox.Show("战斗策略文件不存在");
+                    return;
+                }
+
+                var content = File.ReadAllText(path);
+
                 _cts?.Cancel();
                 _cts = new CancellationTokenSource();
-                var param = new AutoDomainParam(_cts, AutoWoodRoundNum);
+                var param = new AutoDomainParam(_cts, AutoWoodRoundNum, content);
                 _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
                 SwitchAutoDomainButtonText = "停止";
             }
@@ -191,25 +228,36 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
 
-
     public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
     {
         var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null) { return; }
+        if (instance == null)
+        {
+            return;
+        }
+
         instance.SwitchAutoGeniusInvokationButtonText = running ? "停止" : "启动";
     }
 
     public static void SetSwitchAutoWoodButtonText(bool running)
     {
         var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null) { return; }
+        if (instance == null)
+        {
+            return;
+        }
+
         instance.SwitchAutoWoodButtonText = running ? "停止" : "启动";
     }
 
     public static void SetSwitchAutoDomainButtonText(bool running)
     {
         var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null) { return; }
+        if (instance == null)
+        {
+            return;
+        }
+
         instance.SwitchAutoDomainButtonText = running ? "停止" : "启动";
     }
 }

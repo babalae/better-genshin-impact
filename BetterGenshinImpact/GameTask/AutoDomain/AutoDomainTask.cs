@@ -37,7 +37,7 @@ public class AutoDomainTask
 
     private readonly ClickOffset _clickOffset;
 
-    private List<CombatCommand> _combatCommands;
+    private readonly List<CombatCommand> _combatCommands;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -47,12 +47,6 @@ public class AutoDomainTask
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-
-        if (_taskParam.CombatStrategyContent == null)
-        {
-            throw new Exception("战斗策略不能为空");
-        }
-
         _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
     }
 
@@ -252,43 +246,6 @@ public class AutoDomainTask
                     {
                         command.Execute(combatScenes);
                     }
-
-                    //// 钟离
-                    //combatScenes.Avatars[2].Switch();
-                    //combatScenes.Avatars[2].Walk("s", 200);
-                    //combatScenes.Avatars[2].UseSkill(hold: true);
-                    //Sleep(800);
-                    //combatScenes.Avatars[2].Walk("w", 200);
-                    //combatScenes.Avatars[2].UseBurst();
-
-
-                    //// 4号位
-                    //combatScenes.Avatars[3].Switch();
-                    //combatScenes.Avatars[3].UseSkill();
-                    //combatScenes.Avatars[3].UseBurst();
-
-                    //// 夜兰
-                    //combatScenes.Avatars[1].Switch();
-                    //combatScenes.Avatars[1].UseSkill();
-                    //combatScenes.Avatars[1].UseSkill();
-                    //Sleep(800);
-                    //combatScenes.Avatars[1].UseSkill();
-                    //combatScenes.Avatars[1].UseSkill();
-                    //Sleep(1900); // 等待元素球
-                    //combatScenes.Avatars[1].UseBurst();
-
-                    //// 钟离
-                    //combatScenes.Avatars[2].Switch();
-                    //combatScenes.Avatars[2].Walk("s", 200);
-                    //combatScenes.Avatars[2].UseSkill(hold: true);
-                    //Sleep(800);
-                    //combatScenes.Avatars[2].Walk("w", 200);
-                    //combatScenes.Avatars[2].UseBurst();
-
-                    //// 宵宫
-                    //combatScenes.Avatars[0].Switch();
-                    //combatScenes.Avatars[0].UseSkill();
-                    //combatScenes.Avatars[0].Attack(6000);
                 }
             }
             catch (NormalEndException)

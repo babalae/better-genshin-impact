@@ -32,7 +32,7 @@ public class CombatScriptParser
         {
             var charWithCommands = line.Split(" ");
             var character = charWithCommands[0];
-            AssertUtils.IsTrue(DefaultAutoFightConfig.CombatAvatarNames.Contains(character), "角色名称不存在");
+            AssertUtils.IsTrue(DefaultAutoFightConfig.CombatAvatarNames.Contains(character), "角色名称不存在：" + character);
             var commands = charWithCommands[1];
             var commandArray = commands.Split(",");
             foreach (var command in commandArray)
