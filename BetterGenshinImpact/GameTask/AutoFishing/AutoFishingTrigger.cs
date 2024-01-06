@@ -581,7 +581,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (dx < (rect1.Width + rect2.Width) / 2 && dy >= (rect1.Height + rect2.Height) / 2)
             {
                 minDistance = dy - ((rect1.Height + rect2.Height) / 2);
+
                 var moveY = 5;
+                if (minDistance >= 100)
+                {
+                    moveY = 50;
+                }
+                
                 if (c1.Y > c2.Y)
                 {
                     moveY = -moveY;
@@ -596,7 +602,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else if (dx >= (rect1.Width + rect2.Width) / 2 && (dy < (rect1.Height + rect2.Height) / 2))
             {
                 minDistance = dx - ((rect1.Width + rect2.Width) / 2);
-                var moveX = 5;
+                var moveX = 10;
+                if (minDistance >= 100)
+                {
+                    moveX = 50;
+                }
+
                 if (c1.X > c2.X)
                 {
                     moveX = -moveX;
@@ -613,8 +624,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var dpX = dx - ((rect1.Width + rect2.Width) / 2);
                 var dpY = dy - ((rect1.Height + rect2.Height) / 2);
                 //minDistance = (int)Math.Sqrt(dpX * dpX + dpY * dpY);
-                var moveX = 5;
+                var moveX = 10;
+                if (dpX >= 100)
+                {
+                    moveX = 50;
+                }
+
                 var moveY = 5;
+                if (dpY >= 100)
+                {
+                    moveY = 50;
+                }
                 if (c1.Y > c2.Y)
                 {
                     moveY = -moveY;
