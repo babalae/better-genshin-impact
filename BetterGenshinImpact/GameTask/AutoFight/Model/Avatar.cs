@@ -221,7 +221,7 @@ public class Avatar
     /// <param name="ms">攻击时长，建议是200的倍数</param>
     public void Attack(int ms)
     {
-        while (ms > 0)
+        while (ms >= 0)
         {
             if (Cts is { IsCancellationRequested: true })
             {
@@ -229,8 +229,8 @@ public class Avatar
             }
 
             AutoFightContext.Instance().Simulator.LeftButtonClick();
-            ms -= 400;
-            Sleep(400, Cts);
+            ms -= 200;
+            Sleep(200, Cts);
         }
     }
 
@@ -304,7 +304,7 @@ public class Avatar
             if (notActiveCount == 0)
             {
                 // isBurstReleased = true;
-                Sleep(200, Cts);
+                Sleep(1500, Cts);
                 return;
             }
             // else
@@ -392,5 +392,10 @@ public class Avatar
     public void MoveCamera(int pixelDeltaX, int pixelDeltaY)
     {
         Simulation.SendInputEx.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
+    }
+
+    public void Wait(int ms)
+    {
+        Sleep(ms, Cts);
     }
 }

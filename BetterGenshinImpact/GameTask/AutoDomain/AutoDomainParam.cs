@@ -12,6 +12,9 @@ public class AutoDomainParam : BaseTaskParam
 {
 
     public int DomainRoundNum { get; set; }
+
+    public string? CombatStrategyContent { get; set; }
+
     public AutoDomainParam(CancellationTokenSource cts, int domainRoundNum) : base(cts)
     {
         DomainRoundNum = domainRoundNum;

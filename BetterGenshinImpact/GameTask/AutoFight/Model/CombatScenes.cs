@@ -8,6 +8,7 @@ using OpenCvSharp;
 using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -22,6 +23,8 @@ public class CombatScenes
     /// 当前配队
     /// </summary>
     public Avatar[] Avatars { get; set; } = new Avatar[1];
+
+    public Dictionary<string, Avatar> AvatarMap { get; set; } = new();
 
     public int AvatarCount { get; set; }
 
@@ -109,6 +112,7 @@ public class CombatScenes
 
         Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", names));
         Avatars = BuildAvatars(names, nameRects);
+        AvatarMap = Avatars.ToDictionary(x => x.Name);
     }
 
     private bool IsGenshinAvatarName(string name)
@@ -142,5 +146,10 @@ public class CombatScenes
             Avatars[i].Cts = cts;
         }
 
+    }
+
+    public Avatar? SelectAvatar(string name)
+    {
+        return AvatarMap.TryGetValue(name, out var avatar) ? avatar : null;
     }
 }

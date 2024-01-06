@@ -1,13 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using SharpCompress.Common;
+using BetterGenshinImpact.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Config;
 

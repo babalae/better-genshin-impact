@@ -1,0 +1,120 @@
+﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.Helpers;
+using System;
+using System.Collections.Generic;
+using TimeSpan = System.TimeSpan;
+
+namespace BetterGenshinImpact.GameTask.AutoFight.Script;
+
+public class CombatCommand
+{
+    public string Name { get; set; }
+
+    public Method Method { get; set; }
+
+    public List<string>? Args { get; set; }
+
+    public CombatCommand(string name, string command)
+    {
+        Name = name;
+        var startIndex = command.IndexOf('(');
+        if (startIndex > 0)
+        {
+            var endIndex = command.IndexOf(')');
+            var method = command[..startIndex];
+            Method = Method.GetEnumByCode(method);
+
+            var parameters = command.Substring(startIndex + 1, endIndex - startIndex - 1);
+            Args = new List<string>(parameters.Split(','));
+            // 校验参数
+            if (Method == Method.Walk)
+            {
+                AssertUtils.IsTrue(Args.Count == 2, "walk方法必须有两个入参，第一个参数是方向，第二个参数是行走时间。例：walk(s, 0.2)");
+                var s = double.Parse(Args[1]);
+                AssertUtils.IsTrue(s > 0, "行走时间必须大于0");
+            }
+            else if(Method == Method.W || Method == Method.A || Method == Method.S || Method == Method.D )
+            {
+                AssertUtils.IsTrue(Args.Count == 2, "w/a/s/d方法必须有一个入参，代表行走时间。例：d(0.5)");
+            }
+        }
+        else
+        {
+            Method = Method.GetEnumByCode(command);
+        }
+    }
+
+    public void Execute(CombatScenes combatScenes)
+    {
+        var avatar = combatScenes.SelectAvatar(Name);
+        if (avatar == null)
+        {
+            return;
+        }
+        avatar.Switch();
+        if (Method == Method.Skill)
+        {
+            var hold = Args != null && Args.Contains("hold");
+            avatar.UseSkill(hold);
+        }
+        else if (Method == Method.Burst)
+        {
+            avatar.UseBurst();
+        }
+        else if (Method == Method.Attack)
+        {
+            var s = double.Parse(Args![0]);
+            avatar.Attack(TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.Charge)
+        {
+            throw new NotImplementedException();
+        }
+        else if (Method == Method.Walk)
+        {
+            var s = double.Parse(Args![1]);
+            avatar.Walk(Args![0], TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.W)
+        {
+            var s = double.Parse(Args![0]);
+            avatar.Walk("w", TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.A)
+        {
+            var s = double.Parse(Args![0]);
+            avatar.Walk("a", TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.S)
+        {
+            var s = double.Parse(Args![0]);
+            avatar.Walk("s", TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.D)
+        {
+            var s = double.Parse(Args![0]);
+            avatar.Walk("d", TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.Wait)
+        {
+            var s = double.Parse(Args![0]);
+            avatar.Wait(TimeSpan.FromSeconds(s).Milliseconds);
+        }
+        else if (Method == Method.Aim)
+        {
+            throw new NotImplementedException();
+        }
+        else if (Method == Method.Dash)
+        {
+            throw new NotImplementedException();
+        }
+        else if (Method == Method.Jump)
+        {
+            throw new NotImplementedException();
+        }
+        else
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
