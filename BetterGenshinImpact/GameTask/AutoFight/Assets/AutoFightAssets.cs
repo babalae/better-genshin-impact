@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+﻿using System.Collections.Generic;
+using BetterGenshinImpact.Core.Recognition;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -6,6 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 public class AutoFightAssets
 {
     public Rect TeamRect;
+    public List<Rect> AvatarIndexRectList;
     public Rect ERect;
     public Rect QRect;
     public Rect EndTipsRect;
@@ -30,6 +32,15 @@ public class AutoFightAssets
         // 结束提示从中间开始找相对位置
         EndTipsRect = new Rect(captureRect.Width / 2 - (int)(200 * assetScale), captureRect.Height - (int)(160 * assetScale),
             (int)(400 * assetScale), (int)(80 * assetScale));
+
+
+        AvatarIndexRectList = new List<Rect>
+        {
+            new(captureRect.Width - (int)(61 * assetScale),(int)(256 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale),(int)(352 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale),(int)(448 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(captureRect.Width - (int)(61 * assetScale),(int)(544 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+        };
 
         WandererIconRa = new RecognitionObject
         {

@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using System;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -72,8 +73,14 @@ public class Avatar
     /// </summary>
     public CancellationTokenSource? Cts { get; set; }
 
-    public Avatar(string name, int index, Rect nameRect)
+    /// <summary>
+    /// 战斗场景
+    /// </summary>
+    public CombatScenes CombatScenes { get; set; }
+
+    public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect)
     {
+        CombatScenes = combatScenes;
         Name = name;
         Index = index;
         NameRect = nameRect;
@@ -92,20 +99,24 @@ public class Avatar
     /// </summary>
     public void Switch()
     {
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 40; i++)
         {
             if (Cts is { IsCancellationRequested: true })
             {
                 return;
             }
 
-            if (IsActive(GetContentFromDispatcher()))
+            var content = GetContentFromDispatcher();
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(content));
+
+
+            if (IsActive(content) && notActiveCount == 3)
             {
                 return;
             }
 
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
-            Sleep(1050, Cts); // 比1秒多一点，给截图留出时间
+            Sleep(250, Cts); // 比1秒多一点，给截图留出时间
         }
     }
 
@@ -115,6 +126,34 @@ public class Avatar
     /// <returns></returns>
     public bool IsActive(CaptureContent content)
     {
+        if (IndexRect == Rect.Empty)
+        {
+            throw new Exception("IndexRect为空");
+        }
+        else
+        {
+            // 剪裁出IndexRect区域
+            var indexRa = content.CaptureRectArea.Crop(IndexRect);
+            Cv2.ImWrite($"indexRa_{Name}.png", indexRa.SrcMat);
+            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 255);
+            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 是否出战状态
+    /// </summary>
+    /// <returns></returns>
+    [Obsolete]
+    public bool IsActiveNoIndexRect(CaptureContent content)
+    {
         // 通过寻找右侧人物编号来判断是否出战
         if (IndexRect == Rect.Empty)
         {
@@ -123,10 +162,10 @@ public class Avatar
             var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var block = teamRa.Crop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
-            Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
+            // Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
             // 取白色区域
             var bMat = OpenCvCommonHelper.Threshold(block.SrcMat, new Scalar(255, 255, 255), new Scalar(255, 255, 255));
-            Cv2.ImWrite($"block_b_{Name}.png", bMat);
+            // Cv2.ImWrite($"block_b_{Name}.png", bMat);
             // 矩形识别
             Cv2.FindContours(bMat, out var contours, out _, RetrievalModes.External,
                 ContourApproximationModes.ApproxSimple);
@@ -146,7 +185,7 @@ public class Avatar
             var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
-            Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
+            // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {

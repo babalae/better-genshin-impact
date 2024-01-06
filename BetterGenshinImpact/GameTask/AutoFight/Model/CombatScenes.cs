@@ -65,7 +65,7 @@ public class CombatScenes
             }
         }
 
-        if (names.Count < 3 || names.Count > 5)
+        if (names.Count != 4)
         {
             Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
         }
@@ -126,7 +126,10 @@ public class CombatScenes
         var avatars = new Avatar[AvatarCount];
         for (var i = 0; i < AvatarCount; i++)
         {
-            avatars[i] = new Avatar(names[i], i + 1, nameRects[i]);
+            avatars[i] = new Avatar(this, names[i], i + 1, nameRects[i])
+            {
+                IndexRect = AutoFightContext.Instance().FightAssets.AvatarIndexRectList[i]
+            };
         }
        
         return avatars;

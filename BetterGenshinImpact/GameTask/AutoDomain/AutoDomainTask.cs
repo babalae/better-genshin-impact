@@ -235,8 +235,8 @@ public class AutoDomainTask
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
+                    //TODO 通用化战斗策略
                     // 钟离
-                    
                     combatScenes.Avatars[2].Switch();
                     combatScenes.Avatars[2].Walk("s", 200);
                     combatScenes.Avatars[2].UseSkill(hold: true);
@@ -246,14 +246,11 @@ public class AutoDomainTask
 
 
                     // 4号位
-                    Sleep(1800);
                     combatScenes.Avatars[3].Switch();
                     combatScenes.Avatars[3].UseSkill();
-                    Sleep(1500);
                     combatScenes.Avatars[3].UseBurst();
 
                     // 夜兰
-                    Sleep(800);
                     combatScenes.Avatars[1].Switch();
                     combatScenes.Avatars[1].UseSkill();
                     combatScenes.Avatars[1].UseSkill();
@@ -263,12 +260,18 @@ public class AutoDomainTask
                     Sleep(1900); // 等待元素球
                     combatScenes.Avatars[1].UseBurst();
 
+                    // 钟离
+                    combatScenes.Avatars[2].Switch();
+                    combatScenes.Avatars[2].Walk("s", 200);
+                    combatScenes.Avatars[2].UseSkill(hold: true);
+                    Sleep(800);
+                    combatScenes.Avatars[2].Walk("w", 200);
+                    combatScenes.Avatars[2].UseBurst();
+
                     // 宵宫
-                    Sleep(1200);
                     combatScenes.Avatars[0].Switch();
                     combatScenes.Avatars[0].UseSkill();
                     combatScenes.Avatars[0].Attack(6000);
-                    Sleep(1000);
                 }
             }
             catch (NormalEndException)
@@ -552,13 +555,15 @@ public class AutoDomainTask
         // 优先使用浓缩树脂
         GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.UseCondensedResinRa, area => { area.ClickCenter(); });
 
-        Sleep(300, _taskParam.Cts);
+        Sleep(500, _taskParam.Cts);
 
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         while (true)
         {
             // 跳过领取动画
+            _clickOffset.ClickWithoutScale(captureArea.Width - (int)(140 * _clickOffset.AssetScale), (int)(53 * _clickOffset.AssetScale));
+            Sleep(200, _taskParam.Cts);
             _clickOffset.ClickWithoutScale(captureArea.Width - (int)(140 * _clickOffset.AssetScale), (int)(53 * _clickOffset.AssetScale));
 
             // 优先点击继续
@@ -570,6 +575,7 @@ public class AutoDomainTask
                 break;
             }
 
+            // TODO 需要判断体力余量
             var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
             if (!exitRectArea.IsEmpty())
             {

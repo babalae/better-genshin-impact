@@ -118,6 +118,7 @@ public class DrawContent
         }
         RectList.Clear();
         TextList.Clear();
+        LineList.Clear();
         MaskWindow.Instance().Refresh();
     }
 }
