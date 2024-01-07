@@ -32,6 +32,8 @@
 * 独立任务
     * [自动七圣召唤](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)
     * [自动伐木](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)
+    * [自动战斗](http://bgi.huiyadan.com/feats/domain.html)
+    * [自动秘境](http://bgi.huiyadan.com/feats/domain.html)
 * 操控辅助
     * [空格连发](https://bgi.huiyadan.com/doc.html#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
     * [F 连发](https://bgi.huiyadan.com/doc.html#f%E8%BF%9E%E5%8F%91)
