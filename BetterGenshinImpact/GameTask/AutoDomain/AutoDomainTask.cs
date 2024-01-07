@@ -93,9 +93,9 @@ public class AutoDomainTask
                 }
             }
         }
-        catch (NormalEndException)
+        catch (NormalEndException e)
         {
-            Logger.LogInformation("手动中断自动秘境");
+            Logger.LogInformation("自动秘境中断:" + e.Message);
         }
         catch (Exception e)
         {
@@ -540,12 +540,31 @@ public class AutoDomainTask
     private bool GettingTreasure()
     {
         // 等待窗口弹出
-        Sleep(1000, _taskParam.Cts);
+        Sleep(1500, _taskParam.Cts);
 
         // 优先使用浓缩树脂
-        GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.UseCondensedResinRa, area => { area.ClickCenter(); });
+        var retryTimes = 0;
+        while (true)
+        {
+            retryTimes++;
+            if (retryTimes > 3)
+            {
+                Logger.LogInformation("没有浓缩树脂了");
+                break;
+            }
 
-        Sleep(500, _taskParam.Cts);
+            var useCondensedResinRa = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.UseCondensedResinRa);
+            if (!useCondensedResinRa.IsEmpty())
+            {
+                useCondensedResinRa.ClickCenter();
+                break;
+            }
+
+            Sleep(800, _taskParam.Cts);
+        }
+
+
+        Sleep(600, _taskParam.Cts);
 
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
@@ -582,6 +601,7 @@ public class AutoDomainTask
 
             Sleep(300, _taskParam.Cts);
         }
+
         return true;
     }
 

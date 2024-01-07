@@ -49,7 +49,7 @@ public class CombatScriptParser
         }
 
         var names = string.Join(",", combatAvatarNames);
-        Logger.LogInformation("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, "names");
+        Logger.LogInformation("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, names);
 
         return combatCommands;
     }
