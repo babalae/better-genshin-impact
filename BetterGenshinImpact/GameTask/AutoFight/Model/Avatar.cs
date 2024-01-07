@@ -248,7 +248,22 @@ public class Avatar
 
             if (hold)
             {
-                AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
+                if (Name == "纳西妲")
+                {
+                    AutoFightContext.Instance().Simulator.KeyDown(User32.VK.VK_E);
+                    Sleep(300, Cts);
+                    for (int j = 0; j < 10; j++)
+                    {
+                        Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
+                        Sleep(50, Cts);
+                    }
+                    Sleep(300, Cts);
+                    AutoFightContext.Instance().Simulator.KeyUp(User32.VK.VK_E);
+                }
+                else
+                {
+                    AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
+                }
             }
             else
             {

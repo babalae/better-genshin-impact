@@ -2,6 +2,9 @@
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
@@ -28,6 +31,7 @@ public class CombatScriptParser
     public static List<CombatCommand> Parse(List<string> lines)
     {
         List<CombatCommand> combatCommands = new();
+        HashSet<string> combatAvatarNames = new();
         foreach (var line in lines)
         {
             var charWithCommands = line.Split(" ");
@@ -40,7 +44,12 @@ public class CombatScriptParser
                 var combatCommand = new CombatCommand(character, command);
                 combatCommands.Add(combatCommand);
             }
+
+            combatAvatarNames.Add(character);
         }
+
+        var names = string.Join(",", combatAvatarNames);
+        Logger.LogInformation("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, "names");
 
         return combatCommands;
     }

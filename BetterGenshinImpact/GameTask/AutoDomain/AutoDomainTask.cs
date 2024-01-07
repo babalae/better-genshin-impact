@@ -86,7 +86,11 @@ public class AutoDomainTask
 
                 // 5. 快速领取奖励并判断是否有下一轮
                 Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-                GettingTreasure();
+                if (!GettingTreasure())
+                {
+                    Logger.LogInformation("体力已经耗尽，结束自动秘境");
+                    break;
+                }
             }
         }
         catch (NormalEndException)
@@ -533,7 +537,7 @@ public class AutoDomainTask
     /// <summary>
     /// 领取奖励
     /// </summary>
-    private void GettingTreasure()
+    private bool GettingTreasure()
     {
         // 等待窗口弹出
         Sleep(1000, _taskParam.Cts);
@@ -565,7 +569,7 @@ public class AutoDomainTask
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.ClickCenter();
-                        break;
+                        return false;
                     }
                 }
                 else
@@ -578,6 +582,7 @@ public class AutoDomainTask
 
             Sleep(300, _taskParam.Cts);
         }
+        return true;
     }
 
     /// <summary>
