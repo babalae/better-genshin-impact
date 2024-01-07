@@ -12,6 +12,12 @@
 </p>
 <!-- https://github.com/babalae/better-genshin-impact/assets/15783049/483cb63b-f21c-4946-bb19-64249aa7d5fb -->
 
+> [!IMPORTANT]
+> 下载地址：[⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases) | [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
+> 
+> 使用前请先查阅：[文档](https://bgi.huiyadan.com/doc.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
+
+
 ## 截图
 
 <img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN016wk5ZC1lhoEMzz04F_!!2042484851.gif"/>
@@ -22,7 +28,7 @@
 
 自带一个遮罩窗口覆盖在游戏界面上，用于显示日志和图像识别结果。
 
-<img width="580px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/57ab7c3c-709a-4cf3-8f64-1c78764c364c"/>
+<img width="650px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/57ab7c3c-709a-4cf3-8f64-1c78764c364c"/>
 <br>
 <br>
 
@@ -51,8 +57,8 @@
 
 当前版本仍处于 Beta 状态，随时会有 Bug 修复或者新功能补充（产出新的 Bug），请下载最新的版本~
 
-* [📥Github 下载](https://github.com/babalae/better-genshin-impact/releases)
-* [📥蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
+* [⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases)
+* [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
 
 
 ## 使用方法
