@@ -12,8 +12,11 @@
 </p>
 <!-- https://github.com/babalae/better-genshin-impact/assets/15783049/483cb63b-f21c-4946-bb19-64249aa7d5fb -->
 
-## 功能
+## 截图
 
+<img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN016wk5ZC1lhoEMzz04F_!!2042484851.gif"/>
+
+## 功能
 
 特色：
 
@@ -42,9 +45,7 @@
 
 [更多功能研发中...](https://bgi.huiyadan.com/feat.html)
 
-## 界面截图
 
-<img width="780px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/813570c4-3816-4850-ac16-799af4f3cc5f"/>
 
 ## 下载地址
 
