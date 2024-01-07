@@ -108,6 +108,7 @@ public class AutoDomainTask
 
     private void Init()
     {
+        LogScreenResolution();
         if (_taskParam.DomainRoundNum == 9999)
         {
             Logger.LogInformation("→ {Text} 用尽所有体力后结束", "自动秘境，启动！");
@@ -121,6 +122,15 @@ public class AutoDomainTask
         TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(true);
     }
 
+    private void LogScreenResolution()
+    {
+        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+        if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
+        {
+            Logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
+        }
+    }
+
     private void RetryTeamInit(CombatScenes combatScenes)
     {
         if (!combatScenes.CheckTeamInitialized())
@@ -128,7 +138,7 @@ public class AutoDomainTask
             combatScenes.InitializeTeam(GetContentFromDispatcher());
             if (!combatScenes.CheckTeamInitialized())
             {
-                throw new Exception("识别队伍角色并初始化失败");
+                throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。");
             }
         }
     }

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoWood;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -37,6 +38,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string[] _combatStrategyList;
     [ObservableProperty] private int _autoDomainRoundNum;
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
+    [ObservableProperty] private string _switchAutoFightButtonText = "启动";
 
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
@@ -181,31 +183,78 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
 
     [RelayCommand]
+    public void OnSwitchAutoFight()
+    {
+        try
+        {
+            if (SwitchAutoFightButtonText == "启动")
+            {
+                var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
+                if (string.IsNullOrEmpty(content))
+                {
+                    return;
+                }
+
+                _cts?.Cancel();
+                _cts = new CancellationTokenSource();
+                var param = new AutoFightParam(_cts, content);
+                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoFight, param);
+                SwitchAutoFightButtonText = "停止";
+            }
+            else
+            {
+                _cts?.Cancel();
+                SwitchAutoFightButtonText = "启动";
+            }
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    private string? ReadFightStrategy(string strategyName)
+    {
+        if (string.IsNullOrEmpty(strategyName))
+        {
+            MessageBox.Show("请先选择战斗策略");
+            return null;
+        }
+
+        var path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+
+        if (!File.Exists(path))
+        {
+            MessageBox.Show("战斗策略文件不存在");
+            return null;
+        }
+
+        var content = File.ReadAllText(path);
+        return content;
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoFightUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
     public void OnSwitchAutoDomain()
     {
         try
         {
             if (SwitchAutoDomainButtonText == "启动")
             {
-                if (string.IsNullOrEmpty(Config.AutoFightConfig.StrategyName))
+                var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
+                if (string.IsNullOrEmpty(content))
                 {
-                    MessageBox.Show("请先选择战斗策略");
                     return;
                 }
-
-                var path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
-
-                if (!File.Exists(path))
-                {
-                    MessageBox.Show("战斗策略文件不存在");
-                    return;
-                }
-
-                var content = File.ReadAllText(path);
 
                 _cts?.Cancel();
                 _cts = new CancellationTokenSource();
-                var param = new AutoDomainParam(_cts, AutoWoodRoundNum, content);
+                var param = new AutoDomainParam(_cts, AutoDomainRoundNum, content);
                 _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
                 SwitchAutoDomainButtonText = "停止";
             }
@@ -259,5 +308,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         }
 
         instance.SwitchAutoDomainButtonText = running ? "停止" : "启动";
+    }
+
+    public static void SetSwitchAutoFightButtonText(bool running)
+    {
+        var instance = App.GetService<TaskSettingsPageViewModel>();
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.SwitchAutoFightButtonText = running ? "停止" : "启动";
     }
 }

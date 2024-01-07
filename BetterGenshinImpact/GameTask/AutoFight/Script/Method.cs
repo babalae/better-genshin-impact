@@ -9,7 +9,7 @@ public class Method
     public static readonly Method Burst = new(new() { "burst", "q" });
     public static readonly Method Attack = new(new() { "attack", "普攻", "普通攻击" });
     public static readonly Method Charge = new(new() { "charge", "重击" });
-    public static readonly Method Wait = new(new() { "wait", "等待" });
+    public static readonly Method Wait = new(new() { "wait", "after", "等待" });
 
     public static readonly Method Walk = new(new() { "walk", "行走" });
     public static readonly Method W = new(new() { "w" });

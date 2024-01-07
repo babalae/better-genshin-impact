@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
 using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.Gdi32;
@@ -189,6 +190,10 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoWood)
             {
                 Task.Run(() => { new AutoWoodTask().Start((WoodTaskParam)param); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoFight)
+            {
+                Task.Run(() => { new AutoFightTask((AutoFightParam)param).Start(); });
             }
             else if (taskType == IndependentTaskEnum.AutoDomain)
             {
