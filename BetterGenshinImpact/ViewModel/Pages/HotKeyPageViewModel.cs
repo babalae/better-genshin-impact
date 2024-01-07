@@ -151,6 +151,13 @@ public partial class HotKeyPageViewModel : ObservableObject
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
+            "启动/停止自动战斗",
+            nameof(Config.HotKeyConfig.AutoFightHotkey),
+            Config.HotKeyConfig.AutoFightHotkey,
+            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoFight(); }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
             "启动/停止自动秘境",
             nameof(Config.HotKeyConfig.AutoDomainHotkey),
             Config.HotKeyConfig.AutoDomainHotkey,

@@ -30,5 +30,7 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty] private string _autoWoodHotkey = "";
 
+    [ObservableProperty] private string _autoFightHotkey = "";
+
     [ObservableProperty] private string _autoDomainHotkey = "";
 }
