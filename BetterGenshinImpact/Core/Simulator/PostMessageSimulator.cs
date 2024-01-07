@@ -15,6 +15,8 @@ public class PostMessageSimulator
 
     public static readonly uint WM_LBUTTONUP = 0x202; //释放鼠标左键
 
+    public static readonly uint WM_RBUTTONDOWN = 0x204;
+    public static readonly uint WM_RBUTTONUP = 0x205;
 
     private readonly IntPtr _hWnd;
 
@@ -61,6 +63,24 @@ public class PostMessageSimulator
     public PostMessageSimulator LeftButtonUp()
     {
         User32.PostMessage(_hWnd, WM_LBUTTONUP, IntPtr.Zero);
+        return this;
+    }
+
+    /// <summary>
+    /// 默认位置右键按下
+    /// </summary>
+    public PostMessageSimulator RightButtonDown()
+    {
+        User32.PostMessage(_hWnd, WM_RBUTTONDOWN, IntPtr.Zero);
+        return this;
+    }
+
+    /// <summary>
+    /// 默认位置右键释放
+    /// </summary>
+    public PostMessageSimulator RightButtonUp()
+    {
+        User32.PostMessage(_hWnd, WM_RBUTTONUP, IntPtr.Zero);
         return this;
     }
 

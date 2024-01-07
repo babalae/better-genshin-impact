@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -219,7 +220,7 @@ public class Avatar
     /// 普通攻击
     /// </summary>
     /// <param name="ms">攻击时长，建议是200的倍数</param>
-    public void Attack(int ms)
+    public void Attack(int ms = 0)
     {
         while (ms >= 0)
         {
@@ -257,6 +258,7 @@ public class Avatar
                         Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
                         Sleep(50, Cts);
                     }
+
                     Sleep(300, Cts);
                     AutoFightContext.Instance().Simulator.KeyUp(User32.VK.VK_E);
                 }
@@ -353,14 +355,23 @@ public class Avatar
     /// <summary>
     /// 冲刺
     /// </summary>
-    public void Dash()
+    public void Dash(int ms = 0)
     {
         if (Cts is { IsCancellationRequested: true })
         {
             return;
         }
 
-        AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SHIFT);
+        if (ms == 0)
+        {
+            AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SHIFT);
+        }
+        else
+        {
+            AutoFightContext.Instance().Simulator.KeyDown(User32.VK.VK_SHIFT);
+            Sleep(ms, Cts);
+            AutoFightContext.Instance().Simulator.KeyUp(User32.VK.VK_SHIFT);
+        }
     }
 
 
@@ -409,8 +420,54 @@ public class Avatar
         Simulation.SendInputEx.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
     }
 
+    /// <summary>
+    /// 等待
+    /// </summary>
+    /// <param name="ms"></param>
     public void Wait(int ms)
     {
         Sleep(ms, Cts);
+    }
+
+    /// <summary>
+    /// 跳跃
+    /// </summary>
+    public void Jump()
+    {
+        AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SPACE);
+    }
+
+    /// <summary>
+    /// 重击
+    /// </summary>
+    public void Charge(int ms = 0)
+    {
+        if (ms == 0)
+        {
+            ms = 1000;
+        }
+
+        if (Name == "那维莱特")
+        {
+            AutoFightContext.Instance().Simulator.LeftButtonDown();
+            while (ms >= 0)
+            {
+                if (Cts is { IsCancellationRequested: true })
+                {
+                    return;
+                }
+                Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
+                ms -= 50;
+                Sleep(50, Cts);
+            }
+            
+            AutoFightContext.Instance().Simulator.LeftButtonUp();
+        }
+        else
+        {
+            AutoFightContext.Instance().Simulator.LeftButtonDown();
+            Sleep(ms, Cts);
+            AutoFightContext.Instance().Simulator.LeftButtonUp();
+        }
     }
 }

@@ -374,13 +374,10 @@
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\TeleportWaypoint.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="User\AutoFight\四神.txt">
+		<None Update="User\AutoFight\1.四神挂机[推荐].txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="User\AutoFight\宵宫夜兰班尼特.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoFight\宵宫夜兰班行秋.txt">
+		<None Update="User\AutoFight\2.宵宫夜兰班行秋.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
@@ -430,7 +427,6 @@
 	<ItemGroup>
 	  <Folder Include="GameTask\AutoDomain\Model\" />
 	  <Folder Include="GameTask\Common\Exception\" />
-	  <Folder Include="User\AutoFight\" />
 	</ItemGroup>
 
 </Project>

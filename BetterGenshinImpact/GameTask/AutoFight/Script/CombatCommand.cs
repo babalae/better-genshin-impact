@@ -64,12 +64,27 @@ public class CombatCommand
         }
         else if (Method == Method.Attack)
         {
-            var s = double.Parse(Args![0]);
-            avatar.Attack((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
+            if (Args is { Count: > 0 })
+            {
+                var s = double.Parse(Args![0]);
+                avatar.Attack((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
+            }
+            else
+            {
+                avatar.Attack();
+            }
         }
         else if (Method == Method.Charge)
         {
-            throw new NotImplementedException();
+            if (Args is { Count: > 0 })
+            {
+                var s = double.Parse(Args![0]);
+                avatar.Charge((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
+            }
+            else
+            {
+                avatar.Charge();
+            }
         }
         else if (Method == Method.Walk)
         {
@@ -107,11 +122,19 @@ public class CombatCommand
         }
         else if (Method == Method.Dash)
         {
-            throw new NotImplementedException();
+            if (Args is { Count: > 0 })
+            {
+                var s = double.Parse(Args![0]);
+                avatar.Dash((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
+            }
+            else
+            {
+                avatar.Dash();
+            }
         }
         else if (Method == Method.Jump)
         {
-            throw new NotImplementedException();
+            avatar.Jump();
         }
         else
         {

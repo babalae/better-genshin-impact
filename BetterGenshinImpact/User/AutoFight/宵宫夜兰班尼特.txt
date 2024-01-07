@@ -1,4 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2),q
-夜兰 e,e,wait(0.8),e,e,wait(1.5),q
-班尼特 e,q
-宵宫 e,attack(5)
