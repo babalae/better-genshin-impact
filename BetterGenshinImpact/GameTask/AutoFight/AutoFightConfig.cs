@@ -14,4 +14,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 public partial class AutoFightConfig : ObservableObject
 {
     [ObservableProperty] private string _strategyName = "";
+
+    /// <summary>
+    /// 英文逗号分割 强制指定队伍角色
+    /// </summary>
+    [ObservableProperty] private string _teamNames = "";
 }

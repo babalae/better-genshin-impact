@@ -6,6 +6,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 public class AutoFightAssets
 {
+    public Rect TeamRectNoIndex;
     public Rect TeamRect;
     public List<Rect> AvatarIndexRectList;
     public Rect ERect;
@@ -28,6 +29,8 @@ public class AutoFightAssets
         var captureRect = info.CaptureAreaRect;
         var assetScale = info.AssetScale;
 
+        TeamRectNoIndex = new Rect(captureRect.Width - (int)(355 * assetScale), (int)(220 * assetScale),
+            (int)((355 - 85) * assetScale), (int)(465 * assetScale));
         TeamRect = new Rect(captureRect.Width - (int)(355 * assetScale), (int)(220 * assetScale),
             (int)(355 * assetScale), (int)(465 * assetScale));
         ERect = new Rect(captureRect.Width - (int)(267 * assetScale), captureRect.Height - (int)(132 * assetScale),

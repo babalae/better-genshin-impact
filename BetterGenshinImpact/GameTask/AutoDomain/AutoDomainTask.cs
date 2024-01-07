@@ -138,7 +138,7 @@ public class AutoDomainTask
             combatScenes.InitializeTeam(GetContentFromDispatcher());
             if (!combatScenes.CheckTeamInitialized())
             {
-                throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。");
+                throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。或者直接使用强制指定当前队伍角色的功能。");
             }
         }
     }

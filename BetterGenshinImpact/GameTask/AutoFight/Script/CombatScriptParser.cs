@@ -9,7 +9,7 @@ public class CombatScriptParser
 {
     public static List<CombatCommand> Parse(string script)
     {
-        var lines = script.Split(new[] { "\r\n", "\r", "\n", ";" }, StringSplitOptions.None);
+        var lines = script.Split(new[] { "\r\n", "\r", "\n", ";" }, StringSplitOptions.RemoveEmptyEntries);
         var result = new List<string>();
         foreach (var line in lines)
         {

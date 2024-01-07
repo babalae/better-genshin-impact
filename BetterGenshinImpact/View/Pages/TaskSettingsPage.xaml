@@ -323,6 +323,34 @@
                       ItemsSource="{Binding CombatStrategyList}"
                       SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="强制指定队伍"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="队伍无法被识别时，请按顺序填写队伍内角色名称，逗号分割"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                TextWrapping="Wrap" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
 
@@ -388,6 +416,34 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="强制指定队伍"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="队伍无法被识别时，请按顺序填写队伍内角色名称，逗号分割"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                TextWrapping="Wrap" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

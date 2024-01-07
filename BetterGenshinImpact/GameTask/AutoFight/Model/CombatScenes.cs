@@ -34,8 +34,15 @@ public class CombatScenes
     /// <param name="content">完整游戏画面的捕获截图</param>
     public CombatScenes InitializeTeam(CaptureContent content)
     {
+        // 优先取配置
+        if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
+        {
+            InitializeTeamFromConfig(TaskContext.Instance().Config.AutoFightConfig.TeamNames);
+            return this;
+        }
+
         // 剪裁出队伍区域
-        var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
+        var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRectNoIndex);
         // 过滤出白色
         var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
 
@@ -43,6 +50,28 @@ public class CombatScenes
         var result = OcrFactory.Paddle.OcrResult(hsvFilterMat);
         ParseTeamOcrResult(result, teamRa);
         return this;
+    }
+
+    private void InitializeTeamFromConfig(string teamNames)
+    {
+        var names = teamNames.Split(new[] { "，", "," }, StringSplitOptions.TrimEntries);
+        if (names.Length != 4)
+        {
+            throw new Exception($"强制指定队伍角色数量不正确，必须是4个，当前{names.Length}个");
+        }
+
+        foreach (var name in names)
+        {
+            if (!IsGenshinAvatarName(name))
+            {
+                throw new Exception($"强制指定队伍角色名称不正确：{name}");
+            }
+        }
+
+        Logger.LogInformation("强制指定队伍角色:{Text}", string.Join(",", names));
+        TaskContext.Instance().Config.AutoFightConfig.TeamNames = string.Join(",", names);
+        Avatars = BuildAvatars(names.ToList());
+        AvatarMap = Avatars.ToDictionary(x => x.Name);
     }
 
     public bool CheckTeamInitialized()
@@ -131,13 +160,14 @@ public class CombatScenes
         return false;
     }
 
-    private Avatar[] BuildAvatars(List<string> names, List<Rect> nameRects)
+    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null)
     {
         AvatarCount = names.Count;
         var avatars = new Avatar[AvatarCount];
         for (var i = 0; i < AvatarCount; i++)
         {
-            avatars[i] = new Avatar(this, names[i], i + 1, nameRects[i])
+            var nameRect = nameRects?[i] ?? Rect.Empty;
+            avatars[i] = new Avatar(this, names[i], i + 1, nameRect)
             {
                 IndexRect = AutoFightContext.Instance().FightAssets.AvatarIndexRectList[i]
             };
