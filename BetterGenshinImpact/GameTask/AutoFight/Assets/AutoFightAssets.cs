@@ -12,6 +12,7 @@ public class AutoFightAssets
     public Rect QRect;
     public Rect EndTipsRect;
     public RecognitionObject WandererIconRa;
+    public RecognitionObject WandererIconNoActiveRa;
     public RecognitionObject ConfirmRa;
     public RecognitionObject ExitRa;
     public RecognitionObject ClickAnyCloseTipRa;
@@ -51,6 +52,13 @@ public class AutoFightAssets
             Name = "WandererIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon.png"),
+            DrawOnWindow = false
+        }.InitTemplate();
+        WandererIconNoActiveRa = new RecognitionObject
+        {
+            Name = "WandererIconNoActive",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon_no_active.png"),
             DrawOnWindow = false
         }.InitTemplate();
 

@@ -37,7 +37,7 @@ public class CombatScenes
         // 剪裁出队伍区域
         var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
         // 过滤出白色
-        var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210),new Scalar(255, 30, 255));
+        var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
 
         // 识别队伍内角色
         var result = OcrFactory.Paddle.OcrResult(hsvFilterMat);
@@ -51,6 +51,7 @@ public class CombatScenes
         {
             return false;
         }
+
         return true;
     }
 
@@ -81,7 +82,12 @@ public class CombatScenes
             var wanderer = rectArea.Find(AutoFightContext.Instance().FightAssets.WandererIconRa);
             if (wanderer.IsEmpty())
             {
-                Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
+                wanderer = rectArea.Find(AutoFightContext.Instance().FightAssets.WandererIconNoActiveRa);
+            }
+
+            if (wanderer.IsEmpty())
+            {
+                Logger.LogWarning("尝试识别流浪者失败，当前识别结果:{Text}", string.Join(",", names));
             }
             else
             {
@@ -96,7 +102,7 @@ public class CombatScenes
                     }
 
                     var rect = item.Rect.BoundingRect();
-                    if (rect.Y > wanderer.Y && wanderer.Y + wanderer.Height > rect.Y + rect.Height)
+                    if (rect.Y > wanderer.Y && wanderer.Y + wanderer.Height > rect.Y + rect.Height && !names.Contains("流浪者"))
                     {
                         names.Add("流浪者");
                         nameRects.Add(item.Rect.BoundingRect());
@@ -105,7 +111,7 @@ public class CombatScenes
 
                 if (names.Count != 4)
                 {
-                    Logger.LogWarning("尝试识别流浪者失败，请确认流浪者的自定义名称不含有特殊字符");
+                    Logger.LogWarning("尝试识别流浪者失败");
                 }
             }
         }
@@ -121,6 +127,7 @@ public class CombatScenes
         {
             return true;
         }
+
         return false;
     }
 
@@ -135,7 +142,7 @@ public class CombatScenes
                 IndexRect = AutoFightContext.Instance().FightAssets.AvatarIndexRectList[i]
             };
         }
-       
+
         return avatars;
     }
 
@@ -145,7 +152,6 @@ public class CombatScenes
         {
             Avatars[i].Cts = cts;
         }
-
     }
 
     public Avatar? SelectAvatar(string name)

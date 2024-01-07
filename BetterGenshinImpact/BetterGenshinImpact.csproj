@@ -158,6 +158,9 @@
 		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon_no_active.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

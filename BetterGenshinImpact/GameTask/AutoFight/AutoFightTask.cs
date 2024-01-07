@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -33,6 +34,7 @@ public class AutoFightTask
             {
                 throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。");
             }
+            combatScenes.BeforeTask(_taskParam.Cts);
 
             // 战斗操作
             await Task.Run(() =>
@@ -71,7 +73,7 @@ public class AutoFightTask
         {
             VisionContext.Instance().DrawContent.ClearAll();
             TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(false);
-            TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
+            TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动战斗结束");
         }
     }
