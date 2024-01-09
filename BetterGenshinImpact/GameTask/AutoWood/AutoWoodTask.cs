@@ -86,7 +86,8 @@ public class AutoWoodTask
         }
         catch (Exception e)
         {
-            Logger.LogInformation(e.Message);
+            Logger.LogError(e.Message);
+            Logger.LogDebug(e.StackTrace);
             System.Windows.MessageBox.Show("自动伐木时异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
         finally

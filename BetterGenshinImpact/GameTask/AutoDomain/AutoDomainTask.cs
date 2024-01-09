@@ -103,7 +103,7 @@ public class AutoDomainTask
         }
         catch (Exception e)
         {
-            Logger.LogInformation(e.Message);
+            Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
         }
         finally
@@ -296,11 +296,11 @@ public class AutoDomainTask
             return;
         }
 
-        var ms = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
-        if (ms > 0)
+        var s = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
+        if (s > 0)
         {
-            Sleep(1000, _taskParam.Cts);
-            Logger.LogInformation("战斗结束后等待 {Ms} 毫秒", ms);
+            Logger.LogInformation("战斗结束后等待 {Second} 秒", s);
+            Sleep((int)(s * 1000), _taskParam.Cts);
         }
     }
 

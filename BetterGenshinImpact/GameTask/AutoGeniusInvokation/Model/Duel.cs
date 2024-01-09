@@ -306,7 +306,7 @@ public class Duel
         catch (System.Exception ex)
         {
             _logger.LogError(ex.Message);
-            Debug.WriteLine(ex.StackTrace);
+            _logger.LogDebug(ex.StackTrace);
             if (TaskContext.Instance().Config.DetailedErrorLogs)
             {
                 _logger.LogError(ex.StackTrace);

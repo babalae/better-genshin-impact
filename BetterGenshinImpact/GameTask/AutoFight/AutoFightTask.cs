@@ -67,7 +67,8 @@ public class AutoFightTask
         }
         catch (Exception e)
         {
-            Logger.LogInformation(e.Message);
+            Logger.LogError(e.Message);
+            Logger.LogDebug(e.StackTrace);
         }
         finally
         {
