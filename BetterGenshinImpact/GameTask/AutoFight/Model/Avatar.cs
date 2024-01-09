@@ -153,7 +153,7 @@ public class Avatar
         {
             // 剪裁出IndexRect区域
             var indexRa = content.CaptureRectArea.Crop(IndexRect);
-            Cv2.ImWrite($"indexRa_{Name}.png", indexRa.SrcMat);
+            // Cv2.ImWrite($"indexRa_{Name}.png", indexRa.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {

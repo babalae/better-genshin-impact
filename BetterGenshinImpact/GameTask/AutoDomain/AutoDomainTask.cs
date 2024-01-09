@@ -63,6 +63,7 @@ public class AutoDomainTask
             for (var i = 0; i < _taskParam.DomainRoundNum; i++)
             {
                 // 0. 关闭秘境提示
+                Logger.LogDebug("0. 关闭秘境提示");
                 CloseDomainTip();
 
                 // 队伍没初始化成功则重试
@@ -103,6 +104,7 @@ public class AutoDomainTask
         catch (Exception e)
         {
             Logger.LogInformation(e.Message);
+            Logger.LogDebug(e.StackTrace);
         }
         finally
         {

@@ -47,12 +47,12 @@ public partial class App : Application
 
                 var loggerConfiguration = new LoggerConfiguration()
                     .WriteTo.File(path: logFile, outputTemplate: "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}", rollingInterval: RollingInterval.Day)
-                    .MinimumLevel.Information()
+                    .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
                 if (all.MaskWindowConfig.MaskEnabled)
                 {
-                    loggerConfiguration.WriteTo.RichTextBox(maskWindow.LogBox, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+                    loggerConfiguration.WriteTo.RichTextBox(maskWindow.LogBox, LogEventLevel.Information, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
                 }
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
