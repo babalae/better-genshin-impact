@@ -7,6 +7,7 @@ using Fischless.GameCapture;
 using System;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -92,6 +93,11 @@ namespace BetterGenshinImpact.Core.Config
         public AutoFightConfig AutoFightConfig { get; set; } = new();
 
         /// <summary>
+        /// 自动秘境配置
+        /// </summary>
+        public AutoDomainConfig AutoDomainConfig { get; set; } = new();
+
+        /// <summary>
         /// 脚本类配置
         /// </summary>
         public MacroConfig MacroConfig { get; set; } = new();
@@ -117,6 +123,7 @@ namespace BetterGenshinImpact.Core.Config
             HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
             AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
+            AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
         }
 
         public void OnAnyPropertyChanged(object? sender, EventArgs args)

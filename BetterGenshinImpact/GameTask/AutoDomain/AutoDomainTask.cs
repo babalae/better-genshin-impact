@@ -75,10 +75,13 @@ public class AutoDomainTask
                 // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
                 Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
                 await StartFight(combatScenes);
+                await EndFightWait();
 
                 // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
                 Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
                 await FindPetrifiedTree();
+
+                VisionContext.Instance().DrawContent.ClearAll();
 
                 // 4. 走到石化古树处
                 Logger.LogInformation("自动秘境：{Text}", "4. 走到石化古树处");
@@ -161,7 +164,7 @@ public class AutoDomainTask
         }
 
         int retryTimes = 0, clickCount = 0;
-        while (retryTimes < 10 && clickCount < 2)
+        while (retryTimes < 20 && clickCount < 2)
         {
             retryTimes++;
             var confirmRectArea = GetContentFromDispatcher().CaptureRectArea.Find(fightAssets.ConfirmRa);
@@ -171,7 +174,7 @@ public class AutoDomainTask
                 clickCount++;
             }
 
-            Sleep(1000, _taskParam.Cts);
+            Sleep(1500, _taskParam.Cts);
         }
 
         // 载入动画
@@ -282,6 +285,21 @@ public class AutoDomainTask
         domainEndTask.Start();
 
         return Task.WhenAll(combatTask, domainEndTask);
+    }
+
+    private async Task EndFightWait()
+    {
+        if (_taskParam.Cts.Token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var ms = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
+        if (ms > 0)
+        {
+            await Task.Delay(1000, _taskParam.Cts.Token);
+            Logger.LogInformation("战斗结束后等待 {Ms} 毫秒", ms);
+        }
     }
 
     /// <summary>
