@@ -75,7 +75,7 @@ public class AutoDomainTask
                 // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
                 Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
                 await StartFight(combatScenes);
-                await EndFightWait();
+                EndFightWait();
 
                 // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
                 Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
@@ -287,7 +287,7 @@ public class AutoDomainTask
         return Task.WhenAll(combatTask, domainEndTask);
     }
 
-    private async Task EndFightWait()
+    private void EndFightWait()
     {
         if (_taskParam.Cts.Token.IsCancellationRequested)
         {
@@ -297,7 +297,7 @@ public class AutoDomainTask
         var ms = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
         if (ms > 0)
         {
-            await Task.Delay(1000, _taskParam.Cts.Token);
+            Sleep(1000, _taskParam.Cts);
             Logger.LogInformation("战斗结束后等待 {Ms} 毫秒", ms);
         }
     }
