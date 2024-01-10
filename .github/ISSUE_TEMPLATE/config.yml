@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 官方文档 / Document
+    url: https://bgi.huiyadan.com/doc.html
+    about: 请在提出问题前阅读文档 / Read the document before submit the issue
+  
+  - name: 常见问题 / FAQ
+    url: https://bgi.huiyadan.com/faq.html
+    about: 常见的用户提出的问题 / Common questions asked by users
