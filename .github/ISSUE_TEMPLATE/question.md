@@ -6,4 +6,4 @@ labels: question
 ---
 
 - Problem Description / 问题描述
-
+- 请尽量提供问题相关的截图/日志等内容
