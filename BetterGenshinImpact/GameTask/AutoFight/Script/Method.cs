@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
@@ -35,8 +37,9 @@ public class Method
             yield return W;
             yield return A;
             yield return S;
+            yield return D;
 
-            yield return Aim;
+            // yield return Aim;
             yield return Dash;
             yield return Jump;
         }
@@ -62,6 +65,7 @@ public class Method
             }
         }
 
-        throw new ArgumentException($"未知的方法：{method}");
+        Logger.LogError($"战斗策略脚本中出现未知的方法：{method}");
+        throw new ArgumentException($"战斗策略脚本中出现未知的方法：{method}");
     }
 }

@@ -16,16 +16,18 @@ public class CombatCommand
 
     public CombatCommand(string name, string command)
     {
-        Name = name;
+        Name = name.Trim();
+        command = command.Trim();
         var startIndex = command.IndexOf('(');
         if (startIndex > 0)
         {
             var endIndex = command.IndexOf(')');
             var method = command[..startIndex];
+            method = method.Trim();
             Method = Method.GetEnumByCode(method);
 
             var parameters = command.Substring(startIndex + 1, endIndex - startIndex - 1);
-            Args = new List<string>(parameters.Split(','));
+            Args = new List<string>(parameters.Split(',', StringSplitOptions.TrimEntries));
             // 校验参数
             if (Method == Method.Walk)
             {
