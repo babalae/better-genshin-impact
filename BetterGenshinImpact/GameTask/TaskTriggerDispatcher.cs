@@ -1,25 +1,22 @@
-﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+﻿using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoFight;
-using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
-using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -45,11 +42,12 @@ namespace BetterGenshinImpact.GameTask
         /// <summary>
         /// 捕获结果队列
         /// </summary>
-        private Bitmap _bitmap = new(10,10);
+        private Bitmap _bitmap = new(10, 10);
+
         /// <summary>
         /// 仅捕获模式
         /// </summary>
-        private bool _onlyCaptureModeEnabled = false;
+        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.OnlyTrigger;
 
         private static readonly object _bitmapLocker = new();
 
@@ -266,9 +264,10 @@ namespace BetterGenshinImpact.GameTask
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
 
-                if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
+                if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.OnlyTrigger
+                    && (_triggers == null || !_triggers.Exists(t => t.IsEnabled)))
                 {
-                    // Debug.WriteLine("没有可用的触发器, 不再进行截屏");
+                    // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
 
@@ -284,7 +283,7 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-                if (IsOnlyCapture(bitmap))
+                if (IsOnlyCacheCapture(bitmap))
                 {
                     return;
                 }
@@ -307,10 +306,6 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 speedTimer.DebugPrint();
-                //if (_frameIndex / content.FrameRate % 2 == 0)
-                //{
-                //    GC.Collect();
-                //}
                 content.Dispose();
             }
             finally
@@ -358,18 +353,31 @@ namespace BetterGenshinImpact.GameTask
             return false;
         }
 
-        private bool IsOnlyCapture(Bitmap bitmap)
+        /// <summary>
+        /// 是否仅缓存截图
+        /// </summary>
+        /// <param name="bitmap"></param>
+        /// <returns></returns>
+        private bool IsOnlyCacheCapture(Bitmap bitmap)
         {
             lock (_bitmapLocker)
             {
-                _bitmap = new Bitmap(bitmap);
-                return _onlyCaptureModeEnabled;
+                if (_dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+                {
+                    _bitmap = new Bitmap(bitmap);
+                    if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.OnlyCacheCapture)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
 
-        public void SetOnlyCaptureMode(bool enabled)
+        public void SetCacheCaptureMode(DispatcherCaptureModeEnum mode)
         {
-            _onlyCaptureModeEnabled = enabled;
+            _dispatcherCacheCaptureMode = mode;
         }
 
         public Bitmap GetLastCaptureBitmap()

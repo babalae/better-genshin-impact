@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.MiniMap;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -109,7 +110,7 @@ public class AutoDomainTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(false);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
             Logger.LogInformation("→ {Text}", "自动秘境结束");
         }
@@ -128,7 +129,8 @@ public class AutoDomainTask
         }
 
         SystemControl.ActivateWindow();
-        TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(true);
+        TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
+        Sleep(TaskContext.Instance().Config.TriggerInterval * 2, _taskParam.Cts); // 等待缓存图像
     }
 
     private void LogScreenResolution()

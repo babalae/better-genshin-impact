@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ public class AutoFightTask
             {
                 throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。或者直接使用强制指定当前队伍角色的功能。");
             }
+
             combatScenes.BeforeTask(_taskParam.Cts);
 
             // 战斗操作
@@ -73,7 +75,7 @@ public class AutoFightTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(false);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动战斗结束");
         }
@@ -84,7 +86,8 @@ public class AutoFightTask
         LogScreenResolution();
         Logger.LogInformation("→ {Text}", "自动战斗，启动！");
         SystemControl.ActivateWindow();
-        TaskTriggerDispatcher.Instance().SetOnlyCaptureMode(true);
+        TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+        Sleep(TaskContext.Instance().Config.TriggerInterval * 2, _taskParam.Cts); // 等待缓存图像
     }
 
     private void LogScreenResolution()

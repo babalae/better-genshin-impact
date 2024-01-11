@@ -116,7 +116,8 @@ public class CombatScenes
 
             if (wanderer.IsEmpty())
             {
-                Logger.LogWarning("尝试识别流浪者失败，当前识别结果:{Text}", string.Join(",", names));
+                // 补充识别流浪者
+                Logger.LogWarning("二次尝试识别失败，当前识别结果:{Text}", string.Join(",", names));
             }
             else
             {
@@ -140,7 +141,7 @@ public class CombatScenes
 
                 if (names.Count != 4)
                 {
-                    Logger.LogWarning("尝试识别流浪者失败");
+                    Logger.LogWarning("图像识别到流浪者，但识别队内位置信息失败");
                 }
             }
         }
