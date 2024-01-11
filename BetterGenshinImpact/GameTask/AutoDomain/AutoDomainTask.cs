@@ -83,8 +83,6 @@ public class AutoDomainTask
                 Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
                 await FindPetrifiedTree();
 
-                VisionContext.Instance().DrawContent.ClearAll();
-
                 // 4. 走到石化古树处
                 Logger.LogInformation("自动秘境：{Text}", "4. 走到石化古树处");
                 await WalkToPressF();

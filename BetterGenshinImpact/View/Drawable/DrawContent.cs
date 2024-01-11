@@ -112,7 +112,7 @@ public class DrawContent
     /// </summary>
     public void ClearAll()
     {
-        if (RectList.IsEmpty && TextList.IsEmpty)
+        if (RectList.IsEmpty && TextList.IsEmpty && LineList.IsEmpty)
         {
             return;
         }
