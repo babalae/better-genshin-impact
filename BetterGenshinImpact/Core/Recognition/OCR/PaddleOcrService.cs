@@ -3,6 +3,7 @@ using OpenCvSharp;
 using Sdcb.PaddleInference;
 using Sdcb.PaddleOCR;
 using Sdcb.PaddleOCR.Models;
+using SharpDX;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -55,6 +56,16 @@ public class PaddleOcrService : IOcrService
             stopwatch.Stop();
             Debug.WriteLine($"PaddleOcr 耗时 {stopwatch.ElapsedMilliseconds}ms 结果: {result.Text}");
             return result;
+        }
+    }
+
+    public string OcrWithoutDetector(Mat mat)
+    {
+        lock (locker)
+        {
+            var str = _paddleOcrAll.Recognizer.Run(mat).Text;
+            Debug.WriteLine($"PaddleOcrWithoutDetector 结果: {str}");
+            return str;
         }
     }
 }

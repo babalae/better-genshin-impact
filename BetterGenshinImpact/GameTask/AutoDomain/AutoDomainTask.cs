@@ -689,7 +689,8 @@ public class AutoDomainTask
         {
             // 图像右侧就是浓缩树脂数量
             var countArea = content.CaptureRectArea.Crop(new Rect(condensedResinCountRa.X + condensedResinCountRa.Width, condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height));
-            var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
+            // Cv2.ImWrite($"log/resin_{DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")}.png", countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
             condensedResinCount = StringUtils.TryParseInt(count);
         }
 
