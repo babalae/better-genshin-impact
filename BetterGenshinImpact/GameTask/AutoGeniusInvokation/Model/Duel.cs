@@ -1,16 +1,15 @@
-﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.ViewModel.Pages;
 using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
@@ -124,7 +123,7 @@ public class Duel
 
                 CurrentDiceCount = 8;
 
-                // 预计算本回合内的所有可能的元素
+                // 预计算本回合内的所有可能的元素 // 并调整识别骰子素材的顺序
                 var elementSet = PredictionDiceType();
 
                 // 0 投骰子
@@ -367,6 +366,9 @@ public class Duel
                 //executeActionIndex.Add(i);
             }
         }
+
+        // 调整元素骰子识别素材顺序
+        GeniusInvokationControl.GetInstance().SortActionPhaseDiceMats(elementSet);
 
         return elementSet;
     }

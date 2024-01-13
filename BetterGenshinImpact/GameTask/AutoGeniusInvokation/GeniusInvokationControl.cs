@@ -113,16 +113,16 @@ public class GeniusInvokationControl
                 {
                     return bitmap.ToMat();
                 }
+
                 Sleep(20);
             }
+
             throw new RetryException("尝试多次后,截图失败!");
         }
         else
         {
-
             return bitmap.ToMat();
         }
-
     }
 
     public Mat CaptureGameGreyMat()
@@ -185,6 +185,26 @@ public class GeniusInvokationControl
         Retry.Do(IsInCharacterPickRetryThrowable, TimeSpan.FromSeconds(0.8), 20);
         _logger.LogInformation("识别到已经在角色出战界面，等待1.5s");
         Sleep(1500);
+    }
+
+    public void SortActionPhaseDiceMats(HashSet<ElementalType> elementSet)
+    {
+        _assets.ActionPhaseDiceMats = _assets.ActionPhaseDiceMats.OrderByDescending(kvp =>
+            {
+                for (var i = 0; i < elementSet.Count; i++)
+                {
+                    if (kvp.Key == elementSet.ElementAt(i).ToLowerString())
+                    {
+                        return i;
+                    }
+                }
+
+                return -1;
+            })
+            .ToDictionary(x => x.Key, x => x.Value);
+        // 打印排序后的顺序
+        var msg = _assets.ActionPhaseDiceMats.Aggregate("", (current, kvp) => current + $"{kvp.Key.ToElementalType().ToChinese()}| ");
+        _logger.LogDebug("当前骰子排序：{Msg}", msg);
     }
 
     /// <summary>
@@ -574,6 +594,7 @@ public class GeniusInvokationControl
             // 最后一张牌在右侧，而不是中间
             ClickExtension.Move(rect.X + rect.Width / 2d + 120, rect.Y + rect.Height - 50);
         }
+
         m.LeftButtonDown();
         Sleep(100);
         m = ClickExtension.Move(rect.X + rect.Width - 50, rect.Y + rect.Height / 2d);
@@ -1228,21 +1249,42 @@ public class GeniusInvokationControl
     {
         var srcMat = CaptureGameGreyMat();
         var diceCountMap = new Mat(srcMat, _config.MyDiceCountRect);
-        var text = OcrFactory.Paddle.Ocr(diceCountMap);
-        text = text.Replace(" ", "");
-        _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
+        var text = OcrFactory.Paddle.OcrWithoutDetector(diceCountMap);
+        text = text.Replace(" ", "")
+            .Replace("①", "1")
+            .Replace("②", "2")
+            .Replace("③", "3")
+            .Replace("④", "4")
+            .Replace("⑤", "5")
+            .Replace("⑥", "6")
+            .Replace("⑦", "7")
+            .Replace("⑧", "8")
+            .Replace("⑨", "9")
+            .Replace("⑩", "10")
+            .Replace("⑪", "11")
+            .Replace("⑫", "12")
+            .Replace("⑬", "13")
+            .Replace("⑭", "14")
+            .Replace("⑮", "15");
         if (string.IsNullOrWhiteSpace(text))
         {
-            //Cv2.ImWrite($"log\\dice_count_empty{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
+            _logger.LogWarning("通过OCR识别当前骰子数量结果为空,无影响");
+#if DEBUG
+            Cv2.ImWrite($"log\\dice_count_empty{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
+#endif
             return -10;
         }
         else if (Regex.IsMatch(text, @"^[0-9]+$"))
         {
+            _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
             return int.Parse(text);
         }
         else
         {
-            //Cv2.ImWrite($"log\\dice_count_error_{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
+            _logger.LogWarning("通过OCR识别当前骰子结果: {Text}", text);
+#if DEBUG
+            Cv2.ImWrite($"log\\dice_count_error_{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
+#endif
             return -10;
         }
     }

@@ -30,7 +30,7 @@ public partial class AutoGeniusInvokationConfig : ObservableObject
     /// <summary>
     /// 骰子数量文字识别区域
     /// </summary>
-    public Rect MyDiceCountRect { get; set; } = new(58, 632, 45, 47); // 42,47
+    public Rect MyDiceCountRect { get; } = new(68, 642, 25, 31); // 42,47
 
     ///// <summary>
     ///// 角色卡牌区域向左扩展距离，包含HP区域

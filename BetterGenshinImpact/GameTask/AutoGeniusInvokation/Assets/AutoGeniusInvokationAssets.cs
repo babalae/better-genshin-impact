@@ -2,10 +2,12 @@
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
 {
@@ -151,6 +153,8 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets
                 { "geo", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_geo.png", ImreadModes.Color) },
                 { "omni", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_omni.png", ImreadModes.Color) },
             };
+            var msg = ActionPhaseDiceMats.Aggregate("", (current, kvp) => current + $"{kvp.Key.ToElementalType().ToChinese()}| ");
+            Debug.WriteLine($"默认骰子排序：{msg}");
         }
     }
 }
