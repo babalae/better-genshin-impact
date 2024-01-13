@@ -89,7 +89,7 @@ public class AutoDomainTask
 
                 // 5. 快速领取奖励并判断是否有下一轮
                 Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-                if (!GettingTreasure())
+                if (!GettingTreasure(_taskParam.DomainRoundNum == 9999))
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                     break;
@@ -606,7 +606,8 @@ public class AutoDomainTask
     /// <summary>
     /// 领取奖励
     /// </summary>
-    private bool GettingTreasure()
+    /// <param name="recognizeResin">是否识别树脂</param>
+    private bool GettingTreasure(bool recognizeResin)
     {
         // 等待窗口弹出
         Sleep(1500, _taskParam.Cts);
@@ -649,6 +650,12 @@ public class AutoDomainTask
             var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
+                if (!recognizeResin)
+                {
+                    confirmRectArea.ClickCenter();
+                    return true;
+                }
+
                 var (condensedResinCount, fragileResinCount) = GetRemainResinStatus();
                 if (condensedResinCount == 0 && fragileResinCount < 20)
                 {
