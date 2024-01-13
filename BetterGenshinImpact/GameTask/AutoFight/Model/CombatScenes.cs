@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Xml.Linq;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -59,13 +61,10 @@ public class CombatScenes
         {
             throw new Exception($"强制指定队伍角色数量不正确，必须是4个，当前{names.Length}个");
         }
-
-        foreach (var name in names)
+        // 别名转换为标准名称
+        for (var i = 0; i < names.Length; i++)
         {
-            if (!IsGenshinAvatarName(name))
-            {
-                throw new Exception($"强制指定队伍角色名称不正确：{name}");
-            }
+            names[i] = CombatScriptParser.AvatarAliasToStandardName(names[i]);
         }
 
         Logger.LogInformation("强制指定队伍角色:{Text}", string.Join(",", names));

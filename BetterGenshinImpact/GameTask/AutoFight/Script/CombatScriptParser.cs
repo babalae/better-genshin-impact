@@ -107,7 +107,7 @@ public class CombatScriptParser
         var avatar = DefaultAutoFightConfig.CombatAvatars.Find(x => x.Alias.Contains(alias));
         if (avatar == null)
         {
-            throw new Exception($"脚本中的角色名称校验失败：{alias}");
+            throw new Exception($"角色名称校验失败：{alias}");
         }
 
         return avatar.Name;

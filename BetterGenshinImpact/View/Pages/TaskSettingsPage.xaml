@@ -370,7 +370,7 @@
                     <ui:TextBlock Grid.Row="0"
                           Grid.Column="0"
                           FontTypography="Body"
-                          Text="自动秘境（实验功能）"
+                          Text="自动秘境"
                           TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                           Grid.Column="0"
