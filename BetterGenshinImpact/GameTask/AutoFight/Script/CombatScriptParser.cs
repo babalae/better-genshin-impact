@@ -47,7 +47,7 @@ public class CombatScriptParser
 
 
             var character = line[..firstSpaceIndex];
-            AssertUtils.IsTrue(DefaultAutoFightConfig.CombatAvatarNames.Contains(character), "角色名称不存在：" + character);
+            character = AvatarAliasToStandardName(character);
             var commands = line[(firstSpaceIndex + 1)..];
             var commandArray = commands.Split(",", StringSplitOptions.RemoveEmptyEntries);
 
@@ -99,5 +99,17 @@ public class CombatScriptParser
         Logger.LogInformation("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, names);
 
         return combatCommands;
+    }
+
+
+    public static string AvatarAliasToStandardName(string alias)
+    {
+        var avatar = DefaultAutoFightConfig.CombatAvatars.Find(x => x.Alias.Contains(alias));
+        if (avatar == null)
+        {
+            throw new Exception($"脚本中的角色名称校验失败：{alias}");
+        }
+
+        return avatar.Name;
     }
 }

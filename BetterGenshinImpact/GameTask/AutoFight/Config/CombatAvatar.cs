@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Config;
 
@@ -39,5 +40,10 @@ public class CombatAvatar
     /// 元素爆发CD
     /// </summary>
     public double BurstCd { get; set; }
+
+    /// <summary>
+    /// 别名
+    /// </summary>
+    public List<string> Alias { get; set; } = new();
 
 }
