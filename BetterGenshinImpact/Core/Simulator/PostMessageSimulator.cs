@@ -93,6 +93,15 @@ public class PostMessageSimulator
         return this;
     }
 
+    public PostMessageSimulator KeyPress(User32.VK vk, int ms)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
+        Thread.Sleep(ms);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        return this;
+    }
+
     public PostMessageSimulator LongKeyPress(User32.VK vk)
     {
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);

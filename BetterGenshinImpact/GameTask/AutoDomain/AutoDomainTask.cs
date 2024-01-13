@@ -369,6 +369,8 @@ public class AutoDomainTask
             var leftKeyDown = false;
             var rightKeyDown = false;
             var noDetectCount = 0;
+            var prevKey = VK.VK_A;
+            var backwardsAndForwardsCount = 0;
             while (!_taskParam.Cts.Token.IsCancellationRequested)
             {
                 var treeRect = DetectTree(GetContentFromDispatcher());
@@ -376,8 +378,9 @@ public class AutoDomainTask
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
                     var distance = Math.Abs(middleX - treeMiddleX);
-                    if (treeMiddleX < middleX && distance > treeRect.Width / 2)
+                    if (treeRect.X + treeRect.Width < middleX)
                     {
+                        backwardsAndForwardsCount = 0;
                         // 树在左边 往左走
                         Debug.WriteLine($"树在左边 往左走 {treeMiddleX}  {middleX}");
                         if (rightKeyDown)
@@ -393,8 +396,9 @@ public class AutoDomainTask
                             leftKeyDown = true;
                         }
                     }
-                    else if (treeMiddleX > middleX && distance > treeRect.Width / 2)
+                    else if (treeRect.X > middleX)
                     {
+                        backwardsAndForwardsCount = 0;
                         // 树在右边 往右走
                         Debug.WriteLine($"树在右边 往右走 {treeMiddleX}  {middleX}");
                         if (leftKeyDown)
@@ -416,21 +420,48 @@ public class AutoDomainTask
                         if (rightKeyDown)
                         {
                             _simulator.KeyUp(VK.VK_D);
+                            prevKey = VK.VK_D;
                             rightKeyDown = false;
                         }
 
                         if (leftKeyDown)
                         {
                             _simulator.KeyUp(VK.VK_A);
+                            prevKey = VK.VK_A;
                             leftKeyDown = false;
                         }
 
-                        treeCts.Cancel();
-                        break;
+                        // 松开按键后使用小碎步移动
+                        if (treeMiddleX < middleX)
+                        {
+                            if (prevKey == VK.VK_D)
+                            {
+                                backwardsAndForwardsCount++;
+                            }
+
+                            _simulator.KeyPress(VK.VK_A, 60);
+                        }
+                        else if (treeMiddleX > middleX)
+                        {
+                            if (prevKey == VK.VK_A)
+                            {
+                                backwardsAndForwardsCount++;
+                            }
+
+                            _simulator.KeyPress(VK.VK_D, 60);
+                        }
+                        else
+                        {
+                            _simulator.KeyPress(VK.VK_W, 60);
+                            Sleep(500, _taskParam.Cts);
+                            treeCts.Cancel();
+                            break;
+                        }
                     }
                 }
                 else
                 {
+                    backwardsAndForwardsCount = 0;
                     // 左右巡逻
                     noDetectCount++;
                     if (noDetectCount > 40)
@@ -463,7 +494,16 @@ public class AutoDomainTask
                     }
                 }
 
-                Sleep(150);
+                if (backwardsAndForwardsCount > 4)
+                {
+                    // 左右移动5次说明已经在树中心了
+                    _simulator.KeyPress(VK.VK_W, 60);
+                    Sleep(500, _taskParam.Cts);
+                    treeCts.Cancel();
+                    break;
+                }
+
+                Sleep(60, _taskParam.Cts);
             }
 
             VisionContext.Instance().DrawContent.ClearAll();
