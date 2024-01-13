@@ -137,8 +137,6 @@ public class AutoSkipTrigger : ITaskTrigger
 
                         dailyRewardIconRa.ClickCenter();
                         dailyRewardIconRa.Dispose();
-                        Thread.Sleep(1800);
-                        Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                         return;
                     }
 
