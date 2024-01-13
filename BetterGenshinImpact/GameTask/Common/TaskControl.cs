@@ -98,7 +98,7 @@ public class TaskControl
         {
             Logger.LogWarning("截图失败!");
             // 重试5次
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < 15; i++)
             {
                 bitmap = gameCapture?.Capture();
                 if (bitmap != null)
@@ -106,7 +106,7 @@ public class TaskControl
                     return bitmap;
                 }
 
-                Sleep(20);
+                Sleep(30);
             }
 
             throw new Exception("尝试多次后,截图失败!");
