@@ -91,6 +91,7 @@ public class CombatScenes
         foreach (var item in result.Regions)
         {
             var name = StringUtils.ExtractChinese(item.Text);
+            name = ErrorOcrCorrection(name);
             if (IsGenshinAvatarName(name))
             {
                 names.Add(name);
@@ -125,6 +126,7 @@ public class CombatScenes
                 foreach (var item in result.Regions)
                 {
                     var name = StringUtils.ExtractChinese(item.Text);
+                    name = ErrorOcrCorrection(name);
                     if (IsGenshinAvatarName(name))
                     {
                         names.Add(name);
@@ -159,6 +161,22 @@ public class CombatScenes
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 对OCR识别结果进行纠错
+    /// TODO 还剩下单字名称（魈、琴）无法识别到的问题
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public string ErrorOcrCorrection(string name)
+    {
+        if (name.Contains("纳西"))
+        {
+            return "纳西妲";
+        }
+
+        return name;
     }
 
     private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null)
