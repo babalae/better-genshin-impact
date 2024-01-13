@@ -11,6 +11,7 @@ public class AutoFightAssets
     public List<Rect> AvatarIndexRectList;
     public Rect ERect;
     public Rect QRect;
+    public Rect EndTipsUpperRect; // 挑战达成提示
     public Rect EndTipsRect;
     public RecognitionObject WandererIconRa;
     public RecognitionObject WandererIconNoActiveRa;
@@ -38,6 +39,8 @@ public class AutoFightAssets
         QRect = new Rect(captureRect.Width - (int)(157 * assetScale), captureRect.Height - (int)(165 * assetScale),
             (int)(110 * assetScale), (int)(110 * assetScale));
         // 结束提示从中间开始找相对位置
+        EndTipsUpperRect = new Rect(captureRect.Width / 2 - (int)(100 * assetScale),  (int)(243 * assetScale),
+            (int)(200 * assetScale), (int)(50 * assetScale));
         EndTipsRect = new Rect(captureRect.Width / 2 - (int)(200 * assetScale), captureRect.Height - (int)(160 * assetScale),
             (int)(400 * assetScale), (int)(80 * assetScale));
 

@@ -327,16 +327,25 @@ public class AutoDomainTask
     private bool IsDomainEnd()
     {
         var content = GetContentFromDispatcher();
-        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsRect);
-        var result = OcrFactory.Paddle.OcrResult(endTipsRect.SrcGreyMat);
-        var rect = result.FindRectByText("自动退出");
-        if (rect == Rect.Empty)
+
+        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsUpperRect);
+        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        if (text.Contains("挑战") || text.Contains("达成"))
         {
-            return false;
+            Logger.LogInformation("检测到秘境结束提示(挑战达成)，结束秘境");
+            return true;
         }
 
-        Logger.LogInformation("检测到秘境结束提示，结束秘境");
-        return true;
+        endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsRect);
+        var result = OcrFactory.Paddle.OcrResult(endTipsRect.SrcGreyMat);
+        var rect = result.FindRectByText("自动退出");
+        if (rect != Rect.Empty)
+        {
+            Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
+            return true;
+        }
+
+        return false;
     }
 
 
