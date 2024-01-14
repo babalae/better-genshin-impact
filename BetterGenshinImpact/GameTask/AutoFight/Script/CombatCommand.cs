@@ -70,7 +70,19 @@ public class CombatCommand
             return;
         }
 
-        avatar.Switch();
+        // 非宏类脚本，等待切换角色成功
+        if (Method != Method.Wait
+            && Method != Method.MouseDown
+            && Method != Method.MouseUp
+            && Method != Method.Click
+            && Method != Method.MoveBy
+            && Method != Method.KeyDown
+            && Method != Method.KeyUp
+            && Method != Method.KeyPress)
+        {
+            avatar.Switch();
+        }
+
         if (Method == Method.Skill)
         {
             var hold = Args != null && Args.Contains("hold");

@@ -454,11 +454,12 @@ public class Avatar
                 {
                     return;
                 }
+
                 Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
                 ms -= 50;
                 Sleep(50, Cts);
             }
-            
+
             AutoFightContext.Instance().Simulator.LeftButtonUp();
         }
         else
