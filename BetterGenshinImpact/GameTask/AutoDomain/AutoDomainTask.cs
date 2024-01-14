@@ -706,7 +706,7 @@ public class AutoDomainTask
         if (!fragileResinCountRa.IsEmpty())
         {
             // 图像右侧就是脆弱树脂数量
-            var countArea = content.CaptureRectArea.Crop(new Rect(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 2.5), fragileResinCountRa.Height));
+            var countArea = content.CaptureRectArea.Crop(new Rect(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height));
             var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
             fragileResinCount = StringUtils.TryParseInt(count);
         }

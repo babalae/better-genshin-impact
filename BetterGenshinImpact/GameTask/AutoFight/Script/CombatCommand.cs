@@ -39,6 +39,22 @@ public class CombatCommand
             {
                 AssertUtils.IsTrue(Args.Count == 1, "w/a/s/d方法必须有一个入参，代表行走时间。例：d(0.5)");
             }
+            else if (Method == Method.MoveBy)
+            {
+                AssertUtils.IsTrue(Args.Count == 2, "moveby方法必须有两个入参，分别是x和y。例：moveby(100, 100))");
+            }
+            else if (Method == Method.KeyDown || Method == Method.KeyUp || Method == Method.KeyPress)
+            {
+                AssertUtils.IsTrue(Args.Count == 1, $"{Method.Alias[0]}方法必须有一个入参，代表按键");
+                try
+                {
+                    Avatar.ToVk(Args[0]);
+                }
+                catch
+                {
+                    throw new ArgumentException($"{Method.Alias[0]}方法的入参必须是VirtualKeyCodes枚举中的值，当前入参 {Args[0]} 不合法");
+                }
+            }
         }
         else
         {
@@ -137,6 +153,65 @@ public class CombatCommand
         else if (Method == Method.Jump)
         {
             avatar.Jump();
+        }
+        // 宏
+        else if (Method == Method.MouseDown)
+        {
+            if (Args is { Count: > 0 })
+            {
+                avatar.MouseDown(Args![0]);
+            }
+            else
+            {
+                avatar.MouseDown();
+            }
+        }
+        else if (Method == Method.MouseUp)
+        {
+            if (Args is { Count: > 0 })
+            {
+                avatar.MouseUp(Args![0]);
+            }
+            else
+            {
+                avatar.MouseUp();
+            }
+        }
+        else if (Method == Method.Click)
+        {
+            if (Args is { Count: > 0 })
+            {
+                avatar.Click(Args![0]);
+            }
+            else
+            {
+                avatar.Click();
+            }
+        }
+        else if (Method == Method.MoveBy)
+        {
+            if (Args is { Count: 2 })
+            {
+                var x = int.Parse(Args![0]);
+                var y = int.Parse(Args[1]);
+                avatar.MoveBy(x, y);
+            }
+            else
+            {
+                throw new ArgumentException("moveby方法必须有两个入参，分别是x和y。例：moveby(100, 100)");
+            }
+        }
+        else if (Method == Method.KeyDown)
+        {
+            avatar.KeyDown(Args![0]);
+        }
+        else if (Method == Method.KeyUp)
+        {
+            avatar.KeyUp(Args![0]);
+        }
+        else if (Method == Method.KeyPress)
+        {
+            avatar.KeyPress(Args![0]);
         }
         else
         {

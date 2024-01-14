@@ -23,6 +23,15 @@ public class Method
     public static readonly Method Dash = new(new() { "dash", "冲刺" });
     public static readonly Method Jump = new(new() { "jump", "j", "跳跃" });
 
+    // 宏
+    public static readonly Method MouseDown = new(new() { "mousedown" });
+    public static readonly Method MouseUp = new(new() { "mouseup" });
+    public static readonly Method Click = new(new() { "click" });
+    public static readonly Method MoveBy = new(new() { "moveby" });
+    public static readonly Method KeyDown = new(new() { "keydown" });
+    public static readonly Method KeyUp = new(new() { "keyup" });
+    public static readonly Method KeyPress = new(new() { "keypress" });
+
     public static IEnumerable<Method> Values
     {
         get
@@ -42,6 +51,15 @@ public class Method
             // yield return Aim;
             yield return Dash;
             yield return Jump;
+
+            // 宏
+            yield return MouseDown;
+            yield return MouseUp;
+            yield return Click;
+            yield return MoveBy;
+            yield return KeyDown;
+            yield return KeyUp;
+            yield return KeyPress;
         }
     }
 

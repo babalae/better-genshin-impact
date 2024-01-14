@@ -84,6 +84,15 @@ public class PostMessageSimulator
         return this;
     }
 
+    public PostMessageSimulator RightButtonClick()
+    {
+        IntPtr p = (16 << 16) | 16;
+        User32.PostMessage(_hWnd, WM_RBUTTONDOWN, IntPtr.Zero, p);
+        Thread.Sleep(100);
+        User32.PostMessage(_hWnd, WM_RBUTTONUP, IntPtr.Zero, p);
+        return this;
+    }
+
     public PostMessageSimulator KeyPress(User32.VK vk)
     {
         //User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);

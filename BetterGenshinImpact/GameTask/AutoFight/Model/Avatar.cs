@@ -364,14 +364,12 @@ public class Avatar
 
         if (ms == 0)
         {
-            AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SHIFT);
+            ms = 200;
         }
-        else
-        {
-            AutoFightContext.Instance().Simulator.KeyDown(User32.VK.VK_SHIFT);
-            Sleep(ms, Cts);
-            AutoFightContext.Instance().Simulator.KeyUp(User32.VK.VK_SHIFT);
-        }
+
+        AutoFightContext.Instance().Simulator.RightButtonDown();
+        Sleep(ms, Cts);
+        AutoFightContext.Instance().Simulator.RightButtonUp();
     }
 
 
@@ -469,5 +467,91 @@ public class Avatar
             Sleep(ms, Cts);
             AutoFightContext.Instance().Simulator.LeftButtonUp();
         }
+    }
+
+
+    public void MouseDown(string key = "left")
+    {
+        key = key.ToLower();
+        if (key == "left")
+        {
+            AutoFightContext.Instance().Simulator.LeftButtonDown();
+        }
+        else if (key == "right")
+        {
+            AutoFightContext.Instance().Simulator.RightButtonDown();
+        }
+        else if (key == "middle")
+        {
+            Simulation.SendInput.Mouse.MiddleButtonDown();
+        }
+    }
+
+    public void MouseUp(string key = "left")
+    {
+        key = key.ToLower();
+        if (key == "left")
+        {
+            AutoFightContext.Instance().Simulator.LeftButtonUp();
+        }
+        else if (key == "right")
+        {
+            AutoFightContext.Instance().Simulator.RightButtonUp();
+        }
+        else if (key == "middle")
+        {
+            Simulation.SendInput.Mouse.MiddleButtonUp();
+        }
+    }
+
+    public void Click(string key = "left")
+    {
+        key = key.ToLower();
+        if (key == "left")
+        {
+            AutoFightContext.Instance().Simulator.LeftButtonClick();
+        }
+        else if (key == "right")
+        {
+            AutoFightContext.Instance().Simulator.RightButtonClick();
+        }
+        else if (key == "middle")
+        {
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+        }
+    }
+
+    public void MoveBy(int x, int y)
+    {
+        Simulation.SendInputEx.Mouse.MoveMouseBy(x, y);
+    }
+
+    public void KeyDown(string key)
+    {
+        var vk = ToVk(key);
+        AutoFightContext.Instance().Simulator.KeyDown(vk);
+    }
+
+    public void KeyUp(string key)
+    {
+        var vk = ToVk(key);
+        AutoFightContext.Instance().Simulator.KeyUp(vk);
+    }
+
+    public void KeyPress(string key)
+    {
+        var vk = ToVk(key);
+        AutoFightContext.Instance().Simulator.KeyPress(vk);
+    }
+
+    public static User32.VK ToVk(string key)
+    {
+        key = key.ToUpper();
+        if (!key.StartsWith("VK_"))
+        {
+            key = $"VK_{key}";
+        }
+
+        return (User32.VK)Enum.Parse(typeof(User32.VK), key);
     }
 }
