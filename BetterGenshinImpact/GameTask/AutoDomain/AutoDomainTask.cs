@@ -267,14 +267,18 @@ public class AutoDomainTask
                     }
                 }
             }
-            catch (NormalEndException)
+            catch (NormalEndException e)
             {
-                Logger.LogInformation("战斗操作结束");
+                Logger.LogInformation("战斗操作中断：{Msg}", e.Message);
             }
             catch (Exception e)
             {
                 Logger.LogWarning(e.Message);
                 throw;
+            }
+            finally
+            {
+                Logger.LogInformation("自动战斗线程结束");
             }
         }, cts.Token);
 

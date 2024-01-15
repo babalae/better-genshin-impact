@@ -256,10 +256,10 @@ public class Avatar
                     for (int j = 0; j < 10; j++)
                     {
                         Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
-                        Sleep(50, Cts);
+                        Sleep(50); // 持续操作不应该被cts取消
                     }
 
-                    Sleep(300, Cts);
+                    Sleep(300); // 持续操作不应该被cts取消
                     AutoFightContext.Instance().Simulator.KeyUp(User32.VK.VK_E);
                 }
                 else
@@ -368,7 +368,7 @@ public class Avatar
         }
 
         AutoFightContext.Instance().Simulator.RightButtonDown();
-        Sleep(ms, Cts);
+        Sleep(ms); // 冲刺不能被cts取消
         AutoFightContext.Instance().Simulator.RightButtonUp();
     }
 
@@ -404,7 +404,7 @@ public class Avatar
         }
 
         AutoFightContext.Instance().Simulator.KeyDown(vk);
-        Sleep(ms, Cts);
+        Sleep(ms); // 行走不能被cts取消
         AutoFightContext.Instance().Simulator.KeyUp(vk);
     }
 
@@ -424,7 +424,7 @@ public class Avatar
     /// <param name="ms"></param>
     public void Wait(int ms)
     {
-        Sleep(ms, Cts);
+        Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
 
     /// <summary>
@@ -457,7 +457,7 @@ public class Avatar
 
                 Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
                 ms -= 50;
-                Sleep(50, Cts);
+                Sleep(50); // 持续操作不应该被cts取消
             }
 
             AutoFightContext.Instance().Simulator.LeftButtonUp();
@@ -465,7 +465,7 @@ public class Avatar
         else
         {
             AutoFightContext.Instance().Simulator.LeftButtonDown();
-            Sleep(ms, Cts);
+            Sleep(ms); // 持续操作不应该被cts取消
             AutoFightContext.Instance().Simulator.LeftButtonUp();
         }
     }
