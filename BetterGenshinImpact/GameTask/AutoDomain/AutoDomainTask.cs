@@ -634,7 +634,7 @@ public class AutoDomainTask
         }
 
 
-        Sleep(600, _taskParam.Cts);
+        Sleep(1200, _taskParam.Cts);
 
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
