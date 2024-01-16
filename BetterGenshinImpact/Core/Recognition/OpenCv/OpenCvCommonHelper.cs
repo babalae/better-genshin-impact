@@ -49,6 +49,38 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
             return sum;
         }
 
+        public static int CountGrayMatColor(Mat mat, byte lowColor, byte highColor)
+        {
+            Debug.Assert(mat.Depth() == MatType.CV_8U);
+            var channels = mat.Channels();
+            var nRows = mat.Rows;
+            var nCols = mat.Cols * channels;
+            if (mat.IsContinuous())
+            {
+                nCols *= nRows;
+                nRows = 1;
+            }
+
+            var sum = 0;
+            unsafe
+            {
+                for (var i = 0; i < nRows; i++)
+                {
+                    var p = mat.Ptr(i);
+                    var b = (byte*)p.ToPointer();
+                    for (var j = 0; j < nCols; j++)
+                    {
+                        if (b[j] >= lowColor && b[j] <= highColor)
+                        {
+                            sum++;
+                        }
+                    }
+                }
+            }
+
+            return sum;
+        }
+
         public static Mat Threshold(Mat src, Scalar low, Scalar high)
         {
             using var mask = new Mat();

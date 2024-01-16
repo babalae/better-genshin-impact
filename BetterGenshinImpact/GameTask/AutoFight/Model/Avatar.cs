@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
@@ -135,6 +136,8 @@ public class Avatar
             }
 
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            // Debug.WriteLine($"切换到{Index}号位");
+            // Cv2.ImWrite($"log/切换.png", content.CaptureRectArea.SrcMat);
             Sleep(250, Cts); // 比1秒多一点，给截图留出时间
         }
     }
@@ -153,8 +156,8 @@ public class Avatar
         {
             // 剪裁出IndexRect区域
             var indexRa = content.CaptureRectArea.Crop(IndexRect);
-            // Cv2.ImWrite($"indexRa_{Name}.png", indexRa.SrcMat);
-            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 255);
+            // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
+            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 251, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {
                 return false;
