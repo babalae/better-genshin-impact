@@ -159,7 +159,7 @@ public class AutoDomainTask
         var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(_autoPickAssets.FRo);
         if (!fRectArea.IsEmpty())
         {
-            Simulation.SendInputEx.Keyboard.KeyDown(VK.VK_F);
+            Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
             Logger.LogInformation("自动秘境：{Text}", "进入秘境");
             // 秘境开门动画 5s
             Sleep(5000, _taskParam.Cts);
