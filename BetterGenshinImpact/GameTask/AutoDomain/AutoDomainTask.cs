@@ -631,6 +631,10 @@ public class AutoDomainTask
             if (!useCondensedResinRa.IsEmpty())
             {
                 useCondensedResinRa.ClickCenter();
+                // 点两下 #224 #218
+                // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
+                Sleep(400, _taskParam.Cts);
+                useCondensedResinRa.ClickCenter();
                 break;
             }
 
@@ -638,7 +642,7 @@ public class AutoDomainTask
         }
 
 
-        Sleep(1200, _taskParam.Cts);
+        Sleep(1000, _taskParam.Cts);
 
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
