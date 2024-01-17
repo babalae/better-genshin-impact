@@ -119,7 +119,7 @@ public class Avatar
     /// </summary>
     public void Switch()
     {
-        for (var i = 0; i < 40; i++)
+        for (var i = 0; i < 30; i++)
         {
             if (Cts is { IsCancellationRequested: true })
             {
@@ -138,7 +138,7 @@ public class Avatar
             AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", content.CaptureRectArea.SrcMat);
-            Sleep(250, Cts); // 比1秒多一点，给截图留出时间
+            Sleep(250, Cts);
         }
     }
 
