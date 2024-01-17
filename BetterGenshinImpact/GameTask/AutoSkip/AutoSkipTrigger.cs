@@ -71,7 +71,7 @@ public class AutoSkipTrigger : ITaskTrigger
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
         // 播放中图标消失3s内OCR判断文字
-        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 2)
+        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 3)
         {
             // 找播放中的文字
             content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
