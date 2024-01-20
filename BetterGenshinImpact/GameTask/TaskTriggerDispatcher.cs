@@ -135,8 +135,9 @@ namespace BetterGenshinImpact.GameTask
             var systemInfo = TaskContext.Instance().SystemInfo;
             var width = systemInfo.GameScreenSize.Width;
             var height = systemInfo.GameScreenSize.Height;
-            _logger.LogInformation("当前游戏分辨率{Width}x{Height}，素材缩放比率{Scale}",
-                width, height, systemInfo.AssetScale.ToString("F"));
+            var dpiScale = DpiHelper.ScaleY;
+            _logger.LogInformation("当前游戏分辨率{Width}x{Height}，素材缩放比率{Scale}，DPI缩放{Dpi}",
+                width, height, systemInfo.AssetScale.ToString("F"), TaskContext.Instance().DpiScale);
 
             if (width * 9 != height * 16)
             {
