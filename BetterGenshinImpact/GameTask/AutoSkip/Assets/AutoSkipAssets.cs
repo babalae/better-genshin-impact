@@ -20,6 +20,7 @@ public class AutoSkipAssets
     public RecognitionObject CollectRo;
     public RecognitionObject ReRo;
 
+    public RecognitionObject PrimogemRo;
 
     //public Mat BinaryStopAutoButtonMat;
 
@@ -115,6 +116,16 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "re.png"),
             RegionOfInterest = new Rect(info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 每日奖励
+        PrimogemRo = new RecognitionObject
+        {
+            Name = "Primogem",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "primogem.png"),
+            RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }

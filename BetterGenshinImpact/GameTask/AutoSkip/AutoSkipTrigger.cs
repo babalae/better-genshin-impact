@@ -54,6 +54,8 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private DateTime _prevExecute = DateTime.MinValue;
 
+    private DateTime _prevGetDailyRewards = DateTime.MinValue;
+
     public void OnCapture(CaptureContent content)
     {
         if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
@@ -65,6 +67,9 @@ public class AutoSkipTrigger : ITaskTrigger
 
         var config = TaskContext.Instance().Config.AutoSkipConfig;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+
+        GetDailyRewardsEsc(config, content);
+
         // 找左上角剧情自动的按钮
         using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
 
@@ -137,6 +142,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
                         dailyRewardIconRa.ClickCenter();
                         dailyRewardIconRa.Dispose();
+                        _prevGetDailyRewards = DateTime.Now; // 记录领取时间
                         return;
                     }
 
@@ -234,5 +240,29 @@ public class AutoSkipTrigger : ITaskTrigger
 
         var text = OcrFactory.Paddle.Ocr(bMat);
         return text;
+    }
+
+    /// <summary>
+    /// 领取每日委托奖励 后 20s 寻找原石是否出现，出现则按下esc
+    /// </summary>
+    private void GetDailyRewardsEsc(AutoSkipConfig config, CaptureContent content)
+    {
+        if (!config.AutoGetDailyRewardsEnabled)
+        {
+            return;
+        }
+
+        if ((DateTime.Now - _prevGetDailyRewards).TotalSeconds > 20)
+        {
+            return;
+        }
+
+        content.CaptureRectArea.Find(_autoSkipAssets.PrimogemRo, primogemRa =>
+        {
+            Thread.Sleep(100);
+            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            _prevGetDailyRewards = DateTime.MinValue;
+            primogemRa.Dispose();
+        });
     }
 }

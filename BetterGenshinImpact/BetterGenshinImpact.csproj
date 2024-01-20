@@ -299,6 +299,18 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\collect.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\comfirm_btn1.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\comfirm_btn2.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_exclamation.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\primogem.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\re.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -319,6 +331,9 @@
 		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\submit_icon_exclamation.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoWood\Assets\1920x1080\character_guide.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
