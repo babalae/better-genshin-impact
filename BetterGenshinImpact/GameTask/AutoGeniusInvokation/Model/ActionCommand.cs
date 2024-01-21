@@ -20,7 +20,14 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         {
             if (Action == ActionEnum.UseSkill)
             {
-                return $"【{Character.Name}】使用【技能{TargetIndex}】";
+                if (string.IsNullOrEmpty(Character.Skills[TargetIndex].Name))
+                {
+                    return $"【{Character.Name}】使用【技能{TargetIndex}】";
+                }
+                else
+                {
+                    return $"【{Character.Name}】使用【{Character.Skills[TargetIndex].Name}】";
+                }
             }
             else if (Action == ActionEnum.SwitchLater)
             {

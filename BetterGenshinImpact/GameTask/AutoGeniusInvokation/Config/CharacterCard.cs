@@ -135,7 +135,10 @@ public class CharacterCard
 
     public static Skill GetSkill(SkillsItem skillsItem)
     {
-        Skill skill = new();
+        Skill skill = new()
+        {
+            Name = skillsItem.Name
+        };
         var specificElementNum = 0;
         foreach (var cost in skillsItem.Cost)
         {
