@@ -1,10 +1,9 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFight.Config;
-using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using System.Linq;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
@@ -47,7 +46,7 @@ public class CombatScriptParser
 
 
             var character = line[..firstSpaceIndex];
-            character = AvatarAliasToStandardName(character);
+            character = DefaultAutoFightConfig.AvatarAliasToStandardName(character);
             var commands = line[(firstSpaceIndex + 1)..];
             var commandArray = commands.Split(",", StringSplitOptions.RemoveEmptyEntries);
 
@@ -99,17 +98,5 @@ public class CombatScriptParser
         Logger.LogInformation("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, names);
 
         return combatCommands;
-    }
-
-
-    public static string AvatarAliasToStandardName(string alias)
-    {
-        var avatar = DefaultAutoFightConfig.CombatAvatars.Find(x => x.Alias.Contains(alias));
-        if (avatar == null)
-        {
-            throw new Exception($"角色名称校验失败：{alias}");
-        }
-
-        return avatar.Name;
     }
 }

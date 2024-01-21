@@ -243,7 +243,7 @@ public class AutoSkipTrigger : ITaskTrigger
     }
 
     /// <summary>
-    /// 领取每日委托奖励 后 20s 寻找原石是否出现，出现则按下esc
+    /// 领取每日委托奖励 后 10s 寻找原石是否出现，出现则按下esc
     /// </summary>
     private void GetDailyRewardsEsc(AutoSkipConfig config, CaptureContent content)
     {
@@ -252,7 +252,7 @@ public class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-        if ((DateTime.Now - _prevGetDailyRewards).TotalSeconds > 20)
+        if ((DateTime.Now - _prevGetDailyRewards).TotalSeconds > 10)
         {
             return;
         }

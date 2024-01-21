@@ -64,7 +64,7 @@ public class CombatScenes
         // 别名转换为标准名称
         for (var i = 0; i < names.Length; i++)
         {
-            names[i] = CombatScriptParser.AvatarAliasToStandardName(names[i]);
+            names[i] = DefaultAutoFightConfig.AvatarAliasToStandardName(names[i]);
         }
 
         Logger.LogInformation("强制指定队伍角色:{Text}", string.Join(",", names));

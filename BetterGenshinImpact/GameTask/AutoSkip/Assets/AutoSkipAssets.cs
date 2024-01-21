@@ -128,5 +128,7 @@ public class AutoSkipAssets
             RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
+
+        // 更多对话要素
     }
 }

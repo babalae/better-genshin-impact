@@ -22,4 +22,15 @@ public class DefaultAutoFightConfig
         CombatAvatarNames = config.Select(x => x.Name).ToList();
         CombatAvatarMap = config.ToDictionary(x => x.Name);
     }
+
+    public static string AvatarAliasToStandardName(string alias)
+    {
+        var avatar = CombatAvatars.Find(x => x.Alias.Contains(alias));
+        if (avatar == null)
+        {
+            throw new Exception($"角色名称校验失败：{alias}");
+        }
+
+        return avatar.Name;
+    }
 }

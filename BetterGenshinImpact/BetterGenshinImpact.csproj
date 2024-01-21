@@ -290,6 +290,9 @@
 		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\退出挑战.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoGeniusInvokation\Assets\tcg_character_card.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoPick\Assets\1920x1080\F.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

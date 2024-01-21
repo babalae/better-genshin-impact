@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +13,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 public class ScriptParser
 {
     private static readonly ILogger<ScriptParser> MyLogger = App.GetLogger<ScriptParser>();
+
     public static Duel Parse(string script)
     {
         var lines = script.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
@@ -116,21 +119,45 @@ public class ScriptParser
         var parts = characterAndSkill[0].Split('=');
         character.Index = int.Parse(Regex.Replace(parts[0], @"[^0-9]+", ""));
         MyAssert(character.Index >= 1 && character.Index <= 3, "角色序号必须在1-3之间");
-        var nameAndElement = parts[1].Split('|');
-        character.Name = nameAndElement[0];
-        character.Element = nameAndElement[1].Substring(0, 1).ChineseToElementalType();
 
-        // 技能
-        string skillStr = characterAndSkill[1].Replace("}", "");
-        var skillParts = skillStr.Split(',');
-        var skills = new Skill[skillParts.Length + 1];
-        for (int i = 0; i < skillParts.Length; i++)
+        if (parts[1].Contains("|"))
         {
-            var skill = ParseSkill(skillParts[i]);
-            skills[skill.Index] = skill;
+            var nameAndElement = parts[1].Split('|');
+            character.Name = nameAndElement[0];
+            character.Element = nameAndElement[1].Substring(0, 1).ChineseToElementalType();
+
+            // 技能
+            string skillStr = characterAndSkill[1].Replace("}", "");
+            var skillParts = skillStr.Split(',');
+            var skills = new Skill[skillParts.Length + 1];
+            for (int i = 0; i < skillParts.Length; i++)
+            {
+                var skill = ParseSkill(skillParts[i]);
+                skills[skill.Index] = skill;
+            }
+
+            character.Skills = skills.ToArray();
+        }
+        else
+        {
+            // 没有配置直接使用默认配置
+            character.Name = parts[1];
+            var standardName = DefaultTcgConfig.CharacterCardMap.Keys.FirstOrDefault(x => x.Equals(character.Name));
+            if (string.IsNullOrEmpty(standardName))
+            {
+                standardName = DefaultAutoFightConfig.AvatarAliasToStandardName(character.Name);
+            }
+
+            if (DefaultTcgConfig.CharacterCardMap.TryGetValue(standardName, out var characterCard))
+            {
+                CharacterCard.CopyCardProperty(character, characterCard);
+            }
+            else
+            {
+                throw new System.Exception($"角色【{standardName}】暂无默认卡牌定义配置，请自行进行角色定义");
+            }
         }
 
-        character.Skills = skills.ToArray();
         return character;
     }
 
