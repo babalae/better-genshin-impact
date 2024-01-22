@@ -87,7 +87,7 @@ public class AutoFightTask
         Logger.LogInformation("→ {Text}", "自动战斗，启动！");
         SystemControl.ActivateWindow();
         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 2, _taskParam.Cts); // 等待缓存图像
+        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _taskParam.Cts); // 等待缓存图像
     }
 
     private void LogScreenResolution()

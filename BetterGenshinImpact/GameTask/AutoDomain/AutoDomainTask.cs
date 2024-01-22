@@ -128,7 +128,7 @@ public class AutoDomainTask
 
         SystemControl.ActivateWindow();
         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 2, _taskParam.Cts); // 等待缓存图像
+        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _taskParam.Cts); // 等待缓存图像
     }
 
     private void LogScreenResolution()
