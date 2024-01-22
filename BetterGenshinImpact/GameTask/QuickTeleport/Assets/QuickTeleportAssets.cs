@@ -101,7 +101,7 @@ public class QuickTeleportAssets
     public RecognitionObject BuildMapChooseIconRo(string name)
     {
         var info = TaskContext.Instance().SystemInfo;
-        return new RecognitionObject
+        var ro = new RecognitionObject
         {
             Name = name + "MapChooseIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
@@ -112,5 +112,12 @@ public class QuickTeleportAssets
                 info.CaptureAreaRect.Height - (int)(200 * info.AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
+
+        if (name == "TeleportWaypoint.png")
+        {
+            ro.Threshold = 0.7;
+        }
+
+        return ro;
     }
 }

@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -16,7 +17,9 @@ internal class QuickTeleportTrigger : ITaskTrigger
     public bool IsExclusive { get; set; }
 
     private readonly QuickTeleportAssets _assets;
+
     private DateTime _prevClickOptionButtonTime = DateTime.MinValue;
+
     // private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
     private DateTime _prevExecute = DateTime.MinValue;
     private readonly QuickTeleportConfig _config;
@@ -59,6 +62,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 {
                     return;
                 }
+
                 // 存在地图选择按钮，说明未选中传送点，直接返回
                 var mapChooseRa = content.CaptureRectArea.Find(_assets.MapChooseRo);
                 if (!mapChooseRa.IsEmpty())
@@ -97,6 +101,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
     private bool CheckMapChooseIcon(CaptureContent content)
     {
         var hasMapChooseIcon = false;
+
+        List<RectArea> raResultList = new();
         foreach (var ro in _assets.MapChooseIconRoList)
         {
             var ra = content.CaptureRectArea.Find(ro);
@@ -107,18 +113,38 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 {
                     continue;
                 }
+
                 if ((DateTime.Now - _prevClickOptionButtonTime).TotalMilliseconds > 500)
                 {
                     TaskControl.Logger.LogInformation("快速传送：点击 {Option}", text);
                 }
+
                 _prevClickOptionButtonTime = DateTime.Now;
                 TaskControl.Sleep(_config.TeleportListClickDelay);
-                hasMapChooseIcon = true;
-                ra.ClickCenter();
-               
-                break;
+                raResultList.Add(ra);
             }
         }
+
+        if (raResultList.Count > 0)
+        {
+            var highest = raResultList[0];
+            foreach (var ra in raResultList)
+            {
+                if (ra.Y < highest.Y)
+                {
+                    highest = ra;
+                }
+            }
+
+            highest.ClickCenter();
+            hasMapChooseIcon = true;
+
+            foreach (var ra in raResultList)
+            {
+                ra.Dispose();
+            }
+        }
+
 
         return hasMapChooseIcon;
     }

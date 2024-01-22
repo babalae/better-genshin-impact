@@ -21,6 +21,7 @@ public partial class QuickTeleportConfig : ObservableObject
 
     /// <summary>
     /// 等待右侧传送弹出界面的时间(ms)
+    /// 0.24 版本后，这个值可以设置为 0，因为识图时间变久了。0.24 版本前，建议设置为 100
     /// </summary>
-    [ObservableProperty] private int _waitTeleportPanelDelay = 100;
+    [ObservableProperty] private int _waitTeleportPanelDelay = 10;
 }
