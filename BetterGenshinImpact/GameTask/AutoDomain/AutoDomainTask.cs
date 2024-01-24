@@ -40,6 +40,8 @@ public class AutoDomainTask
 
     private readonly List<CombatCommand> _combatCommands;
 
+    private readonly AutoDomainConfig _config;
+
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
@@ -49,6 +51,7 @@ public class AutoDomainTask
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
+        _config = TaskContext.Instance().Config.AutoDomainConfig;
     }
 
     public async void Start()
@@ -390,8 +393,7 @@ public class AutoDomainTask
                 if (treeRect != Rect.Empty)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
-                    var distance = Math.Abs(middleX - treeMiddleX);
-                    if (treeRect.X + treeRect.Width < middleX)
+                    if (treeRect.X + treeRect.Width < middleX && !_config.ShortMovement)
                     {
                         backwardsAndForwardsCount = 0;
                         // 树在左边 往左走
@@ -409,7 +411,7 @@ public class AutoDomainTask
                             leftKeyDown = true;
                         }
                     }
-                    else if (treeRect.X > middleX)
+                    else if (treeRect.X > middleX && !_config.ShortMovement)
                     {
                         backwardsAndForwardsCount = 0;
                         // 树在右边 往右走
@@ -453,6 +455,7 @@ public class AutoDomainTask
                             }
 
                             _simulator.KeyPress(VK.VK_A, 60);
+                            prevKey = VK.VK_A;
                         }
                         else if (treeMiddleX > middleX)
                         {
@@ -462,6 +465,7 @@ public class AutoDomainTask
                             }
 
                             _simulator.KeyPress(VK.VK_D, 60);
+                            prevKey = VK.VK_D;
                         }
                         else
                         {
@@ -507,7 +511,7 @@ public class AutoDomainTask
                     }
                 }
 
-                if (backwardsAndForwardsCount > 4)
+                if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
                 {
                     // 左右移动5次说明已经在树中心了
                     _simulator.KeyPress(VK.VK_W, 60);
@@ -532,8 +536,8 @@ public class AutoDomainTask
         var list = new List<RectDrawable>();
         foreach (var box in result.Boxes)
         {
-            var rect = new System.Windows.Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-            list.Add(new RectDrawable(rect));
+            var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+            list.Add(rect.ToRectDrawable());
         }
 
         VisionContext.Instance().DrawContent.PutOrRemoveRectList("TreeBox", list);
