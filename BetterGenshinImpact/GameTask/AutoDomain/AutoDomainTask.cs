@@ -646,7 +646,7 @@ public class AutoDomainTask
 
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        while (true)
+        for (var i = 0; i < 30; i++)
         {
             // 跳过领取动画
             _clickOffset.ClickWithoutScale(captureArea.Width - (int)(140 * _clickOffset.AssetScale), (int)(53 * _clickOffset.AssetScale));
@@ -679,14 +679,14 @@ public class AutoDomainTask
                 {
                     // 有体力继续
                     confirmRectArea.ClickCenter();
-                    break;
+                    return true;
                 }
             }
 
             Sleep(300, _taskParam.Cts);
         }
 
-        return true;
+        throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
     }
 
     /// <summary>
