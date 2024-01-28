@@ -223,7 +223,10 @@ public class AutoDomainTask
             _simulator.KeyDown(VK.VK_W);
             Sleep(20);
             // 组合键好像不能直接用 postmessage
-            Simulation.SendInputEx.Keyboard.KeyDown(VK.VK_SHIFT);
+            if (!_config.WalkToF)
+            {
+                Simulation.SendInputEx.Keyboard.KeyDown(VK.VK_SHIFT);
+            }
             try
             {
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
@@ -246,7 +249,10 @@ public class AutoDomainTask
             {
                 _simulator.KeyUp(VK.VK_W);
                 Sleep(50);
-                Simulation.SendInputEx.Keyboard.KeyUp(VK.VK_SHIFT);
+                if (!_config.WalkToF)
+                {
+                    Simulation.SendInputEx.Keyboard.KeyUp(VK.VK_SHIFT);
+                }
             }
         });
     }

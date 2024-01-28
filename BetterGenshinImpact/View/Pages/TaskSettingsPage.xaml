@@ -99,7 +99,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动打牌 -<Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        全自动打牌 -
+                        <Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -192,7 +194,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        需要装备「王树瑞佑」 -<Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        需要装备「王树瑞佑」 -
+                        <Hyperlink Command="{Binding GoToAutoWoodUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -261,8 +265,8 @@
         </ui:CardExpander>
 
         <ui:CardExpander Margin="0,0,0,12"
-         ContentPadding="0"
-         Icon="{ui:SymbolIcon ArrowSyncCircle24}">
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon ArrowSyncCircle24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -274,25 +278,26 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
-                  Grid.Column="0"
-                  FontTypography="Body"
-                  Text="自动战斗（实验功能）"
-                  TextWrapping="Wrap" />
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动战斗（实验功能）"
+                                  TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
-                  Grid.Column="0"
-                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                  TextWrapping="Wrap">
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
                         自动执行选择的战斗策略 -
-                        <Hyperlink Command="{Binding GoToAutoFightUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        <Hyperlink Command="{Binding GoToAutoFightUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:Button Grid.Row="0"
-               Grid.RowSpan="2"
-               Grid.Column="1"
-               Margin="0,0,24,0"
-               Command="{Binding SwitchAutoFightCommand}"
-               Content="{Binding SwitchAutoFightButtonText}" />
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,24,0"
+                               Command="{Binding SwitchAutoFightCommand}"
+                               Content="{Binding SwitchAutoFightButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -306,22 +311,22 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
-                          Grid.Column="0"
-                          FontTypography="Body"
-                          Text="选择战斗策略"
-                          TextWrapping="Wrap" />
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="选择战斗策略"
+                                  TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
-                          Grid.Column="0"
-                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                          Text="选择你想要使用的战斗策略"
-                          TextWrapping="Wrap" />
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="选择你想要使用的战斗策略"
+                                  TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
-                      Grid.RowSpan="2"
-                      Grid.Column="1"
-                      Width="180"
-                      Margin="0,0,36,0"
-                      ItemsSource="{Binding CombatStrategyList}"
-                      SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="180"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding CombatStrategyList}"
+                              SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -355,8 +360,8 @@
         </ui:CardExpander>
 
         <ui:CardExpander Margin="0,0,0,12"
-                 ContentPadding="0"
-                 Icon="{ui:SymbolIcon BuildingBankToolbox24}">
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon BuildingBankToolbox24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -368,25 +373,26 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
-                          Grid.Column="0"
-                          FontTypography="Body"
-                          Text="自动秘境"
-                          TextWrapping="Wrap" />
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动秘境"
+                                  TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
-                          Grid.Column="0"
-                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                          TextWrapping="Wrap">
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
                         基于钟离的自动循环刷本 -
-                        <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:Button Grid.Row="0"
-                       Grid.RowSpan="2"
-                       Grid.Column="1"
-                       Margin="0,0,24,0"
-                       Command="{Binding SwitchAutoDomainCommand}"
-                       Content="{Binding SwitchAutoDomainButtonText}" />
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,24,0"
+                               Command="{Binding SwitchAutoDomainCommand}"
+                               Content="{Binding SwitchAutoDomainButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -509,6 +515,32 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="步行前往开启秘境和领取奖励"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="如果电脑性能较差，开启秘境或者领取奖励的F点击不到，可以尝试此功能"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Margin="0,0,36,0"
+                        IsChecked="{Binding Config.AutoDomainConfig.WalkToF, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="寻找古树时确认位置左右移动的次数（正常用户不要修改）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
@@ -533,21 +565,21 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
-                          Grid.Column="0"
-                          FontTypography="Body"
-                          Text="循环次数"
-                          TextWrapping="Wrap" />
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="循环次数"
+                                  TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
-                          Grid.Column="0"
-                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                          Text="循环秘境多少次，输入 0 则为用光所有树脂为止，优先使用浓缩树脂"
-                          TextWrapping="Wrap" />
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="循环秘境多少次，输入 0 则为用光所有树脂为止，优先使用浓缩树脂"
+                                  TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        MinWidth="90"
-                        Margin="0,0,36,0"
-                        Text="{Binding AutoDomainRoundNum, Mode=TwoWay}" />
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding AutoDomainRoundNum, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
