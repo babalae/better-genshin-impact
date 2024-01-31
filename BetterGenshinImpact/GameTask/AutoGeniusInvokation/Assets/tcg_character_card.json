@@ -1994,6 +1994,75 @@
         ]
     },
     {
+        "id": 1311,
+        "nameEn": "thoma",
+        "type": "character",
+        "name": "托马",
+        "hp": 10,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "swiftshatter_spear",
+                "name": "迅破枪势",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "blazing_blessing",
+                "name": "烈烧佑命之侍护",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "crimson_ooyoroi",
+                "name": "真红炽火之大铠",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1401,
         "nameEn": "fischl",
         "type": "character",
@@ -3114,6 +3183,83 @@
         ]
     },
     {
+        "id": 1507,
+        "nameEn": "sayu",
+        "type": "character",
+        "name": "早柚",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "shuumatsuban_ninja_blade",
+                "name": "忍刀·终末番",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "yoohoo_art_fuuin_dash",
+                "name": "呜呼流·风隐急进",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "yoohoo_art_mujina_flurry",
+                "name": "呜呼流·影貉缭乱",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "fuufuu_whirlwind_kick",
+                "name": "风风轮舞踢",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1508,
         "nameEn": "lynette",
         "type": "character",
@@ -4187,6 +4333,83 @@
         ]
     },
     {
+        "id": 2103,
+        "nameEn": "cryo_hypostasis",
+        "type": "character",
+        "name": "无相之冰",
+        "hp": 8,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "icespike_shot",
+                "name": "冰锥迸射",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ice_ring_waltz",
+                "name": "圆舞冰环",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "plunging_ice_shards",
+                "name": "冰棱轰坠",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "cryocrystal_core",
+                "name": "冰晶核心",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 2201,
         "nameEn": "rhodeia_of_loch",
         "type": "character",
@@ -4717,6 +4940,91 @@
             {
                 "nameEn": "lightning_probe",
                 "name": "雷霆探知",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2403,
+        "nameEn": "millennial_pearl_seahorse",
+        "type": "character",
+        "name": "千年珍珠骏麟",
+        "hp": 8,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "tail_sweep",
+                "name": "旋尾扇击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "swirling_school_of_fish",
+                "name": "霰舞鱼群",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "fontemer_hoarthunder",
+                "name": "原海古雷",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "pearl_armor",
+                "name": "明珠甲胄",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            },
+            {
+                "nameEn": "swirling_school_of_fish",
+                "name": "霰舞鱼群",
                 "skillTag": [
                     "被动技能"
                 ],
