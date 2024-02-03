@@ -45,10 +45,7 @@ namespace BetterGenshinImpact.GameTask
             {
                 TriggerDictionary["AutoPick"].IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
                 // 用于刷新AutoPick的黑白名单
-                if (TriggerDictionary["AutoPick"].IsEnabled == false)
-                {
-                    TriggerDictionary["AutoPick"].Init();
-                }
+                TriggerDictionary["AutoPick"].Init();
                 TriggerDictionary["AutoSkip"].IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
                 TriggerDictionary["AutoFishing"].IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
                 // 钓鱼有很多变量要初始化，直接重新newZA

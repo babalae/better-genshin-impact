@@ -68,4 +68,10 @@ public class Global
         }
         return false;
     }
+
+    public static void WriteAllText(string relativePath, string blackListJson)
+    {
+        var path = Absolute(relativePath);
+        File.WriteAllText(path, blackListJson);
+    }
 }
