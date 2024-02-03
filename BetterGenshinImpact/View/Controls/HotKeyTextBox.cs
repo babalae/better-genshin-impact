@@ -1,12 +1,33 @@
-﻿using System.Windows;
+﻿using BetterGenshinImpact.Model;
+using System.Windows;
 using System.Windows.Input;
-using BetterGenshinImpact.Model;
-using Wpf.Ui.Controls;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.View.Controls;
 
 public class HotKeyTextBox : TextBox
 {
+
+    public static readonly DependencyProperty HotkeyTypeNameProperty = DependencyProperty.Register(
+        nameof(HotKeyTypeName),
+        typeof(string),
+        typeof(HotKeyTextBox),
+        new FrameworkPropertyMetadata(
+            default(string),
+            FrameworkPropertyMetadataOptions.BindsTwoWayByDefault
+        )
+    );
+
+    /// <summary>
+    /// 热键类型 (中文)
+    /// </summary>
+    public string HotKeyTypeName
+    {
+        get => (string)GetValue(HotkeyTypeNameProperty);
+        set => SetValue(HotkeyTypeNameProperty, value);
+    }
+
     public static readonly DependencyProperty HotkeyProperty = DependencyProperty.Register(
         nameof(Hotkey),
         typeof(HotKey),
@@ -120,10 +141,30 @@ public class HotKeyTextBox : TextBox
             return;
 
         // If key has a character and pressed without modifiers or only with Shift - return
-        if (HasKeyChar(key) && modifiers is ModifierKeys.None or ModifierKeys.Shift)
+        if (HotKeyTypeName == HotKeyTypeEnum.GlobalRegister.ToChineseName() && HasKeyChar(key) && modifiers is ModifierKeys.None or ModifierKeys.Shift)
             return;
 
         // Set value
         Hotkey = new HotKey(key, modifiers);
+    }
+
+
+    /// <summary>
+    /// 支持鼠标侧键配置
+    /// </summary>
+    /// <param name="args"></param>
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs args)
+    {
+        if (args.ChangedButton is MouseButton.XButton1 or MouseButton.XButton2)
+        {
+            if (HotKeyTypeName == HotKeyTypeEnum.GlobalRegister.ToChineseName())
+            {
+                Hotkey = new HotKey(Key.None);
+            }
+            else
+            {
+                Hotkey = new HotKey(Key.None, ModifierKeys.None, args.ChangedButton);
+            }
+        }
     }
 }

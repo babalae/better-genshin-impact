@@ -43,7 +43,8 @@ public class MouseKeyMonitor
 
         _globalHook.KeyDown += GlobalHookKeyDown;
         _globalHook.KeyUp += GlobalHookKeyUp;
-        //_globalHook.MouseDownExt += GlobalHookMouseDownExt;
+        _globalHook.MouseDownExt += GlobalHookMouseDownExt;
+        _globalHook.MouseUpExt += GlobalHookMouseUpExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _firstSpaceKeyDownTime = DateTime.MaxValue;
@@ -128,15 +129,21 @@ public class MouseKeyMonitor
     //    Debug.WriteLine("KeyPress: \t{0}", e.KeyChar);
     //}
 
-    //private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
-    //{
-    //    Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+    private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
+    {
+        Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
-    //    // uncommenting the following line will suppress the middle mouse button click
-    //    if (e.Button == MouseButtons.Left)
-    //    {
-    //    }
-    //}
+        // uncommenting the following line will suppress the middle mouse button click
+        if (e.Button == MouseButtons.Left)
+        {
+        }
+    }
+
+    private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
+    {
+        Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+
+    }
 
     public void Unsubscribe()
     {

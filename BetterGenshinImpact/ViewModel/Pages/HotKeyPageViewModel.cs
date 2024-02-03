@@ -12,6 +12,7 @@ using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using BetterGenshinImpact.GameTask.QucikBuy;
+using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -40,21 +41,38 @@ public partial class HotKeyPageViewModel : ObservableObject
             {
                 if (sender is HotKeySettingModel model)
                 {
-                    Debug.WriteLine($"{model.FunctionName} 快捷键变更为 {model.HotKey}");
-
                     // 反射更新配置
-                    var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName, BindingFlags.Public | BindingFlags.Instance);
-                    if (null != pi && pi.CanWrite)
-                    {
-                        var str = model.HotKey.ToString();
-                        if (str == "< None >")
-                        {
-                            str = "";
-                        }
 
-                        pi.SetValue(Config.HotKeyConfig, str, null);
+                    // 更新快捷键
+                    if (e.PropertyName == "HotKey")
+                    {
+                        Debug.WriteLine($"{model.FunctionName} 快捷键变更为 {model.HotKey}");
+                        var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName, BindingFlags.Public | BindingFlags.Instance);
+                        if (null != pi && pi.CanWrite)
+                        {
+                            var str = model.HotKey.ToString();
+                            if (str == "< None >")
+                            {
+                                str = "";
+                            }
+
+                            pi.SetValue(Config.HotKeyConfig, str, null);
+                        }
                     }
 
+                    // 更新快捷键类型
+                    if (e.PropertyName == "HotKeyType")
+                    {
+                        Debug.WriteLine($"{model.FunctionName} 快捷键类型变更为 {model.HotKeyType.ToChineseName()}");
+                        model.HotKey = HotKey.None;
+                        var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName + "Type", BindingFlags.Public | BindingFlags.Instance);
+                        if (null != pi && pi.CanWrite)
+                        {
+                            pi.SetValue(Config.HotKeyConfig, model.HotKeyType.ToString(), null);
+                        }
+                    }
+
+                    RemoveDuplicateHotKey(model);
                     model.UnRegisterHotKey();
                     model.RegisterHotKey();
                 }
@@ -62,17 +80,39 @@ public partial class HotKeyPageViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 移除重复的快捷键配置
+    /// </summary>
+    /// <param name="current"></param>
+    private void RemoveDuplicateHotKey(HotKeySettingModel current)
+    {
+        if (current.HotKey.IsEmpty)
+        {
+            return;
+        }
+        foreach (var hotKeySettingModel in HotKeySettingModels)
+        {
+            if (hotKeySettingModel.HotKey.IsEmpty)
+            {
+                continue;
+            }
+
+            if (hotKeySettingModel.ConfigPropertyName != current.ConfigPropertyName && hotKeySettingModel.HotKey == current.HotKey)
+            {
+                hotKeySettingModel.HotKey = HotKey.None;
+            }
+        }
+
+    }
+
     private void BuildHotKeySettingModelList()
     {
-
         var bgiEnabledHotKeySettingModel = new HotKeySettingModel(
             "启动停止 BetterGI",
             nameof(Config.HotKeyConfig.BgiEnabledHotkey),
             Config.HotKeyConfig.BgiEnabledHotkey,
-            (_, _) =>
-            {
-                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SwitchTriggerStatus", "", ""));
-            }
+            Config.HotKeyConfig.BgiEnabledHotkeyType,
+            (_, _) => { WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SwitchTriggerStatus", "", "")); }
         );
         HotKeySettingModels.Add(bgiEnabledHotKeySettingModel);
 
@@ -80,6 +120,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),
             Config.HotKeyConfig.AutoPickEnabledHotkey,
+            Config.HotKeyConfig.AutoPickEnabledHotkeyType,
             (_, _) =>
             {
                 TaskContext.Instance().Config.AutoPickConfig.Enabled = !TaskContext.Instance().Config.AutoPickConfig.Enabled;
@@ -92,6 +133,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "自动剧情开关",
             nameof(Config.HotKeyConfig.AutoSkipEnabledHotkey),
             Config.HotKeyConfig.AutoSkipEnabledHotkey,
+            Config.HotKeyConfig.AutoSkipEnabledHotkeyType,
             (_, _) =>
             {
                 TaskContext.Instance().Config.AutoSkipConfig.Enabled = !TaskContext.Instance().Config.AutoSkipConfig.Enabled;
@@ -104,6 +146,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "自动钓鱼开关",
             nameof(Config.HotKeyConfig.AutoFishingEnabledHotkey),
             Config.HotKeyConfig.AutoFishingEnabledHotkey,
+            Config.HotKeyConfig.AutoFishingEnabledHotkeyType,
             (_, _) =>
             {
                 TaskContext.Instance().Config.AutoFishingConfig.Enabled = !TaskContext.Instance().Config.AutoFishingConfig.Enabled;
@@ -116,6 +159,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "长按旋转视角 - 那维莱特转圈",
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
             Config.HotKeyConfig.TurnAroundHotkey,
+            Config.HotKeyConfig.TurnAroundHotkeyType,
             (_, _) => { TurnAroundMacro.Done(); }
         );
         HotKeySettingModels.Add(turnAroundHotKeySettingModel);
@@ -124,6 +168,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "按下快速强化圣遗物",
             nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
             Config.HotKeyConfig.EnhanceArtifactHotkey,
+            Config.HotKeyConfig.EnhanceArtifactHotkeyType,
             (_, _) => { QuickEnhanceArtifactMacro.Done(); }
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
@@ -132,14 +177,16 @@ public partial class HotKeyPageViewModel : ObservableObject
             "按下快速购买商店物品",
             nameof(Config.HotKeyConfig.QuickBuyHotkey),
             Config.HotKeyConfig.QuickBuyHotkey,
+            Config.HotKeyConfig.QuickBuyHotkeyType,
             (_, _) => { QuickBuyTask.Done(); }
         ));
 
 
         HotKeySettingModels.Add(new HotKeySettingModel(
             "启动/停止自动七圣召唤",
-            nameof(Config.HotKeyConfig.AutoGeniusInvokation),
-            Config.HotKeyConfig.AutoGeniusInvokation,
+            nameof(Config.HotKeyConfig.AutoGeniusInvokationHotkey),
+            Config.HotKeyConfig.AutoGeniusInvokationHotkey,
+            Config.HotKeyConfig.AutoGeniusInvokationHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoGeniusInvokation(); }
         ));
 
@@ -147,6 +194,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "启动/停止自动伐木",
             nameof(Config.HotKeyConfig.AutoWoodHotkey),
             Config.HotKeyConfig.AutoWoodHotkey,
+            Config.HotKeyConfig.AutoWoodHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoWood(); }
         ));
 
@@ -154,6 +202,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "启动/停止自动战斗",
             nameof(Config.HotKeyConfig.AutoFightHotkey),
             Config.HotKeyConfig.AutoFightHotkey,
+            Config.HotKeyConfig.AutoFightHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoFight(); }
         ));
 
@@ -161,6 +210,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             "启动/停止自动秘境",
             nameof(Config.HotKeyConfig.AutoDomainHotkey),
             Config.HotKeyConfig.AutoDomainHotkey,
+            Config.HotKeyConfig.AutoDomainHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
         ));
     }
