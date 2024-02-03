@@ -45,4 +45,10 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
             "派遣角色优先级配置", Config.AutoSkipConfig.AutoReExploreCharacter);
          Config.AutoSkipConfig.AutoReExploreCharacter = str.Replace("，", ",").Replace(" ","");
     }
+
+    [RelayCommand]
+    public void OnGoToQGroupUrl()
+    {
+        Process.Start(new ProcessStartInfo("http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=mL1O7atys6Prlu5LBVqmDlfOrzyPMLN4&authKey=jSI2WuZyUjmpIUIAsBAf5g0r5QeSu9K6Un%2BRuSsQ8fQGYwGYwRVioFfJyYnQqvbf&noverify=0&group_code=863012276") { UseShellExecute = true });
+    }
 }
