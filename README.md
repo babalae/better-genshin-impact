@@ -12,7 +12,7 @@
 </p>
 <!-- https://github.com/babalae/better-genshin-impact/assets/15783049/483cb63b-f21c-4946-bb19-64249aa7d5fb -->
 
-> [!IMPORTANT]
+> [!NOTE]
 > 下载地址：[⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases) | [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
 > 
 > 使用前请先查阅：[文档](https://bgi.huiyadan.com/doc.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
