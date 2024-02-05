@@ -728,6 +728,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (_left.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在left左边
                     || _cur.Width > _left.Width // left一定比cur宽
                     || _cur.X + _cur.Width > srcMat.Width / 2 // cur 一定在屏幕左侧
+                    || _cur.X + _cur.Width > _left.X - _left.Width/2 // cur 一定在left左侧+left的一半宽度
+                    || _cur.X + _cur.Width > srcMat.Width / 2 - _left.Width // cur 一定在屏幕中轴线减去整个left的宽度的位置左侧
                     || !(_left.X < srcMat.Width / 2 && _left.X + _left.Width > srcMat.Width / 2) // left肯定穿过游戏中轴线
                    )
                 {
