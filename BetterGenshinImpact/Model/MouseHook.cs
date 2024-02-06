@@ -22,7 +22,7 @@ public class MouseHook
 
     public void MouseDown(object? sender, MouseEventExtArgs e)
     {
-        if (e.Button != MouseButtons.Left && e.Button == BindMouse)
+        if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
             IsPressed = true;
             if (IsHold)
@@ -54,7 +54,7 @@ public class MouseHook
 
     public void MouseUp(object? sender, MouseEventExtArgs e)
     {
-        if (e.Button != MouseButtons.Left && e.Button == BindMouse)
+        if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
             IsPressed = false;
         }

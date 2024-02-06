@@ -30,7 +30,7 @@
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       TextWrapping="Wrap"
-                      Text="全局热键：只支持组合键和功能键。键盘监听：只支持任意单键（推荐）。点击类型按钮可以切换快捷键类型" />
+                      Text="全局热键：只支持组合键和功能键，软件启动直接生效。键鼠监听：支持任意键盘单键、鼠标侧键，功能启动后才生效（推荐）。点击类型按钮可以切换快捷键类型。其中存在长按需求的功能不能使用全局热键。" />
         <ItemsControl Grid.Row="2" ItemsSource="{Binding HotKeySettingModels}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type model:HotKeySettingModel}">
@@ -47,7 +47,9 @@
                                    HorizontalAlignment="Right"
                                    Margin="0,0,8,0"
                                    Content="{Binding HotKeyTypeName, Mode=OneWay}"
-                                   Command="{Binding SwitchHotKeyTypeCommand}"/>
+                                   Command="{Binding SwitchHotKeyTypeCommand}"
+                                   IsEnabled="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}"
+                                   />
                         <controls:HotKeyTextBox Grid.Column="2"
                                                 HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
                                                 Hotkey="{Binding HotKey}"

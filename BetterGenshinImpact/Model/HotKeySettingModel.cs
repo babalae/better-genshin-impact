@@ -17,7 +17,7 @@ public partial class HotKeySettingModel : ObservableObject
 
 
     /// <summary>
-    /// 键盘监听、全局热键
+    /// 键鼠监听、全局热键
     /// </summary>
     [ObservableProperty] private HotKeyTypeEnum _hotKeyType;
 
@@ -30,6 +30,8 @@ public partial class HotKeySettingModel : ObservableObject
     public Action<object?, KeyPressedEventArgs> OnKeyAction { get; set; }
 
     public bool IsHold { get; set; }
+
+    [ObservableProperty] private bool _switchHotkeyTypeEnabled;
 
     /// <summary>
     /// 全局热键配置
@@ -56,6 +58,7 @@ public partial class HotKeySettingModel : ObservableObject
         HotKeyTypeName = HotKeyType.ToChineseName();
         OnKeyAction = onKeyAction;
         IsHold = isHold;
+        SwitchHotkeyTypeEnabled = !isHold;
     }
 
     public void RegisterHotKey()

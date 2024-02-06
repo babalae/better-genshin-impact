@@ -15,7 +15,7 @@ public static class HotKeyTypeEnumExtension
         return type switch
         {
             HotKeyTypeEnum.GlobalRegister => "全局热键",
-            HotKeyTypeEnum.KeyboardMonitor => "键盘监听",
+            HotKeyTypeEnum.KeyboardMonitor => "键鼠监听",
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
         };
     }

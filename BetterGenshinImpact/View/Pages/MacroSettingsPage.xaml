@@ -120,7 +120,7 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="快速跳过强化结果展示，需要配置快捷键进行触发（请不要长按）" />
+                        Text="快速跳过强化结果展示，需要配置快捷键进行触发" />
                     <ui:Button
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -178,13 +178,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="一键购买（请不要长按）" />
+                        Text="一键购买" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="在物品购买/兑换页使用，从选中物品处开始，想要买几次就点按多少次" />
+                        Text="在物品购买/兑换页使用，从选中物品处开始，长按持续购买" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button
