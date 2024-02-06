@@ -61,7 +61,7 @@ public class MouseKeyMonitor
 
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
-        Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
+        // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
 
         // 热键按下事件
         HotKeyDown(sender, e);
@@ -108,7 +108,7 @@ public class MouseKeyMonitor
 
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
-        Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
+        // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
 
         // 热键松开事件
         HotKeyUp(sender, e);
@@ -158,7 +158,7 @@ public class MouseKeyMonitor
 
     private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
     {
-        Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+        // Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
         if (e.Button != MouseButtons.Left)
         {
@@ -171,7 +171,7 @@ public class MouseKeyMonitor
 
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
     {
-        Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+        // Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
         if (e.Button != MouseButtons.Left)
         {

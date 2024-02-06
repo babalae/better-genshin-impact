@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using SharpDX;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv
@@ -125,6 +123,74 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
         public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, double threshold)
         {
             return MatchTemplateMulti(srcMat, dstMat, null, threshold);
+        }
+
+        /// <summary>
+        /// 在一张图中查找多个模板
+        /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
+        /// </summary>
+        /// <param name="srcMat"></param>
+        /// <param name="imgSubDictionary"></param>
+        /// <param name="threshold"></param>
+        /// <returns></returns>
+        public static Dictionary<string, List<Point>> MatchMultiPicForOnePic(Mat srcMat, Dictionary<string, Mat> imgSubDictionary, double threshold = 0.8)
+        {
+            var dictionary = new Dictionary<string, List<Point>>();
+            foreach (var kvp in imgSubDictionary)
+            {
+                var list = new List<Point>();
+
+                while (true)
+                {
+                    var point = MatchTemplate(srcMat, kvp.Value, TemplateMatchModes.CCoeffNormed, null, threshold);
+                    if (point != new Point())
+                    {
+                        // 把结果给遮掩掉，避免重复识别
+                        Cv2.Rectangle(srcMat, point, new Point(point.X + kvp.Value.Width, point.Y + kvp.Value.Height), Scalar.Black, -1);
+                        list.Add(point);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                dictionary.Add(kvp.Key, list);
+            }
+
+            return dictionary;
+        }
+
+        /// <summary>
+        /// 在一张图中查找多个模板
+        /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
+        /// </summary>
+        /// <param name="srcMat"></param>
+        /// <param name="imgSubList"></param>
+        /// <param name="threshold"></param>
+        /// <returns></returns>
+        public static List<Rect> MatchMultiPicForOnePic(Mat srcMat, List<Mat> imgSubList, double threshold = 0.8)
+        {
+            List<Rect> list = new();
+            foreach (var sub in imgSubList)
+            {
+                while (true)
+                {
+                    var point = MatchTemplate(srcMat, sub, TemplateMatchModes.CCoeffNormed, null, threshold);
+                    if (point != new Point())
+                    {
+                        // 把结果给遮掩掉，避免重复识别
+                        Cv2.Rectangle(srcMat, point, new Point(point.X + sub.Width, point.Y + sub.Height), Scalar.Black, -1);
+                        list.Add(new Rect(point.X, point.Y, sub.Width, sub.Height));
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return list;
         }
     }
 }

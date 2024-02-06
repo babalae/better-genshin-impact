@@ -1,12 +1,16 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using OpenCvSharp;
 using System.Collections.Generic;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 
 public class QuickTeleportAssets
 {
+    public Rect MapChooseIconRoi;
     public List<RecognitionObject> MapChooseIconRoList;
+    public List<Mat> MapChooseIconGreyMatList;
+
     public RecognitionObject TeleportButtonRo;
     public RecognitionObject MapScaleButtonRo;
     public RecognitionObject MapCloseButtonRo;
@@ -15,6 +19,11 @@ public class QuickTeleportAssets
     public QuickTeleportAssets()
     {
         var info = TaskContext.Instance().SystemInfo;
+
+        MapChooseIconRoi = new Rect((int)(1270 * info.AssetScale),
+            (int)(100 * info.AssetScale),
+            (int)(50 * info.AssetScale),
+            info.CaptureAreaRect.Height - (int)(200 * info.AssetScale));
         MapChooseIconRoList = new List<RecognitionObject>
         {
             BuildMapChooseIconRo("TeleportWaypoint.png"),
@@ -25,6 +34,7 @@ public class QuickTeleportAssets
             BuildMapChooseIconRo("Mansion.png"),
             BuildMapChooseIconRo("SubSpaceWaypoint.png"),
         };
+        MapChooseIconGreyMatList = MapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat());
 
         // 传送按钮宽泛的识别区域
         // RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 8, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 8),
@@ -106,10 +116,7 @@ public class QuickTeleportAssets
             Name = name + "MapChooseIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", name),
-            RegionOfInterest = new Rect((int)(1270 * info.AssetScale),
-                (int)(100 * info.AssetScale),
-                (int)(50 * info.AssetScale),
-                info.CaptureAreaRect.Height - (int)(200 * info.AssetScale)),
+            RegionOfInterest = MapChooseIconRoi,
             DrawOnWindow = false
         }.InitTemplate();
 
