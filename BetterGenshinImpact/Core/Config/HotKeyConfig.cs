@@ -18,19 +18,19 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty] private string _bgiEnabledHotkey = "F11";
     [ObservableProperty] private string _bgiEnabledHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
 
-    [ObservableProperty] private string _autoPickEnabledHotkey = "F1";
+    [ObservableProperty] private string _autoPickEnabledHotkey = "";
     [ObservableProperty] private string _autoPickEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
-    [ObservableProperty] private string _autoSkipEnabledHotkey = "F2";
+    [ObservableProperty] private string _autoSkipEnabledHotkey = "";
     [ObservableProperty] private string _autoSkipEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     [ObservableProperty] private string _autoFishingEnabledHotkey = "";
     [ObservableProperty] private string _autoFishingEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
-    [ObservableProperty] private string _turnAroundHotkey = "F3";
+    [ObservableProperty] private string _turnAroundHotkey = "";
     [ObservableProperty] private string _turnAroundHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
-    [ObservableProperty] private string _enhanceArtifactHotkey = "F4";
+    [ObservableProperty] private string _enhanceArtifactHotkey = "";
     [ObservableProperty] private string _enhanceArtifactHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     [ObservableProperty] private string _quickBuyHotkey = "";
