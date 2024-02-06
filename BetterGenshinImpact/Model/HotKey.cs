@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text;
 using System.Windows.Input;
-using System.Xml.Linq;
 
 namespace BetterGenshinImpact.Model;
 

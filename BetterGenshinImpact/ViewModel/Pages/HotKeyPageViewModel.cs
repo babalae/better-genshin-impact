@@ -160,7 +160,8 @@ public partial class HotKeyPageViewModel : ObservableObject
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
             Config.HotKeyConfig.TurnAroundHotkey,
             Config.HotKeyConfig.TurnAroundHotkeyType,
-            (_, _) => { TurnAroundMacro.Done(); }
+            (_, _) => { TurnAroundMacro.Done(); },
+            true
         );
         HotKeySettingModels.Add(turnAroundHotKeySettingModel);
 
@@ -169,7 +170,8 @@ public partial class HotKeyPageViewModel : ObservableObject
             nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
             Config.HotKeyConfig.EnhanceArtifactHotkey,
             Config.HotKeyConfig.EnhanceArtifactHotkeyType,
-            (_, _) => { QuickEnhanceArtifactMacro.Done(); }
+            (_, _) => { QuickEnhanceArtifactMacro.Done(); },
+            true
         );
         HotKeySettingModels.Add(enhanceArtifactHotKeySettingModel);
 
@@ -178,7 +180,8 @@ public partial class HotKeyPageViewModel : ObservableObject
             nameof(Config.HotKeyConfig.QuickBuyHotkey),
             Config.HotKeyConfig.QuickBuyHotkey,
             Config.HotKeyConfig.QuickBuyHotkeyType,
-            (_, _) => { QuickBuyTask.Done(); }
+            (_, _) => { QuickBuyTask.Done(); },
+            true
         ));
 
 

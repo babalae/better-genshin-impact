@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using Fischless.HotkeyCapture;
 using System;
 using System.Diagnostics;
+using System.Windows.Forms;
+using System.Windows.Input;
 
 namespace BetterGenshinImpact.Model;
 
@@ -19,8 +21,7 @@ public partial class HotKeySettingModel : ObservableObject
     /// </summary>
     [ObservableProperty] private HotKeyTypeEnum _hotKeyType;
 
-    [ObservableProperty]
-    private string _hotKeyTypeName;
+    [ObservableProperty] private string _hotKeyTypeName;
 
     public string FunctionName { get; set; }
 
@@ -28,12 +29,25 @@ public partial class HotKeySettingModel : ObservableObject
 
     public Action<object?, KeyPressedEventArgs> OnKeyAction { get; set; }
 
+    public bool IsHold { get; set; }
+
     /// <summary>
     /// 全局热键配置
     /// </summary>
-    public HotkeyHook? KeyBindInfo { get; set; }
+    public HotkeyHook? GlobalRegisterHook { get; set; }
 
-    public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, string hotKeyTypeCode, Action<object?, KeyPressedEventArgs> onKeyAction)
+    /// <summary>
+    /// 键盘监听配置
+    /// </summary>
+    public KeyboardHook? KeyboardMonitorHook { get; set; }
+
+    /// <summary>
+    /// 鼠标监听配置
+    /// </summary>
+    public MouseHook? MouseMonitorHook { get; set; }
+
+
+    public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, string hotKeyTypeCode, Action<object?, KeyPressedEventArgs> onKeyAction, bool isHold = false)
     {
         FunctionName = functionName;
         ConfigPropertyName = configPropertyName;
@@ -41,6 +55,7 @@ public partial class HotKeySettingModel : ObservableObject
         HotKeyType = (HotKeyTypeEnum)Enum.Parse(typeof(HotKeyTypeEnum), hotKeyTypeCode);
         HotKeyTypeName = HotKeyType.ToChineseName();
         OnKeyAction = onKeyAction;
+        IsHold = isHold;
     }
 
     public void RegisterHotKey()
@@ -50,29 +65,48 @@ public partial class HotKeySettingModel : ObservableObject
             return;
         }
 
-        if (HotKeyType == HotKeyTypeEnum.GlobalRegister)
+        try
         {
-            try
+            if (HotKeyType == HotKeyTypeEnum.GlobalRegister)
             {
                 Hotkey hotkey = new(HotKey.ToString());
-
-                KeyBindInfo?.Dispose();
-                KeyBindInfo = new HotkeyHook();
-                KeyBindInfo.KeyPressed -= OnKeyPressed;
-                KeyBindInfo.KeyPressed += OnKeyPressed;
-                KeyBindInfo.RegisterHotKey(hotkey.ModifierKey, hotkey.Key);
+                GlobalRegisterHook?.Dispose();
+                GlobalRegisterHook = new HotkeyHook();
+                GlobalRegisterHook.KeyPressed -= OnKeyPressed;
+                GlobalRegisterHook.KeyPressed += OnKeyPressed;
+                GlobalRegisterHook.RegisterHotKey(hotkey.ModifierKey, hotkey.Key);
             }
-            catch (Exception e)
+            else
             {
-                Debug.WriteLine(e);
-                HotKey = HotKey.None;
+                MouseMonitorHook?.Dispose();
+                KeyboardMonitorHook?.Dispose();
+                if (HotKey.MouseButton is MouseButton.XButton1 or MouseButton.XButton2)
+                {
+                    MouseMonitorHook = new MouseHook
+                    {
+                        IsHold = IsHold
+                    };
+                    MouseMonitorHook.MousePressed -= OnKeyPressed;
+                    MouseMonitorHook.MousePressed += OnKeyPressed;
+                    MouseMonitorHook.RegisterHotKey((MouseButtons)Enum.Parse(typeof(MouseButtons), HotKey.MouseButton.ToString()));
+                }
+                else
+                {
+                    KeyboardMonitorHook = new KeyboardHook
+                    {
+                        IsHold = IsHold
+                    };
+                    KeyboardMonitorHook.KeyPressed -= OnKeyPressed;
+                    KeyboardMonitorHook.KeyPressed += OnKeyPressed;
+                    KeyboardMonitorHook.RegisterHotKey((Keys)Enum.Parse(typeof(Keys), HotKey.Key.ToString()));
+                }
             }
         }
-        else
+        catch (Exception e)
         {
-
+            Debug.WriteLine(e);
+            HotKey = HotKey.None;
         }
-
     }
 
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)
@@ -84,11 +118,12 @@ public partial class HotKeySettingModel : ObservableObject
     {
         if (HotKeyType == HotKeyTypeEnum.GlobalRegister)
         {
-            KeyBindInfo?.Dispose();
+            GlobalRegisterHook?.Dispose();
         }
         else
         {
-
+            MouseMonitorHook?.Dispose();
+            KeyboardMonitorHook?.Dispose();
         }
     }
 
@@ -98,5 +133,4 @@ public partial class HotKeySettingModel : ObservableObject
         HotKeyType = HotKeyType == HotKeyTypeEnum.GlobalRegister ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
         HotKeyTypeName = HotKeyType.ToChineseName();
     }
-
 }

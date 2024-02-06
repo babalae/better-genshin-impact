@@ -7,7 +7,7 @@ public class KeyPressedEventArgs : EventArgs
     public User32.HotKeyModifiers Modifier { get; }
     public Keys Key { get; }
 
-    internal KeyPressedEventArgs(User32.HotKeyModifiers modifier, Keys key)
+    public KeyPressedEventArgs(User32.HotKeyModifiers modifier, Keys key)
     {
         Modifier = modifier;
         Key = key;

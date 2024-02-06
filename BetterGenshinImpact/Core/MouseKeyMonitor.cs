@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.QuickTeleport;
+using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core;
@@ -60,7 +61,11 @@ public class MouseKeyMonitor
 
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
-        //Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
+        Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
+
+        // 热键按下事件
+        HotKeyDown(sender, e);
+
         if (e.KeyCode == Keys.Space)
         {
             if (_firstSpaceKeyDownTime == DateTime.MaxValue)
@@ -99,9 +104,15 @@ public class MouseKeyMonitor
         }
     }
 
+
+
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
-        //Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
+        Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
+
+        // 热键松开事件
+        HotKeyUp(sender, e);
+
         if (e.KeyCode == Keys.Space)
         {
             if (_firstSpaceKeyDownTime != DateTime.MaxValue)
@@ -124,6 +135,22 @@ public class MouseKeyMonitor
         }
     }
 
+    private void HotKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook))
+        {
+            hook.KeyDown(sender, e);
+        }
+    }
+
+    private void HotKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook))
+        {
+            hook.KeyUp(sender, e);
+        }
+    }
+
     //private void GlobalHookKeyPress(object? sender, KeyPressEventArgs e)
     //{
     //    Debug.WriteLine("KeyPress: \t{0}", e.KeyChar);
@@ -133,15 +160,26 @@ public class MouseKeyMonitor
     {
         Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
-        // uncommenting the following line will suppress the middle mouse button click
-        if (e.Button == MouseButtons.Left)
+        if (e.Button != MouseButtons.Left)
         {
+            if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
+            {
+                hook.MouseDown(sender, e);
+            }
         }
     }
 
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
     {
         Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+
+        if (e.Button != MouseButtons.Left)
+        {
+            if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
+            {
+                hook.MouseUp(sender, e);
+            }
+        }
 
     }
 
@@ -151,7 +189,8 @@ public class MouseKeyMonitor
         {
             _globalHook.KeyDown -= GlobalHookKeyDown;
             _globalHook.KeyUp -= GlobalHookKeyUp;
-            //_globalHook.MouseDownExt -= GlobalHookMouseDownExt;
+            _globalHook.MouseDownExt -= GlobalHookMouseDownExt;
+            _globalHook.MouseUpExt -= GlobalHookMouseUpExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
         }
