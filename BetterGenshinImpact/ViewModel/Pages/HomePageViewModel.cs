@@ -90,17 +90,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnStartCaptureTest()
     {
-        //var hWnd = SystemControl.FindGenshinImpactHandle();
-        //if (hWnd == IntPtr.Zero)
-        //{
-        //    System.Windows.MessageBox.Show("未找到原神窗口");
-        //    return;
-        //}
-
-        //CaptureTestWindow captureTestWindow = new();
-        //captureTestWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
-        //captureTestWindow.Show();
-
         var picker = new PickerWindow();
         var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
         if (hWnd != IntPtr.Zero)
@@ -108,6 +97,21 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             var captureWindow = new CaptureTestWindow();
             captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
             captureWindow.Show();
+        }
+    }
+
+    [RelayCommand]
+    private void OnManualPickWindow()
+    {
+        var picker = new PickerWindow();
+        var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
+        if (hWnd != IntPtr.Zero)
+        {
+            Start(hWnd);
+        }
+        else
+        {
+            System.Windows.MessageBox.Show("选择的窗体句柄为空！");
         }
     }
 
@@ -139,6 +143,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             }
         }
 
+        Start(hWnd);
+    }
+
+    private void Start(IntPtr hWnd)
+    {
         if (!_taskDispatcherEnabled)
         {
             _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);

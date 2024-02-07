@@ -21,7 +21,7 @@ public class GraphicsCapture : IGameCapture
 
     private ResourceRegion? _region;
 
-    private Bitmap _currentBitmap;
+    private Bitmap? _currentBitmap;
 
     public void Dispose() => Stop();
 
@@ -126,6 +126,11 @@ public class GraphicsCapture : IGameCapture
         // }
         //
         // return null;
+
+        if (_currentBitmap == null)
+        {
+            return null;
+        }
         return (Bitmap)_currentBitmap.Clone();
     }
 
