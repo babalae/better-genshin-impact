@@ -53,6 +53,11 @@ namespace BetterGenshinImpact.Core.Config
         public MaskWindowConfig MaskWindowConfig { get; set; } = new();
 
         /// <summary>
+        /// 通用配置
+        /// </summary>
+        public CommonConfig CommonConfig { get; set; } = new();
+
+        /// <summary>
         /// 原神启动配置
         /// </summary>
         public GenshinStartConfig GenshinStartConfig { get; set; } = new();
@@ -113,6 +118,7 @@ namespace BetterGenshinImpact.Core.Config
         {
             this.PropertyChanged += OnAnyPropertyChanged;
             MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
+            CommonConfig.PropertyChanged += OnAnyPropertyChanged;
             GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
 
             AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;

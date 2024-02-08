@@ -90,6 +90,7 @@ public partial class HotKeyPageViewModel : ObservableObject
         {
             return;
         }
+
         foreach (var hotKeySettingModel in HotKeySettingModels)
         {
             if (hotKeySettingModel.HotKey.IsEmpty)
@@ -102,7 +103,6 @@ public partial class HotKeyPageViewModel : ObservableObject
                 hotKeySettingModel.HotKey = HotKey.None;
             }
         }
-
     }
 
     private void BuildHotKeySettingModelList()
@@ -115,6 +115,15 @@ public partial class HotKeyPageViewModel : ObservableObject
             (_, _) => { WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SwitchTriggerStatus", "", "")); }
         );
         HotKeySettingModels.Add(bgiEnabledHotKeySettingModel);
+
+        var takeScreenshotHotKeySettingModel = new HotKeySettingModel(
+            "游戏截图（开发者）",
+            nameof(Config.HotKeyConfig.TakeScreenshotHotkey),
+            Config.HotKeyConfig.TakeScreenshotHotkey,
+            Config.HotKeyConfig.TakeScreenshotHotkeyType,
+            (_, _) => { TaskTriggerDispatcher.Instance().TakeScreenshot(); }
+        );
+        HotKeySettingModels.Add(takeScreenshotHotKeySettingModel);
 
         var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动拾取开关",
@@ -154,6 +163,19 @@ public partial class HotKeyPageViewModel : ObservableObject
             }
         );
         HotKeySettingModels.Add(autoFishingEnabledHotKeySettingModel);
+
+        var quickTeleportEnabledHotKeySettingModel = new HotKeySettingModel(
+            "快速传送开关",
+            nameof(Config.HotKeyConfig.QuickTeleportEnabledHotkey),
+            Config.HotKeyConfig.QuickTeleportEnabledHotkey,
+            Config.HotKeyConfig.QuickTeleportEnabledHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.QuickTeleportConfig.Enabled = !TaskContext.Instance().Config.QuickTeleportConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "快速传送", ToChinese(TaskContext.Instance().Config.QuickTeleportConfig.Enabled));
+            }
+        );
+        HotKeySettingModels.Add(quickTeleportEnabledHotKeySettingModel);
 
         var turnAroundHotKeySettingModel = new HotKeySettingModel(
             "长按旋转视角 - 那维莱特转圈",

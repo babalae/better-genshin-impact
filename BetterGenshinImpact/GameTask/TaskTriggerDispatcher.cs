@@ -16,7 +16,11 @@ using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using Vanara.PInvoke;
+using System.IO;
+using System.Drawing.Imaging;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -100,6 +104,12 @@ namespace BetterGenshinImpact.GameTask
             // 启动截图
             GameCapture.Start(hWnd);
 
+            // 捕获模式初始化配置
+            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled)
+            {
+                _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
+            }
+
             // 读取游戏注册表配置
             ReadGameSettings();
 
@@ -135,9 +145,9 @@ namespace BetterGenshinImpact.GameTask
             var systemInfo = TaskContext.Instance().SystemInfo;
             var width = systemInfo.GameScreenSize.Width;
             var height = systemInfo.GameScreenSize.Height;
-            var dpiScale = DpiHelper.ScaleY;
+            var dpiScale = TaskContext.Instance().DpiScale;
             _logger.LogInformation("当前游戏分辨率{Width}x{Height}，素材缩放比率{Scale}，DPI缩放{Dpi}",
-                width, height, systemInfo.AssetScale.ToString("F"), TaskContext.Instance().DpiScale);
+                width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
 
             if (width * 9 != height * 16)
             {
@@ -381,6 +391,11 @@ namespace BetterGenshinImpact.GameTask
             _dispatcherCacheCaptureMode = mode;
         }
 
+        public DispatcherCaptureModeEnum GetCacheCaptureMode()
+        {
+            return _dispatcherCacheCaptureMode;
+        }
+
         public Bitmap GetLastCaptureBitmap()
         {
             lock (_bitmapLocker)
@@ -393,6 +408,37 @@ namespace BetterGenshinImpact.GameTask
         {
             var bitmap = GetLastCaptureBitmap();
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
+        }
+
+        public void TakeScreenshot()
+        {
+            if (_dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+            {
+                try
+                {
+                    var path = Global.Absolute($@"log\screenshot\");
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+
+                    var bitmap = GetLastCaptureBitmap();
+                    var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
+                    var savePath = Global.Absolute($@"log\screenshot\{name}");
+
+                    bitmap.Save(savePath, ImageFormat.Png);
+                    _logger.LogInformation("截图已保存: {Name}", name);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("截图保存失败: {Message}", e.Message);
+                    _logger.LogDebug("截图保存失败: {StackTrace}", e.StackTrace);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("当前不处于截图模式，无法保存截图");
+            }
         }
     }
 }
