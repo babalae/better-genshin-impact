@@ -20,6 +20,7 @@ using Windows.System;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 using Wpf.Ui.Controls;
+using MessageBox = System.Windows.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -33,12 +34,10 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [ObservableProperty] private Visibility _startButtonVisibility = Visibility.Visible;
     [ObservableProperty] private Visibility _stopButtonVisibility = Visibility.Collapsed;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
 
     public AllConfig Config { get; set; }
@@ -72,6 +71,15 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 }
             }
         });
+
+        var args = Environment.GetCommandLineArgs();
+        if (args.Length > 1)
+        {
+            if (args[1].Contains("start"))
+            {
+                _ = OnStartTriggerAsync();
+            }
+        }
     }
 
     [RelayCommand]
@@ -136,6 +144,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             {
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
             }
+
             if (hWnd == IntPtr.Zero)
             {
                 System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
@@ -231,6 +240,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 {
                     return;
                 }
+
                 Config.GenshinStartConfig.InstallPath = path;
             }
         });
