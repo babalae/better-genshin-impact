@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -11,10 +13,13 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware
 {
     public AllConfig Config { get; set; }
+    
+    private readonly INavigationService _navigationService;
 
-    public TriggerSettingsPageViewModel(IConfigService configService)
+    public TriggerSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {
         Config = configService.Get();
+        _navigationService = navigationService;
     }
 
     public void OnNavigatedTo()
@@ -50,5 +55,11 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     public void OnGoToQGroupUrl()
     {
         Process.Start(new ProcessStartInfo("http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=mL1O7atys6Prlu5LBVqmDlfOrzyPMLN4&authKey=jSI2WuZyUjmpIUIAsBAf5g0r5QeSu9K6Un%2BRuSsQ8fQGYwGYwRVioFfJyYnQqvbf&noverify=0&group_code=863012276") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnGoToHotKeyPage()
+    {
+        _navigationService.Navigate(typeof(HotKeyPage));
     }
 }

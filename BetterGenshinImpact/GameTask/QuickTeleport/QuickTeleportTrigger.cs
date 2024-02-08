@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Linq;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Model;
+using System.Windows.Forms;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -23,11 +26,13 @@ internal class QuickTeleportTrigger : ITaskTrigger
     // private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
     private DateTime _prevExecute = DateTime.MinValue;
     private readonly QuickTeleportConfig _config;
+    private readonly HotKeyConfig _hotkeyConfig;
 
     public QuickTeleportTrigger()
     {
         _assets = new QuickTeleportAssets();
         _config = TaskContext.Instance().Config.QuickTeleportConfig;
+        _hotkeyConfig = TaskContext.Instance().Config.HotKeyConfig;
     }
 
     public void Init()
@@ -41,6 +46,15 @@ internal class QuickTeleportTrigger : ITaskTrigger
         if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 300)
         {
             return;
+        }
+
+        // 快捷键传送配置启用的情况下，且快捷键按下的时候激活
+        if (_config.HotkeyTpEnabled && !string.IsNullOrEmpty(_hotkeyConfig.QuickTeleportTickHotkey))
+        {
+            if (!IsHotkeyPressed())
+            {
+                return;
+            }
         }
 
         _prevExecute = DateTime.Now;
@@ -123,12 +137,12 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 {
                     continue;
                 }
-                
+
                 if ((DateTime.Now - _prevClickOptionButtonTime).TotalMilliseconds > 500)
                 {
                     TaskControl.Logger.LogInformation("快速传送：点击 {Option}", text);
                 }
-                
+
                 _prevClickOptionButtonTime = DateTime.Now;
                 TaskControl.Sleep(_config.TeleportListClickDelay);
                 ra.ClickCenter();
@@ -136,7 +150,6 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 break;
             }
         }
-
 
 
         // List<RectArea> raResultList = new();
@@ -200,5 +213,32 @@ internal class QuickTeleportTrigger : ITaskTrigger
         using var mat = new Mat(captureMat, textRect);
         var text = OcrFactory.Paddle.Ocr(mat);
         return text;
+    }
+
+
+    private bool IsHotkeyPressed()
+    {
+        if (HotKey.IsMouseButton(_hotkeyConfig.QuickTeleportTickHotkey))
+        {
+            if (MouseHook.AllMouseHooks.TryGetValue((MouseButtons)Enum.Parse(typeof(MouseButtons), _hotkeyConfig.QuickTeleportTickHotkey), out var mouseHook))
+            {
+                if (mouseHook.IsPressed)
+                {
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            if (KeyboardHook.AllKeyboardHooks.TryGetValue((Keys)Enum.Parse(typeof(Keys), _hotkeyConfig.QuickTeleportTickHotkey), out var keyboardHook))
+            {
+                if (keyboardHook.IsPressed)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

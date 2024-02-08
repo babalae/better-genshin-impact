@@ -177,6 +177,16 @@ public partial class HotKeyPageViewModel : ObservableObject
         );
         HotKeySettingModels.Add(quickTeleportEnabledHotKeySettingModel);
 
+        var quickTeleportTickHotKeySettingModel = new HotKeySettingModel(
+            "手动触发快速传送触发快捷键（按住起效）",
+            nameof(Config.HotKeyConfig.QuickTeleportTickHotkey),
+            Config.HotKeyConfig.QuickTeleportTickHotkey,
+            Config.HotKeyConfig.QuickTeleportTickHotkeyType,
+            (_, _) => { },
+            true
+        );
+        HotKeySettingModels.Add(quickTeleportTickHotKeySettingModel);
+
         var turnAroundHotKeySettingModel = new HotKeySettingModel(
             "长按旋转视角 - 那维莱特转圈",
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
