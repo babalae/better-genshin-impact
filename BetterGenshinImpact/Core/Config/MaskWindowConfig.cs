@@ -50,7 +50,7 @@ namespace BetterGenshinImpact.Core.Config
         /// <summary>
         /// 1080p下UID遮盖的位置与大小
         /// </summary>
-        public Rect UidCoverRect { get; set; } = new(1695, 1052, 168, 22);
+        public Rect UidCoverRect { get; set; } = new(1690, 1052, 173, 22);
 
         /// <summary>
         /// 方位提示是否启用

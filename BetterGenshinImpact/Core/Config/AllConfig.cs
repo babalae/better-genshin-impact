@@ -1,18 +1,16 @@
 ﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.QuickTeleport;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
-using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
-using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.Model;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
-using BetterGenshinImpact.GameTask.AutoWood;
-using BetterGenshinImpact.GameTask.QuickTeleport;
 
 namespace BetterGenshinImpact.Core.Config
 {

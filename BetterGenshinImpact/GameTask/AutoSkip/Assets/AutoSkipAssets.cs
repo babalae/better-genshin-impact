@@ -58,12 +58,14 @@ public class AutoSkipAssets
             DrawOnWindow = true
         }.InitTemplate();
 
+
+        var optionRect = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2 - info.CaptureAreaRect.Width / 6, info.CaptureAreaRect.Height);
         OptionIconRo = new RecognitionObject
         {
             Name = "OptionIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            RegionOfInterest = optionRect,
             DrawOnWindow = false
         }.InitTemplate();
         DailyRewardIconRo = new RecognitionObject
@@ -71,7 +73,7 @@ public class AutoSkipAssets
             Name = "DailyRewardIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_daily_reward.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            RegionOfInterest = optionRect,
             DrawOnWindow = false
         }.InitTemplate();
         ExploreIconRo = new RecognitionObject
@@ -79,7 +81,7 @@ public class AutoSkipAssets
             Name = "ExploreIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_explore.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            RegionOfInterest = optionRect,
             DrawOnWindow = false
         }.InitTemplate();
 

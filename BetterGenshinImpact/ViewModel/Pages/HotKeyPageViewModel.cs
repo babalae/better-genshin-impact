@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
@@ -182,7 +183,7 @@ public partial class HotKeyPageViewModel : ObservableObject
             nameof(Config.HotKeyConfig.QuickTeleportTickHotkey),
             Config.HotKeyConfig.QuickTeleportTickHotkey,
             Config.HotKeyConfig.QuickTeleportTickHotkeyType,
-            (_, _) => { },
+            (_, _) => { Thread.Sleep(100); },
             true
         );
         HotKeySettingModels.Add(quickTeleportTickHotKeySettingModel);

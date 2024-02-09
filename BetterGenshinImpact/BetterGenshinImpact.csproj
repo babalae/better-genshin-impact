@@ -63,7 +63,7 @@
 
 	<ItemGroup>
 		<Compile Update="GameTask\TaskContext.cs">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</Compile>
 		<Compile Update="View\MaskWindow.xaml.cs">
 			<SubType>Code</SubType>

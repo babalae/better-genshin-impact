@@ -20,7 +20,10 @@ using BetterGenshinImpact.Core.Config;
 using Vanara.PInvoke;
 using System.IO;
 using System.Drawing.Imaging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
+using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -426,7 +429,18 @@ namespace BetterGenshinImpact.GameTask
                     var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
                     var savePath = Global.Absolute($@"log\screenshot\{name}");
 
-                    bitmap.Save(savePath, ImageFormat.Png);
+                    if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
+                    {
+                        var mat = bitmap.ToMat();
+                        var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
+                        mat.Rectangle(rect, Scalar.White, -1);
+                        Cv2.ImWrite(savePath, mat);
+                    }
+                    else
+                    {
+                        bitmap.Save(savePath, ImageFormat.Png);
+                    }
+
                     _logger.LogInformation("截图已保存: {Name}", name);
                 }
                 catch (Exception e)
