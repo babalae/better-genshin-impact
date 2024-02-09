@@ -11,9 +11,11 @@ public class AutoSkipAssets
     public RecognitionObject PlayingTextRo;
     public RecognitionObject MenuRo;
 
+    public Rect OptionRoi;
     public RecognitionObject OptionIconRo;
     public RecognitionObject DailyRewardIconRo;
     public RecognitionObject ExploreIconRo;
+    public RecognitionObject ExclamationIconRo;
 
     public RecognitionObject PageCloseRo;
 
@@ -59,13 +61,13 @@ public class AutoSkipAssets
         }.InitTemplate();
 
 
-        var optionRect = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2 - info.CaptureAreaRect.Width / 6, info.CaptureAreaRect.Height);
+        OptionRoi = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2 - info.CaptureAreaRect.Width / 6, info.CaptureAreaRect.Height);
         OptionIconRo = new RecognitionObject
         {
             Name = "OptionIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
-            RegionOfInterest = optionRect,
+            RegionOfInterest = OptionRoi,
             DrawOnWindow = false
         }.InitTemplate();
         DailyRewardIconRo = new RecognitionObject
@@ -73,7 +75,7 @@ public class AutoSkipAssets
             Name = "DailyRewardIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_daily_reward.png"),
-            RegionOfInterest = optionRect,
+            RegionOfInterest = OptionRoi,
             DrawOnWindow = false
         }.InitTemplate();
         ExploreIconRo = new RecognitionObject
@@ -81,10 +83,20 @@ public class AutoSkipAssets
             Name = "ExploreIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_explore.png"),
-            RegionOfInterest = optionRect,
+            RegionOfInterest = OptionRoi,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 更多对话要素
+        ExclamationIconRo = new RecognitionObject
+        {
+            Name = "IconExclamation",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_exclamation.png"),
+            RegionOfInterest = OptionRoi,
             DrawOnWindow = false
         }.InitTemplate();
 
+        // 其他
         MenuRo = new RecognitionObject
         {
             Name = "Menu",
@@ -99,7 +111,7 @@ public class AutoSkipAssets
             Name = "PageClose",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "page_close.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 8 , 0, info.CaptureAreaRect.Width / 8, info.CaptureAreaRect.Height / 8),
+            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 8, 0, info.CaptureAreaRect.Width / 8, info.CaptureAreaRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
 
@@ -117,7 +129,7 @@ public class AutoSkipAssets
             Name = "Re",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "re.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
+            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -130,7 +142,5 @@ public class AutoSkipAssets
             RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
-
-        // 更多对话要素
     }
 }

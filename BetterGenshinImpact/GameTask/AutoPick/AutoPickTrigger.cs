@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Windows.Forms;
 using BetterGenshinImpact.Helpers;
 using WindowsInput;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -51,7 +52,7 @@ public class AutoPickTrigger : ITaskTrigger
             var blackListJson = Global.ReadAllTextIfExist("User\\pick_black_lists.json");
             if (!string.IsNullOrEmpty(blackListJson))
             {
-                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson) ?? new List<string>();
+                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson, ConfigService.JsonOptions) ?? new List<string>();
             }
         }
         catch (Exception e)
@@ -65,7 +66,7 @@ public class AutoPickTrigger : ITaskTrigger
             var whiteListJson = Global.ReadAllTextIfExist("User\\pick_white_lists.json");
             if (!string.IsNullOrEmpty(whiteListJson))
             {
-                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson) ?? new List<string>();
+                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson, ConfigService.JsonOptions) ?? new List<string>();
             }
         }
         catch (Exception e)

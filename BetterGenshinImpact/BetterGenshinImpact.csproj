@@ -437,6 +437,15 @@
 		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]黄衫.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\AutoSkip\default_pause_options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoSkip\select_options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoSkip\pause_options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

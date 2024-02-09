@@ -45,6 +45,11 @@ public class ClickOffset
         ClickExtension.Click(OffsetX + x, OffsetY + y);
     }
 
+    public void ClickWithoutScale(double x, double y)
+    {
+        ClickExtension.Click(OffsetX + x, OffsetY + y);
+    }
+
     public void Move(int x, int y)
     {
         ClickExtension.Move(OffsetX + (int)(x * AssetScale), OffsetY + (int)(y * AssetScale));

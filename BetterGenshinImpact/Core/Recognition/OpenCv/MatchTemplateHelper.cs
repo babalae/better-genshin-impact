@@ -192,5 +192,33 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
 
             return list;
         }
+
+        /// <summary>
+        /// 在一张图中查找一个个模板
+        /// </summary>
+        /// <param name="srcMat"></param>
+        /// <param name="dstMat"></param>
+        /// <param name="threshold"></param>
+        /// <returns></returns>
+        public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, double threshold = 0.8)
+        {
+            List<Rect> list = new();
+
+            while (true)
+            {
+                var point = MatchTemplate(srcMat, dstMat, TemplateMatchModes.CCoeffNormed, null, threshold);
+                if (point != new Point())
+                {
+                    // 把结果给遮掩掉，避免重复识别
+                    Cv2.Rectangle(srcMat, point, new Point(point.X + dstMat.Width, point.Y + dstMat.Height), Scalar.Black, -1);
+                    list.Add(new Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return list;
+        }
     }
 }

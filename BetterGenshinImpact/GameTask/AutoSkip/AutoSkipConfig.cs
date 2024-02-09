@@ -1,9 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip
 {
@@ -50,6 +46,12 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// <summary>
         /// 自动重新派遣使用角色配置，逗号分割
         /// </summary>
+        [Obsolete]
         [ObservableProperty] private string _autoReExploreCharacter = "";
+
+        /// <summary>
+        /// 优先点击第一个选项
+        /// </summary>
+        [ObservableProperty] private bool _clickFirstOptionEnabled = false;
     }
 }
