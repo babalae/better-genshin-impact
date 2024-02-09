@@ -305,7 +305,7 @@ public class AutoSkipTrigger : ITaskTrigger
     private bool IsOrangeOption(Mat textMat)
     {
         // 只提取橙色
-        Cv2.ImWrite($"log/text{DateTime.Now:yyyyMMddHHmmssffff}.png", textMat);
+        // Cv2.ImWrite($"log/text{DateTime.Now:yyyyMMddHHmmssffff}.png", textMat);
         using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
         var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
         var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
@@ -399,8 +399,16 @@ public class AutoSkipTrigger : ITaskTrigger
                 // 橙色选项
                 foreach (var item in ocrRes.Regions)
                 {
-                    var textRect = item.Rect.BoundingRect();
-                    var textMat = new Mat(content.CaptureRectArea.SrcMat, new Rect(ocrRect.X + textRect.X, ocrRect.Y + textRect.Y, textRect.Width, textRect.Height));
+                    var textOcrRect = item.Rect.BoundingRect();
+                    var textRect = new Rect(ocrRect.X + textOcrRect.X, ocrRect.Y + textOcrRect.Y, textOcrRect.Width, textOcrRect.Height);
+                    if (textRect.X < 0 || textRect.Y < 0 || textRect.Width > content.CaptureRectArea.SrcMat.Width || textRect.Height > content.CaptureRectArea.SrcMat.Height)
+                    {
+                        Debug.WriteLine($"识别到的文字区域超出正常范围:{textOcrRect}");
+                        _logger.LogDebug("识别到的文字区域超出正常范围:{TextOcrRect}", textOcrRect);
+                        continue;
+                    }
+
+                    var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
                     if (IsOrangeOption(textMat))
                     {
                         if (item.Text.Contains("每日委托"))
@@ -453,8 +461,8 @@ public class AutoSkipTrigger : ITaskTrigger
                 // 没OCR到文字，直接选择气泡选项
                 var clickOffset = new ClickOffset(captureArea.X + _autoSkipAssets.OptionRoi.X, captureArea.Y + _autoSkipAssets.OptionRoi.Y, assetScale);
                 clickOffset.ClickWithoutScale(clickRect.X + clickRect.Width / 2, clickRect.Y + clickRect.Height / 2);
-                var msg = _config.ClickFirstOptionEnabled ? "上" : "下";
-                AutoSkipLog($"点击最{msg}选项");
+                var msg = _config.ClickFirstOptionEnabled ? "第一个" : "最后一个";
+                AutoSkipLog($"点击{msg}选项");
             }
         }
     }
