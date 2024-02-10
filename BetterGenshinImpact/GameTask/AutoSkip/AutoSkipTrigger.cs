@@ -3,6 +3,8 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
@@ -17,10 +19,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Vanara.PInvoke;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -275,8 +274,6 @@ public class AutoSkipTrigger : ITaskTrigger
 
                 _prevClickTime = DateTime.Now;
             }
-
-            // TODO 自动交付材料
         }
     }
 

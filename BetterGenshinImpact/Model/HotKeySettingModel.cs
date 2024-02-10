@@ -119,15 +119,9 @@ public partial class HotKeySettingModel : ObservableObject
 
     public void UnRegisterHotKey()
     {
-        if (HotKeyType == HotKeyTypeEnum.GlobalRegister)
-        {
-            GlobalRegisterHook?.Dispose();
-        }
-        else
-        {
-            MouseMonitorHook?.Dispose();
-            KeyboardMonitorHook?.Dispose();
-        }
+        GlobalRegisterHook?.Dispose();
+        MouseMonitorHook?.Dispose();
+        KeyboardMonitorHook?.Dispose();
     }
 
     [RelayCommand]
