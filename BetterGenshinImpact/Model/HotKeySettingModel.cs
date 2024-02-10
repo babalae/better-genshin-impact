@@ -95,6 +95,12 @@ public partial class HotKeySettingModel : ObservableObject
                 }
                 else
                 {
+                    // 如果是组合键，不支持
+                    if (HotKey.Modifiers != ModifierKeys.None)
+                    {
+                        HotKey = HotKey.None;
+                        return;
+                    }
                     KeyboardMonitorHook = new KeyboardHook
                     {
                         IsHold = IsHold
