@@ -17,6 +17,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Vanara.PInvoke;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -159,14 +161,17 @@ public class AutoSkipTrigger : ITaskTrigger
             if (!isPlaying)
             {
                 // 关闭弹出页
-                content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
-                {
-                    pageCloseRoRa.ClickCenter();
+                ClosePopupPage(content);
 
-                    AutoSkipLog("关闭弹出页");
-                    isPlaying = true;
-                    pageCloseRoRa.Dispose();
-                });
+                // 自动剧情点击3s内判断
+                if ((DateTime.Now - _prevClickTime).TotalMilliseconds < 3000)
+                {
+                    // 提交物品
+                    if (SubmitGoods(content))
+                    {
+                        return;
+                    }
+                }
             }
         }
         else
@@ -282,6 +287,7 @@ public class AutoSkipTrigger : ITaskTrigger
     /// <param name="foundIconRectArea"></param>
     /// <param name="chatOptionTextWidth"></param>
     /// <returns></returns>
+    [Obsolete]
     private string GetOrangeOptionText(Mat captureMat, RectArea foundIconRectArea, int chatOptionTextWidth)
     {
         var textRect = new Rect(foundIconRectArea.X + foundIconRectArea.Width, foundIconRectArea.Y, chatOptionTextWidth, foundIconRectArea.Height);
@@ -418,6 +424,7 @@ public class AutoSkipTrigger : ITaskTrigger
                         }
                         else if (item.Text.Contains("探索派遣"))
                         {
+                            ClickOcrRegion(clickOffset, item);
                             Thread.Sleep(800); // 等待探索派遣界面打开
                             new OneKeyExpeditionTask().Run(_autoSkipAssets);
                         }
@@ -481,5 +488,59 @@ public class AutoSkipTrigger : ITaskTrigger
         }
 
         _prevClickTime = DateTime.Now;
+    }
+
+    /// <summary>
+    /// 关闭弹出页
+    /// </summary>
+    /// <param name="content"></param>
+    private void ClosePopupPage(CaptureContent content)
+    {
+        content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
+        {
+            pageCloseRoRa.ClickCenter();
+
+            AutoSkipLog("关闭弹出页");
+            pageCloseRoRa.Dispose();
+        });
+    }
+
+    private bool SubmitGoods(CaptureContent content)
+    {
+        var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
+        if (!exclamationRa.IsEmpty())
+        {
+            // 最多3个物品 现在就支持一个
+            var goods = content.CaptureRectArea.Find(_autoSkipAssets.SubmitGoodsRo);
+            if (!goods.IsEmpty())
+            {
+                goods.ClickCenter();
+                _logger.LogInformation("提交物品：{Text}", "1. 选择物品");
+
+                TaskControl.Sleep(800);
+                content = TaskControl.CaptureToContent();
+
+                var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnBlackConfirm);
+                if (!btnBlackConfirmRa.IsEmpty())
+                {
+                    btnBlackConfirmRa.ClickCenter();
+                    _logger.LogInformation("提交物品：{Text}", "2. 放入");
+
+                    TaskControl.Sleep(800);
+                    content = TaskControl.CaptureToContent();
+
+                    var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnWhiteConfirm);
+                    if (!btnWhiteConfirmRa.IsEmpty())
+                    {
+                        btnWhiteConfirmRa.ClickCenter();
+                        _logger.LogInformation("提交物品：{Text}", "3. 交付");
+
+                        VisionContext.Instance().DrawContent.ClearAll();
+                    }
+                }
+            }
+            return true;
+        }
+        return false;
     }
 }

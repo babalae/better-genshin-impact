@@ -24,6 +24,9 @@ public class AutoSkipAssets
 
     public RecognitionObject PrimogemRo;
 
+    public RecognitionObject SubmitExclamationIconRo;
+    public RecognitionObject SubmitGoodsRo;
+
     //public Mat BinaryStopAutoButtonMat;
 
     public AutoSkipAssets()
@@ -140,6 +143,24 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "primogem.png"),
             RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 3),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 提交物品
+        SubmitExclamationIconRo = new RecognitionObject
+        {
+            Name = "SubmitExclamationIconRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_icon_exclamation.png"),
+            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SubmitGoodsRo = new RecognitionObject
+        {
+            Name = "SubmitGoods",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_goods.png"),
+            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }
