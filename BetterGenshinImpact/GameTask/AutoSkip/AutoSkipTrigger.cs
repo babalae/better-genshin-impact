@@ -264,7 +264,7 @@ public class AutoSkipTrigger : ITaskTrigger
             using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
-            if (rate is >= 0.5 and < 0.999)
+            if (rate is >= 0.5 and < 0.98)
             {
                 Simulation.SendInputEx.Mouse.LeftButtonClick();
                 if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
