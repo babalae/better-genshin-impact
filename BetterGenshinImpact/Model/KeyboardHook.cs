@@ -1,4 +1,5 @@
-﻿using Fischless.HotkeyCapture;
+﻿using BetterGenshinImpact.GameTask;
+using Fischless.HotkeyCapture;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,6 +22,11 @@ public class KeyboardHook
 
     public void KeyDown(object? sender, KeyEventArgs e)
     {
+        if (!SystemControl.IsGenshinImpactActive())
+        {
+            return;
+        }
+
         if (e.KeyCode == BindKey)
         {
             IsPressed = true;
