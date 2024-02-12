@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Model;
@@ -22,6 +23,11 @@ public class MouseHook
 
     public void MouseDown(object? sender, MouseEventExtArgs e)
     {
+        if (!SystemControl.IsGenshinImpactActive())
+        {
+            return;
+        }
+
         if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
             IsPressed = true;
