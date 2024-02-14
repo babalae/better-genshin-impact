@@ -93,9 +93,6 @@
 		<None Update="Assets\Model\Fish\bgi_fish.onnx">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="Assets\Model\Fish\label.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
 		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdiparams">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -166,6 +163,15 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\flashing maintenance mek bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\sour bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\sugardew bait.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\lift_rod.png">

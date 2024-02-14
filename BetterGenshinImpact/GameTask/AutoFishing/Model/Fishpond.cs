@@ -38,6 +38,11 @@ public class Fishpond
                 TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
                 continue;
             }
+            else if (box.Class.Name == "target-error")
+            {
+                TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+                continue;
+            }
 
             var fish = new OneFish(box.Class.Name, new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height));
             Fishes.Add(fish);

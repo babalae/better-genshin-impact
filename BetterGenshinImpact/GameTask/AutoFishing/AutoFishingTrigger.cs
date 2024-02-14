@@ -86,6 +86,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     return;
                 }
+
                 _prevExecute = DateTime.Now;
 
                 // 进入独占模式判断
@@ -104,6 +105,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         return;
                     }
+
                     _prevExecute = DateTime.Now;
 
                     _fishBoxRect = GetFishBoxArea(content.CaptureRectArea.SrcMat);
@@ -164,7 +166,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                             // 点击下面的按钮
                             var rc = info.CaptureAreaRect;
-                            Simulation.SendInput
+                            Simulation.SendInputEx
                                 .Mouse
                                 .MoveMouseTo(
                                     (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 / info.DesktopRectArea.Width,
@@ -274,18 +276,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             // 往左移动是正数，往右移动是负数
                             if (fishpond.FishpondRect.Left > centerX)
                             {
-                                Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                                Simulation.SendInputEx.Mouse.MoveMouseBy(100, 0);
                             }
 
                             if (fishpond.FishpondRect.Right < centerX)
                             {
-                                Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
+                                Simulation.SendInputEx.Mouse.MoveMouseBy(-100, 0);
                             }
 
                             // 鱼塘尽量在上半屏幕
                             if (fishpond.FishpondRect.Bottom > centerY)
                             {
-                                Simulation.SendInput.Mouse.MoveMouseBy(0, -100);
+                                Simulation.SendInputEx.Mouse.MoveMouseBy(0, -100);
                             }
 
                             if ((fishpond.FishpondRect.Left < centerX && fishpond.FishpondRect.Right > centerX) || fishpond.FishpondRect.Width < content.SrcBitmap.Width / 4)
@@ -325,7 +327,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         // 30s 没有上钩，重新抛竿
                         if (_throwRodWaitFrameNum >= content.FrameRate * TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut)
                         {
-                            Simulation.SendInput.Mouse.LeftButtonClick();
+                            Simulation.SendInputEx.Mouse.LeftButtonClick();
                             _throwRodWaitFrameNum = 0;
                             _waitBiteContinuouslyFrameNum = 0;
                             Debug.WriteLine("超时自动收竿");
@@ -369,7 +371,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private string ChooseBait(CaptureContent content, Fishpond fishpond)
         {
             // 打开换饵界面
-            Simulation.SendInput.Mouse.RightButtonClick();
+            Simulation.SendInputEx.Mouse.RightButtonClick();
+            Sleep(100);
+            Simulation.SendInputEx.Mouse.MoveMouseBy(0, 200); // 鼠标移走，防止干扰
             Sleep(500);
 
             // 截图
@@ -378,12 +382,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _logger.LogInformation("选择鱼饵 {Text}", BaitType.FromName(_selectedBaitName).ChineseName);
 
             // 寻找鱼饵
-            var ro = new RecognitionObject()
+            var ro = new RecognitionObject
             {
                 Name = "ChooseBait",
                 RecognitionType = RecognitionTypes.TemplateMatch,
                 TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{_selectedBaitName}.png"),
-                Threshold = 0.9,
+                Threshold = 0.8,
                 Use3Channels = true,
                 DrawOnWindow = false
             }.InitTemplate();
@@ -400,7 +404,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else
             {
                 resRa.ClickCenter();
-                Sleep(500);
+                Sleep(700);
                 // 可能重复点击，所以固定界面点击下
                 var rect = systemInfo.CaptureAreaRect;
                 ClickExtension.Click(rect.X + 1300 * systemInfo.AssetScale, rect.Y + 400 * systemInfo.AssetScale);
@@ -423,7 +427,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private void ApproachFishAndThrowRod(CaptureContent content)
         {
             // 预抛竿
-            Simulation.SendInput.Mouse.LeftButtonDown();
+            Simulation.SendInputEx.Mouse.LeftButtonDown();
             _logger.LogInformation("长按预抛竿");
             Sleep(3000);
 
@@ -446,29 +450,29 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     noPlacementTimes++;
                     Sleep(50);
-                    Debug.WriteLine("历次未找到鱼饵落点,随机移动");
-
+                    Debug.WriteLine("历次未找到鱼饵落点");
+                    
                     var cX = content.SrcBitmap.Width / 2;
                     var cY = content.SrcBitmap.Height / 2;
                     var rdX = _rd.Next(0, content.SrcBitmap.Width);
                     var rdY = _rd.Next(0, content.SrcBitmap.Height);
-
+                    
                     var moveX = 100 * (cX - rdX) / content.SrcBitmap.Width;
                     var moveY = 100 * (cY - rdY) / content.SrcBitmap.Height;
-
-                    Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
+                    
+                    Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, moveY);
 
                     if (noPlacementTimes > 50)
                     {
-                        _logger.LogInformation("未找到鱼饵落点，大概率是长按失败，直接抛竿收杆重试");
-                        Simulation.SendInput.Mouse.LeftButtonUp().Sleep(200).LeftButtonDown().Sleep(200).LeftButtonUp();
-                        Sleep(2000);
-                        Simulation.SendInput.Mouse.LeftButtonClick();
-                        _selectedBaitName = string.Empty;
-                        _isThrowRod = false;
-                        Sleep(2000);
-                        MoveViewpointDown();
-                        Sleep(300);
+                        _logger.LogInformation("未找到鱼饵落点，重试");
+                        // Simulation.SendInputEx.Mouse.LeftButtonUp();
+                        // // Sleep(2000);
+                        // // Simulation.SendInputEx.Mouse.LeftButtonClick();
+                        // _selectedBaitName = string.Empty;
+                        // _isThrowRod = false;
+                        // // Sleep(2000);
+                        // // MoveViewpointDown();
+                        // Sleep(300);
                         break;
                     }
 
@@ -501,17 +505,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     noTargetFishTimes++;
                     //if (noTargetFishTimes == 30)
                     //{
-                    //    Simulation.SendInput.Mouse.MoveMouseBy(0, 100);
+                    //    Simulation.SendInputEx.Mouse.MoveMouseBy(0, 100);
                     //}
 
-                    if (noTargetFishTimes > 80)
+                    if (noTargetFishTimes > 70)
                     {
                         // 没有找到目标鱼，重新选择鱼饵
                         _logger.LogInformation("没有找到目标鱼，1.直接抛竿");
-                        Simulation.SendInput.Mouse.LeftButtonUp();
+                        Simulation.SendInputEx.Mouse.LeftButtonUp();
                         Sleep(1500);
                         _logger.LogInformation("没有找到目标鱼，2.收杆");
-                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        Simulation.SendInputEx.Mouse.LeftButtonClick();
                         Sleep(1500);
                         _logger.LogInformation("没有找到目标鱼，3.准备重新选择鱼饵");
                         _selectedBaitName = string.Empty;
@@ -530,11 +534,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     VisionContext.Instance().DrawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
                     VisionContext.Instance().DrawContent.PutRect("Fish", currentFish.Rect.ToRectDrawable());
                     // 因为视角是斜着看向鱼的，所以Y轴抛竿距离要近一点
-                    if ((_selectedBaitName != "fruit paste bait" && min is { Item1: <= 50, Item2: <= 25 }) 
+                    if ((_selectedBaitName != "fruit paste bait" && min is { Item1: <= 50, Item2: <= 25 })
                         || _selectedBaitName == "fruit paste bait" && min is { Item1: <= 40, Item2: <= 25 })
                     {
                         Sleep(100);
-                        Simulation.SendInput.Mouse.LeftButtonUp();
+                        Simulation.SendInputEx.Mouse.LeftButtonUp();
                         _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
                         _isThrowRod = true;
                         VisionContext.Instance().DrawContent.RemoveRect("Target");
@@ -555,9 +559,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
             {
                 // 下移视角方便看鱼
-                Simulation.SendInput.Mouse.MoveMouseBy(0, 300);
+                Simulation.SendInputEx.Mouse.MoveMouseBy(0, 400);
                 Sleep(500);
-                Simulation.SendInput.Mouse.MoveMouseBy(0, 400);
+                Simulation.SendInputEx.Mouse.MoveMouseBy(0, 500);
                 Sleep(500);
             }
         }
@@ -587,14 +591,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     moveY = 50;
                 }
-                
+
                 if (c1.Y > c2.Y)
                 {
                     moveY = -moveY;
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", 0, moveY);
-                Simulation.SendInput.Mouse.MoveMouseBy(0, moveY);
+                Simulation.SendInputEx.Mouse.MoveMouseBy(0, moveY);
                 return (0, minDistance);
             }
 
@@ -614,7 +618,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", moveX, 0);
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, 0);
                 return (minDistance, 0);
             }
 
@@ -635,6 +639,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     moveY = 50;
                 }
+
                 if (c1.Y > c2.Y)
                 {
                     moveY = -moveY;
@@ -646,7 +651,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 //_logger.LogInformation("移动鼠标 {X} {Y}", moveX, moveY);
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
+                Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, moveY);
                 return (dpX, dpY);
             }
 
@@ -677,6 +682,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _logger.LogWarning("截图失败!");
                 throw new Exception("截图失败");
             }
+
             // 更新当前捕获内容
             _currContent = new CaptureContent(bitmap, _currContent.FrameIndex, _currContent.TimerInterval, _currContent.Dispatcher);
             return bitmap;
@@ -728,7 +734,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (_left.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在left左边
                     || _cur.Width > _left.Width // left一定比cur宽
                     || _cur.X + _cur.Width > srcMat.Width / 2 // cur 一定在屏幕左侧
-                    || _cur.X + _cur.Width > _left.X - _left.Width/2 // cur 一定在left左侧+left的一半宽度
+                    || _cur.X + _cur.Width > _left.X - _left.Width / 2 // cur 一定在left左侧+left的一半宽度
                     || _cur.X + _cur.Width > srcMat.Width / 2 - _left.Width // cur 一定在屏幕中轴线减去整个left的宽度的位置左侧
                     || !(_left.X < srcMat.Width / 2 && _left.X + _left.Width > srcMat.Width / 2) // left肯定穿过游戏中轴线
                    )
@@ -800,7 +806,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             var liftRodButtonRa = content.CaptureRectArea.Find(_autoFishingAssets.LiftRodButtonRo);
                             if (!liftRodButtonRa.IsEmpty())
                             {
-                                Simulation.SendInput.Mouse.LeftButtonClick();
+                                Simulation.SendInputEx.Mouse.LeftButtonClick();
                                 _logger.LogInformation(@"┌------------------------┐");
                                 _logger.LogInformation("  自动提竿(图像识别)");
                                 _isFishingProcess = true;
@@ -811,13 +817,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             }
 
                             // OCR 提竿判断
-                            var text = _ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat, 
-                                new Rect(currentBiteWordsTips.X+ liftingWordsAreaRect.X, 
-                                    currentBiteWordsTips.Y+liftingWordsAreaRect.Y, 
+                            var text = _ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat,
+                                new Rect(currentBiteWordsTips.X + liftingWordsAreaRect.X,
+                                    currentBiteWordsTips.Y + liftingWordsAreaRect.Y,
                                     currentBiteWordsTips.Width, currentBiteWordsTips.Height)));
                             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
                             {
-                                Simulation.SendInput.Mouse.LeftButtonClick();
+                                Simulation.SendInputEx.Mouse.LeftButtonClick();
                                 _logger.LogInformation(@"┌------------------------┐");
                                 _logger.LogInformation("  自动提竿(OCR)");
                                 _isFishingProcess = true;
@@ -836,7 +842,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     if (_biteTipsExitCount >= content.FrameRate / 2d)
                     {
-                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        Simulation.SendInputEx.Mouse.LeftButtonClick();
                         _logger.LogInformation(@"┌------------------------┐");
                         _logger.LogInformation("  自动提竿(文字块)");
                         _isFishingProcess = true;
@@ -862,7 +868,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <param name="fishBarMat"></param>
         private void Fishing(CaptureContent content, Mat fishBarMat)
         {
-            var simulator = Simulation.SendInput;
+            var simulator = Simulation.SendInputEx;
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
             {
@@ -964,10 +970,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _logger.LogInformation("  钓鱼结束");
                     _logger.LogInformation(@"└------------------------┘");
 
-                    if (_prevMouseEvent == MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
-                    {
-                        simulator.Mouse.LeftButtonUp();
-                    }
+                    // 保证鼠标松开
+                    simulator.Mouse.LeftButtonUp();
 
                     Sleep(1000);
 
@@ -1010,10 +1014,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                 var autoThrowRodEnabled = TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled;
                 _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", autoThrowRodEnabled.ToChinese());
-                if (autoThrowRodEnabled)
-                {
-                    _logger.LogInformation("枫丹、须弥地区暂不支持自动抛竿，如果在这两个地区钓鱼请关闭自动抛竿功能");
-                }
+                // if (autoThrowRodEnabled)
+                // {
+                //     _logger.LogInformation("枫丹、须弥地区暂不支持自动抛竿，如果在这两个地区钓鱼请关闭自动抛竿功能");
+                // }
                 _switchBaitContinuouslyFrameNum = 0;
                 _waitBiteContinuouslyFrameNum = 0;
                 _noFishActionContinuouslyFrameNum = 0;
