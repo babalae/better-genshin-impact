@@ -46,7 +46,7 @@ public class GraphicsCapture : IGameCapture
 
         _captureFramePool = Direct3D11CaptureFramePool.Create(device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2,
             _captureItem.Size);
-        _captureFramePool.FrameArrived += OnFrameArrived;
+        // _captureFramePool.FrameArrived += OnFrameArrived;
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
         _captureSession.IsCursorCaptureEnabled = false;
         if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
@@ -109,29 +109,29 @@ public class GraphicsCapture : IGameCapture
             return null;
         }
 
-        // try
-        // {
-        //     using var frame = _captureFramePool?.TryGetNextFrame();
-        //
-        //     if (frame == null)
-        //     {
-        //         return null;
-        //     }
-        //
-        //     return frame.ToBitmap(_region);
-        // }
-        // catch (Exception e)
-        // {
-        //     Debug.WriteLine(e);
-        // }
-        //
-        // return null;
-
-        if (_currentBitmap == null)
+        try
         {
-            return null;
+            using var frame = _captureFramePool?.TryGetNextFrame();
+        
+            if (frame == null)
+            {
+                return null;
+            }
+        
+            return frame.ToBitmap(_region);
         }
-        return (Bitmap)_currentBitmap.Clone();
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
+        
+        return null;
+
+        // if (_currentBitmap == null)
+        // {
+        //     return null;
+        // }
+        // return (Bitmap)_currentBitmap.Clone();
     }
 
     public void Stop()
