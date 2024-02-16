@@ -35,5 +35,17 @@ namespace BetterGenshinImpact.Core.Config
         /// https://github.com/babalae/better-genshin-impact/issues/9
         /// </summary>
         [ObservableProperty] private int _enhanceWaitDelay = 0;
+
+
+
+        /// <summary>
+        /// 转圈圈鼠标右移长度
+        /// </summary>
+        [ObservableProperty] private int _runaroundMouseXInterval = 500;
+
+        /// <summary>
+        /// 转圈圈时间间隔
+        /// </summary>
+        [ObservableProperty] private int _runaroundInterval = 0;
     }
 }
