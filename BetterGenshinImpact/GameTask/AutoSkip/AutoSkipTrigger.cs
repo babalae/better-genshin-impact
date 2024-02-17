@@ -378,12 +378,15 @@ public class AutoSkipTrigger : ITaskTrigger
             // Cv2.ImWrite("log/ocrMat.png", ocrMat);
             var ocrRes = OcrFactory.Paddle.OcrResult(ocrMat);
 
-            if (ocrRes.Regions.Length > 0)
+            // 删除为空的结果
+            var rs = ocrRes.Regions.Where(r => !string.IsNullOrEmpty(r.Text)).ToArray();
+
+            if (rs.Length > 0)
             {
                 var clickOffset = new ClickOffset(captureArea.X + ocrRect.X, captureArea.Y + ocrRect.Y, assetScale);
 
                 // 用户自定义关键词 匹配
-                foreach (var item in ocrRes.Regions)
+                foreach (var item in rs)
                 {
                     // 选择关键词
                     if (_selectList.Any(s => item.Text.Contains(s)))
@@ -400,7 +403,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 橙色选项
-                foreach (var item in ocrRes.Regions)
+                foreach (var item in rs)
                 {
                     var textOcrRect = item.Rect.BoundingRect();
                     var textRect = new Rect(ocrRect.X + textOcrRect.X, ocrRect.Y + textOcrRect.Y, textOcrRect.Width, textOcrRect.Height);
@@ -435,7 +438,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 默认不选择关键词
-                foreach (var item in ocrRes.Regions)
+                foreach (var item in rs)
                 {
                     // 不选择关键词
                     if (_defaultPauseList.Any(s => item.Text.Contains(s)))
@@ -445,10 +448,10 @@ public class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 最后，选择默认选项
-                var clickRegion = ocrRes.Regions[^1];
+                var clickRegion = rs[^1];
                 if (_config.ClickFirstOptionEnabled)
                 {
-                    clickRegion = ocrRes.Regions[0];
+                    clickRegion = rs[0];
                 }
 
                 ClickOcrRegion(clickOffset, clickRegion);
