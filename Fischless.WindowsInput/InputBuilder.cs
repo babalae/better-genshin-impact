@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using Vanara.PInvoke;
-using static Vanara.PInvoke.User32;
 
 namespace Fischless.WindowsInput;
 
@@ -368,7 +367,7 @@ public enum VK2
     /// <summary>
     ///  ENTER key
     /// </summary>
-    VK_ENTER = VK.VK_RETURN,
+    VK_ENTER = User32.VK.VK_RETURN,
 
     /// <summary>
     ///  The Unassigned code: The Num ENTER key.
