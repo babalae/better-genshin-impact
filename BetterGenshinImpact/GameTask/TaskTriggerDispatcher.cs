@@ -105,7 +105,12 @@ namespace BetterGenshinImpact.GameTask
             _triggers = GameTaskManager.LoadTriggers();
 
             // 启动截图
-            GameCapture.Start(hWnd);
+            GameCapture.Start(hWnd,
+                new Dictionary<string, object>()
+                {
+                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache }
+                }
+            );
 
             // 捕获模式初始化配置
             if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled)

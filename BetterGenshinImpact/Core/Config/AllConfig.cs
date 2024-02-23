@@ -46,6 +46,13 @@ namespace BetterGenshinImpact.Core.Config
         [ObservableProperty] private bool _detailedErrorLogs = false;
 
         /// <summary>
+        /// WGC使用位图缓存
+        /// 高帧率情况下，可能会导致卡顿
+        /// 云原神可能会出现黑屏
+        /// </summary>
+        [ObservableProperty] private bool _wgcUseBitmapCache = true;
+
+        /// <summary>
         /// 遮罩窗口配置
         /// </summary>
         public MaskWindowConfig MaskWindowConfig { get; set; } = new();
