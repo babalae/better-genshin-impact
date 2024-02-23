@@ -482,10 +482,15 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private void AutoSkipLog(string text)
     {
-        if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
+        if (text.Contains("每日委托") || text.Contains("探索派遣"))
         {
             _logger.LogInformation("自动剧情：{Text}", text);
         }
+        else if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
+        {
+            _logger.LogInformation("自动剧情：{Text}", text);
+        }
+
 
         _prevClickTime = DateTime.Now;
     }
