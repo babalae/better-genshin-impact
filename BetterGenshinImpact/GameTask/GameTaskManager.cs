@@ -6,6 +6,7 @@ using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.View.Drawable;
 
@@ -24,6 +25,7 @@ namespace BetterGenshinImpact.GameTask
             TriggerDictionary = new Dictionary<string, ITaskTrigger>()
             {
                 { "RecognitionTest", new TestTrigger() },
+                { "GameLoading", new GameLoadingTrigger() },
                 { "AutoPick", new AutoPick.AutoPickTrigger() },
                 { "QuickTeleport", new QuickTeleport.QuickTeleportTrigger() },
                 { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
@@ -54,6 +56,7 @@ namespace BetterGenshinImpact.GameTask
                     TriggerDictionary["AutoFishing"].Init();
                 }
                 TriggerDictionary["QuickTeleport"].IsEnabled = TaskContext.Instance().Config.QuickTeleportConfig.Enabled;
+                TriggerDictionary["GameLoading"].Init();
                 // 清理画布
                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
                 VisionContext.Instance().DrawContent.ClearAll();

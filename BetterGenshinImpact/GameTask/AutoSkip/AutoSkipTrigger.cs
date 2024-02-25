@@ -347,7 +347,7 @@ public class AutoSkipTrigger : ITaskTrigger
     }
 
 
-    Regex _enRegex = new(@"^[a-zA-Z]+$");
+    private readonly Regex _enRegex = new(@"^[a-zA-Z]+$");
 
     /// <summary>
     /// 新的对话选项选择

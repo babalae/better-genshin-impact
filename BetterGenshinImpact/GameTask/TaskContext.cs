@@ -12,7 +12,6 @@ namespace BetterGenshinImpact.GameTask
     /// </summary>
     public class TaskContext
     {
-
         private static TaskContext? _uniqueInstance;
         private static readonly object Locker = new();
 
@@ -29,6 +28,7 @@ namespace BetterGenshinImpact.GameTask
                     _uniqueInstance ??= new TaskContext();
                 }
             }
+
             return _uniqueInstance;
         }
 
@@ -61,10 +61,17 @@ namespace BetterGenshinImpact.GameTask
                 {
                     throw new Exception("Config未初始化");
                 }
+
                 return ConfigService.Config;
             }
         }
 
         public SettingsContainer? GameSettings { get; set; }
+
+        /// <summary>
+        /// 关联启动原神的时间
+        /// 注意 IsInitialized = false 时，这个值就会被设置
+        /// </summary>
+        public DateTime LinkedStartGenshinTime { get; set; } = DateTime.MinValue;
     }
 }

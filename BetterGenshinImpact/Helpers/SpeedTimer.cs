@@ -28,10 +28,10 @@ public class SpeedTimer
         var msg = string.Empty;
         foreach (var pair in _timeRecordDic)
         {
-            //if (pair.Value.TotalMilliseconds > 0)
-            //{
+            // if (pair.Value.TotalMilliseconds > 0.1)
+            // {
                 msg += $"{pair.Key}:{pair.Value.TotalMilliseconds}ms,";
-            //}
+            // }
 
         }
 

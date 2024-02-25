@@ -143,6 +143,10 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             if (Config.GenshinStartConfig.LinkedStartEnabled && !string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
             {
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
+                if (hWnd != IntPtr.Zero)
+                {
+                    TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
+                }
             }
 
             if (hWnd == IntPtr.Zero)

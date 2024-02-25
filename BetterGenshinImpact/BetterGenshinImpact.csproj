@@ -417,6 +417,9 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\submit_icon_exclamation.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\GameLoading\Assets\1920x1080\welkin_moon_logo.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Domain.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

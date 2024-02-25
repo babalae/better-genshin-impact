@@ -24,4 +24,14 @@ public partial class GenshinStartConfig : ObservableObject
     /// 原神启动参数
     /// </summary>
     [ObservableProperty] private string _genshinStartArgs = "";
+
+    /// <summary>
+    /// 自动进入游戏（开门）
+    /// </summary>
+    [ObservableProperty] private bool _autoEnterGameEnabled = true;
+
+    /// <summary>
+    /// 自动点击月卡
+    /// </summary>
+    [ObservableProperty] private bool _autoClickBlessingOfTheWelkinMoonEnabled = false;
 }
