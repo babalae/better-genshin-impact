@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using Vanara.PInvoke;
@@ -345,6 +346,9 @@ public class AutoSkipTrigger : ITaskTrigger
         });
     }
 
+
+    Regex _enRegex = new(@"^[a-zA-Z]+$");
+
     /// <summary>
     /// 新的对话选项选择
     /// </summary>
@@ -378,10 +382,19 @@ public class AutoSkipTrigger : ITaskTrigger
             // Cv2.ImWrite("log/ocrMat.png", ocrMat);
             var ocrRes = OcrFactory.Paddle.OcrResult(ocrMat);
 
-            // 删除为空的结果
-            var rs = ocrRes.Regions.Where(r => !string.IsNullOrEmpty(r.Text)).ToArray();
+            // 删除为空的结果 和 纯英文的结果
+            var rs = new List<PaddleOcrResultRegion>();
+            foreach (var item in ocrRes.Regions)
+            {
+                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && _enRegex.IsMatch(item.Text)))
+                {
+                    continue;
+                }
 
-            if (rs.Length > 0)
+                rs.Add(item);
+            }
+
+            if (rs.Count > 0)
             {
                 var clickOffset = new ClickOffset(captureArea.X + ocrRect.X, captureArea.Y + ocrRect.Y, assetScale);
 
@@ -544,8 +557,10 @@ public class AutoSkipTrigger : ITaskTrigger
                     }
                 }
             }
+
             return true;
         }
+
         return false;
     }
 }

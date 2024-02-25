@@ -178,7 +178,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="云原神出现获取到黑屏图案、原神出现掉帧的情况请尝试关闭此功能"
+                                  Text="云原神出现获取到黑屏图案、原神出现掉帧的情况请尝试关闭此功能，并重启软件"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
