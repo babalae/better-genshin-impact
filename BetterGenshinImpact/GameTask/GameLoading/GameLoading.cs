@@ -22,7 +22,7 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private int _enterGameClickCount = 0;
     private int _welkinMoonClickCount = 0;
-    private int _noneClickCount = 0;
+    private int _noneClickCount, _wmNoneClickCount;
 
     private DateTime _prevExecuteTime = DateTime.MinValue;
 
@@ -51,7 +51,6 @@ public class GameLoadingTrigger : ITaskTrigger
         {
             return;
         }
-
         _prevExecuteTime = DateTime.Now;
         // 5min 后自动停止
         if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
@@ -82,17 +81,28 @@ public class GameLoadingTrigger : ITaskTrigger
 
         if (_enterGameClickCount > 0 && _config.AutoClickBlessingOfTheWelkinMoonEnabled)
         {
-            content.CaptureRectArea.Find(_assets.WelkinMoonRo, area =>
+            var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
+            if (!wmRa.IsEmpty())
             {
-                area.ClickCenter();
+                wmRa.ClickCenter();
                 _welkinMoonClickCount++;
                 Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
                 if (_welkinMoonClickCount > 2)
                 {
                     IsEnabled = false;
                 }
-            });
-
+            }
+            else
+            {
+                if (_welkinMoonClickCount > 0)
+                {
+                    _wmNoneClickCount++;
+                    if (_wmNoneClickCount > 2)
+                    {
+                        IsEnabled = false;
+                    }
+                }
+            }
         }
     }
 }
