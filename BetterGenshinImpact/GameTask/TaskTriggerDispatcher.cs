@@ -357,9 +357,10 @@ namespace BetterGenshinImpact.GameTask
             else if (_gameRect != currentRect)
             {
                 // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 不支持 需要考虑的问题太多了
-                if (_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
+                if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
+                    && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("游戏窗口大小发生变化, 请重新启动捕获程序!");
+                    _logger.LogError("游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 请重新启动捕获程序!", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
                 }
 
                 _gameRect = new RECT(currentRect);
@@ -370,6 +371,11 @@ namespace BetterGenshinImpact.GameTask
             }
 
             return false;
+        }
+
+        private bool SizeIsZero(RECT rect)
+        {
+            return rect.Width == 0 || rect.Height == 0;
         }
 
         /// <summary>
