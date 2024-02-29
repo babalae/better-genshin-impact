@@ -1,8 +1,8 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
-using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -48,11 +48,9 @@ public class Duel
     /// </summary>
     public int CurrentDiceCount { get; set; } = 0;
 
-
     public CancellationTokenSource Cts { get; set; }
 
     private int _keqingECount = 0;
-
 
     public async Task RunAsync(GeniusInvokationTaskParam taskParam)
     {
@@ -73,7 +71,6 @@ public class Duel
 
             // 对局准备 选择初始手牌
             GeniusInvokationControl.GetInstance().CommonDuelPrepare();
-
 
             // 获取角色区域
             try
@@ -182,7 +179,6 @@ public class Duel
                             continue;
                         }
 
-
                         // 1. 判断切人
                         if (CurrentCharacter.Index != actionCommand.Character.Index)
                         {
@@ -223,7 +219,7 @@ public class Duel
                                 alreadyExecutedActionIndex.Add(i);
                                 alreadyExecutedActionCommand.Add(actionCommand);
                                 _logger.LogInformation("→指令执行完成：{Action}", actionCommand);
-                                // 刻晴的E加手牌 
+                                // 刻晴的E加手牌
                                 if (actionCommand.Character.Name == "刻晴" && actionCommand.TargetIndex == 2)
                                 {
                                     _keqingECount++;
@@ -247,7 +243,6 @@ public class Duel
                             break;
                         }
                     }
-
 
                     if (alreadyExecutedActionIndex.Count != 0)
                     {
@@ -442,7 +437,6 @@ public class Duel
 
     //    return num;
     //}
-
 
     private void LogScreenResolution()
     {

@@ -520,7 +520,6 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\AutoDomain\Model\" />
-	  <Folder Include="GameTask\Common\Exception\" />
 	</ItemGroup>
 
 </Project>

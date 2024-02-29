@@ -1,18 +1,15 @@
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Fischless.GameCapture;
-using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Threading;
-using static SharpDX.Utilities;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
 public class TaskControl
 {
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
-
 
     public static void CheckAndSleep(int millisecondsTimeout)
     {

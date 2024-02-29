@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -15,7 +16,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Compunet.YoloV8;
 using Fischless.GameCapture;
-using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -119,7 +119,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-
         /// <summary>
         /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
         /// 点击按钮进入独占模式
@@ -191,7 +190,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-
         //private bool OcrStartFishingForExclusive(CaptureContent content)
         //{
         //    var srcMat = content.CaptureRectArea.SrcMat;
@@ -216,7 +214,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return !content.CaptureRectArea.Find(_autoFishingAssets.ExitFishingButtonRo).IsEmpty();
         }
 
-
         private int _throwRodWaitFrameNum = 0; // 抛竿等待的时间(帧数)
         private int _switchBaitContinuouslyFrameNum = 0; // 切换鱼饵按钮图标的持续时间(帧数)
         private int _waitBiteContinuouslyFrameNum = 0; // 等待上钩的持续时间(帧数)
@@ -233,7 +230,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 前提：必须要正面面对鱼塘，没有识别到鱼的时候不会自动抛竿
         /// 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
         /// 2. 根据第一步的观察结果，提前选择鱼饵
-        /// 3. 
+        /// 3.
         /// </summary>
         /// <param name="content"></param>
         private void ThrowRod(CaptureContent content)
@@ -314,13 +311,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _noFishActionContinuouslyFrameNum = 0;
                     _throwRodWaitFrameNum++;
 
-
                     if (_waitBiteContinuouslyFrameNum >= content.FrameRate)
                     {
                         _isThrowRod = true;
                         _waitBiteContinuouslyFrameNum = 0;
                     }
-
 
                     if (_isThrowRod)
                     {
@@ -357,7 +352,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _isThrowRod = false;
             }
         }
-
 
         private string _selectedBaitName = string.Empty;
 
@@ -417,7 +411,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return _selectedBaitName;
         }
 
-
         private readonly Random _rd = new();
 
         /// <summary>
@@ -451,15 +444,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     noPlacementTimes++;
                     Sleep(50);
                     Debug.WriteLine("历次未找到鱼饵落点");
-                    
+
                     var cX = content.SrcBitmap.Width / 2;
                     var cY = content.SrcBitmap.Height / 2;
                     var rdX = _rd.Next(0, content.SrcBitmap.Width);
                     var rdY = _rd.Next(0, content.SrcBitmap.Height);
-                    
+
                     var moveX = 100 * (cX - rdX) / content.SrcBitmap.Width;
                     var moveY = 100 * (cY - rdY) / content.SrcBitmap.Height;
-                    
+
                     Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, moveY);
 
                     if (noPlacementTimes > 50)
@@ -702,7 +695,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Thread.Sleep(millisecondsTimeout);
         }
 
-
         /// <summary>
         /// 获取钓鱼框的位置
         /// </summary>
@@ -730,7 +722,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _left = rects[0];
                 }
 
-
                 if (_left.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在left左边
                     || _cur.Width > _left.Width // left一定比cur宽
                     || _cur.X + _cur.Width > srcMat.Width / 2 // cur 一定在屏幕左侧
@@ -755,11 +746,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return Rect.Empty;
         }
 
-
         private bool _isFishingProcess = false; // 提杆后会设置为true
-        int _biteTipsExitCount = 0; // 钓鱼提示持续时间
-        int _notFishingAfterBiteCount = 0; // 提竿后没有钓鱼的时间
-        Rect _baseBiteTips = Rect.Empty;
+        private int _biteTipsExitCount = 0; // 钓鱼提示持续时间
+        private int _notFishingAfterBiteCount = 0; // 提竿后没有钓鱼的时间
+        private Rect _baseBiteTips = Rect.Empty;
 
         /// <summary>
         /// 自动提竿
@@ -854,12 +844,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-
         private int _noRectsCount = 0;
         private Rect _cur, _left, _right;
         private MOUSEEVENTF _prevMouseEvent = 0x0;
         private bool _findFishBoxTips;
-
 
         /// <summary>
         /// 钓鱼拉条

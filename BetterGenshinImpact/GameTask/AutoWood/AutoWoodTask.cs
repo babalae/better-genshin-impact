@@ -2,6 +2,7 @@
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;

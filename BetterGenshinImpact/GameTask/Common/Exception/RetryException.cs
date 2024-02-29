@@ -1,4 +1,4 @@
-﻿namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+﻿namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception; // TODO: change this namespace to BetterGenshinImpact.GameTask.Common.Exception
 
 public class RetryException : System.Exception
 {
