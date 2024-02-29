@@ -44,28 +44,23 @@ public class Global
     /// <returns>是否需要更新</returns>
     public static bool IsNewVersion(string oldVersion, string currentVersion)
     {
-        var currentVersionArr = oldVersion.Split('.');
-        var newVersionArr = currentVersion.Split('.');
-        if (currentVersionArr.Length != newVersionArr.Length)
+        try
         {
-            return false;
-        }
+            Version oldVersionX = new(oldVersion);
+            Version currentVersionX = new(currentVersion);
 
-        for (var i = 0; i < currentVersionArr.Length; i++)
-        {
-
-            if (int.Parse(currentVersionArr[i]) > int.Parse(newVersionArr[i]))
-            {
-                // 不需要更新
-                return false;
-            }
-
-            if (int.Parse(currentVersionArr[i]) < int.Parse(newVersionArr[i]))
+            if (currentVersionX > oldVersionX)
             {
                 // 需要更新
                 return true;
             }
         }
+        catch
+        {
+            ///
+        }
+
+        // 不需要更新
         return false;
     }
 
