@@ -97,7 +97,7 @@ public class GameLoadingTrigger : ITaskTrigger
                 if (_welkinMoonClickCount > 0)
                 {
                     _wmNoneClickCount++;
-                    if (_wmNoneClickCount > 2)
+                    if (_wmNoneClickCount > 1)
                     {
                         IsEnabled = false;
                     }
