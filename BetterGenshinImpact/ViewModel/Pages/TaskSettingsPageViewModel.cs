@@ -47,16 +47,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
 
-        _strategyList = LoadCustomScript();
-        _combatStrategyList = LoadCustomCombatScript();
+        _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
+        _combatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
         _switchAutoGeniusInvokationButtonText = "启动";
 
         _switchAutoWoodButtonText = "启动";
     }
 
-    private string[] LoadCustomScript()
+    private string[] LoadCustomScript(string folder)
     {
-        var files = Directory.GetFiles(Global.Absolute(@"User\AutoGeniusInvokation"), "*.*",
+        var files = Directory.GetFiles(folder, "*.*",
             SearchOption.AllDirectories);
 
         var strategyList = new string[files.Length];
@@ -64,26 +64,12 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             if (files[i].EndsWith(".txt"))
             {
-                var fileName = Path.GetFileNameWithoutExtension(files[i]);
-                strategyList[i] = fileName;
-            }
-        }
-
-        return strategyList;
-    }
-
-    private string[] LoadCustomCombatScript()
-    {
-        var files = Directory.GetFiles(Global.Absolute(@"User\AutoFight"), "*.*",
-            SearchOption.AllDirectories);
-
-        var strategyList = new string[files.Length];
-        for (var i = 0; i < files.Length; i++)
-        {
-            if (files[i].EndsWith(".txt"))
-            {
-                var fileName = Path.GetFileNameWithoutExtension(files[i]);
-                strategyList[i] = fileName;
+                var strategyName = files[i].Replace(folder, "").Replace(".txt", "");
+                if (strategyName.StartsWith(@"\"))
+                {
+                    strategyName = strategyName[1..];
+                }
+                strategyList[i] = strategyName;
             }
         }
 

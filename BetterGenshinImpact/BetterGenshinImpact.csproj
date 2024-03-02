@@ -465,6 +465,9 @@
 		<None Update="User\AutoFight\2.宵宫队[请看文件内说明].txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\AutoFight\群友分享\*.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
