@@ -69,35 +69,8 @@
                 Margin="0,0,36,0"
                 IsChecked="{Binding Config.MacroConfig.FPressHoldToContinuationEnabled, Mode=TwoWay}" />
         </ui:CardControl>
-        <!--水龙王转圈圈-->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
-            <ui:CardControl.Header>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="那维莱特 - 转圈圈" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="快速水平平移鼠标，需要配置快捷键进行触发" />
-                </Grid>
-            </ui:CardControl.Header>
-            <ui:Button
-                Margin="0,0,36,0"
-                Content="绑定快捷键"
-                Command="{Binding GoToHotKeyPageCommand}" />
-        </ui:CardControl>
         <!-- 水龙王转圈圈 -->
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon DoorArrowLeft24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Cursor24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>

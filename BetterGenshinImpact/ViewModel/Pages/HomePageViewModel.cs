@@ -17,10 +17,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using OpenCvSharp;
 using Wpf.Ui.Controls;
-using MessageBox = System.Windows.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
