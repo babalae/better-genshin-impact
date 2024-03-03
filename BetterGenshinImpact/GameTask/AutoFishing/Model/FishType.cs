@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
 
 /// <summary>
 /// 模仿Java实现的多属性枚举类
 /// </summary>
+[Obsolete]
 public class FishType
 {
     public static readonly FishType AizenMedaka = new("aizen medaka", "fruit paste bait", "蓝染花鳉");
