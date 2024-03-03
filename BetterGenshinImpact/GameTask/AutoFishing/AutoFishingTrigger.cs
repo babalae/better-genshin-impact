@@ -429,7 +429,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var noTargetFishTimes = 0; // 没有目标鱼的次数
             var prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
 
-            while (true)
+            while (IsEnabled)
             {
                 // 截图
                 var bitmap = CaptureGameBitmap(content.Dispatcher.GameCapture);
