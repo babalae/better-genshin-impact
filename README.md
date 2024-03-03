@@ -96,6 +96,7 @@
 * [MicaSetup](https://github.com/lemutec/MicaSetup)
 * [cvAutoTrack](https://github.com/GengGode/cvAutoTrack)
 * [genshin_impact_assistant](https://github.com/infstellar/genshin_impact_assistant)
+* [HutaoFisher](https://github.com/myHuTao-qwq/HutaoFisher)
 
 另外特别感谢 [@Lightczx](https://github.com/Lightczx) 和 [@emako](https://github.com/emako) 对本项目的指导与贡献
 

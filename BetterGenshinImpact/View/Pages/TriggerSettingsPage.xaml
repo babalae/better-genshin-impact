@@ -370,17 +370,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="自动选择鱼饵并抛竿（实验功能，不建议启用）" />
+                        Text="自动选择鱼饵并抛竿（实验功能）" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap" >
-                        基于 YOLOv8 的鱼类识别。帮助提供训练集：Q群
-                        <Hyperlink Command="{Binding GoToQGroupUrlCommand}"
-                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            863012276
-                        </Hyperlink>
+                        基于 YOLOv8 的鱼类识别，自动选择鱼饵并抛竿，支持所有地区。
                     </ui:TextBlock>
                     <ui:ToggleSwitch
                         Grid.Row="0"
