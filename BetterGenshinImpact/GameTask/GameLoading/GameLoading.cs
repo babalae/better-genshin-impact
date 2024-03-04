@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Diagnostics;
+using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
 
@@ -26,7 +27,9 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private DateTime _prevExecuteTime = DateTime.MinValue;
 
-    private ClickOffset? _clickOffset;
+    // private ClickOffset? _clickOffset;
+
+    private PostMessageSimulator? _postMessageSimulator;
 
     public void Init()
     {
@@ -38,10 +41,11 @@ public class GameLoadingTrigger : ITaskTrigger
         }
 
         _enterGameClickCount = 0;
-
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
+        
+        // var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        // var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        // _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
+        _postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
     }
 
     public void OnCapture(CaptureContent content)
@@ -63,7 +67,9 @@ public class GameLoadingTrigger : ITaskTrigger
         if (!ra.IsEmpty())
         {
             // 随便找个相对点击的位置
-            _clickOffset?.Click(955, 666);
+            // _clickOffset?.Click(955, 666);
+            _postMessageSimulator?.LeftButtonClick();
+            Simulation.SendInputEx.Mouse.LeftButtonClick();
             _enterGameClickCount++;
         }
         else

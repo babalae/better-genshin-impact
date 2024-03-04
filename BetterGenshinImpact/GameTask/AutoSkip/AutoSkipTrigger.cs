@@ -188,76 +188,6 @@ public class AutoSkipTrigger : ITaskTrigger
             }
 
             ChatOptionChoose(content);
-
-            // // 领取每日委托奖励
-            // if (config.AutoGetDailyRewardsEnabled)
-            // {
-            //     var dailyRewardIconRa = content.CaptureRectArea.Find(_autoSkipAssets.DailyRewardIconRo);
-            //     if (!dailyRewardIconRa.IsEmpty())
-            //     {
-            //         var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, dailyRewardIconRa, (int)(config.ChatOptionTextWidth * assetScale));
-            //
-            //         if (text.Contains("每日委托"))
-            //         {
-            //             if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
-            //             {
-            //                 _logger.LogInformation("自动选择：{Text}", text);
-            //             }
-            //
-            //             dailyRewardIconRa.ClickCenter();
-            //             dailyRewardIconRa.Dispose();
-            //             _prevGetDailyRewards = DateTime.Now; // 记录领取时间
-            //             return;
-            //         }
-            //
-            //         _prevOtherClickFrameIndex = content.FrameIndex;
-            //         dailyRewardIconRa.Dispose();
-            //     }
-            // }
-            //
-            // // 领取探索派遣奖励
-            // if (config.AutoReExploreEnabled)
-            // {
-            //     var exploreIconRa = content.CaptureRectArea.Find(_autoSkipAssets.ExploreIconRo);
-            //     if (!exploreIconRa.IsEmpty())
-            //     {
-            //         var text = GetOrangeOptionText(content.CaptureRectArea.SrcMat, exploreIconRa, (int)(config.ExpeditionOptionTextWidth * assetScale));
-            //         if (text.Contains("探索派遣"))
-            //         {
-            //             if (Math.Abs(content.FrameIndex - _prevOtherClickFrameIndex) >= 8)
-            //             {
-            //                 _logger.LogInformation("自动选择：{Text}", text);
-            //             }
-            //
-            //             exploreIconRa.ClickCenter();
-            //
-            //             // 等待探索派遣界面打开
-            //             Thread.Sleep(800);
-            //             new OneKeyExpeditionTask().Run(_autoSkipAssets);
-            //             exploreIconRa.Dispose();
-            //             return;
-            //         }
-            //
-            //         _prevOtherClickFrameIndex = content.FrameIndex;
-            //         exploreIconRa.Dispose();
-            //         return;
-            //     }
-            // }
-            //
-            // // 找右下的对话选项按钮
-            // content.CaptureRectArea.Find(_autoSkipAssets.OptionIconRo, (optionButtonRectArea) =>
-            // {
-            //     TaskControl.Sleep(config.AfterChooseOptionSleepDelay);
-            //     optionButtonRectArea.ClickCenter();
-            //
-            //     if (Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 8)
-            //     {
-            //         _logger.LogInformation("自动剧情：{Text}", "点击选项");
-            //     }
-            //
-            //     _prevClickFrameIndex = content.FrameIndex;
-            //     optionButtonRectArea.Dispose();
-            // });
         }
         else
         {
@@ -482,7 +412,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 var clickOffset = new ClickOffset(captureArea.X + _autoSkipAssets.OptionRoi.X, captureArea.Y + _autoSkipAssets.OptionRoi.Y, assetScale);
                 clickOffset.ClickWithoutScale(clickRect.X + clickRect.Width / 2, clickRect.Y + clickRect.Height / 2);
                 var msg = _config.ClickFirstOptionEnabled ? "第一个" : "最后一个";
-                AutoSkipLog($"点击{msg}选项");
+                AutoSkipLog($"点击{msg}气泡选项");
             }
         }
     }
