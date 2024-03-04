@@ -429,7 +429,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var noTargetFishTimes = 0; // 没有目标鱼的次数
             var prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
 
-            while (true)
+            while (IsEnabled)
             {
                 // 截图
                 var bitmap = CaptureGameBitmap(content.Dispatcher.GameCapture);
@@ -757,7 +757,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             Retry.Do(() =>
             {
-                if (!SystemControl.IsGenshinImpactActiveByProcess())
+                if (IsEnabled && !SystemControl.IsGenshinImpactActiveByProcess())
                 {
                     _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
                     throw new RetryException("当前获取焦点的窗口不是原神");
@@ -1069,7 +1069,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             var prevIsExclusive = IsExclusive;
             IsExclusive = FindButtonForExclusive(content);
-            if (!prevIsExclusive && IsExclusive)
+            if (IsEnabled && !prevIsExclusive && IsExclusive)
             {
                 _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                 var autoThrowRodEnabled = TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled;
