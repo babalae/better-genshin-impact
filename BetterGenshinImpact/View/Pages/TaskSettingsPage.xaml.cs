@@ -29,4 +29,14 @@ public partial class TaskSettingsPage : Page
         DataContext = ViewModel = viewModel;
         InitializeComponent();
     }
+
+    private void StrategyDropDownOpened(object sender, EventArgs e)
+    {
+        ViewModel.LoadStrategyListCommand.Execute(null);
+    }
+
+    private void CombatStrategyDropDownOpened(object sender, EventArgs e)
+    {
+        ViewModel.LoadCombatStrategyListCommand.Execute(null);
+    }
 }
