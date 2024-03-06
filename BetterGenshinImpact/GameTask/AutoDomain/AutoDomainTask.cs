@@ -42,6 +42,8 @@ public class AutoDomainTask
 
     private readonly AutoDomainConfig _config;
 
+    private bool IsRunning { get; set; }
+
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
@@ -52,6 +54,7 @@ public class AutoDomainTask
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
         _config = TaskContext.Instance().Config.AutoDomainConfig;
+        IsRunning = false;
     }
 
     public async void Start()
@@ -92,9 +95,17 @@ public class AutoDomainTask
 
                 // 5. 快速领取奖励并判断是否有下一轮
                 Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-                if (!GettingTreasure(_taskParam.DomainRoundNum == 9999))
+                if (!GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
                 {
-                    Logger.LogInformation("体力已经耗尽，结束自动秘境");
+                    if (i == _taskParam.DomainRoundNum - 1)
+                    {
+                        Logger.LogInformation("配置的{Cnt}轮秘境已经完成，结束自动秘境", _taskParam.DomainRoundNum);
+                    }
+                    else
+                    {
+                        Logger.LogInformation("体力已经耗尽，结束自动秘境");
+                    }
+
                     break;
                 }
             }
@@ -114,11 +125,13 @@ public class AutoDomainTask
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
             Logger.LogInformation("→ {Text}", "自动秘境结束");
+            IsRunning = false;
         }
     }
 
     private void Init()
     {
+        IsRunning = true;
         LogScreenResolution();
         if (_taskParam.DomainRoundNum == 9999)
         {
@@ -227,6 +240,7 @@ public class AutoDomainTask
             {
                 Simulation.SendInputEx.Keyboard.KeyDown(VK.VK_SHIFT);
             }
+
             try
             {
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
@@ -350,9 +364,8 @@ public class AutoDomainTask
         }
 
         endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsRect);
-        var result = OcrFactory.Paddle.OcrResult(endTipsRect.SrcGreyMat);
-        var rect = result.FindRectByText("自动退出");
-        if (rect != Rect.Empty)
+        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        if (text.Contains("自动") || text.Contains("退出"))
         {
             Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
             return true;
@@ -621,7 +634,8 @@ public class AutoDomainTask
     /// 领取奖励
     /// </summary>
     /// <param name="recognizeResin">是否识别树脂</param>
-    private bool GettingTreasure(bool recognizeResin)
+    /// <param name="isLastTurn">是否最后一轮</param>
+    private bool GettingTreasure(bool recognizeResin, bool isLastTurn)
     {
         // 等待窗口弹出
         Sleep(1500, _taskParam.Cts);
@@ -668,6 +682,17 @@ public class AutoDomainTask
             var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
+                if (isLastTurn)
+                {
+                    // 最后一回合 退出
+                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
+                    if (!exitRectArea.IsEmpty())
+                    {
+                        exitRectArea.ClickCenter();
+                        return false;
+                    }
+                }
+
                 if (!recognizeResin)
                 {
                     confirmRectArea.ClickCenter();
