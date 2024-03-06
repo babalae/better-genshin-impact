@@ -161,6 +161,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         if (!_taskDispatcherEnabled)
         {
             _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+            _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
             _mouseKeyMonitor.Subscribe(hWnd);
@@ -175,15 +176,26 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand(CanExecute = nameof(CanStopTrigger))]
     private void OnStopTrigger()
     {
+        Stop();
+    }
+
+    private void Stop()
+    {
         if (_taskDispatcherEnabled)
         {
-            _maskWindow?.Hide();
             _taskDispatcher.Stop();
+            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+            _maskWindow?.Hide();
             _taskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
             StartButtonVisibility = Visibility.Visible;
             StopButtonVisibility = Visibility.Collapsed;
         }
+    }
+
+    private void OnUiTaskStopTick(object? sender, EventArgs e)
+    {
+        UIDispatcherHelper.Invoke(Stop);
     }
 
     public void OnNavigatedTo()

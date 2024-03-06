@@ -58,6 +58,8 @@ namespace BetterGenshinImpact.GameTask
 
         private static readonly object _bitmapLocker = new();
 
+        public event EventHandler UiTaskStopTickEvent;
+
         public TaskTriggerDispatcher()
         {
             _instance = this;
@@ -233,18 +235,34 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查截图器是否初始化
+                var maskWindow = MaskWindow.Instance();
                 if (GameCapture == null || !GameCapture.IsCapturing)
                 {
-                    _logger.LogError("截图器未初始化!");
-                    Stop();
+                    if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    {
+                        _logger.LogError("截图器未初始化!");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                    }
+                    UiTaskStopTickEvent.Invoke(sender, e);
+                    maskWindow.Invoke(maskWindow.Hide);
                     return;
                 }
 
                 // 检查游戏是否在前台
                 var active = SystemControl.IsGenshinImpactActive();
-                var maskWindow = MaskWindow.Instance();
                 if (!active)
                 {
+                    // 检查游戏是否已结束
+                    if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    {
+                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                        UiTaskStopTickEvent.Invoke(sender, e);
+                        return;
+                    }
+
                     if (_prevGameActive)
                     {
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
