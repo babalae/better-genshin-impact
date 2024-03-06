@@ -58,6 +58,8 @@ namespace BetterGenshinImpact.GameTask
 
         private static readonly object _bitmapLocker = new();
 
+        public event EventHandler TaskStopped;
+
         public TaskTriggerDispatcher()
         {
             _instance = this;
@@ -169,6 +171,7 @@ namespace BetterGenshinImpact.GameTask
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
+            TaskStopped?.Invoke(this, EventArgs.Empty);
         }
 
         public void StartTimer()
@@ -245,6 +248,14 @@ namespace BetterGenshinImpact.GameTask
                 var maskWindow = MaskWindow.Instance();
                 if (!active)
                 {
+                    // 检查游戏是否已结束
+                    if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    {
+                        _logger.LogWarning("游戏已退出");
+                        Stop();
+                        return;
+                    }
+
                     if (_prevGameActive)
                     {
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
