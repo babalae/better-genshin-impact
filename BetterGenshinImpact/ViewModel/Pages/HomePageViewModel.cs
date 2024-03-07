@@ -27,9 +27,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    private bool _taskDispatcherEnabled = false;
-    [ObservableProperty] private Visibility _startButtonVisibility = Visibility.Visible;
-    [ObservableProperty] private Visibility _stopButtonVisibility = Visibility.Collapsed;
+    [ObservableProperty] private bool _taskDispatcherEnabled = false;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
@@ -158,16 +156,14 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     private void Start(IntPtr hWnd)
     {
-        if (!_taskDispatcherEnabled)
+        if (!TaskDispatcherEnabled)
         {
             _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
             _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
             _mouseKeyMonitor.Subscribe(hWnd);
-            _taskDispatcherEnabled = true;
-            StartButtonVisibility = Visibility.Collapsed;
-            StopButtonVisibility = Visibility.Visible;
+            TaskDispatcherEnabled = true;
         }
     }
 
@@ -181,15 +177,13 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     private void Stop()
     {
-        if (_taskDispatcherEnabled)
+        if (TaskDispatcherEnabled)
         {
             _taskDispatcher.Stop();
             _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
             _maskWindow?.Hide();
-            _taskDispatcherEnabled = false;
+            TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
-            StartButtonVisibility = Visibility.Visible;
-            StopButtonVisibility = Visibility.Collapsed;
         }
     }
 

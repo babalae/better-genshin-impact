@@ -24,12 +24,8 @@ namespace BetterGenshinImpact.ViewModel
 
         public AllConfig? Config { get; set; }
 
-        [ObservableProperty] private Visibility _logTextBoxVisibility = Visibility.Visible;
-        [ObservableProperty] private Visibility _uidCoverVisibility = Visibility.Visible;
         [ObservableProperty] private Rect _uidCoverRect = new(0, 0, 200, 30);
 
-
-        [ObservableProperty] private Visibility _directionsVisibility = Visibility.Visible;
         [ObservableProperty] private Point _eastPoint = new(274, 109);
         [ObservableProperty] private Point _southPoint = new(150, 233);
         [ObservableProperty] private Point _westPoint = new(32, 109);
@@ -86,12 +82,6 @@ namespace BetterGenshinImpact.ViewModel
             InitConfig();
             if (Config != null)
             {
-                // 日志窗口
-                LogTextBoxVisibility = Config.MaskWindowConfig.ShowLogBox ? Visibility.Visible : Visibility.Collapsed;
-
-                // UID遮盖
-                UidCoverVisibility = Config.MaskWindowConfig.UidCoverEnabled ? Visibility.Visible : Visibility.Collapsed;
-                DirectionsVisibility = Config.MaskWindowConfig.DirectionsEnabled ? Visibility.Visible : Visibility.Collapsed;
                 // 比较特殊，必须要启动过任务调度器才能够获取到缩放信息
                 if (TaskContext.Instance().SystemInfo != null)
                 {
