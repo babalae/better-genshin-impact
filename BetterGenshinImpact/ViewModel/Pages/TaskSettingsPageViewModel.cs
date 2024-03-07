@@ -77,15 +77,18 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    private void OnLoadStrategyList()
+    public void OnStrategyDropDownOpened(object parameter)
     {
-        StrategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
-    }
-
-    [RelayCommand]
-    private void OnLoadCombatStrategyList()
-    {
-        CombatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
+        var type = (string)parameter; // Cast the parameter
+        switch (type)
+        {
+            case "Combat":
+                CombatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
+                break;
+            case "GeniusInvocation":
+                StrategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
+                break;
+        }
     }
 
     public void OnNavigatedTo()
