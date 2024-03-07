@@ -43,7 +43,7 @@
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="重启软件后生效，独占全屏模式下此模式不一定生效" />
+                        Text="实时生效，独占全屏模式下此模式不一定生效" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"

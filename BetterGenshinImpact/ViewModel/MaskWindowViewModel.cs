@@ -29,10 +29,6 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private Point _northPoint = new(150, -9);
 
 
-        [ObservableProperty] private bool _logTextBoxVisibility = true;
-        [ObservableProperty] private bool _uidCoverVisibility = true;
-        [ObservableProperty] private bool _directionsVisibility = true;
-
         public MaskWindowViewModel()
         {
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -83,10 +79,7 @@ namespace BetterGenshinImpact.ViewModel
             InitConfig();
             if (Config != null)
             {
-                LogTextBoxVisibility = Config.MaskWindowConfig.ShowLogBox;
-                UidCoverVisibility = Config.MaskWindowConfig.UidCoverEnabled;
-                DirectionsVisibility = Config.MaskWindowConfig.DirectionsEnabled;
-
+                OnPropertyChanged(nameof(Config));
                 // 比较特殊，必须要启动过任务调度器才能够获取到缩放信息
                 if (TaskContext.Instance().SystemInfo != null)
                 {

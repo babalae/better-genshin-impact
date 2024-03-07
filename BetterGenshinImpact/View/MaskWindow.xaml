@@ -70,7 +70,7 @@
                              Foreground="LightGray"
                              IsHitTestVisible="False"
                              VerticalScrollBarVisibility="Hidden"
-                             Visibility="{Binding LogTextBoxVisibility, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                             Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </ContentControl>
 
             <!--<ContentControl Width="230"
@@ -115,7 +115,7 @@
                        Height="{Binding UidCoverRect.Height, Mode=OneWay}"
                        Fill="White"
                        IsHitTestVisible="False"
-                       Visibility="{Binding UidCoverVisibility, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                       Visibility="{Binding Config.MaskWindowConfig.UidCoverEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!--  方位  -->
             <Label Canvas.Left="{Binding EastPoint.X, Mode=OneWay}"
@@ -126,7 +126,7 @@
                    FontStretch="Medium"
                    FontWeight="DemiBold"
                    Foreground="White"
-                   Visibility="{Binding DirectionsVisibility, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                   Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
             <Label Canvas.Left="{Binding SouthPoint.X, Mode=OneWay}"
                    Canvas.Top="{Binding SouthPoint.Y, Mode=OneWay}"
                    HorizontalAlignment="Center"
@@ -135,7 +135,7 @@
                    FontStretch="Medium"
                    FontWeight="DemiBold"
                    Foreground="White"
-                   Visibility="{Binding DirectionsVisibility, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                   Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
             <Label Canvas.Left="{Binding WestPoint.X, Mode=OneWay}"
                    Canvas.Top="{Binding WestPoint.Y, Mode=OneWay}"
                    HorizontalAlignment="Center"
@@ -144,7 +144,7 @@
                    FontStretch="Medium"
                    FontWeight="DemiBold"
                    Foreground="White"
-                   Visibility="{Binding DirectionsVisibility, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                   Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
             <Label Canvas.Left="{Binding NorthPoint.X, Mode=OneWay}"
                    Canvas.Top="{Binding NorthPoint.Y, Mode=OneWay}"
                    HorizontalAlignment="Center"
@@ -153,7 +153,7 @@
                    FontStretch="Medium"
                    FontWeight="DemiBold"
                    Foreground="White"
-                   Visibility="{Binding DirectionsVisibility, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                   Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
         </Canvas>
     </AdornerDecorator>
 
