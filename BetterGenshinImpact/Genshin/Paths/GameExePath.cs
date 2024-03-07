@@ -46,7 +46,7 @@ internal class GameExePath
                 var str = File.ReadAllText(configPath);
                 var installPath = Regex.Match(str, @"game_install_path=(.+)").Groups[1].Value.Trim();
                 var exeName = Regex.Match(str, @"game_start_name=(.+)").Groups[1].Value.Trim();
-                var exePath = Path.Join(installPath, exeName);
+                var exePath = Path.GetFullPath(exeName, installPath);
                 if (File.Exists(exePath))
                 {
                     return exePath;
