@@ -138,6 +138,7 @@
                               Grid.Column="1"
                               Width="180"
                               Margin="0,0,36,0"
+                              DropDownOpened="StrategyDropDownOpened"
                               ItemsSource="{Binding StrategyList}"
                               SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}" />
                 </Grid>
@@ -325,6 +326,7 @@
                               Grid.Column="1"
                               Width="180"
                               Margin="0,0,36,0"
+                              DropDownOpened="CombatStrategyDropDownOpened"
                               ItemsSource="{Binding CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
                 </Grid>

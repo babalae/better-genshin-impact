@@ -76,6 +76,18 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         return strategyList;
     }
 
+    [RelayCommand]
+    private void OnLoadStrategyList()
+    {
+        StrategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
+    }
+
+    [RelayCommand]
+    private void OnLoadCombatStrategyList()
+    {
+        CombatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
+    }
+
     public void OnNavigatedTo()
     {
     }
