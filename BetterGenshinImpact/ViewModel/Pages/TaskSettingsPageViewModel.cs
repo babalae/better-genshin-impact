@@ -77,9 +77,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public void OnStrategyDropDownOpened(object parameter)
+    public void OnStrategyDropDownOpened(string type)
     {
-        var type = (string)parameter; // Cast the parameter
         switch (type)
         {
             case "Combat":
