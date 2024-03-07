@@ -16,6 +16,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using Wpf.Ui;
+using System.Drawing;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -24,6 +25,16 @@ namespace BetterGenshinImpact.ViewModel
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly IConfigService _configService;
         public string Title { get; set; } = $"BetterGI · 更好的原神 · {Global.Version}";
+
+        [ObservableProperty]
+        public bool _isVisible = true;
+
+        [ObservableProperty]
+        public WindowState _windowState = WindowState.Normal;
+
+        public EventHandler RestoreWindowEvent;
+
+        private readonly System.Windows.Forms.NotifyIcon notifyIcon;
 
         public AllConfig Config { get; set; }
 
@@ -35,6 +46,31 @@ namespace BetterGenshinImpact.ViewModel
 #if DEBUG
             Title += " · Dev";
 #endif
+
+            var icon = new Icon(App.GetContentStream(new Uri("pack://application:,,,/Assets/logo.ico")).Stream);
+            var contextMenu = new System.Windows.Forms.ContextMenuStrip();
+            contextMenu.Items.Add("退出", null, (sender, e) => OnClosed());
+
+            notifyIcon = new System.Windows.Forms.NotifyIcon
+            {
+                Icon = icon,
+                Visible = true,
+                Text = Title,
+                ContextMenuStrip = contextMenu,
+            };
+
+            notifyIcon.DoubleClick += (sender, args) =>
+            {
+                IsVisible = true;
+                WindowState = WindowState.Normal;
+                RestoreWindowEvent?.Invoke(sender, args);
+            };
+        }
+
+        [RelayCommand]
+        private void OnHide()
+        {
+            IsVisible = false;
         }
 
 

@@ -16,6 +16,8 @@
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                 WindowState="{Binding WindowState, Mode=TwoWay}"
                  ExtendsContentIntoTitleBar="True"
                  mc:Ignorable="d">
     <Window.Resources>
@@ -102,7 +104,16 @@
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>
+            <ui:TitleBar.Header>
+                <StackPanel>
+                    <ui:Button Height="30" 
+                               Width="44"
+                               Background="Transparent"  
+                               BorderBrush="Transparent" 
+                               Icon="{ui:SymbolIcon CaretDown24}" 
+                               Command="{Binding HideCommand}" />
+                </StackPanel>
+            </ui:TitleBar.Header>
         </ui:TitleBar>
-
     </Grid>
 </ui:FluentWindow>
