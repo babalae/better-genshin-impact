@@ -1,7 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
-using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,10 +9,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.GameTask;
-using System;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -31,6 +28,10 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private Point _westPoint = new(32, 109);
         [ObservableProperty] private Point _northPoint = new(150, -9);
 
+
+        [ObservableProperty] private bool _logTextBoxVisibility = true;
+        [ObservableProperty] private bool _uidCoverVisibility = true;
+        [ObservableProperty] private bool _directionsVisibility = true;
 
         public MaskWindowViewModel()
         {
@@ -82,6 +83,10 @@ namespace BetterGenshinImpact.ViewModel
             InitConfig();
             if (Config != null)
             {
+                LogTextBoxVisibility = Config.MaskWindowConfig.ShowLogBox;
+                UidCoverVisibility = Config.MaskWindowConfig.UidCoverEnabled;
+                DirectionsVisibility = Config.MaskWindowConfig.DirectionsEnabled;
+
                 // 比较特殊，必须要启动过任务调度器才能够获取到缩放信息
                 if (TaskContext.Instance().SystemInfo != null)
                 {
