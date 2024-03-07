@@ -77,7 +77,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public void OnStrategyDropDownOpened(string type)
+    private void OnStrategyDropDownOpened(string type)
     {
         switch (type)
         {
