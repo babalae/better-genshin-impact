@@ -26,10 +26,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         SetPageService(pageService);
         navigationService.SetNavigationControl(RootNavigation);
 
-        viewModel.RestoreWindowEvent += (sender, args) =>
-        {
-            Activate();
-        };
+        Application.Current.MainWindow = this;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -72,8 +69,9 @@ public partial class MainWindow : FluentWindow, INavigationWindow
             return;
         }
     }
-    private void Button_Click(object sender, RoutedEventArgs e)
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        Hide();
+        this.TrayContextMenu.DataContext = ViewModel;
     }
 }
