@@ -3,15 +3,11 @@ using BetterGenshinImpact.ViewModel;
 using System;
 using System.Windows;
 using System.Windows.Media;
-using System.Drawing;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : FluentWindow, INavigationWindow
 {
     public MainWindowViewModel ViewModel { get; }

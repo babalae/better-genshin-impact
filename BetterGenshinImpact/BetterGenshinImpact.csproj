@@ -14,6 +14,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Remove="Assets\*.jpg" />
 		<None Remove="Assets\*.png" />
 		<None Remove="Assets\*.ico" />
 	</ItemGroup>
@@ -21,11 +22,7 @@
 	<ItemGroup>
 		<Resource Include="Assets\*.jpg" />
 		<Resource Include="Assets\*.png" />
-		<Content Include="Assets\*.ico" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Remove="Assets\keqin.jpg" />
+		<Resource Include="Assets\*.ico" />
 	</ItemGroup>
 
 	<ItemGroup>
