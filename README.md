@@ -100,6 +100,9 @@
 
 另外特别感谢 [@Lightczx](https://github.com/Lightczx) 和 [@emako](https://github.com/emako) 对本项目的指导与贡献
 
+## 开发者
+
+格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；
 
 ## 问题反馈
 
