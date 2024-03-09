@@ -25,6 +25,12 @@ namespace BetterGenshinImpact.ViewModel
         private readonly IConfigService _configService;
         public string Title { get; set; } = $"BetterGI · 更好的原神 · {Global.Version}";
 
+        [ObservableProperty]
+        public bool _isVisible = true;
+
+        [ObservableProperty]
+        public WindowState _windowState = WindowState.Normal;
+        
         public AllConfig Config { get; set; }
 
         public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
@@ -35,6 +41,12 @@ namespace BetterGenshinImpact.ViewModel
 #if DEBUG
             Title += " · Dev";
 #endif
+        }
+
+        [RelayCommand]
+        private void OnHide()
+        {
+            IsVisible = false;
         }
 
 
