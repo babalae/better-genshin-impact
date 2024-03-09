@@ -4,221 +4,209 @@ using System;
 using System.Collections.Generic;
 using Point = OpenCvSharp.Point;
 
-namespace BetterGenshinImpact.Core.Recognition.OpenCv
+namespace BetterGenshinImpact.Core.Recognition.OpenCv;
+
+/// <summary>
+/// 多目标模板匹配demo
+/// https://github.com/shimat/opencvsharp/issues/182
+/// </summary>
+public class MatchTemplateHelper
 {
-    public class MatchTemplateHelper
+    private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
+
+    /// <summary>
+    /// 模板匹配
+    /// TODO 算法不一样的的时候找点的方法也不一样
+    /// </summary>
+    /// <param name="srcMat">原图像</param>
+    /// <param name="dstMat">模板</param>
+    /// <param name="matchMode">匹配方式</param>
+    /// <param name="maskMat">遮罩</param>
+    /// <param name="threshold">阈值</param>
+    /// <returns>左上角的标点</returns>
+    public static Point MatchTemplate(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat = null, double threshold = 0.8)
     {
-        private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
-
-        /// <summary>
-        /// 模板匹配
-        /// TODO 算法不一样的的时候找点的方法也不一样
-        /// </summary>
-        /// <param name="srcMat">原图像</param>
-        /// <param name="dstMat">模板</param>
-        /// <param name="matchMode">匹配方式</param>
-        /// <param name="maskMat">遮罩</param>
-        /// <param name="threshold">阈值</param>
-        /// <returns>左上角的标点</returns>
-        public static Point MatchTemplate(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat = null, double threshold = 0.8)
+        try
         {
-            try
+            using var result = new Mat();
+            if (maskMat == null)
             {
-                using var result = new Mat();
-                if (maskMat == null)
-                {
-                    Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
-                }
-                else
-                {
-                    Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
-                }
-
-                Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var point);
-
-                if (maxValue >= threshold)
-                {
-                    return point;
-                }
-
-                return new Point();
+                Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex.ToString());
-                return new Point();
+                Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
             }
+
+            Cv2.ImWrite($@"log/{DateTime.Now:yyyyMMddHHmmssffff}.png", result);
+
+            Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var point);
+
+            if (maxValue >= threshold)
+            {
+                return point;
+            }
+
+            return new Point();
         }
-
-        /// <summary>
-        /// 模板匹配多个结果
-        /// 不好用
-        /// </summary>
-        /// <param name="srcMat"></param>
-        /// <param name="dstMat"></param>
-        /// <param name="maskMat"></param>
-        /// <param name="threshold"></param>
-        /// <param name="maxCount"></param>
-        /// <returns></returns>
-        public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, Mat? maskMat = null, double threshold = 0.8, int maxCount = 8)
+        catch (Exception ex)
         {
-            var points = new List<Point>();
-            try
-            {
-                using var result = new Mat();
-                if (maskMat == null)
-                {
-                    Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed);
-                }
-                else
-                {
-                    Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed, maskMat);
-                }
-
-                //while (true)
-                //{
-                //    Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc);
-
-                //    if (maxValue >= threshold)
-                //    {
-                //        points.Add(maxLoc);
-
-                //        //Fill in the res Mat so you don't find the same area again in the MinMaxLoc
-                //        Cv2.FloodFill(result, maxLoc, new Scalar(0), out _, new Scalar(0.1), new Scalar(1.0));
-                //    }
-                //    else
-                //    {
-                //        break;
-                //    }
-                //}
-
-
-                var mask = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.White);
-                var maskSub = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.Black);
-                while (true)
-                {
-                    Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc, mask);
-                    var maskRect = new Rect(maxLoc.X, maxLoc.Y, dstMat.Width, dstMat.Height);
-                    maskSub.Rectangle(maskRect, Scalar.White, -1);
-                    mask -= maskSub;
-                    if (maxValue >= threshold)
-                    {
-                        points.Add(maxLoc);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                return points;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("{Ex}", ex);
-                return points;
-            }
+            _logger.LogError(ex.ToString());
+            return new Point();
         }
+    }
 
-        public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, double threshold)
+    /// <summary>
+    /// 模板匹配多个结果
+    /// 不好用
+    /// </summary>
+    /// <param name="srcMat"></param>
+    /// <param name="dstMat"></param>
+    /// <param name="maskMat"></param>
+    /// <param name="threshold"></param>
+    /// <param name="maxCount"></param>
+    /// <returns></returns>
+    public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, Mat? maskMat = null, double threshold = 0.8, int maxCount = 8)
+    {
+        var points = new List<Point>();
+        try
         {
-            return MatchTemplateMulti(srcMat, dstMat, null, threshold);
-        }
-
-        /// <summary>
-        /// 在一张图中查找多个模板
-        /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
-        /// </summary>
-        /// <param name="srcMat"></param>
-        /// <param name="imgSubDictionary"></param>
-        /// <param name="threshold"></param>
-        /// <returns></returns>
-        public static Dictionary<string, List<Point>> MatchMultiPicForOnePic(Mat srcMat, Dictionary<string, Mat> imgSubDictionary, double threshold = 0.8)
-        {
-            var dictionary = new Dictionary<string, List<Point>>();
-            foreach (var kvp in imgSubDictionary)
+            using var result = new Mat();
+            if (maskMat == null)
             {
-                var list = new List<Point>();
-
-                while (true)
-                {
-                    var point = MatchTemplate(srcMat, kvp.Value, TemplateMatchModes.CCoeffNormed, null, threshold);
-                    if (point != new Point())
-                    {
-                        // 把结果给遮掩掉，避免重复识别
-                        Cv2.Rectangle(srcMat, point, new Point(point.X + kvp.Value.Width, point.Y + kvp.Value.Height), Scalar.Black, -1);
-                        list.Add(point);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                dictionary.Add(kvp.Key, list);
+                Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed);
+            }
+            else
+            {
+                Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed, maskMat);
             }
 
-            return dictionary;
-        }
-
-        /// <summary>
-        /// 在一张图中查找多个模板
-        /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
-        /// </summary>
-        /// <param name="srcMat"></param>
-        /// <param name="imgSubList"></param>
-        /// <param name="threshold"></param>
-        /// <returns></returns>
-        public static List<Rect> MatchMultiPicForOnePic(Mat srcMat, List<Mat> imgSubList, double threshold = 0.8)
-        {
-            List<Rect> list = new();
-            foreach (var sub in imgSubList)
-            {
-                while (true)
-                {
-                    var point = MatchTemplate(srcMat, sub, TemplateMatchModes.CCoeffNormed, null, threshold);
-                    if (point != new Point())
-                    {
-                        // 把结果给遮掩掉，避免重复识别
-                        Cv2.Rectangle(srcMat, point, new Point(point.X + sub.Width, point.Y + sub.Height), Scalar.Black, -1);
-                        list.Add(new Rect(point.X, point.Y, sub.Width, sub.Height));
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-
-            return list;
-        }
-
-        /// <summary>
-        /// 在一张图中查找一个个模板
-        /// </summary>
-        /// <param name="srcMat"></param>
-        /// <param name="dstMat"></param>
-        /// <param name="threshold"></param>
-        /// <returns></returns>
-        public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, double threshold = 0.8)
-        {
-            List<Rect> list = new();
-
+            var mask = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.White);
+            var maskSub = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.Black);
             while (true)
             {
-                var point = MatchTemplate(srcMat, dstMat, TemplateMatchModes.CCoeffNormed, null, threshold);
-                if (point != new Point())
+                Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var maxLoc, mask);
+                var maskRect = new Rect(maxLoc.X, maxLoc.Y, dstMat.Width, dstMat.Height);
+                maskSub.Rectangle(maskRect, Scalar.White, -1);
+                mask -= maskSub;
+                if (maxValue >= threshold)
                 {
-                    // 把结果给遮掩掉，避免重复识别
-                    Cv2.Rectangle(srcMat, point, new Point(point.X + dstMat.Width, point.Y + dstMat.Height), Scalar.Black, -1);
-                    list.Add(new Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+                    points.Add(maxLoc);
                 }
                 else
                 {
                     break;
                 }
             }
-            return list;
+
+            return points;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError("{Ex}", ex);
+            return points;
+        }
+    }
+
+    public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, double threshold)
+    {
+        return MatchTemplateMulti(srcMat, dstMat, null, threshold);
+    }
+
+    /// <summary>
+    /// 在一张图中查找多个模板
+    /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
+    /// </summary>
+    /// <param name="srcMat"></param>
+    /// <param name="imgSubDictionary"></param>
+    /// <param name="threshold"></param>
+    /// <returns></returns>
+    public static Dictionary<string, List<Point>> MatchMultiPicForOnePic(Mat srcMat, Dictionary<string, Mat> imgSubDictionary, double threshold = 0.8)
+    {
+        var dictionary = new Dictionary<string, List<Point>>();
+        foreach (var kvp in imgSubDictionary)
+        {
+            var list = new List<Point>();
+
+            while (true)
+            {
+                var point = MatchTemplate(srcMat, kvp.Value, TemplateMatchModes.CCoeffNormed, null, threshold);
+                if (point != new Point())
+                {
+                    // 把结果给遮掩掉，避免重复识别
+                    Cv2.Rectangle(srcMat, point, new Point(point.X + kvp.Value.Width, point.Y + kvp.Value.Height), Scalar.Black, -1);
+                    list.Add(point);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            dictionary.Add(kvp.Key, list);
+        }
+
+        return dictionary;
+    }
+
+    /// <summary>
+    /// 在一张图中查找多个模板
+    /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
+    /// </summary>
+    /// <param name="srcMat"></param>
+    /// <param name="imgSubList"></param>
+    /// <param name="threshold"></param>
+    /// <returns></returns>
+    public static List<Rect> MatchMultiPicForOnePic(Mat srcMat, List<Mat> imgSubList, double threshold = 0.8)
+    {
+        List<Rect> list = new();
+        foreach (var sub in imgSubList)
+        {
+            while (true)
+            {
+                var point = MatchTemplate(srcMat, sub, TemplateMatchModes.CCoeffNormed, null, threshold);
+                if (point != new Point())
+                {
+                    // 把结果给遮掩掉，避免重复识别
+                    Cv2.Rectangle(srcMat, point, new Point(point.X + sub.Width, point.Y + sub.Height), Scalar.Black, -1);
+                    list.Add(new Rect(point.X, point.Y, sub.Width, sub.Height));
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// 在一张图中查找一个个模板
+    /// </summary>
+    /// <param name="srcMat"></param>
+    /// <param name="dstMat"></param>
+    /// <param name="maskMat"></param>
+    /// <param name="threshold"></param>
+    /// <returns></returns>
+    public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, Mat? maskMat = null, double threshold = 0.8)
+    {
+        List<Rect> list = new();
+
+        while (true)
+        {
+            var point = MatchTemplate(srcMat, dstMat, TemplateMatchModes.CCoeffNormed, maskMat, threshold);
+            if (point != new Point())
+            {
+                // 把结果给遮掩掉，避免重复识别
+                Cv2.Rectangle(srcMat, point, new Point(point.X + dstMat.Width, point.Y + dstMat.Height), Scalar.Black, -1);
+                list.Add(new Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+            }
+            else
+            {
+                break;
+            }
+        }
+        return list;
     }
 }

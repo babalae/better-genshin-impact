@@ -89,7 +89,7 @@ public class RecognitionObject
 
         if (UseMask && TemplateImageMat != null && MaskMat == null)
         {
-            MaskMat = OpenCvCommonHelper.Threshold(TemplateImageMat, MaskColor.ToScalar());
+            MaskMat = OpenCvCommonHelper.CreateMask(TemplateImageMat, MaskColor.ToScalar());
         }
         return this;
     }

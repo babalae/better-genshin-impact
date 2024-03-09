@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
@@ -17,7 +18,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
+using OpenCvSharp;
 using Wpf.Ui.Controls;
+using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -228,6 +231,19 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         //{
         //    MessageBox.Show(e.StackTrace);
         //}
+
+        Mat tar = new(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\selected.png");
+        var mask = OpenCvCommonHelper.CreateMask(tar, new Scalar(0, 0, 0));
+        var src = new Mat(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\Clip_20240309_135911.png");
+        var src2 = src.Clone();
+        var res = MatchTemplateHelper.MatchOnePicForOnePic(src, tar, mask);
+        // 把结果画到原图上
+        foreach (var t in res)
+        {
+            Cv2.Rectangle(src2, t, new Scalar(0, 0, 255));
+        }
+
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\x1.png", src2);
     }
 
     [RelayCommand]

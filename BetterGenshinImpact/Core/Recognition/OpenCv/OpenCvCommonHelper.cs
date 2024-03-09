@@ -1,10 +1,5 @@
 ﻿using OpenCvSharp;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv
 {
@@ -105,6 +100,19 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv
         public static Mat Threshold(Mat src, Scalar s)
         {
             return Threshold(src, s, s);
+        }
+
+        /// <summary>
+        /// 和二值化的颜色刚好相反
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static Mat CreateMask(Mat src, Scalar s)
+        {
+            var mask = new Mat();
+            Cv2.InRange(src, s, s, mask);
+            return 255 - mask;
         }
     }
 }
