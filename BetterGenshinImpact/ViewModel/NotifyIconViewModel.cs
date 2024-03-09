@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.ViewModel;
 public partial class NotifyIconViewModel : ObservableObject
 {
     [RelayCommand]
-    public static void ShowOrHide()
+    public void ShowOrHide()
     {
         if (Application.Current.MainWindow.Visibility == Visibility.Visible)
         {
@@ -27,7 +27,7 @@ public partial class NotifyIconViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public static void Exit()
+    public void Exit()
     {
         App.GetService<IConfigService>()?.Save();
         Application.Current.Shutdown();

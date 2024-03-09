@@ -32,9 +32,15 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         TryApplySystemBackdrop();
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        App.GetService<NotifyIconViewModel>()?.Exit();
+    }
+
     private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
     {
-        NotifyIconViewModel.ShowOrHide();
+        App.GetService<NotifyIconViewModel>()?.ShowOrHide();
     }
 
     public INavigationView GetNavigation() => RootNavigation;

@@ -16,6 +16,12 @@ internal static class RuntimeHelper
     public static bool IsElevated { get; } = GetElevated();
     public static bool IsDebuggerAttached => Debugger.IsAttached;
     public static bool IsDesignMode { get; } = GetDesignMode();
+    public static bool IsDebug =>
+#if DEBUG
+        true;
+#else
+        false;
+#endif
 
     private static bool GetElevated()
     {

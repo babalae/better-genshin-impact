@@ -22,7 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
-    public string Title { get; set; } = $"BetterGI · 更好的原神 · {Global.Version}";
+    public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty]
     public bool _isVisible = true;
@@ -37,9 +37,6 @@ public partial class MainWindowViewModel : ObservableObject
         _configService = configService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
-#if DEBUG
-        Title += " · Dev";
-#endif
     }
 
     [RelayCommand]
