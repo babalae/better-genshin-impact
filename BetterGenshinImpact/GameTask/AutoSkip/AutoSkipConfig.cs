@@ -53,5 +53,11 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// 优先点击第一个选项
         /// </summary>
         [ObservableProperty] private bool _clickFirstOptionEnabled = false;
+
+
+        /// <summary>
+        /// 自动邀约启用
+        /// </summary>
+        [ObservableProperty] private bool _autoHangoutEventEnabled = false;
     }
 }

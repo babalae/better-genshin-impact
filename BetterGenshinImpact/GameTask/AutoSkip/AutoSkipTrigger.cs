@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
@@ -115,6 +116,7 @@ public class AutoSkipTrigger : ITaskTrigger
     private DateTime _prevPlayingTime = DateTime.MinValue;
 
     private DateTime _prevExecute = DateTime.MinValue;
+    private DateTime _prevHangoutExecute = DateTime.MinValue;
 
     private DateTime _prevGetDailyRewardsTime = DateTime.MinValue;
 
@@ -130,7 +132,7 @@ public class AutoSkipTrigger : ITaskTrigger
         _prevExecute = DateTime.Now;
 
 
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
 
         GetDailyRewardsEsc(_config, content);
 
@@ -140,7 +142,7 @@ public class AutoSkipTrigger : ITaskTrigger
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
         // 播放中图标消失3s内OCR判断文字
-        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 3)
+        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
             // 找播放中的文字
             content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
@@ -187,7 +189,20 @@ public class AutoSkipTrigger : ITaskTrigger
                 Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_SPACE);
             }
 
-            ChatOptionChoose(content);
+            // 对话选项选择
+            var hasOption = ChatOptionChoose(content);
+
+            // 邀约选项选择 1s 1次
+            if (_config.AutoHangoutEventEnabled && !hasOption)
+            {
+                if ((DateTime.Now - _prevHangoutExecute).TotalMilliseconds < 1000)
+                {
+                    return;
+                }
+
+                _prevHangoutExecute = DateTime.Now;
+                HangoutOptionChoose(content);
+            }
         }
         else
         {
@@ -195,7 +210,7 @@ public class AutoSkipTrigger : ITaskTrigger
             using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
-            if (rate is >= 0.5 and < 0.98)
+            if (rate is >= 0.5 and < 0.98999)
             {
                 Simulation.SendInputEx.Mouse.LeftButtonClick();
                 if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
@@ -205,6 +220,67 @@ public class AutoSkipTrigger : ITaskTrigger
 
                 _prevClickTime = DateTime.Now;
             }
+        }
+    }
+
+    private void HangoutOptionChoose(CaptureContent content)
+    {
+        var selectedRects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcGreyMat, _autoSkipAssets.HangoutSelectedMat);
+        var unselectedRects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcGreyMat, _autoSkipAssets.HangoutUnselectedMat);
+        if (selectedRects.Count > 0 || unselectedRects.Count > 0)
+        {
+            var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+            var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
+
+
+            // 识别结果显示在遮罩上
+            var drawList = selectedRects.Concat(unselectedRects).Select(rect => rect.ToRectDrawable()).ToList();
+            VisionContext.Instance().DrawContent.PutOrRemoveRectList("HangoutIcon", drawList);
+
+            List<HangoutOption> hangoutOptionList = new();
+            hangoutOptionList.AddRange(selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)));
+            hangoutOptionList.AddRange(unselectedRects.Select(unselectedRect => new HangoutOption(unselectedRect, false)));
+            // 只有一个选项直接点击
+            // if (hangoutOptionList.Count == 1)
+            // {
+            //     hangoutOptionList[0].Click(clickOffset);
+            //     AutoHangoutSkipLog("点击唯一邀约选项");
+            //     return;
+            // }
+
+            hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != Rect.Empty).ToList();
+            if (hangoutOptionList.Count == 0)
+            {
+                return;
+            }
+
+            // OCR识别选项文字
+            foreach (var hangoutOption in hangoutOptionList)
+            {
+                using var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, hangoutOption.TextRect);
+                var text = OcrFactory.Paddle.Ocr(textMat);
+                hangoutOption.OptionTextSrc = text;
+            }
+
+            // todo 根据文字内容决定停留还是自动点击
+            // 这个OCR好像不太准确
+
+            // 没有停留的选项 优先选择未点击的的选项
+            foreach (var hangoutOption in hangoutOptionList)
+            {
+                if (!hangoutOption.IsSelected)
+                {
+                    hangoutOption.Click(clickOffset);
+                    AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
+                    return;
+                }
+            }
+
+            // 没有未点击的选项 选择第一个已点击选项
+            hangoutOptionList[0].Click(clickOffset);
+            AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
+            VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
         }
     }
 
@@ -281,8 +357,10 @@ public class AutoSkipTrigger : ITaskTrigger
 
     /// <summary>
     /// 新的对话选项选择
+    ///
+    /// 返回 true 表示存在对话选项，但是不一定点击了
     /// </summary>
-    private void ChatOptionChoose(CaptureContent content)
+    private bool ChatOptionChoose(CaptureContent content)
     {
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -294,7 +372,7 @@ public class AutoSkipTrigger : ITaskTrigger
             exclamationIconRa.ClickCenter();
             AutoSkipLog("点击感叹号选项");
             exclamationIconRa.Dispose();
-            return;
+            return true;
         }
 
         // 气泡识别
@@ -335,13 +413,13 @@ public class AutoSkipTrigger : ITaskTrigger
                     if (_selectList.Any(s => item.Text.Contains(s)))
                     {
                         ClickOcrRegion(clickOffset, item);
-                        return;
+                        return true;
                     }
 
                     // 不选择关键词
                     if (_pauseList.Any(s => item.Text.Contains(s)))
                     {
-                        return;
+                        return true;
                     }
                 }
 
@@ -376,7 +454,7 @@ public class AutoSkipTrigger : ITaskTrigger
                             ClickOcrRegion(clickOffset, item);
                         }
 
-                        return;
+                        return true;
                     }
                 }
 
@@ -386,7 +464,7 @@ public class AutoSkipTrigger : ITaskTrigger
                     // 不选择关键词
                     if (_defaultPauseList.Any(s => item.Text.Contains(s)))
                     {
-                        return;
+                        return true;
                     }
                 }
 
@@ -414,13 +492,28 @@ public class AutoSkipTrigger : ITaskTrigger
                 var msg = _config.ClickFirstOptionEnabled ? "第一个" : "最后一个";
                 AutoSkipLog($"点击{msg}气泡选项");
             }
+
+            return true;
         }
+
+        return false;
     }
 
     private void ClickOcrRegion(ClickOffset clickOffset, PaddleOcrResultRegion clickRegion)
     {
         clickOffset.ClickWithoutScale(clickRegion.Rect.Center.X, clickRegion.Rect.Center.Y);
         AutoSkipLog(clickRegion.Text);
+    }
+
+    private void AutoHangoutSkipLog(string text)
+    {
+        if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
+        {
+            _logger.LogInformation("自动邀约：{Text}", text);
+        }
+
+
+        _prevClickTime = DateTime.Now;
     }
 
     private void AutoSkipLog(string text)

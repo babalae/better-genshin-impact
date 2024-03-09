@@ -38,8 +38,6 @@ public class MatchTemplateHelper
                 Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
             }
 
-            Cv2.ImWrite($@"log/{DateTime.Now:yyyyMMddHHmmssffff}.png", result);
-
             Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var point);
 
             if (maxValue >= threshold)

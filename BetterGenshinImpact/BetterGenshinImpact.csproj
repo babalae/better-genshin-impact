@@ -318,6 +318,12 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\comfirm_btn2.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\hangout_selected.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\hangout_unselected.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_exclamation.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

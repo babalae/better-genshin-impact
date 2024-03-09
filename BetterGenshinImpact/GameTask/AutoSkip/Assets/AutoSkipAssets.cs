@@ -27,7 +27,8 @@ public class AutoSkipAssets
     public RecognitionObject SubmitExclamationIconRo;
     public RecognitionObject SubmitGoodsRo;
 
-    //public Mat BinaryStopAutoButtonMat;
+    public Mat HangoutSelectedMat;
+    public Mat HangoutUnselectedMat;
 
     public AutoSkipAssets()
     {
@@ -163,5 +164,10 @@ public class AutoSkipAssets
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
+
+
+        // 邀约
+        HangoutSelectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_selected.png", ImreadModes.Grayscale);
+        HangoutUnselectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_unselected.png", ImreadModes.Grayscale);
     }
 }
