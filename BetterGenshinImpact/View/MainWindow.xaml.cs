@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Media;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
@@ -29,6 +30,11 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     {
         base.OnSourceInitialized(e);
         TryApplySystemBackdrop();
+    }
+
+    private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
+    {
+        NotifyIconViewModel.ShowOrHide();
     }
 
     public INavigationView GetNavigation() => RootNavigation;
@@ -64,10 +70,5 @@ public partial class MainWindow : FluentWindow, INavigationWindow
             WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
             return;
         }
-    }
-
-    private void Window_Loaded(object sender, RoutedEventArgs e)
-    {
-        this.TrayContextMenu.DataContext = ViewModel;
     }
 }

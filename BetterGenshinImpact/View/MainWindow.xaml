@@ -18,7 +18,6 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 Loaded="Window_Loaded"
                  Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
                  WindowState="{Binding WindowState, Mode=TwoWay}"
                  mc:Ignorable="d">
@@ -28,9 +27,6 @@
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
-        </b:EventTrigger>
-        <b:EventTrigger EventName="Closed">
-            <b:InvokeCommandAction Command="{Binding ClosedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
@@ -113,19 +109,24 @@
                                Background="Transparent"
                                BorderBrush="Transparent"
                                Command="{Binding HideCommand}"
-                               Icon="{ui:SymbolIcon CaretDown24}" />
+                               Icon="{ui:SymbolIcon CaretDown24}"
+                               ToolTip="最小化到托盘" />
                 </StackPanel>
             </ui:TitleBar.Header>
         </ui:TitleBar>
 
         <tray:NotifyIcon Grid.Row="0"
-                         FocusOnLeftClick="True"
+                         FocusOnLeftClick="False"
                          Icon="pack://application:,,,/Assets/logo.ico"
+                         LeftDoubleClick="OnNotifyIconLeftDoubleClick"
                          MenuOnRightClick="True"
                          TooltipText="BetterGI">
             <tray:NotifyIcon.Menu>
-                <ContextMenu Name="TrayContextMenu">
-                    <ui:MenuItem Command="{Binding ClosedCommand}"
+                <ContextMenu>
+                    <ContextMenu.DataContext>
+                        <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
+                    </ContextMenu.DataContext>
+                    <ui:MenuItem Command="{Binding ExitCommand}"
                                  Header="退出"
                                  Icon="{ui:SymbolIcon Dismiss24}" />
                 </ContextMenu>

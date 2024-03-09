@@ -69,6 +69,7 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddSingleton<INavigationWindow, MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
+                services.AddSingleton<NotifyIconViewModel>();
 
                 // Views and ViewModels
                 services.AddSingleton<HomePage>();
@@ -109,6 +110,16 @@ public partial class App : Application
     public static T? GetService<T>() where T : class
     {
         return _host.Services.GetService(typeof(T)) as T;
+    }
+
+    /// <summary>
+    /// Gets registered service.
+    /// </summary>
+    /// <returns>Instance of the service or <see langword="null"/>.</returns>
+    /// <returns></returns>
+    public static object? GetService(Type type)
+    {
+        return _host.Services.GetService(type);
     }
 
     /// <summary>
