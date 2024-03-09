@@ -7,6 +7,7 @@
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
+                 xmlns:tray="http://schemas.lepo.co/wpfui/2022/xaml/tray"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  Title="更好的原神"
@@ -17,6 +18,9 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
+                 Loaded="Window_Loaded"
+                 Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                 WindowState="{Binding WindowState, Mode=TwoWay}"
                  mc:Ignorable="d">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -102,7 +106,30 @@
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>
+            <ui:TitleBar.Header>
+                <StackPanel>
+                    <ui:Button Width="44"
+                               Height="30"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               Command="{Binding HideCommand}"
+                               Icon="{ui:SymbolIcon CaretDown24}" />
+                </StackPanel>
+            </ui:TitleBar.Header>
         </ui:TitleBar>
 
+        <tray:NotifyIcon Grid.Row="0"
+                         FocusOnLeftClick="True"
+                         Icon="pack://application:,,,/Assets/logo.ico"
+                         MenuOnRightClick="True"
+                         TooltipText="BetterGI">
+            <tray:NotifyIcon.Menu>
+                <ContextMenu Name="TrayContextMenu">
+                    <ui:MenuItem Command="{Binding ClosedCommand}"
+                                 Header="退出"
+                                 Icon="{ui:SymbolIcon Dismiss24}" />
+                </ContextMenu>
+            </tray:NotifyIcon.Menu>
+        </tray:NotifyIcon>
     </Grid>
 </ui:FluentWindow>

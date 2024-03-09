@@ -1,15 +1,13 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
 using System;
+using System.Windows;
 using System.Windows.Media;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : FluentWindow, INavigationWindow
 {
     public MainWindowViewModel ViewModel { get; }
@@ -23,6 +21,8 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
         SetPageService(pageService);
         navigationService.SetNavigationControl(RootNavigation);
+
+        Application.Current.MainWindow = this;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -64,5 +64,10 @@ public partial class MainWindow : FluentWindow, INavigationWindow
             WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
             return;
         }
+    }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        this.TrayContextMenu.DataContext = ViewModel;
     }
 }
