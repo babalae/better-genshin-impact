@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// </summary>
         [ObservableProperty] private bool _quicklySkipConversationsEnabled = true;
 
-        public int ChatOptionTextWidth { get; set; }= 280;
+        public int ChatOptionTextWidth { get; set; } = 280;
 
         public int ExpeditionOptionTextWidth { get; set; } = 130;
 
@@ -31,7 +31,6 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// 选择选项前的延迟（毫秒）
         /// </summary>
         [ObservableProperty] private int _afterChooseOptionSleepDelay = 0;
-
 
         /// <summary>
         /// 自动领取每日委托奖励
@@ -53,7 +52,6 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// 优先点击第一个选项
         /// </summary>
         [ObservableProperty] private bool _clickFirstOptionEnabled = false;
-
 
         /// <summary>
         /// 自动邀约启用
