@@ -1,15 +1,15 @@
-﻿using System;
+﻿using OpenCvSharp;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 
 public class CommonRecognition
 {
     /// <summary>
-    /// 寻找游戏内按钮
+    ///     寻找游戏内按钮
     /// </summary>
     /// <param name="srcMat"></param>
     /// <returns></returns>
@@ -28,7 +28,7 @@ public class CommonRecognition
             //Cv2.Dilate(src, src, kernel); //膨胀
 
             Cv2.FindContours(src, out var contours, out _, RetrievalModes.External,
-                ContourApproximationModes.ApproxSimple, null);
+                ContourApproximationModes.ApproxSimple);
             if (contours.Length > 0)
             {
                 var boxes = contours.Select(Cv2.BoundingRect).Where(r => r.Width > 50);

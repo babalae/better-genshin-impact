@@ -1,30 +1,30 @@
-﻿using System;
+﻿using OpenCvSharp;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading.Tasks;
+using Windows.Globalization;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Storage.Streams;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
-
 /// <summary>
-/// : IOcrService
+///     : IOcrService
 /// </summary>
 [Obsolete]
-public class MediaOcrService 
+public class MediaOcrService
 {
     private static readonly OcrEngine Engine =
-        OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("zh-Hans-CN"));
+        OcrEngine.TryCreateFromLanguage(new Language("zh-Hans-CN"));
 
     /// <summary>
-    /// 图片太小的时候这个方法会报错，无法判断图片类型
-    /// BitmapDecoder (0x88982F50)
-    /// https://github.com/microsoft/CsWinRT/issues/682
+    ///     图片太小的时候这个方法会报错，无法判断图片类型
+    ///     BitmapDecoder (0x88982F50)
+    ///     https://github.com/microsoft/CsWinRT/issues/682
     /// </summary>
     /// <param name="bitmap"></param>
     /// <returns></returns>
@@ -67,7 +67,7 @@ public class MediaOcrService
     }
 
     /// <summary>
-    /// 将BitMap转换成bytes数组
+    ///     将BitMap转换成bytes数组
     /// </summary>
     /// <param name="bitmap">要转换的图像</param>
     /// <returns></returns>
@@ -78,7 +78,7 @@ public class MediaOcrService
         bitmap.Save(ms, ImageFormat.Bmp);
         ms.Seek(0, SeekOrigin.Begin);
         // 2.再将内存流转成byte[]并返回
-        byte[] bytes = new byte[ms.Length];
+        var bytes = new byte[ms.Length];
         var _ = ms.Read(bytes, 0, bytes.Length);
         ms.Dispose();
         return bytes;
@@ -113,11 +113,9 @@ public class MediaOcrService
         {
             return "";
         }
-        else
-        {
-            Debug.WriteLine("MediaOcr结果: " + ocrResult.Text);
-            return ocrResult.Text;
-        }
+
+        Debug.WriteLine("MediaOcr结果: " + ocrResult.Text);
+        return ocrResult.Text;
     }
 
     public string Ocr(Mat mat)

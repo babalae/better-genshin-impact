@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
+﻿using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using Sdcb.PaddleOCR;
-using static System.Net.Mime.MediaTypeNames;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
@@ -18,26 +13,17 @@ public static class PaddleOcrResultExtension
     public static bool RegionHasText(this PaddleOcrResult result, string text)
     {
         foreach (var item in result.Regions)
-        {
             if (item.Text.Contains(text))
-            {
                 return true;
-            }
-        }
 
         return false;
     }
 
-
     public static PaddleOcrResultRegion FindRegionByText(this PaddleOcrResult result, string text)
     {
         foreach (var item in result.Regions)
-        {
             if (item.Text.Contains(text))
-            {
                 return item;
-            }
-        }
 
         return new PaddleOcrResultRegion();
     }
@@ -58,12 +44,8 @@ public static class PaddleOcrResultExtension
     public static Rect FindRectByText(this PaddleOcrResult result, string text)
     {
         foreach (var item in result.Regions)
-        {
             if (item.Text.Contains(text))
-            {
                 return item.Rect.BoundingRect();
-            }
-        }
 
         return Rect.Empty;
     }

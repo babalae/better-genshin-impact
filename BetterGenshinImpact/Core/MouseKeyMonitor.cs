@@ -1,46 +1,44 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.QuickTeleport;
-using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
+using Timer = System.Timers.Timer;
 
 namespace BetterGenshinImpact.Core;
 
 public class MouseKeyMonitor
 {
-    private IntPtr _hWnd;
-
-    private IKeyboardMouseEvents? _globalHook;
+    /// <summary>
+    ///     长按F变F连发
+    /// </summary>
+    private readonly Timer _fTimer = new();
 
     //private readonly Random _random = new();
 
     /// <summary>
-    /// 长按空格变空格连发
+    ///     长按空格变空格连发
     /// </summary>
-    private readonly System.Timers.Timer _spaceTimer = new();
+    private readonly Timer _spaceTimer = new();
+
+    private DateTime _firstFKeyDownTime = DateTime.MaxValue;
 
     /// <summary>
-    /// 长按F变F连发
-    /// </summary>
-    private readonly System.Timers.Timer _fTimer = new();
-
-    /// <summary>
-    /// DateTime.MaxValue 代表没有按下
+    ///     DateTime.MaxValue 代表没有按下
     /// </summary>
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
-    private DateTime _firstFKeyDownTime = DateTime.MaxValue;
+    private IKeyboardMouseEvents? _globalHook;
+    private IntPtr _hWnd;
 
     public void Subscribe(IntPtr gameHandle)
     {
         _hWnd = gameHandle;
         // Note: for the application hook, use the Hook.AppEvents() instead
         _globalHook = Hook.GlobalEvents();
-
 
         _globalHook.KeyDown += GlobalHookKeyDown;
         _globalHook.KeyUp += GlobalHookKeyUp;
@@ -57,7 +55,6 @@ public class MouseKeyMonitor
         _fTimer.Interval = fi;
         _fTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F); };
     }
-
 
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
@@ -76,12 +73,8 @@ public class MouseKeyMonitor
             {
                 var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
                 if (timeSpan.TotalMilliseconds > 300 && TaskContext.Instance().Config.MacroConfig.SpacePressHoldToContinuationEnabled)
-                {
                     if (!_spaceTimer.Enabled)
-                    {
                         _spaceTimer.Start();
-                    }
-                }
             }
         }
         else if (e.KeyCode == Keys.F)
@@ -94,17 +87,11 @@ public class MouseKeyMonitor
             {
                 var timeSpan = DateTime.Now - _firstFKeyDownTime;
                 if (timeSpan.TotalMilliseconds > 200 && TaskContext.Instance().Config.MacroConfig.FPressHoldToContinuationEnabled)
-                {
                     if (!_fTimer.Enabled)
-                    {
                         _fTimer.Start();
-                    }
-                }
             }
         }
     }
-
-
 
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
@@ -137,18 +124,12 @@ public class MouseKeyMonitor
 
     private void HotKeyDown(object? sender, KeyEventArgs e)
     {
-        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook))
-        {
-            hook.KeyDown(sender, e);
-        }
+        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook)) hook.KeyDown(sender, e);
     }
 
     private void HotKeyUp(object? sender, KeyEventArgs e)
     {
-        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook))
-        {
-            hook.KeyUp(sender, e);
-        }
+        if (KeyboardHook.AllKeyboardHooks.TryGetValue(e.KeyCode, out var hook)) hook.KeyUp(sender, e);
     }
 
     //private void GlobalHookKeyPress(object? sender, KeyPressEventArgs e)
@@ -161,12 +142,8 @@ public class MouseKeyMonitor
         // Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
         if (e.Button != MouseButtons.Left)
-        {
             if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
-            {
                 hook.MouseDown(sender, e);
-            }
-        }
     }
 
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
@@ -174,13 +151,8 @@ public class MouseKeyMonitor
         // Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
 
         if (e.Button != MouseButtons.Left)
-        {
             if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
-            {
                 hook.MouseUp(sender, e);
-            }
-        }
-
     }
 
     public void Unsubscribe()

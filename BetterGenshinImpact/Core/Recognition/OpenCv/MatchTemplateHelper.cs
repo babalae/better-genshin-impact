@@ -2,21 +2,20 @@
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 
 /// <summary>
-/// 多目标模板匹配demo
-/// https://github.com/shimat/opencvsharp/issues/182
+///     多目标模板匹配demo
+///     https://github.com/shimat/opencvsharp/issues/182
 /// </summary>
 public class MatchTemplateHelper
 {
     private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
 
     /// <summary>
-    /// 模板匹配
-    /// TODO 算法不一样的的时候找点的方法也不一样
+    ///     模板匹配
+    ///     TODO 算法不一样的的时候找点的方法也不一样
     /// </summary>
     /// <param name="srcMat">原图像</param>
     /// <param name="dstMat">模板</param>
@@ -30,20 +29,13 @@ public class MatchTemplateHelper
         {
             using var result = new Mat();
             if (maskMat == null)
-            {
                 Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
-            }
             else
-            {
                 Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
-            }
 
             Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var point);
 
-            if (maxValue >= threshold)
-            {
-                return point;
-            }
+            if (maxValue >= threshold) return point;
 
             return new Point();
         }
@@ -55,8 +47,8 @@ public class MatchTemplateHelper
     }
 
     /// <summary>
-    /// 模板匹配多个结果
-    /// 不好用
+    ///     模板匹配多个结果
+    ///     不好用
     /// </summary>
     /// <param name="srcMat"></param>
     /// <param name="dstMat"></param>
@@ -71,13 +63,9 @@ public class MatchTemplateHelper
         {
             using var result = new Mat();
             if (maskMat == null)
-            {
                 Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed);
-            }
             else
-            {
                 Cv2.MatchTemplate(srcMat, dstMat, result, TemplateMatchModes.CCoeffNormed, maskMat);
-            }
 
             var mask = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.White);
             var maskSub = new Mat(result.Height, result.Width, MatType.CV_8UC1, Scalar.Black);
@@ -88,13 +76,9 @@ public class MatchTemplateHelper
                 maskSub.Rectangle(maskRect, Scalar.White, -1);
                 mask -= maskSub;
                 if (maxValue >= threshold)
-                {
                     points.Add(maxLoc);
-                }
                 else
-                {
                     break;
-                }
             }
 
             return points;
@@ -112,8 +96,8 @@ public class MatchTemplateHelper
     }
 
     /// <summary>
-    /// 在一张图中查找多个模板
-    /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
+    ///     在一张图中查找多个模板
+    ///     查到一个遮盖一个的笨方法，效率很低，但是很准确
     /// </summary>
     /// <param name="srcMat"></param>
     /// <param name="imgSubDictionary"></param>
@@ -148,8 +132,8 @@ public class MatchTemplateHelper
     }
 
     /// <summary>
-    /// 在一张图中查找多个模板
-    /// 查到一个遮盖一个的笨方法，效率很低，但是很准确
+    ///     在一张图中查找多个模板
+    ///     查到一个遮盖一个的笨方法，效率很低，但是很准确
     /// </summary>
     /// <param name="srcMat"></param>
     /// <param name="imgSubList"></param>
@@ -159,7 +143,6 @@ public class MatchTemplateHelper
     {
         List<Rect> list = new();
         foreach (var sub in imgSubList)
-        {
             while (true)
             {
                 var point = MatchTemplate(srcMat, sub, TemplateMatchModes.CCoeffNormed, null, threshold);
@@ -174,13 +157,12 @@ public class MatchTemplateHelper
                     break;
                 }
             }
-        }
 
         return list;
     }
 
     /// <summary>
-    /// 在一张图中查找一个个模板
+    ///     在一张图中查找一个个模板
     /// </summary>
     /// <param name="srcMat"></param>
     /// <param name="dstMat"></param>
@@ -205,6 +187,7 @@ public class MatchTemplateHelper
                 break;
             }
         }
+
         return list;
     }
 }

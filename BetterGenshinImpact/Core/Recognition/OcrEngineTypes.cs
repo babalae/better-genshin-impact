@@ -8,5 +8,6 @@ public enum OcrEngineTypes
 
     // 特定模型
     YasModel,
+
     YapModel
 }

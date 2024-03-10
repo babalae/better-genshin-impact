@@ -5,9 +5,9 @@ using Vanara.PInvoke;
 namespace BetterGenshinImpact.Core.Simulator;
 
 /// <summary>
-/// 虚拟键代码
-/// https://learn.microsoft.com/zh-cn/windows/win32/inputdev/virtual-key-codes
-/// User32.VK.VK_SPACE 键盘空格键
+///     虚拟键代码
+///     https://learn.microsoft.com/zh-cn/windows/win32/inputdev/virtual-key-codes
+///     User32.VK.VK_SPACE 键盘空格键
 /// </summary>
 public class PostMessageSimulator
 {
@@ -22,11 +22,11 @@ public class PostMessageSimulator
 
     public PostMessageSimulator(IntPtr hWnd)
     {
-        this._hWnd = hWnd;
+        _hWnd = hWnd;
     }
 
     /// <summary>
-    /// 指定位置并按下左键
+    ///     指定位置并按下左键
     /// </summary>
     /// <param name="x"></param>
     /// <param name="y"></param>
@@ -49,7 +49,7 @@ public class PostMessageSimulator
     }
 
     /// <summary>
-    /// 默认位置左键按下
+    ///     默认位置左键按下
     /// </summary>
     public PostMessageSimulator LeftButtonDown()
     {
@@ -58,7 +58,7 @@ public class PostMessageSimulator
     }
 
     /// <summary>
-    /// 默认位置左键释放
+    ///     默认位置左键释放
     /// </summary>
     public PostMessageSimulator LeftButtonUp()
     {
@@ -67,7 +67,7 @@ public class PostMessageSimulator
     }
 
     /// <summary>
-    /// 默认位置右键按下
+    ///     默认位置右键按下
     /// </summary>
     public PostMessageSimulator RightButtonDown()
     {
@@ -76,7 +76,7 @@ public class PostMessageSimulator
     }
 
     /// <summary>
-    /// 默认位置右键释放
+    ///     默认位置右键释放
     /// </summary>
     public PostMessageSimulator RightButtonUp()
     {
