@@ -14,7 +14,22 @@ public class StringUtils
             return str;
         }
 
-        return str.Replace(" ", "");
+        return str.Replace(" ", "").Replace("\t", "");
+    }
+
+    /// <summary>
+    ///  删除所有换行符
+    /// </summary>
+    /// <param name="str"></param>
+    /// <returns></returns>
+    public static string RemoveAllEnter(string str)
+    {
+        if (string.IsNullOrEmpty(str))
+        {
+            return str;
+        }
+
+        return str.Replace("\n", "").Replace("\r", "");
     }
 
     /// <summary>
@@ -40,7 +55,6 @@ public class StringUtils
         //声明存储结果的字符串
         string chineseString = "";
 
-
         //将传入参数中的中文字符添加到结果字符串中
         for (int i = 0; i < str.Length; i++)
         {
@@ -50,11 +64,9 @@ public class StringUtils
             }
         }
 
-
         //返回保留中文的处理结果
         return chineseString;
     }
-
 
     public static double TryParseDouble(string text)
     {

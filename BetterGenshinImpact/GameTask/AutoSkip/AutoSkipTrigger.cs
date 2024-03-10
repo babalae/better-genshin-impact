@@ -56,7 +56,6 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private List<string> _selectList = new();
 
-
     public AutoSkipTrigger()
     {
         _autoSkipAssets = new AutoSkipAssets();
@@ -131,7 +130,6 @@ public class AutoSkipTrigger : ITaskTrigger
 
         _prevExecute = DateTime.Now;
 
-
         VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
 
         GetDailyRewardsEsc(_config, content);
@@ -158,7 +156,6 @@ public class AutoSkipTrigger : ITaskTrigger
                     isPlaying = true;
                 }
             }
-
 
             if (!isPlaying)
             {
@@ -233,7 +230,6 @@ public class AutoSkipTrigger : ITaskTrigger
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
 
-
             // 识别结果显示在遮罩上
             var drawList = selectedRects.Concat(unselectedRects).Select(rect => rect.ToRectDrawable()).ToList();
             VisionContext.Instance().DrawContent.PutOrRemoveRectList("HangoutIcon", drawList);
@@ -260,7 +256,7 @@ public class AutoSkipTrigger : ITaskTrigger
             {
                 using var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, hangoutOption.TextRect);
                 var text = OcrFactory.Paddle.Ocr(textMat);
-                hangoutOption.OptionTextSrc = text;
+                hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
             }
 
             // todo 根据文字内容决定停留还是自动点击
@@ -311,7 +307,6 @@ public class AutoSkipTrigger : ITaskTrigger
         return text;
     }
 
-
     private bool IsOrangeOption(Mat textMat)
     {
         // 只提取橙色
@@ -351,7 +346,6 @@ public class AutoSkipTrigger : ITaskTrigger
             primogemRa.Dispose();
         });
     }
-
 
     private readonly Regex _enRegex = new(@"^[a-zA-Z]+$");
 
@@ -512,7 +506,6 @@ public class AutoSkipTrigger : ITaskTrigger
             _logger.LogInformation("自动邀约：{Text}", text);
         }
 
-
         _prevClickTime = DateTime.Now;
     }
 
@@ -526,7 +519,6 @@ public class AutoSkipTrigger : ITaskTrigger
         {
             _logger.LogInformation("自动剧情：{Text}", text);
         }
-
 
         _prevClickTime = DateTime.Now;
     }
