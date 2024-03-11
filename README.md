@@ -35,7 +35,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [**快速传送**](http://bgi.huiyadan.com/feats/domain.html)：在地图上点击传送点，或者点击后出现的列表中存在传送点，会自动点击传送点并传送
   * [**那维莱特转圈**](https://bgi.huiyadan.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)：设置快捷键后，长按可以不断水平旋转视角（当然你也可以用来转草神）
   * [**快速圣遗物强化**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：通过快速切换“详情”、“强化”页跳过圣遗物强化结果展示，快速+20
-  * [**商店一键购买**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：点按快捷键后，可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
+  * [**商店一键购买**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
   * [**……**](https://bgi.huiyadan.com/feat.html)
 
 
