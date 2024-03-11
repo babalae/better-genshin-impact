@@ -1,0 +1,100 @@
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AutoPickMonoDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:control="clr-namespace:BetterGenshinImpact.View.Controls"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:local="clr-namespace:BetterGenshinImpact.View.Windows"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:viewModel="clr-namespace:BetterGenshinImpact.View.Windows"
+                 Title="自动拾取 - 黑白名单设置"
+                 Width="600"
+                 Height="600"
+                 d:Background="#D2D2D2"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 Tag="AutoPickMonoDialog"
+                 WindowStartupLocation="CenterOwner"
+                 mc:Ignorable="d">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/CodeBox/CodeBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid Margin="8,48,8,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1*" />
+                <RowDefinition Height="3*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Border Width="16"
+                            Height="16"
+                            Background="White"
+                            BorderBrush="#50FFFFFF"
+                            BorderThickness="2"
+                            CornerRadius="4"
+                            Opacity="0.9" />
+                    <TextBlock Margin="6,0,0,0"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Text="白名单" />
+                </StackPanel>
+                <control:JsonCodeBox x:Name="WhiteJsonCodeBox"
+                                     Grid.Row="1"
+                                     Margin="0,8,0,0"
+                                     Code="{Binding WhiteJson, Mode=OneTime}" />
+            </Grid>
+            <Grid Grid.Row="1" Margin="0,16,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Border Width="16"
+                            Height="16"
+                            Background="Black"
+                            BorderBrush="#50FFFFFF"
+                            BorderThickness="2"
+                            CornerRadius="4"
+                            Opacity="0.9" />
+                    <TextBlock Margin="6,0,0,0"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Text="黑名单" />
+                </StackPanel>
+                <control:JsonCodeBox x:Name="BlackJsonCodeBox"
+                                     Grid.Row="1"
+                                     Margin="0,8,0,0"
+                                     Code="{Binding BlackJson, Mode=OneTime}" />
+            </Grid>
+            <Grid Grid.Row="2" Margin="0,8,0,8">
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button MinWidth="90"
+                            Margin="8,0,8,0"
+                            Command="{Binding SaveCommand}"
+                            Content="保存" />
+                    <Button MinWidth="90"
+                            Command="{Binding CloseCommand}"
+                            Content="关闭" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+        <ui:TitleBar Title="自动拾取 - 黑白名单设置">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+    </Grid>
+</ui:FluentWindow>

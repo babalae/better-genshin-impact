@@ -19,6 +19,7 @@
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                 WindowStartupLocation="CenterScreen"
                  WindowState="{Binding WindowState, Mode=TwoWay}"
                  mc:Ignorable="d">
     <Window.Resources>

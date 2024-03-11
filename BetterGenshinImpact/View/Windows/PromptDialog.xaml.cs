@@ -2,12 +2,8 @@
 
 namespace BetterGenshinImpact.View.Windows;
 
-/// <summary>
-/// PromptDialog.xaml 的交互逻辑
-/// </summary>
 public partial class PromptDialog
 {
-
     public string DialogTitle { get; set; }
 
     public PromptDialog(string question, string title, string defaultValue = "")
