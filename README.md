@@ -38,6 +38,10 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [**商店一键购买**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
   * [**……**](https://bgi.huiyadan.com/feat.html)
 
+<div align="center">
+  <img src="https://github.com/babalae/better-genshin-impact/assets/15783049/57ab7c3c-709a-4cf3-8f64-1c78764c364c"/>
+  <p>自带一个遮罩窗口覆盖在游戏界面上，用于显示日志和图像识别结果</p>
+</div>
 
 ## 截图
 
