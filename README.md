@@ -1,6 +1,9 @@
 <div align="center">
-  <a href="https://bgi.huiyadan.com/"><img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN01Bn1Fzx1lhoDqQDAzj_!!2042484851.png" width="200"></a>
-  <h1 align="center"><a href="https://bgi.huiyadan.com/">BetterGI</a></h1>
+  <h1 align="center">
+    <a href="https://bgi.huiyadan.com/"><img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN01Bn1Fzx1lhoDqQDAzj_!!2042484851.png" width="200"></a>
+    <br/>
+    <a href="https://bgi.huiyadan.com/">BetterGI</a>
+  </h1>
   <h5>🎁 𝑴𝒂𝒌𝒆 𝑮𝒆𝒏𝒔𝒉𝒊𝒏 𝑰𝒎𝒑𝒂𝒄𝒕 𝑮𝒓𝒆𝒂𝒕 𝑨𝒈𝒂𝒊𝒏 🥂</h5>
   <a href="https://trendshift.io/repositories/5269" target="_blank"><img src="https://trendshift.io/api/badge/repositories/5269" alt="babalae%2Fbetter-genshin-impact | Trendshift" style="width: 200px; height: 46px;" width="250" height="46"/></a>
 </div>
