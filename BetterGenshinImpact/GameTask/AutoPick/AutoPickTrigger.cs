@@ -38,7 +38,6 @@ public class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private List<string> _whiteList = new();
 
-
     public AutoPickTrigger()
     {
         _autoPickAssets = new AutoPickAssets();
@@ -49,10 +48,10 @@ public class AutoPickTrigger : ITaskTrigger
         IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
         try
         {
-            var blackListJson = Global.ReadAllTextIfExist("User\\pick_black_lists.json");
+            var blackListJson = Global.ReadAllTextIfExist(@"User\pick_black_lists.json");
             if (!string.IsNullOrEmpty(blackListJson))
             {
-                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -63,10 +62,10 @@ public class AutoPickTrigger : ITaskTrigger
 
         try
         {
-            var whiteListJson = Global.ReadAllTextIfExist("User\\pick_white_lists.json");
+            var whiteListJson = Global.ReadAllTextIfExist(@"User\pick_white_lists.json");
             if (!string.IsNullOrEmpty(whiteListJson))
             {
-                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)

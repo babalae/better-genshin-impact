@@ -17,15 +17,18 @@
 		<None Remove="Assets\*.jpg" />
 		<None Remove="Assets\*.png" />
 		<None Remove="Assets\*.ico" />
+		<None Remove="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Resource Include="Assets\*.jpg" />
 		<Resource Include="Assets\*.png" />
 		<Resource Include="Assets\*.ico" />
+		<Resource Include="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
@@ -523,10 +526,6 @@
 		<None Update="User\pick_white_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="GameTask\AutoDomain\Model\" />
 	</ItemGroup>
 
 </Project>

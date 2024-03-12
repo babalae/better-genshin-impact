@@ -8,7 +8,6 @@ namespace BetterGenshinImpact.View.Controls;
 
 public class HotKeyTextBox : TextBox
 {
-
     public static readonly DependencyProperty HotkeyTypeNameProperty = DependencyProperty.Register(
         nameof(HotKeyTypeName),
         typeof(string),
@@ -147,7 +146,6 @@ public class HotKeyTextBox : TextBox
         // Set value
         Hotkey = new HotKey(key, modifiers);
     }
-
 
     /// <summary>
     /// 支持鼠标侧键配置

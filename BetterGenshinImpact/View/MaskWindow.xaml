@@ -39,7 +39,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/View/Controls/Style/DraggableResizableItem.xaml" />
+                <ResourceDictionary Source="/View/Controls/Draggable/DraggableResizableItem.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
