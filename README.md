@@ -1,64 +1,56 @@
-<p>
-  <h1><a href="https://bgi.huiyadan.com/"><img src="https://github.com/babalae/better-genshin-impact/assets/15783049/c3fe6d01-6932-46ae-a570-fd3027e5a2a5" align="right" width="220" hspace="5" vspace="5"></a>🍨 BetterGI · 更好的原神</h1>
-  <p>
-    <img alt="" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square&color=4096d8" />
-    <img alt="" src="https://img.shields.io/github/last-commit/babalae/better-genshin-impact?style=flat-square&color=4096d8" />
-    <img alt="" src="https://img.shields.io/github/v/release/babalae/better-genshin-impact?style=flat-square&color=4096d8" />
-  </p>
-  <p>你喜欢钓鱼吗？你想玩七圣召唤吗？你是否想要跳过不爱看的剧情？你做完所有邀约了吗？</p>
-  <p>是否对日复一日的重复点击感到疲劳？</p>
-  <p><b>BetterGI ， 一个基于计算机视觉技术，意图让原神变的更好的项目。</b></p>
-</p>
-<!-- https://github.com/babalae/better-genshin-impact/assets/15783049/483cb63b-f21c-4946-bb19-64249aa7d5fb -->
+<div align="center">
+  <h1 align="center">
+    <a href="https://bgi.huiyadan.com/"><img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN01Bn1Fzx1lhoDqQDAzj_!!2042484851.png" width="200"></a>
+    <br/>
+    <a href="https://bgi.huiyadan.com/">BetterGI</a>
+  </h1>
+  <h5>🎁 𝑴𝒂𝒌𝒆 𝑮𝒆𝒏𝒔𝒉𝒊𝒏 𝑰𝒎𝒑𝒂𝒄𝒕 𝑮𝒓𝒆𝒂𝒕 𝑨𝒈𝒂𝒊𝒏 🥂</h5>
+  <a href="https://trendshift.io/repositories/5269" target="_blank"><img src="https://trendshift.io/api/badge/repositories/5269" alt="babalae%2Fbetter-genshin-impact | Trendshift" style="width: 200px; height: 46px;" width="250" height="46"/></a>
+</div>
 
-> [!NOTE]
-> 下载地址：[⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases) | [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
-> 
-> 使用前请先查阅：[文档](https://bgi.huiyadan.com/doc.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
+<br/>
 
+<div align="center">
+  <a href="https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime"><img alt="Windows" src="https://img.shields.io/badge/platform-Windows-blue?logo=windows11&style=flat-square&color=1E9BFA" /></a>
+  <a href="https://github.com/babalae/better-genshin-impact/releases"><img alt="下载数" src="https://img.shields.io/github/downloads/babalae/better-genshin-impact/total?style=flat-square&color=1E9BFA"></a>
+  <a href="https://github.com/babalae/better-genshin-impact/releases"><img alt="Release" src="https://img.shields.io/github/v/release/babalae/better-genshin-impact?style=flat-square&color=1E9BFA"></a>
+</div>
+
+<br/>
+
+BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
+
+## 功能
+  * [**自动拾取**](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)：遇到可交互/拾取内容时自动按 <kbd>F</kbd>，支持黑白名单配置
+  * [**自动剧情**](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)：快速点击过剧情、自动选择选项、自动提交物品、关闭弹出书页等
+    * 与凯瑟琳对话时有橙色选项会 [自动领取「每日委托」奖励](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)、[自动重新派遣](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
+  * [**全自动钓鱼**](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
+  * [**全自动七圣召唤**](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
+  * [**自动伐木**](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
+  * [**自动战斗**](http://bgi.huiyadan.com/feats/domain.html)：编写战斗脚本，让队伍按照你的策略进行自动战斗
+  * [**自动秘境**](http://bgi.huiyadan.com/feats/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
+  * [**快速传送**](http://bgi.huiyadan.com/feats/domain.html)：在地图上点击传送点，或者点击后出现的列表中存在传送点，会自动点击传送点并传送
+  * [**那维莱特转圈**](https://bgi.huiyadan.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)：设置快捷键后，长按可以不断水平旋转视角（当然你也可以用来转草神）
+  * [**快速圣遗物强化**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：通过快速切换“详情”、“强化”页跳过圣遗物强化结果展示，快速+20
+  * [**商店一键购买**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
+  * [**……**](https://bgi.huiyadan.com/feat.html)
+
+<div align="center">
+  <img src="https://github.com/babalae/better-genshin-impact/assets/15783049/57ab7c3c-709a-4cf3-8f64-1c78764c364c"/>
+  <p>自带一个遮罩窗口覆盖在游戏界面上，用于显示日志和图像识别结果</p>
+</div>
 
 ## 截图
 
 <img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN016wk5ZC1lhoEMzz04F_!!2042484851.gif"/>
 
-## 功能
 
-特色：
+## 下载
 
-自带一个遮罩窗口覆盖在游戏界面上，用于显示日志和图像识别结果。
-
-<img width="650px" src="https://github.com/babalae/better-genshin-impact/assets/15783049/57ab7c3c-709a-4cf3-8f64-1c78764c364c"/>
-<br>
-<br>
-
-* 实时任务
-  * [自动拾取](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)
-  * [自动剧情](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)
-    * [自动领取『每日委托』奖励](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)
-    * [自动重新派遣](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
-  * [全自动钓鱼(AI)](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)
-* 独立任务
-    * [自动七圣召唤](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)
-    * [自动伐木](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)
-    * [自动战斗](http://bgi.huiyadan.com/feats/domain.html)
-    * [自动秘境](http://bgi.huiyadan.com/feats/domain.html)
-* 操控辅助
-    * [空格连发](https://bgi.huiyadan.com/doc.html#%E7%A9%BA%E6%A0%BC%E8%BF%9E%E5%8F%91)
-    * [F 连发](https://bgi.huiyadan.com/doc.html#f%E8%BF%9E%E5%8F%91)
-    * [那维莱特 - 转圈圈](https://bgi.huiyadan.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)
-    * [快速圣遗物强化](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)
-
-[更多功能研发中...](https://bgi.huiyadan.com/feat.html)
-
-
-
-## 下载地址
-
-当前版本仍处于 Beta 状态，随时会有 Bug 修复或者新功能补充（产出新的 Bug），请下载最新的版本~
-
-* [⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases)
-* [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
-
+> [!NOTE]
+> 下载地址：[⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases) | [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
+> 
+> 第一次使用请看：[快速上手](https://bgi.huiyadan.com/quickstart.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
 
 ## 使用方法
 由于图像识别比较吃性能，低配置电脑可能无法正常使用部分功能。
@@ -77,7 +69,9 @@
 
 **打开软件以后，在“启动”页选择好截图方式，点击启动按钮就可以享受 BetterGI 带来的便利了！**
 
-具体功能效果与使用方式见：[Wiki](https://bgi.huiyadan.com/doc.html)
+详细使用指南请看：[快速上手](https://bgi.huiyadan.com/quickstart.html)
+
+具体功能效果与使用方式见：[文档](https://bgi.huiyadan.com/doc.html)
 
 ## FAQ
 * 为什么需要管理员权限？
