@@ -21,18 +21,18 @@
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
-  * [**自动拾取**](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)：遇到可交互/拾取内容时自动按 <kbd>F</kbd>，支持黑白名单配置
-  * [**自动剧情**](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)：快速点击过剧情、自动选择选项、自动提交物品、关闭弹出书页等
+  * [自动拾取](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)：遇到可交互/拾取内容时自动按 <kbd>F</kbd>，支持黑白名单配置
+  * [自动剧情](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)：快速点击过剧情、自动选择选项、自动提交物品、关闭弹出书页等
     * 与凯瑟琳对话时有橙色选项会 [自动领取「每日委托」奖励](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)、[自动重新派遣](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
-  * [**全自动钓鱼**](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
-  * [**全自动七圣召唤**](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
-  * [**自动伐木**](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
-  * [**自动战斗**](http://bgi.huiyadan.com/feats/domain.html)：编写战斗脚本，让队伍按照你的策略进行自动战斗
-  * [**自动秘境**](http://bgi.huiyadan.com/feats/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
-  * [**快速传送**](http://bgi.huiyadan.com/feats/domain.html)：在地图上点击传送点，或者点击后出现的列表中存在传送点，会自动点击传送点并传送
-  * [**那维莱特转圈**](https://bgi.huiyadan.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)：设置快捷键后，长按可以不断水平旋转视角（当然你也可以用来转草神）
-  * [**快速圣遗物强化**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：通过快速切换“详情”、“强化”页跳过圣遗物强化结果展示，快速+20
-  * [**商店一键购买**](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
+  * [全自动钓鱼](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
+  * [全自动七圣召唤](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
+  * [自动伐木](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
+  * [自动战斗](http://bgi.huiyadan.com/feats/domain.html)：编写战斗脚本，让队伍按照你的策略进行自动战斗
+  * [自动秘境](http://bgi.huiyadan.com/feats/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
+  * [快速传送](http://bgi.huiyadan.com/feats/domain.html)：在地图上点击传送点，或者点击后出现的列表中存在传送点，会自动点击传送点并传送
+  * [那维莱特转圈](https://bgi.huiyadan.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)：设置快捷键后，长按可以不断水平旋转视角（当然你也可以用来转草神）
+  * [快速圣遗物强化](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：通过快速切换“详情”、“强化”页跳过圣遗物强化结果展示，快速+20
+  * [商店一键购买](https://bgi.huiyadan.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
   * [**……**](https://bgi.huiyadan.com/feat.html)
 
 <div align="center">
