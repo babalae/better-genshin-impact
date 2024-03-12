@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center">
-    <a href="https://bgi.huiyadan.com/"><img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN01Bn1Fzx1lhoDqQDAzj_!!2042484851.png" width="200"></a>
+    <a href="https://bgi.huiyadan.com/"><img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN014wn1rf1lhoFYjL0gA_!!2042484851.png" width="200"></a>
     <br/>
     <a href="https://bgi.huiyadan.com/">BetterGI</a>
   </h1>
@@ -11,9 +11,9 @@
 <br/>
 
 <div align="center">
-  <a href="https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime"><img alt="Windows" src="https://img.shields.io/badge/platform-Windows-blue?logo=windows11&style=flat-square&color=1E9BFA" /></a>
-  <a href="https://github.com/babalae/better-genshin-impact/releases"><img alt="下载数" src="https://img.shields.io/github/downloads/babalae/better-genshin-impact/total?style=flat-square&color=1E9BFA"></a>
-  <a href="https://github.com/babalae/better-genshin-impact/releases"><img alt="Release" src="https://img.shields.io/github/v/release/babalae/better-genshin-impact?style=flat-square&color=1E9BFA"></a>
+  <a href="https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime"><img alt="Windows" src="https://img.shields.io/badge/platform-Windows-blue?logo=windowsxp&style=flat-square&color=1E9BFA" /></a>
+  <a href="https://github.com/babalae/better-genshin-impact/releases"><img alt="下载数" src="https://img.shields.io/github/downloads/babalae/better-genshin-impact/total?logo=github&style=flat-square&color=1E9BFA"></a>
+  <a href="https://github.com/babalae/better-genshin-impact/releases"><img alt="Release" src="https://img.shields.io/github/v/release/babalae/better-genshin-impact?logo=visualstudio&style=flat-square&color=1E9BFA"></a>
 </div>
 
 <br/>
