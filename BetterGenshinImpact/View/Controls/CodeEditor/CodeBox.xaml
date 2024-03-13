@@ -1,7 +1,8 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ava="clr-namespace:ICSharpCode.AvalonEdit;assembly=ICSharpCode.AvalonEdit"
-                    xmlns:local="clr-namespace:BetterGenshinImpact.View.Controls">
+                    xmlns:local="clr-namespace:BetterGenshinImpact.View.Controls"
+                    xmlns:codeEditor="clr-namespace:BetterGenshinImpact.View.Controls.CodeEditor">
 
     <Style x:Key="DefaultTextEditorStyle" TargetType="{x:Type ava:TextEditor}">
         <Setter Property="FontFamily" Value="{DynamicResource TextThemeFontFamily}" />
@@ -10,7 +11,7 @@
     </Style>
 
     <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type ava:TextEditor}" />
-    <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type local:CodeBox}" />
-    <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type local:JsonCodeBox}" />
+    <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type codeEditor:CodeBox}" />
+    <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type codeEditor:JsonCodeBox}" />
 
 </ResourceDictionary>

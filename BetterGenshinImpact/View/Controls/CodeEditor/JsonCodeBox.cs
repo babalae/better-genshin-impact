@@ -1,10 +1,10 @@
-﻿using BetterGenshinImpact.Helpers;
+﻿using System.IO;
+using System.Xml;
+using BetterGenshinImpact.Helpers;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
-using System.IO;
-using System.Xml;
 
-namespace BetterGenshinImpact.View.Controls;
+namespace BetterGenshinImpact.View.Controls.CodeEditor;
 
 public class JsonCodeBox : CodeBox
 {

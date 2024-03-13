@@ -7,6 +7,7 @@
       xmlns:model="clr-namespace:BetterGenshinImpact.Model"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
       Title="HotkeyPage"
       d:DataContext="{d:DesignInstance Type=pages:HotKeyPageViewModel}"
       d:DesignHeight="850"
@@ -50,7 +51,7 @@
                                    Command="{Binding SwitchHotKeyTypeCommand}"
                                    IsEnabled="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}"
                                    />
-                        <controls:HotKeyTextBox Grid.Column="2"
+                        <hotKey:HotKeyTextBox Grid.Column="2"
                                                 HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
                                                 Hotkey="{Binding HotKey}"
                                                 Style="{StaticResource DefaultTextBoxStyle}"

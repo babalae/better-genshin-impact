@@ -1,10 +1,10 @@
-﻿using BetterGenshinImpact.Model;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
+using BetterGenshinImpact.Model;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
-namespace BetterGenshinImpact.View.Controls;
+namespace BetterGenshinImpact.View.Controls.HotKey;
 
 public class HotKeyTextBox : TextBox
 {
@@ -29,10 +29,10 @@ public class HotKeyTextBox : TextBox
 
     public static readonly DependencyProperty HotkeyProperty = DependencyProperty.Register(
         nameof(Hotkey),
-        typeof(HotKey),
+        typeof(Model.HotKey),
         typeof(HotKeyTextBox),
         new FrameworkPropertyMetadata(
-            default(HotKey),
+            default(Model.HotKey),
             FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
             (sender, _) =>
             {
@@ -42,9 +42,9 @@ public class HotKeyTextBox : TextBox
         )
     );
 
-    public HotKey Hotkey
+    public Model.HotKey Hotkey
     {
-        get => (HotKey)GetValue(HotkeyProperty);
+        get => (Model.HotKey)GetValue(HotkeyProperty);
         set => SetValue(HotkeyProperty, value);
     }
 
@@ -114,7 +114,7 @@ public class HotKeyTextBox : TextBox
         // If Delete/Backspace/Escape is pressed without modifiers - clear current value and return
         if (key is Key.Delete or Key.Back or Key.Escape && modifiers == ModifierKeys.None)
         {
-            Hotkey = HotKey.None;
+            Hotkey = Model.HotKey.None;
             return;
         }
 
@@ -144,7 +144,7 @@ public class HotKeyTextBox : TextBox
             return;
 
         // Set value
-        Hotkey = new HotKey(key, modifiers);
+        Hotkey = new Model.HotKey(key, modifiers);
     }
 
     /// <summary>
@@ -157,11 +157,11 @@ public class HotKeyTextBox : TextBox
         {
             if (HotKeyTypeName == HotKeyTypeEnum.GlobalRegister.ToChineseName())
             {
-                Hotkey = new HotKey(Key.None);
+                Hotkey = new Model.HotKey(Key.None);
             }
             else
             {
-                Hotkey = new HotKey(Key.None, ModifierKeys.None, args.ChangedButton);
+                Hotkey = new Model.HotKey(Key.None, ModifierKeys.None, args.ChangedButton);
             }
         }
     }

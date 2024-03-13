@@ -1,9 +1,9 @@
-﻿using ICSharpCode.AvalonEdit;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ICSharpCode.AvalonEdit;
 
-namespace BetterGenshinImpact.View.Controls;
+namespace BetterGenshinImpact.View.Controls.CodeEditor;
 
 public class CodeBox : TextEditor
 {
