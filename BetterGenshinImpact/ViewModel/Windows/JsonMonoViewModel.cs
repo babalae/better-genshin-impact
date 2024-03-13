@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -8,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
-using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -29,7 +29,7 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Show("读取黑白名单出错：" + e.ToString());
+            WpfUiMessageBoxHelper.Show("读取黑白名单出错：" + e.ToString());
         }
     }
 
@@ -42,18 +42,18 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Show("保存失败：" + e.ToString());
+            WpfUiMessageBoxHelper.Show("保存失败：" + e.ToString());
             return;
         }
 
         try
         {
             Global.WriteAllText(JsonPath, JsonText);
-            MessageBox.Show("保存成功", "自动拾取");
+            // WpfUiMessageBoxHelper.Show("保存成功");
         }
         catch (Exception e)
         {
-            MessageBox.Show("保存失败：" + e.ToString(), "自动拾取");
+            WpfUiMessageBoxHelper.Show("保存失败：" + e.ToString());
         }
     }
 
@@ -62,7 +62,7 @@ public partial class JsonMonoViewModel : ObservableObject
     {
         Application.Current.Windows
             .Cast<Window>()
-            .FirstOrDefault(w => w.Tag?.Equals(nameof(JsonMonoDialog)) ?? false)
-            ?.Close();
+        .FirstOrDefault(w => w.Tag?.Equals(nameof(JsonMonoDialog)) ?? false)
+        ?.Close();
     }
 }

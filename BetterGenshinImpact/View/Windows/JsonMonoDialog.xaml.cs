@@ -1,8 +1,9 @@
 ﻿using BetterGenshinImpact.ViewModel.Windows;
 using System;
 using System.Windows.Media;
-using BetterGenshinImpact.View.Controls.CodeEditor;
 using Wpf.Ui.Controls;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace BetterGenshinImpact.View.Windows;
 
