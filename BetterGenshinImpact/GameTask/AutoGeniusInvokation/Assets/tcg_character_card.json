@@ -644,6 +644,75 @@
         ]
     },
     {
+        "id": 1110,
+        "nameEn": "charlotte",
+        "type": "character",
+        "name": "夏洛蒂",
+        "hp": 10,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "coolcolor_capture",
+                "name": "冷色摄影律",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "framing_freezing_point_composition",
+                "name": "取景·冰点构图法",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "still_photo_comprehensive_confirmation",
+                "name": "定格·全方位确证",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1201,
         "nameEn": "barbara",
         "type": "character",
@@ -1285,6 +1354,75 @@
                     "被动技能"
                 ],
                 "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1210,
+        "nameEn": "neuvillette",
+        "type": "character",
+        "name": "那维莱特",
+        "hp": 10,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "as_water_seeks_equilibrium",
+                "name": "如水从平",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "o_tears_i_shall_repay",
+                "name": "泪水啊，我必偿还",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "o_tides_i_have_returned",
+                "name": "潮水啊，我已归来",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
             }
         ]
     },
@@ -3115,7 +3253,7 @@
     },
     {
         "id": 1506,
-        "nameEn": "realnameid1delayhandletrue",
+        "nameEn": "wanderer",
         "type": "character",
         "name": "流浪者",
         "hp": 10,
@@ -3248,14 +3386,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "fuufuu_whirlwind_kick",
-                "name": "风风轮舞踢",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
             }
         ]
     },
@@ -4187,6 +4317,75 @@
         ]
     },
     {
+        "id": 1707,
+        "nameEn": "kirara",
+        "type": "character",
+        "name": "绮良良",
+        "hp": 10,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "boxcutter",
+                "name": "箱纸切削术",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "meowteor_kick",
+                "name": "呜喵町飞足",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "secret_art_surprise_dispatch",
+                "name": "秘法·惊喜特派",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 2101,
         "nameEn": "fatui_cryo_cicin_mage",
         "type": "character",
@@ -4400,7 +4599,7 @@
                 ]
             },
             {
-                "nameEn": "cryocrystal_core",
+                "nameEn": "cryo_crystal_core",
                 "name": "冰晶核心",
                 "skillTag": [
                     "被动技能"
@@ -5021,14 +5220,75 @@
                     "被动技能"
                 ],
                 "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2404,
+        "nameEn": "fatui_electro_cicin_mage",
+        "type": "character",
+        "name": "愚人众·雷萤术士",
+        "hp": 10,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "hurtling_bolts",
+                "name": "轰闪落雷",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
             },
             {
-                "nameEn": "swirling_school_of_fish",
-                "name": "霰舞鱼群",
+                "nameEn": "misty_call",
+                "name": "雾虚之召",
                 "skillTag": [
-                    "被动技能"
+                    "元素战技"
                 ],
-                "cost": []
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "thundering_shield",
+                "name": "霆雷之护",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
             }
         ]
     },
