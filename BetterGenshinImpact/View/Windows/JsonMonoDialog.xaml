@@ -1,4 +1,4 @@
-﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AutoPickMonoDialog"
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.JsonMonoDialog"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:codeEditor="clr-namespace:BetterGenshinImpact.View.Controls.CodeEditor"
@@ -12,7 +12,7 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 Tag="AutoPickMonoDialog"
+                 Tag="JsonMonoDialog"
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Window.Resources>
@@ -33,7 +33,6 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <codeEditor:JsonCodeBox x:Name="JsonCodeBox"
-                                        Grid.Row="1"
                                         Margin="0,8,0,0"
                                         Code="{Binding JsonText, Mode=OneTime}" />
             </Grid>

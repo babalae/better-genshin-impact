@@ -1,15 +1,16 @@
 ﻿using BetterGenshinImpact.ViewModel.Windows;
 using System;
 using System.Windows.Media;
+using BetterGenshinImpact.View.Controls.CodeEditor;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
 
-public partial class AutoPickMonoDialog : FluentWindow
+public partial class JsonMonoDialog : FluentWindow
 {
-    public AutoPickMonoViewModel ViewModel { get; }
+    public JsonMonoViewModel ViewModel { get; }
 
-    public AutoPickMonoDialog(string path)
+    public JsonMonoDialog(string path)
     {
         DataContext = ViewModel = new(path);
         InitializeComponent();

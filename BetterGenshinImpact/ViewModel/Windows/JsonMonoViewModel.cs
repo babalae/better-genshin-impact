@@ -12,7 +12,7 @@ using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
-public partial class AutoPickMonoViewModel : ObservableObject
+public partial class JsonMonoViewModel : ObservableObject
 {
     [ObservableProperty]
     private string _jsonText = string.Empty;
@@ -20,7 +20,7 @@ public partial class AutoPickMonoViewModel : ObservableObject
     [ObservableProperty]
     private string _jsonPath = string.Empty;
 
-    public AutoPickMonoViewModel(string path)
+    public JsonMonoViewModel(string path)
     {
         try
         {
@@ -62,7 +62,7 @@ public partial class AutoPickMonoViewModel : ObservableObject
     {
         Application.Current.Windows
             .Cast<Window>()
-            .FirstOrDefault(w => w.Tag?.Equals(nameof(AutoPickMonoDialog)) ?? false)
+            .FirstOrDefault(w => w.Tag?.Equals(nameof(JsonMonoDialog)) ?? false)
             ?.Close();
     }
 }
