@@ -9,14 +9,13 @@ public partial class AutoPickMonoDialog : FluentWindow
 {
     public AutoPickMonoViewModel ViewModel { get; }
 
-    public AutoPickMonoDialog()
+    public AutoPickMonoDialog(string path)
     {
-        DataContext = ViewModel = new();
+        DataContext = ViewModel = new(path);
         InitializeComponent();
 
         // Manual MVVM binding
-        WhiteJsonCodeBox.TextChanged += (_, _) => ViewModel.WhiteJson = WhiteJsonCodeBox.Text;
-        BlackJsonCodeBox.TextChanged += (_, _) => ViewModel.BlackJson = BlackJsonCodeBox.Text;
+        JsonCodeBox.TextChanged += (_, _) => ViewModel.JsonText = JsonCodeBox.Text;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -38,7 +37,6 @@ public partial class AutoPickMonoDialog : FluentWindow
         {
             Background = new SolidColorBrush(Colors.Transparent);
             WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
-            return;
         }
     }
 }

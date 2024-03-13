@@ -34,17 +34,22 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     [RelayCommand]
     private void OnEditBlacklist()
     {
-        AutoPickMonoDialog dialog = new()
-        {
-            Owner = Application.Current.MainWindow
-        };
-        dialog.Show();
+        ShowAutoPickMonoDialog(@"User\pick_black_lists.json");
     }
 
     [RelayCommand]
     private void OnEditWhitelist()
     {
-        OnEditBlacklist();
+        ShowAutoPickMonoDialog(@"User\pick_white_lists.json");
+    }
+
+    private void ShowAutoPickMonoDialog(string path)
+    {
+        AutoPickMonoDialog dialog = new(path)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        dialog.Show();
     }
 
     [RelayCommand]

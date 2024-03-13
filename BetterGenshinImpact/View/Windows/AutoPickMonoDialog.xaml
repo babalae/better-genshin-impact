@@ -5,7 +5,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="自动拾取 - 黑白名单设置"
+                 Title="JSON 编辑器"
                  Width="600"
                  Height="600"
                  d:Background="#D2D2D2"
@@ -25,59 +25,19 @@
     <Grid>
         <Grid Margin="8,48,8,0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="1*" />
-                <RowDefinition Height="3*" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0"
-                            VerticalAlignment="Center"
-                            Orientation="Horizontal">
-                    <Border Width="16"
-                            Height="16"
-                            Background="White"
-                            BorderBrush="#50FFFFFF"
-                            BorderThickness="2"
-                            CornerRadius="4"
-                            Opacity="0.9" />
-                    <TextBlock Margin="6,0,0,0"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Text="白名单" />
-                </StackPanel>
-                <codeEditor:JsonCodeBox x:Name="WhiteJsonCodeBox"
+                <codeEditor:JsonCodeBox x:Name="JsonCodeBox"
                                         Grid.Row="1"
                                         Margin="0,8,0,0"
-                                        Code="{Binding WhiteJson, Mode=OneTime}" />
+                                        Code="{Binding JsonText, Mode=OneTime}" />
             </Grid>
-            <Grid Grid.Row="1" Margin="0,16,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0"
-                            VerticalAlignment="Center"
-                            Orientation="Horizontal">
-                    <Border Width="16"
-                            Height="16"
-                            Background="Black"
-                            BorderBrush="#50FFFFFF"
-                            BorderThickness="2"
-                            CornerRadius="4"
-                            Opacity="0.9" />
-                    <TextBlock Margin="6,0,0,0"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Text="黑名单" />
-                </StackPanel>
-                <codeEditor:JsonCodeBox x:Name="BlackJsonCodeBox"
-                                        Grid.Row="1"
-                                        Margin="0,8,0,0"
-                                        Code="{Binding BlackJson, Mode=OneTime}" />
-            </Grid>
-            <Grid Grid.Row="2" Margin="0,8,0,8">
+            <Grid Grid.Row="1" Margin="0,8,0,8">
                 <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                     <Button MinWidth="90"
                             Margin="8,0,8,0"
@@ -89,7 +49,7 @@
                 </StackPanel>
             </Grid>
         </Grid>
-        <ui:TitleBar Title="自动拾取 - 黑白名单设置">
+        <ui:TitleBar Title="JSON 编辑器">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>
