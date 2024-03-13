@@ -124,8 +124,8 @@ public class AutoWoodTask
 
         if (_first)
         {
-            var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-            var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
+            using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+            using var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
@@ -149,8 +149,8 @@ public class AutoWoodTask
             NewRetry.Do(() =>
             {
                 Sleep(1, taskParam.Cts);
-                var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-                var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
+                using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+                using var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
                 if (ra.IsEmpty())
                 {
 #if !TEST_WITHOUT_Z_ITEM
@@ -182,8 +182,8 @@ public class AutoWoodTask
             NewRetry.Do(() =>
             {
                 Sleep(1, taskParam.Cts);
-                var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-                var ra = content.CaptureRectArea.Find(_assets.MenuBagRo);
+                using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+                using var ra = content.CaptureRectArea.Find(_assets.MenuBagRo);
                 if (ra.IsEmpty())
                 {
                     throw new RetryException("未检测到弹出菜单");
@@ -226,8 +226,8 @@ public class AutoWoodTask
         {
             Sleep(1, taskParam.Cts);
 
-            var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-            var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
+            using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+            using var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
             if (!ra.IsEmpty())
             {
                 clickCnt++;
