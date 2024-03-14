@@ -1,5 +1,7 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Windows;
 using System.Windows.Media;
@@ -11,10 +13,13 @@ namespace BetterGenshinImpact.View;
 
 public partial class MainWindow : FluentWindow, INavigationWindow
 {
+    private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
+
     public MainWindowViewModel ViewModel { get; }
 
     public MainWindow(MainWindowViewModel viewModel, IPageService pageService, INavigationService navigationService)
     {
+        _logger.LogDebug("主窗体实例化");
         DataContext = ViewModel = viewModel;
 
         InitializeComponent();
@@ -34,6 +39,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     protected override void OnClosed(EventArgs e)
     {
+        _logger.LogDebug("主窗体退出");
         base.OnClosed(e);
         App.GetService<NotifyIconViewModel>()?.Exit();
     }
