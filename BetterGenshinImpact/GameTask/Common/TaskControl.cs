@@ -11,6 +11,8 @@ public class TaskControl
 {
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
+    public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
+
     public static void CheckAndSleep(int millisecondsTimeout)
     {
         if (!SystemControl.IsGenshinImpactActiveByProcess())

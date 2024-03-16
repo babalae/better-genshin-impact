@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.MiniMap;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
@@ -59,7 +60,7 @@ public class AutoDomainTask
         var hasLock = false;
         try
         {
-            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            hasLock = await TaskSemaphore.WaitAsync(0);
             if (!hasLock)
             {
                 Logger.LogError("启动自动秘境功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
@@ -133,7 +134,7 @@ public class AutoDomainTask
 
             if (hasLock)
             {
-                Monitor.Exit(TaskContext.TaskLocker);
+                TaskSemaphore.Release();
             }
         }
     }

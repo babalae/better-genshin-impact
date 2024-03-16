@@ -4,6 +4,7 @@ using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -40,8 +41,6 @@ namespace BetterGenshinImpact.GameTask
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
             IsInitialized = true;
         }
-
-        public static readonly object TaskLocker = new();
 
         public bool IsInitialized { get; set; }
 

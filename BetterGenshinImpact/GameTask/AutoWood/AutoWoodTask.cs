@@ -46,7 +46,7 @@ public class AutoWoodTask
         var hasLock = false;
         try
         {
-            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            hasLock = TaskSemaphore.Wait(0);
             if (!hasLock)
             {
                 Logger.LogError("启动自动伐木功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
@@ -110,7 +110,7 @@ public class AutoWoodTask
 
             if (hasLock)
             {
-                Monitor.Exit(TaskContext.TaskLocker);
+                TaskSemaphore.Release();
             }
         }
     }

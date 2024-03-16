@@ -63,7 +63,7 @@ public class Duel
         Cts = taskParam.Cts;
         try
         {
-            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            hasLock = TaskControl.TaskSemaphore.Wait(0);
             if (!hasLock)
             {
                 _logger.LogError("启动自动七圣召唤功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
@@ -323,7 +323,7 @@ public class Duel
 
             if (hasLock)
             {
-                Monitor.Exit(TaskContext.TaskLocker);
+                TaskControl.TaskSemaphore.Release();
             }
         }
     }
