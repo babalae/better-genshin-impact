@@ -152,6 +152,18 @@ public partial class HotKeyPageViewModel : ObservableObject
         );
         HotKeySettingModels.Add(autoSkipEnabledHotKeySettingModel);
 
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "自动邀约开关",
+            nameof(Config.HotKeyConfig.AutoSkipHangoutEnabledHotkey),
+            Config.HotKeyConfig.AutoSkipHangoutEnabledHotkey,
+            Config.HotKeyConfig.AutoSkipHangoutEnabledHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled = !TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动邀约", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.Enabled));
+            }
+        ));
+
         var autoFishingEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动钓鱼开关",
             nameof(Config.HotKeyConfig.AutoFishingEnabledHotkey),
@@ -216,7 +228,6 @@ public partial class HotKeyPageViewModel : ObservableObject
             (_, _) => { QuickBuyTask.Done(); },
             true
         ));
-
 
         HotKeySettingModels.Add(new HotKeySettingModel(
             "启动/停止自动七圣召唤",
