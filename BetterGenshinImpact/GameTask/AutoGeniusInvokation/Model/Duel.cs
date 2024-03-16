@@ -59,9 +59,17 @@ public class Duel
 
     public void Run(GeniusInvokationTaskParam taskParam)
     {
+        var hasLock = false;
         Cts = taskParam.Cts;
         try
         {
+            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            if (!hasLock)
+            {
+                _logger.LogError("启动自动七圣召唤功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
@@ -312,6 +320,11 @@ public class Duel
             TaskSettingsPageViewModel.SetSwitchAutoGeniusInvokationButtonText(false);
             _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
             taskParam.Dispatcher.StartTimer();
+
+            if (hasLock)
+            {
+                Monitor.Exit(TaskContext.TaskLocker);
+            }
         }
     }
 

@@ -42,8 +42,6 @@ public class AutoDomainTask
 
     private readonly AutoDomainConfig _config;
 
-    private bool IsRunning { get; set; }
-
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
@@ -54,13 +52,20 @@ public class AutoDomainTask
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
         _config = TaskContext.Instance().Config.AutoDomainConfig;
-        IsRunning = false;
     }
 
     public async void Start()
     {
+        var hasLock = false;
         try
         {
+            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            if (!hasLock)
+            {
+                Logger.LogError("启动自动秘境功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             Init();
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
@@ -125,13 +130,16 @@ public class AutoDomainTask
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
             Logger.LogInformation("→ {Text}", "自动秘境结束");
-            IsRunning = false;
+
+            if (hasLock)
+            {
+                Monitor.Exit(TaskContext.TaskLocker);
+            }
         }
     }
 
     private void Init()
     {
-        IsRunning = true;
         LogScreenResolution();
         if (_taskParam.DomainRoundNum == 9999)
         {
@@ -373,7 +381,6 @@ public class AutoDomainTask
 
         return false;
     }
-
 
     /// <summary>
     /// 旋转视角后寻找石化古树
@@ -665,9 +672,7 @@ public class AutoDomainTask
             Sleep(800, _taskParam.Cts);
         }
 
-
         Sleep(1000, _taskParam.Cts);
-
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         for (var i = 0; i < 30; i++)

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -41,8 +42,16 @@ public class AutoWoodTask
 
     public void Start(WoodTaskParam taskParam)
     {
+        var hasLock = false;
         try
         {
+            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            if (!hasLock)
+            {
+                Logger.LogError("启动自动伐木功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             TaskTriggerDispatcher.Instance().StopTimer();
             Logger.LogInformation("→ {Text} 设置伐木总次数：{Cnt}", "自动伐木，启动！", taskParam.WoodRoundNum);
 
@@ -97,6 +106,11 @@ public class AutoWoodTask
             TaskSettingsPageViewModel.SetSwitchAutoWoodButtonText(false);
             Logger.LogInformation("← {Text}", "退出自动伐木");
             taskParam.Dispatcher.StartTimer();
+
+            if (hasLock)
+            {
+                Monitor.Exit(TaskContext.TaskLocker);
+            }
         }
     }
 

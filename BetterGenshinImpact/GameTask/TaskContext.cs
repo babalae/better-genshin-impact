@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.GameTask
     public class TaskContext
     {
         private static TaskContext? _uniqueInstance;
-        private static readonly object Locker = new();
+        private static readonly object InstanceLocker = new();
 
         private TaskContext()
         {
@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask
         {
             if (_uniqueInstance == null)
             {
-                lock (Locker)
+                lock (InstanceLocker)
                 {
                     _uniqueInstance ??= new TaskContext();
                 }
@@ -41,6 +41,8 @@ namespace BetterGenshinImpact.GameTask
             IsInitialized = true;
         }
 
+        public static readonly object TaskLocker = new();
+
         public bool IsInitialized { get; set; }
 
         public IntPtr GameHandle { get; set; }
@@ -49,9 +51,7 @@ namespace BetterGenshinImpact.GameTask
 
         public float DpiScale { get; set; }
 
-
         public SystemInfo SystemInfo { get; set; }
-
 
         public AllConfig Config
         {

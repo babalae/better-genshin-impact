@@ -7,6 +7,7 @@ using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Gdi32;
@@ -27,8 +28,16 @@ public class AutoFightTask
 
     public async void Start()
     {
+        var hasLock = false;
         try
         {
+            Monitor.TryEnter(TaskContext.TaskLocker, ref hasLock);
+            if (!hasLock)
+            {
+                Logger.LogError("启动自动战斗功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             Init();
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
             if (!combatScenes.CheckTeamInitialized())
@@ -78,6 +87,11 @@ public class AutoFightTask
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动战斗结束");
+
+            if (hasLock)
+            {
+                Monitor.Exit(TaskContext.TaskLocker);
+            }
         }
     }
 

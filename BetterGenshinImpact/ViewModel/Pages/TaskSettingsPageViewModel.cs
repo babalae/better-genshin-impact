@@ -26,7 +26,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private readonly TaskTriggerDispatcher _taskDispatcher;
 
     private CancellationTokenSource? _cts;
-
+    private static readonly object _locker = new();
 
     [ObservableProperty] private string[] _strategyList;
     [ObservableProperty] private string _switchAutoGeniusInvokationButtonText;
@@ -34,12 +34,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private int _autoWoodRoundNum;
     [ObservableProperty] private string _switchAutoWoodButtonText;
 
-
     [ObservableProperty] private string[] _combatStrategyList;
     [ObservableProperty] private int _autoDomainRoundNum;
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
     [ObservableProperty] private string _switchAutoFightButtonText = "启动";
-
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -84,6 +82,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             case "Combat":
                 CombatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
                 break;
+
             case "GeniusInvocation":
                 StrategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
                 break;
@@ -109,33 +108,36 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         try
         {
-            if (SwitchAutoGeniusInvokationButtonText == "启动")
+            lock (_locker)
             {
-                if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
+                if (SwitchAutoGeniusInvokationButtonText == "启动")
                 {
-                    MessageBox.Show("请先选择策略");
-                    return;
+                    if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
+                    {
+                        MessageBox.Show("请先选择策略");
+                        return;
+                    }
+
+                    var path = Global.Absolute(@"User\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
+
+                    if (!File.Exists(path))
+                    {
+                        MessageBox.Show("策略文件不存在");
+                        return;
+                    }
+
+                    var content = File.ReadAllText(path);
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new GeniusInvokationTaskParam(_cts, _taskDispatcher, content);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoGeniusInvokation, param);
+                    SwitchAutoGeniusInvokationButtonText = "停止";
                 }
-
-                var path = Global.Absolute(@"User\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
-
-                if (!File.Exists(path))
+                else
                 {
-                    MessageBox.Show("策略文件不存在");
-                    return;
+                    _cts?.Cancel();
+                    SwitchAutoGeniusInvokationButtonText = "启动";
                 }
-
-                var content = File.ReadAllText(path);
-                _cts?.Cancel();
-                _cts = new CancellationTokenSource();
-                var param = new GeniusInvokationTaskParam(_cts, _taskDispatcher, content);
-                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoGeniusInvokation, param);
-                SwitchAutoGeniusInvokationButtonText = "停止";
-            }
-            else
-            {
-                _cts?.Cancel();
-                SwitchAutoGeniusInvokationButtonText = "启动";
             }
         }
         catch (System.Exception ex)
@@ -155,18 +157,21 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         try
         {
-            if (SwitchAutoWoodButtonText == "启动")
+            lock (_locker)
             {
-                _cts?.Cancel();
-                _cts = new CancellationTokenSource();
-                var param = new WoodTaskParam(_cts, _taskDispatcher, AutoWoodRoundNum);
-                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
-                SwitchAutoWoodButtonText = "停止";
-            }
-            else
-            {
-                _cts?.Cancel();
-                SwitchAutoWoodButtonText = "启动";
+                if (SwitchAutoWoodButtonText == "启动")
+                {
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new WoodTaskParam(_cts, _taskDispatcher, AutoWoodRoundNum);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
+                    SwitchAutoWoodButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoWoodButtonText = "启动";
+                }
             }
         }
         catch (System.Exception ex)
@@ -181,30 +186,32 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8") { UseShellExecute = true });
     }
 
-
     [RelayCommand]
     public void OnSwitchAutoFight()
     {
         try
         {
-            if (SwitchAutoFightButtonText == "启动")
+            lock (_locker)
             {
-                var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
-                if (string.IsNullOrEmpty(content))
+                if (SwitchAutoFightButtonText == "启动")
                 {
-                    return;
-                }
+                    var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
+                    if (string.IsNullOrEmpty(content))
+                    {
+                        return;
+                    }
 
-                _cts?.Cancel();
-                _cts = new CancellationTokenSource();
-                var param = new AutoFightParam(_cts, content);
-                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoFight, param);
-                SwitchAutoFightButtonText = "停止";
-            }
-            else
-            {
-                _cts?.Cancel();
-                SwitchAutoFightButtonText = "启动";
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new AutoFightParam(_cts, content);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoFight, param);
+                    SwitchAutoFightButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoFightButtonText = "启动";
+                }
             }
         }
         catch (System.Exception ex)
@@ -244,24 +251,27 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         try
         {
-            if (SwitchAutoDomainButtonText == "启动")
+            lock (_locker)
             {
-                var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
-                if (string.IsNullOrEmpty(content))
+                if (SwitchAutoDomainButtonText == "启动")
                 {
-                    return;
-                }
+                    var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
+                    if (string.IsNullOrEmpty(content))
+                    {
+                        return;
+                    }
 
-                _cts?.Cancel();
-                _cts = new CancellationTokenSource();
-                var param = new AutoDomainParam(_cts, AutoDomainRoundNum, content);
-                _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
-                SwitchAutoDomainButtonText = "停止";
-            }
-            else
-            {
-                _cts?.Cancel();
-                SwitchAutoDomainButtonText = "启动";
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new AutoDomainParam(_cts, AutoDomainRoundNum, content);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
+                    SwitchAutoDomainButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoDomainButtonText = "启动";
+                }
             }
         }
         catch (System.Exception ex)
@@ -275,7 +285,6 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/domain.html") { UseShellExecute = true });
     }
-
 
     public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
     {

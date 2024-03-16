@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.AutoDomain;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoWood;
@@ -9,21 +10,18 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using Vanara.PInvoke;
-using System.IO;
-using System.Drawing.Imaging;
-using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
-using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -307,7 +305,6 @@ namespace BetterGenshinImpact.GameTask
                     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
-
 
                 var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
