@@ -5,11 +5,9 @@ namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = "0.26.0";
+    public static string Version { get; } = "0.26.1";
 
     public static string StartUpPath { get; } = AppContext.BaseDirectory;
-
-    public static string AppPath { get; private set; } = Absolute("BetterGI.exe");
 
     public static string Absolute(string relativePath)
     {

@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using GC = System.GC;
 
 namespace BetterGenshinImpact.GameTask.AutoWood;
 
@@ -129,6 +130,9 @@ public class AutoWoodTask
 
         // 3. 等待进入游戏
         EnterGame(taskParam);
+
+        // 手动 GC
+        GC.Collect();
     }
 
     private void PressZ(WoodTaskParam taskParam)
@@ -219,11 +223,12 @@ public class AutoWoodTask
         Sleep(500, taskParam.Cts);
 
         // 点击确认
-        var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+        using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
         content.CaptureRectArea.Find(_assets.ConfirmRo, ra =>
         {
             ra.ClickCenter();
             Debug.WriteLine("[AutoWood] Click confirm button");
+            ra.Dispose();
         });
     }
 
