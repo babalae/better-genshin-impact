@@ -7,14 +7,12 @@ namespace BetterGenshinImpact.Test
     /// </summary>
     public partial class MainWindow : Window
     {
-
         public MainWindow()
         {
-
             InitializeComponent();
-            
-            new HsvTestWindow().Run();
-          
+
+            // new HsvTestWindow().Run();
+            MapPuzzle.Put();
         }
     }
 }
