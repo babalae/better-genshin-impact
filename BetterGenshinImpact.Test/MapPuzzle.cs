@@ -66,8 +66,8 @@ public class MapPuzzle
         // 计算大图的总宽度和高度
         var lenCol = maxCol - minCol;
         var lenRow = maxRow - minRow;
-        int totalWidth = (lenCol + 1) * block; // referenceImage是你参考的单张图片的宽度
-        int totalHeight = (lenRow + 1) * block; // referenceImage是你参考的单张图片的高度
+        int totalWidth = (lenCol + 1) * block;
+        int totalHeight = (lenRow + 1) * block;
 
         // 创建空白大图
         Mat largeImage = new Mat(totalHeight, totalWidth, MatType.CV_8UC3, new Scalar(255, 255, 255));
@@ -83,18 +83,19 @@ public class MapPuzzle
             arr[row, col] = 1;
 
             // 计算当前图片在大图中的左上角位置
-            int x = (lenCol - col) * block;
-            int y = (lenRow - row) * block;
+            int x = (lenCol - col) * block; // 顺序倒过来了，屮
+            int y = (lenRow - row) * block; // 顺序倒过来了，屮
 
             // 将图片粘贴到大图上
             if (img.Width != block || img.Height != block)
             {
-                img = img.Resize(new Size(block, block));
+                img = img.Resize(new Size(block, block), 0, 0, InterpolationFlags.Nearest);
             }
 
             img.CopyTo(new Mat(largeImage, new Rect(x, y, img.Width, img.Height)));
         }
 
+        // 康康二维数组的拼接结果
         for (int i = 0; i < arr.GetLength(0); i++)
         {
             for (int j = 0; j < arr.GetLength(1); j++)
