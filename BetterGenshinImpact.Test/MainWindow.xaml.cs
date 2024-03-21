@@ -12,8 +12,8 @@ namespace BetterGenshinImpact.Test
             InitializeComponent();
 
             // new HsvTestWindow().Run();
-            // MapPuzzle.Put();
-            OcrTest.TestYap();
+            MapPuzzle.Put();
+            // OcrTest.TestYap();
         }
     }
 }

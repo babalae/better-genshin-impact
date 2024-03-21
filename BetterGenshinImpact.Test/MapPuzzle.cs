@@ -1,6 +1,7 @@
 ﻿using OpenCvSharp;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.Test;
@@ -8,6 +9,22 @@ namespace BetterGenshinImpact.Test;
 public class MapPuzzle
 {
     public static readonly int block = 1024;
+
+    public static List<string> PicWhiteHashList = new List<string>
+    {
+        "25E23B0D18C2CBEA19D28E5E399D42FA",
+        "3B4847FEA7D506EAF3B75D4F4541E867",
+        "CCCAF02768432A46AA0001E51DC5991B",
+        "F80C609208063B289A05B8A1E0351226",
+        "06767779699056515930D0597072AB7D",
+        "04F757BD57FBB5FA74A6C9C0634BB122",
+        "04C1EDFCD89249209D1DD885DD2F2129",
+        "01B8641F5F58BBDE6E10F53D56EA7288",
+        "AF56BDE27BDF534317A9FB34E08165C0",
+        "05F4EAB8C6BFBADD60B8A5CCDD614F83"
+    };
+
+    public static MD5 Md5Service = MD5.Create();
 
     public static void Put()
     {
@@ -28,22 +45,39 @@ public class MapPuzzle
             int row, col;
             if (match.Success)
             {
+                // Debug.WriteLine($"已匹配 ({match.Groups[1].Value}, {match.Groups[2].Value}) {name}");
                 row = int.Parse(match.Groups[1].Value);
                 col = int.Parse(match.Groups[2].Value);
             }
             else
             {
+                // Debug.WriteLine($"未匹配 {name}");
                 continue;
             }
 
             Mat img = Cv2.ImRead(imagePath);
+            var hashBytes = Md5Service.ComputeHash(File.ReadAllBytes(imagePath));
+            var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
+
+            if (img.Width < 8)
+            {
+                Debug.WriteLine($"太小的不要 ({row}, {col}) {img.Width} {img.Height}  {name}");
+                continue;
+            }
 
             // 如果当前位置已经有图片了，保留尺寸较大的图片
             if (imageLocations.ContainsKey((row, col)))
             {
-                if (img.Width > imageLocations[(row, col)].Img.Width || fileInfo.Length > imageLocations[(row, col)].FileLength)
+                // 如果当前位置的图片已经被hash锁定，跳过
+                if (imageLocations[(row, col)].Locked)
                 {
-                    imageLocations[(row, col)] = new ImgInfo(img, name, fileInfo.Length);
+                    Debug.WriteLine($"已锁定 ({row}, {col}) {name}");
+                    continue;
+                }
+
+                if (img.Width > imageLocations[(row, col)].Img.Width || fileInfo.Length > imageLocations[(row, col)].FileLength || PicWhiteHashList.Contains(hash))
+                {
+                    imageLocations[(row, col)] = new ImgInfo(img, name, fileInfo.Length, PicWhiteHashList.Contains(hash));
                 }
                 else
                 {
@@ -52,7 +86,7 @@ public class MapPuzzle
             }
             else
             {
-                imageLocations[(row, col)] = new ImgInfo(img, name, fileInfo.Length);
+                imageLocations[(row, col)] = new ImgInfo(img, name, fileInfo.Length, PicWhiteHashList.Contains(hash));
             }
         }
 
@@ -92,6 +126,9 @@ public class MapPuzzle
                 img = img.Resize(new Size(block, block), 0, 0, InterpolationFlags.Nearest);
             }
 
+            // 添加位置标识
+            // img.PutText($"{location.Key.row} , {location.Key.col}", new Point(50, 50), HersheyFonts.HersheyComplex, 2, Scalar.Red, 2, LineTypes.Link8);
+
             img.CopyTo(new Mat(largeImage, new Rect(x, y, img.Width, img.Height)));
         }
 
@@ -128,11 +165,14 @@ public class MapPuzzle
         /// </summary>
         public long FileLength { get; set; }
 
-        public ImgInfo(Mat mat, string name, long fileLength)
+        public bool Locked { get; set; }
+
+        public ImgInfo(Mat mat, string name, long fileLength, bool locked = false)
         {
             this.Img = mat;
             this.Name = name;
             this.FileLength = fileLength;
+            Locked = locked;
         }
     }
 }
