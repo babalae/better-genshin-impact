@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
@@ -19,7 +20,8 @@ public class SystemControl
         Process.Start(new ProcessStartInfo(path)
         {
             UseShellExecute = true,
-            Arguments = TaskContext.Instance().Config.GenshinStartConfig.GenshinStartArgs
+            Arguments = TaskContext.Instance().Config.GenshinStartConfig.GenshinStartArgs,
+            WorkingDirectory = Path.GetDirectoryName(path)
         });
 
         for (var i = 0; i < 5; i++)
