@@ -12,6 +12,7 @@ using System;
 using System.IO;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -69,5 +70,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
 
         Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    public void OnOpenMapViewer()
+    {
+        new MapViewer().Show();
     }
 }

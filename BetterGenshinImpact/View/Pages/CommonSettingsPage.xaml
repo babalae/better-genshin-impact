@@ -309,6 +309,31 @@
             </StackPanel>
         </ui:CardExpander>
 
+        <!--  地图  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="查看地图（开发者）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="查看当前识别到的位置"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+                       Command="{Binding OpenMapViewerCommand}"
+                       Content="查看地图" />
+        </ui:CardControl>
+
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>
                 <Grid>

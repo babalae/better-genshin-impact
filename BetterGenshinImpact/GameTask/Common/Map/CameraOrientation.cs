@@ -1,13 +1,13 @@
-﻿using BetterGenshinImpact.View.Drawable;
-using OpenCvSharp;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using BetterGenshinImpact.View.Drawable;
+using OpenCvSharp;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
-namespace BetterGenshinImpact.GameTask.Common.MiniMap;
+namespace BetterGenshinImpact.GameTask.Common.Map;
 
 public class CameraOrientation
 {
@@ -46,7 +46,6 @@ public class CameraOrientation
         // 优化
         var left2 = left.Zip(right, (x, y) => Math.Max(x - y, 0)).ToArray();
         var right2 = right.Zip(left, (x, y) => Math.Max(x - y, 0)).ToArray();
-
 
         // 左移后相乘 在附近2°内寻找最大值
         var sum = new int[360];

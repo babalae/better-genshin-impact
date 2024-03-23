@@ -1,12 +1,7 @@
 ﻿using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BetterGenshinImpact.GameTask.Common.MiniMap;
+namespace BetterGenshinImpact.GameTask.Common.Map;
 
 public class CharacterOrientation
 {
@@ -112,5 +107,4 @@ public class CharacterOrientation
         var midY = (p1.Y + p2.Y) / 2;
         return new Point(midX, midY);
     }
-
 }

@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Core;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
@@ -15,12 +14,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
-using OpenCvSharp;
 using Wpf.Ui.Controls;
-using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -32,10 +28,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty] private bool _taskDispatcherEnabled = false;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
 
     public AllConfig Config { get; set; }

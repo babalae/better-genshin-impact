@@ -28,6 +28,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="Assets\Map\map_sd1024.png" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
@@ -81,6 +85,9 @@
 		</Compile>
 		<Compile Update="View\PickerWindow.xaml.cs">
 			<SubType>Code</SubType>
+		</Compile>
+		<Compile Update="View\Windows\MapViewer.xaml.cs">
+		  <SubType>Code</SubType>
 		</Compile>
 	</ItemGroup>
 
@@ -526,6 +533,10 @@
 		<None Update="User\pick_white_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="Assets\Map\map_sd1024.png" />
 	</ItemGroup>
 
 </Project>

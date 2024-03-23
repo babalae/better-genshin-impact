@@ -18,7 +18,7 @@ internal static class ResourceHelper
     public static byte[] GetBytes(string uriString)
     {
         Uri uri = new(uriString);
-        StreamResourceInfo info = Application.GetResourceStream(uri);
+        StreamResourceInfo? info = Application.GetResourceStream(uri);
         using BinaryReader stream = new(info.Stream);
         return stream.ReadBytes((int)info.Stream.Length);
     }
@@ -26,14 +26,18 @@ internal static class ResourceHelper
     public static Stream GetStream(string uriString)
     {
         Uri uri = new(uriString);
-        StreamResourceInfo info = Application.GetResourceStream(uri);
+        StreamResourceInfo? info = Application.GetResourceStream(uri);
         return info?.Stream!;
     }
 
     public static string GetString(string uriString, Encoding encoding = null!)
     {
         Uri uri = new(uriString);
-        StreamResourceInfo info = Application.GetResourceStream(uri);
+        StreamResourceInfo? info = Application.GetResourceStream(uri);
+        if (info == null)
+        {
+            throw new FileNotFoundException($"Resource not found: {uriString}");
+        }
         using StreamReader stream = new(info.Stream, encoding ?? Encoding.UTF8);
         return stream.ReadToEnd();
     }

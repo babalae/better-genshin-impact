@@ -104,7 +104,7 @@ public class MapPuzzle
         int totalHeight = (lenRow + 1) * block;
 
         // 创建空白大图
-        Mat largeImage = new Mat(totalHeight, totalWidth, MatType.CV_8UC3, new Scalar(255, 255, 255));
+        Mat largeImage = new Mat(totalHeight, totalWidth, MatType.CV_8UC3, new Scalar(0, 0, 0));
 
         // 拼接图片
         int[,] arr = new int[lenRow + 1, lenCol + 1];
@@ -145,6 +145,8 @@ public class MapPuzzle
 
         // 保存大图
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image.png", largeImage);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
         // 释放资源
         largeImage.Dispose();
