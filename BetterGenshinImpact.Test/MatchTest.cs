@@ -13,9 +13,9 @@ public class MatchTest
 {
     public static void Test()
     {
-        var tar = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_185641.png", ImreadModes.Color);
+        var tar = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_152015.png", ImreadModes.Color);
         tar = tar.Resize(new Size(tar.Width * 2, tar.Height * 2), 0, 0, InterpolationFlags.Nearest);
-        var src = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image.png", ImreadModes.Color);
+        var src = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image_C.png", ImreadModes.Color);
         var res = MatchPicBySurf(src, tar);
 
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\s1.png", res);
@@ -117,7 +117,7 @@ public class MatchTest
         return p2;
     }
 
-    public static Mat MatchPicBySurf(Mat matSrc, Mat matTo, double threshold = 400)
+    public static Mat MatchPicBySurf(Mat matSrc, Mat matTo, double threshold = 100)
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
@@ -125,16 +125,16 @@ public class MatchTest
         Mat matSrcRet = new Mat();
         using Mat matToRet = new Mat();
         KeyPoint[] keyPointsSrc, keyPointsTo;
-        using (var surf = OpenCvSharp.XFeatures2D.SURF.Create(threshold, 4, 3, true, true))
+        using (var surf = OpenCvSharp.XFeatures2D.SURF.Create(threshold, 4, 3, false, true))
         {
-            var kpPath = @"E:\HuiTask\更好的原神\地图匹配\surf.kp";
-            var kpMatPath = @"E:\HuiTask\更好的原神\地图匹配\surf.mat";
+            var kpPath = @"E:\HuiTask\更好的原神\地图匹配\surf2.kp";
+            var kpMatPath = @"E:\HuiTask\更好的原神\地图匹配\surf2.mat";
             if (File.Exists(kpPath) && File.Exists(kpMatPath))
             {
                 keyPointsSrc = (KeyPoint[])DeserializeObject(File.ReadAllBytes(kpPath));
                 GCHandle pinnedArray = GCHandle.Alloc(DeserializeObject(File.ReadAllBytes(kpMatPath)), GCHandleType.Pinned);
                 IntPtr pointer = pinnedArray.AddrOfPinnedObject();
-                matSrcRet = new Mat(166767, 128, MatType.CV_32FC1, pointer);
+                matSrcRet = new Mat(334848, 64, MatType.CV_32FC1, pointer);
             }
             else
             {
