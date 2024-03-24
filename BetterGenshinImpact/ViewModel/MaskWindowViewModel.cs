@@ -19,6 +19,8 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskButton> _maskButtons = new();
 
+        [ObservableProperty] private ObservableCollection<StatusItem> _statusList = new();
+
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private Rect _uidCoverRect = new(0, 0, 200, 30);
@@ -68,10 +70,23 @@ namespace BetterGenshinImpact.ViewModel
             });
         }
 
+        private void InitializeStatusList()
+        {
+            if (Config != null)
+            {
+                StatusList.Add(new StatusItem("自动拾取", Config.AutoPickConfig));
+                StatusList.Add(new StatusItem("自动剧情", Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem("自动邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem("自动钓鱼", Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem("快速传送", Config.QuickTeleportConfig));
+            }
+        }
+
         [RelayCommand]
         private void OnLoaded()
         {
             RefreshSettings();
+            InitializeStatusList();
         }
 
         private void RefreshSettings()
