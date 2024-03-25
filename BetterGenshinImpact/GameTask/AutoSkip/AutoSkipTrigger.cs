@@ -363,6 +363,7 @@ public class AutoSkipTrigger : ITaskTrigger
         var exclamationIconRa = content.CaptureRectArea.Find(_autoSkipAssets.ExclamationIconRo);
         if (!exclamationIconRa.IsEmpty())
         {
+            TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
             exclamationIconRa.ClickCenter();
             AutoSkipLog("点击感叹号选项");
             exclamationIconRa.Dispose();
@@ -481,6 +482,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 没OCR到文字，直接选择气泡选项
+                TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
                 var clickOffset = new ClickOffset(captureArea.X + _autoSkipAssets.OptionRoi.X, captureArea.Y + _autoSkipAssets.OptionRoi.Y, assetScale);
                 clickOffset.ClickWithoutScale(clickRect.X + clickRect.Width / 2, clickRect.Y + clickRect.Height / 2);
                 var msg = _config.ClickFirstOptionEnabled ? "第一个" : "最后一个";
@@ -495,6 +497,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private void ClickOcrRegion(ClickOffset clickOffset, PaddleOcrResultRegion clickRegion)
     {
+        TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
         clickOffset.ClickWithoutScale(clickRegion.Rect.Center.X, clickRegion.Rect.Center.Y);
         AutoSkipLog(clickRegion.Text);
     }
@@ -543,7 +546,7 @@ public class AutoSkipTrigger : ITaskTrigger
         var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
         if (!exclamationRa.IsEmpty())
         {
-            // 最多3个物品 现在就支持一个
+            // 最多4个物品 现在就支持一个
             var goods = content.CaptureRectArea.Find(_autoSkipAssets.SubmitGoodsRo);
             if (!goods.IsEmpty())
             {
