@@ -73,6 +73,51 @@
                              Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </ContentControl>
 
+
+            <ContentControl x:Name="StatusWrapper"
+                            Canvas.Left="20"
+                            Canvas.Top="476"
+                            Width="477"
+                            Height="24"
+                            Style="{StaticResource OuterDraggableResizableItemStyle}">
+                <ListView ItemsSource="{Binding StatusList}" Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Focusable" Value="False" />
+                            <Setter Property="IsHitTestVisible" Value="False" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <StackPanel.Resources>
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Setter Property="Margin" Value="0,0,8,0"/>
+                                    </Style>
+                                </StackPanel.Resources>
+                                <TextBlock Text="{Binding Name}" FontSize="12">
+                                    <TextBlock.Style>
+                                        <Style TargetType="{x:Type TextBlock}">
+                                            <Setter Property="Foreground" Value="LightGray" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                    <Setter Property="Foreground" Value="LightGreen" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </ContentControl>
+
             <!--<ContentControl Width="230"
                             Height="130"
                             Canvas.Top="150"
