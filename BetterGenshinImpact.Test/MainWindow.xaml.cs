@@ -1,21 +1,20 @@
 ﻿using System.Windows;
 
-namespace BetterGenshinImpact.Test
-{
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
-    {
-        public MainWindow()
-        {
-            InitializeComponent();
+namespace BetterGenshinImpact.Test;
 
-            // new HsvTestWindow().Run();
-            // MapPuzzle.Put();
-            // OcrTest.TestYap();
-            // MatchTemplateTest.Test();
-            MatchTest.Test();
-        }
+/// <summary>
+/// Interaction logic for MainWindow.xaml
+/// </summary>
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+
+        // new HsvTestWindow().Run();
+        // MapPuzzle.Put();
+        // OcrTest.TestYap();
+        // MatchTemplateTest.Test();
+        MatchTest.Test();
     }
 }

@@ -14,8 +14,8 @@ public class MatchTest
     public static void Test()
     {
         var tar = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_152015.png", ImreadModes.Color);
-        tar = tar.Resize(new Size(tar.Width * 2, tar.Height * 2), 0, 0, InterpolationFlags.Nearest);
-        var src = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image_C.png", ImreadModes.Color);
+        // tar = tar.Resize(new Size(tar.Width * 2, tar.Height * 2), 0, 0, InterpolationFlags.Nearest);
+        var src = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image_2048_lim[quick].png", ImreadModes.Color);
         var res = MatchPicBySurf(src, tar);
 
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\s1.png", res);
@@ -117,7 +117,7 @@ public class MatchTest
         return p2;
     }
 
-    public static Mat MatchPicBySurf(Mat matSrc, Mat matTo, double threshold = 100)
+    public static Mat MatchPicBySurf(Mat matSrc, Mat matTo, double threshold = 400)
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
@@ -127,9 +127,9 @@ public class MatchTest
         KeyPoint[] keyPointsSrc, keyPointsTo;
         using (var surf = OpenCvSharp.XFeatures2D.SURF.Create(threshold, 4, 3, false, true))
         {
-            var kpPath = @"E:\HuiTask\更好的原神\地图匹配\surf2.kp";
-            var kpMatPath = @"E:\HuiTask\更好的原神\地图匹配\surf2.mat";
-            if (File.Exists(kpPath) && File.Exists(kpMatPath))
+            var kpPath = @"E:\HuiTask\更好的原神\地图匹配\surf3.kp";
+            var kpMatPath = @"E:\HuiTask\更好的原神\地图匹配\surf3.mat";
+            if (File.Exists(kpPath) && File.Exists(kpMatPath) && false)
             {
                 keyPointsSrc = (KeyPoint[])DeserializeObject(File.ReadAllBytes(kpPath));
                 GCHandle pinnedArray = GCHandle.Alloc(DeserializeObject(File.ReadAllBytes(kpMatPath)), GCHandleType.Pinned);

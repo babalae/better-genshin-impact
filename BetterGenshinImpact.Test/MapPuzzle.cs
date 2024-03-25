@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.Test;
 
 public class MapPuzzle
 {
-    public static readonly int block = 1024;
+    public static readonly int block = 2048;
 
     public static List<string> PicWhiteHashList = new List<string>
     {
@@ -59,7 +59,7 @@ public class MapPuzzle
             var hashBytes = Md5Service.ComputeHash(File.ReadAllBytes(imagePath));
             var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
 
-            if (img.Width < 8)
+            if (img.Width != 2048)
             {
                 Debug.WriteLine($"太小的不要 ({row}, {col}) {img.Width} {img.Height}  {name}");
                 continue;
@@ -144,9 +144,9 @@ public class MapPuzzle
         }
 
         // 保存大图
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image.png", largeImage);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_2048.png", largeImage);
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
         // 释放资源
         largeImage.Dispose();
