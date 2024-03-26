@@ -29,6 +29,9 @@
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
+        <b:EventTrigger EventName="Closing">
+            <b:InvokeCommandAction Command="{Binding ClosingCommand}" PassEventArgsToCommand="True"/>
+        </b:EventTrigger>
     </b:Interaction.Triggers>
 
     <Grid>

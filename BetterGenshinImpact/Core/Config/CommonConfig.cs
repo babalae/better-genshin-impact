@@ -20,4 +20,10 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _screenshotUidCoverEnabled;
+
+    /// <summary>
+    ///     退出时最小化至托盘
+    /// </summary>
+    [ObservableProperty]
+    private bool _exitToTray;
 }

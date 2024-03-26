@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
@@ -43,6 +44,16 @@ public partial class MainWindowViewModel : ObservableObject
     private void OnHide()
     {
         IsVisible = false;
+    }
+
+    [RelayCommand]
+    private void OnClosing(CancelEventArgs e)
+    {
+        if (Config.CommonConfig.ExitToTray)
+        {
+            e.Cancel = true;
+            OnHide();
+        }
     }
 
     [RelayCommand]
