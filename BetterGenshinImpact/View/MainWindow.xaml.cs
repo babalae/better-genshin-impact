@@ -29,6 +29,8 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         navigationService.SetNavigationControl(RootNavigation);
 
         Application.Current.MainWindow = this;
+
+        Loaded += (s, e) => Activate();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
