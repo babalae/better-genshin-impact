@@ -90,6 +90,13 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="通知"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:NotificationSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Alert24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
