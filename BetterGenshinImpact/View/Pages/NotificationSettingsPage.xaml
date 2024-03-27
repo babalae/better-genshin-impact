@@ -59,8 +59,8 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -79,7 +79,7 @@
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.WebhookEndpoint, Mode=TwoWay}"
-                                TextWrapping="Wrap" />
+                                TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -87,8 +87,8 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                  Grid.Column="0"
@@ -102,12 +102,15 @@
                                  TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.Column="1"
+                               HorizontalAlignment="Right"
                                Margin="0,0,36,0"
                                Content="Send Test"
                                Command="{Binding TestWebhookCommand}"
                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="1"
+                                  HorizontalAlignment="Right"
+                                  Margin="0,0,36,0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{Binding WebhookStatus}"
                                   TextWrapping="Wrap" />
