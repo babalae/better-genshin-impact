@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -55,6 +56,17 @@ public class AutoDomainTask
         _config = TaskContext.Instance().Config.AutoDomainConfig;
     }
 
+    private void Notify(NotificationAction action, NotificationConclusion? conclusion)
+    {
+        NotificationManager.Instance().NotifyObservers(new TaskNotificationData
+        {
+            Event = NotificationEvent.Domain,
+            Action = action,
+            Conclusion = conclusion,
+            Task = _taskParam
+        });
+    }
+
     public async void Start()
     {
         var hasLock = false;
@@ -68,6 +80,7 @@ public class AutoDomainTask
             }
 
             Init();
+            Notify(NotificationAction.Started, null);
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 前置进入秘境
@@ -111,19 +124,22 @@ public class AutoDomainTask
                     {
                         Logger.LogInformation("体力已经耗尽，结束自动秘境");
                     }
-
+                    Notify(NotificationAction.Completed, NotificationConclusion.Success);
                     break;
                 }
+                Notify(NotificationAction.Progress, null);
             }
         }
         catch (NormalEndException e)
         {
             Logger.LogInformation("自动秘境中断:" + e.Message);
+            Notify(NotificationAction.Completed, NotificationConclusion.Cancelled);
         }
         catch (Exception e)
         {
             Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
+            Notify(NotificationAction.Completed, NotificationConclusion.Failure);
         }
         finally
         {
