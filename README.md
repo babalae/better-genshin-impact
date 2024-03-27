@@ -24,6 +24,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [自动拾取](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)：遇到可交互/拾取内容时自动按 <kbd>F</kbd>，支持黑白名单配置
   * [自动剧情](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)：快速点击过剧情、自动选择选项、自动提交物品、关闭弹出书页等
     * 与凯瑟琳对话时有橙色选项会 [自动领取「每日委托」奖励](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)、[自动重新派遣](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
+  * [自动邀约](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%82%80%E7%BA%A6)：自动剧情开启的情况下此功能才会生效，自动选择邀约选项
   * [全自动钓鱼](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
   * [全自动七圣召唤](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
   * [自动伐木](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
