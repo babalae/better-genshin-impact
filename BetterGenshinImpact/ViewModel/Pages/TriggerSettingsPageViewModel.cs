@@ -11,7 +11,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware
+public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public AllConfig Config { get; set; }
 

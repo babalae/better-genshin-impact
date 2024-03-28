@@ -19,7 +19,7 @@ using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel;
 
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;

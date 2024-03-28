@@ -9,7 +9,7 @@ using System.Diagnostics;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class ScriptControlViewModel : ObservableObject, INavigationAware
+public partial class ScriptControlViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public ScriptControlViewModel()
     {
