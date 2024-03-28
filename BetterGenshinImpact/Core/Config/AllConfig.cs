@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.QuickTeleport;
+using BetterGenshinImpact.Service.Notification;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
@@ -122,6 +123,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public HotKeyConfig HotKeyConfig { get; set; } = new();
 
+    /// <summary>
+    ///     通知配置
+    /// </summary>
+    public NotificationConfig NotificationConfig { get; set; } = new();
+
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -131,6 +137,7 @@ public partial class AllConfig : ObservableObject
         MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
         CommonConfig.PropertyChanged += OnAnyPropertyChanged;
         GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
+        NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
 
         AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
@@ -146,6 +153,7 @@ public partial class AllConfig : ObservableObject
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
     {
         GameTaskManager.RefreshTriggerConfigs();
+        NotificationManager.Instance().RefreshNotifiers();
         OnAnyChangedAction?.Invoke();
     }
 }
