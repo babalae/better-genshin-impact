@@ -26,6 +26,7 @@ public class AutoSkipAssets
 
     public RecognitionObject SubmitExclamationIconRo;
     public RecognitionObject SubmitGoodsRo;
+    public Mat SubmitGoodsMat;
 
     public Mat HangoutSelectedMat;
     public Mat HangoutUnselectedMat;
@@ -49,7 +50,6 @@ public class AutoSkipAssets
         //}
         //BinaryStopAutoButtonMat = StopAutoButtonRo.TemplateImageGreyMat.Clone();
 
-
         //Cv2.Threshold(BinaryStopAutoButtonMat, BinaryStopAutoButtonMat, 0, 255, ThresholdTypes.BinaryInv);
 
         PlayingTextRo = new RecognitionObject
@@ -63,7 +63,6 @@ public class AutoSkipAssets
             },
             DrawOnWindow = true
         }.InitTemplate();
-
 
         OptionRoi = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2 - info.CaptureAreaRect.Width / 6, info.CaptureAreaRect.Height);
         OptionIconRo = new RecognitionObject
@@ -160,11 +159,14 @@ public class AutoSkipAssets
         {
             Name = "SubmitGoods",
             RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateMatchMode = TemplateMatchModes.CCorrNormed,
+            Threshold = 0.9,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_goods.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width/2, info.CaptureAreaRect.Height / 3),
-            DrawOnWindow = false
+            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height / 3),
+            DrawOnWindow = true,
+            Use3Channels = true
         }.InitTemplate();
-
+        SubmitGoodsMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_goods.png");
 
         // 邀约
         HangoutSelectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_selected.png", ImreadModes.Grayscale);

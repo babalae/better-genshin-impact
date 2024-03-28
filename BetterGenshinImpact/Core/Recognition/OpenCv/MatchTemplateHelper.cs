@@ -14,8 +14,7 @@ public class MatchTemplateHelper
     private static readonly ILogger<MatchTemplateHelper> _logger = App.GetLogger<MatchTemplateHelper>();
 
     /// <summary>
-    ///     模板匹配
-    ///     TODO 算法不一样的的时候找点的方法也不一样
+    ///  模板匹配
     /// </summary>
     /// <param name="srcMat">原图像</param>
     /// <param name="dstMat">模板</param>
@@ -29,13 +28,30 @@ public class MatchTemplateHelper
         {
             using var result = new Mat();
             if (maskMat == null)
+            {
                 Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
+            }
             else
+            {
                 Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
+            }
+            // Cv2.Normalize(result, result, 0, 1, NormTypes.MinMax, -1, null);
+            Cv2.MinMaxLoc(result, out var minValue, out var maxValue, out var minLoc, out var maxLoc);
 
-            Cv2.MinMaxLoc(result, out _, out var maxValue, out _, out var point);
-
-            if (maxValue >= threshold) return point;
+            if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.SqDiffNormed)
+            {
+                if (minValue <= threshold)
+                {
+                    return minLoc;
+                }
+            }
+            else
+            {
+                if (maxValue >= threshold)
+                {
+                    return maxLoc;
+                }
+            }
 
             return new Point();
         }
@@ -176,6 +192,38 @@ public class MatchTemplateHelper
         while (true)
         {
             var point = MatchTemplate(srcMat, dstMat, TemplateMatchModes.CCoeffNormed, maskMat, threshold);
+            if (point != new Point())
+            {
+                // 把结果给遮掩掉，避免重复识别
+                Cv2.Rectangle(srcMat, point, new Point(point.X + dstMat.Width, point.Y + dstMat.Height), Scalar.Black, -1);
+                list.Add(new Rect(point.X, point.Y, dstMat.Width, dstMat.Height));
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    ///    在一张图中查找一个个模板
+    /// </summary>
+    /// <param name="srcMat"></param>
+    /// <param name="dstMat"></param>
+    /// <param name="matchMode"></param>
+    /// <param name="maskMat"></param>
+    /// <param name="threshold"></param>
+    /// <param name="maxCount"></param>
+    /// <returns></returns>
+    public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat, double threshold, int maxCount)
+    {
+        List<Rect> list = new();
+
+        for (int i = 0; i < maxCount; i++)
+        {
+            var point = MatchTemplate(srcMat, dstMat, matchMode, maskMat, threshold);
             if (point != new Point())
             {
                 // 把结果给遮掩掉，避免重复识别
