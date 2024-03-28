@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
@@ -67,26 +68,17 @@ public partial class App : Application
                 services.AddSingleton<INavigationService, NavigationService>();
 
                 // Main window with navigation
-                services.AddSingleton<INavigationWindow, MainWindow>();
-                services.AddSingleton<MainWindowViewModel>();
+                services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
 
-                // Views and ViewModels
-                services.AddSingleton<HomePage>();
-                services.AddSingleton<HomePageViewModel>();
-                services.AddSingleton<ScriptControlPage>();
-                services.AddSingleton<ScriptControlViewModel>();
-                services.AddSingleton<TriggerSettingsPage>();
-                services.AddSingleton<TriggerSettingsPageViewModel>();
-                services.AddSingleton<MacroSettingsPage>();
-                services.AddSingleton<MacroSettingsPageViewModel>();
-                services.AddSingleton<CommonSettingsPage>();
-                services.AddSingleton<CommonSettingsPageViewModel>();
-                services.AddSingleton<TaskSettingsPage>();
-                services.AddSingleton<TaskSettingsPageViewModel>();
-
-                services.AddSingleton<HotKeyPage>();
-                services.AddSingleton<HotKeyPageViewModel>();
+                // Views
+                services.AddView<HomePage, HomePageViewModel>();
+                services.AddView<ScriptControlPage, ScriptControlViewModel>();
+                services.AddView<TriggerSettingsPage, TriggerSettingsPageViewModel>();
+                services.AddView<MacroSettingsPage, MacroSettingsPageViewModel>();
+                services.AddView<CommonSettingsPage, CommonSettingsPageViewModel>();
+                services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
+                services.AddView<HotKeyPage, HotKeyPageViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();

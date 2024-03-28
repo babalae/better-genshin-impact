@@ -18,7 +18,7 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAware
+public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public AllConfig Config { get; set; }
 

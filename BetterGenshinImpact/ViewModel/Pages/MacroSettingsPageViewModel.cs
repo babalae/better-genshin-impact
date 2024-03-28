@@ -9,7 +9,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class MacroSettingsPageViewModel : ObservableObject, INavigationAware
+public partial class MacroSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public AllConfig Config { get; set; }
 
