@@ -9,16 +9,19 @@ namespace BetterGenshinImpact.Service.Notification.Converter;
 
 public class ImageToBase64Converter : JsonConverter<Image>
 {
-    public override Image Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Image? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        return new Bitmap(0, 0);
+        if (reader.GetString() is string base64)
+        {
+            return Image.FromStream(new MemoryStream(Convert.FromBase64String(base64)));
+        }
+        return default;
     }
 
     public override void Write(Utf8JsonWriter writer, Image value, JsonSerializerOptions options)
     {
-        var stream = new MemoryStream();
-        value.Save(stream, ImageFormat.Jpeg);
-        byte[] byteImage = stream.ToArray();
-        writer.WriteBase64StringValue(byteImage);
+        using var ms = new MemoryStream();
+        value.Save(ms, ImageFormat.Jpeg);
+        writer.WriteBase64StringValue(ms.ToArray());
     }
 }
