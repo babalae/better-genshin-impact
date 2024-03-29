@@ -39,7 +39,7 @@ public class NotificationService
 
     private HttpContent TransformData(INotificationData notificationData)
     {
-        // using object type here so it serailized correctly
+        // using object type here so it serializes the interface correctly
         var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

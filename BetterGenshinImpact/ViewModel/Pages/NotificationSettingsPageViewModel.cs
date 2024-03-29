@@ -16,7 +16,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject
 
     [ObservableProperty] private bool _isLoading;
 
-    [ObservableProperty] private string _webhookStatus = "";
+    [ObservableProperty] private string _webhookStatus = string.Empty;
 
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
@@ -28,7 +28,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject
     private async Task OnTestWebhook()
     {
         IsLoading = true;
-        WebhookStatus = "";
+        WebhookStatus = string.Empty;
 
         var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
 
