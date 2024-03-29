@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace BetterGenshinImpact.Service.Notification.Model;
+﻿namespace BetterGenshinImpact.Service.Notification.Model;
 
 public class LifecycleNotificationData : INotificationData
 {
