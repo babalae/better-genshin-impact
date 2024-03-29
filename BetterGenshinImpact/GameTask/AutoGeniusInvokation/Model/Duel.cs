@@ -2,6 +2,8 @@
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -55,12 +57,14 @@ public class Duel
 
     private static void Notify(NotificationAction action, NotificationConclusion? conclusion)
     {
-        NotificationManager.Instance().NotifyObservers(new TaskNotificationData
-        {
-            Event = NotificationEvent.GeniusInvocation,
-            Action = action,
-            Conclusion = conclusion
-        });
+        Task.Run(() =>
+            NotificationService.Instance().NotifyAllNotifiersAsync(new TaskNotificationData
+            {
+                Event = NotificationEvent.GeniusInvocation,
+                Action = action,
+                Conclusion = conclusion
+            })
+        );
     }
 
     public async Task RunAsync(GeniusInvokationTaskParam taskParam)

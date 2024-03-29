@@ -3,6 +3,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
@@ -93,7 +94,8 @@ public partial class App : Application
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
-                services.AddSingleton<NotificationManager>();
+                services.AddSingleton<NotificationService>();
+                services.AddSingleton<NotifierManager>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));

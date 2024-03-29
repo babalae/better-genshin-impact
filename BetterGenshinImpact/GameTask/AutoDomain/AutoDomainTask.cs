@@ -9,6 +9,8 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -58,13 +60,15 @@ public class AutoDomainTask
 
     private void Notify(NotificationAction action, NotificationConclusion? conclusion)
     {
-        NotificationManager.Instance().NotifyObservers(new TaskNotificationData
-        {
-            Event = NotificationEvent.Domain,
-            Action = action,
-            Conclusion = conclusion,
-            Task = _taskParam
-        });
+        Task.Run(() =>
+            NotificationService.Instance().NotifyAllNotifiersAsync(new TaskNotificationData
+            {
+                Event = NotificationEvent.Domain,
+                Action = action,
+                Conclusion = conclusion,
+                Task = _taskParam
+            })
+        );
     }
 
     public async void Start()

@@ -11,6 +11,7 @@ using BetterGenshinImpact.Service.Notification;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -138,6 +139,7 @@ public partial class AllConfig : ObservableObject
         CommonConfig.PropertyChanged += OnAnyPropertyChanged;
         GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
         NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
+        NotificationConfig.PropertyChanged += OnNotificationPropertyChanged;
 
         AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
@@ -153,7 +155,11 @@ public partial class AllConfig : ObservableObject
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
     {
         GameTaskManager.RefreshTriggerConfigs();
-        NotificationManager.Instance().RefreshNotifiers();
         OnAnyChangedAction?.Invoke();
+    }
+
+    public void OnNotificationPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        NotificationService.Instance().RefreshNotifiers();
     }
 }

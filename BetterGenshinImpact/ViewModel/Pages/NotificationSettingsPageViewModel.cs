@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -11,16 +12,16 @@ public partial class NotificationSettingsPageViewModel : ObservableObject
 {
     public AllConfig Config { get; set; }
 
-    private readonly NotificationManager _notificationManager;
+    private readonly NotificationService _notificationService;
 
     [ObservableProperty] private bool _isLoading;
 
     [ObservableProperty] private string _webhookStatus = "";
 
-    public NotificationSettingsPageViewModel(IConfigService configService, NotificationManager notificationManager)
+    public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
         Config = configService.Get();
-        _notificationManager = notificationManager;
+        _notificationService = notificationService;
     }
 
     [RelayCommand]
@@ -29,8 +30,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject
         IsLoading = true;
         WebhookStatus = "";
 
-        var n = _notificationManager.GetNotifier<WebhookNotifier>();
-        var res = await n.Notify(LifecycleNotificationData.Test());
+        var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
 
         WebhookStatus = res.Message;
 
