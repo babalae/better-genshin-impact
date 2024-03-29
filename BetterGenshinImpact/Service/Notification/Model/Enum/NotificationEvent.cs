@@ -2,6 +2,7 @@
 
 public enum NotificationEvent
 {
+    Test,
     GeniusInvocation,
     Domain
 }

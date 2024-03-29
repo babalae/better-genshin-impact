@@ -1,3 +1,10 @@
-﻿namespace BetterGenshinImpact.Service.Notification.Model;
+﻿using BetterGenshinImpact.Service.Notification.Model.Enum;
+using System.Text.Json.Serialization;
 
-public interface INotificationData { }
+namespace BetterGenshinImpact.Service.Notification.Model;
+
+public interface INotificationData
+{
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public NotificationEvent Event { get; set; }
+}
