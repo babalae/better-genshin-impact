@@ -96,4 +96,9 @@ public class NotificationService : IHostedService
     {
         await _notifierManager.SendNotificationToAllAsync(TransformData(notificationData));
     }
+
+    public void NotifyAllNotifiers(TaskNotificationData notificationData)
+    {
+        Task.Run(() => NotifyAllNotifiersAsync(notificationData));
+    }
 }

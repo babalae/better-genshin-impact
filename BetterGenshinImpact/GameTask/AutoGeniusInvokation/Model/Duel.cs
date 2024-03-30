@@ -57,14 +57,12 @@ public class Duel
 
     private static void Notify(NotificationAction action, NotificationConclusion? conclusion)
     {
-        Task.Run(() =>
-            NotificationService.Instance().NotifyAllNotifiersAsync(new TaskNotificationData
-            {
-                Event = NotificationEvent.GeniusInvocation,
-                Action = action,
-                Conclusion = conclusion
-            })
-        );
+        NotificationService.Instance().NotifyAllNotifiers(new TaskNotificationData
+        {
+            Event = NotificationEvent.GeniusInvocation,
+            Action = action,
+            Conclusion = conclusion
+        });
     }
 
     public async Task RunAsync(GeniusInvokationTaskParam taskParam)

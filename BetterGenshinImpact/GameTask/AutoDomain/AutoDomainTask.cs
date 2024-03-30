@@ -61,15 +61,13 @@ public class AutoDomainTask
 
     private void Notify(NotificationAction action, NotificationConclusion? conclusion)
     {
-        Task.Run(() =>
-            NotificationService.Instance().NotifyAllNotifiersAsync(new TaskNotificationData
-            {
-                Event = NotificationEvent.Domain,
-                Action = action,
-                Conclusion = conclusion,
-                Screenshot = (Bitmap) GetContentFromDispatcher().SrcBitmap.Clone()
-            })
-        );
+        NotificationService.Instance().NotifyAllNotifiers(new TaskNotificationData
+        {
+            Event = NotificationEvent.Domain,
+            Action = action,
+            Conclusion = conclusion,
+            Screenshot = (Bitmap)GetContentFromDispatcher().SrcBitmap.Clone()
+        });
     }
 
     public async void Start()
