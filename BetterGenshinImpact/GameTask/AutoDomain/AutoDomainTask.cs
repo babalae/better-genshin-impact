@@ -8,12 +8,10 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.Service.Notification;
-using BetterGenshinImpact.Service.Notification.Model;
-using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.Service.Notification;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -59,17 +57,6 @@ public class AutoDomainTask
         _config = TaskContext.Instance().Config.AutoDomainConfig;
     }
 
-    private void Notify(NotificationAction action, NotificationConclusion? conclusion)
-    {
-        NotificationService.Instance().NotifyAllNotifiers(new TaskNotificationData
-        {
-            Event = NotificationEvent.Domain,
-            Action = action,
-            Conclusion = conclusion,
-            Screenshot = (Bitmap)GetContentFromDispatcher().SrcBitmap.Clone()
-        });
-    }
-
     public async void Start()
     {
         var hasLock = false;
@@ -83,7 +70,7 @@ public class AutoDomainTask
             }
 
             Init();
-            Notify(NotificationAction.Started, null);
+            NotificationHelper.NotifyUsing(t => t.Domain().Started().Build());
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 前置进入秘境
@@ -127,22 +114,22 @@ public class AutoDomainTask
                     {
                         Logger.LogInformation("体力已经耗尽，结束自动秘境");
                     }
-                    Notify(NotificationAction.Completed, NotificationConclusion.Success);
+                    NotificationHelper.NotifyUsing(t => t.Domain().Success().Build());
                     break;
                 }
-                Notify(NotificationAction.Progress, null);
+                NotificationHelper.NotifyUsing(t => t.Domain().Progress().Build());
             }
         }
         catch (NormalEndException e)
         {
             Logger.LogInformation("自动秘境中断:" + e.Message);
-            Notify(NotificationAction.Completed, NotificationConclusion.Cancelled);
+            NotificationHelper.NotifyUsing(t => t.Domain().Cancelled().Build());
         }
         catch (Exception e)
         {
             Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
-            Notify(NotificationAction.Completed, NotificationConclusion.Failure);
+            NotificationHelper.NotifyUsing(t => t.Domain().Failure().Build());
         }
         finally
         {

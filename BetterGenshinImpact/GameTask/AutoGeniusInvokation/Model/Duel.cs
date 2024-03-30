@@ -2,8 +2,6 @@
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification;
-using BetterGenshinImpact.Service.Notification.Model;
-using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -55,16 +53,6 @@ public class Duel
 
     private int _keqingECount = 0;
 
-    private static void Notify(NotificationAction action, NotificationConclusion? conclusion)
-    {
-        NotificationService.Instance().NotifyAllNotifiers(new TaskNotificationData
-        {
-            Event = NotificationEvent.GeniusInvocation,
-            Action = action,
-            Conclusion = conclusion
-        });
-    }
-
     public async Task RunAsync(GeniusInvokationTaskParam taskParam)
     {
         await Task.Run(() => { Run(taskParam); });
@@ -86,8 +74,7 @@ public class Duel
             LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
-            Notify(NotificationAction.Started, null);
-
+            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Started().Build());
             GeniusInvokationControl.GetInstance().Init(taskParam);
             SystemControl.ActivateWindow();
 
@@ -313,13 +300,13 @@ public class Duel
         catch (TaskCanceledException ex)
         {
             _logger.LogInformation(ex.Message);
-            Notify(NotificationAction.Completed, NotificationConclusion.Cancelled);
+            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Cancelled().Build());
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");
-            Notify(NotificationAction.Completed, NotificationConclusion.Success);
+            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Success().Build());
         }
         catch (System.Exception ex)
         {
@@ -329,7 +316,7 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
-            Notify(NotificationAction.Completed, NotificationConclusion.Failure);
+            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Failure().Build());
         }
         finally
         {

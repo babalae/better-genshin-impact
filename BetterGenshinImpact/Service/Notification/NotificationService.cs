@@ -92,12 +92,12 @@ public class NotificationService : IHostedService
         }
     }
 
-    public async Task NotifyAllNotifiersAsync(TaskNotificationData notificationData)
+    public async Task NotifyAllNotifiersAsync(INotificationData notificationData)
     {
         await _notifierManager.SendNotificationToAllAsync(TransformData(notificationData));
     }
 
-    public void NotifyAllNotifiers(TaskNotificationData notificationData)
+    public void NotifyAllNotifiers(INotificationData notificationData)
     {
         Task.Run(() => NotifyAllNotifiersAsync(notificationData));
     }

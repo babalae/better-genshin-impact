@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
-public class TaskNotificationData : INotificationData
+public record TaskNotificationData : INotificationData
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public NotificationEvent Event { get; set; }
