@@ -9,10 +9,12 @@ using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using System.Text.Json;
+using Microsoft.Extensions.Hosting;
+using System.Threading;
 
 namespace BetterGenshinImpact.Service.Notification;
 
-public class NotificationService
+public class NotificationService : IHostedService
 {
     private static NotificationService? _instance;
 
@@ -35,6 +37,16 @@ public class NotificationService
             throw new Exception("Not instantiated");
         }
         return _instance;
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 
     private HttpContent TransformData(INotificationData notificationData)

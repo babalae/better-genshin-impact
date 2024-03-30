@@ -95,6 +95,7 @@ public partial class App : Application
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<NotificationService>();
+                services.AddHostedService<NotificationService>(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
 
                 // Configuration
