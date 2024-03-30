@@ -20,6 +20,7 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
@@ -66,7 +67,7 @@ public class AutoDomainTask
                 Event = NotificationEvent.Domain,
                 Action = action,
                 Conclusion = conclusion,
-                Task = _taskParam
+                Screenshot = (Bitmap) GetContentFromDispatcher().SrcBitmap.Clone()
             })
         );
     }
