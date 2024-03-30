@@ -1,7 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple.AllMap;
 
 public class MatchTemplateTest
 {

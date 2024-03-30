@@ -3,27 +3,34 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:BetterGenshinImpact.Test"
-        xmlns:oxy="http://oxyplot.org/wpf"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="400">
-    <Window.DataContext>
-        <local:MainViewModel/>
-    </Window.DataContext>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-            <RowDefinition></RowDefinition>
-        </Grid.RowDefinitions>
-        <oxy:PlotView
-            Grid.Row="0"
-            Model="{Binding LeftModel}"/>
-        <oxy:PlotView 
-            Grid.Row="1"
-            Model="{Binding RightModel}"/>
-        <oxy:PlotView
-            Grid.Row="2"
-            Model="{Binding AllModel}"/>
-    </Grid>
+        Title="MainWindow"
+        Width="800"
+        Height="450"
+        mc:Ignorable="d">
+    <Canvas>
+        <Button Canvas.Left="10"
+                Canvas.Top="10"
+                Width="100"
+                Height="23"
+                Click="ShowCameraRecWindow"
+                Content="视角识别测试" />
+        <Button Canvas.Left="10"
+                Canvas.Top="40"
+                Width="100"
+                Height="23"
+                Click="ShowHsvTestWindow"
+                Content="Hsv拉条" />
+        <Button Canvas.Left="10"
+                Canvas.Top="70"
+                Width="100"
+                Height="23"
+                Click="DoMapPuzzle"
+                Content="拼接超大地图" />
+        <Button Canvas.Left="10"
+                Canvas.Top="100"
+                Width="100"
+                Height="23"
+                Click="DoMatchTest"
+                Content="特征匹配测试" />
+    </Canvas>
 </Window>

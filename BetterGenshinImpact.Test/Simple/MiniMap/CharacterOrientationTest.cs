@@ -1,13 +1,8 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using System.Diagnostics;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using OpenCvSharp;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple.MiniMap;
 
 public class CharacterOrientationTest
 {
@@ -20,8 +15,7 @@ public class CharacterOrientationTest
         Cv2.ImShow("gray", gray);
     }
 
-
-    static double Distance(OpenCvSharp.Point pt1, OpenCvSharp.Point pt2)
+    static double Distance(Point pt1, Point pt2)
     {
         int deltaX = Math.Abs(pt2.X - pt1.X);
         int deltaY = Math.Abs(pt2.Y - pt1.Y);
@@ -69,13 +63,13 @@ public class CharacterOrientationTest
             double perimeter = Cv2.ArcLength(contours[i], true);
 
             // 近似多边形拟合
-            OpenCvSharp.Point[] approx = Cv2.ApproxPolyDP(contours[i], 0.04 * perimeter, true);
+            Point[] approx = Cv2.ApproxPolyDP(contours[i], 0.04 * perimeter, true);
 
             // 如果拟合的多边形有三个顶点，认为是三角形
             if (approx.Length == 3)
             {
                 // 在图像上绘制三角形的轮廓
-                Cv2.DrawContours(src, new OpenCvSharp.Point[][] { approx }, -1, Scalar.Green, 1);
+                Cv2.DrawContours(src, new Point[][] { approx }, -1, Scalar.Green, 1);
                 // 计算三条边的长度
                 var sideLengths = new double[3];
                 sideLengths[0] = Distance(approx[1], approx[2]);
@@ -90,7 +84,7 @@ public class CharacterOrientationTest
                 // 计算最短线的中点
                 var residue = approx.ToList();
                 residue.RemoveAt(result.Index);
-                var midPoint = new OpenCvSharp.Point((residue[0].X + residue[1].X) / 2, (residue[0].Y + residue[1].Y) / 2);
+                var midPoint = new Point((residue[0].X + residue[1].X) / 2, (residue[0].Y + residue[1].Y) / 2);
 
                 // 在图像上绘制直线
                 Cv2.Line(src, midPoint, approx[result.Index] + (approx[result.Index] - midPoint) * 3, Scalar.Red, 1);
@@ -101,7 +95,6 @@ public class CharacterOrientationTest
 
         Cv2.ImShow("目标2", src);
     }
-
 
     public static void TestArrow2()
     {
@@ -202,7 +195,6 @@ public class CharacterOrientationTest
         return angleDegrees;
     }
 
-
     public static void FloodFill()
     {
         var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\s1.png", ImreadModes.Color);
@@ -260,7 +252,6 @@ public class CharacterOrientationTest
         }
     }
 
-
     public static void Hsv()
     {
         var mat = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\箭头识别\e1.png", ImreadModes.Color);
@@ -315,11 +306,10 @@ public class CharacterOrientationTest
             if (approx.Length == 3)
             {
                 // 在图像上绘制三角形的轮廓
-                Cv2.DrawContours(mat, new OpenCvSharp.Point[][] { approx }, -1, Scalar.Green, 1);
+                Cv2.DrawContours(mat, new Point[][] { approx }, -1, Scalar.Green, 1);
 
                 // 剪裁出三角形所在区域
                 var newSrcMat = new Mat(mat, maxRect);
-              
 
                 // HSV 阈值取出中心飞镖
                 var hsvMat = new Mat();
