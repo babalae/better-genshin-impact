@@ -141,7 +141,7 @@ public class GeniusInvokationControl
 
     public void CheckTask()
     {
-        Retry.Do(() =>
+        NewRetry.Do(() =>
         {
             if (_cts is { IsCancellationRequested: true })
             {
@@ -180,7 +180,7 @@ public class GeniusInvokationControl
         Sleep(3000);
 
         // 是否是再角色出战选择界面
-        Retry.Do(IsInCharacterPickRetryThrowable, TimeSpan.FromSeconds(0.8), 20);
+        NewRetry.Do(IsInCharacterPickRetryThrowable, TimeSpan.FromSeconds(0.8), 20);
         _logger.LogInformation("识别到已经在角色出战界面，等待1.5s");
         Sleep(1500);
     }
@@ -1199,7 +1199,7 @@ public class GeniusInvokationControl
 
         // 上面判断失效
         _logger.LogWarning("通过OCR HP的方式未识别到出战角色 {Array}", hpArray);
-        return Retry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
+        return NewRetry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
     }
 
     private static void OutputImage(Duel duel, List<Rect> rects, Mat bottomMat, int halfHeight, string fileName)
