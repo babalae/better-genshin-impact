@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.Service.Notifier;
 
 public class WebhookNotifier : INotifier
 {
-    public string Name { get; set; } = "WebhookNotifier";
+    public string Name { get; set; } = "Webhook";
 
     public string Endpoint { get; set; }
 
@@ -29,7 +29,10 @@ public class WebhookNotifier : INotifier
             {
                 throw new NotifierException($"Webhook call failed with code: {response.StatusCode}");
             }
-            return;
+        }
+        catch (NotifierException)
+        {
+            throw;
         }
         catch (System.Exception ex)
         {

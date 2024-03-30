@@ -3,14 +3,16 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
 public class NotifierManager
 {
     private readonly List<INotifier> _notifiers = [];
+
+    public static ILogger Logger { get; } = App.GetLogger<NotifierManager>();
 
     public NotifierManager()
     {
@@ -42,11 +44,11 @@ public class NotifierManager
         {
             await notifier.SendNotificationAsync(httpContent);
         }
-        catch (NotifierException ex)
+        catch (System.Exception ex)
         {
+            Logger.LogError("{name} 通知发送失败", notifier.Name);
             Debug.WriteLine(ex);
         }
-
     }
 
     public async Task SendNotificationAsync<T>(HttpContent httpContent) where T : INotifier
