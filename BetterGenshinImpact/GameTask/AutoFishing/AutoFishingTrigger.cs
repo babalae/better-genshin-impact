@@ -755,7 +755,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public void Sleep(int millisecondsTimeout)
         {
-            Retry.Do(() =>
+            NewRetry.Do(() =>
             {
                 if (IsEnabled && !SystemControl.IsGenshinImpactActiveByProcess())
                 {

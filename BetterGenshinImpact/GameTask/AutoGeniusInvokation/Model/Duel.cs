@@ -83,7 +83,7 @@ public class Duel
             // 获取角色区域
             try
             {
-                CharacterCardRects = Retry.Do(() => GeniusInvokationControl.GetInstance().GetCharacterRects(), TimeSpan.FromSeconds(1.5), 3);
+                CharacterCardRects = NewRetry.Do(() => GeniusInvokationControl.GetInstance().GetCharacterRects(), TimeSpan.FromSeconds(1.5), 3);
             }
             catch
             {
