@@ -4,23 +4,23 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.Service.Notification.Builder;
 
-public class TaskNotificationBuilder : INotificationDataBuilder
+public class TaskNotificationBuilder : INotificationDataBuilder<TaskNotificationData>
 {
-    private TaskNotificationData _notificationData = new();
+    private readonly TaskNotificationData _notificationData = new();
 
-    public TaskNotificationBuilder AddEvent(NotificationEvent notificationEvent)
+    public TaskNotificationBuilder WithEvent(NotificationEvent notificationEvent)
     {
         _notificationData.Event = notificationEvent;
         return this;
     }
 
-    public TaskNotificationBuilder AddAction(NotificationAction notificationAction)
+    public TaskNotificationBuilder WithAction(NotificationAction notificationAction)
     {
         _notificationData.Action = notificationAction;
         return this;
     }
 
-    public TaskNotificationBuilder AddConclusion(NotificationConclusion? conclusion)
+    public TaskNotificationBuilder WithConclusion(NotificationConclusion? conclusion)
     {
         _notificationData.Conclusion = conclusion;
         return this;
@@ -28,48 +28,48 @@ public class TaskNotificationBuilder : INotificationDataBuilder
 
     public TaskNotificationBuilder GeniusInvocation()
     {
-        return AddEvent(NotificationEvent.GeniusInvocation);
+        return WithEvent(NotificationEvent.GeniusInvocation);
     }
 
     public TaskNotificationBuilder Domain()
     {
-        return AddEvent(NotificationEvent.Domain);
+        return WithEvent(NotificationEvent.Domain);
     }
 
     public TaskNotificationBuilder Started()
     {
-        return AddAction(NotificationAction.Started);
+        return WithAction(NotificationAction.Started);
     }
 
     public TaskNotificationBuilder Completed()
     {
-        return AddAction(NotificationAction.Completed);
+        return WithAction(NotificationAction.Completed);
     }
 
     public TaskNotificationBuilder Progress()
     {
-        return AddAction(NotificationAction.Progress);
+        return WithAction(NotificationAction.Progress);
     }
 
     public TaskNotificationBuilder Success()
     {
-        return AddAction(NotificationAction.Completed)
-            .AddConclusion(NotificationConclusion.Success);
+        return WithAction(NotificationAction.Completed)
+            .WithConclusion(NotificationConclusion.Success);
     }
 
     public TaskNotificationBuilder Failure()
     {
-        return AddAction(NotificationAction.Completed)
-            .AddConclusion(NotificationConclusion.Failure);
+        return WithAction(NotificationAction.Completed)
+            .WithConclusion(NotificationConclusion.Failure);
     }
 
     public TaskNotificationBuilder Cancelled()
     {
-        return AddAction(NotificationAction.Completed)
-            .AddConclusion(NotificationConclusion.Cancelled);
+        return WithAction(NotificationAction.Completed)
+            .WithConclusion(NotificationConclusion.Cancelled);
     }
 
-    public TaskNotificationBuilder AddScreenshot(Image screenshot)
+    public TaskNotificationBuilder WithScreenshot(Image? screenshot)
     {
         _notificationData.Screenshot = screenshot;
         return this;
@@ -81,13 +81,8 @@ public class TaskNotificationBuilder : INotificationDataBuilder
         return this;
     }
 
-    public INotificationData Build()
+    public TaskNotificationData Build()
     {
         return _notificationData;
-    }
-
-    public void Send()
-    {
-        NotificationService.Instance().NotifyAllNotifiers(Build());
     }
 }

@@ -74,7 +74,7 @@ public class Duel
             LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
-            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Started().Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
             GeniusInvokationControl.GetInstance().Init(taskParam);
             SystemControl.ActivateWindow();
 
@@ -300,13 +300,13 @@ public class Duel
         catch (TaskCanceledException ex)
         {
             _logger.LogInformation(ex.Message);
-            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Cancelled().Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Cancelled().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");
-            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Success().Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Success().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
         }
         catch (System.Exception ex)
         {
@@ -316,7 +316,7 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
-            NotificationHelper.NotifyUsing(t => t.GeniusInvocation().Failure().Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Failure().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
         }
         finally
         {

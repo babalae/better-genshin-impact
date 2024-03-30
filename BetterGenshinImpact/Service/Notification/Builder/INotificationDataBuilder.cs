@@ -2,9 +2,7 @@
 
 namespace BetterGenshinImpact.Service.Notification.Builder;
 
-public interface INotificationDataBuilder
+public interface INotificationDataBuilder<TNotificationData> where TNotificationData : INotificationData
 {
-    INotificationData Build();
-
-    void Send();
+    TNotificationData Build();
 }

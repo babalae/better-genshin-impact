@@ -13,9 +13,16 @@ public class NotificationHelper
         NotificationService.Instance().NotifyAllNotifiers(notificationData);
     }
 
-    public static void NotifyUsing(Func<TaskNotificationBuilder, INotificationData> func)
+    public static void SendTaskNotificationUsing(Func<TaskNotificationBuilder, INotificationData> builderFunc)
     {
+        var builder = new TaskNotificationBuilder();
+        Notify(builderFunc(builder));
+    }
+
+    public static void SendTaskNotificationWithScreenshotUsing(Func<TaskNotificationBuilder, INotificationData> builderFunc)
+    {
+        var builder = new TaskNotificationBuilder();
         var screenShot = (Bitmap)TaskControl.GetContentFromDispatcher().SrcBitmap.Clone();
-        Notify(func(new TaskNotificationBuilder().AddScreenshot(screenShot)));
+        Notify(builderFunc(builder.WithScreenshot(screenShot)));
     }
 }

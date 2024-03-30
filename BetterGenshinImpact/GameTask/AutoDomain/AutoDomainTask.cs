@@ -70,7 +70,7 @@ public class AutoDomainTask
             }
 
             Init();
-            NotificationHelper.NotifyUsing(t => t.Domain().Started().Build());
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 前置进入秘境
@@ -114,22 +114,22 @@ public class AutoDomainTask
                     {
                         Logger.LogInformation("体力已经耗尽，结束自动秘境");
                     }
-                    NotificationHelper.NotifyUsing(t => t.Domain().Success().Build());
+                    NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
                     break;
                 }
-                NotificationHelper.NotifyUsing(t => t.Domain().Progress().Build());
+                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
             }
         }
         catch (NormalEndException e)
         {
             Logger.LogInformation("自动秘境中断:" + e.Message);
-            NotificationHelper.NotifyUsing(t => t.Domain().Cancelled().Build());
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Cancelled().Build());
         }
         catch (Exception e)
         {
             Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
-            NotificationHelper.NotifyUsing(t => t.Domain().Failure().Build());
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Failure().Build());
         }
         finally
         {
