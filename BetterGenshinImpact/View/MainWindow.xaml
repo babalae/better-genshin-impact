@@ -30,7 +30,7 @@
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
         <b:EventTrigger EventName="Closing">
-            <b:InvokeCommandAction Command="{Binding ClosingCommand}" PassEventArgsToCommand="True"/>
+            <b:InvokeCommandAction Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
@@ -113,6 +113,7 @@
                                Background="Transparent"
                                BorderBrush="Transparent"
                                Command="{Binding HideCommand}"
+                               CornerRadius="0"
                                Icon="{ui:SymbolIcon CaretDown24}"
                                ToolTip="最小化到托盘" />
                 </StackPanel>
