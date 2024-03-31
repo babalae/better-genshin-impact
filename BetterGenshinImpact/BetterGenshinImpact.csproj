@@ -487,6 +487,9 @@
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\TeleportWaypoint.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\SereniteaPotIcon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\AutoFight\1.四神挂机[推荐].txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
