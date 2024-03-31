@@ -125,19 +125,19 @@ public class KeyPointMatchTest
         Stopwatch sw = new Stopwatch();
         sw.Start();
 
-        Mat matSrcRet = new Mat();
+        using Mat matSrcRet = new Mat();
         using Mat matToRet = new Mat();
         KeyPoint[] keyPointsSrc, keyPointsTo;
         using (var surf = OpenCvSharp.XFeatures2D.SURF.Create(threshold, 4, 3, false, true))
         {
             surf.DetectAndCompute(matSrc, null, out keyPointsSrc, matSrcRet);
             sw.Stop();
-            Debug.WriteLine($"大地图kp耗时：{sw.ElapsedMilliseconds}ms.");
+            Debug.WriteLine($"模板kp耗时：{sw.ElapsedMilliseconds}ms.");
             sw.Restart();
 
             surf.DetectAndCompute(matTo, null, out keyPointsTo, matToRet);
             sw.Stop();
-            Debug.WriteLine($"模板kp耗时：{sw.ElapsedMilliseconds}ms.");
+            Debug.WriteLine($"大地图kp耗时：{sw.ElapsedMilliseconds}ms.");
             sw.Restart();
         }
 

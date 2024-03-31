@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.View.Drawable;
+﻿using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -27,7 +26,7 @@ public class TestTrigger : ITaskTrigger
 
     // private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
 
-    private readonly BigMap _bigMap = new();
+    // private readonly EntireMap _bigMap = new();
 
     public TestTrigger()
     {
@@ -93,7 +92,7 @@ public class TestTrigger : ITaskTrigger
         //    Debug.WriteLine("没找到");
         //}
 
-        _bigMap.GetMapPositionAndDraw(content.CaptureRectArea.SrcMat);
+        // _bigMap.GetMapPositionAndDrawBySurf(content.CaptureRectArea.SrcGreyMat);
     }
 
     // private void Detect(CaptureContent content)

@@ -28,10 +28,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="Assets\Map\map_sd1024.png" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
@@ -92,6 +88,27 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="Assets\Map\cityMap2048Block.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\combined_image_2048_lim[quick].png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\combined_image_lim[quick].png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\mainMap100Block.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\mainMap1024Block.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\mainMapZoomOut1024.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\map_sd1024.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="Assets\Model\Domain\bgi_tree.onnx">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -533,10 +550,6 @@
 		<None Update="User\pick_white_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Resource Include="Assets\Map\map_sd1024.png" />
 	</ItemGroup>
 
 </Project>

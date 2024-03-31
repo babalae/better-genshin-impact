@@ -25,7 +25,7 @@
         </Grid.RowDefinitions>
 
         <Canvas Grid.Row="1">
-            <ui:Image Source="pack://application:,,,/Assets/Map/map_sd1024.png" Stretch="Uniform" />
+            <ui:Image Source="{Binding MapPath, Mode=OneWay}" Stretch="Uniform" />
             <Rectangle Canvas.Left="{Binding BigMapRect.Left}"
                        Canvas.Top="{Binding BigMapRect.Top}"
                        Width="{Binding BigMapRect.Width}"
