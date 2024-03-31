@@ -39,8 +39,8 @@ public class EntireMap
     {
         // 大地图模板匹配使用的模板
         _mainMap100BlockMat = new Mat(Global.Absolute(@"Assets\Map\mainMap100Block.png"));
-        _mainMap1024BlockMat = new Mat(Global.Absolute(@"Assets\Map\mainMap1024Block.png"), ImreadModes.Grayscale);
-        _cityMap2048BlockMat = new Mat(Global.Absolute(@"Assets\Map\cityMap2048Block.png"), ImreadModes.Grayscale);
+        _mainMap1024BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap1024Block.png", ImreadModes.Grayscale);
+        _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
         _surfMatcher = new SurfMatcher(_mainMap1024BlockMat);
     }
 
