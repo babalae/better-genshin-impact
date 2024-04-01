@@ -231,7 +231,7 @@ public partial class HotKeyPageViewModel : ObservableObject
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
-            "按下快速进入尘歌壶",
+            "按下快速进出尘歌壶",
             nameof(Config.HotKeyConfig.QuickSereniteaPotHotkey),
             Config.HotKeyConfig.QuickSereniteaPotHotkey,
             Config.HotKeyConfig.QuickSereniteaPotHotkeyType,
