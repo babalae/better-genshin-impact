@@ -3,7 +3,7 @@
 public class NotificationTestResult
 {
     public bool IsSuccess { get; set; }
-    public string Message { get; set; } = "";
+    public string Message { get; set; } = string.Empty;
 
     public static NotificationTestResult Success()
     {

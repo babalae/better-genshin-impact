@@ -19,5 +19,5 @@ public partial class NotificationConfig : ObservableObject
     ///
     /// </summary>
     [ObservableProperty]
-    private string _webhookEndpoint = "";
+    private string _webhookEndpoint = string.Empty;
 }
