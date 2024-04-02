@@ -76,10 +76,11 @@ public class QuickSereniteaPotTask
 
             // 点击道具页
             clickOffset.ClickWithoutScale((int)(1050 * assetScale), (int)(50 * assetScale));
-            TaskControl.CheckAndSleep(100);
+            TaskControl.CheckAndSleep(200);
 
             // 尝试放置壶
             FindPotIcon();
+            TaskControl.CheckAndSleep(200);
 
             // 点击放置 右下225,60
             clickOffset.ClickWithoutScale(captureArea.Width - (int)(225 * assetScale), captureArea.Height - (int)(60 * assetScale));
