@@ -77,6 +77,12 @@ public partial class HotKeyConfig : ObservableObject
     private string _quickBuyHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     [ObservableProperty]
+    private string _quickSereniteaPotHotkey = "";
+
+    [ObservableProperty]
+    private string _quickSereniteaPotHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    [ObservableProperty]
     private string _quickTeleportEnabledHotkey = "";
 
     [ObservableProperty]
