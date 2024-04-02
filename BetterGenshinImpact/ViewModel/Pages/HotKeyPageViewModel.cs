@@ -13,6 +13,7 @@ using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using BetterGenshinImpact.GameTask.QucikBuy;
+using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -226,6 +227,15 @@ public partial class HotKeyPageViewModel : ObservableObject
             Config.HotKeyConfig.QuickBuyHotkey,
             Config.HotKeyConfig.QuickBuyHotkeyType,
             (_, _) => { QuickBuyTask.Done(); },
+            true
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "按下快速进出尘歌壶",
+            nameof(Config.HotKeyConfig.QuickSereniteaPotHotkey),
+            Config.HotKeyConfig.QuickSereniteaPotHotkey,
+            Config.HotKeyConfig.QuickSereniteaPotHotkeyType,
+            (_, _) => { QuickSereniteaPotTask.Done(); },
             true
         ));
 
