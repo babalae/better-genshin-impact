@@ -24,4 +24,17 @@ public class MatchTemplateTest
 
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\x1.png", src2);
     }
+
+    public static void TestMenu()
+    {
+        var tar = new Mat(@"D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\GameTask\Common\Element\Assets\1920x1080\paimon_menu.png", ImreadModes.Color);
+        var src = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\菜单\Clip_20240331_155210.png", ImreadModes.Color);
+        var src2 = src.Clone();
+        var p = MatchTemplateHelper.MatchTemplate(src, tar, TemplateMatchModes.CCoeffNormed, null, 0.1);
+        Cv2.Rectangle(src2, new Rect(p.X, p.Y, tar.Width, tar.Height), new Scalar(0, 0, 255), 1);
+        // 画出小地图的位置
+        // 此图38x40 小地图210x210 小地图左上角位置 24,-15
+        Cv2.Rectangle(src2, new Rect(p.X + 24, p.Y - 15, 210, 210), Scalar.Blue, 1);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\比较\菜单\rec2.png", src2);
+    }
 }

@@ -9,6 +9,7 @@ public class ElementAssets
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
     public RecognitionObject BtnBlackConfirm;
+    public RecognitionObject PaimonMenuRo;
 
     private ElementAssets()
     {
@@ -36,9 +37,17 @@ public class ElementAssets
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_black_confirm.png"),
             DrawOnWindow = false
         }.InitTemplate();
-
+        // 派蒙菜单
+        // 此图38x40 小地图210x210 小地图左上角位置 24,-15
+        PaimonMenuRo = new RecognitionObject
+        {
+            Name = "PaimonMenu",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "paimon_menu.png"),
+            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
     }
-
 
     private static ElementAssets? _uniqueInstance;
     private static readonly object Locker = new();

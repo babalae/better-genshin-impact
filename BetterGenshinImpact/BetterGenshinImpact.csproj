@@ -364,7 +364,7 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_explore.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\menu.png">
+		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_option.png">
@@ -430,7 +430,7 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_option.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\menu.png">
+		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\page_close.png">

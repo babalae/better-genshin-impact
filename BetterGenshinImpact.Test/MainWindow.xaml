@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        Title="MainWindow"
-        Width="800"
+        Title="Test"
+        Width="120"
         Height="450"
         mc:Ignorable="d">
     <Canvas>
@@ -32,5 +32,11 @@
                 Height="23"
                 Click="DoMatchTest"
                 Content="特征匹配测试" />
+        <Button Canvas.Left="10"
+                Canvas.Top="130"
+                Width="100"
+                Height="23"
+                Click="DoMatchTemplateTest"
+                Content="模板匹配测试" />
     </Canvas>
 </Window>

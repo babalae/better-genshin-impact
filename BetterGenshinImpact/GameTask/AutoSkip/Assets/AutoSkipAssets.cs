@@ -9,7 +9,6 @@ public class AutoSkipAssets
 {
     public RecognitionObject StopAutoButtonRo;
     public RecognitionObject PlayingTextRo;
-    public RecognitionObject MenuRo;
 
     public Rect OptionRoi;
     public RecognitionObject OptionIconRo;
@@ -96,16 +95,6 @@ public class AutoSkipAssets
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_exclamation.png"),
             RegionOfInterest = OptionRoi,
-            DrawOnWindow = false
-        }.InitTemplate();
-
-        // 其他
-        MenuRo = new RecognitionObject
-        {
-            Name = "Menu",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "menu.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = false
         }.InitTemplate();
 
