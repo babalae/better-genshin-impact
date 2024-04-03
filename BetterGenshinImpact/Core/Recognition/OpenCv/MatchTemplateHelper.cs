@@ -40,7 +40,7 @@ public class MatchTemplateHelper
 
             if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.SqDiffNormed)
             {
-                if (minValue <= threshold)
+                if (minValue <= 1 - threshold)
                 {
                     return minLoc;
                 }
