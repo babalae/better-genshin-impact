@@ -573,7 +573,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 TaskControl.Sleep(800);
                 content = TaskControl.CaptureToContent();
 
-                var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnBlackConfirm);
+                var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnBlackConfirm);
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
                     btnBlackConfirmRa.ClickCenter();
@@ -585,7 +585,7 @@ public class AutoSkipTrigger : ITaskTrigger
             TaskControl.Sleep(500);
             content = TaskControl.CaptureToContent();
 
-            var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnWhiteConfirm);
+            var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnWhiteConfirm);
             if (!btnWhiteConfirmRa.IsEmpty())
             {
                 // btnWhiteConfirmRa.ClickCenter();

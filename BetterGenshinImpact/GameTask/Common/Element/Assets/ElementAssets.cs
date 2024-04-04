@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
-using BetterGenshinImpact.Core.Recognition;
+﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
-public class ElementAssets
+public class ElementAssets : Singleton<ElementAssets>
 {
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
@@ -47,20 +47,5 @@ public class ElementAssets
             RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
             DrawOnWindow = false
         }.InitTemplate();
-    }
-
-    private static ElementAssets? _uniqueInstance;
-    private static readonly object Locker = new();
-
-    public static ElementAssets Instance()
-    {
-        if (_uniqueInstance == null)
-        {
-            lock (Locker)
-            {
-                _uniqueInstance ??= new ElementAssets();
-            }
-        }
-        return _uniqueInstance;
     }
 }
