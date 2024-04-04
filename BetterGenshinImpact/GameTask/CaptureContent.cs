@@ -34,29 +34,6 @@ public class CaptureContent : IDisposable
         Dispatcher = dispatcher;
     }
 
-    /// <summary>
-    /// 达到了什么时间间隔
-    /// 最大MaxFrameIndexSecond秒
-    ///
-    /// 这代码有bug
-    /// 这代码有bug
-    /// 这代码有bug
-    ///
-    /// 不用了
-    /// </summary>
-    /// <param name="interval"></param>
-    /// <returns></returns>
-    [Obsolete]
-    public bool IsReachInterval(TimeSpan interval)
-    {
-        if (interval.TotalSeconds > MaxFrameIndexSecond)
-        {
-            throw new ArgumentException($"时间间隔不能超过{MaxFrameIndexSecond}s");
-        }
-        //Debug.WriteLine($"{FrameIndex}%{FrameRate * interval.TotalSeconds}={FrameIndex % (FrameRate * interval.TotalSeconds)}");
-        return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
-    }
-
     public void Dispose()
     {
         CaptureRectArea.Dispose();

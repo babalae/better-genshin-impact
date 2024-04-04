@@ -26,7 +26,7 @@ public class TaskControl
 
     public static void Sleep(int millisecondsTimeout)
     {
-        Retry.Do(() =>
+        NewRetry.Do(() =>
         {
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
@@ -49,7 +49,7 @@ public class TaskControl
             return;
         }
 
-        Retry.Do(() =>
+        NewRetry.Do(() =>
         {
             if (cts is { IsCancellationRequested: true })
             {

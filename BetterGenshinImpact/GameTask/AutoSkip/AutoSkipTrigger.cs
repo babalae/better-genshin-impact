@@ -163,7 +163,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 ClosePopupPage(content);
 
                 // 自动剧情点击3s内判断
-                if ((DateTime.Now - _prevClickTime).TotalMilliseconds < 3000)
+                if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
                 {
                     // 提交物品
                     if (SubmitGoods(content))
@@ -546,37 +546,115 @@ public class AutoSkipTrigger : ITaskTrigger
         var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
         if (!exclamationRa.IsEmpty())
         {
-            // 最多4个物品 现在就支持一个
-            var goods = content.CaptureRectArea.Find(_autoSkipAssets.SubmitGoodsRo);
-            if (!goods.IsEmpty())
+            var rects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcMat.CvtColor(ColorConversionCodes.BGRA2BGR),
+                _autoSkipAssets.SubmitGoodsMat, TemplateMatchModes.SqDiffNormed, null, 0.1, 4);
+            if (rects.Count == 0)
             {
-                goods.ClickCenter();
-                _logger.LogInformation("提交物品：{Text}", "1. 选择物品");
+                return false;
+            }
 
+            // 出现相交的矩形，只保留最初的
+            // var newRects = new List<Rect> { rects[0] };
+            // foreach (var rect in rects)
+            // {
+            //     if (!newRects.Any(newRect => newRect.IntersectsWith(rect)))
+            //     {
+            //         newRects.Add(rect);
+            //     }
+            // }
+
+            var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+            var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
+            for (var i = 0; i < rects.Count; i++)
+            {
+                clickOffset.ClickWithoutScale(rects[i].X + rects[i].Width / 2, rects[i].Y + rects[i].Height / 2);
+                _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
                 TaskControl.Sleep(800);
                 content = TaskControl.CaptureToContent();
 
-                var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnBlackConfirm);
+                var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnBlackConfirm);
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
                     btnBlackConfirmRa.ClickCenter();
-                    _logger.LogInformation("提交物品：{Text}", "2. 放入");
-
-                    TaskControl.Sleep(800);
-                    content = TaskControl.CaptureToContent();
-
-                    var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnWhiteConfirm);
-                    if (!btnWhiteConfirmRa.IsEmpty())
-                    {
-                        btnWhiteConfirmRa.ClickCenter();
-                        _logger.LogInformation("提交物品：{Text}", "3. 交付");
-
-                        VisionContext.Instance().DrawContent.ClearAll();
-                    }
+                    _logger.LogInformation("提交物品：{Text}", "2. 放入" + i);
+                    TaskControl.Sleep(200);
                 }
             }
 
-            return true;
+            TaskControl.Sleep(500);
+            content = TaskControl.CaptureToContent();
+
+            var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnWhiteConfirm);
+            if (!btnWhiteConfirmRa.IsEmpty())
+            {
+                // btnWhiteConfirmRa.ClickCenter();
+                _logger.LogInformation("提交物品：{Text}", "3. 交付");
+
+                VisionContext.Instance().DrawContent.ClearAll();
+            }
+
+            // 最多4个物品 现在就支持一个
+            // var prevGoodsRect = Rect.Empty;
+            // for (var i = 1; i <= 4; i++)
+            // {
+            //     // 不断的截取出右边的物品
+            //     TaskControl.Sleep(200);
+            //     content = TaskControl.CaptureToContent();
+            //     var gameArea = content.CaptureRectArea;
+            //     if (prevGoodsRect != Rect.Empty)
+            //     {
+            //         var r = content.CaptureRectArea.ToRect();
+            //         var newX = prevGoodsRect.X + prevGoodsRect.Width;
+            //         gameArea = content.CaptureRectArea.Crop(new Rect(newX, 0, r.Width - newX, r.Height));
+            //         Cv2.ImWrite($"log/物品{i}.png", gameArea.SrcMat);
+            //     }
+            //
+            //     var goods = gameArea.Find(_autoSkipAssets.SubmitGoodsRo);
+            //     if (!goods.IsEmpty())
+            //     {
+            //         prevGoodsRect = goods.ConvertRelativePositionToCaptureArea();
+            //         goods.ClickCenter();
+            //         _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
+            //
+            //         TaskControl.Sleep(800);
+            //         content = TaskControl.CaptureToContent();
+            //
+            //         var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnBlackConfirm);
+            //         if (!btnBlackConfirmRa.IsEmpty())
+            //         {
+            //             btnBlackConfirmRa.ClickCenter();
+            //             _logger.LogInformation("提交物品：{Text}", "2. 放入" + i);
+            //
+            //             TaskControl.Sleep(800);
+            //             content = TaskControl.CaptureToContent();
+            //
+            //             btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnBlackConfirm);
+            //             if (!btnBlackConfirmRa.IsEmpty())
+            //             {
+            //                 _logger.LogInformation("提交物品：{Text}", "2. 仍旧存在物品");
+            //                 continue;
+            //             }
+            //             else
+            //             {
+            //                 var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance().BtnWhiteConfirm);
+            //                 if (!btnWhiteConfirmRa.IsEmpty())
+            //                 {
+            //                     btnWhiteConfirmRa.ClickCenter();
+            //                     _logger.LogInformation("提交物品：{Text}", "3. 交付");
+            //
+            //                     VisionContext.Instance().DrawContent.ClearAll();
+            //                     return true;
+            //                 }
+            //                 break;
+            //             }
+            //         }
+            //     }
+            //     else
+            //     {
+            //         break;
+            //     }
+            // }
         }
 
         return false;

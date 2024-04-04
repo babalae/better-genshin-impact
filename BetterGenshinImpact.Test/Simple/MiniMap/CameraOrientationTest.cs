@@ -1,7 +1,6 @@
 ﻿using OpenCvSharp;
-using SharpCompress;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple.MiniMap;
 
 public class CameraOrientationTest
 {
@@ -137,8 +136,6 @@ public class CameraOrientationTest
             return LeftShift(array, -k);
         }
     }
-
-        
 
     public static void Test2()
     {

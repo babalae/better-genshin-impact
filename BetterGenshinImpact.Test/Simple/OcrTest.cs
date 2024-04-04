@@ -1,10 +1,10 @@
-﻿using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
+﻿using System.Diagnostics;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using OpenCvSharp;
-using System.Diagnostics;
-using BetterGenshinImpact.Core.Recognition.OCR;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple;
 
 public class OcrTest
 {

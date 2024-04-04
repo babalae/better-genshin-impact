@@ -1,10 +1,10 @@
-﻿using OpenCvSharp;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using OpenCvSharp;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple.AllMap;
 
 public class MapPuzzle
 {
@@ -171,9 +171,9 @@ public class MapPuzzle
 
         public ImgInfo(Mat mat, string name, long fileLength, bool locked = false)
         {
-            this.Img = mat;
-            this.Name = name;
-            this.FileLength = fileLength;
+            Img = mat;
+            Name = name;
+            FileLength = fileLength;
             Locked = locked;
         }
     }

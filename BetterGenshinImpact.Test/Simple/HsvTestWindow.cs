@@ -1,42 +1,49 @@
 ﻿using OpenCvSharp;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple;
 
 internal class HsvTestWindow
 {
     private const int MaxValueH = 360 / 2;
-    static readonly int MaxValue = 255;
+    private static readonly int MaxValue = 255;
+
     //private const string WindowCaptureName = "Video Capture";
     private const string _windowDetectionName = "Object Detection";
-    static int _lowH = 0, _lowS = 0, _lowV = 0;
-    static int _highH = MaxValueH, _highS = MaxValue, _highV = MaxValue;
 
-    static void on_low_H_thresh_trackbar(int pos, IntPtr userdata)
+    private static int _lowH = 0, _lowS = 0, _lowV = 0;
+    private static int _highH = MaxValueH, _highS = MaxValue, _highV = MaxValue;
+
+    static void on_low_H_thresh_trackbar(int pos, nint userdata)
     {
         _lowH = Math.Min(_highH - 1, _lowH);
         Cv2.SetTrackbarPos("Low H", _windowDetectionName, _lowH);
     }
-    static void on_high_H_thresh_trackbar(int pos, IntPtr userdata)
+
+    static void on_high_H_thresh_trackbar(int pos, nint userdata)
     {
         _highH = Math.Max(_highH, _lowH + 1);
         Cv2.SetTrackbarPos("High H", _windowDetectionName, _highH);
     }
-    static void on_low_S_thresh_trackbar(int pos, IntPtr userdata)
+
+    static void on_low_S_thresh_trackbar(int pos, nint userdata)
     {
         _lowS = Math.Min(_highS - 1, _lowS);
         Cv2.SetTrackbarPos("Low S", _windowDetectionName, _lowS);
     }
-    static void on_high_S_thresh_trackbar(int pos, IntPtr userdata)
+
+    static void on_high_S_thresh_trackbar(int pos, nint userdata)
     {
         _highS = Math.Max(_highS, _lowS + 1);
         Cv2.SetTrackbarPos("High S", _windowDetectionName, _highS);
     }
-    static void on_low_V_thresh_trackbar(int pos, IntPtr userdata)
+
+    static void on_low_V_thresh_trackbar(int pos, nint userdata)
     {
         _lowV = Math.Min(_highV - 1, _lowV);
         Cv2.SetTrackbarPos("Low V", _windowDetectionName, _lowV);
     }
-    static void on_high_V_thresh_trackbar(int pos, IntPtr userdata)
+
+    static void on_high_V_thresh_trackbar(int pos, nint userdata)
     {
         _highV = Math.Max(_highV, _lowV + 1);
         Cv2.SetTrackbarPos("High V", _windowDetectionName, _highV);
@@ -44,7 +51,6 @@ internal class HsvTestWindow
 
     public void Run()
     {
-
         //Cv2.NamedWindow(WindowCaptureName);
         Cv2.NamedWindow(_windowDetectionName);
         Cv2.ResizeWindow(_windowDetectionName, 900, 900);

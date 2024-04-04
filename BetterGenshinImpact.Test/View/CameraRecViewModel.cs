@@ -1,21 +1,20 @@
-﻿using OxyPlot;
+﻿using BetterGenshinImpact.Test.Simple.MiniMap;
+using OxyPlot;
 using OxyPlot.Series;
-using OxyPlot.Wpf;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.View;
 
-internal class MainViewModel
+internal class CameraRecViewModel
 {
-
     public PlotModel LeftModel { get; private set; }
     public PlotModel RightModel { get; private set; }
     public PlotModel AllModel { get; private set; }
 
-    public MainViewModel()
+    public CameraRecViewModel()
     {
         var data = CameraOrientationTest.Test1();
 
-        LeftModel = BuildModel(data.Item1,"左");
+        LeftModel = BuildModel(data.Item1, "左");
         RightModel = BuildModel(data.Item2, "右(左移90度后)");
         AllModel = BuildModel(data.Item3, "乘积");
     }
@@ -37,5 +36,4 @@ internal class MainViewModel
         plotModel.Title = name;
         return plotModel;
     }
-
 }

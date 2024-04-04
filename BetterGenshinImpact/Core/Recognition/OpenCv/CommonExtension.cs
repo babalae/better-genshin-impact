@@ -1,5 +1,6 @@
 ﻿using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using Vanara.PInvoke;
 using Color = System.Windows.Media.Color;
@@ -75,5 +76,15 @@ public static class CommonExtension
     public static Color ToWindowsColor(this System.Drawing.Color color)
     {
         return Color.FromArgb(color.A, color.R, color.G, color.B);
+    }
+
+    public static Point2d ToPoint2d(this Point2f p)
+    {
+        return new Point2d(p.X, p.Y);
+    }
+
+    public static List<Point2d> ToPoint2d(this List<Point2f> list)
+    {
+        return list.ConvertAll(ToPoint2d);
     }
 }

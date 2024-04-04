@@ -30,7 +30,7 @@
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
         <b:EventTrigger EventName="Closing">
-            <b:InvokeCommandAction Command="{Binding ClosingCommand}" PassEventArgsToCommand="True"/>
+            <b:InvokeCommandAction Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
@@ -90,6 +90,13 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="通知"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:NotificationSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Alert24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
@@ -113,6 +120,7 @@
                                Background="Transparent"
                                BorderBrush="Transparent"
                                Command="{Binding HideCommand}"
+                               CornerRadius="0"
                                Icon="{ui:SymbolIcon CaretDown24}"
                                ToolTip="最小化到托盘" />
                 </StackPanel>

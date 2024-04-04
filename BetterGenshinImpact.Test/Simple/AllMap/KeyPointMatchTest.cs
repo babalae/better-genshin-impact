@@ -1,27 +1,30 @@
-﻿using OpenCvSharp;
-using OpenCvSharp.Features2D;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml;
+using OpenCvSharp;
 
-namespace BetterGenshinImpact.Test;
+namespace BetterGenshinImpact.Test.Simple.AllMap;
 
-public class MatchTest
+public class KeyPointMatchTest
 {
     public static void Test()
     {
-        var tar = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_152015.png", ImreadModes.Color);
+        // var trainMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\叠图\无法匹配2.png", ImreadModes.Color);
+        var trainMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_152015.png", ImreadModes.Grayscale);
+
         // tar = tar.Resize(new Size(tar.Width * 2, tar.Height * 2), 0, 0, InterpolationFlags.Nearest);
-        var src = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image_2048_lim[quick].png", ImreadModes.Color);
-        var res = MatchPicBySurf(src, tar);
+
+        // var queryMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image_lim[quick].png", ImreadModes.Color);
+        var queryMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\combined_image_2048_lim[quick].png", ImreadModes.Grayscale);
+        var res = MatchPicBySurf(trainMat, queryMat);
 
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\s1.png", res);
     }
 
-    public static Mat MatchPicBySift(Mat matSrc, Mat matTo)
+    /*public static Mat MatchPicBySift(Mat matSrc, Mat matTo)
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
@@ -108,7 +111,7 @@ public class MatchTest
             sw.Restart();
             return outMat;
         }
-    }
+    }*/
 
     //This method may be missed, you may read a lot of blogs, but none of them wrote
     private static Point2d Point2fToPoint2d(Point2f input)
@@ -122,39 +125,23 @@ public class MatchTest
         Stopwatch sw = new Stopwatch();
         sw.Start();
 
-        Mat matSrcRet = new Mat();
+        using Mat matSrcRet = new Mat();
         using Mat matToRet = new Mat();
         KeyPoint[] keyPointsSrc, keyPointsTo;
         using (var surf = OpenCvSharp.XFeatures2D.SURF.Create(threshold, 4, 3, false, true))
         {
-            var kpPath = @"E:\HuiTask\更好的原神\地图匹配\surf3.kp";
-            var kpMatPath = @"E:\HuiTask\更好的原神\地图匹配\surf3.mat";
-            if (File.Exists(kpPath) && File.Exists(kpMatPath) && false)
-            {
-                keyPointsSrc = (KeyPoint[])DeserializeObject(File.ReadAllBytes(kpPath));
-                GCHandle pinnedArray = GCHandle.Alloc(DeserializeObject(File.ReadAllBytes(kpMatPath)), GCHandleType.Pinned);
-                IntPtr pointer = pinnedArray.AddrOfPinnedObject();
-                matSrcRet = new Mat(334848, 64, MatType.CV_32FC1, pointer);
-            }
-            else
-            {
-                surf.DetectAndCompute(matSrc, null, out keyPointsSrc, matSrcRet);
-                byte[] arr = new byte[matSrcRet.Step(0) * matSrcRet.Rows]; // matSrcRet.Total() * matSrcRet.ElemSize()
-                Marshal.Copy(matSrcRet.Data, arr, 0, arr.Length);
-                File.WriteAllBytes(kpMatPath, SerializeObject(arr));
-                File.WriteAllBytes(kpPath, SerializeObject(keyPointsSrc));
-            }
+            surf.DetectAndCompute(matSrc, null, out keyPointsSrc, matSrcRet);
             sw.Stop();
-            Debug.WriteLine($"大地图kp耗时：{sw.ElapsedMilliseconds}ms.");
+            Debug.WriteLine($"模板kp耗时：{sw.ElapsedMilliseconds}ms.");
             sw.Restart();
 
             surf.DetectAndCompute(matTo, null, out keyPointsTo, matToRet);
             sw.Stop();
-            Debug.WriteLine($"模板kp耗时：{sw.ElapsedMilliseconds}ms.");
+            Debug.WriteLine($"大地图kp耗时：{sw.ElapsedMilliseconds}ms.");
             sw.Restart();
         }
 
-        using (var flnMatcher = new OpenCvSharp.FlannBasedMatcher())
+        using (var flnMatcher = new FlannBasedMatcher())
         {
             var matches = flnMatcher.Match(matSrcRet, matToRet);
             //Finding the Minimum and Maximum Distance
@@ -205,7 +192,34 @@ public class MatchTest
             var outMask = new Mat();
             // If the original matching result is null, Skip the filtering step
             if (pSrc.Count > 0 && pDst.Count > 0)
-                Cv2.FindHomography(pSrc, pDst, HomographyMethods.Ransac, mask: outMask);
+            {
+                var hMat = Cv2.FindHomography(pSrc, pDst, HomographyMethods.Ransac, mask: outMask);
+
+                var objCorners = new Point2f[4];
+                objCorners[0] = new Point2f(0, 0);
+                objCorners[1] = new Point2f(0, matSrc.Rows);
+                objCorners[2] = new Point2f(matSrc.Cols, matSrc.Rows);
+                objCorners[3] = new Point2f(matSrc.Cols, 0);
+
+                var sceneCorners = Cv2.PerspectiveTransform(objCorners, hMat);
+
+                // for (int i = 0; i < 4; i++)
+                // {
+                //     /* 作用和perspectiveTransform一样
+                //     double x = obj_corners[i].x;
+                //     double y = obj_corners[i].y;
+                //     double Z = 1. / (H.At<double>(2, 0) * x + H.At<double>(2, 1) * y + H.At<double>(2, 2));
+                //     double X = (H.At<double>(0, 0) * x + H.At<double>(0, 1) * y + H.At<double>(0, 2)) * Z;
+                //     double Y = (H.At<double>(1, 0) * x + H.At<double>(1, 1) * y + H.At<double>(1, 2)) * Z;
+                //     scene_corners[i] = new Point(cv.Round(X) + img_1.Cols, cv.Round(Y));*/
+                //     sceneCorners[i].X += matSrc.Cols;
+                // }
+
+                Cv2.Line(matTo, sceneCorners[0].ToPoint(), sceneCorners[1].ToPoint(), Scalar.Red, 2);
+                Cv2.Line(matTo, sceneCorners[1].ToPoint(), sceneCorners[2].ToPoint(), Scalar.Red, 2);
+                Cv2.Line(matTo, sceneCorners[2].ToPoint(), sceneCorners[3].ToPoint(), Scalar.Red, 2);
+                Cv2.Line(matTo, sceneCorners[3].ToPoint(), sceneCorners[0].ToPoint(), Scalar.Red, 2);
+            }
             sw.Stop();
             Debug.WriteLine($"FindHomography耗时：{sw.ElapsedMilliseconds}ms.");
             sw.Restart();
@@ -329,7 +343,7 @@ public class MatchTest
                 type = reader.ReadInt32();
                 channels = reader.ReadInt32();
                 data = reader.ReadInt32();
-                image = new OpenCvSharp.Mat(rows, cols, (OpenCvSharp.MatType)type);
+                image = new Mat(rows, cols, (MatType)type);
                 // reader.Read(image.Data, 0, data);
             }
             catch (Exception)
