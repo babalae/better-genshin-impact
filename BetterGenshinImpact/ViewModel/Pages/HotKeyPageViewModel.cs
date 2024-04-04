@@ -18,7 +18,7 @@ using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HotKeyPageViewModel : ObservableObject
+public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;

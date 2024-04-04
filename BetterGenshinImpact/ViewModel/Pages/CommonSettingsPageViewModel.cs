@@ -16,7 +16,7 @@ using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class CommonSettingsPageViewModel : ObservableObject, INavigationAware
+public partial class CommonSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public AllConfig Config { get; set; }
 
