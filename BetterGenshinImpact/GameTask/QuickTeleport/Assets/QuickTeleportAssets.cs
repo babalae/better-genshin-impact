@@ -1,11 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 using System.Collections.Generic;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 
-public class QuickTeleportAssets
+public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
 {
     public Rect MapChooseIconRoi;
     public List<RecognitionObject> MapChooseIconRoList;
@@ -16,14 +16,12 @@ public class QuickTeleportAssets
     public RecognitionObject MapCloseButtonRo;
     public RecognitionObject MapChooseRo;
 
-    public QuickTeleportAssets()
+    private QuickTeleportAssets()
     {
-        var info = TaskContext.Instance().SystemInfo;
-
-        MapChooseIconRoi = new Rect((int)(1270 * info.AssetScale),
-            (int)(100 * info.AssetScale),
-            (int)(50 * info.AssetScale),
-            info.CaptureAreaRect.Height - (int)(200 * info.AssetScale));
+        MapChooseIconRoi = new Rect((int)(1270 * AssetScale),
+            (int)(100 * AssetScale),
+            (int)(50 * AssetScale),
+            CaptureRect.Height - (int)(200 * AssetScale));
         MapChooseIconRoList = new List<RecognitionObject>
         {
             BuildMapChooseIconRo("TeleportWaypoint.png"),
@@ -37,16 +35,16 @@ public class QuickTeleportAssets
         MapChooseIconGreyMatList = MapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat());
 
         // 传送按钮宽泛的识别区域
-        // RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 8, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 8),
+        // RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 4, CaptureRect.Height - CaptureRect.Height / 8, CaptureRect.Width / 4, CaptureRect.Height / 8),
         TeleportButtonRo = new RecognitionObject
         {
             Name = "GoTeleport",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "GoTeleport.png"),
-            RegionOfInterest = new Rect((int)(1440 * info.AssetScale),
-                (int)(979 * info.AssetScale),
-                (int)(60 * info.AssetScale),
-                (int)(60 * info.AssetScale)),
+            RegionOfInterest = new Rect((int)(1440 * AssetScale),
+                (int)(979 * AssetScale),
+                (int)(60 * AssetScale),
+                (int)(60 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -55,10 +53,10 @@ public class QuickTeleportAssets
         //    Name = "MapScaleButton",
         //    RecognitionType = RecognitionTypes.TemplateMatch,
         //    TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "ScaleWithMask.png"),
-        //    RegionOfInterest = new Rect((int)(30 * info.AssetScale),
-        //        (int)(440 * info.AssetScale),
-        //        (int)(40 * info.AssetScale),
-        //        (int)(200 * info.AssetScale)),
+        //    RegionOfInterest = new Rect((int)(30 * AssetScale),
+        //        (int)(440 * AssetScale),
+        //        (int)(40 * AssetScale),
+        //        (int)(200 * AssetScale)),
         //    UseMask = true,
         //    DrawOnWindow = true
         //}.InitTemplate();
@@ -68,10 +66,10 @@ public class QuickTeleportAssets
             Name = "MapScaleButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapScaleButton.png"),
-            RegionOfInterest = new Rect((int)(30 * info.AssetScale),
-                (int)(440 * info.AssetScale),
-                (int)(40 * info.AssetScale),
-                (int)(200 * info.AssetScale)),
+            RegionOfInterest = new Rect((int)(30 * AssetScale),
+                (int)(440 * AssetScale),
+                (int)(40 * AssetScale),
+                (int)(200 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -80,10 +78,10 @@ public class QuickTeleportAssets
             Name = "MapCloseButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapCloseButton.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - (int)(107 * info.AssetScale),
-                (int)(19 * info.AssetScale),
-                (int)(58 * info.AssetScale),
-                (int)(58 * info.AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(107 * AssetScale),
+                (int)(19 * AssetScale),
+                (int)(58 * AssetScale),
+                (int)(58 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -92,17 +90,17 @@ public class QuickTeleportAssets
             Name = "MapChoose",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapChoose.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - (int)(480 * info.AssetScale),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(480 * AssetScale),
                 0,
-                (int)(100 * info.AssetScale),
-                (int)(70 * info.AssetScale)),
+                (int)(100 * AssetScale),
+                (int)(70 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
 
     /// <summary>
     /// 宽泛的识别区域
-    /// RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height / 3,  info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3),
+    /// RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 3,  CaptureRect.Width / 4, CaptureRect.Height - CaptureRect.Height / 3),
     ///
     /// 限制小区域，防止误识别
     /// </summary>

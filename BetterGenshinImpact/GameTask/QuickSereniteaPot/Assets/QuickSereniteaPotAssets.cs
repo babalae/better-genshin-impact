@@ -1,14 +1,15 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 
-public class QuickSereniteaPotAssets
+public class QuickSereniteaPotAssets : BaseAssets<QuickSereniteaPotAssets>
 {
     public RecognitionObject BagCloseButtonRo;
     public RecognitionObject SereniteaPotIconRo;
 
-    public QuickSereniteaPotAssets()
+    private QuickSereniteaPotAssets()
     {
         var info = TaskContext.Instance().SystemInfo;
 

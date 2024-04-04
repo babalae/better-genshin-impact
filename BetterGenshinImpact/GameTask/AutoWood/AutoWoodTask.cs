@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.AutoWood;
 /// </summary>
 public class AutoWoodTask
 {
-    private readonly AutoWoodAssets _assets = new();
+    private readonly AutoWoodAssets _assets;
 
     private bool _first = true;
 
@@ -39,6 +39,7 @@ public class AutoWoodTask
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _login3rdParty = new();
+        _assets = AutoWoodAssets.Instance;
     }
 
     public void Start(WoodTaskParam taskParam)

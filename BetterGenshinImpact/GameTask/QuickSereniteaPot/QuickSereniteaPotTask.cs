@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 public class QuickSereniteaPotTask
 {
-    private static readonly QuickSereniteaPotAssets _assets = new();
+    private static readonly QuickSereniteaPotAssets _assets = QuickSereniteaPotAssets.Instance;
 
     private static void WaitForBagToOpen()
     {
