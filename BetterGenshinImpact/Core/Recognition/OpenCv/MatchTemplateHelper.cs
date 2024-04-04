@@ -21,7 +21,7 @@ public class MatchTemplateHelper
     /// <param name="matchMode">匹配方式</param>
     /// <param name="maskMat">遮罩</param>
     /// <param name="threshold">阈值</param>
-    /// <returns>左上角的标点</returns>
+    /// <returns>左上角的标点,由于(0,0)点作为未匹配的结果，所以不能做完全相同的模板匹配</returns>
     public static Point MatchTemplate(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat = null, double threshold = 0.8)
     {
         try

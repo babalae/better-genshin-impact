@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
@@ -106,6 +107,8 @@ public class TestTrigger : ITaskTrigger
 
         // var mat = content.CaptureRectArea.SrcGreyMat;
         // _bigMap.GetMapPositionAndDrawBySurf(mat);
+
+        Bv.BigMapIsUnderground(content.CaptureRectArea);
     }
 
     // private void Detect(CaptureContent content)

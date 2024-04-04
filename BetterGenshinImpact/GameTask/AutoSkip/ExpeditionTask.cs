@@ -158,11 +158,9 @@ public class ExpeditionTask
         var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
-
         var ocrResultRects = result.Regions.Select(x => x.ToOcrResultRect()).ToList();
         ocrResultRects = ocrResultRects.Where(r => r.Rect.X + r.Rect.Width < captureRect.Width / 2)
             .OrderBy(r => r.Rect.Y).ThenBy(r => r.Rect.X).ToList();
-
 
         var cards = new List<ExpeditionCharacterCard>();
         foreach (var ocrResultRect in ocrResultRects)
@@ -213,7 +211,7 @@ public class ExpeditionTask
 
     private PaddleOcrResult CaptureAndOcr(CaptureContent content)
     {
-        using var bitmap = TaskControl.CaptureGameBitmap(content.Dispatcher.GameCapture);
+        using var bitmap = TaskControl.CaptureGameBitmap();
         using var mat = bitmap.ToMat();
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);
@@ -221,10 +219,9 @@ public class ExpeditionTask
         return result;
     }
 
-
     private PaddleOcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
-        using var bitmap = TaskControl.CaptureGameBitmap(content.Dispatcher.GameCapture);
+        using var bitmap = TaskControl.CaptureGameBitmap();
         using var mat = new Mat(bitmap.ToMat(), rect);
         Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
         var result = OcrFactory.Paddle.OcrResult(mat);

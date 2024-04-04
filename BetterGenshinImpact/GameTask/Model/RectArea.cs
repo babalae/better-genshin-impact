@@ -194,6 +194,15 @@ public class RectArea : IDisposable
         return Width == 0 && Height == 0 && X == 0 && Y == 0;
     }
 
+    /// <summary>
+    /// 语义化包装
+    /// </summary>
+    /// <returns></returns>
+    public bool IsExist()
+    {
+        return !IsEmpty();
+    }
+
     public bool HasImage()
     {
         return _srcBitmap != null || _srcMat != null;
@@ -247,7 +256,7 @@ public class RectArea : IDisposable
             }
 
             var p = MatchTemplateHelper.MatchTemplate(roi, template, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
-            if (p is { X: > 0, Y: > 0 })
+            if (p != new Point())
             {
                 var newRa = new RectArea(template.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
@@ -344,6 +353,7 @@ public class RectArea : IDisposable
                 {
                     VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
                 }
+
                 failAction?.Invoke();
                 return new RectArea();
             }

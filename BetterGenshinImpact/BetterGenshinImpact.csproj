@@ -472,6 +472,9 @@
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapScaleButton.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapUndergroundSwitchButton.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\PortableWaypoint.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

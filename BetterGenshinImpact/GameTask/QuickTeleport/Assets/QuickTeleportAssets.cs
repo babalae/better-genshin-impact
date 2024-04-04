@@ -16,6 +16,8 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
     public RecognitionObject MapCloseButtonRo;
     public RecognitionObject MapChooseRo;
 
+    public RecognitionObject MapUndergroundSwitchButtonRo;
+
     private QuickTeleportAssets()
     {
         MapChooseIconRoi = new Rect((int)(1270 * AssetScale),
@@ -70,7 +72,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
                 (int)(440 * AssetScale),
                 (int)(40 * AssetScale),
                 (int)(200 * AssetScale)),
-            DrawOnWindow = false
+            DrawOnWindow = true
         }.InitTemplate();
 
         MapCloseButtonRo = new RecognitionObject
@@ -95,6 +97,21 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
                 (int)(100 * AssetScale),
                 (int)(70 * AssetScale)),
             DrawOnWindow = false
+        }.InitTemplate();
+
+        // 地下切换按钮
+        // 由于有颜色相近的内容，所以使用3通道
+        MapUndergroundSwitchButtonRo = new RecognitionObject
+        {
+            Name = "MapUndergroundSwitchButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            Use3Channels = true,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapUndergroundSwitchButton.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(120 * AssetScale),
+                (int)(250 * AssetScale),
+                (int)(90 * AssetScale),
+                (int)(570 * AssetScale)),
+            DrawOnWindow = true
         }.InitTemplate();
     }
 

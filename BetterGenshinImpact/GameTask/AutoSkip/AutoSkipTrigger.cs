@@ -203,21 +203,38 @@ public class AutoSkipTrigger : ITaskTrigger
         }
         else
         {
-            // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
-            var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
-            var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
-            if (rate is >= 0.5 and < 0.98999)
-            {
-                Simulation.SendInputEx.Mouse.LeftButtonClick();
-                if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
-                {
-                    _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
-                }
-
-                _prevClickTime = DateTime.Now;
-            }
+            ClickBlackGameScreen(content);
         }
+    }
+
+    /// <summary>
+    /// 黑屏点击判断
+    /// </summary>
+    /// <param name="content"></param>
+    /// <returns></returns>
+    private bool ClickBlackGameScreen(CaptureContent content)
+    {
+        // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
+        using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
+        var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
+        var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
+        if (rate is >= 0.5 and < 0.98999)
+        {
+            Simulation.SendInputEx.Mouse.LeftButtonClick();
+            if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
+            {
+                _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
+            }
+
+            _prevClickTime = DateTime.Now;
+            return true;
+        }
+        return false;
+    }
+
+    private bool AutoTrack(CaptureContent content)
+    {
+        return false;
     }
 
     private void HangoutOptionChoose(CaptureContent content)
@@ -234,9 +251,11 @@ public class AutoSkipTrigger : ITaskTrigger
             var drawList = selectedRects.Concat(unselectedRects).Select(rect => rect.ToRectDrawable()).ToList();
             VisionContext.Instance().DrawContent.PutOrRemoveRectList("HangoutIcon", drawList);
 
-            List<HangoutOption> hangoutOptionList = new();
-            hangoutOptionList.AddRange(selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)));
-            hangoutOptionList.AddRange(unselectedRects.Select(unselectedRect => new HangoutOption(unselectedRect, false)));
+            List<HangoutOption> hangoutOptionList =
+            [
+                .. selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)),
+                .. unselectedRects.Select(unselectedRect => new HangoutOption(unselectedRect, false)),
+            ];
             // 只有一个选项直接点击
             // if (hangoutOptionList.Count == 1)
             // {

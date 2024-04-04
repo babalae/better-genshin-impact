@@ -22,16 +22,13 @@ public class CaptureContent : IDisposable
 
     public RectArea CaptureRectArea { get; private set; }
 
-    public TaskTriggerDispatcher Dispatcher { get; private set; }
-
-    public CaptureContent(Bitmap srcBitmap, int frameIndex, double interval, TaskTriggerDispatcher dispatcher)
+    public CaptureContent(Bitmap srcBitmap, int frameIndex, double interval)
     {
         SrcBitmap = srcBitmap;
         FrameIndex = frameIndex;
         TimerInterval = interval;
         var systemInfo = TaskContext.Instance().SystemInfo;
         CaptureRectArea = new RectArea(srcBitmap, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y, systemInfo.DesktopRectArea);
-        Dispatcher = dispatcher;
     }
 
     public void Dispose()

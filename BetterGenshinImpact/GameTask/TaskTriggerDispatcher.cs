@@ -323,7 +323,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
+                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {
@@ -436,7 +436,7 @@ namespace BetterGenshinImpact.GameTask
         public CaptureContent GetLastCaptureContent()
         {
             var bitmap = GetLastCaptureBitmap();
-            return new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
+            return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
         }
 
         public void TakeScreenshot()
