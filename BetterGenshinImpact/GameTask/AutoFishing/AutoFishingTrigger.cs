@@ -140,7 +140,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     var ro = new RecognitionObject()
                     {
                         Name = "StartFishingText",
-                        RecognitionType = RecognitionTypes.Ocr,
+                        RecognitionType = RecognitionTypes.OcrMatch,
                         RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2,
                             srcMat.Height - srcMat.Height / 2),
                         AllContainMatchText = new List<string>

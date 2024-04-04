@@ -217,9 +217,14 @@ public class MatchTemplateHelper
     /// <param name="threshold"></param>
     /// <param name="maxCount"></param>
     /// <returns></returns>
-    public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat, double threshold, int maxCount)
+    public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat, double threshold, int maxCount = -1)
     {
         List<Rect> list = new();
+
+        if (maxCount < 0)
+        {
+            maxCount = srcMat.Width * srcMat.Height / dstMat.Width / dstMat.Height;
+        }
 
         for (int i = 0; i < maxCount; i++)
         {

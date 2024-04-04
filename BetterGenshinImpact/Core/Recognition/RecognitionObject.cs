@@ -75,6 +75,11 @@ public class RecognitionObject
     /// </summary>
     public Pen DrawOnWindowPen = new(Color.Red, 2);
 
+    /// <summary>
+    ///    一个模板匹配多个结果的时候最大匹配数量。可选，默认 -1，即不限制。
+    /// </summary>
+    public int MaxMatchCount { get; set; } = -1;
+
     public RecognitionObject InitTemplate()
     {
         if (TemplateImageMat != null && TemplateImageGreyMat == null)
