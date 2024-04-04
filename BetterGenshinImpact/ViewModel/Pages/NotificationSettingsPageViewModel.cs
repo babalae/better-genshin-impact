@@ -8,7 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class NotificationSettingsPageViewModel : ObservableObject
+public partial class NotificationSettingsPageViewModel : ObservableObject, IViewModel
 {
     public AllConfig Config { get; set; }
 

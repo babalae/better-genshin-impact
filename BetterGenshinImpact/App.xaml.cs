@@ -81,6 +81,7 @@ public partial class App : Application
                 services.AddView<CommonSettingsPage, CommonSettingsPageViewModel>();
                 services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
+                services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
