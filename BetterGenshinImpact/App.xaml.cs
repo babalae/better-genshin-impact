@@ -2,6 +2,8 @@
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
@@ -84,12 +86,17 @@ public partial class App : Application
                 services.AddSingleton<CommonSettingsPageViewModel>();
                 services.AddSingleton<TaskSettingsPage>();
                 services.AddSingleton<TaskSettingsPageViewModel>();
+                services.AddSingleton<NotificationSettingsPage>();
+                services.AddSingleton<NotificationSettingsPageViewModel>();
 
                 services.AddSingleton<HotKeyPage>();
                 services.AddSingleton<HotKeyPageViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
+                services.AddSingleton<NotificationService>();
+                services.AddHostedService<NotificationService>(sp => sp.GetRequiredService<NotificationService>());
+                services.AddSingleton<NotifierManager>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));

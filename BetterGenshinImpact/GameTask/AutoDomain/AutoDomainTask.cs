@@ -11,12 +11,14 @@ using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.Service.Notification;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
@@ -68,6 +70,7 @@ public class AutoDomainTask
             }
 
             Init();
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 前置进入秘境
@@ -111,19 +114,22 @@ public class AutoDomainTask
                     {
                         Logger.LogInformation("体力已经耗尽，结束自动秘境");
                     }
-
+                    NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
                     break;
                 }
+                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
             }
         }
         catch (NormalEndException e)
         {
             Logger.LogInformation("自动秘境中断:" + e.Message);
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Cancelled().Build());
         }
         catch (Exception e)
         {
             Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Failure().Build());
         }
         finally
         {
