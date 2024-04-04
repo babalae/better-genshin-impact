@@ -6,24 +6,22 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.Service.Notification;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.Map;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -31,8 +29,6 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask
 {
-    private readonly AutoPickAssets _autoPickAssets = new();
-
     private readonly AutoDomainParam _taskParam;
 
     private readonly PostMessageSimulator _simulator;
@@ -187,7 +183,7 @@ public class AutoDomainTask
     {
         var fightAssets = AutoFightContext.Instance().FightAssets;
 
-        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(_autoPickAssets.FRo);
+        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
@@ -261,7 +257,7 @@ public class AutoDomainTask
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
                 {
                     var content = GetContentFromDispatcher();
-                    var fRectArea = content.CaptureRectArea.Find(_autoPickAssets.FRo);
+                    var fRectArea = content.CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _taskParam.Cts);
