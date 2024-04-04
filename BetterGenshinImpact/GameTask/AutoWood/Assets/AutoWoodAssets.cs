@@ -1,17 +1,20 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoWood.Assets;
 
-public class AutoWoodAssets
+public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
 {
     public RecognitionObject TheBoonOfTheElderTreeRo;
+
     // public RecognitionObject CharacterGuideRo;
     public RecognitionObject MenuBagRo;
+
     public RecognitionObject ConfirmRo;
     public RecognitionObject EnterGameRo;
 
-    public AutoWoodAssets()
+    private AutoWoodAssets()
     {
         var info = TaskContext.Instance().SystemInfo;
         //「王树瑞佑」

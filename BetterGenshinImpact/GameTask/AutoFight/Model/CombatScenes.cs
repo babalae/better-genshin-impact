@@ -44,7 +44,7 @@ public class CombatScenes
         }
 
         // 剪裁出队伍区域
-        var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRectNoIndex);
+        var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRectNoIndex);
         // 过滤出白色
         var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
 
@@ -108,10 +108,10 @@ public class CombatScenes
         {
             // 流浪者特殊处理
             // 4人以上的队伍，不支持流浪者的识别
-            var wanderer = rectArea.Find(AutoFightContext.Instance().FightAssets.WandererIconRa);
+            var wanderer = rectArea.Find(AutoFightContext.Instance.FightAssets.WandererIconRa);
             if (wanderer.IsEmpty())
             {
-                wanderer = rectArea.Find(AutoFightContext.Instance().FightAssets.WandererIconNoActiveRa);
+                wanderer = rectArea.Find(AutoFightContext.Instance.FightAssets.WandererIconNoActiveRa);
             }
 
             if (wanderer.IsEmpty())
@@ -187,7 +187,7 @@ public class CombatScenes
             var nameRect = nameRects?[i] ?? Rect.Empty;
             avatars[i] = new Avatar(this, names[i], i + 1, nameRect)
             {
-                IndexRect = AutoFightContext.Instance().FightAssets.AvatarIndexRectList[i]
+                IndexRect = AutoFightContext.Instance.FightAssets.AvatarIndexRectList[i]
             };
         }
 

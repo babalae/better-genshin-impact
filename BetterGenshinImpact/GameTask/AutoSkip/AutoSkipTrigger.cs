@@ -58,7 +58,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
     public AutoSkipTrigger()
     {
-        _autoSkipAssets = new AutoSkipAssets();
+        _autoSkipAssets = AutoSkipAssets.Instance;
         _config = TaskContext.Instance().Config.AutoSkipConfig;
     }
 

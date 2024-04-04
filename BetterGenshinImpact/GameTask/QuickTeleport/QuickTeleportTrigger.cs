@@ -25,12 +25,13 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
     // private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
     private DateTime _prevExecute = DateTime.MinValue;
+
     private readonly QuickTeleportConfig _config;
     private readonly HotKeyConfig _hotkeyConfig;
 
     public QuickTeleportTrigger()
     {
-        _assets = new QuickTeleportAssets();
+        _assets = QuickTeleportAssets.Instance;
         _config = TaskContext.Instance().Config.QuickTeleportConfig;
         _hotkeyConfig = TaskContext.Instance().Config.HotKeyConfig;
     }
@@ -151,7 +152,6 @@ internal class QuickTeleportTrigger : ITaskTrigger
             }
         }
 
-
         // List<RectArea> raResultList = new();
         // foreach (var ro in _assets.MapChooseIconRoList)
         // {
@@ -195,10 +195,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
         //     }
         // }
 
-
         return hasMapChooseIcon;
     }
-
 
     /// <summary>
     /// 获取选项的文字
@@ -214,7 +212,6 @@ internal class QuickTeleportTrigger : ITaskTrigger
         var text = OcrFactory.Paddle.Ocr(mat);
         return text;
     }
-
 
     private bool IsHotkeyPressed()
     {

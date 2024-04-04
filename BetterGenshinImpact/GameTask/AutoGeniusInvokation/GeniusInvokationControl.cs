@@ -65,7 +65,7 @@ public class GeniusInvokationControl
 
     private CancellationTokenSource? _cts;
 
-    private readonly AutoGeniusInvokationAssets _assets = new();
+    private readonly AutoGeniusInvokationAssets _assets = AutoGeniusInvokationAssets.Instance;
 
     private IGameCapture? _gameCapture;
 

@@ -40,7 +40,7 @@ public class AutoPickTrigger : ITaskTrigger
 
     public AutoPickTrigger()
     {
-        _autoPickAssets = new AutoPickAssets();
+        _autoPickAssets = AutoPickAssets.Instance;
     }
 
     public void Init()
