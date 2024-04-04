@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 
-public class AutoFightAssets
+public class AutoFightAssets : BaseAssets<AutoFightAssets>
 {
     public Rect TeamRectNoIndex;
     public Rect TeamRect;
@@ -22,35 +23,31 @@ public class AutoFightAssets
 
     // 树脂状态
     public RecognitionObject CondensedResinCountRa;
+
     public RecognitionObject FragileResinCountRa;
 
-    public AutoFightAssets()
+    private AutoFightAssets()
     {
-        var info = TaskContext.Instance().SystemInfo;
-        var captureRect = info.CaptureAreaRect;
-        var assetScale = info.AssetScale;
-
-        TeamRectNoIndex = new Rect(captureRect.Width - (int)(355 * assetScale), (int)(220 * assetScale),
-            (int)((355 - 85) * assetScale), (int)(465 * assetScale));
-        TeamRect = new Rect(captureRect.Width - (int)(355 * assetScale), (int)(220 * assetScale),
-            (int)(355 * assetScale), (int)(465 * assetScale));
-        ERect = new Rect(captureRect.Width - (int)(267 * assetScale), captureRect.Height - (int)(132 * assetScale),
-            (int)(77 * assetScale), (int)(77 * assetScale));
-        QRect = new Rect(captureRect.Width - (int)(157 * assetScale), captureRect.Height - (int)(165 * assetScale),
-            (int)(110 * assetScale), (int)(110 * assetScale));
+        TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
+            (int)((355 - 85) * AssetScale), (int)(465 * AssetScale));
+        TeamRect = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
+            (int)(355 * AssetScale), (int)(465 * AssetScale));
+        ERect = new Rect(CaptureRect.Width - (int)(267 * AssetScale), CaptureRect.Height - (int)(132 * AssetScale),
+            (int)(77 * AssetScale), (int)(77 * AssetScale));
+        QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
+            (int)(110 * AssetScale), (int)(110 * AssetScale));
         // 结束提示从中间开始找相对位置
-        EndTipsUpperRect = new Rect(captureRect.Width / 2 - (int)(100 * assetScale),  (int)(243 * assetScale),
-            (int)(200 * assetScale), (int)(50 * assetScale));
-        EndTipsRect = new Rect(captureRect.Width / 2 - (int)(200 * assetScale), captureRect.Height - (int)(160 * assetScale),
-            (int)(400 * assetScale), (int)(80 * assetScale));
-
+        EndTipsUpperRect = new Rect(CaptureRect.Width / 2 - (int)(100 * AssetScale), (int)(243 * AssetScale),
+            (int)(200 * AssetScale), (int)(50 * AssetScale));
+        EndTipsRect = new Rect(CaptureRect.Width / 2 - (int)(200 * AssetScale), CaptureRect.Height - (int)(160 * AssetScale),
+            (int)(400 * AssetScale), (int)(80 * AssetScale));
 
         AvatarIndexRectList = new List<Rect>
         {
-            new(captureRect.Width - (int)(61 * assetScale), (int)(256 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
-            new(captureRect.Width - (int)(61 * assetScale), (int)(352 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
-            new(captureRect.Width - (int)(61 * assetScale), (int)(448 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
-            new(captureRect.Width - (int)(61 * assetScale), (int)(544 * assetScale), (int)(28 * assetScale), (int)(24 * assetScale)),
+            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(256 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(352 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(448 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(544 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
         };
 
         WandererIconRa = new RecognitionObject
@@ -74,7 +71,7 @@ public class AutoFightAssets
             Name = "Confirm",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "confirm.png"),
-            RegionOfInterest = new Rect(captureRect.Width / 2, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -84,7 +81,7 @@ public class AutoFightAssets
             Name = "ClickAnyCloseTip",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "click_any_close_tip.png"),
-            RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width, captureRect.Height / 2),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -93,7 +90,7 @@ public class AutoFightAssets
             Name = "UseCondensedResin",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "use_condensed_resin.png"),
-            RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -102,7 +99,7 @@ public class AutoFightAssets
             Name = "Exit",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "exit.png"),
-            RegionOfInterest = new Rect(0, captureRect.Height / 2, captureRect.Width / 2, captureRect.Height / 2),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -111,7 +108,7 @@ public class AutoFightAssets
             Name = "CondensedResinCount",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_count.png"),
-            RegionOfInterest = new Rect(captureRect.Width / 2, captureRect.Height / 3 * 2, captureRect.Width / 2, captureRect.Height / 3),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 3 * 2, CaptureRect.Width / 2, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
         FragileResinCountRa = new RecognitionObject
@@ -119,7 +116,7 @@ public class AutoFightAssets
             Name = "FragileResinCount",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "fragile_resin_count.png"),
-            RegionOfInterest = new Rect(captureRect.Width / 2, captureRect.Height / 3 * 2, captureRect.Width / 2, captureRect.Height / 3),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 3 * 2, CaptureRect.Width / 2, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }

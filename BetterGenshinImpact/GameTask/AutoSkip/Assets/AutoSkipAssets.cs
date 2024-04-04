@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
 
-public class AutoSkipAssets
+public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 {
     public RecognitionObject StopAutoButtonRo;
     public RecognitionObject PlayingTextRo;
@@ -30,15 +31,14 @@ public class AutoSkipAssets
     public Mat HangoutSelectedMat;
     public Mat HangoutUnselectedMat;
 
-    public AutoSkipAssets()
+    private AutoSkipAssets()
     {
-        var info = TaskContext.Instance().SystemInfo;
         StopAutoButtonRo = new RecognitionObject
         {
             Name = "StopAutoButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "stop_auto.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 5, info.CaptureAreaRect.Height / 8),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
 
@@ -60,7 +60,7 @@ public class AutoSkipAssets
             DrawOnWindow = true
         }.InitTemplate();
 
-        OptionRoi = new Rect(info.CaptureAreaRect.Width / 2, 0, info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 2 - info.CaptureAreaRect.Width / 6, info.CaptureAreaRect.Height);
+        OptionRoi = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width - CaptureRect.Width / 2 - CaptureRect.Width / 6, CaptureRect.Height);
         OptionIconRo = new RecognitionObject
         {
             Name = "OptionIcon",
@@ -100,7 +100,7 @@ public class AutoSkipAssets
             Name = "PageClose",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "page_close.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 8, 0, info.CaptureAreaRect.Width / 8, info.CaptureAreaRect.Height / 8),
+            RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 8, 0, CaptureRect.Width / 8, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
 
@@ -110,7 +110,7 @@ public class AutoSkipAssets
             Name = "Collect",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "collect.png"),
-            RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 3),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - CaptureRect.Height / 3, CaptureRect.Width / 4, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
         ReRo = new RecognitionObject
@@ -118,7 +118,7 @@ public class AutoSkipAssets
             Name = "Re",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "re.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 4, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height - CaptureRect.Height / 4, CaptureRect.Width / 4, CaptureRect.Height / 4),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -128,7 +128,7 @@ public class AutoSkipAssets
             Name = "Primogem",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "primogem.png"),
-            RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 3, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 3),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 3, CaptureRect.Width, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -138,7 +138,7 @@ public class AutoSkipAssets
             Name = "SubmitExclamationIconRo",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_icon_exclamation.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height / 4),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height / 4),
             DrawOnWindow = false
         }.InitTemplate();
         SubmitGoodsRo = new RecognitionObject
@@ -148,7 +148,7 @@ public class AutoSkipAssets
             TemplateMatchMode = TemplateMatchModes.CCorrNormed,
             Threshold = 0.9,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_goods.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height / 3),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 2, CaptureRect.Height / 3),
             DrawOnWindow = true,
             Use3Channels = true
         }.InitTemplate();

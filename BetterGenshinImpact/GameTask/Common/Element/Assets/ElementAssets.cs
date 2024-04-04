@@ -1,10 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
-public class ElementAssets : Singleton<ElementAssets>
+public class ElementAssets : BaseAssets<ElementAssets>
 {
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;

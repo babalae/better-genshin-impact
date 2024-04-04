@@ -6,24 +6,22 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.Service.Notification;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.Map;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -31,8 +29,6 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask
 {
-    private readonly AutoPickAssets _autoPickAssets = new();
-
     private readonly AutoDomainParam _taskParam;
 
     private readonly PostMessageSimulator _simulator;
@@ -48,7 +44,7 @@ public class AutoDomainTask
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
-        _simulator = AutoFightContext.Instance().Simulator;
+        _simulator = AutoFightContext.Instance.Simulator;
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -185,9 +181,9 @@ public class AutoDomainTask
 
     private void EnterDomain()
     {
-        var fightAssets = AutoFightContext.Instance().FightAssets;
+        var fightAssets = AutoFightContext.Instance.FightAssets;
 
-        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(_autoPickAssets.FRo);
+        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
@@ -221,7 +217,7 @@ public class AutoDomainTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            var cactRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ClickAnyCloseTipRa);
+            var cactRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
                 Sleep(1000, _taskParam.Cts);
@@ -261,7 +257,7 @@ public class AutoDomainTask
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
                 {
                     var content = GetContentFromDispatcher();
-                    var fRectArea = content.CaptureRectArea.Find(_autoPickAssets.FRo);
+                    var fRectArea = content.CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _taskParam.Cts);
@@ -370,7 +366,7 @@ public class AutoDomainTask
     {
         var content = GetContentFromDispatcher();
 
-        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsUpperRect);
+        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("挑战") || text.Contains("达成"))
         {
@@ -378,7 +374,7 @@ public class AutoDomainTask
             return true;
         }
 
-        endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsRect);
+        endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.EndTipsRect);
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("自动") || text.Contains("退出"))
         {
@@ -665,7 +661,7 @@ public class AutoDomainTask
                 break;
             }
 
-            var useCondensedResinRa = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.UseCondensedResinRa);
+            var useCondensedResinRa = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
             if (!useCondensedResinRa.IsEmpty())
             {
                 useCondensedResinRa.ClickCenter();
@@ -691,13 +687,13 @@ public class AutoDomainTask
 
             // 优先点击继续
             var content = GetContentFromDispatcher();
-            var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
+            var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 if (isLastTurn)
                 {
                     // 最后一回合 退出
-                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
+                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.ClickCenter();
@@ -715,7 +711,7 @@ public class AutoDomainTask
                 if (condensedResinCount == 0 && fragileResinCount < 20)
                 {
                     // 没有体力了退出
-                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
+                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.ClickCenter();
@@ -746,7 +742,7 @@ public class AutoDomainTask
 
         var content = GetContentFromDispatcher();
         // 浓缩树脂
-        var condensedResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.CondensedResinCountRa);
+        var condensedResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.CondensedResinCountRa);
         if (!condensedResinCountRa.IsEmpty())
         {
             // 图像右侧就是浓缩树脂数量
@@ -757,7 +753,7 @@ public class AutoDomainTask
         }
 
         // 脆弱树脂
-        var fragileResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.FragileResinCountRa);
+        var fragileResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.FragileResinCountRa);
         if (!fragileResinCountRa.IsEmpty())
         {
             // 图像右侧就是脆弱树脂数量

@@ -53,7 +53,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public AutoFishingTrigger()
         {
-            _autoFishingAssets = new AutoFishingAssets();
+            _autoFishingAssets = AutoFishingAssets.Instance;
         }
 
         public void Init()
