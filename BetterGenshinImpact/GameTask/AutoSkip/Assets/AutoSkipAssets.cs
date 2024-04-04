@@ -55,7 +55,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
         {
             Name = "PlayingText",
             RecognitionType = RecognitionTypes.OcrMatch,
-            RegionOfInterest = new Rect((int)(100 * info.AssetScale), (int)(35 * info.AssetScale), (int)(85 * info.AssetScale), (int)(35 * info.AssetScale)),
+            RegionOfInterest = new Rect((int)(100 * AssetScale), (int)(35 * AssetScale), (int)(85 * AssetScale), (int)(35 * AssetScale)),
             OneContainMatchText = ["播", "番", "放", "中"],
             DrawOnWindow = true
         }.InitTemplate();
