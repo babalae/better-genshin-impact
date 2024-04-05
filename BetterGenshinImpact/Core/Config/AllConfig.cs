@@ -58,7 +58,7 @@ public partial class AllConfig : ObservableObject
     /// 推理使用的设备
     /// </summary>
     [ObservableProperty]
-    private string _inferenceDevice = "GPU";
+    private string _inferenceDevice = "CPU";
 
     /// <summary>
     ///     遮罩窗口配置

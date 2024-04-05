@@ -24,16 +24,10 @@ public class PickTextInference : ITextInference
 
     public PickTextInference()
     {
-        var options = TaskContext.Instance().Config.InferenceDevice switch
-        {
-            "CPU" => new SessionOptions(),
-            "GPU" => SessionOptions.MakeSessionOptionWithCudaProvider(),
-            _ => throw new InvalidEnumArgumentException("无效的推理设备")
-        };
         var modelPath = Global.Absolute("Assets\\Model\\Yap\\model_training.onnx");
         if (!File.Exists(modelPath)) throw new FileNotFoundException("Yap模型文件不存在", modelPath);
 
-        _session = new InferenceSession(modelPath, options);
+        _session = new InferenceSession(modelPath, BgiSessionOption.Instance.Options);
 
         var wordJsonPath = Global.Absolute("Assets\\Model\\Yap\\index_2_word.json");
         if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);

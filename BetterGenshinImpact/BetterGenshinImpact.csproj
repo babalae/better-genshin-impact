@@ -34,8 +34,8 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.17.1" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.17.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Gpu" Version="1.17.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.17.0" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.8.0.20230708" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />

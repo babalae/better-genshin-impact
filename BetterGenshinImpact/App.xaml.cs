@@ -236,5 +236,6 @@ public partial class App : Application
         MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
 
         // log
+        GetLogger<App>().LogDebug(e, "UnHandle Exception");
     }
 }

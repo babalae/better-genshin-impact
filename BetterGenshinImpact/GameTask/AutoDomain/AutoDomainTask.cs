@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -46,7 +47,7 @@ public class AutoDomainTask
         _taskParam = taskParam;
         _simulator = AutoFightContext.Instance.Simulator;
 
-        _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
+        _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"), BgiSessionOption.Instance.Options);
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
