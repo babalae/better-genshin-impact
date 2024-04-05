@@ -560,22 +560,20 @@ public class AutoSkipTrigger : ITaskTrigger
         var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
         if (!exclamationRa.IsEmpty())
         {
-            var rects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcMat.CvtColor(ColorConversionCodes.BGRA2BGR),
-                _autoSkipAssets.SubmitGoodsMat, TemplateMatchModes.SqDiffNormed, null, 0.1, 4);
+            // var rects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcMat.CvtColor(ColorConversionCodes.BGRA2BGR),
+            //     _autoSkipAssets.SubmitGoodsMat, TemplateMatchModes.SqDiffNormed, null, 0.9, 4);
+            var rects = ContoursHelper.FindSpecifyColorRects(content.CaptureRectArea.SrcMat, new Scalar(233, 229, 220), 100, 20);
             if (rects.Count == 0)
             {
                 return false;
             }
 
-            // 出现相交的矩形，只保留最初的
-            // var newRects = new List<Rect> { rects[0] };
+            // 画矩形并保存
             // foreach (var rect in rects)
             // {
-            //     if (!newRects.Any(newRect => newRect.IntersectsWith(rect)))
-            //     {
-            //         newRects.Add(rect);
-            //     }
+            //     Cv2.Rectangle(content.CaptureRectArea.SrcMat, rect, Scalar.Red, 1);
             // }
+            // Cv2.ImWrite("log/提交物品.png", content.CaptureRectArea.SrcMat);
 
             var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -602,7 +600,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnWhiteConfirm);
             if (!btnWhiteConfirmRa.IsEmpty())
             {
-                // btnWhiteConfirmRa.ClickCenter();
+                btnWhiteConfirmRa.ClickCenter();
                 _logger.LogInformation("提交物品：{Text}", "3. 交付");
 
                 VisionContext.Instance().DrawContent.ClearAll();

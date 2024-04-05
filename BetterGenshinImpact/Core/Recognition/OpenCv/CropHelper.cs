@@ -1,10 +1,12 @@
-﻿using OpenCvSharp;
+﻿using System;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 
 /// <summary>
 ///     图片剪裁
 /// </summary>
+[Obsolete]
 public class CropHelper
 {
     public static Mat CutRightTop(Mat srcMat, int saveRightWidth, int saveTopHeight)
