@@ -33,7 +33,7 @@ public class AutoDomainTask
 
     private readonly PostMessageSimulator _simulator;
 
-    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
+    private readonly YoloV8 _predictor;
 
     private readonly ClickOffset _clickOffset;
 
@@ -45,6 +45,8 @@ public class AutoDomainTask
     {
         _taskParam = taskParam;
         _simulator = AutoFightContext.Instance.Simulator;
+
+        _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;

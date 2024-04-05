@@ -40,11 +40,6 @@ public partial class AllConfig : ObservableObject
     [ObservableProperty]
     private string _notShowNewVersionNoticeEndVersion = "";
 
-    ///// <summary>
-    ///// 窗口捕获帧数/触发器触发频率
-    ///// </summary>
-    //[ObservableProperty] private int _frameRate = 30;
-
     /// <summary>
     ///     触发器触发频率(ms)
     /// </summary>
@@ -58,6 +53,12 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _wgcUseBitmapCache = true;
+
+    /// <summary>
+    /// 推理使用的设备
+    /// </summary>
+    [ObservableProperty]
+    private string _inferenceDevice = "GPU";
 
     /// <summary>
     ///     遮罩窗口配置

@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -22,7 +24,12 @@ public class PickTextInference : ITextInference
 
     public PickTextInference()
     {
-        var options = new SessionOptions();
+        var options = TaskContext.Instance().Config.InferenceDevice switch
+        {
+            "CPU" => new SessionOptions(),
+            "GPU" => SessionOptions.MakeSessionOptionWithCudaProvider(),
+            _ => throw new InvalidEnumArgumentException("无效的推理设备")
+        };
         var modelPath = Global.Absolute("Assets\\Model\\Yap\\model_training.onnx");
         if (!File.Exists(modelPath)) throw new FileNotFoundException("Yap模型文件不存在", modelPath);
 
