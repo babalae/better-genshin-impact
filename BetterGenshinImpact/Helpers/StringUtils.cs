@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.Helpers;
+﻿using System.Text.RegularExpressions;
+
+namespace BetterGenshinImpact.Helpers;
 
 public class StringUtils
 {
@@ -99,6 +101,24 @@ public class StringUtils
         catch
         {
             return 0;
+        }
+    }
+
+    public static int TryExtractPositiveInt(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return -1;
+        }
+
+        try
+        {
+            text = Regex.Replace(text, @"[^0-9]+", "");
+            return int.Parse(text);
+        }
+        catch
+        {
+            return -1;
         }
     }
 }

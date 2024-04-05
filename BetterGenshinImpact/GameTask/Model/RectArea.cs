@@ -11,8 +11,10 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using Sdcb.PaddleOCR;
 using Point = OpenCvSharp.Point;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
@@ -252,6 +254,11 @@ public class RectArea : IDisposable
             if (ro.RegionOfInterest != Rect.Empty)
             {
                 // TODO roi 是可以加缓存的
+                if (!(0 <= ro.RegionOfInterest.X && 0 <= ro.RegionOfInterest.Width && ro.RegionOfInterest.X + ro.RegionOfInterest.Width <= roi.Cols
+                      && 0 <= ro.RegionOfInterest.Y && 0 <= ro.RegionOfInterest.Height && ro.RegionOfInterest.Y + ro.RegionOfInterest.Height <= roi.Rows))
+                {
+                    Logger.LogError("输入图像{W1}x{H1},模板ROI区域{H2}x{W2},边界溢出！", roi.Width, roi.Height, ro.RegionOfInterest.Width, ro.RegionOfInterest.Height);
+                }
                 roi = new Mat(roi, ro.RegionOfInterest);
             }
 
@@ -453,7 +460,12 @@ public class RectArea : IDisposable
 
             if (result.Regions.Length > 0)
             {
-                var resRaList = result.Regions.Select(r => this.Derive(r.Rect.BoundingRect() + new Point(ro.RegionOfInterest.X, ro.RegionOfInterest.Y))).ToList();
+                var resRaList = result.Regions.Select(r =>
+                {
+                    var newRa = this.Derive(r.Rect.BoundingRect() + new Point(ro.RegionOfInterest.X, ro.RegionOfInterest.Y));
+                    newRa.Text = r.Text;
+                    return newRa;
+                }).ToList();
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
                     VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, result.ToRectDrawableListOffset(ro.RegionOfInterest.X, ro.RegionOfInterest.Y));
@@ -529,6 +541,18 @@ public class RectArea : IDisposable
     public RectArea Derive(Rect rect)
     {
         return new RectArea(rect, this);
+    }
+
+    /// <summary>
+    /// 派生2x2区域（无图片）
+    /// 方便用于点击
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    public RectArea DerivePoint(int x, int y)
+    {
+        return new RectArea(new Rect(x, y, 2, 2), this);
     }
 
     /// <summary>

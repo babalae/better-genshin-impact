@@ -21,6 +21,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -215,6 +217,10 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoDomain)
             {
                 Task.Run(() => { new AutoDomainTask((AutoDomainParam)param).Start(); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoTrack)
+            {
+                Task.Run(() => { new AutoTrackTask((AutoTrackParam)param).Start(); });
             }
         }
 

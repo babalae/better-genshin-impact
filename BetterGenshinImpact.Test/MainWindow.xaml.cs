@@ -37,7 +37,7 @@ public partial class MainWindow : Window
 
     private void DoMatchTemplateTest(object sender, System.Windows.RoutedEventArgs e)
     {
-        MatchTemplateTest.TestMenu();
+        MatchTemplateTest.TestTrack();
     }
 
     private void DoMatchTest(object sender, System.Windows.RoutedEventArgs e)

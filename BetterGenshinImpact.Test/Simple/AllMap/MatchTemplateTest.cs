@@ -25,6 +25,16 @@ public class MatchTemplateTest
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\x1.png", src2);
     }
 
+    public static void TestTrack()
+    {
+        var tar = new Mat(@"E:\HuiTask\更好的原神\自动剧情\任务剧情与地图追踪\blue_task_point_28x.png", ImreadModes.Grayscale);
+        var src = new Mat(@"E:\HuiTask\更好的原神\自动剧情\任务剧情与地图追踪\202404050232291883.png", ImreadModes.Grayscale);
+        var src2 = src.Clone();
+        var p = MatchTemplateHelper.MatchTemplate(src, tar, TemplateMatchModes.CCoeffNormed, null, 0.1);
+        Cv2.Rectangle(src2, new Rect(p.X, p.Y, tar.Width, tar.Height), new Scalar(0, 0, 255), 1);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\自动剧情\任务剧情与地图追踪\rec_b1.png", src2);
+    }
+
     public static void TestMenu()
     {
         var tar = new Mat(@"D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\GameTask\Common\Element\Assets\1920x1080\paimon_menu.png", ImreadModes.Color);

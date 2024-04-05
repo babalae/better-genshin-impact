@@ -232,11 +232,6 @@ public class AutoSkipTrigger : ITaskTrigger
         return false;
     }
 
-    private bool AutoTrack(CaptureContent content)
-    {
-        return false;
-    }
-
     private void HangoutOptionChoose(CaptureContent content)
     {
         var selectedRects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcGreyMat, _autoSkipAssets.HangoutSelectedMat);

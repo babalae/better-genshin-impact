@@ -10,11 +10,10 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BtnWhiteCancel;
     public RecognitionObject BtnBlackConfirm;
     public RecognitionObject PaimonMenuRo;
+    public RecognitionObject BlueTrackPoint;
 
     private ElementAssets()
     {
-        var info = TaskContext.Instance().SystemInfo;
-
         // 按钮
         BtnWhiteConfirm = new RecognitionObject
         {
@@ -44,8 +43,18 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "PaimonMenu",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "paimon_menu.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 4),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 4),
             DrawOnWindow = false
+        }.InitTemplate();
+
+        // 任务追踪点位
+        BlueTrackPoint = new RecognitionObject
+        {
+            Name = "BlueTrackPoint",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "blue_track_point_28x.png"),
+            RegionOfInterest = new Rect((int)(300 * AssetScale), 0, CaptureRect.Width - (int)(600 * AssetScale), CaptureRect.Height),
+            DrawOnWindow = true
         }.InitTemplate();
     }
 }

@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.AutoWood;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -38,6 +39,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private int _autoDomainRoundNum;
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
     [ObservableProperty] private string _switchAutoFightButtonText = "启动";
+    [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -284,6 +286,57 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     public void OnGoToAutoDomainUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/domain.html") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnSwitchAutoTrack()
+    {
+        try
+        {
+            lock (_locker)
+            {
+                if (SwitchAutoTrackButtonText == "启动")
+                {
+                    var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
+                    if (string.IsNullOrEmpty(content))
+                    {
+                        return;
+                    }
+
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new AutoTrackParam(_cts);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrack, param);
+                    SwitchAutoTrackButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoTrackButtonText = "启动";
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoTrackUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+    }
+
+    public static void SetSwitchAutoTrackButtonText(bool running)
+    {
+        var instance = App.GetService<TaskSettingsPageViewModel>();
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.SwitchAutoTrackButtonText = running ? "停止" : "启动";
     }
 
     public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
