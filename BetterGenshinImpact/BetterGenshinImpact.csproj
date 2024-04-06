@@ -367,6 +367,9 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\blue_track_point_28x.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_cancel.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

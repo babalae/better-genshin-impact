@@ -59,16 +59,16 @@ public static partial class Bv
         return false;
     }
 
-    // public static bool ClickBlackCancelButton(RectArea captureRa)
-    // {
-    //     var ra = captureRa.Find(ElementAssets.Instance.BtnBlackCancel);
-    //     if (ra.IsExist())
-    //     {
-    //         ra.ClickCenter();
-    //         return true;
-    //     }
-    //     return false;
-    // }
+    public static bool ClickBlackCancelButton(RectArea captureRa)
+    {
+        var ra = captureRa.Find(ElementAssets.Instance.BtnBlackCancel);
+        if (ra.IsExist())
+        {
+            ra.ClickCenter();
+            return true;
+        }
+        return false;
+    }
 
     /// <summary>
     /// 点击确认按钮（优先点击白色背景的确认按钮）
@@ -77,15 +77,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool ClickConfirmButton(RectArea captureRa)
     {
-        if (ClickWhiteConfirmButton(captureRa))
-        {
-            return true;
-        }
-        if (ClickBlackConfirmButton(captureRa))
-        {
-            return true;
-        }
-        return false;
+        return ClickBlackConfirmButton(captureRa) || ClickWhiteConfirmButton(captureRa);
     }
 
     /// <summary>
@@ -95,14 +87,6 @@ public static partial class Bv
     /// <returns></returns>
     public static bool ClickCancelButton(RectArea captureRa)
     {
-        if (ClickWhiteCancelButton(captureRa))
-        {
-            return true;
-        }
-        // if(ClickBlackCancelButton(captureRa))
-        // {
-        //     return true;
-        // }
-        return false;
+        return ClickBlackCancelButton(captureRa) || ClickWhiteCancelButton(captureRa);
     }
 }

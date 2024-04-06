@@ -283,11 +283,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             {
                 if (Bv.ClickConfirmButton(TaskControl.CaptureToRectArea()))
                 {
-                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：成功");
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "确认");
                 }
                 else
                 {
-                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：未找到按钮图片");
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "确认");
                 }
             }
         ));
@@ -301,11 +301,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             {
                 if (Bv.ClickCancelButton(TaskControl.CaptureToRectArea()))
                 {
-                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：成功");
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "取消");
                 }
                 else
                 {
-                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：未找到按钮图片");
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "取消");
                 }
             }
         ));
