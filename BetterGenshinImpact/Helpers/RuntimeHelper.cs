@@ -16,12 +16,16 @@ internal static class RuntimeHelper
     public static bool IsElevated { get; } = GetElevated();
     public static bool IsDebuggerAttached => Debugger.IsAttached;
     public static bool IsDesignMode { get; } = GetDesignMode();
+
     public static bool IsDebug =>
 #if DEBUG
         true;
+
 #else
         false;
 #endif
+
+    public static bool IsGpuPackage => true;
 
     private static bool GetElevated()
     {
@@ -81,9 +85,9 @@ internal static class RuntimeHelper
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
-                MessageBox.Show("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI", 
+                MessageBox.Show("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI",
                     "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return; 
+                return;
             }
         }
         catch (Win32Exception)
