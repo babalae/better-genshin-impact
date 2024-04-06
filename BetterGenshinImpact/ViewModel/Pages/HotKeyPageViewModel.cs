@@ -7,6 +7,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
@@ -24,7 +26,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     public AllConfig Config { get; set; }
 
-    [ObservableProperty] private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
+    [ObservableProperty]
+    private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
 
     public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
     {
@@ -269,6 +272,42 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoDomainHotkey,
             Config.HotKeyConfig.AutoDomainHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "快捷点击原神内确认按钮",
+            nameof(Config.HotKeyConfig.ClickGenshinConfirmButtonHotkey),
+            Config.HotKeyConfig.ClickGenshinConfirmButtonHotkey,
+            Config.HotKeyConfig.ClickGenshinConfirmButtonHotkeyType,
+            (_, _) =>
+            {
+                if (Bv.ClickConfirmButton(TaskControl.CaptureToRectArea()))
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：成功");
+                }
+                else
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：未找到按钮图片");
+                }
+            }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "快捷点击原神内取消按钮",
+            nameof(Config.HotKeyConfig.ClickGenshinCancelButtonHotkey),
+            Config.HotKeyConfig.ClickGenshinCancelButtonHotkey,
+            Config.HotKeyConfig.ClickGenshinCancelButtonHotkeyType,
+            (_, _) =>
+            {
+                if (Bv.ClickCancelButton(TaskControl.CaptureToRectArea()))
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：成功");
+                }
+                else
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内确认按钮：未找到按钮图片");
+                }
+            }
         ));
     }
 

@@ -107,4 +107,18 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _turnAroundHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 点击确认按钮
+    [ObservableProperty]
+    private string _clickGenshinConfirmButtonHotkey = "";
+
+    [ObservableProperty]
+    private string _clickGenshinConfirmButtonHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 点击取消按钮
+    [ObservableProperty]
+    private string _clickGenshinCancelButtonHotkey = "";
+
+    [ObservableProperty]
+    private string _clickGenshinCancelButtonHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }
