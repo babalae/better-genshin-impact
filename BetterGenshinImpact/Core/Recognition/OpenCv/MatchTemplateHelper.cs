@@ -35,7 +35,12 @@ public class MatchTemplateHelper
             {
                 Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
             }
-            // Cv2.Normalize(result, result, 0, 1, NormTypes.MinMax, -1, null);
+
+            if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.CCoeff or TemplateMatchModes.CCorr)
+            {
+                Cv2.Normalize(result, result, 0, 1, NormTypes.MinMax, -1, null);
+            }
+
             Cv2.MinMaxLoc(result, out var minValue, out var maxValue, out var minLoc, out var maxLoc);
 
             if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.SqDiffNormed)
