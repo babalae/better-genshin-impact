@@ -44,4 +44,9 @@ public partial class MainWindow : Window
     {
         KeyPointMatchTest.Test();
     }
+
+    private void MapDrawTeleportPoint(object sender, RoutedEventArgs e)
+    {
+        MapTeleportPointDraw.Draw();
+    }
 }

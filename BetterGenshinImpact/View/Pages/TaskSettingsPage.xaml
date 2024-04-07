@@ -595,7 +595,7 @@
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
-                         Icon="{ui:SymbolIcon BuildingBankToolbox24}">
+                         Icon="{ui:SymbolIcon PeopleQueue24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>

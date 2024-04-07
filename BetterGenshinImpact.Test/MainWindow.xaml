@@ -38,5 +38,11 @@
                 Height="23"
                 Click="DoMatchTemplateTest"
                 Content="模板匹配测试" />
+        <Button Canvas.Left="10"
+                Canvas.Top="160"
+                Width="100"
+                Height="23"
+                Click="MapDrawTeleportPoint"
+                Content="超大地图标点" />
     </Canvas>
 </Window>
