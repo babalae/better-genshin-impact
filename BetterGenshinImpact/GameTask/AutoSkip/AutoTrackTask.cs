@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -49,6 +50,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             }
 
             SystemControl.ActivateWindow();
+
+            Logger.LogInformation("→ {Text}", "自动追踪，启动！");
 
             TrackMission();
         }
@@ -203,26 +206,33 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             var blueTrackPointRa = ra.Find(ElementAssets.Instance.BlueTrackPoint);
             if (blueTrackPointRa.IsExist())
             {
-                // 调整整体高度
+                // 使追踪点位于俯视角上方
                 var centerY = blueTrackPointRa.Y + blueTrackPointRa.Height / 2;
                 if (centerY > CaptureRect.Height / 2)
                 {
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(-100, 0);
+                    Simulation.SendInputEx.Mouse.MoveMouseBy(-50, 0);
                     if (wDown)
                     {
                         Simulation.SendInputEx.Keyboard.KeyUp(User32.VK.VK_W);
                         wDown = false;
                     }
-
+                    Debug.WriteLine("使追踪点位于俯视角上方");
                     continue;
                 }
 
                 // 调整方向
                 var centerX = blueTrackPointRa.X + blueTrackPointRa.Width / 2;
-                var moveX = centerX - CaptureRect.Width / 2;
+                var moveX = (centerX - CaptureRect.Width / 2) / 8;
+                moveX = moveX switch
+                {
+                    > 0 and < 10 => 10,
+                    > -10 and < 0 => -10,
+                    _ => moveX
+                };
                 if (moveX != 0)
                 {
                     Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, 0);
+                    Debug.WriteLine("调整方向:" + moveX);
                 }
 
                 if (moveX == 0 || prevMoveX * moveX < 0)

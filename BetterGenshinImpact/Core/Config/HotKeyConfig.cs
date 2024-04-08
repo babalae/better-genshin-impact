@@ -11,6 +11,12 @@ namespace BetterGenshinImpact.Core.Config;
 public partial class HotKeyConfig : ObservableObject
 {
     [ObservableProperty]
+    private string _autoTrackHotkey = "";
+
+    [ObservableProperty]
+    private string _autoTrackHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    [ObservableProperty]
     private string _autoDomainHotkey = "";
 
     [ObservableProperty]
