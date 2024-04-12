@@ -10,12 +10,12 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 
 public static class CommonExtension
 {
-    public static unsafe Point ToCvPoint(this System.Drawing.Point point)
+    public static unsafe Point AsCvPoint(this System.Drawing.Point point)
     {
         return *(Point*)&point;
     }
 
-    public static unsafe System.Drawing.Point ToDrawingPoint(this Point point)
+    public static unsafe System.Drawing.Point AsDrawingPoint(this Point point)
     {
         return *(System.Drawing.Point*)&point;
     }
@@ -25,7 +25,7 @@ public static class CommonExtension
         return new System.Windows.Point(point.X, point.Y);
     }
 
-    public static unsafe Rect ToCvRect(this Rectangle rectangle)
+    public static unsafe Rect AsCvRect(this Rectangle rectangle)
     {
         return *(Rect*)&rectangle;
     }
@@ -40,7 +40,7 @@ public static class CommonExtension
         return new System.Windows.Rect(rect.X + offsetX, rect.Y + offsetY, rect.Width, rect.Height);
     }
 
-    public static unsafe Rectangle ToDrawingRectangle(this Rect rect)
+    public static unsafe Rectangle AsDrawingRectangle(this Rect rect)
     {
         return *(Rectangle*)&rect;
     }

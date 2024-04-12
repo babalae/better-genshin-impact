@@ -4,17 +4,14 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
 public class TextInferenceFactory
 {
-    public static ITextInference Pick = Create(OcrEngineTypes.YapModel);
+    public static ITextInference Pick { get; } = Create(OcrEngineTypes.YapModel);
 
     public static ITextInference Create(OcrEngineTypes type)
     {
-        switch (type)
+        return type switch
         {
-            case OcrEngineTypes.YapModel:
-                return new PickTextInference();
-
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
+            OcrEngineTypes.YapModel => new PickTextInference(),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+        };
     }
 }
