@@ -54,29 +54,36 @@ public class CombatScenes : IDisposable
         // 识别队伍
         var names = new string[4];
         var displayNames = new string[4];
-        for (var i = 0; i < AutoFightAssets.Instance.AvatarSideIconRectList.Count; i++)
+        try
         {
-            var ra = content.CaptureRectArea.Crop(AutoFightAssets.Instance.AvatarSideIconRectList[i]);
-            var pair = ClassifyAvatarCnName(ra.SrcBitmap, i + 1);
-            names[i] = pair.Item1;
-            if (!string.IsNullOrEmpty(pair.Item2))
+            for (var i = 0; i < AutoFightAssets.Instance.AvatarSideIconRectList.Count; i++)
             {
-                var costumeName = pair.Item2;
-                if (AutoFightAssets.Instance.AvatarCostumeMap.ContainsKey(costumeName))
+                var ra = content.CaptureRectArea.Crop(AutoFightAssets.Instance.AvatarSideIconRectList[i]);
+                var pair = ClassifyAvatarCnName(ra.SrcBitmap, i + 1);
+                names[i] = pair.Item1;
+                if (!string.IsNullOrEmpty(pair.Item2))
                 {
-                    costumeName = AutoFightAssets.Instance.AvatarCostumeMap[costumeName];
-                }
+                    var costumeName = pair.Item2;
+                    if (AutoFightAssets.Instance.AvatarCostumeMap.ContainsKey(costumeName))
+                    {
+                        costumeName = AutoFightAssets.Instance.AvatarCostumeMap[costumeName];
+                    }
 
-                displayNames[i] = $"{pair.Item1}({costumeName})";
+                    displayNames[i] = $"{pair.Item1}({costumeName})";
+                }
+                else
+                {
+                    displayNames[i] = pair.Item1;
+                }
             }
-            else
-            {
-                displayNames[i] = pair.Item1;
-            }
+            Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
+            Avatars = BuildAvatars(names.ToList());
+            AvatarMap = Avatars.ToDictionary(x => x.Name);
         }
-        Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
-        Avatars = BuildAvatars(names.ToList());
-        AvatarMap = Avatars.ToDictionary(x => x.Name);
+        catch (Exception e)
+        {
+            Logger.LogWarning(e.Message);
+        }
         return this;
     }
 
