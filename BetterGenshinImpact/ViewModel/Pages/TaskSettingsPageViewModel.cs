@@ -1,6 +1,11 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
@@ -9,13 +14,9 @@ using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoWood;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -30,10 +31,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private static readonly object _locker = new();
 
     [ObservableProperty] private string[] _strategyList;
-    [ObservableProperty] private string _switchAutoGeniusInvokationButtonText;
+    [ObservableProperty] private string _switchAutoGeniusInvokationButtonText = "启动";
 
     [ObservableProperty] private int _autoWoodRoundNum;
-    [ObservableProperty] private string _switchAutoWoodButtonText;
+    [ObservableProperty] private string _switchAutoWoodButtonText = "启动";
 
     [ObservableProperty] private string[] _combatStrategyList;
     [ObservableProperty] private int _autoDomainRoundNum;
@@ -48,10 +49,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         _taskDispatcher = taskTriggerDispatcher;
 
         _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
-        _combatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
-        _switchAutoGeniusInvokationButtonText = "启动";
 
-        _switchAutoWoodButtonText = "启动";
+        _combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
     }
 
     private string[] LoadCustomScript(string folder)
@@ -82,7 +81,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         switch (type)
         {
             case "Combat":
-                CombatStrategyList = LoadCustomScript(Global.Absolute(@"User\AutoFight"));
+                CombatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
                 break;
 
             case "GeniusInvocation":
@@ -197,15 +196,20 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             {
                 if (SwitchAutoFightButtonText == "启动")
                 {
-                    var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
-                    if (string.IsNullOrEmpty(content))
+                    var path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
+                    if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
                     {
+                        path = Global.Absolute(@"User\AutoFight\");
+                    }
+                    if (!File.Exists(path) && !Directory.Exists(path))
+                    {
+                        MessageBox.Show("战斗策略文件不存在");
                         return;
                     }
 
                     _cts?.Cancel();
                     _cts = new CancellationTokenSource();
-                    var param = new AutoFightParam(_cts, content);
+                    var param = new AutoFightParam(_cts, path);
                     _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoFight, param);
                     SwitchAutoFightButtonText = "停止";
                 }
@@ -222,6 +226,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         }
     }
 
+    [Obsolete]
     private string? ReadFightStrategy(string strategyName)
     {
         if (string.IsNullOrEmpty(strategyName))
@@ -257,15 +262,20 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             {
                 if (SwitchAutoDomainButtonText == "启动")
                 {
-                    var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
-                    if (string.IsNullOrEmpty(content))
+                    var path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
+                    if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
                     {
+                        path = Global.Absolute(@"User\AutoFight\");
+                    }
+                    if (!File.Exists(path) && !Directory.Exists(path))
+                    {
+                        MessageBox.Show("战斗策略文件不存在");
                         return;
                     }
 
                     _cts?.Cancel();
                     _cts = new CancellationTokenSource();
-                    var param = new AutoDomainParam(_cts, AutoDomainRoundNum, content);
+                    var param = new AutoDomainParam(_cts, AutoDomainRoundNum, path);
                     _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
                     SwitchAutoDomainButtonText = "停止";
                 }
@@ -297,12 +307,6 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             {
                 if (SwitchAutoTrackButtonText == "启动")
                 {
-                    var content = ReadFightStrategy(Config.AutoFightConfig.StrategyName);
-                    if (string.IsNullOrEmpty(content))
-                    {
-                        return;
-                    }
-
                     _cts?.Cancel();
                     _cts = new CancellationTokenSource();
                     var param = new AutoTrackParam(_cts);

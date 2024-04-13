@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -9,7 +10,49 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
 public class CombatScriptParser
 {
-    public static List<CombatCommand> Parse(string script)
+    public static CombatScriptBag ReadAndParse(string path)
+    {
+        if (File.Exists(path))
+        {
+            var script = File.ReadAllText(path);
+            return new CombatScriptBag(Parse(script));
+        }
+        else if (Directory.Exists(path))
+        {
+            var files = Directory.GetFiles(path, "*.txt", SearchOption.AllDirectories);
+            if (files.Length == 0)
+            {
+                Logger.LogError("战斗脚本文件不存在：{Path}", path);
+                throw new Exception("战斗脚本文件不存在");
+            }
+
+            var combatScripts = new List<CombatScript>();
+            foreach (var file in files)
+            {
+                try
+                {
+                    var script = File.ReadAllText(file);
+                    var combatScript = Parse(script);
+                    combatScript.Path = file;
+                    combatScript.Name = Path.GetFileNameWithoutExtension(file);
+                    combatScripts.Add(combatScript);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogWarning("解析战斗脚本文件失败：{Path} , {Msg} ", file, e.Message);
+                }
+            }
+
+            return new CombatScriptBag(combatScripts);
+        }
+        else
+        {
+            Logger.LogError("战斗脚本文件不存在：{Path}", path);
+            throw new Exception("战斗脚本文件不存在");
+        }
+    }
+
+    public static CombatScript Parse(string script)
     {
         var lines = script.Split(new[] { "\r\n", "\r", "\n", ";" }, StringSplitOptions.RemoveEmptyEntries);
         var result = new List<string>();
@@ -30,7 +73,7 @@ public class CombatScriptParser
         return Parse(result);
     }
 
-    public static List<CombatCommand> Parse(List<string> lines)
+    public static CombatScript Parse(List<string> lines)
     {
         List<CombatCommand> combatCommands = new();
         HashSet<string> combatAvatarNames = new();
@@ -43,7 +86,6 @@ public class CombatScriptParser
                 Logger.LogError("战斗脚本格式错误，必须以空格分隔角色和指令");
                 throw new Exception("战斗脚本格式错误，必须以空格分隔角色和指令");
             }
-
 
             var character = line[..firstSpaceIndex];
             character = DefaultAutoFightConfig.AvatarAliasToStandardName(character);
@@ -95,8 +137,8 @@ public class CombatScriptParser
         }
 
         var names = string.Join(",", combatAvatarNames);
-        Logger.LogInformation("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, names);
+        Logger.LogDebug("战斗脚本解析完成，共{Cnt}条指令，涉及角色：{Str}", combatCommands.Count, names);
 
-        return combatCommands;
+        return new CombatScript(combatAvatarNames, combatCommands);
     }
 }

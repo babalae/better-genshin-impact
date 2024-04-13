@@ -37,9 +37,9 @@ public class AutoDomainTask
 
     private readonly ClickOffset _clickOffset;
 
-    private readonly List<CombatCommand> _combatCommands;
-
     private readonly AutoDomainConfig _config;
+
+    private readonly CombatScriptBag _combatScriptBag;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -49,8 +49,9 @@ public class AutoDomainTask
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-        _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
         _config = TaskContext.Instance().Config.AutoDomainConfig;
+
+        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
     public async void Start()
@@ -67,6 +68,7 @@ public class AutoDomainTask
 
             Init();
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
+
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 前置进入秘境
@@ -284,6 +286,8 @@ public class AutoDomainTask
 
     private Task StartFight(CombatScenes combatScenes)
     {
+        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
+
         CancellationTokenSource cts = new CancellationTokenSource();
         _taskParam.Cts.Token.Register(cts.Cancel);
         combatScenes.BeforeTask(cts);
@@ -295,7 +299,7 @@ public class AutoDomainTask
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
-                    foreach (var command in _combatCommands)
+                    foreach (var command in combatCommands)
                     {
                         command.Execute(combatScenes);
                     }
