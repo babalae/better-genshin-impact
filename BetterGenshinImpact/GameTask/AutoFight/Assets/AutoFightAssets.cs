@@ -9,6 +9,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 {
     public Rect TeamRectNoIndex;
     public Rect TeamRect;
+    public List<Rect> AvatarSideIconRectList;
     public List<Rect> AvatarIndexRectList;
     public Rect ERect;
     public Rect QRect;
@@ -26,6 +27,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
     public RecognitionObject FragileResinCountRa;
 
+    public Dictionary<string, string> AvatarCostumeMap;
+
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -42,12 +45,38 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         EndTipsRect = new Rect(CaptureRect.Width / 2 - (int)(200 * AssetScale), CaptureRect.Height - (int)(160 * AssetScale),
             (int)(400 * AssetScale), (int)(80 * AssetScale));
 
-        AvatarIndexRectList = new List<Rect>
+        AvatarIndexRectList =
+        [
+            new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(256 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(352 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(448 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(544 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+        ];
+
+        AvatarSideIconRectList =
+        [
+            new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(225 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(315 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(410 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(500 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+        ];
+
+        AvatarCostumeMap = new Dictionary<string, string>
         {
-            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(256 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
-            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(352 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
-            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(448 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
-            new(CaptureRect.Width - (int)(61 * AssetScale), (int)(544 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+            { "Flamme", "殷红终夜" },
+            { "Bamboo", "雨化竹身" },
+            { "Dai", "冷花幽露" },
+            { "Yu", "玄玉瑶芳" },
+            { "Dancer", "帆影游风" },
+            { "Witch", "琪花星烛" },
+            { "Wic", "和谐和谐" },
+            { "Studentin", "叶隐芳名" },
+            { "Fruhling", "花时来信" },
+            { "Highness", "极夜真梦" },
+            { "Feather", "霓裾翩跹" },
+            { "Floral", "纱中幽兰" },
+            { "Summertime", "闪耀协奏" },
+            { "Sea", "海风之梦" },
         };
 
         WandererIconRa = new RecognitionObject

@@ -109,6 +109,9 @@
 		<None Update="Assets\Map\map_sd1024.png">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Update="Assets\Model\Common\avatar_side_classify_sim.onnx">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="Assets\Model\Domain\bgi_tree.onnx">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
