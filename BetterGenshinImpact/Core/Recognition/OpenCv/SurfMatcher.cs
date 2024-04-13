@@ -10,36 +10,45 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 public class SurfMatcher
 {
     private readonly double _threshold;
-    private readonly Mat _trainRet = new(); // 被匹配的图像的KeyPoint # train image
-    private readonly KeyPoint[] _keyPointsTo;
+    private readonly SURF _surf;
+    private readonly Mat _trainMat = new(); // 被匹配的图像的
+    private readonly KeyPoint[] _trainKeyPoints;
 
-    public SurfMatcher(Mat matTo, double threshold = 400)
+    public SurfMatcher(Mat trainMat, double threshold = 100)
     {
         _threshold = threshold;
-        using var surf = SURF.Create(_threshold, 4, 3, false, true);
-        surf.DetectAndCompute(matTo, null, out _keyPointsTo, _trainRet);
+        _surf = SURF.Create(_threshold, 4, 3, false, true);
+        _surf.DetectAndCompute(trainMat, null, out _trainKeyPoints, _trainMat);
         Debug.WriteLine("被匹配的图像生成初始化KeyPoint完成");
     }
 
     /// <summary>
     /// 普通匹配
     /// </summary>
-    /// <param name="queryMat">query image</param>
+    /// <param name="queryMat"></param>
     /// <returns></returns>
     public Point2f[]? Match(Mat queryMat)
+    {
+        return Match(_trainMat, queryMat);
+    }
+
+    /// <summary>
+    /// 普通匹配
+    /// </summary>
+    /// <param name="trainRet"></param>
+    /// <param name="queryMat"></param>
+    /// <returns></returns>
+    public Point2f[]? Match(Mat trainRet, Mat queryMat)
     {
         SpeedTimer speedTimer = new();
 
         using var queryRet = new Mat();
-        KeyPoint[] keyPointsQuery;
-        using (var surf = SURF.Create(_threshold, 4, 3, false, true))
-        {
-            surf.DetectAndCompute(queryMat, null, out keyPointsQuery, queryRet);
-            speedTimer.Record("模板生成KeyPoint");
-        }
+
+        _surf.DetectAndCompute(queryMat, null, out var queryKeyPoints, queryRet);
+        speedTimer.Record("模板生成KeyPoint");
 
         using var flnMatcher = new FlannBasedMatcher();
-        var matches = flnMatcher.Match(queryRet, _trainRet);
+        var matches = flnMatcher.Match(queryRet, trainRet);
         //Finding the Minimum and Maximum Distance
         double minDistance = 1000; //Backward approximation
         double maxDistance = 0;
@@ -69,8 +78,8 @@ public class SurfMatcher
             double distance = matches[i].Distance;
             if (distance < Math.Max(minDistance * 2, 0.02))
             {
-                pointsQuery.Add(keyPointsQuery[matches[i].QueryIdx].Pt);
-                pointsTrain.Add(_keyPointsTo[matches[i].TrainIdx].Pt);
+                pointsQuery.Add(queryKeyPoints[matches[i].QueryIdx].Pt);
+                pointsTrain.Add(_trainKeyPoints[matches[i].TrainIdx].Pt);
                 //Compression of new ones with distances less than ranges DMatch
                 // goodMatches.Add(matches[i]);
             }
@@ -101,10 +110,17 @@ public class SurfMatcher
             speedTimer.DebugPrint();
             return sceneCorners;
         }
+
         speedTimer.DebugPrint();
         return null;
     }
 
+    /// <summary>
+    /// knn的方式匹配
+    /// </summary>
+    /// <param name="matSrc"></param>
+    /// <returns></returns>
+    [Obsolete]
     public Point2f[]? KnnMatch(Mat matSrc)
     {
         SpeedTimer speedTimer = new();
@@ -118,7 +134,7 @@ public class SurfMatcher
         }
 
         using var flnMatcher = new FlannBasedMatcher();
-        var knnMatches = flnMatcher.KnnMatch(matSrcRet, _trainRet, 2);
+        var knnMatches = flnMatcher.KnnMatch(matSrcRet, _trainMat, 2);
         var minRatio = 0.66;
 
         var pointsSrc = new List<Point2f>();
@@ -133,7 +149,7 @@ public class SurfMatcher
             if (r > minRatio)
             {
                 pointsSrc.Add(keyPointsSrc[best.QueryIdx].Pt);
-                pointsDst.Add(_keyPointsTo[best.TrainIdx].Pt);
+                pointsDst.Add(_trainKeyPoints[best.TrainIdx].Pt);
             }
         }
 
@@ -162,6 +178,7 @@ public class SurfMatcher
             speedTimer.DebugPrint();
             return sceneCorners;
         }
+
         speedTimer.DebugPrint();
         return null;
     }
