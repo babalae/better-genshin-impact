@@ -1,4 +1,6 @@
 ﻿using System.Windows;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.Test.Dataset;
 using BetterGenshinImpact.Test.Simple;
 using BetterGenshinImpact.Test.Simple.AllMap;
 using BetterGenshinImpact.Test.View;
@@ -42,11 +44,17 @@ public partial class MainWindow : Window
 
     private void DoMatchTest(object sender, System.Windows.RoutedEventArgs e)
     {
-        KeyPointMatchTest.Test();
+        // KeyPointMatchTest.Test();
+        EntireMap entireMap = new();
     }
 
     private void MapDrawTeleportPoint(object sender, RoutedEventArgs e)
     {
         MapTeleportPointDraw.Draw();
+    }
+
+    private void GenAvatarData(object sender, RoutedEventArgs e)
+    {
+        AvatarClassifyGen.GenAll();
     }
 }
