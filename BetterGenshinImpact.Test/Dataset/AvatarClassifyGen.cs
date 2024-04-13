@@ -20,9 +20,10 @@ public class AvatarClassifyGen
         List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
 
         // 生成训练集
-        // GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 10);
+        GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 200);
         // 生成测试集
-        GenTo(new List<string> { sideImageFiles[1] }, Path.Combine(BaseDir, @"dateset\test"), 1);
+        GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\test"), 40);
+        // GenTo(new List<string> { sideImageFiles[1] }, Path.Combine(BaseDir, @"dateset\test"), 1);
     }
 
     static void GenTo(List<string> sideImageFiles, string dataFolder, int count)
@@ -45,8 +46,6 @@ public class AvatarClassifyGen
             Mat sideImageSrc = Cv2.ImRead(sideImageFile, ImreadModes.Unchanged);
             var channels = sideImageSrc.Split();
             var alphaChannel = channels[3]; // 透明通道
-            // var fMat = new Mat();
-            // Cv2.Multiply(alphaChannel, 1 / 255, fMat);
             for (int i = 0; i < 3; i++)
             {
                 Cv2.Multiply(channels[i], alphaChannel, channels[i], 1 / 255.0);
@@ -79,10 +78,14 @@ public class AvatarClassifyGen
                 Mat backgroundImageRegionClone = backgroundImageRegion.Clone();
                 var resizedSideImage = new Mat();
                 Cv2.Resize(sideImage, resizedSideImage, new Size(128 * scale, 128 * scale));
-                Cv2.ImShow("resizedSideImage", resizedSideImage);
+                // Cv2.ImShow("resizedSideImage", resizedSideImage);
                 var resizedMaskImage = new Mat();
-                Cv2.Resize(255 - alphaChannel, resizedMaskImage, new Size(128 * scale, 128 * scale));
-                Cv2.ImShow("resizedMaskImage", resizedMaskImage);
+                // Cv2.Threshold(alphaChannel, alphaChannel, 200, 255, ThresholdTypes.Otsu);
+                Cv2.Resize(255 - alphaChannel, resizedMaskImage, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
+                var resizedAlphaChannel = new Mat();
+                Cv2.Resize(alphaChannel, resizedAlphaChannel, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
+
+                // Cv2.ImShow("resizedMaskImage", resizedMaskImage);
                 // generatedImage[transformedRect] = resizedSideImage;
                 Mat result;
                 if (scale > 1)
@@ -98,8 +101,9 @@ public class AvatarClassifyGen
                     Debug.WriteLine($"{sideImageFileName} 缩放{scale}大于1 偏移 ({offsetX},{offsetY})");
 
                     var roi = new Rect((resizedSideImage.Width - 128) / 2 + offsetX, (resizedSideImage.Height - 128) + offsetY, 128, 128);
-                    result = new Mat();
-                    Cv2.BitwiseAnd(backgroundImageRegionClone, backgroundImageRegionClone, result, resizedMaskImage[roi]);
+                    // result = new Mat();
+                    // Cv2.BitwiseAnd(backgroundImageRegionClone, backgroundImageRegionClone, result, resizedMaskImage[roi]);
+                    result = Mul(backgroundImageRegionClone, resizedAlphaChannel[roi]);
                     Cv2.Add(result, resizedSideImage[roi], result);
                 }
                 else
@@ -112,16 +116,29 @@ public class AvatarClassifyGen
 
                     var roi = new Rect((128 - resizedSideImage.Width) / 2 + offsetX, (128 - resizedSideImage.Height) + offsetY, resizedSideImage.Width, resizedSideImage.Height);
                     var res = new Mat();
-                    Cv2.BitwiseAnd(backgroundImageRegionClone[roi], backgroundImageRegionClone[roi], res, resizedMaskImage);
+                    // Cv2.BitwiseAnd(backgroundImageRegionClone[roi], backgroundImageRegionClone[roi], res, resizedMaskImage);
+                    res = Mul(backgroundImageRegionClone[roi], resizedAlphaChannel);
                     Cv2.Add(res, resizedSideImage, res);
                     backgroundImageRegionClone[roi] = res;
                     result = backgroundImageRegionClone.Clone();
                 }
 
-                Cv2.ImShow("avatarR", result);
+                // Cv2.ImShow("avatarR", result);
                 // 保存生成的图像
                 Cv2.ImWrite(Path.Combine(sideDataFolder, $"{sideImageFileName}_{i}.png"), result);
             }
+        }
+
+        static Mat Mul(Mat background, Mat alphaChannel)
+        {
+            var channels = background.Split();
+            for (int i = 0; i < 3; i++)
+            {
+                Cv2.Multiply(channels[i], 255 - alphaChannel, channels[i], 1 / 255.0);
+            }
+            Mat result = new Mat();
+            Cv2.Merge(channels[..3], result);
+            return result;
         }
     }
 }
