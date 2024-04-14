@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.ViewModel.Windows;
 using System;
+using System.Windows;
 using System.Windows.Media;
 using Wpf.Ui.Controls;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -40,5 +41,14 @@ public partial class JsonMonoDialog : FluentWindow
             Background = new SolidColorBrush(Colors.Transparent);
             WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
         }
+    }
+
+    public static void Show(string path)
+    {
+        JsonMonoDialog dialog = new(path)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        dialog.Show();
     }
 }

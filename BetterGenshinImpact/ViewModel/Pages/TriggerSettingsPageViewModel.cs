@@ -34,22 +34,13 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     [RelayCommand]
     private void OnEditBlacklist()
     {
-        ShowJsonMonoDialog(@"User\pick_black_lists.json");
+        JsonMonoDialog.Show(@"User\pick_black_lists.json");
     }
 
     [RelayCommand]
     private void OnEditWhitelist()
     {
-        ShowJsonMonoDialog(@"User\pick_white_lists.json");
-    }
-
-    private void ShowJsonMonoDialog(string path)
-    {
-        JsonMonoDialog dialog = new(path)
-        {
-            Owner = Application.Current.MainWindow
-        };
-        dialog.Show();
+        JsonMonoDialog.Show(@"User\pick_white_lists.json");
     }
 
     [RelayCommand]

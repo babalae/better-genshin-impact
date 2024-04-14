@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Windows.Input;
@@ -14,6 +15,9 @@ public partial class MacroSettingsPageViewModel : ObservableObject, INavigationA
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;
+
+    [ObservableProperty]
+    private string[] _quickFightMacroHotkeyMode = ["按住时重复", "触发"];
 
     public MacroSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {
@@ -33,5 +37,11 @@ public partial class MacroSettingsPageViewModel : ObservableObject, INavigationA
     public void OnGoToHotKeyPage()
     {
         _navigationService.Navigate(typeof(HotKeyPage));
+    }
+
+    [RelayCommand]
+    public void OnEditAvatarMacro()
+    {
+        JsonMonoDialog.Show(@"User\avatar_macro.json");
     }
 }

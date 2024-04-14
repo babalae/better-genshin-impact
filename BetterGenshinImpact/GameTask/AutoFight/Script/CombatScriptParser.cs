@@ -14,8 +14,7 @@ public class CombatScriptParser
     {
         if (File.Exists(path))
         {
-            var script = File.ReadAllText(path);
-            return new CombatScriptBag(Parse(script));
+            return new CombatScriptBag(Parse(path));
         }
         else if (Directory.Exists(path))
         {
@@ -31,11 +30,7 @@ public class CombatScriptParser
             {
                 try
                 {
-                    var script = File.ReadAllText(file);
-                    var combatScript = Parse(script);
-                    combatScript.Path = file;
-                    combatScript.Name = Path.GetFileNameWithoutExtension(file);
-                    combatScripts.Add(combatScript);
+                    combatScripts.Add(Parse(file));
                 }
                 catch (Exception e)
                 {
@@ -52,8 +47,9 @@ public class CombatScriptParser
         }
     }
 
-    public static CombatScript Parse(string script)
+    public static CombatScript Parse(string path)
     {
+        var script = File.ReadAllText(path);
         var lines = script.Split(new[] { "\r\n", "\r", "\n", ";" }, StringSplitOptions.RemoveEmptyEntries);
         var result = new List<string>();
         foreach (var line in lines)
@@ -70,7 +66,10 @@ public class CombatScriptParser
             result.Add(l);
         }
 
-        return Parse(result);
+        var combatScript = Parse(result);
+        combatScript.Path = path;
+        combatScript.Name = Path.GetFileNameWithoutExtension(path);
+        return combatScript;
     }
 
     public static CombatScript Parse(List<string> lines)

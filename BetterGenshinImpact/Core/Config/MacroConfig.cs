@@ -48,4 +48,22 @@ public partial class MacroConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _spacePressHoldToContinuationEnabled;
+
+    /// <summary>
+    ///     一键战斗宏启用状态
+    /// </summary>
+    [ObservableProperty]
+    private bool _combatMacroEnabled;
+
+    /// <summary>
+    ///     一键战斗宏快捷键模式
+    /// </summary>
+    [ObservableProperty]
+    private string _combatMacroHotkeyMode = "按住时重复";
+
+    /// <summary>
+    ///     一键战斗宏优先级
+    /// </summary>
+    [ObservableProperty]
+    private int _combatMacroPriority;
 }

@@ -562,6 +562,9 @@
 		<None Update="User\AutoSkip\pause_options.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\avatar_macro.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
