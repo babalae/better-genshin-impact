@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using BetterGenshinImpact.GameTask.AutoFight;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -59,7 +60,7 @@ public partial class MacroConfig : ObservableObject
     ///     一键战斗宏快捷键模式
     /// </summary>
     [ObservableProperty]
-    private string _combatMacroHotkeyMode = "按住时重复";
+    private string _combatMacroHotkeyMode = OneKeyFightTask.HoldOnMode;
 
     /// <summary>
     ///     一键战斗宏优先级

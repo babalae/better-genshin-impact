@@ -127,4 +127,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _clickGenshinCancelButtonHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 一键战斗宏
+    [ObservableProperty]
+    private string _oneKeyFightHotkey = "";
+
+    [ObservableProperty]
+    private string _oneKeyFightHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

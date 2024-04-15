@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -17,7 +18,7 @@ public partial class MacroSettingsPageViewModel : ObservableObject, INavigationA
     private readonly INavigationService _navigationService;
 
     [ObservableProperty]
-    private string[] _quickFightMacroHotkeyMode = ["按住时重复", "触发"];
+    private string[] _quickFightMacroHotkeyMode = [OneKeyFightTask.HoldOnMode, OneKeyFightTask.TickMode];
 
     public MacroSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {

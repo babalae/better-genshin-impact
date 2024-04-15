@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -316,6 +317,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "取消");
                 }
             }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "一键战斗宏快捷键",
+            nameof(Config.HotKeyConfig.OneKeyFightHotkey),
+            Config.HotKeyConfig.OneKeyFightHotkey,
+            Config.HotKeyConfig.OneKeyFightHotkeyType,
+            (_, _) =>
+            {
+                OneKeyFightTask.Instance.Run();
+            },
+            true
         ));
     }
 
