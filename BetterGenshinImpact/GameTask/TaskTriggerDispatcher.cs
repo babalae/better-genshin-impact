@@ -381,7 +381,7 @@ namespace BetterGenshinImpact.GameTask
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 请重新启动捕获程序!", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    _logger.LogError("游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 请重启整个软件!", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
                 }
 
                 _gameRect = new RECT(currentRect);
