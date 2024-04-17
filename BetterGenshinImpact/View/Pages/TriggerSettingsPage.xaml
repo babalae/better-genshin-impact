@@ -319,7 +319,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动邀约（实验功能）"
+                                  Text="自动邀约（仅支持1920x1080）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -346,7 +346,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择进行的邀约（数据收集中）"
+                                  Text="选择进行的邀约（由于无人提供数据，此功能暂停开发）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -358,7 +358,7 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,24,0"
-                                Text="开发中..." />
+                                Text="无数据" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
