@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask
     public class TaskContext
     {
         private static TaskContext? _uniqueInstance;
-        private static readonly object InstanceLocker = new();
+        private static object? InstanceLocker;
 
         private TaskContext()
         {
@@ -22,15 +22,7 @@ namespace BetterGenshinImpact.GameTask
 
         public static TaskContext Instance()
         {
-            if (_uniqueInstance == null)
-            {
-                lock (InstanceLocker)
-                {
-                    _uniqueInstance ??= new TaskContext();
-                }
-            }
-
-            return _uniqueInstance;
+            return LazyInitializer.EnsureInitialized(ref _uniqueInstance, ref InstanceLocker, () => new TaskContext());
         }
 
         public void Init(IntPtr hWnd)
