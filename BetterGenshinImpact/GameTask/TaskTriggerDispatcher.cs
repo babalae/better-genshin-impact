@@ -115,7 +115,7 @@ namespace BetterGenshinImpact.GameTask
             );
 
             // 捕获模式初始化配置
-            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled)
+            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
             {
                 _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
             }

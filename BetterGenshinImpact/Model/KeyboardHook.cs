@@ -12,7 +12,11 @@ public class KeyboardHook
 {
     public static Dictionary<Keys, KeyboardHook> AllKeyboardHooks = new();
 
-    public event EventHandler<KeyPressedEventArgs>? KeyPressed = null;
+    public event EventHandler<KeyPressedEventArgs>? KeyPressedEvent = null;
+
+    public event EventHandler<KeyPressedEventArgs>? KeyDownEvent = null;
+
+    public event EventHandler<KeyPressedEventArgs>? KeyUpEvent = null;
 
     public bool IsHold { get; set; }
 
@@ -20,6 +24,11 @@ public class KeyboardHook
 
     public bool IsPressed { get; set; }
 
+    /// <summary>
+    /// 注意长按的时候会一直触发KeyDown
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     public void KeyDown(object? sender, KeyEventArgs e)
     {
         if (!SystemControl.IsGenshinImpactActive())
@@ -30,13 +39,17 @@ public class KeyboardHook
         if (e.KeyCode == BindKey)
         {
             IsPressed = true;
+            KeyDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
             if (IsHold)
             {
-                Task.Run(() => RunAction(e));
+                if (KeyPressedEvent != null)
+                {
+                    Task.Run(() => RunAction(e));
+                }
             }
             else
             {
-                KeyPressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
+                KeyPressedEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
                 IsPressed = false;
             }
         }
@@ -50,9 +63,9 @@ public class KeyboardHook
     {
         lock (this)
         {
-            while (IsPressed)
+            while (IsPressed && KeyPressedEvent != null)
             {
-                KeyPressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
+                KeyPressedEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
             }
         }
     }
@@ -62,6 +75,10 @@ public class KeyboardHook
         if (e.KeyCode == BindKey)
         {
             IsPressed = false;
+            if (SystemControl.IsGenshinImpactActive())
+            {
+                KeyUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
+            }
         }
     }
 

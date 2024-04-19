@@ -66,5 +66,5 @@ public partial class MacroConfig : ObservableObject
     ///     一键战斗宏优先级
     /// </summary>
     [ObservableProperty]
-    private int _combatMacroPriority;
+    private int _combatMacroPriority = 1;
 }

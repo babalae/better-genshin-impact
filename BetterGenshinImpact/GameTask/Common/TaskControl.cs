@@ -64,7 +64,7 @@ public class TaskControl
             }
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
-        if (cts.IsCancellationRequested)
+        if (cts is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
         }
@@ -138,11 +138,19 @@ public class TaskControl
         return CaptureToContent().CaptureRectArea;
     }
 
+    /// <summary>
+    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    /// </summary>
+    /// <returns></returns>
     public static CaptureContent GetContentFromDispatcher()
     {
         return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
     }
 
+    /// <summary>
+    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    /// </summary>
+    /// <returns></returns>
     public static RectArea GetRectAreaFromDispatcher()
     {
         return GetContentFromDispatcher().CaptureRectArea;

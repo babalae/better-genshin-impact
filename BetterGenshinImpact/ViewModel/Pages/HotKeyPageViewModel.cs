@@ -324,12 +324,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.OneKeyFightHotkey),
             Config.HotKeyConfig.OneKeyFightHotkey,
             Config.HotKeyConfig.OneKeyFightHotkeyType,
-            (_, _) =>
-            {
-                OneKeyFightTask.Instance.Run();
-            },
-            true
-        ));
+            null,
+            true)
+        {
+            OnKeyDownAction = (_, _) => { OneKeyFightTask.Instance.KeyDown(); },
+            OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
+        });
     }
 
     private string ToChinese(bool enabled)
