@@ -27,18 +27,11 @@ public class MatchTemplateHelper
         try
         {
             using var result = new Mat();
-            if (maskMat == null)
-            {
-                Cv2.MatchTemplate(srcMat, dstMat, result, matchMode);
-            }
-            else
-            {
-                Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat);
-            }
+            Cv2.MatchTemplate(srcMat, dstMat, result, matchMode, maskMat!);
 
             if (matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.CCoeff or TemplateMatchModes.CCorr)
             {
-                Cv2.Normalize(result, result, 0, 1, NormTypes.MinMax, -1);
+                Cv2.Normalize(result, result, 0, 1, NormTypes.MinMax);
             }
 
             Cv2.MinMaxLoc(result, out var minValue, out var maxValue, out var minLoc, out var maxLoc);
@@ -62,7 +55,8 @@ public class MatchTemplateHelper
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex.Message);
+            _logger.LogDebug(ex, ex.Message);
             return default;
         }
     }
@@ -77,6 +71,7 @@ public class MatchTemplateHelper
     /// <param name="threshold"></param>
     /// <param name="maxCount"></param>
     /// <returns></returns>
+    [Obsolete]
     public static List<Point> MatchTemplateMulti(Mat srcMat, Mat dstMat, Mat? maskMat = null, double threshold = 0.8, int maxCount = 8)
     {
         var points = new List<Point>();
@@ -103,7 +98,8 @@ public class MatchTemplateHelper
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, ex.Message);
+            _logger.LogError(ex.Message);
+            _logger.LogDebug(ex, ex.Message);
             return points;
         }
     }
