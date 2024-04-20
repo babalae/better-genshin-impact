@@ -254,11 +254,11 @@ public class RectArea : IDisposable
             if (ro.RegionOfInterest != Rect.Empty)
             {
                 // TODO roi 是可以加缓存的
-                if (!(0 <= ro.RegionOfInterest.X && 0 <= ro.RegionOfInterest.Width && ro.RegionOfInterest.X + ro.RegionOfInterest.Width <= roi.Cols
-                      && 0 <= ro.RegionOfInterest.Y && 0 <= ro.RegionOfInterest.Height && ro.RegionOfInterest.Y + ro.RegionOfInterest.Height <= roi.Rows))
-                {
-                    Logger.LogError("输入图像{W1}x{H1},模板ROI区域{H2}x{W2},边界溢出！", roi.Width, roi.Height, ro.RegionOfInterest.Width, ro.RegionOfInterest.Height);
-                }
+                // if (!(0 <= ro.RegionOfInterest.X && 0 <= ro.RegionOfInterest.Width && ro.RegionOfInterest.X + ro.RegionOfInterest.Width <= roi.Cols
+                //       && 0 <= ro.RegionOfInterest.Y && 0 <= ro.RegionOfInterest.Height && ro.RegionOfInterest.Y + ro.RegionOfInterest.Height <= roi.Rows))
+                // {
+                //     Logger.LogError("输入图像{W1}x{H1},模板ROI位置{X2}x{Y2},区域{H2}x{W2},边界溢出！", roi.Width, roi.Height, ro.RegionOfInterest.X, ro.RegionOfInterest.Y, ro.RegionOfInterest.Width, ro.RegionOfInterest.Height);
+                // }
                 roi = new Mat(roi, ro.RegionOfInterest);
             }
 
