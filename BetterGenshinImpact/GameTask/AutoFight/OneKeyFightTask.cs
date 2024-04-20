@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -28,6 +29,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
 
     private bool _isKeyDown = false;
     private int activeMacroPriority = -1;
+    private DateTime _lastUpdateTime = DateTime.MinValue;
 
     public void KeyDown()
     {
@@ -36,7 +38,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             return;
         }
         _isKeyDown = true;
-        if (activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority)
+        if (activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority || IsAvatarMacrosEdited())
         {
             activeMacroPriority = TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
             _avatarMacros = LoadAvatarMacros();
@@ -161,9 +163,11 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         }
     }
 
-    public static Dictionary<string, List<CombatCommand>> LoadAvatarMacros()
+    public Dictionary<string, List<CombatCommand>> LoadAvatarMacros()
     {
-        var json = File.ReadAllText(Global.Absolute("User/avatar_macro.json"));
+        var jsonPath = Global.Absolute("User/avatar_macro.json");
+        var json = File.ReadAllText(jsonPath);
+        _lastUpdateTime = File.GetLastWriteTime(jsonPath);
         var avatarMacros = JsonSerializer.Deserialize<List<AvatarMacro>>(json, ConfigService.JsonOptions);
         if (avatarMacros == null)
         {
@@ -179,6 +183,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             }
         }
         return result;
+    }
+
+    public bool IsAvatarMacrosEdited()
+    {
+        // 通过修改时间判断是否编辑过
+        var jsonPath = Global.Absolute("User/avatar_macro.json");
+        var lastWriteTime = File.GetLastWriteTime(jsonPath);
+        return lastWriteTime > _lastUpdateTime;
     }
 
     public static bool IsEnabled()
