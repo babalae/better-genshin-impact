@@ -370,6 +370,11 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private bool ChatOptionChoose(CaptureContent content)
     {
+        if (_config.IsClickNoneChatOption())
+        {
+            return false;
+        }
+
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
@@ -479,7 +484,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
                 // 最后，选择默认选项
                 var clickRegion = rs[^1];
-                if (_config.ClickFirstOptionEnabled)
+                if (_config.IsClickFirstChatOption())
                 {
                     clickRegion = rs[0];
                 }
@@ -490,7 +495,7 @@ public class AutoSkipTrigger : ITaskTrigger
             else
             {
                 var clickRect = lowest;
-                if (_config.ClickFirstOptionEnabled)
+                if (_config.IsClickFirstChatOption())
                 {
                     clickRect = chatOptionResultList[^1];
                 }
@@ -499,7 +504,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
                 var clickOffset = new ClickOffset(captureArea.X + _autoSkipAssets.OptionRoi.X, captureArea.Y + _autoSkipAssets.OptionRoi.Y, assetScale);
                 clickOffset.ClickWithoutScale(clickRect.X + clickRect.Width / 2, clickRect.Y + clickRect.Height / 2);
-                var msg = _config.ClickFirstOptionEnabled ? "第一个" : "最后一个";
+                var msg = _config.IsClickFirstChatOption() ? "第一个" : "最后一个";
                 AutoSkipLog($"点击{msg}气泡选项");
             }
 

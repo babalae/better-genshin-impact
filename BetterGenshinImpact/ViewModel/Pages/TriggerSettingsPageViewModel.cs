@@ -4,6 +4,7 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fischless.GameCapture;
 using System.Diagnostics;
 using System.Windows;
 using Wpf.Ui;
@@ -13,6 +14,9 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
+    [ObservableProperty]
+    private string[] _clickChatOptionNames = ["优先选择第一个选项", "优先选择最后一个选项", "不选择选项"];
+
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;
