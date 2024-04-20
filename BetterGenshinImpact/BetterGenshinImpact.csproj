@@ -373,6 +373,12 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_cancel.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_no.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_yes.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

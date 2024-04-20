@@ -59,9 +59,46 @@ public static partial class Bv
         return false;
     }
 
+    /// <summary>
+    /// 点击黑色取消按钮
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
     public static bool ClickBlackCancelButton(RectArea captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnBlackCancel);
+        if (ra.IsExist())
+        {
+            ra.ClickCenter();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 点击联机确认按钮
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool ClickOnlineYesButton(RectArea captureRa)
+    {
+        var ra = captureRa.Find(ElementAssets.Instance.BtnOnlineYes);
+        if (ra.IsExist())
+        {
+            ra.ClickCenter();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 点击联机取消按钮
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool ClickOnlineNoButton(RectArea captureRa)
+    {
+        var ra = captureRa.Find(ElementAssets.Instance.BtnOnlineNo);
         if (ra.IsExist())
         {
             ra.ClickCenter();
@@ -77,7 +114,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool ClickConfirmButton(RectArea captureRa)
     {
-        return ClickBlackConfirmButton(captureRa) || ClickWhiteConfirmButton(captureRa);
+        return ClickBlackConfirmButton(captureRa) || ClickWhiteConfirmButton(captureRa) || ClickOnlineYesButton(captureRa);
     }
 
     /// <summary>
@@ -87,6 +124,6 @@ public static partial class Bv
     /// <returns></returns>
     public static bool ClickCancelButton(RectArea captureRa)
     {
-        return ClickBlackCancelButton(captureRa) || ClickWhiteCancelButton(captureRa);
+        return ClickBlackCancelButton(captureRa) || ClickWhiteCancelButton(captureRa) || ClickOnlineNoButton(captureRa);
     }
 }

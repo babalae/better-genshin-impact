@@ -10,6 +10,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BtnWhiteCancel;
     public RecognitionObject BtnBlackConfirm;
     public RecognitionObject BtnBlackCancel;
+    public RecognitionObject BtnOnlineYes;
+    public RecognitionObject BtnOnlineNo;
 
     public RecognitionObject PaimonMenuRo;
     public RecognitionObject BlueTrackPoint;
@@ -43,6 +45,20 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "BtnBlackCancel",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_black_cancel.png"),
+            Use3Channels = true
+        }.InitTemplate();
+        BtnOnlineYes = new RecognitionObject
+        {
+            Name = "BtnOnlineYes",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_online_yes.png"),
+            Use3Channels = true
+        }.InitTemplate();
+        BtnOnlineNo = new RecognitionObject
+        {
+            Name = "BtnOnlineNo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_online_no.png"),
             Use3Channels = true
         }.InitTemplate();
 

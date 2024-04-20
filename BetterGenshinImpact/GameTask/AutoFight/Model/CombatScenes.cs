@@ -118,7 +118,7 @@ public class CombatScenes : IDisposable
         if (result.Confidence < 0.8)
         {
             Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-            throw new Exception($"无法识别第{index}位角色，置信度{result.Confidence}");
+            throw new Exception($"无法识别第{index}位角色，置信度{result.Confidence}，结果：{result.Class.Name}");
         }
 
         return result.Class.Name;
