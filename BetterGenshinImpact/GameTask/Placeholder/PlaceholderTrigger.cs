@@ -40,8 +40,8 @@ public class TestTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = true;
-        IsExclusive = true;
+        IsEnabled = false;
+        IsExclusive = false;
     }
 
     public void OnCapture(CaptureContent content)
@@ -104,7 +104,7 @@ public class TestTrigger : ITaskTrigger
             return;
         }
 
-        _bigMap.Value.GetMapPositionAndDrawBySurf(new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+        _bigMap.Value.GetMapPositionAndDrawByFeatureMatch(new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
 
         // 大地图测试
         // var mat = content.CaptureRectArea.SrcGreyMat;

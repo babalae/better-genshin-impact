@@ -5,6 +5,7 @@ using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using BetterGenshinImpact.GameTask.Common.Map;
 using OpenCvSharp.Features2D;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
@@ -18,8 +19,8 @@ public class FeatureMatcher
     private readonly KeyPoint[] _trainKeyPoints;
 
     private readonly KeyPointFeatureBlock[][] _blocks; // 特征块存储
-    private readonly int _splitRow = 13 * 2; // 特征点拆分行数
-    private readonly int _splitCol = 14 * 2; // 特征点拆分列数
+    private readonly int _splitRow = MapCoordinate.GameMapRows * 2; // 特征点拆分行数
+    private readonly int _splitCol = MapCoordinate.GameMapCols * 2; // 特征点拆分列数
     private KeyPointFeatureBlock? _lastMergedBlock; // 上次合并的特征块
 
     public FeatureMatcher(Mat trainMat, Feature2DType type = Feature2DType.SIFT, double threshold = 100)

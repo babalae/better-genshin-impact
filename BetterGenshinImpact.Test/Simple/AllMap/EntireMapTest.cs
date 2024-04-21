@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
+using System.Diagnostics;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 

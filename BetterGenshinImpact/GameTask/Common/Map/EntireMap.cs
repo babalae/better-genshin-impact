@@ -6,8 +6,10 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
+using BetterGenshinImpact.Model;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
@@ -34,7 +36,7 @@ public class EntireMap
     /// </summary>
     private readonly Mat _cityMap2048BlockMat;
 
-    private readonly FeatureMatcher _surfMatcher;
+    private readonly FeatureMatcher _featureMatcher;
 
     private int _prevX = -1;
     private int _prevY = -1;
@@ -42,10 +44,10 @@ public class EntireMap
     public EntireMap()
     {
         // 大地图模板匹配使用的模板
-        _mainMap100BlockMat = new Mat(Global.Absolute(@"Assets\Map\mainMap100Block.png"));
-        _mainMap1024BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap1024Block.png", ImreadModes.Grayscale);
+        _mainMap100BlockMat = MapAssets.Instance.MainMap100BlockMat.Value;
+        _mainMap1024BlockMat = MapAssets.Instance.MainMap1024BlockMat.Value;
         // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
-        _surfMatcher = new FeatureMatcher(_mainMap1024BlockMat);
+        _featureMatcher = new FeatureMatcher(_mainMap1024BlockMat);
     }
 
     /// <summary>
@@ -74,29 +76,37 @@ public class EntireMap
     /// 基于Surf匹配获取地图位置(1024区块)
     /// 支持大地图和小地图
     /// </summary>
-    /// <param name="captureGreyMat">灰度图</param>
+    /// <param name="greyMat">灰度图</param>
     /// <returns></returns>
-    public Rect GetMapPositionBySurf(Mat captureGreyMat)
+    public Rect GetMapPositionByFeatureMatch(Mat greyMat)
     {
-        Point2f[]? pArray;
-        if (_prevX != -1 && _prevY != -1)
+        try
         {
-            pArray = _surfMatcher.Match(captureGreyMat, _prevX, _prevY);
-        }
-        else
-        {
-            pArray = _surfMatcher.Match(captureGreyMat);
-        }
+            Point2f[]? pArray;
+            if (_prevX != -1 && _prevY != -1)
+            {
+                pArray = _featureMatcher.Match(greyMat, _prevX, _prevY);
+            }
+            else
+            {
+                pArray = _featureMatcher.Match(greyMat);
+            }
 
-        if (pArray == null || pArray.Length < 4)
+            if (pArray == null || pArray.Length < 4)
+            {
+                throw new InvalidOperationException();
+            }
+            var rect = Cv2.BoundingRect(pArray);
+            _prevX = rect.X + rect.Width / 2;
+            _prevY = rect.Y + rect.Height / 2;
+            return rect;
+        }
+        catch
         {
             (_prevX, _prevY) = (-1, -1);
-            throw new InvalidOperationException();
+            Debug.WriteLine("Surf Match Failed");
+            return Rect.Empty;
         }
-        var rect = Cv2.BoundingRect(pArray);
-        _prevX = rect.X + rect.Width / 2;
-        _prevY = rect.Y + rect.Height / 2;
-        return rect;
     }
 
     // public static Point GetIntersection(Point2f[] points)
@@ -118,18 +128,13 @@ public class EntireMap
     //     return new Point((int)x, (int)y);
     // }
 
-    public void GetMapPositionAndDrawBySurf(Mat captureGreyMat)
+    public void GetMapPositionAndDrawByFeatureMatch(Mat captureGreyMat)
     {
-        try
+        var rect = GetMapPositionByFeatureMatch(captureGreyMat);
+        if (rect != Rect.Empty)
         {
-            var rect = GetMapPositionBySurf(captureGreyMat);
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
                 new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
-        }
-        catch (Exception)
-        {
-            (_prevX, _prevY) = (-1, -1);
-            Debug.WriteLine("Surf Match Failed");
         }
     }
 }
