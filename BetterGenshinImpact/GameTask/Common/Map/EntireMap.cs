@@ -35,12 +35,15 @@ public class EntireMap
 
     private readonly SurfMatcher _surfMatcher;
 
+    private int _prevX = -1;
+    private int _prevY = -1;
+
     public EntireMap()
     {
         // 大地图模板匹配使用的模板
         _mainMap100BlockMat = new Mat(Global.Absolute(@"Assets\Map\mainMap100Block.png"));
         _mainMap1024BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap1024Block.png", ImreadModes.Grayscale);
-        _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
+        // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
         _surfMatcher = new SurfMatcher(_mainMap1024BlockMat);
     }
 
@@ -74,13 +77,26 @@ public class EntireMap
     /// <returns></returns>
     public Rect GetMapPositionBySurf(Mat captureGreyMat)
     {
-        var pArray = _surfMatcher.Match(captureGreyMat);
-        if (pArray == null || pArray.Length < 4)
+        Point2f[]? pArray;
+        if (_prevX != -1 && _prevY != -1)
         {
-            throw new InvalidOperationException();
+            pArray = _surfMatcher.Match(captureGreyMat, _prevX, _prevY);
+        }
+        else
+        {
+            pArray = _surfMatcher.Match(captureGreyMat);
         }
 
-        return Cv2.BoundingRect(pArray);
+        if (pArray == null || pArray.Length < 4)
+        {
+            _prevX = -1;
+            _prevY = -1;
+            throw new InvalidOperationException();
+        }
+        var rect = Cv2.BoundingRect(pArray);
+        _prevX = rect.X + rect.Width / 2;
+        _prevY = rect.Y + rect.Height / 2;
+        return rect;
     }
 
     // public static Point GetIntersection(Point2f[] points)

@@ -45,7 +45,7 @@ public partial class MainWindow : Window
     private void DoMatchTest(object sender, System.Windows.RoutedEventArgs e)
     {
         // KeyPointMatchTest.Test();
-        EntireMap entireMap = new();
+        EntireMapTest.Test();
     }
 
     private void MapDrawTeleportPoint(object sender, RoutedEventArgs e)
