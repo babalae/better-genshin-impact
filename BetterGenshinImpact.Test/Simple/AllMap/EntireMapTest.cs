@@ -11,7 +11,7 @@ public class EntireMapTest
     {
         SpeedTimer speedTimer = new();
         var mainMap1024BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap1024Block.png", ImreadModes.Grayscale);
-        var surfMatcher = new SurfMatcher(mainMap1024BlockMat);
+        var surfMatcher = new FeatureMatcher(mainMap1024BlockMat);
         var queryMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_183119.png", ImreadModes.Grayscale);
 
         speedTimer.Record("初始化特征");

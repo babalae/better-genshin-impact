@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
@@ -33,7 +34,7 @@ public class EntireMap
     /// </summary>
     private readonly Mat _cityMap2048BlockMat;
 
-    private readonly SurfMatcher _surfMatcher;
+    private readonly FeatureMatcher _surfMatcher;
 
     private int _prevX = -1;
     private int _prevY = -1;
@@ -44,7 +45,7 @@ public class EntireMap
         _mainMap100BlockMat = new Mat(Global.Absolute(@"Assets\Map\mainMap100Block.png"));
         _mainMap1024BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap1024Block.png", ImreadModes.Grayscale);
         // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
-        _surfMatcher = new SurfMatcher(_mainMap1024BlockMat);
+        _surfMatcher = new FeatureMatcher(_mainMap1024BlockMat);
     }
 
     /// <summary>
@@ -89,8 +90,7 @@ public class EntireMap
 
         if (pArray == null || pArray.Length < 4)
         {
-            _prevX = -1;
-            _prevY = -1;
+            (_prevX, _prevY) = (-1, -1);
             throw new InvalidOperationException();
         }
         var rect = Cv2.BoundingRect(pArray);
@@ -128,6 +128,7 @@ public class EntireMap
         }
         catch (Exception)
         {
+            (_prevX, _prevY) = (-1, -1);
             Debug.WriteLine("Surf Match Failed");
         }
     }

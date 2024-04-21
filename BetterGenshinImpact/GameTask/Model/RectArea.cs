@@ -6,15 +6,13 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
-using Sdcb.PaddleOCR;
 using Point = OpenCvSharp.Point;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
