@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
-using CommunityToolkit.HighPerformance;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
