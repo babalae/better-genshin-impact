@@ -51,8 +51,11 @@ public class FeatureMatcher
         }
 
         Debug.WriteLine("被匹配的图像生成初始化KeyPoint完成");
+        Stopwatch sw = new();
+        sw.Start();
         _blocks = KeyPointFeatureBlockHelper.SplitFeatures(_trainMat, _splitRow, _splitCol, _trainKeyPoints, _trainRet);
-        Debug.WriteLine("切割特征点完成");
+        sw.Stop();
+        Debug.WriteLine($"切割特征点耗时: {sw.ElapsedMilliseconds}ms");
     }
 
     /// <summary>

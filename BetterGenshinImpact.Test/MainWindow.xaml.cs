@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Test.Dataset;
 using BetterGenshinImpact.Test.Simple;
@@ -15,6 +16,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Global.StartUpPath = @"D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\bin\x64\Debug\net7.0-windows10.0.22621.0";
     }
 
     private void ShowCameraRecWindow(object sender, System.Windows.RoutedEventArgs e)

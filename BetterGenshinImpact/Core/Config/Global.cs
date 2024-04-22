@@ -7,7 +7,7 @@ public class Global
 {
     public static string Version { get; } = "0.27.1";
 
-    public static string StartUpPath { get; } = AppContext.BaseDirectory;
+    public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
 
     public static string Absolute(string relativePath)
     {

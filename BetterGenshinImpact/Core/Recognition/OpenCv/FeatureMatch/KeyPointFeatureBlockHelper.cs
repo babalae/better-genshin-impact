@@ -125,7 +125,7 @@ public class KeyPointFeatureBlockHelper
     private static unsafe void InitBlockMat(List<int> keyPointIndexList, Mat descriptor, Mat matches)
     {
         Size size = matches.Size();
-        
+
         Matrix<float> destMatrix = new(descriptor.DataPointer, size.Width, size.Height);
         Matrix<float> sourceMatrix = new(matches.DataPointer, size.Width, size.Height);
 
@@ -164,4 +164,27 @@ public class KeyPointFeatureBlockHelper
             }
         }
     }
+
+    // /// <summary>
+    // /// 按行拷贝matches到descriptor
+    // /// </summary>
+    // /// <param name="keyPointIndexList">记录了哪些行需要拷贝</param>
+    // /// <param name="descriptor">拷贝结果</param>
+    // /// <param name="matches">原始数据</param>
+    // [Obsolete]
+    // private static unsafe void InitBlockMat2(IReadOnlyList<int> keyPointIndexList, Mat descriptor, Mat matches)
+    // {
+    //     int cols = matches.Cols;
+    //     float* ptrDest = (float*)descriptor.DataPointer;
+    //
+    //     for (int i = 0; i < keyPointIndexList.Count; i++)
+    //     {
+    //         var index = keyPointIndexList[i];
+    //         float* ptrSrcRow = (float*)matches.Ptr(index);
+    //         for (int j = 0; j < cols; j++)
+    //         {
+    //             *(ptrDest + i * cols + j) = ptrSrcRow[j];
+    //         }
+    //     }
+    // }
 }
