@@ -2,6 +2,8 @@
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
@@ -120,18 +122,45 @@ public class KeyPointFeatureBlockHelper
     /// <param name="keyPointIndexList">记录了哪些行需要拷贝</param>
     /// <param name="descriptor">拷贝结果</param>
     /// <param name="matches">原始数据</param>
-    private static unsafe void InitBlockMat(IReadOnlyList<int> keyPointIndexList, Mat descriptor, Mat matches)
+    private static unsafe void InitBlockMat(List<int> keyPointIndexList, Mat descriptor, Mat matches)
     {
-        int cols = matches.Cols;
-        float* ptrDest = (float*)descriptor.DataPointer;
+        Size size = matches.Size();
+        
+        Matrix<float> destMatrix = new(descriptor.DataPointer, size.Width, size.Height);
+        Matrix<float> sourceMatrix = new(matches.DataPointer, size.Width, size.Height);
 
-        for (int i = 0; i < keyPointIndexList.Count; i++)
+        Span<int> keyPointIndexSpan = CollectionsMarshal.AsSpan(keyPointIndexList);
+        ref int keyPointIndexRef = ref MemoryMarshal.GetReference(keyPointIndexSpan);
+        for (int i = 0; i < keyPointIndexSpan.Length; i++)
         {
-            var index = keyPointIndexList[i];
-            float* ptrSrcRow = (float*)matches.Ptr(index);
-            for (int j = 0; j < cols; j++)
+            ref int index = ref Unsafe.Add(ref keyPointIndexRef, i);
+            sourceMatrix[index].CopyTo(destMatrix[i]);
+        }
+    }
+
+    private readonly ref struct Matrix<T>
+    {
+        private readonly ref T reference;
+        private readonly int width;
+        private readonly int height;
+
+        public unsafe Matrix(void* pointer, int width, int height)
+        {
+            reference = ref Unsafe.AsRef<T>(pointer);
+            this.width = width;
+            this.height = height;
+        }
+
+        public Span<T> this[int row]
+        {
+            get
             {
-                *(ptrDest + i * cols + j) = ptrSrcRow[j];
+                if (row < 0 || row >= height)
+                {
+                    throw new IndexOutOfRangeException();
+                }
+
+                return MemoryMarshal.CreateSpan(ref Unsafe.Add(ref reference, row * width), width);
             }
         }
     }
