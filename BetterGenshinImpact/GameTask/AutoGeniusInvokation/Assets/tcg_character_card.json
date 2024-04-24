@@ -2907,6 +2907,75 @@
         ]
     },
     {
+        "id": 1411,
+        "nameEn": "kuki_shinobu",
+        "type": "character",
+        "name": "久岐忍",
+        "hp": 10,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "shinobus_shadowsword",
+                "name": "忍流飞刃斩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "sanctifying_ring",
+                "name": "越祓雷草之轮",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "gyoei_narukami_kariyama_rite",
+                "name": "御咏鸣神刈山祭",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1501,
         "nameEn": "sucrose",
         "type": "character",
@@ -3438,6 +3507,75 @@
             {
                 "nameEn": "magic_trick_astonishing_shift",
                 "name": "魔术·运变惊奇",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 1509,
+        "nameEn": "faruzan",
+        "type": "character",
+        "name": "珐露珊",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "弓",
+        "skills": [
+            {
+                "nameEn": "parthian_shot",
+                "name": "迴身箭术",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "wind_realm_of_nasamjnin",
+                "name": "非想风天",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "the_winds_secret_ways",
+                "name": "抟风秘道",
                 "skillTag": [
                     "元素爆发"
                 ],
@@ -4762,6 +4900,83 @@
         ]
     },
     {
+        "id": 2203,
+        "nameEn": "abyss_herald_wicked_torrents",
+        "type": "character",
+        "name": "深渊使徒·激流",
+        "hp": 6,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "rippling_slash",
+                "name": "波刃锋斩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "vortex_edge",
+                "name": "洄涡锋刃",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "torrential_shock",
+                "name": "激流强震",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "watery_rebirth",
+                "name": "水之新生",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 2301,
         "nameEn": "fatui_pyro_agent",
         "type": "character",
@@ -4985,6 +5200,83 @@
             {
                 "nameEn": "spirit_of_omens_power",
                 "name": "厄灵之能",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2304,
+        "nameEn": "emperor_of_fire_and_iron",
+        "type": "character",
+        "name": "铁甲熔火帝皇",
+        "hp": 6,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "shatterclamp_strike",
+                "name": "重钳碎击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "buster_blaze",
+                "name": "烈焰燃绽",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "battleline_detonation",
+                "name": "战阵爆轰",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "imperial_panoply",
+                "name": "帝王甲胄",
                 "skillTag": [
                     "被动技能"
                 ],
