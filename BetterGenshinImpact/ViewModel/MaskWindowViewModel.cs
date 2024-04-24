@@ -1,7 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
-using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -9,10 +9,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.GameTask;
-using System;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -22,14 +19,12 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskButton> _maskButtons = new();
 
+        [ObservableProperty] private ObservableCollection<StatusItem> _statusList = new();
+
         public AllConfig? Config { get; set; }
 
-        [ObservableProperty] private Visibility _logTextBoxVisibility = Visibility.Visible;
-        [ObservableProperty] private Visibility _uidCoverVisibility = Visibility.Visible;
         [ObservableProperty] private Rect _uidCoverRect = new(0, 0, 200, 30);
 
-
-        [ObservableProperty] private Visibility _directionsVisibility = Visibility.Visible;
         [ObservableProperty] private Point _eastPoint = new(274, 109);
         [ObservableProperty] private Point _southPoint = new(150, 233);
         [ObservableProperty] private Point _westPoint = new(32, 109);
@@ -75,10 +70,23 @@ namespace BetterGenshinImpact.ViewModel
             });
         }
 
+        private void InitializeStatusList()
+        {
+            if (Config != null)
+            {
+                StatusList.Add(new StatusItem("自动拾取", Config.AutoPickConfig));
+                StatusList.Add(new StatusItem("自动剧情", Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem("自动邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem("自动钓鱼", Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem("快速传送", Config.QuickTeleportConfig));
+            }
+        }
+
         [RelayCommand]
         private void OnLoaded()
         {
             RefreshSettings();
+            InitializeStatusList();
         }
 
         private void RefreshSettings()
@@ -86,12 +94,7 @@ namespace BetterGenshinImpact.ViewModel
             InitConfig();
             if (Config != null)
             {
-                // 日志窗口
-                LogTextBoxVisibility = Config.MaskWindowConfig.ShowLogBox ? Visibility.Visible : Visibility.Collapsed;
-
-                // UID遮盖
-                UidCoverVisibility = Config.MaskWindowConfig.UidCoverEnabled ? Visibility.Visible : Visibility.Collapsed;
-                DirectionsVisibility = Config.MaskWindowConfig.DirectionsEnabled ? Visibility.Visible : Visibility.Collapsed;
+                OnPropertyChanged(nameof(Config));
                 // 比较特殊，必须要启动过任务调度器才能够获取到缩放信息
                 if (TaskContext.Instance().SystemInfo != null)
                 {

@@ -1,8 +1,10 @@
 ﻿using BetterGenshinImpact.Helpers.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.GameTask;
 using Fischless.GameCapture;
 
 namespace BetterGenshinImpact.View
@@ -47,7 +49,12 @@ namespace BetterGenshinImpact.View
 
             _capture = GameCaptureFactory.Create(captureMode);
             //_capture.IsClientEnabled = true;
-            _capture.Start(hWnd);
+            _capture.Start(hWnd,
+                new Dictionary<string, object>()
+                {
+                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache }
+                }
+            );
 
             CompositionTarget.Rendering += Loop;
         }

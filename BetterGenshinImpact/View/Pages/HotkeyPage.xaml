@@ -7,6 +7,7 @@
       xmlns:model="clr-namespace:BetterGenshinImpact.Model"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
       Title="HotkeyPage"
       d:DataContext="{d:DesignInstance Type=pages:HotKeyPageViewModel}"
       d:DesignHeight="850"
@@ -20,23 +21,38 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="快捷键设置" />
-        <ItemsControl Grid.Row="1" ItemsSource="{Binding HotKeySettingModels}">
+        <ui:TextBlock Grid.Row="1"
+                      Margin="0,0,0,8"
+                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                      TextWrapping="Wrap"
+                      Text="全局热键：只支持组合键和功能键，软件启动直接生效。键鼠监听：支持任意键盘单键、鼠标侧键，功能启动后才生效（推荐）。点击类型按钮可以切换快捷键类型。其中存在长按需求的功能不能使用全局热键。" />
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding HotKeySettingModels}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type model:HotKeySettingModel}">
                     <Grid Margin="0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="100" />
                             <ColumnDefinition Width="180" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Column="0"
                                       VerticalAlignment="Center"
                                       Text="{Binding FunctionName}" />
-                        <controls:HotKeyTextBox Grid.Column="1"
+                        <ui:Button Grid.Column="1"  
+                                   HorizontalAlignment="Right"
+                                   Margin="0,0,8,0"
+                                   Content="{Binding HotKeyTypeName, Mode=OneWay}"
+                                   Command="{Binding SwitchHotKeyTypeCommand}"
+                                   IsEnabled="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}"
+                                   />
+                        <hotKey:HotKeyTextBox Grid.Column="2"
+                                                HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
                                                 Hotkey="{Binding HotKey}"
                                                 Style="{StaticResource DefaultTextBoxStyle}"
                                                 TextAlignment="Center" />

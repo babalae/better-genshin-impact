@@ -21,9 +21,12 @@ public class GraphicsCapture : IGameCapture
 
     private ResourceRegion? _region;
 
+    private bool _useBitmapCache = false;
+    private Bitmap? _currentBitmap;
+
     public void Dispose() => Stop();
 
-    public void Start(nint hWnd)
+    public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
         _hWnd = hWnd;
 
@@ -44,12 +47,20 @@ public class GraphicsCapture : IGameCapture
 
         _captureFramePool = Direct3D11CaptureFramePool.Create(device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2,
             _captureItem.Size);
+
+        if (settings != null && settings.TryGetValue("useBitmapCache", out object? value) && (bool)value)
+        {
+            _useBitmapCache = true;
+            _captureFramePool.FrameArrived += OnFrameArrived;
+        }
+
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
         _captureSession.IsCursorCaptureEnabled = false;
         if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
         {
             _captureSession.IsBorderRequired = false;
         }
+
         _captureSession.StartCapture();
         IsCapturing = true;
     }
@@ -84,6 +95,20 @@ public class GraphicsCapture : IGameCapture
         return region;
     }
 
+    private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
+    {
+        using var frame = _captureFramePool?.TryGetNextFrame();
+
+        if (frame != null)
+        {
+            var b = frame.ToBitmap(_region);
+            if (b != null)
+            {
+                _currentBitmap = b;
+            }
+        }
+    }
+
     public Bitmap? Capture()
     {
         if (_hWnd == IntPtr.Zero)
@@ -91,23 +116,35 @@ public class GraphicsCapture : IGameCapture
             return null;
         }
 
-        try
+        if (!_useBitmapCache)
         {
-            using var frame = _captureFramePool?.TryGetNextFrame();
+            try
+            {
+                using var frame = _captureFramePool?.TryGetNextFrame();
 
-            if (frame == null)
+                if (frame == null)
+                {
+                    return null;
+                }
+
+                return frame.ToBitmap(_region);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+            }
+
+            return null;
+        }
+        else
+        {
+            if (_currentBitmap == null)
             {
                 return null;
             }
 
-            return frame.ToBitmap(_region);
+            return (Bitmap)_currentBitmap.Clone();
         }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e);
-        }
-
-        return null;
     }
 
     public void Stop()

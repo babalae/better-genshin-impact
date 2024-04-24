@@ -32,10 +32,7 @@ public class MouseEventSimulator
 
     public bool Click(int x, int y)
     {
-        if (x == 0 && y == 0)
-        {
-            return false;
-        }
+        if (x == 0 && y == 0) return false;
 
         Move(x, y);
         LeftButtonDown();

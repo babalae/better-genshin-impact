@@ -1,18 +1,15 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.View.Drawable;
-using Compunet.YoloV8;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
-using BetterGenshinImpact.GameTask.Common.MiniMap;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
-using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask.Placeholder;
 
@@ -31,7 +28,9 @@ public class TestTrigger : ITaskTrigger
 
     //private readonly AutoGeniusInvokationAssets _autoGeniusInvokationAssets;
 
-    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
+    // private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
+
+    private readonly Lazy<EntireMap> _bigMap = new();
 
     public TestTrigger()
     {
@@ -49,24 +48,23 @@ public class TestTrigger : ITaskTrigger
     {
         // TestArrow(content);
         // TestCamera(content);
-        Detect(content);
-        var angle = CameraOrientation.Compute(content);
-        Debug.WriteLine(angle);
-        if (angle < 180)
-        {
-            // 左移视角
-            Simulation.SendInputEx.Mouse.MoveMouseBy(-angle, 0);
-        }
-        else if (angle is > 180 and < 360)
-        {
-            // 右移视角
-            Simulation.SendInputEx.Mouse.MoveMouseBy(360 - angle, 0);
-        }
-        else
-        {
-            // 360 度 东方向视角
-        }
-
+        // Detect(content);
+        // var angle = CameraOrientation.Compute(content);
+        // Debug.WriteLine(angle);
+        // if (angle < 180)
+        // {
+        //     // 左移视角
+        //     Simulation.SendInputEx.Mouse.MoveMouseBy(-angle, 0);
+        // }
+        // else if (angle is > 180 and < 360)
+        // {
+        //     // 右移视角
+        //     Simulation.SendInputEx.Mouse.MoveMouseBy(360 - angle, 0);
+        // }
+        // else
+        // {
+        //     // 360 度 东方向视角
+        // }
 
         //var dictionary = GeniusInvokationControl.FindMultiPicFromOneImage2OneByOne(content.CaptureRectArea.SrcGreyMat, _autoGeniusInvokationAssets.RollPhaseDiceMats, 0.7);
         //if (dictionary.Count > 0)
@@ -88,7 +86,6 @@ public class TestTrigger : ITaskTrigger
         //    Debug.WriteLine("找到了" + i + "个");
         //}
 
-
         //var foundRectArea = content.CaptureRectArea.Find(_autoGeniusInvokationAssets.ElementalTuningConfirmButtonRo);
         //if (!foundRectArea.IsEmpty())
         //{
@@ -98,24 +95,40 @@ public class TestTrigger : ITaskTrigger
         //{
         //    Debug.WriteLine("没找到");
         //}
-    }
 
-    private void Detect(CaptureContent content)
-    {
-        using var memoryStream = new MemoryStream();
-        content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = _predictor.Detect(memoryStream);
-        Debug.WriteLine(result);
-        var list = new List<RectDrawable>();
-        foreach (var box in result.Boxes)
+        // 小地图匹配测试
+        var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;
+        var p = MatchTemplateHelper.MatchTemplate(content.CaptureRectArea.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
+        if (p.X == 0 || p.Y == 0)
         {
-            var rect = new System.Windows.Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-            list.Add(new RectDrawable(rect, _pen));
+            return;
         }
 
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("TreeBox", list);
+        _bigMap.Value.GetMapPositionAndDrawByFeatureMatch(new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+
+        // 大地图测试
+        // var mat = content.CaptureRectArea.SrcGreyMat;
+        // _bigMap.Value.GetMapPositionAndDrawBySurf(mat);
+
+        // Bv.BigMapIsUnderground(content.CaptureRectArea);
     }
+
+    // private void Detect(CaptureContent content)
+    // {
+    //     using var memoryStream = new MemoryStream();
+    //     content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+    //     memoryStream.Seek(0, SeekOrigin.Begin);
+    //     var result = _predictor.Detect(memoryStream);
+    //     Debug.WriteLine(result);
+    //     var list = new List<RectDrawable>();
+    //     foreach (var box in result.Boxes)
+    //     {
+    //         var rect = new System.Windows.Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+    //         list.Add(new RectDrawable(rect, _pen));
+    //     }
+    //
+    //     VisionContext.Instance().DrawContent.PutOrRemoveRectList("TreeBox", list);
+    // }
 
     public static void TestArrow(CaptureContent content)
     {
@@ -220,7 +233,6 @@ public class TestTrigger : ITaskTrigger
         return new Point(midX, midY);
     }
 
-
     public void TestCamera(CaptureContent content)
     {
         var mat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(62, 19, 212, 212));
@@ -251,7 +263,6 @@ public class TestTrigger : ITaskTrigger
         // 优化
         var left2 = left.Zip(right, (x, y) => Math.Max(x - y, 0)).ToArray();
         var right2 = right.Zip(left, (x, y) => Math.Max(x - y, 0)).ToArray();
-
 
         // 左移后相乘 在附近2°内寻找最大值
         var sum = new int[360];

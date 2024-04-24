@@ -6,16 +6,18 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using System;
-using System.Drawing;
-using System.Text.RegularExpressions;
 using Sdcb.PaddleOCR;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
 /// <summary>
-/// 屏幕上的某块矩形区域或者点
+/// 屏幕上的某块矩形区域或者点，方便用于识别以及坐标系转换
 /// 一般层级如下：
 /// 桌面 -> 窗口捕获区域 -> 窗口内的矩形区域 -> 矩形区域内识别到的图像区域
 /// </summary>
@@ -23,15 +25,11 @@ namespace BetterGenshinImpact.GameTask.Model;
 public class RectArea : IDisposable
 {
     /// <summary>
-    /// 当前所属的坐标系名称
-    /// 顶层一定是桌面
-    /// Desktop -> CaptureArea -> Part -> ?
-    /// </summary>
-    public string? CoordinateName { get; set; }
-
-    /// <summary>
     /// 当前所属的坐标系层级
     /// 桌面 = 0
+    /// 游戏窗口 = 1
+    /// 顶层一定是桌面
+    /// Desktop -> GameCaptureArea -> Part -> ?
     /// </summary>
     public int CoordinateLevelNum { get; set; } = 0;
 
@@ -94,10 +92,14 @@ public class RectArea : IDisposable
         }
     }
 
+    /// <summary>
+    /// 存放OCR识别的结果文本
+    /// </summary>
+    public string Text { get; set; } = string.Empty;
+
     public RectArea()
     {
     }
-
 
     public RectArea(int x, int y, int width, int height, RectArea? owner = null)
     {
@@ -192,19 +194,29 @@ public class RectArea : IDisposable
         return Width == 0 && Height == 0 && X == 0 && Y == 0;
     }
 
+    /// <summary>
+    /// 语义化包装
+    /// </summary>
+    /// <returns></returns>
+    public bool IsExist()
+    {
+        return !IsEmpty();
+    }
+
     public bool HasImage()
     {
         return _srcBitmap != null || _srcMat != null;
     }
 
     /// <summary>
-    /// 在本区域内查找识别对象
+    /// 在本区域内查找最优识别对象
     /// </summary>
     /// <param name="ro"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <param name="successAction">成功找到后做什么</param>
+    /// <param name="failAction">失败后做什么</param>
+    /// <returns>返回最优的一个识别结果RectArea</returns>
     /// <exception cref="Exception"></exception>
-    public RectArea Find(RecognitionObject ro, Action<RectArea>? action = null)
+    public RectArea Find(RecognitionObject ro, Action<RectArea>? successAction = null, Action? failAction = null)
     {
         if (!HasImage())
         {
@@ -240,11 +252,16 @@ public class RectArea : IDisposable
             if (ro.RegionOfInterest != Rect.Empty)
             {
                 // TODO roi 是可以加缓存的
+                // if (!(0 <= ro.RegionOfInterest.X && 0 <= ro.RegionOfInterest.Width && ro.RegionOfInterest.X + ro.RegionOfInterest.Width <= roi.Cols
+                //       && 0 <= ro.RegionOfInterest.Y && 0 <= ro.RegionOfInterest.Height && ro.RegionOfInterest.Y + ro.RegionOfInterest.Height <= roi.Rows))
+                // {
+                //     Logger.LogError("输入图像{W1}x{H1},模板ROI位置{X2}x{Y2},区域{H2}x{W2},边界溢出！", roi.Width, roi.Height, ro.RegionOfInterest.X, ro.RegionOfInterest.Y, ro.RegionOfInterest.Width, ro.RegionOfInterest.Height);
+                // }
                 roi = new Mat(roi, ro.RegionOfInterest);
             }
 
             var p = MatchTemplateHelper.MatchTemplate(roi, template, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
-            if (p is { X: > 0, Y: > 0 })
+            if (p != new Point())
             {
                 var newRa = new RectArea(template.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, this);
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
@@ -254,7 +271,7 @@ public class RectArea : IDisposable
                         .ToRectDrawable(ro.DrawOnWindowPen, ro.Name));
                 }
 
-                action?.Invoke(newRa);
+                successAction?.Invoke(newRa);
                 return newRa;
             }
             else
@@ -264,10 +281,11 @@ public class RectArea : IDisposable
                     VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
                 }
 
+                failAction?.Invoke();
                 return new RectArea();
             }
         }
-        else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
+        else if (RecognitionTypes.OcrMatch.Equals(ro.RecognitionType))
         {
             if (ro.AllContainMatchText.Count == 0 && ro.OneContainMatchText.Count == 0 && ro.RegexMatchText.Count == 0)
             {
@@ -331,7 +349,7 @@ public class RectArea : IDisposable
                     VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, result.ToRectDrawableListOffset(ro.RegionOfInterest.X, ro.RegionOfInterest.Y));
                 }
 
-                action?.Invoke(newRa);
+                successAction?.Invoke(newRa);
                 return newRa;
             }
             else
@@ -341,12 +359,133 @@ public class RectArea : IDisposable
                     VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
                 }
 
+                failAction?.Invoke();
                 return new RectArea();
             }
         }
         else
         {
             throw new Exception($"RectArea不支持的识别类型{ro.RecognitionType}");
+        }
+    }
+
+    /// <summary>
+    /// 在本区域内查找识别对象
+    /// 返回所有找到的结果
+    /// 仅支持:
+    /// RecognitionTypes.TemplateMatch
+    /// RecognitionTypes.Ocr
+    /// </summary>
+    /// <param name="ro"></param>
+    /// <param name="successAction">成功找到后做什么</param>
+    /// <param name="failAction">失败后做什么</param>
+    /// <returns>无内嵌图片的 RectArea List</returns>
+    /// <exception cref="Exception"></exception>
+    public List<RectArea> FindMulti(RecognitionObject ro, Action<List<RectArea>>? successAction = null, Action? failAction = null)
+    {
+        if (!HasImage())
+        {
+            throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
+        }
+
+        if (ro == null)
+        {
+            throw new Exception("识别对象不能为null");
+        }
+
+        if (RecognitionTypes.TemplateMatch.Equals(ro.RecognitionType))
+        {
+            Mat roi;
+            Mat? template;
+            if (ro.Use3Channels)
+            {
+                template = ro.TemplateImageMat;
+                roi = SrcMat;
+                Cv2.CvtColor(roi, roi, ColorConversionCodes.BGRA2BGR);
+            }
+            else
+            {
+                template = ro.TemplateImageGreyMat;
+                roi = SrcGreyMat;
+            }
+
+            if (template == null)
+            {
+                throw new Exception($"[TemplateMatch]识别对象{ro.Name}的模板图片不能为null");
+            }
+
+            if (ro.RegionOfInterest != Rect.Empty)
+            {
+                // TODO roi 是可以加缓存的
+                roi = new Mat(roi, ro.RegionOfInterest);
+            }
+
+            var rectList = MatchTemplateHelper.MatchOnePicForOnePic(roi, template, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
+            if (rectList.Count > 0)
+            {
+                var resRaList = rectList.Select(r => this.Derive(r + new Point(ro.RegionOfInterest.X, ro.RegionOfInterest.Y))).ToList();
+
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name,
+                        resRaList.Select(ra => ra.ConvertRelativePositionToCaptureArea()
+                            .ToRectDrawable(ro.DrawOnWindowPen, ro.Name)).ToList());
+                }
+
+                successAction?.Invoke(resRaList);
+                return resRaList;
+            }
+            else
+            {
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                }
+
+                failAction?.Invoke();
+                return [];
+            }
+        }
+        else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
+        {
+            var roi = SrcGreyMat;
+            if (ro.RegionOfInterest != Rect.Empty)
+            {
+                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+            }
+
+            var result = OcrFactory.Paddle.OcrResult(roi);
+
+            if (result.Regions.Length > 0)
+            {
+                var resRaList = result.Regions.Select(r =>
+                {
+                    var newRa = this.Derive(r.Rect.BoundingRect() + new Point(ro.RegionOfInterest.X, ro.RegionOfInterest.Y));
+                    newRa.Text = r.Text;
+                    return newRa;
+                }).ToList();
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, result.ToRectDrawableListOffset(ro.RegionOfInterest.X, ro.RegionOfInterest.Y));
+                }
+
+                successAction?.Invoke(resRaList);
+                return resRaList;
+            }
+            else
+            {
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                }
+
+                failAction?.Invoke();
+                return [];
+            }
+        }
+        else
+        {
+            throw new Exception($"RectArea多目标识别不支持的识别类型{ro.RecognitionType}");
         }
     }
 
@@ -366,23 +505,6 @@ public class RectArea : IDisposable
         return ra;
     }
 
-    ///// <summary>
-    ///// 找到图像并点击中心
-    ///// </summary>
-    ///// <param name="targetImageMat"></param>
-    ///// <returns></returns>
-    //[Obsolete]
-    //public RectArea ClickCenter(Mat targetImageMat)
-    //{
-    //    var ra = Find(targetImageMat);
-    //    if (!ra.IsEmpty())
-    //    {
-    //        ra.ClickCenter();
-    //    }
-
-    //    return ra;
-    //}
-
     /// <summary>
     /// 当前对象点击中心
     /// </summary>
@@ -398,7 +520,6 @@ public class RectArea : IDisposable
             ConvertRelativePositionToDesktop().ClickCenter();
         }
     }
-
 
     /// <summary>
     /// 剪裁图片
@@ -421,6 +542,18 @@ public class RectArea : IDisposable
     }
 
     /// <summary>
+    /// 派生2x2区域（无图片）
+    /// 方便用于点击
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    public RectArea DerivePoint(int x, int y)
+    {
+        return new RectArea(new Rect(x, y, 2, 2), this);
+    }
+
+    /// <summary>
     /// OCR识别
     /// </summary>
     /// <returns>所有结果</returns>
@@ -428,7 +561,6 @@ public class RectArea : IDisposable
     {
         return OcrFactory.Paddle.OcrResult(SrcGreyMat);
     }
-
 
     public void Dispose()
     {

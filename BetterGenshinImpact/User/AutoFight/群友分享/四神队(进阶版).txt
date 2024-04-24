@@ -1,0 +1,14 @@
+钟离 q,s(0.2),e(hold),wait(0.1),w(0.2),wait(0.2)
+雷电将军 e,wait(0.5),
+纳西妲 e(hold),wait(0.3),q,attack(0.5)
+芙宁娜 e,wait(0.2),q,wait(0.1)
+纳西妲 attack(0.5),wait(0.3),charge,wait(0.2)
+雷电将军 q,wait(0.1),attack(1),charge,wait(0.1),dash,attack(1.5),e
+钟离 wait(0.3),q,wait(0.2),s(0.2),e(hold),w(0.2),wait(1)
+纳西妲 e(hold),wait(0.2),q,wait(0.2),attack(1),wait(0.3),charge,wait(0.2)
+芙宁娜 charge,e,wait(0.3)
+纳西妲 attack(0.5),wait(0.3),charge,wait(0.2)
+钟离 s(0.2),e(hold),wait(0.5),w(0.2)
+雷电将军 wait(0.5),e,wait(0.2)
+芙宁娜 charge,e,wait(0.2),q
+纳西妲 e(hold),wait(0.2),attack(0.5),wait(0.3),charge,wait(0.2)

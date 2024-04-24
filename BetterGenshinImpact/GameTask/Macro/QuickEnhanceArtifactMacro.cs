@@ -1,5 +1,4 @@
-﻿using System;
-using BetterGenshinImpact.Helpers;
+﻿using BetterGenshinImpact.Helpers;
 using System.Threading;
 using System.Windows;
 

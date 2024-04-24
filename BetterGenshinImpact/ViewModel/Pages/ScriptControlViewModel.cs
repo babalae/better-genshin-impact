@@ -1,4 +1,6 @@
-﻿#if DEBUG
+﻿using BetterGenshinImpact.ViewModel;
+
+#if DEBUG
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.ClearScript;
@@ -9,7 +11,7 @@ using System.Diagnostics;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class ScriptControlViewModel : ObservableObject, INavigationAware
+public partial class ScriptControlViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public ScriptControlViewModel()
     {
@@ -32,6 +34,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
 #else
 
-public partial class ScriptControlViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject { }
+public partial class ScriptControlViewModel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject, IViewModel { }
 
 #endif

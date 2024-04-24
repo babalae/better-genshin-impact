@@ -6,6 +6,7 @@ using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.View.Drawable;
 
@@ -24,6 +25,7 @@ namespace BetterGenshinImpact.GameTask
             TriggerDictionary = new Dictionary<string, ITaskTrigger>()
             {
                 { "RecognitionTest", new TestTrigger() },
+                { "GameLoading", new GameLoadingTrigger() },
                 { "AutoPick", new AutoPick.AutoPickTrigger() },
                 { "QuickTeleport", new QuickTeleport.QuickTeleportTrigger() },
                 { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
@@ -45,10 +47,7 @@ namespace BetterGenshinImpact.GameTask
             {
                 TriggerDictionary["AutoPick"].IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
                 // 用于刷新AutoPick的黑白名单
-                if (TriggerDictionary["AutoPick"].IsEnabled == false)
-                {
-                    TriggerDictionary["AutoPick"].Init();
-                }
+                TriggerDictionary["AutoPick"].Init();
                 TriggerDictionary["AutoSkip"].IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
                 TriggerDictionary["AutoFishing"].IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
                 // 钓鱼有很多变量要初始化，直接重新newZA
@@ -57,6 +56,7 @@ namespace BetterGenshinImpact.GameTask
                     TriggerDictionary["AutoFishing"].Init();
                 }
                 TriggerDictionary["QuickTeleport"].IsEnabled = TaskContext.Instance().Config.QuickTeleportConfig.Enabled;
+                TriggerDictionary["GameLoading"].Init();
                 // 清理画布
                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
                 VisionContext.Instance().DrawContent.ClearAll();

@@ -1,11 +1,10 @@
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Model;
 using Fischless.GameCapture;
-using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Threading;
-using static SharpDX.Utilities;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -13,6 +12,7 @@ public class TaskControl
 {
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
+    public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
 
     public static void CheckAndSleep(int millisecondsTimeout)
     {
@@ -27,7 +27,7 @@ public class TaskControl
 
     public static void Sleep(int millisecondsTimeout)
     {
-        Retry.Do(() =>
+        NewRetry.Do(() =>
         {
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
@@ -50,7 +50,7 @@ public class TaskControl
             return;
         }
 
-        Retry.Do(() =>
+        NewRetry.Do(() =>
         {
             if (cts is { IsCancellationRequested: true })
             {
@@ -64,7 +64,7 @@ public class TaskControl
             }
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
-        if (cts.IsCancellationRequested)
+        if (cts is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
         }
@@ -125,7 +125,7 @@ public class TaskControl
     public static CaptureContent CaptureToContent(IGameCapture? gameCapture)
     {
         var bitmap = CaptureGameBitmap(gameCapture);
-        return new CaptureContent(bitmap, 0, 0, null!);
+        return new CaptureContent(bitmap, 0, 0);
     }
 
     public static CaptureContent CaptureToContent()
@@ -133,8 +133,26 @@ public class TaskControl
         return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
     }
 
+    public static RectArea CaptureToRectArea()
+    {
+        return CaptureToContent().CaptureRectArea;
+    }
+
+    /// <summary>
+    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    /// </summary>
+    /// <returns></returns>
     public static CaptureContent GetContentFromDispatcher()
     {
         return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
+    }
+
+    /// <summary>
+    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    /// </summary>
+    /// <returns></returns>
+    public static RectArea GetRectAreaFromDispatcher()
+    {
+        return GetContentFromDispatcher().CaptureRectArea;
     }
 }

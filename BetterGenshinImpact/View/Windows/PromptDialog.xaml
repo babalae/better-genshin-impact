@@ -4,39 +4,47 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 WindowStartupLocation="CenterScreen" 
-                 mc:Ignorable="d"
-                 MinWidth="400"
-                 MinHeight="200"
+                 Title="配置"
                  Width="500"
                  Height="210"
-                 WindowStyle="SingleBorderWindow"
-                 ResizeMode="CanMinimize"
+                 MinWidth="400"
+                 MinHeight="200"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
-                 Title="配置"
-                 >
+                 ResizeMode="CanMinimize"
+                 WindowStartupLocation="CenterScreen"
+                 WindowStyle="SingleBorderWindow"
+                 mc:Ignorable="d">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel
-            Grid.Row="1"
-            Margin="12">
-            <ui:TextBlock Name="TxtQuestion" Margin="5"/>
-            <ui:TextBox Name="TxtResponse" Margin="5"/>
-            <StackPanel Orientation="Horizontal" Margin="5" HorizontalAlignment="Right">
-                <ui:Button Content="确定" IsDefault="True" Margin="5" Name="BtnOk" Click="BtnOkClick"  Appearance="Primary" />
-                <ui:Button Content="取消" IsCancel="True" Margin="5" Name="BtnCancel" Click="BtnCancelClick" />
+        <StackPanel Grid.Row="1" Margin="12">
+            <ui:TextBlock Name="TxtQuestion" Margin="5" />
+            <ui:TextBox Name="TxtResponse" Margin="5" />
+            <StackPanel Margin="5"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal">
+                <ui:Button Name="BtnOk"
+                           Margin="5"
+                           Appearance="Primary"
+                           Click="BtnOkClick"
+                           Content="确定"
+                           IsDefault="True" />
+                <ui:Button Name="BtnCancel"
+                           Margin="5"
+                           Click="BtnCancelClick"
+                           Content="取消"
+                           IsCancel="True" />
             </StackPanel>
         </StackPanel>
 
         <ui:TitleBar Title="配置" Grid.Row="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 

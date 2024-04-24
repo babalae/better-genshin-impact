@@ -1,9 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Macro
 {
@@ -11,7 +7,8 @@ namespace BetterGenshinImpact.GameTask.Macro
     {
         public static void Done()
         {
-            Simulation.SendInput.Mouse.MoveMouseBy(600, 0);
+            Simulation.SendInputEx.Mouse.MoveMouseBy(TaskContext.Instance().Config.MacroConfig.RunaroundMouseXInterval, 0);
+            Thread.Sleep(TaskContext.Instance().Config.MacroConfig.RunaroundInterval);
         }
     }
 }

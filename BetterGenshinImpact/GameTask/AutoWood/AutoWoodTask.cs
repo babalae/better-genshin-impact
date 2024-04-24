@@ -2,6 +2,7 @@
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
@@ -10,8 +11,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using GC = System.GC;
 
 namespace BetterGenshinImpact.GameTask.AutoWood;
 
@@ -20,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.AutoWood;
 /// </summary>
 public class AutoWoodTask
 {
-    private readonly AutoWoodAssets _assets = new();
+    private readonly AutoWoodAssets _assets;
 
     private bool _first = true;
 
@@ -36,12 +39,21 @@ public class AutoWoodTask
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _login3rdParty = new();
+        _assets = AutoWoodAssets.Instance;
     }
 
     public void Start(WoodTaskParam taskParam)
     {
+        var hasLock = false;
         try
         {
+            hasLock = TaskSemaphore.Wait(0);
+            if (!hasLock)
+            {
+                Logger.LogError("启动自动伐木功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             TaskTriggerDispatcher.Instance().StopTimer();
             Logger.LogInformation("→ {Text} 设置伐木总次数：{Cnt}", "自动伐木，启动！", taskParam.WoodRoundNum);
 
@@ -96,6 +108,11 @@ public class AutoWoodTask
             TaskSettingsPageViewModel.SetSwitchAutoWoodButtonText(false);
             Logger.LogInformation("← {Text}", "退出自动伐木");
             taskParam.Dispatcher.StartTimer();
+
+            if (hasLock)
+            {
+                TaskSemaphore.Release();
+            }
         }
     }
 
@@ -114,6 +131,9 @@ public class AutoWoodTask
 
         // 3. 等待进入游戏
         EnterGame(taskParam);
+
+        // 手动 GC
+        GC.Collect();
     }
 
     private void PressZ(WoodTaskParam taskParam)
@@ -123,8 +143,8 @@ public class AutoWoodTask
 
         if (_first)
         {
-            var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-            var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
+            using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+            using var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
@@ -148,8 +168,8 @@ public class AutoWoodTask
             NewRetry.Do(() =>
             {
                 Sleep(1, taskParam.Cts);
-                var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-                var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
+                using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+                using var ra = content.CaptureRectArea.Find(_assets.TheBoonOfTheElderTreeRo);
                 if (ra.IsEmpty())
                 {
 #if !TEST_WITHOUT_Z_ITEM
@@ -181,8 +201,8 @@ public class AutoWoodTask
             NewRetry.Do(() =>
             {
                 Sleep(1, taskParam.Cts);
-                var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-                var ra = content.CaptureRectArea.Find(_assets.MenuBagRo);
+                using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+                using var ra = content.CaptureRectArea.Find(_assets.MenuBagRo);
                 if (ra.IsEmpty())
                 {
                     throw new RetryException("未检测到弹出菜单");
@@ -204,11 +224,12 @@ public class AutoWoodTask
         Sleep(500, taskParam.Cts);
 
         // 点击确认
-        var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+        using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
         content.CaptureRectArea.Find(_assets.ConfirmRo, ra =>
         {
             ra.ClickCenter();
             Debug.WriteLine("[AutoWood] Click confirm button");
+            ra.Dispose();
         });
     }
 
@@ -225,8 +246,8 @@ public class AutoWoodTask
         {
             Sleep(1, taskParam.Cts);
 
-            var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
-            var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
+            using var content = CaptureToContent(taskParam.Dispatcher.GameCapture);
+            using var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
             if (!ra.IsEmpty())
             {
                 clickCnt++;

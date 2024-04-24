@@ -3,25 +3,23 @@ using OpenCvSharp;
 using Sdcb.PaddleInference;
 using Sdcb.PaddleOCR;
 using Sdcb.PaddleOCR.Models;
-using SharpDX;
 using System;
 using System.Diagnostics;
-using System.Drawing;
-using Path = System.IO.Path;
+using System.IO;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
 public class PaddleOcrService : IOcrService
 {
+    private static readonly object locker = new();
+
     /// <summary>
-    /// Usage:
-    /// https://github.com/sdcb/PaddleSharp/blob/master/docs/ocr.md
-    /// 模型列表:
-    /// https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.5/doc/doc_ch/models_list.md
+    ///     Usage:
+    ///     https://github.com/sdcb/PaddleSharp/blob/master/docs/ocr.md
+    ///     模型列表:
+    ///     https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.5/doc/doc_ch/models_list.md
     /// </summary>
     private readonly PaddleOcrAll _paddleOcrAll;
-
-    private static readonly object locker = new();
 
     public PaddleOcrService()
     {
@@ -33,7 +31,7 @@ public class PaddleOcrService : IOcrService
         _paddleOcrAll = new PaddleOcrAll(model, PaddleDevice.Onnx())
         {
             AllowRotateDetection = false, /* 允许识别有角度的文字 */
-            Enable180Classification = false, /* 允许识别旋转角度大于90度的文字 */
+            Enable180Classification = false /* 允许识别旋转角度大于90度的文字 */
         };
 
         // System.AccessViolationException
@@ -50,11 +48,10 @@ public class PaddleOcrService : IOcrService
     {
         lock (locker)
         {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            long startTime = Stopwatch.GetTimestamp();
             var result = _paddleOcrAll.Run(mat);
-            stopwatch.Stop();
-            Debug.WriteLine($"PaddleOcr 耗时 {stopwatch.ElapsedMilliseconds}ms 结果: {result.Text}");
+            TimeSpan time = Stopwatch.GetElapsedTime(startTime);
+            Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
             return result;
         }
     }

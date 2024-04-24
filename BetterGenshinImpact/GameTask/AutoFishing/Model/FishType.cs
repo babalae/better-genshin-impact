@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
 
 /// <summary>
 /// 模仿Java实现的多属性枚举类
 /// </summary>
+[Obsolete]
 public class FishType
 {
     public static readonly FishType AizenMedaka = new("aizen medaka", "fruit paste bait", "蓝染花鳉");
@@ -27,7 +29,7 @@ public class FishType
     public static readonly FishType DivdaRay = new("divda ray", "fake fly bait", "迪芙妲鳐");
     public static readonly FishType FormaloRay = new("formalo ray", "fake fly bait", "佛玛洛鳐");
     public static readonly FishType GoldenKoi = new("golden koi", "fake fly bait", "金赤假龙");
-    public static readonly FishType Pufferfish = new("pufferfish", "fake fly bait", "苦炮鲀2");
+    public static readonly FishType Pufferfish = new("pufferfish", "fake fly bait", "炮鲀");
     public static readonly FishType RustyKoi = new("rusty koi", "fake fly bait", "锖假龙");
     public static readonly FishType HalcyonJadeAxeMarlin = new("halcyon jade axe marlin", "sugardew bait", "翡玉斧枪鱼");
     public static readonly FishType LazuriteAxeMarlin = new("lazurite axe marlin", "sugardew bait", "青金斧枪鱼");
@@ -38,10 +40,12 @@ public class FishType
     public static readonly FishType TrueFruitAngler = new("true fruit angler", "sugardew bait", "真果角鲀");
     public static readonly FishType BlazingHeartfeatherBass = new("blazing heartfeather bass", "sour bait", "烘烘心羽鲈");
     public static readonly FishType RipplingHeartfeatherBass = new("rippling heartfeather bass", "sour bait", "波波心羽鲈");
-    public static readonly FishType MaintenanceMekInitialConfiguration = new("maintenance mek: initial configuration", "flashing maintenance mek bait", "维护机关·初始能力型");
-    public static readonly FishType MaintenanceMekPlatinumCollection = new("maintenance mek: platinum collection", "flashing maintenance mek bait", "维护机关·白金典藏型");
-    public static readonly FishType MaintenanceMekSituationController = new("maintenance mek: situation controller", "flashing maintenance mek bait", "维护机关·态势控制者");
-    public static readonly FishType MaintenanceMekWaterBodyCleaner = new("maintenance mek: water body cleaner", "flashing maintenance mek bait", "维护机关·水域清理者");
+    public static readonly FishType MaintenanceMekInitialConfiguration = new("maintenance mek- initial configuration", "flashing maintenance mek bait", "维护机关·初始能力型");
+    public static readonly FishType MaintenanceMekPlatinumCollection = new("maintenance mek- platinum collection", "flashing maintenance mek bait", "维护机关·白金典藏型");
+    public static readonly FishType MaintenanceMekSituationController = new("maintenance mek- situation controller", "flashing maintenance mek bait", "维护机关·态势控制者");
+    public static readonly FishType MaintenanceMekWaterBodyCleaner = new("maintenance mek- water body cleaner", "flashing maintenance mek bait", "维护机关·水域清理者");
+    public static readonly FishType MaintenanceMekWaterGoldLeader = new ("maintenance mek- gold leader", "flashing maintenance mek bait", "维护机关·澄金领队型");
+
 
     public static IEnumerable<FishType> Values
     {
@@ -82,6 +86,7 @@ public class FishType
             yield return MaintenanceMekPlatinumCollection;
             yield return MaintenanceMekSituationController;
             yield return MaintenanceMekWaterBodyCleaner;
+            yield return MaintenanceMekWaterGoldLeader;
         }
     }
 

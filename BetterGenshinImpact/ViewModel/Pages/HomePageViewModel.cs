@@ -14,24 +14,19 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using OpenCvSharp;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HomePageViewModel : ObservableObject, INavigationAware
+public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     [ObservableProperty] private string[] _modeNames = GameCaptureFactory.ModeNames();
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    private bool _taskDispatcherEnabled = false;
-    [ObservableProperty] private Visibility _startButtonVisibility = Visibility.Visible;
-    [ObservableProperty] private Visibility _stopButtonVisibility = Visibility.Collapsed;
+    [ObservableProperty] private bool _taskDispatcherEnabled = false;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
@@ -72,6 +67,15 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 }
             }
         });
+
+        var args = Environment.GetCommandLineArgs();
+        if (args.Length > 1)
+        {
+            if (args[1].Contains("start"))
+            {
+                _ = OnStartTriggerAsync();
+            }
+        }
     }
 
     [RelayCommand]
@@ -90,17 +94,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnStartCaptureTest()
     {
-        //var hWnd = SystemControl.FindGenshinImpactHandle();
-        //if (hWnd == IntPtr.Zero)
-        //{
-        //    System.Windows.MessageBox.Show("未找到原神窗口");
-        //    return;
-        //}
-
-        //CaptureTestWindow captureTestWindow = new();
-        //captureTestWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
-        //captureTestWindow.Show();
-
         var picker = new PickerWindow();
         var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
         if (hWnd != IntPtr.Zero)
@@ -108,6 +101,21 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             var captureWindow = new CaptureTestWindow();
             captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
             captureWindow.Show();
+        }
+    }
+
+    [RelayCommand]
+    private void OnManualPickWindow()
+    {
+        var picker = new PickerWindow();
+        var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
+        if (hWnd != IntPtr.Zero)
+        {
+            Start(hWnd);
+        }
+        else
+        {
+            System.Windows.MessageBox.Show("选择的窗体句柄为空！");
         }
     }
 
@@ -131,7 +139,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             if (Config.GenshinStartConfig.LinkedStartEnabled && !string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
             {
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
+                if (hWnd != IntPtr.Zero)
+                {
+                    TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
+                }
             }
+
             if (hWnd == IntPtr.Zero)
             {
                 System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
@@ -139,15 +152,19 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
             }
         }
 
-        if (!_taskDispatcherEnabled)
+        Start(hWnd);
+    }
+
+    private void Start(IntPtr hWnd)
+    {
+        if (!TaskDispatcherEnabled)
         {
             _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+            _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
             _mouseKeyMonitor.Subscribe(hWnd);
-            _taskDispatcherEnabled = true;
-            StartButtonVisibility = Visibility.Collapsed;
-            StopButtonVisibility = Visibility.Visible;
+            TaskDispatcherEnabled = true;
         }
     }
 
@@ -156,15 +173,24 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
     [RelayCommand(CanExecute = nameof(CanStopTrigger))]
     private void OnStopTrigger()
     {
-        if (_taskDispatcherEnabled)
+        Stop();
+    }
+
+    private void Stop()
+    {
+        if (TaskDispatcherEnabled)
         {
-            _maskWindow?.Hide();
             _taskDispatcher.Stop();
-            _taskDispatcherEnabled = false;
+            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+            _maskWindow?.Hide();
+            TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
-            StartButtonVisibility = Visibility.Visible;
-            StopButtonVisibility = Visibility.Collapsed;
         }
+    }
+
+    private void OnUiTaskStopTick(object? sender, EventArgs e)
+    {
+        UIDispatcherHelper.Invoke(Stop);
     }
 
     public void OnNavigatedTo()
@@ -203,6 +229,19 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
         //{
         //    MessageBox.Show(e.StackTrace);
         //}
+
+        // Mat tar = new(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\selected.png", ImreadModes.Grayscale);
+        //  var mask = OpenCvCommonHelper.CreateMask(tar, new Scalar(0, 0, 0));
+        // var src = new Mat(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\Clip_20240309_135839.png", ImreadModes.Grayscale);
+        // var src2 = src.Clone();
+        // var res = MatchTemplateHelper.MatchOnePicForOnePic(src, mask);
+        // // 把结果画到原图上
+        // foreach (var t in res)
+        // {
+        //     Cv2.Rectangle(src2, t, new Scalar(0, 0, 255));
+        // }
+        //
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\x1.png", src2);
     }
 
     [RelayCommand]
@@ -222,6 +261,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware
                 {
                     return;
                 }
+
                 Config.GenshinStartConfig.InstallPath = path;
             }
         });

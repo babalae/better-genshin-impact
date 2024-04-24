@@ -6,11 +6,6 @@ namespace BetterGenshinImpact.Core.Config;
 [Obsolete("Replace with original OpenCvSharp.Rect")]
 public class RectConfig
 {
-    public int X { get; set; }
-    public int Y { get; set; }
-    public int Width { get; set; }
-    public int Height { get; set; }
-
     public RectConfig()
     {
     }
@@ -22,6 +17,11 @@ public class RectConfig
         Width = width;
         Height = height;
     }
+
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
 
     public Rect ToRect()
     {

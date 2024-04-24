@@ -4,11 +4,11 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using Fischless.GameCapture;
-using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -63,10 +63,9 @@ public class GeniusInvokationControl
 
     public static bool OutputImageWhenError = true;
 
-
     private CancellationTokenSource? _cts;
 
-    private readonly AutoGeniusInvokationAssets _assets = new();
+    private readonly AutoGeniusInvokationAssets _assets = AutoGeniusInvokationAssets.Instance;
 
     private IGameCapture? _gameCapture;
 
@@ -142,7 +141,7 @@ public class GeniusInvokationControl
 
     public void CheckTask()
     {
-        Retry.Do(() =>
+        NewRetry.Do(() =>
         {
             if (_cts is { IsCancellationRequested: true })
             {
@@ -155,7 +154,6 @@ public class GeniusInvokationControl
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
         }, TimeSpan.FromSeconds(1), 100);
-
 
         if (_cts is { IsCancellationRequested: true })
         {
@@ -182,7 +180,7 @@ public class GeniusInvokationControl
         Sleep(3000);
 
         // 是否是再角色出战选择界面
-        Retry.Do(IsInCharacterPickRetryThrowable, TimeSpan.FromSeconds(0.8), 20);
+        NewRetry.Do(IsInCharacterPickRetryThrowable, TimeSpan.FromSeconds(0.8), 20);
         _logger.LogInformation("识别到已经在角色出战界面，等待1.5s");
         Sleep(1500);
     }
@@ -250,7 +248,6 @@ public class GeniusInvokationControl
                 //由连续区域进入空白区域了
                 inLine = false;
 
-
                 if (y1 == 0)
                 {
                     y1 = start;
@@ -294,10 +291,8 @@ public class GeniusInvokationControl
         //    throw new RetryException("未获取到角色区域");
         //}
 
-
         // 垂直投影
         var v = ArithmeticHelper.VerticalProjection(gray);
-
 
         inLine = false;
         start = 0;
@@ -358,7 +353,6 @@ public class GeniusInvokationControl
         {
             throw new RetryException("未获取到角色区域");
         }
-
 
         //_logger.LogInformation("识别到角色卡牌区域:{Rects}", rects);
 
@@ -443,7 +437,6 @@ public class GeniusInvokationControl
         var dictionary = FindMultiPicFromOneImage2OneByOne(gameSnapshot, _assets.RollPhaseDiceMats, 0.73);
 
         var count = dictionary.Sum(kvp => kvp.Value.Count);
-
 
         if (count != 8)
         {
@@ -579,7 +572,6 @@ public class GeniusInvokationControl
         return result;
     }
 
-
     /// <summary>
     ///  烧牌
     /// </summary>
@@ -634,7 +626,6 @@ public class GeniusInvokationControl
 
         ClickExtension.Move(x, y).LeftButtonClick();
     }
-
 
     /// <summary>
     /// 使用技能
@@ -703,7 +694,6 @@ public class GeniusInvokationControl
                     }
                 }
 
-
                 _logger.LogInformation("当前骰子数量{Count}与期望的骰子数量{Expect}不相等，重试", dCount, duel.CurrentDiceCount);
                 diceStatus = ActionPhaseDice();
                 retryCount++;
@@ -714,7 +704,6 @@ public class GeniusInvokationControl
                 break;
             }
         }
-
 
         int needSpecifyElementDiceCount = diceCost - diceStatus[ElementalType.Omni.ToLowerString()] - diceStatus[elementalType.ToLowerString()];
         if (needSpecifyElementDiceCount > 0)
@@ -758,7 +747,6 @@ public class GeniusInvokationControl
         return ActionPhaseUseSkill(skillIndex);
     }
 
-
     /// <summary>
     /// 回合结束
     /// </summary>
@@ -767,7 +755,7 @@ public class GeniusInvokationControl
         CaptureGameRectArea().Find(_assets.RoundEndButtonRo, foundRectArea =>
         {
             foundRectArea.ClickCenter();
-            Sleep(1000); // 有弹出动画 
+            Sleep(1000); // 有弹出动画
             foundRectArea.ClickCenter();
             Sleep(300);
         });
@@ -823,7 +811,6 @@ public class GeniusInvokationControl
         return !CaptureGameRectArea().Find(_assets.EndPhaseRo).IsEmpty();
     }
 
-
     /// <summary>
     /// 出战角色是否被打倒
     /// </summary>
@@ -858,7 +845,6 @@ public class GeniusInvokationControl
             }
         }
 
-
         return res;
     }
 
@@ -892,7 +878,6 @@ public class GeniusInvokationControl
     {
         return !CaptureGameRectArea().Find(_assets.ExitDuelButtonRo).IsEmpty();
     }
-
 
     public Mat CutRight(Mat srcMat, int saveRightWidth)
     {
@@ -999,7 +984,6 @@ public class GeniusInvokationControl
                 throw new System.Exception("等待对方行动超时,停止自动打牌！");
             }
 
-
             Sleep(1000 + rd.Next(1, 500));
         }
     }
@@ -1098,7 +1082,6 @@ public class GeniusInvokationControl
         var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(15, 10), new OpenCvSharp.Point(-1, -1));
         Cv2.Dilate(gray, gray, kernel); //膨胀
 
-
         Cv2.FindContours(gray, out var contours, out _, RetrievalModes.External,
             ContourApproximationModes.ApproxSimple, null);
 
@@ -1106,7 +1089,6 @@ public class GeniusInvokationControl
         {
             // .Where(w => w.Width > 1 && w.Height >= 5)
             var rects = contours.Select(Cv2.BoundingRect).ToList();
-
 
             // 按照Y轴高度排序
             rects = rects.OrderBy(r => r.Y).ToList();
@@ -1217,7 +1199,7 @@ public class GeniusInvokationControl
 
         // 上面判断失效
         _logger.LogWarning("通过OCR HP的方式未识别到出战角色 {Array}", hpArray);
-        return Retry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
+        return NewRetry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
     }
 
     private static void OutputImage(Duel duel, List<Rect> rects, Mat bottomMat, int halfHeight, string fileName)
@@ -1235,7 +1217,6 @@ public class GeniusInvokationControl
                 Cv2.Rectangle(bottomMat,
                     new Rect(rc.X, rc.Y - halfHeight, rc.Width, rc.Height), Scalar.Green, 1);
             }
-
 
             Cv2.ImWrite(fileName, bottomMat);
         }

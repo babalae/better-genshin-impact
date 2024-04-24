@@ -103,7 +103,7 @@ public class Avatar
     /// <returns></returns>
     public void ThrowWhenDefeated(CaptureContent content)
     {
-        var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
+        var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
         if (!confirmRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
@@ -135,7 +135,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", content.CaptureRectArea.SrcMat);
             Sleep(250, Cts);
@@ -181,7 +181,7 @@ public class Avatar
         {
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // 剪裁出队伍区域
-            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
+            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var block = teamRa.Crop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
             // Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
@@ -204,7 +204,7 @@ public class Avatar
         else
         {
             // 剪裁出IndexRect区域
-            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.TeamRect);
+            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
@@ -232,7 +232,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance().Simulator.LeftButtonClick();
+            AutoFightContext.Instance.Simulator.LeftButtonClick();
             ms -= 200;
             Sleep(200, Cts);
         }
@@ -254,7 +254,7 @@ public class Avatar
             {
                 if (Name == "纳西妲")
                 {
-                    AutoFightContext.Instance().Simulator.KeyDown(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
                     Sleep(300, Cts);
                     for (int j = 0; j < 10; j++)
                     {
@@ -263,16 +263,16 @@ public class Avatar
                     }
 
                     Sleep(300); // 持续操作不应该被cts取消
-                    AutoFightContext.Instance().Simulator.KeyUp(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
                 }
                 else
                 {
-                    AutoFightContext.Instance().Simulator.LongKeyPress(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.LongKeyPress(User32.VK.VK_E);
                 }
             }
             else
             {
-                AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_E);
+                AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_E);
             }
 
             Sleep(200, Cts);
@@ -296,7 +296,7 @@ public class Avatar
     /// </summary>
     public double GetSkillCurrentCd(CaptureContent content)
     {
-        var eRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.ERect);
+        var eRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.ERect);
         var text = OcrFactory.Paddle.Ocr(eRa.SrcGreyMat);
         return StringUtils.TryParseDouble(text);
     }
@@ -315,7 +315,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_Q);
+            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
             Sleep(200, Cts);
 
             var content = GetContentFromDispatcher();
@@ -350,7 +350,7 @@ public class Avatar
     /// </summary>
     public double GetBurstCurrentCd(CaptureContent content)
     {
-        var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.QRect);
+        var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.QRect);
         var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
         return StringUtils.TryParseDouble(text);
     }
@@ -370,11 +370,10 @@ public class Avatar
             ms = 200;
         }
 
-        AutoFightContext.Instance().Simulator.RightButtonDown();
+        AutoFightContext.Instance.Simulator.RightButtonDown();
         Sleep(ms); // 冲刺不能被cts取消
-        AutoFightContext.Instance().Simulator.RightButtonUp();
+        AutoFightContext.Instance.Simulator.RightButtonUp();
     }
-
 
     public void Walk(string key, int ms)
     {
@@ -406,9 +405,9 @@ public class Avatar
             return;
         }
 
-        AutoFightContext.Instance().Simulator.KeyDown(vk);
+        AutoFightContext.Instance.Simulator.KeyDown(vk);
         Sleep(ms); // 行走不能被cts取消
-        AutoFightContext.Instance().Simulator.KeyUp(vk);
+        AutoFightContext.Instance.Simulator.KeyUp(vk);
     }
 
     /// <summary>
@@ -435,7 +434,7 @@ public class Avatar
     /// </summary>
     public void Jump()
     {
-        AutoFightContext.Instance().Simulator.KeyPress(User32.VK.VK_SPACE);
+        AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_SPACE);
     }
 
     /// <summary>
@@ -450,7 +449,7 @@ public class Avatar
 
         if (Name == "那维莱特")
         {
-            AutoFightContext.Instance().Simulator.LeftButtonDown();
+            AutoFightContext.Instance.Simulator.LeftButtonDown();
             while (ms >= 0)
             {
                 if (Cts is { IsCancellationRequested: true })
@@ -463,27 +462,26 @@ public class Avatar
                 Sleep(50); // 持续操作不应该被cts取消
             }
 
-            AutoFightContext.Instance().Simulator.LeftButtonUp();
+            AutoFightContext.Instance.Simulator.LeftButtonUp();
         }
         else
         {
-            AutoFightContext.Instance().Simulator.LeftButtonDown();
+            AutoFightContext.Instance.Simulator.LeftButtonDown();
             Sleep(ms); // 持续操作不应该被cts取消
-            AutoFightContext.Instance().Simulator.LeftButtonUp();
+            AutoFightContext.Instance.Simulator.LeftButtonUp();
         }
     }
-
 
     public void MouseDown(string key = "left")
     {
         key = key.ToLower();
         if (key == "left")
         {
-            AutoFightContext.Instance().Simulator.LeftButtonDown();
+            AutoFightContext.Instance.Simulator.LeftButtonDown();
         }
         else if (key == "right")
         {
-            AutoFightContext.Instance().Simulator.RightButtonDown();
+            AutoFightContext.Instance.Simulator.RightButtonDown();
         }
         else if (key == "middle")
         {
@@ -496,11 +494,11 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            AutoFightContext.Instance().Simulator.LeftButtonUp();
+            AutoFightContext.Instance.Simulator.LeftButtonUp();
         }
         else if (key == "right")
         {
-            AutoFightContext.Instance().Simulator.RightButtonUp();
+            AutoFightContext.Instance.Simulator.RightButtonUp();
         }
         else if (key == "middle")
         {
@@ -513,11 +511,11 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            AutoFightContext.Instance().Simulator.LeftButtonClick();
+            AutoFightContext.Instance.Simulator.LeftButtonClick();
         }
         else if (key == "right")
         {
-            AutoFightContext.Instance().Simulator.RightButtonClick();
+            AutoFightContext.Instance.Simulator.RightButtonClick();
         }
         else if (key == "middle")
         {
@@ -533,19 +531,19 @@ public class Avatar
     public void KeyDown(string key)
     {
         var vk = ToVk(key);
-        AutoFightContext.Instance().Simulator.KeyDown(vk);
+        AutoFightContext.Instance.Simulator.KeyDown(vk);
     }
 
     public void KeyUp(string key)
     {
         var vk = ToVk(key);
-        AutoFightContext.Instance().Simulator.KeyUp(vk);
+        AutoFightContext.Instance.Simulator.KeyUp(vk);
     }
 
     public void KeyPress(string key)
     {
         var vk = ToVk(key);
-        AutoFightContext.Instance().Simulator.KeyPress(vk);
+        AutoFightContext.Instance.Simulator.KeyPress(vk);
     }
 
     public static User32.VK ToVk(string key)

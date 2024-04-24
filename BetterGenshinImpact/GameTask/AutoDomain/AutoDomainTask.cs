@@ -6,9 +6,10 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.Common.MiniMap;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Compunet.YoloV8;
@@ -28,8 +29,6 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask
 {
-    private readonly AutoPickAssets _autoPickAssets = new();
-
     private readonly AutoDomainParam _taskParam;
 
     private readonly PostMessageSimulator _simulator;
@@ -38,27 +37,38 @@ public class AutoDomainTask
 
     private readonly ClickOffset _clickOffset;
 
-    private readonly List<CombatCommand> _combatCommands;
-
     private readonly AutoDomainConfig _config;
+
+    private readonly CombatScriptBag _combatScriptBag;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
-        _simulator = AutoFightContext.Instance().Simulator;
+        _simulator = AutoFightContext.Instance.Simulator;
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-        _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
         _config = TaskContext.Instance().Config.AutoDomainConfig;
+
+        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
     public async void Start()
     {
+        var hasLock = false;
         try
         {
+            hasLock = await TaskSemaphore.WaitAsync(0);
+            if (!hasLock)
+            {
+                Logger.LogError("启动自动秘境功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             Init();
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
+
             var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
 
             // 前置进入秘境
@@ -92,21 +102,32 @@ public class AutoDomainTask
 
                 // 5. 快速领取奖励并判断是否有下一轮
                 Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-                if (!GettingTreasure(_taskParam.DomainRoundNum == 9999))
+                if (!GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
                 {
-                    Logger.LogInformation("体力已经耗尽，结束自动秘境");
+                    if (i == _taskParam.DomainRoundNum - 1)
+                    {
+                        Logger.LogInformation("配置的{Cnt}轮秘境已经完成，结束自动秘境", _taskParam.DomainRoundNum);
+                    }
+                    else
+                    {
+                        Logger.LogInformation("体力已经耗尽，结束自动秘境");
+                    }
+                    NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
                     break;
                 }
+                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
             }
         }
         catch (NormalEndException e)
         {
             Logger.LogInformation("自动秘境中断:" + e.Message);
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Cancelled().Build());
         }
         catch (Exception e)
         {
             Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Failure().Build());
         }
         finally
         {
@@ -114,6 +135,11 @@ public class AutoDomainTask
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
             Logger.LogInformation("→ {Text}", "自动秘境结束");
+
+            if (hasLock)
+            {
+                TaskSemaphore.Release();
+            }
         }
     }
 
@@ -157,9 +183,9 @@ public class AutoDomainTask
 
     private void EnterDomain()
     {
-        var fightAssets = AutoFightContext.Instance().FightAssets;
+        var fightAssets = AutoFightContext.Instance.FightAssets;
 
-        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(_autoPickAssets.FRo);
+        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
@@ -193,7 +219,7 @@ public class AutoDomainTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            var cactRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ClickAnyCloseTipRa);
+            var cactRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
                 Sleep(1000, _taskParam.Cts);
@@ -227,12 +253,13 @@ public class AutoDomainTask
             {
                 Simulation.SendInputEx.Keyboard.KeyDown(VK.VK_SHIFT);
             }
+
             try
             {
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
                 {
                     var content = GetContentFromDispatcher();
-                    var fRectArea = content.CaptureRectArea.Find(_autoPickAssets.FRo);
+                    var fRectArea = content.CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _taskParam.Cts);
@@ -259,6 +286,8 @@ public class AutoDomainTask
 
     private Task StartFight(CombatScenes combatScenes)
     {
+        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
+
         CancellationTokenSource cts = new CancellationTokenSource();
         _taskParam.Cts.Token.Register(cts.Cancel);
         combatScenes.BeforeTask(cts);
@@ -270,7 +299,7 @@ public class AutoDomainTask
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
-                    foreach (var command in _combatCommands)
+                    foreach (var command in combatCommands)
                     {
                         command.Execute(combatScenes);
                     }
@@ -341,7 +370,7 @@ public class AutoDomainTask
     {
         var content = GetContentFromDispatcher();
 
-        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsUpperRect);
+        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("挑战") || text.Contains("达成"))
         {
@@ -349,10 +378,9 @@ public class AutoDomainTask
             return true;
         }
 
-        endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance().FightAssets.EndTipsRect);
-        var result = OcrFactory.Paddle.OcrResult(endTipsRect.SrcGreyMat);
-        var rect = result.FindRectByText("自动退出");
-        if (rect != Rect.Empty)
+        endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.EndTipsRect);
+        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        if (text.Contains("自动") || text.Contains("退出"))
         {
             Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
             return true;
@@ -360,7 +388,6 @@ public class AutoDomainTask
 
         return false;
     }
-
 
     /// <summary>
     /// 旋转视角后寻找石化古树
@@ -621,7 +648,8 @@ public class AutoDomainTask
     /// 领取奖励
     /// </summary>
     /// <param name="recognizeResin">是否识别树脂</param>
-    private bool GettingTreasure(bool recognizeResin)
+    /// <param name="isLastTurn">是否最后一轮</param>
+    private bool GettingTreasure(bool recognizeResin, bool isLastTurn)
     {
         // 等待窗口弹出
         Sleep(1500, _taskParam.Cts);
@@ -637,7 +665,7 @@ public class AutoDomainTask
                 break;
             }
 
-            var useCondensedResinRa = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.UseCondensedResinRa);
+            var useCondensedResinRa = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
             if (!useCondensedResinRa.IsEmpty())
             {
                 useCondensedResinRa.ClickCenter();
@@ -651,9 +679,7 @@ public class AutoDomainTask
             Sleep(800, _taskParam.Cts);
         }
 
-
         Sleep(1000, _taskParam.Cts);
-
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         for (var i = 0; i < 30; i++)
@@ -665,9 +691,20 @@ public class AutoDomainTask
 
             // 优先点击继续
             var content = GetContentFromDispatcher();
-            var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ConfirmRa);
+            var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
+                if (isLastTurn)
+                {
+                    // 最后一回合 退出
+                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ExitRa);
+                    if (!exitRectArea.IsEmpty())
+                    {
+                        exitRectArea.ClickCenter();
+                        return false;
+                    }
+                }
+
                 if (!recognizeResin)
                 {
                     confirmRectArea.ClickCenter();
@@ -678,7 +715,7 @@ public class AutoDomainTask
                 if (condensedResinCount == 0 && fragileResinCount < 20)
                 {
                     // 没有体力了退出
-                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.ExitRa);
+                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.ClickCenter();
@@ -709,7 +746,7 @@ public class AutoDomainTask
 
         var content = GetContentFromDispatcher();
         // 浓缩树脂
-        var condensedResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.CondensedResinCountRa);
+        var condensedResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.CondensedResinCountRa);
         if (!condensedResinCountRa.IsEmpty())
         {
             // 图像右侧就是浓缩树脂数量
@@ -720,7 +757,7 @@ public class AutoDomainTask
         }
 
         // 脆弱树脂
-        var fragileResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance().FightAssets.FragileResinCountRa);
+        var fragileResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.FragileResinCountRa);
         if (!fragileResinCountRa.IsEmpty())
         {
             // 图像右侧就是脆弱树脂数量

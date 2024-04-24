@@ -10,9 +10,10 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 public class AutoFightParam : BaseTaskParam
 {
-    public string CombatStrategyContent { get; set; }
-    public AutoFightParam(CancellationTokenSource cts, string content) : base(cts)
+    public string CombatStrategyPath { get; set; }
+
+    public AutoFightParam(CancellationTokenSource cts, string path) : base(cts)
     {
-        CombatStrategyContent = content;
+        CombatStrategyPath = path;
     }
 }

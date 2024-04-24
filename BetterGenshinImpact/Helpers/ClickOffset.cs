@@ -1,10 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Extensions;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -13,7 +9,6 @@ public class ClickOffset
     public int OffsetX { get; set; }
     public int OffsetY { get; set; }
     public double AssetScale { get; set; }
-
 
     public ClickOffset()
     {
@@ -41,6 +36,11 @@ public class ClickOffset
     }
 
     public void ClickWithoutScale(int x, int y)
+    {
+        ClickExtension.Click(OffsetX + x, OffsetY + y);
+    }
+
+    public void ClickWithoutScale(double x, double y)
     {
         ClickExtension.Click(OffsetX + x, OffsetY + y);
     }

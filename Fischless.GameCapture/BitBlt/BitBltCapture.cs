@@ -13,7 +13,7 @@ public class BitBltCapture : IGameCapture
 
     public void Dispose() => Stop();
 
-    public void Start(nint hWnd)
+    public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
         _hWnd = hWnd;
         IsCapturing = true;

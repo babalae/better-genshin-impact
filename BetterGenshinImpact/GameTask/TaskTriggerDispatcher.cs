@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.AutoDomain;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoWood;
@@ -9,13 +10,19 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -50,6 +57,8 @@ namespace BetterGenshinImpact.GameTask
         private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.OnlyTrigger;
 
         private static readonly object _bitmapLocker = new();
+
+        public event EventHandler UiTaskStopTickEvent;
 
         public TaskTriggerDispatcher()
         {
@@ -98,7 +107,18 @@ namespace BetterGenshinImpact.GameTask
             _triggers = GameTaskManager.LoadTriggers();
 
             // 启动截图
-            GameCapture.Start(hWnd);
+            GameCapture.Start(hWnd,
+                new Dictionary<string, object>()
+                {
+                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache }
+                }
+            );
+
+            // 捕获模式初始化配置
+            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
+            {
+                _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
+            }
 
             // 读取游戏注册表配置
             ReadGameSettings();
@@ -135,9 +155,9 @@ namespace BetterGenshinImpact.GameTask
             var systemInfo = TaskContext.Instance().SystemInfo;
             var width = systemInfo.GameScreenSize.Width;
             var height = systemInfo.GameScreenSize.Height;
-            var dpiScale = DpiHelper.ScaleY;
+            var dpiScale = TaskContext.Instance().DpiScale;
             _logger.LogInformation("当前游戏分辨率{Width}x{Height}，素材缩放比率{Scale}，DPI缩放{Dpi}",
-                width, height, systemInfo.AssetScale.ToString("F"), TaskContext.Instance().DpiScale);
+                width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
 
             if (width * 9 != height * 16)
             {
@@ -198,6 +218,10 @@ namespace BetterGenshinImpact.GameTask
             {
                 Task.Run(() => { new AutoDomainTask((AutoDomainParam)param).Start(); });
             }
+            else if (taskType == IndependentTaskEnum.AutoTrack)
+            {
+                Task.Run(() => { new AutoTrackTask((AutoTrackParam)param).Start(); });
+            }
         }
 
         public void Dispose() => Stop();
@@ -215,18 +239,34 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查截图器是否初始化
+                var maskWindow = MaskWindow.Instance();
                 if (GameCapture == null || !GameCapture.IsCapturing)
                 {
-                    _logger.LogError("截图器未初始化!");
-                    Stop();
+                    if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    {
+                        _logger.LogError("截图器未初始化!");
+                    }
+                    else
+                    {
+                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                    }
+                    UiTaskStopTickEvent.Invoke(sender, e);
+                    maskWindow.Invoke(maskWindow.Hide);
                     return;
                 }
 
                 // 检查游戏是否在前台
                 var active = SystemControl.IsGenshinImpactActive();
-                var maskWindow = MaskWindow.Instance();
                 if (!active)
                 {
+                    // 检查游戏是否已结束
+                    if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                    {
+                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                        UiTaskStopTickEvent.Invoke(sender, e);
+                        return;
+                    }
+
                     if (_prevGameActive)
                     {
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
@@ -272,7 +312,6 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-
                 var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
                 var bitmap = GameCapture.Capture();
@@ -290,7 +329,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
+                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
                 var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {
@@ -339,9 +378,10 @@ namespace BetterGenshinImpact.GameTask
             else if (_gameRect != currentRect)
             {
                 // 后面大概可以取消掉这个判断，支持随意移动变化窗口 —— 不支持 需要考虑的问题太多了
-                if (_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
+                if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
+                    && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("游戏窗口大小发生变化, 请重新启动捕获程序!");
+                    _logger.LogError("游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 请重启整个软件!", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
                 }
 
                 _gameRect = new RECT(currentRect);
@@ -352,6 +392,11 @@ namespace BetterGenshinImpact.GameTask
             }
 
             return false;
+        }
+
+        private bool SizeIsZero(RECT rect)
+        {
+            return rect.Width == 0 || rect.Height == 0;
         }
 
         /// <summary>
@@ -381,6 +426,11 @@ namespace BetterGenshinImpact.GameTask
             _dispatcherCacheCaptureMode = mode;
         }
 
+        public DispatcherCaptureModeEnum GetCacheCaptureMode()
+        {
+            return _dispatcherCacheCaptureMode;
+        }
+
         public Bitmap GetLastCaptureBitmap()
         {
             lock (_bitmapLocker)
@@ -392,7 +442,49 @@ namespace BetterGenshinImpact.GameTask
         public CaptureContent GetLastCaptureContent()
         {
             var bitmap = GetLastCaptureBitmap();
-            return new CaptureContent(bitmap, _frameIndex, _timer.Interval, this);
+            return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+        }
+
+        public void TakeScreenshot()
+        {
+            if (_dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+            {
+                try
+                {
+                    var path = Global.Absolute($@"log\screenshot\");
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+
+                    var bitmap = GetLastCaptureBitmap();
+                    var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
+                    var savePath = Global.Absolute($@"log\screenshot\{name}");
+
+                    if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
+                    {
+                        var mat = bitmap.ToMat();
+                        var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
+                        mat.Rectangle(rect, Scalar.White, -1);
+                        Cv2.ImWrite(savePath, mat);
+                    }
+                    else
+                    {
+                        bitmap.Save(savePath, ImageFormat.Png);
+                    }
+
+                    _logger.LogInformation("截图已保存: {Name}", name);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("截图保存失败: {Message}", e.Message);
+                    _logger.LogDebug("截图保存失败: {StackTrace}", e.StackTrace);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("当前不处于截图模式，无法保存截图");
+            }
         }
     }
 }

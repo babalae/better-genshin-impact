@@ -1,7 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.GameTask.AutoWood.Utils;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;

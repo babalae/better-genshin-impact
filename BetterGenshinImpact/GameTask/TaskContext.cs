@@ -4,6 +4,7 @@ using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -12,9 +13,8 @@ namespace BetterGenshinImpact.GameTask
     /// </summary>
     public class TaskContext
     {
-
         private static TaskContext? _uniqueInstance;
-        private static readonly object Locker = new();
+        private static object? InstanceLocker;
 
         private TaskContext()
         {
@@ -22,14 +22,7 @@ namespace BetterGenshinImpact.GameTask
 
         public static TaskContext Instance()
         {
-            if (_uniqueInstance == null)
-            {
-                lock (Locker)
-                {
-                    _uniqueInstance ??= new TaskContext();
-                }
-            }
-            return _uniqueInstance;
+            return LazyInitializer.EnsureInitialized(ref _uniqueInstance, ref InstanceLocker, () => new TaskContext());
         }
 
         public void Init(IntPtr hWnd)
@@ -49,9 +42,7 @@ namespace BetterGenshinImpact.GameTask
 
         public float DpiScale { get; set; }
 
-
         public SystemInfo SystemInfo { get; set; }
-
 
         public AllConfig Config
         {
@@ -61,10 +52,17 @@ namespace BetterGenshinImpact.GameTask
                 {
                     throw new Exception("Config未初始化");
                 }
+
                 return ConfigService.Config;
             }
         }
 
         public SettingsContainer? GameSettings { get; set; }
+
+        /// <summary>
+        /// 关联启动原神的时间
+        /// 注意 IsInitialized = false 时，这个值就会被设置
+        /// </summary>
+        public DateTime LinkedStartGenshinTime { get; set; } = DateTime.MinValue;
     }
 }

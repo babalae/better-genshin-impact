@@ -9,8 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Windows.Forms;
 using BetterGenshinImpact.Helpers;
 using WindowsInput;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -36,25 +38,40 @@ public class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private List<string> _whiteList = new();
 
-
     public AutoPickTrigger()
     {
-        _autoPickAssets = new AutoPickAssets();
+        _autoPickAssets = AutoPickAssets.Instance;
     }
 
     public void Init()
     {
         IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
-        var blackListJson = Global.ReadAllTextIfExist("User\\pick_black_lists.json");
-        if (!string.IsNullOrEmpty(blackListJson))
+        try
         {
-            _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson) ?? new List<string>();
+            var blackListJson = Global.ReadAllTextIfExist(@"User\pick_black_lists.json");
+            if (!string.IsNullOrEmpty(blackListJson))
+            {
+                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson, ConfigService.JsonOptions) ?? [];
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "读取拾取黑名单失败");
+            MessageBox.Show("读取拾取黑名单失败，请确认修改后的拾取黑名单内容格式是否正确！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        var whiteListJson = Global.ReadAllTextIfExist("User\\pick_white_lists.json");
-        if (!string.IsNullOrEmpty(whiteListJson))
+        try
         {
-            _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson) ?? new List<string>();
+            var whiteListJson = Global.ReadAllTextIfExist(@"User\pick_white_lists.json");
+            if (!string.IsNullOrEmpty(whiteListJson))
+            {
+                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson, ConfigService.JsonOptions) ?? [];
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "读取拾取白名单失败");
+            MessageBox.Show("读取拾取白名单失败，请确认修改后的拾取白名单内容格式是否正确！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -72,7 +89,7 @@ public class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
-        var speedTimer = new SpeedTimer();  
+        var speedTimer = new SpeedTimer();
         content.CaptureRectArea.Find(_autoPickAssets.FRo, foundRectArea =>
         {
             speedTimer.Record("识别到 F 拾取键");
@@ -136,6 +153,7 @@ public class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
+
                 // 单个字符不拾取
                 if (text.Length <= 1)
                 {
@@ -148,6 +166,7 @@ public class AutoPickTrigger : ITaskTrigger
                     Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
                     return;
                 }
+
                 speedTimer.Record("白名单判断");
 
                 if (isExcludeIcon)
@@ -160,6 +179,7 @@ public class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
+
                 speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);

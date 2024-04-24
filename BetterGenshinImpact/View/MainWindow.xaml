@@ -7,6 +7,7 @@
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
+                 xmlns:tray="http://schemas.lepo.co/wpfui/2022/xaml/tray"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  Title="更好的原神"
@@ -17,6 +18,9 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
+                 Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                 WindowStartupLocation="CenterScreen"
+                 WindowState="{Binding WindowState, Mode=TwoWay}"
                  mc:Ignorable="d">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -25,8 +29,8 @@
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
-        <b:EventTrigger EventName="Closed">
-            <b:InvokeCommandAction Command="{Binding ClosedCommand}" CommandParameter="{Binding}" />
+        <b:EventTrigger EventName="Closing">
+            <b:InvokeCommandAction Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
@@ -86,6 +90,13 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="通知"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:NotificationSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Alert24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
@@ -102,7 +113,36 @@
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>
+            <ui:TitleBar.Header>
+                <StackPanel>
+                    <ui:Button Width="44"
+                               Height="30"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               Command="{Binding HideCommand}"
+                               CornerRadius="0"
+                               Icon="{ui:SymbolIcon CaretDown24}"
+                               ToolTip="最小化到托盘" />
+                </StackPanel>
+            </ui:TitleBar.Header>
         </ui:TitleBar>
 
+        <tray:NotifyIcon Grid.Row="0"
+                         FocusOnLeftClick="False"
+                         Icon="pack://application:,,,/Assets/logo.ico"
+                         LeftDoubleClick="OnNotifyIconLeftDoubleClick"
+                         MenuOnRightClick="True"
+                         TooltipText="BetterGI">
+            <tray:NotifyIcon.Menu>
+                <ContextMenu>
+                    <ContextMenu.DataContext>
+                        <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
+                    </ContextMenu.DataContext>
+                    <ui:MenuItem Command="{Binding ExitCommand}"
+                                 Header="退出"
+                                 Icon="{ui:SymbolIcon Dismiss24}" />
+                </ContextMenu>
+            </tray:NotifyIcon.Menu>
+        </tray:NotifyIcon>
     </Grid>
 </ui:FluentWindow>

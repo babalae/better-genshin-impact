@@ -1,27 +1,29 @@
 ﻿<Page x:Class="BetterGenshinImpact.View.Pages.CommonSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-      mc:Ignorable="d" 
+      Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
+      d:DesignHeight="950"
+      d:DesignWidth="600"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      d:DesignHeight="950" d:DesignWidth="600"
-      Title="CommonSettingsPage">
+      mc:Ignorable="d">
 
     <StackPanel Margin="42,16,42,12">
-        <ui:TextBlock
-            Margin="0,0,0,8"
-            FontTypography="BodyStrong"
-            Text="遮罩窗口设置" />
+        <ui:TextBlock Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="软件设置" />
 
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon SquareHintSparkles24}">
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon SquareHintSparkles24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -32,24 +34,21 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="启用遮罩窗口" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="重启软件后生效，全屏游戏下此功能无用" />
-                    <ui:ToggleSwitch
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,24,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.MaskEnabled, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用遮罩窗口"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="实时生效，独占全屏模式下此模式不一定生效"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.MaskEnabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -62,24 +61,55 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="显示日志窗口" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="在遮罩内显示日志窗口" />
-                    <ui:ToggleSwitch
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}" >
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="显示日志窗口"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在遮罩内显示日志窗口"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Unchecked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ui:ToggleSwitch>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="显示实时任务启用状态"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在遮罩内显示实时任务启用状态"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.ShowStatus, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="Unchecked">
                                 <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
@@ -127,24 +157,21 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="显示图像识别结果" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="实时显示各种图像识别的结果" />
-                    <ui:ToggleSwitch
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.DisplayRecognitionResultsOnMask, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="显示图像识别结果"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="实时显示各种图像识别的结果"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.DisplayRecognitionResultsOnMask, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -155,24 +182,21 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="启用UID遮盖" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="遮盖右下角的UID区域" />
-                    <ui:ToggleSwitch
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.UidCoverEnabled, Mode=TwoWay}" >
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用UID遮盖"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="遮盖右下角的UID区域"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.UidCoverEnabled, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="Unchecked">
                                 <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
@@ -192,24 +216,21 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        FontTypography="Body"
-                        TextWrapping="Wrap"
-                        Text="显示小地图方位" />
-                    <ui:TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                        TextWrapping="Wrap"
-                        Text="在小地图周围显示东南西北的文字" />
-                    <ui:ToggleSwitch
-                        Grid.Row="0"
-                        Grid.RowSpan="2"
-                        Grid.Column="1"
-                        Margin="0,0,36,0"
-                        IsChecked="{Binding Config.MaskWindowConfig.DirectionsEnabled, Mode=TwoWay}" >
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="显示小地图方位"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在小地图周围显示东南西北的文字"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.DirectionsEnabled, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="Unchecked">
                                 <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
@@ -222,6 +243,153 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+
+        <!--  截图  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Camera24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用截图功能（开发者）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        启用后可以通过快捷键截图，文件保存在<Hyperlink Command="{Binding GoToFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            log/screenshot
+                        </Hyperlink>
+                    </ui:TextBlock>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.CommonConfig.ScreenshotEnabled, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Unchecked">
+                                <b:InvokeCommandAction Command="{Binding SwitchTakenScreenshotEnabledCommand}" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding SwitchTakenScreenshotEnabledCommand}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ui:ToggleSwitch>
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="截图快捷键"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="截图功能主要用于错误排查，训练素材快速获取等开发相关功能"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding GoToHotKeyPageCommand}"
+                               Content="绑定快捷键" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="截图遮盖UID"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="生成的截图会遮盖右下角的UID区域"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.CommonConfig.ScreenshotUidCoverEnabled, Mode=TwoWay}" />
+                </Grid>
+
+            </StackPanel>
+        </ui:CardExpander>
+
+        <!--  退出时最小化  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon ArrowMinimize24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="退出时最小化到系统托盘"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="启用后点击右上角退出按钮会最小化到系统托盘继续运行，右键托盘图标退出"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
+        </ui:CardControl>
+
+        <!--  地图  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="查看地图（开发者）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="查看当前识别到的位置"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+                       Command="{Binding OpenMapViewerCommand}"
+                       Content="查看地图" />
+        </ui:CardControl>
 
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>
@@ -244,7 +412,7 @@
                         Text="xxxxxxxxxxxxxxxxxxxxxxxx" />
                 </Grid>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch 
+            <ui:ToggleSwitch
                 Margin="0,0,36,0"
                 IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}"/>
         </ui:CardControl>-->

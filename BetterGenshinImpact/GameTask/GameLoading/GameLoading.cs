@@ -1,64 +1,114 @@
-﻿using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.GameTask.Model;
-using OpenCvSharp;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.GameLoading.Assets;
+using BetterGenshinImpact.Helpers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using BetterGenshinImpact.Core.Simulator;
 
-namespace BetterGenshinImpact.GameTask.GameLoading
+namespace BetterGenshinImpact.GameTask.GameLoading;
+
+public class GameLoadingTrigger : ITaskTrigger
 {
-    public class GameLoadingTrigger : ITaskTrigger
+    public string Name => "自动开门";
+
+    public bool IsEnabled { get; set; }
+
+    public int Priority => 999;
+
+    public bool IsExclusive => false;
+
+    private readonly GameLoadingAssets _assets = new();
+
+    private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
+
+    private int _enterGameClickCount = 0;
+    private int _welkinMoonClickCount = 0;
+    private int _noneClickCount, _wmNoneClickCount;
+
+    private DateTime _prevExecuteTime = DateTime.MinValue;
+
+    // private ClickOffset? _clickOffset;
+
+    private PostMessageSimulator? _postMessageSimulator;
+
+    public void Init()
     {
-        private RecognitionObject? _startGameRo;
-
-        public string Name => "GameLoading";
-
-        public bool IsEnabled { get; set; }
-
-        public int Priority => 999;
-
-        public bool IsExclusive => false;
-
-        public void Init()
+        IsEnabled = _config.AutoEnterGameEnabled;
+        // 前面没有联动启动原神，这个任务也不用启动
+        if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
         {
-            var info = TaskContext.Instance().SystemInfo;
-            _startGameRo = new RecognitionObject
-            {
-                Name = "StartGame",
-                RecognitionType = RecognitionTypes.Ocr,
-                // ROI 应该时捕捉窗口的中间底部部分
-                RegionOfInterest = new Rect((int)(info.CaptureAreaRect.Width / 2 - 100),
-                    (int)(info.CaptureAreaRect.Height - 100),
-                    200,
-                    100),
-                OneContainMatchText = new List<string>
-            {
-                "点", "击", "进", "入"
-            },
-                DrawOnWindow = true
-            }.InitTemplate();
             IsEnabled = false;
         }
 
-        public void OnCapture(CaptureContent content)
+        _enterGameClickCount = 0;
+        
+        // var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        // var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        // _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
+        _postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+    }
+
+    public void OnCapture(CaptureContent content)
+    {
+        // 5s 一次
+        if ((DateTime.Now - _prevExecuteTime).TotalMilliseconds <= 5000)
         {
-            using var foundRectArea = content.CaptureRectArea.Find(_startGameRo!);
-            if (!foundRectArea.IsEmpty())
+            return;
+        }
+        _prevExecuteTime = DateTime.Now;
+        // 5min 后自动停止
+        if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
+        {
+            IsEnabled = false;
+            return;
+        }
+
+        using var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
+        if (!ra.IsEmpty())
+        {
+            // 随便找个相对点击的位置
+            // _clickOffset?.Click(955, 666);
+            _postMessageSimulator?.LeftButtonClick();
+            Simulation.SendInputEx.Mouse.LeftButtonClick();
+            _enterGameClickCount++;
+        }
+        else
+        {
+            if (_enterGameClickCount > 0 && !_config.AutoClickBlessingOfTheWelkinMoonEnabled)
             {
-                // 在游戏窗口中心点击
-                var info = TaskContext.Instance().SystemInfo;
-                var x = info.CaptureAreaRect.Right - (info.CaptureAreaRect.Width / 2);
-                var y = info.CaptureAreaRect.Bottom - (info.CaptureAreaRect.Height / 2);
-                Simulation.MouseEvent.Click(x, y);
-                // 一旦进入游戏，这个触发器就不再需要了
-                // TODO：如果其他触发器成功，这个触发器同样也不再需要了，考虑使用其他触发器的成功来禁用该事件
-                IsEnabled = false;
+                _noneClickCount++;
+                if (_noneClickCount > 5)
+                {
+                    IsEnabled = false;
+                }
+            }
+        }
+
+
+        if (_enterGameClickCount > 0 && _config.AutoClickBlessingOfTheWelkinMoonEnabled)
+        {
+            var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
+            if (!wmRa.IsEmpty())
+            {
+                wmRa.ClickCenter();
+                _welkinMoonClickCount++;
+                Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
+                if (_welkinMoonClickCount > 2)
+                {
+                    IsEnabled = false;
+                }
+            }
+            else
+            {
+                if (_welkinMoonClickCount > 0)
+                {
+                    _wmNoneClickCount++;
+                    if (_wmNoneClickCount > 1)
+                    {
+                        IsEnabled = false;
+                    }
+                }
             }
         }
     }
-
 }

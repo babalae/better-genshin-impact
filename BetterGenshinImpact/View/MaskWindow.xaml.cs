@@ -75,6 +75,7 @@ public partial class MaskWindow : Window
             Height = currentRect.Height / dpiScale;
 
             Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
         });
         // 重新计算控件位置
         // shit code 预定了

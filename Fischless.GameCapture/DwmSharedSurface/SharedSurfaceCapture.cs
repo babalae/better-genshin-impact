@@ -21,7 +21,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         public CaptureModes Mode => CaptureModes.DwmGetDxSharedSurface;
 
-        public void Start(nint hWnd)
+        public void Start(nint hWnd, Dictionary<string, object>? settings = null)
         {
             _hWnd = hWnd;
             User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);

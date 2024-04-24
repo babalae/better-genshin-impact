@@ -1,25 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
+﻿using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using Sdcb.PaddleOCR;
-using static System.Net.Mime.MediaTypeNames;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
 public static class PaddleOcrResultExtension
 {
-    public static bool RegionHasText(this PaddleOcrResult result, string text)
+    public static bool RegionHasText(this PaddleOcrResult result, ReadOnlySpan<char> text)
     {
-        foreach (var item in result.Regions)
+        foreach (ref readonly PaddleOcrResultRegion item in result.Regions.AsSpan())
         {
-            if (item.Text.Contains(text))
+            if (item.Text.AsSpan().Contains(text, StringComparison.InvariantCulture))
             {
                 return true;
             }
@@ -28,36 +24,22 @@ public static class PaddleOcrResultExtension
         return false;
     }
 
-
-    public static PaddleOcrResultRegion FindRegionByText(this PaddleOcrResult result, string text)
+    public static PaddleOcrResultRegion FindRegionByText(this PaddleOcrResult result, ReadOnlySpan<char> text)
     {
-        foreach (var item in result.Regions)
+        foreach (ref readonly PaddleOcrResultRegion item in result.Regions.AsSpan())
         {
-            if (item.Text.Contains(text))
+            if (item.Text.AsSpan().Contains(text, StringComparison.InvariantCulture))
             {
                 return item;
             }
         }
 
-        return new PaddleOcrResultRegion();
+        return default;
     }
-
-    //public static RotatedRect FindRotatedRectByText(this PaddleOcrResult result, string text)
-    //{
-    //    foreach (var item in result.Regions)
-    //    {
-    //        if (item.Text.Contains(text))
-    //        {
-    //            return item.Rect;
-    //        }
-    //    }
-
-    //    return new RotatedRect();
-    //}
 
     public static Rect FindRectByText(this PaddleOcrResult result, string text)
     {
-        foreach (var item in result.Regions)
+        foreach (ref PaddleOcrResultRegion item in result.Regions.AsSpan())
         {
             if (item.Text.Contains(text))
             {
@@ -65,7 +47,7 @@ public static class PaddleOcrResultExtension
             }
         }
 
-        return Rect.Empty;
+        return default;
     }
 
     public static List<RectDrawable> ToRectDrawableList(this PaddleOcrResult result, Pen? pen = null)

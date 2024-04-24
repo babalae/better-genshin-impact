@@ -1,21 +1,25 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Windows;
 using System.Windows.Media;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : FluentWindow, INavigationWindow
 {
+    private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
+
     public MainWindowViewModel ViewModel { get; }
 
     public MainWindow(MainWindowViewModel viewModel, IPageService pageService, INavigationService navigationService)
     {
+        _logger.LogDebug("主窗体实例化");
         DataContext = ViewModel = viewModel;
 
         InitializeComponent();
@@ -23,12 +27,28 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
         SetPageService(pageService);
         navigationService.SetNavigationControl(RootNavigation);
+
+        Application.Current.MainWindow = this;
+
+        Loaded += (s, e) => Activate();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
         TryApplySystemBackdrop();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _logger.LogDebug("主窗体退出");
+        base.OnClosed(e);
+        App.GetService<NotifyIconViewModel>()?.Exit();
+    }
+
+    private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
+    {
+        App.GetService<NotifyIconViewModel>()?.ShowOrHide();
     }
 
     public INavigationView GetNavigation() => RootNavigation;

@@ -1,8 +1,9 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
-using GeniusInvokationAutoToy.Utils;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -48,11 +49,9 @@ public class Duel
     /// </summary>
     public int CurrentDiceCount { get; set; } = 0;
 
-
     public CancellationTokenSource Cts { get; set; }
 
     private int _keqingECount = 0;
-
 
     public async Task RunAsync(GeniusInvokationTaskParam taskParam)
     {
@@ -61,24 +60,31 @@ public class Duel
 
     public void Run(GeniusInvokationTaskParam taskParam)
     {
+        var hasLock = false;
         Cts = taskParam.Cts;
         try
         {
+            hasLock = TaskControl.TaskSemaphore.Wait(0);
+            if (!hasLock)
+            {
+                _logger.LogError("启动自动七圣召唤功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                return;
+            }
+
             LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
-
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
             GeniusInvokationControl.GetInstance().Init(taskParam);
             SystemControl.ActivateWindow();
 
             // 对局准备 选择初始手牌
             GeniusInvokationControl.GetInstance().CommonDuelPrepare();
 
-
             // 获取角色区域
             try
             {
-                CharacterCardRects = Retry.Do(() => GeniusInvokationControl.GetInstance().GetCharacterRects(), TimeSpan.FromSeconds(1.5), 3);
+                CharacterCardRects = NewRetry.Do(() => GeniusInvokationControl.GetInstance().GetCharacterRects(), TimeSpan.FromSeconds(1.5), 3);
             }
             catch
             {
@@ -182,7 +188,6 @@ public class Duel
                             continue;
                         }
 
-
                         // 1. 判断切人
                         if (CurrentCharacter.Index != actionCommand.Character.Index)
                         {
@@ -223,7 +228,7 @@ public class Duel
                                 alreadyExecutedActionIndex.Add(i);
                                 alreadyExecutedActionCommand.Add(actionCommand);
                                 _logger.LogInformation("→指令执行完成：{Action}", actionCommand);
-                                // 刻晴的E加手牌 
+                                // 刻晴的E加手牌
                                 if (actionCommand.Character.Name == "刻晴" && actionCommand.TargetIndex == 2)
                                 {
                                     _keqingECount++;
@@ -247,7 +252,6 @@ public class Duel
                             break;
                         }
                     }
-
 
                     if (alreadyExecutedActionIndex.Count != 0)
                     {
@@ -296,11 +300,13 @@ public class Duel
         catch (TaskCanceledException ex)
         {
             _logger.LogInformation(ex.Message);
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Cancelled().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Success().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
         }
         catch (System.Exception ex)
         {
@@ -310,6 +316,7 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Failure().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
         }
         finally
         {
@@ -317,6 +324,11 @@ public class Duel
             TaskSettingsPageViewModel.SetSwitchAutoGeniusInvokationButtonText(false);
             _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
             taskParam.Dispatcher.StartTimer();
+
+            if (hasLock)
+            {
+                TaskControl.TaskSemaphore.Release();
+            }
         }
     }
 
@@ -442,7 +454,6 @@ public class Duel
 
     //    return num;
     //}
-
 
     private void LogScreenResolution()
     {

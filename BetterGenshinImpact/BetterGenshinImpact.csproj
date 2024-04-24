@@ -14,24 +14,28 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<None Remove="Assets\*.jpg" />
 		<None Remove="Assets\*.png" />
 		<None Remove="Assets\*.ico" />
+		<None Remove="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Resource Include="Assets\*.jpg" />
 		<Resource Include="Assets\*.png" />
-		<Content Include="Assets\*.ico" />
+		<Resource Include="Assets\*.ico" />
+		<Resource Include="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.16.1" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.16.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.17.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.17.1" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.8.0.20230708" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />
@@ -47,6 +51,7 @@
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.17" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
 		<PackageReference Include="WPF-UI" Version="3.0.0-preview.7" />
+		<PackageReference Include="WPF-UI.Tray" Version="3.0.0-preview.7" />
 		<PackageReference Include="YoloV8" Version="2.0.1" />
 	</ItemGroup>
 
@@ -63,7 +68,7 @@
 
 	<ItemGroup>
 		<Compile Update="GameTask\TaskContext.cs">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</Compile>
 		<Compile Update="View\MaskWindow.xaml.cs">
 			<SubType>Code</SubType>
@@ -77,9 +82,36 @@
 		<Compile Update="View\PickerWindow.xaml.cs">
 			<SubType>Code</SubType>
 		</Compile>
+		<Compile Update="View\Windows\MapViewer.xaml.cs">
+		  <SubType>Code</SubType>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Update="Assets\Map\cityMap2048Block.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\combined_image_2048_lim[quick].png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\combined_image_lim[quick].png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\mainMap100Block.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\mainMap1024Block.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\mainMapZoomOut1024.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Map\map_sd1024.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Common\avatar_side_classify_sim.onnx">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="Assets\Model\Domain\bgi_tree.onnx">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -87,9 +119,6 @@
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Assets\Model\Fish\bgi_fish.onnx">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Fish\label.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdiparams">
@@ -162,6 +191,15 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\flashing maintenance mek bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\sour bait.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\sugardew bait.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\lift_rod.png">
@@ -308,6 +346,12 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\comfirm_btn2.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\hangout_selected.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\hangout_unselected.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_exclamation.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -323,7 +367,19 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_explore.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\menu.png">
+		<None Update="GameTask\Common\Element\Assets\1920x1080\blue_track_point_28x.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_cancel.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_no.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_yes.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_option.png">
@@ -334,6 +390,9 @@
 		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\submit_goods.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\submit_icon_exclamation.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -354,6 +413,60 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoWood\Assets\1920x1080\TheBoonOfTheElderTree.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_confirm.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_white_cancel.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_white_confirm.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\collect.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\comfirm_btn1.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\comfirm_btn2.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_daily_reward.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_exclamation.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_explore.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_option.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\page_close.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\primogem.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\re.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\stop_auto.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\submit_icon_exclamation.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\yellow_track_point_28x.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\GameLoading\Assets\1920x1080\welkin_moon_logo.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Domain.png">
@@ -377,6 +490,9 @@
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapScaleButton.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapUndergroundSwitchButton.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\PortableWaypoint.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -392,6 +508,9 @@
 		<None Update="GameTask\QuickTeleport\Assets\1920x1080\TeleportWaypoint.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\SereniteaPotIcon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\AutoFight\1.四神挂机[推荐].txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -399,6 +518,9 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\AutoFight\2.宵宫队[请看文件内说明].txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoFight\群友分享\*.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
@@ -437,17 +559,24 @@
 		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]黄衫.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\AutoSkip\default_pause_options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoSkip\select_options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\AutoSkip\pause_options.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="User\avatar_macro.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\pick_white_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="GameTask\AutoDomain\Model\" />
-	  <Folder Include="GameTask\Common\Exception\" />
 	</ItemGroup>
 
 </Project>

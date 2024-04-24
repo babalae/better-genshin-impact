@@ -4,6 +4,7 @@ using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using Compunet.YoloV8.Data;
 using OpenCvSharp;
+using static OpenCvSharp.Cv2;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
 
@@ -29,19 +30,23 @@ public class Fishpond
     {
         foreach (var box in result.Boxes)
         {
-            if (box.Class.Name == "moonfin")
+            if (box.Class.Name == "rod")
             {
+                TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
                 continue;
             }
-            else if (box.Class.Name == "target")
+            else if (box.Class.Name == "err rod")
             {
                 TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
                 continue;
             }
 
-            var fish = new OneFish(box.Class.Name, new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height));
+            var fish = new OneFish(box.Class.Name, new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height), box.Confidence);
             Fishes.Add(fish);
         }
+
+        // 可信度最高的鱼放在最前面
+        Fishes = Fishes.OrderByDescending(fish => fish.Confidence).ToList();
 
         FishpondRect = CalculateFishpondRect();
     }
@@ -94,7 +99,7 @@ public class Fishpond
     /// <returns></returns>
     public List<OneFish> FilterByBaitName(string baitName)
     {
-        return Fishes.Where(fish => fish.FishType.BaitName == baitName).ToList();
+        return Fishes.Where(fish => fish.FishType.BaitName == baitName).OrderByDescending(fish => fish.Confidence).ToList();
     }
 
     public OneFish? FilterByBaitNameAndRecently(string baitName, Rect prevTargetFishRect)
@@ -118,6 +123,7 @@ public class Fishpond
                 result = fish;
             }
         }
+
         return result;
     }
 
@@ -150,6 +156,7 @@ public class Fishpond
                 result = key;
             }
         }
+
         return result;
     }
 }

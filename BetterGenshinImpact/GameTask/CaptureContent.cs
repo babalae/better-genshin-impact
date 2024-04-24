@@ -22,39 +22,13 @@ public class CaptureContent : IDisposable
 
     public RectArea CaptureRectArea { get; private set; }
 
-    public TaskTriggerDispatcher Dispatcher { get; private set; }
-
-    public CaptureContent(Bitmap srcBitmap, int frameIndex, double interval, TaskTriggerDispatcher dispatcher)
+    public CaptureContent(Bitmap srcBitmap, int frameIndex, double interval)
     {
         SrcBitmap = srcBitmap;
         FrameIndex = frameIndex;
         TimerInterval = interval;
         var systemInfo = TaskContext.Instance().SystemInfo;
         CaptureRectArea = new RectArea(srcBitmap, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y, systemInfo.DesktopRectArea);
-        Dispatcher = dispatcher;
-    }
-
-    /// <summary>
-    /// 达到了什么时间间隔
-    /// 最大MaxFrameIndexSecond秒
-    ///
-    /// 这代码有bug
-    /// 这代码有bug
-    /// 这代码有bug
-    ///
-    /// 不用了
-    /// </summary>
-    /// <param name="interval"></param>
-    /// <returns></returns>
-    [Obsolete]
-    public bool IsReachInterval(TimeSpan interval)
-    {
-        if (interval.TotalSeconds > MaxFrameIndexSecond)
-        {
-            throw new ArgumentException($"时间间隔不能超过{MaxFrameIndexSecond}s");
-        }
-        //Debug.WriteLine($"{FrameIndex}%{FrameRate * interval.TotalSeconds}={FrameIndex % (FrameRate * interval.TotalSeconds)}");
-        return FrameIndex % (FrameRate * interval.TotalSeconds) == 0;
     }
 
     public void Dispose()

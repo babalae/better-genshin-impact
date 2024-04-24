@@ -1,97 +1,90 @@
-﻿using System;
+﻿using OpenCvSharp;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Drawing;
-using OpenCvSharp;
 using Vanara.PInvoke;
-using Point = System.Drawing.Point;
+using Color = System.Windows.Media.Color;
+using Point = OpenCvSharp.Point;
 
-namespace BetterGenshinImpact.Core.Recognition.OpenCv
+namespace BetterGenshinImpact.Core.Recognition.OpenCv;
+
+public static class CommonExtension
 {
-    public static class CommonExtension
+    public static unsafe Point AsCvPoint(this System.Drawing.Point point)
     {
-        public static unsafe OpenCvSharp.Point ToCvPoint(this Point point)
-        {
-            return *(OpenCvSharp.Point*)&point;
-        }
+        return *(Point*)&point;
+    }
 
-        public static unsafe Point ToDrawingPoint(this OpenCvSharp.Point point)
-        {
-            return *(Point*)&point;
-        }
+    public static unsafe System.Drawing.Point AsDrawingPoint(this Point point)
+    {
+        return *(System.Drawing.Point*)&point;
+    }
 
-        public static System.Windows.Point ToWindowsPoint(this OpenCvSharp.Point point)
-        {
-            return new System.Windows.Point(point.X, point.Y);
-        }
+    public static System.Windows.Point ToWindowsPoint(this Point point)
+    {
+        return new System.Windows.Point(point.X, point.Y);
+    }
 
-        public static unsafe OpenCvSharp.Rect ToCvRect(this Rectangle rectangle)
-        {
-            return *(OpenCvSharp.Rect*)&rectangle;
-        }
+    public static unsafe Rect AsCvRect(this Rectangle rectangle)
+    {
+        return *(Rect*)&rectangle;
+    }
 
-        public static System.Windows.Rect ToWindowsRectangle(this OpenCvSharp.Rect rect)
-        {
-            return new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height);
-        }
+    public static System.Windows.Rect ToWindowsRectangle(this Rect rect)
+    {
+        return new System.Windows.Rect(rect.X, rect.Y, rect.Width, rect.Height);
+    }
 
-        public static System.Windows.Rect ToWindowsRectangleOffset(this OpenCvSharp.Rect rect, int offsetX, int offsetY)
-        {
-            return new System.Windows.Rect(rect.X + offsetX, rect.Y + offsetY, rect.Width, rect.Height);
-        }
+    public static System.Windows.Rect ToWindowsRectangleOffset(this Rect rect, int offsetX, int offsetY)
+    {
+        return new System.Windows.Rect(rect.X + offsetX, rect.Y + offsetY, rect.Width, rect.Height);
+    }
 
-        public static unsafe Rectangle ToDrawingRectangle(this OpenCvSharp.Rect rect)
-        {
-            return *(Rectangle*)&rect;
-        }
+    public static unsafe Rectangle AsDrawingRectangle(this Rect rect)
+    {
+        return *(Rectangle*)&rect;
+    }
 
-        public static Point GetCenterPoint(this Rectangle rectangle)
-        {
-            if (rectangle.IsEmpty)
-            {
-                throw new ArgumentException("rectangle is empty");
-            }
+    public static System.Drawing.Point GetCenterPoint(this Rectangle rectangle)
+    {
+        if (rectangle.IsEmpty) throw new ArgumentException("rectangle is empty");
 
-            return new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
-        }
+        return new System.Drawing.Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+    }
 
+    public static Point GetCenterPoint(this RECT rectangle)
+    {
+        if (rectangle.IsEmpty) throw new ArgumentException("rectangle is empty");
 
-        public static OpenCvSharp.Point GetCenterPoint(this RECT rectangle)
-        {
-            if (rectangle.IsEmpty)
-            {
-                throw new ArgumentException("rectangle is empty");
-            }
+        return new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+    }
 
-            return new OpenCvSharp.Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
-        }
+    public static Point GetCenterPoint(this Rect rectangle)
+    {
+        if (rectangle == Rect.Empty) throw new ArgumentException("rectangle is empty");
 
-        public static OpenCvSharp.Point GetCenterPoint(this Rect rectangle)
-        {
-            if (rectangle == Rect.Empty)
-            {
-                throw new ArgumentException("rectangle is empty");
-            }
+        return new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+    }
 
-            return new OpenCvSharp.Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
-        }
+    public static Rect Multiply(this Rect rect, double assetScale)
+    {
+        if (rect == Rect.Empty) throw new ArgumentException("rect is empty");
 
-        public static Rect Multiply(this Rect rect, double assetScale)
-        {
-            if (rect == Rect.Empty)
-            {
-                throw new ArgumentException("rect is empty");
-            }
+        return new Rect((int)(rect.X * assetScale), (int)(rect.Y * assetScale), (int)(rect.Width * assetScale), (int)(rect.Height * assetScale));
+    }
 
-            return new Rect((int)(rect.X * assetScale), (int)(rect.Y * assetScale), (int)(rect.Width * assetScale), (int)(rect.Height * assetScale));
-        }
+    public static Color ToWindowsColor(this System.Drawing.Color color)
+    {
+        return Color.FromArgb(color.A, color.R, color.G, color.B);
+    }
 
+    public static Point2d ToPoint2d(this Point2f p)
+    {
+        return new Point2d(p.X, p.Y);
+    }
 
-        public static System.Windows.Media.Color ToWindowsColor(this Color color)
-        {
-            return System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
-        }
+    public static List<Point2d> ToPoint2d(this List<Point2f> list)
+    {
+        return list.ConvertAll(ToPoint2d);
     }
 }

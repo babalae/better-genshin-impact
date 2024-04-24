@@ -28,7 +28,7 @@
             <Grid>
                 <Border ClipToBounds="True" CornerRadius="8">
                     <Border.Background>
-                        <ImageBrush ImageSource="pack://application:,,,/Assets/mona.jpg"
+                        <ImageBrush ImageSource="pack://application:,,,/Assets/keqin.jpg"
                                     RenderOptions.BitmapScalingMode="HighQuality"
                                     Stretch="UniformToFill" />
                     </Border.Background>
@@ -97,11 +97,11 @@
                         <ui:Button Command="{Binding StartTriggerCommand}"
                                    Content="启动"
                                    Icon="{ui:SymbolIcon Play24}"
-                                   Visibility="{Binding StartButtonVisibility}" />
+                                   Visibility="{Binding TaskDispatcherEnabled, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
                         <ui:Button Command="{Binding StopTriggerCommand}"
                                    Content="停止"
                                    Icon="{ui:SymbolIcon Dismiss24}"
-                                   Visibility="{Binding StopButtonVisibility}" />
+                                   Visibility="{Binding TaskDispatcherEnabled, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
                     </StackPanel>
                 </Grid>
             </ui:CardExpander.Header>
@@ -173,6 +173,32 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="WindowsGraphicsCapture 截图方式启用位图缓存"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="云原神出现获取到黑屏图案、原神出现掉帧的情况请尝试关闭此功能，并重启软件"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.WgcUseBitmapCache, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="测试图像捕获"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
@@ -186,6 +212,33 @@
                                Margin="0,0,36,0"
                                Command="{Binding StartCaptureTestCommand}"
                                Content="测试图像捕获" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="手动选择窗口（无法找到原神窗口时使用）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="原神已经启动的情况下，点击“启动”仍旧提示无法找到窗口时使用"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding ManualPickWindowCommand}"
+                               Content="选择捕获窗口" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -249,6 +302,7 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -275,6 +329,7 @@
                                Command="{Binding SelectInstallPathCommand}"
                                Content="浏览" />
                 </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -303,6 +358,58 @@
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
                                 TextWrapping="Wrap" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动进入游戏"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="原神启动后自动进入游戏（自动开门）"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.GenshinStartConfig.AutoEnterGameEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动点击获取月卡"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="进入游戏后自动点击月卡，如果有的话"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.GenshinStartConfig.AutoClickBlessingOfTheWelkinMoonEnabled, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

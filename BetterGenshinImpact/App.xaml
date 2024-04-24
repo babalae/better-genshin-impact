@@ -1,6 +1,7 @@
 ﻿<Application x:Class="BetterGenshinImpact.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:bgivc="clr-namespace:BetterGenshinImpact.View.Converters"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -8,6 +9,10 @@
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
+            <bgivc:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

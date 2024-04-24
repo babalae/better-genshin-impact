@@ -24,7 +24,8 @@ public class ConfigService : IConfigService
             new OpenCvRectJsonConverter(),
         },
         WriteIndented = true,
-        AllowTrailingCommas = true
+        AllowTrailingCommas = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
     };
 
     /// <summary>
