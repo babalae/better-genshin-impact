@@ -63,7 +63,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             DrawOnWindow = true
         }.InitTemplate();
 
-        OptionRoi = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width - CaptureRect.Width / 2 - CaptureRect.Width / 6, CaptureRect.Height);
+        OptionRoi = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 12, CaptureRect.Width - CaptureRect.Width / 2 - CaptureRect.Width / 6, CaptureRect.Height - CaptureRect.Height / 12 - 10);
         OptionIconRo = new RecognitionObject
         {
             Name = "OptionIcon",
