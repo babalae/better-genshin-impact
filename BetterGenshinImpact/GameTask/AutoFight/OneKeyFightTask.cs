@@ -31,6 +31,8 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private int activeMacroPriority = -1;
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
+    private CombatScenes? _currentCombatScenes;
+
     public void KeyDown()
     {
         if (_isKeyDown || !IsEnabled())
@@ -129,11 +131,22 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         var combatScenes = new CombatScenes().InitializeTeam(content);
         if (!combatScenes.CheckTeamInitialized())
         {
-            Logger.LogError("队伍角色识别失败");
-            return Task.CompletedTask;
+            if (_currentCombatScenes == null)
+            {
+                Logger.LogError("首次队伍角色识别失败");
+                return Task.CompletedTask;
+            }
+            else
+            {
+                Logger.LogWarning("队伍角色识别失败，使用上次识别结果，队伍未切换时无影响");
+            }
+        }
+        else
+        {
+            _currentCombatScenes = combatScenes;
         }
         // 找到出战角色
-        var activeAvatar = combatScenes.Avatars.First(avatar => avatar.IsActive(content));
+        var activeAvatar = _currentCombatScenes.Avatars.First(avatar => avatar.IsActive(content));
 
         if (_avatarMacros != null && _avatarMacros.TryGetValue(activeAvatar.Name, out var combatCommands))
         {
