@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System.Collections.Generic;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -7,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Fischless.GameCapture;
 using System.Diagnostics;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -21,10 +23,14 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
 
     private readonly INavigationService _navigationService;
 
+    [ObservableProperty]
+    private List<string> _hangoutBranches;
+
     public TriggerSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {
         Config = configService.Get();
         _navigationService = navigationService;
+        _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
     }
 
     public void OnNavigatedTo()

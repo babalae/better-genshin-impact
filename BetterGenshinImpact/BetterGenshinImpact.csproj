@@ -367,6 +367,9 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_explore.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoSkip\Assets\hangout.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\blue_track_point_28x.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

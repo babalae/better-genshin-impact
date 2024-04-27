@@ -347,19 +347,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择进行的邀约（由于无人提供数据，此功能暂停开发）"
+                                  Text="选择邀约分支（不支持气泡联想选择）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在存在分支选项时暂停，优先选择成就或 GE 选项"
+                                  Text="会按照选择分支的关键词进行选项选择"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,24,0"
-                                Text="无数据" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding HangoutBranches}"
+                              SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=OneWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

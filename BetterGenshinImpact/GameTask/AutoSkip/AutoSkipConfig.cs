@@ -60,6 +60,11 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         /// </summary>
         [ObservableProperty] private bool _autoHangoutEventEnabled = false;
 
+        /// <summary>
+        /// 自动邀约启用
+        /// </summary>
+        [ObservableProperty] private string _autoHangoutEndChoose = string.Empty;
+
         public bool IsClickFirstChatOption()
         {
             return ClickChatOption == "优先选择第一个选项";

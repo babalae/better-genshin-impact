@@ -192,7 +192,7 @@ public class AutoSkipTrigger : ITaskTrigger
             // 邀约选项选择 1s 1次
             if (_config.AutoHangoutEventEnabled && !hasOption)
             {
-                if ((DateTime.Now - _prevHangoutExecute).TotalMilliseconds < 1000)
+                if ((DateTime.Now - _prevHangoutExecute).TotalMilliseconds < 1200)
                 {
                     return;
                 }
@@ -273,8 +273,24 @@ public class AutoSkipTrigger : ITaskTrigger
                 hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
             }
 
-            // todo 根据文字内容决定停留还是自动点击
-            // 这个OCR好像不太准确
+            // 优先选择分支选项
+            if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose))
+            {
+                var chooseList = HangoutConfig.Instance.HangoutOptions[_config.AutoHangoutEndChoose];
+                foreach (var hangoutOption in hangoutOptionList)
+                {
+                    foreach (var str in chooseList)
+                    {
+                        if (hangoutOption.OptionTextSrc.Contains(str))
+                        {
+                            hangoutOption.Click(clickOffset);
+                            AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
+                            VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
+                            return;
+                        }
+                    }
+                }
+            }
 
             // 没有停留的选项 优先选择未点击的的选项
             foreach (var hangoutOption in hangoutOptionList)
@@ -283,6 +299,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 {
                     hangoutOption.Click(clickOffset);
                     AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
+                    VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
                     return;
                 }
             }

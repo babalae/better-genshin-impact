@@ -131,7 +131,7 @@
                               Grid.Column="1"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding ModeNames}"
-                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.CaptureMode, Mode=OneWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
