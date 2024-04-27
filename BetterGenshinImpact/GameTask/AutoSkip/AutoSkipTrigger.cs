@@ -22,6 +22,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using Vanara.PInvoke;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -285,6 +286,7 @@ public class AutoSkipTrigger : ITaskTrigger
                         if (hangoutOption.OptionTextSrc.Contains(str))
                         {
                             hangoutOption.Click(clickOffset);
+                            _logger.LogInformation("邀约分支[{Text}]关键词[{Str}]命中", _config.AutoHangoutEndChoose, str);
                             AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
                             VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
                             return;

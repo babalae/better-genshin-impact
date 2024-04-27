@@ -358,8 +358,8 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding HangoutBranches}"
-                              SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=OneWay}" />
+                              ItemsSource="{Binding HangoutBranches, Mode=OneWay}"
+                              SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
