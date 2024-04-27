@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification;
@@ -64,6 +65,7 @@ public class Duel
         Cts = taskParam.Cts;
         try
         {
+            AutoGeniusInvokationAssets.DestroyInstance();
             hasLock = TaskControl.TaskSemaphore.Wait(0);
             if (!hasLock)
             {

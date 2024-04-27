@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
@@ -59,6 +60,7 @@ public class AutoDomainTask
         var hasLock = false;
         try
         {
+            AutoFightAssets.DestroyInstance();
             hasLock = await TaskSemaphore.WaitAsync(0);
             if (!hasLock)
             {

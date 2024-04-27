@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition;
+﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Service;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;

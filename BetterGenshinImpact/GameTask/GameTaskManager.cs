@@ -6,8 +6,13 @@ using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.Placeholder;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
 
 namespace BetterGenshinImpact.GameTask
@@ -22,6 +27,7 @@ namespace BetterGenshinImpact.GameTask
         /// <returns></returns>
         public static List<ITaskTrigger> LoadTriggers()
         {
+            ReloadAssets();
             TriggerDictionary = new Dictionary<string, ITaskTrigger>()
             {
                 { "RecognitionTest", new TestTrigger() },
@@ -38,7 +44,6 @@ namespace BetterGenshinImpact.GameTask
 
             loadedTriggers = loadedTriggers.OrderByDescending(i => i.Priority).ToList();
             return loadedTriggers;
-
         }
 
         public static void RefreshTriggerConfigs()
@@ -61,6 +66,17 @@ namespace BetterGenshinImpact.GameTask
                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
                 VisionContext.Instance().DrawContent.ClearAll();
             }
+            ReloadAssets();
+        }
+
+        public static void ReloadAssets()
+        {
+            AutoSkipAssets.DestroyInstance();
+            AutoSkipAssets.DestroyInstance();
+            AutoFishingAssets.DestroyInstance();
+            QuickTeleportAssets.DestroyInstance();
+            AutoFightAssets.DestroyInstance();
+            AutoGeniusInvokationAssets.DestroyInstance();
         }
 
         /// <summary>

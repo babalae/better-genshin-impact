@@ -85,7 +85,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
+                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
                             点击展开启动相关配置
                         </Run>
                         。</ui:TextBlock>

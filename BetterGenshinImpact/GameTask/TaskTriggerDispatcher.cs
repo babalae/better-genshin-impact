@@ -60,6 +60,14 @@ namespace BetterGenshinImpact.GameTask
 
         public event EventHandler UiTaskStopTickEvent;
 
+        public event EventHandler UiTaskStartTickEvent;
+
+        // 记录 start 的参数
+        private IntPtr _hWnd;
+
+        private CaptureModes _mode;
+        private int _interval;
+
         public TaskTriggerDispatcher()
         {
             _instance = this;
@@ -94,6 +102,10 @@ namespace BetterGenshinImpact.GameTask
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
+            _hWnd = hWnd;
+            _mode = mode;
+            _interval = interval;
+
             // 初始化截图器
             GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
@@ -381,7 +393,10 @@ namespace BetterGenshinImpact.GameTask
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 请重启整个软件!", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    UiTaskStopTickEvent.Invoke(null, EventArgs.Empty);
+                    UiTaskStartTickEvent.Invoke(null, EventArgs.Empty);
+                    _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
                 }
 
                 _gameRect = new RECT(currentRect);

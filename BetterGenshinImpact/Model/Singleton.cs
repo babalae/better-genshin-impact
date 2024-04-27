@@ -20,4 +20,9 @@ public class Singleton<T> where T : class
     {
         return (T)Activator.CreateInstance(typeof(T), true)!;
     }
+
+    public static void DestroyInstance()
+    {
+        _instance = null;
+    }
 }

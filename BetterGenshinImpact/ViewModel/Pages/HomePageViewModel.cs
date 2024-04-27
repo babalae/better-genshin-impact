@@ -44,6 +44,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
+    // 记录上次使用原神的句柄
+    private IntPtr _hWnd;
+
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         _taskDispatcher = taskTriggerDispatcher;
@@ -111,6 +114,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
         if (hWnd != IntPtr.Zero)
         {
+            _hWnd = hWnd;
             Start(hWnd);
         }
         else
@@ -159,8 +163,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     {
         if (!TaskDispatcherEnabled)
         {
+            _hWnd = hWnd;
             _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+            _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
             _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
+            _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
             _mouseKeyMonitor.Subscribe(hWnd);
@@ -181,7 +189,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         if (TaskDispatcherEnabled)
         {
             _taskDispatcher.Stop();
-            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
             _maskWindow?.Hide();
             TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
@@ -191,6 +198,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnUiTaskStopTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(Stop);
+    }
+
+    private void OnUiTaskStartTick(object? sender, EventArgs e)
+    {
+        UIDispatcherHelper.Invoke(() => Start(_hWnd));
     }
 
     public void OnNavigatedTo()

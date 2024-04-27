@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -29,6 +30,7 @@ public class AutoFightTask
         var hasLock = false;
         try
         {
+            AutoFightAssets.DestroyInstance();
             hasLock = await TaskSemaphore.WaitAsync(0);
             if (!hasLock)
             {
