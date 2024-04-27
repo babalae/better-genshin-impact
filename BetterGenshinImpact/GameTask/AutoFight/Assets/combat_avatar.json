@@ -734,5 +734,23 @@
     "nameEn": "Liuyun",
     "skillCD": 12.0,
     "weapon": "10"
+  },
+  {
+    "alias": [ "千织", "Chiori", "chiori", "老板娘", "裁锦师", "裁缝" ],
+    "burstCD": 13.5,
+    "id": "10000094",
+    "name": "千织",
+    "nameEn": "Chiori",
+    "skillCD": 16.0,
+    "weapon": "1"
+  },
+  {
+    "alias": [ "Arlecchino", "阿雷奇诺", "仆人", "黑优菈", "黑暗优菈", "父亲", "佩露薇利" ],
+    "burstCD": 15.0,
+    "id": "10000096",
+    "name": "阿蕾奇诺",
+    "nameEn": "Arlecchino",
+    "skillCD": 30.0,
+    "weapon": "13"
   }
 ]
