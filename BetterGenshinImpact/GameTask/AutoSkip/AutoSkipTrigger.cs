@@ -216,7 +216,7 @@ public class AutoSkipTrigger : ITaskTrigger
     private bool ClickBlackGameScreen(CaptureContent content)
     {
         // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
-        if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 800)
+        if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1200)
         {
             using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
