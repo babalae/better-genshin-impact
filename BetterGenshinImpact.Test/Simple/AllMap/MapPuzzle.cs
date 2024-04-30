@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.Test.Simple.AllMap;
 
 public class MapPuzzle
 {
-    public static readonly int block = 2048;
+    public static readonly int block = 1024;
 
     public static List<string> PicWhiteHashList = new List<string>
     {
@@ -28,7 +28,7 @@ public class MapPuzzle
 
     public static void Put()
     {
-        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\Map"; // 图片文件夹路径
+        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map"; // 图片文件夹路径
         string pattern = @"UI_MapBack_([-+]?\d+)_([-+]?\d+)(.*)";
         var images = Directory.GetFiles(folderPath, "*.png", SearchOption.TopDirectoryOnly); // 获取所有图片文件路径
 
@@ -55,13 +55,26 @@ public class MapPuzzle
                 continue;
             }
 
+            // 排除指定行列的图片
+            if ((row, col) == (4, 6) || (row, col) == (5, 6) || (row, col) == (5, 5) || (row, col) == (5, 2) || (row, col) == (5, 1) || (row, col) == (4, 1))
+            {
+                continue;
+            }
+
+            // 读取图片并计算hash值
             Mat img = Cv2.ImRead(imagePath);
             var hashBytes = Md5Service.ComputeHash(File.ReadAllBytes(imagePath));
             var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToUpperInvariant();
 
-            if (img.Width != 2048)
+            if (img.Width < 8)
             {
                 Debug.WriteLine($"太小的不要 ({row}, {col}) {img.Width} {img.Height}  {name}");
+                continue;
+            }
+
+            if (block == 2048 && img.Width != 2048)
+            {
+                Debug.WriteLine($"不是2048的不要 ({row}, {col}) {img.Width} {img.Height}  {name}");
                 continue;
             }
 
@@ -144,7 +157,7 @@ public class MapPuzzle
         }
 
         // 保存大图
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_2048.png", largeImage);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_46_2048.png", largeImage);
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
