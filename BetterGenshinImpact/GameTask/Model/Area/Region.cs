@@ -52,7 +52,7 @@ public class Region : IDisposable
     /// </summary>
     public void Click()
     {
-        Click(X, Y, Width, Height);
+        ClickTo(X, Y, Width, Height);
     }
 
     /// <summary>
@@ -60,9 +60,9 @@ public class Region : IDisposable
     /// </summary>
     /// <param name="x"></param>
     /// <param name="y"></param>
-    public void Click(int x, int y)
+    public void ClickTo(int x, int y)
     {
-        Click(x, y, 0, 0);
+        ClickTo(x, y, 0, 0);
     }
 
     /// <summary>
@@ -73,39 +73,13 @@ public class Region : IDisposable
     /// <param name="w"></param>
     /// <param name="h"></param>
     /// <exception cref="Exception"></exception>
-    public void Click(int x, int y, int w, int h)
+    public void ClickTo(int x, int y, int w, int h)
     {
-        var node = this;
-        while (node != null)
-        {
-            if (node is DesktopRegion)
-            {
-                break;
-            }
-
-            if (node.PrevConverter != null)
-            {
-                (x, y, w, h) = node.PrevConverter.ToPrev(x, y, w, h);
-            }
-            else
-            {
-                throw new Exception("PrevConverter is null");
-            }
-
-            node = node.Prev;
-        }
-
-        if (node is DesktopRegion desktopRegion)
-        {
-            desktopRegion.DesktopRegionClick(x, y, w, h);
-        }
-        else
-        {
-            throw new Exception("Desktop Region not found");
-        }
+        var res = ConvertRes<DesktopRegion>.ConvertPositionToTargetRegion(x, y, w, h, this);
+        res.TargetRegion.DesktopRegionClick(res.X, res.Y, res.Width, res.Height);
     }
 
-    public void DrawRect(string name, Pen? pen = null)
+    public void DrawSelf(string name, Pen? pen = null)
     {
         DrawRect(X, Y, Width, Height, name, pen);
     }
@@ -122,7 +96,7 @@ public class Region : IDisposable
     /// <param name="name"></param>
     /// <param name="pen"></param>
     /// <returns></returns>
-    public RectDrawable ToRectDrawable(string name, Pen? pen = null)
+    public RectDrawable SelfToRectDrawable(string name, Pen? pen = null)
     {
         return ToRectDrawable(X, Y, Width, Height, name, pen);
     }
@@ -152,33 +126,19 @@ public class Region : IDisposable
     /// <exception cref="Exception"></exception>
     public RectDrawable ToRectDrawable(int x, int y, int w, int h, string name, Pen? pen = null)
     {
-        var node = this;
-        while (node != null)
-        {
-            if (node is GameCaptureRegion)
-            {
-                break;
-            }
+        var res = ConvertRes<GameCaptureRegion>.ConvertPositionToTargetRegion(x, y, w, h, this);
+        return res.TargetRegion.ConvertToRectDrawable(res.X, res.Y, res.Width, res.Height, pen, name);
+    }
 
-            if (node.PrevConverter != null)
-            {
-                (x, y, w, h) = node.PrevConverter.ToPrev(x, y, w, h);
-            }
-            else
-            {
-                throw new Exception("PrevConverter is null");
-            }
-            node = node.Prev;
-        }
+    public Rect ConvertSelfPositionToGameCaptureRegion()
+    {
+        return ConvertPositionToGameCaptureRegion(X, Y, Width, Height);
+    }
 
-        if (node is GameCaptureRegion gameCaptureRegion)
-        {
-            return gameCaptureRegion.ConvertToRectDrawable(x, y, w, h, pen, name);
-        }
-        else
-        {
-            throw new Exception("Game Capture Region not found");
-        }
+    public Rect ConvertPositionToGameCaptureRegion(int x, int y, int w, int h)
+    {
+        var res = ConvertRes<GameCaptureRegion>.ConvertPositionToTargetRegion(x, y, w, h, this);
+        return res.ToRect();
     }
 
     public Rect ToRect()
@@ -206,6 +166,26 @@ public class Region : IDisposable
         NextChildren?.ForEach(x => x.Dispose());
     }
 
+    /// <summary>
+    /// 派生一个点类型的区域
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    public Region Derive(int x, int y)
+    {
+        var child = new Region(x, y, 0, 0, this, new TranslationConverter(X, Y));
+        return AddChild(child);
+    }
+
+    /// <summary>
+    /// 派生一个矩形类型的区域
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="w"></param>
+    /// <param name="h"></param>
+    /// <returns></returns>
     public Region Derive(int x, int y, int w, int h)
     {
         var child = new Region(x, y, w, h, this, new TranslationConverter(X, Y));

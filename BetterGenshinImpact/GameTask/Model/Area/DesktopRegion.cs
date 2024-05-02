@@ -1,7 +1,8 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
+using System.Drawing;
 using OpenCvSharp;
-using System;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
 
@@ -16,5 +17,13 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
     {
         Simulation.SendInputEx.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
+    }
+
+    public GameCaptureRegion Derive(Bitmap captureBitmap, int x, int y)
+    {
+        var child = new GameCaptureRegion(captureBitmap, x, y, this, new TranslationConverter(X, Y));
+        NextChildren ??= [];
+        NextChildren.Add(child);
+        return child;
     }
 }

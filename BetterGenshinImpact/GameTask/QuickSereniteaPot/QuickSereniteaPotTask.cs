@@ -16,13 +16,10 @@ public class QuickSereniteaPotTask
 
     private static void WaitForBagToOpen()
     {
-        var content = TaskControl.CaptureToContent();
-
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            var content = TaskControl.CaptureToContent();
-            var ra2 = content.CaptureRectArea.Find(_assets.BagCloseButtonRo);
+            using var ra2 = TaskControl.CaptureToRectArea().Find(_assets.BagCloseButtonRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("背包未打开");
@@ -35,15 +32,14 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            var content = TaskControl.CaptureToContent();
-            var ra2 = content.CaptureRectArea.Find(_assets.SereniteaPotIconRo);
+            using var ra2 = TaskControl.CaptureToRectArea().Find(_assets.SereniteaPotIconRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("未检测到壶");
             }
             else
             {
-                ra2.ClickCenter();
+                ra2.Click();
             }
         }, TimeSpan.FromMilliseconds(200), 3);
     }

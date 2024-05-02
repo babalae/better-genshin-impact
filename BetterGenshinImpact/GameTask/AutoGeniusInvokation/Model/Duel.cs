@@ -76,7 +76,7 @@ public class Duel
             LogScreenResolution();
             _logger.LogInformation("========================================");
             _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().WithScreenshot(TaskControl.CaptureGameBitmap()).Build());
             GeniusInvokationControl.GetInstance().Init(taskParam);
             SystemControl.ActivateWindow();
 
@@ -302,13 +302,13 @@ public class Duel
         catch (TaskCanceledException ex)
         {
             _logger.LogInformation(ex.Message);
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Cancelled().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Cancelled().WithScreenshot(TaskControl.CaptureGameBitmap()).Build());
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Success().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Success().WithScreenshot(TaskControl.CaptureGameBitmap()).Build());
         }
         catch (System.Exception ex)
         {
@@ -318,14 +318,14 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Failure().WithScreenshot(taskParam.Dispatcher.GameCapture?.Capture()).Build());
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Failure().WithScreenshot(TaskControl.CaptureGameBitmap()).Build());
         }
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
             TaskSettingsPageViewModel.SetSwitchAutoGeniusInvokationButtonText(false);
             _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
-            taskParam.Dispatcher.StartTimer();
+            TaskTriggerDispatcher.Instance().StartTimer();
 
             if (hasLock)
             {

@@ -23,6 +23,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -71,7 +72,7 @@ public class AutoDomainTask
             Init();
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
 
-            var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
+            var combatScenes = new CombatScenes().InitializeTeam(GetRectAreaFromDispatcher());
 
             // 前置进入秘境
             EnterDomain();
@@ -175,7 +176,7 @@ public class AutoDomainTask
     {
         if (!combatScenes.CheckTeamInitialized())
         {
-            combatScenes.InitializeTeam(GetContentFromDispatcher());
+            combatScenes.InitializeTeam(GetRectAreaFromDispatcher());
             if (!combatScenes.CheckTeamInitialized())
             {
                 throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。或者直接使用强制指定当前队伍角色的功能。");
@@ -187,7 +188,7 @@ public class AutoDomainTask
     {
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
-        var fRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
+        var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
@@ -200,10 +201,10 @@ public class AutoDomainTask
         while (retryTimes < 20 && clickCount < 2)
         {
             retryTimes++;
-            var confirmRectArea = GetContentFromDispatcher().CaptureRectArea.Find(fightAssets.ConfirmRa);
+            var confirmRectArea = GetRectAreaFromDispatcher().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
-                confirmRectArea.ClickCenter();
+                confirmRectArea.Click();
                 clickCount++;
             }
 
@@ -221,11 +222,11 @@ public class AutoDomainTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            var cactRectArea = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
+            var cactRectArea = GetRectAreaFromDispatcher().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
                 Sleep(1000, _taskParam.Cts);
-                cactRectArea.ClickCenter();
+                cactRectArea.Click();
                 break;
             }
 
@@ -260,8 +261,7 @@ public class AutoDomainTask
             {
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
                 {
-                    var content = GetContentFromDispatcher();
-                    var fRectArea = content.CaptureRectArea.Find(AutoPickAssets.Instance.FRo);
+                    using var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _taskParam.Cts);
@@ -370,9 +370,9 @@ public class AutoDomainTask
 
     private bool IsDomainEnd()
     {
-        var content = GetContentFromDispatcher();
+        var ra = GetRectAreaFromDispatcher();
 
-        var endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
+        var endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("挑战") || text.Contains("达成"))
         {
@@ -380,7 +380,7 @@ public class AutoDomainTask
             return true;
         }
 
-        endTipsRect = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.EndTipsRect);
+        endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsRect);
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("自动") || text.Contains("退出"))
         {
@@ -424,7 +424,7 @@ public class AutoDomainTask
             var backwardsAndForwardsCount = 0;
             while (!_taskParam.Cts.Token.IsCancellationRequested)
             {
-                var treeRect = DetectTree(GetContentFromDispatcher());
+                var treeRect = DetectTree(GetRectAreaFromDispatcher());
                 if (treeRect != Rect.Empty)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
@@ -562,10 +562,10 @@ public class AutoDomainTask
         });
     }
 
-    private Rect DetectTree(CaptureContent content)
+    private Rect DetectTree(ImageRegion region)
     {
         using var memoryStream = new MemoryStream();
-        content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+        region.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
         memoryStream.Seek(0, SeekOrigin.Begin);
         var result = _predictor.Detect(memoryStream);
         var list = new List<RectDrawable>();
@@ -594,7 +594,7 @@ public class AutoDomainTask
             var started = false;
             while (!cts.Token.IsCancellationRequested)
             {
-                var angle = CameraOrientation.Compute(GetContentFromDispatcher());
+                var angle = CameraOrientation.Compute(GetRectAreaFromDispatcher().SrcGreyMat);
                 if (angle is >= 356 or <= 4)
                 {
                     // 算作对准了
@@ -667,14 +667,14 @@ public class AutoDomainTask
                 break;
             }
 
-            var useCondensedResinRa = GetContentFromDispatcher().CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
+            var useCondensedResinRa = GetRectAreaFromDispatcher().Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
             if (!useCondensedResinRa.IsEmpty())
             {
-                useCondensedResinRa.ClickCenter();
+                useCondensedResinRa.Click();
                 // 点两下 #224 #218
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
                 Sleep(400, _taskParam.Cts);
-                useCondensedResinRa.ClickCenter();
+                useCondensedResinRa.Click();
                 break;
             }
 
@@ -692,24 +692,24 @@ public class AutoDomainTask
             _clickOffset.ClickWithoutScale(captureArea.Width - (int)(140 * _clickOffset.AssetScale), (int)(53 * _clickOffset.AssetScale));
 
             // 优先点击继续
-            var content = GetContentFromDispatcher();
-            var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+            var ra = GetRectAreaFromDispatcher();
+            var confirmRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 if (isLastTurn)
                 {
                     // 最后一回合 退出
-                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ExitRa);
+                    var exitRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
-                        exitRectArea.ClickCenter();
+                        exitRectArea.Click();
                         return false;
                     }
                 }
 
                 if (!recognizeResin)
                 {
-                    confirmRectArea.ClickCenter();
+                    confirmRectArea.Click();
                     return true;
                 }
 
@@ -717,17 +717,17 @@ public class AutoDomainTask
                 if (condensedResinCount == 0 && fragileResinCount < 20)
                 {
                     // 没有体力了退出
-                    var exitRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ExitRa);
+                    var exitRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
-                        exitRectArea.ClickCenter();
+                        exitRectArea.Click();
                         return false;
                     }
                 }
                 else
                 {
                     // 有体力继续
-                    confirmRectArea.ClickCenter();
+                    confirmRectArea.Click();
                     return true;
                 }
             }
@@ -746,24 +746,24 @@ public class AutoDomainTask
         var condensedResinCount = 0;
         var fragileResinCount = 0;
 
-        var content = GetContentFromDispatcher();
+        var ra = GetRectAreaFromDispatcher();
         // 浓缩树脂
-        var condensedResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.CondensedResinCountRa);
+        var condensedResinCountRa = ra.Find(AutoFightContext.Instance.FightAssets.CondensedResinCountRa);
         if (!condensedResinCountRa.IsEmpty())
         {
             // 图像右侧就是浓缩树脂数量
-            var countArea = content.CaptureRectArea.Crop(new Rect(condensedResinCountRa.X + condensedResinCountRa.Width, condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height));
+            var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width, condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height);
             // Cv2.ImWrite($"log/resin_{DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")}.png", countArea.SrcGreyMat);
             var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
             condensedResinCount = StringUtils.TryParseInt(count);
         }
 
         // 脆弱树脂
-        var fragileResinCountRa = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.FragileResinCountRa);
+        var fragileResinCountRa = ra.Find(AutoFightContext.Instance.FightAssets.FragileResinCountRa);
         if (!fragileResinCountRa.IsEmpty())
         {
             // 图像右侧就是脆弱树脂数量
-            var countArea = content.CaptureRectArea.Crop(new Rect(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height));
+            var countArea = ra.DeriveCrop(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height);
             var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
             fragileResinCount = StringUtils.TryParseInt(count);
         }

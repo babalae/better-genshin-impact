@@ -22,7 +22,6 @@ public class QuickBuyTask
             return;
         }
 
-
         try
         {
             var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
@@ -37,13 +36,13 @@ public class QuickBuyTask
             // 选中左边点 742x601
             clickOffset.Move(742, 601);
             TaskControl.CheckAndSleep(100);
-            Simulation.SendInput.Mouse.LeftButtonDown();
+            Simulation.SendInputEx.Mouse.LeftButtonDown();
             TaskControl.CheckAndSleep(50);
 
             // 向右滑动
-            Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+            Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
             TaskControl.CheckAndSleep(200);
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            Simulation.SendInputEx.Mouse.LeftButtonUp();
             TaskControl.CheckAndSleep(100);
 
             // 点击弹出页的购买/兑换 1100x780

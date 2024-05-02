@@ -39,7 +39,7 @@ public class AutoFightTask
             }
 
             Init();
-            var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
+            var combatScenes = new CombatScenes().InitializeTeam(GetRectAreaFromDispatcher());
             if (!combatScenes.CheckTeamInitialized())
             {
                 throw new Exception("识别队伍角色失败");

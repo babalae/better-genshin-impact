@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Helpers;
+﻿using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
 using System;
 using System.Diagnostics;
 using Vanara.PInvoke;
@@ -21,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.Model
         /// <summary>
         /// 素材缩放比例
         /// </summary>
-        public double AssetScale { get; }
+        public double AssetScale { get; } = 1;
 
         /// <summary>
         /// 捕获窗口区域 现在已经和实际游戏画面一致
@@ -35,7 +36,7 @@ namespace BetterGenshinImpact.GameTask.Model
 
         public int GameProcessId { get; }
 
-        public RectArea DesktopRectArea { get; }
+        public DesktopRegion DesktopRectArea { get; }
 
         public SystemInfo(IntPtr hWnd)
         {
@@ -45,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.Model
             GameProcessId = GameProcess.Id;
 
             DisplaySize = PrimaryScreen.WorkingArea;
-            DesktopRectArea = new RectArea(0, 0, DisplaySize.Width, DisplaySize.Height);
+            DesktopRectArea = new DesktopRegion();
 
             // 判断最小化
             if (User32.IsIconic(hWnd))
@@ -61,7 +62,11 @@ namespace BetterGenshinImpact.GameTask.Model
                 throw new ArgumentException("游戏窗口分辨率不得小于 800x600 ！");
             }
 
-            AssetScale = GameScreenSize.Width / 1920d;
+            // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
+            if (GameScreenSize.Width < 1920)
+            {
+                AssetScale = GameScreenSize.Width / 1920d;
+            }
             CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
         }
     }

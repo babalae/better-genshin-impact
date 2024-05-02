@@ -96,10 +96,15 @@ public class ImageRegion : Region
     /// <param name="w"></param>
     /// <param name="h"></param>
     /// <returns></returns>
-    public ImageRegion DeriveCorp(int x, int y, int w, int h)
+    public ImageRegion DeriveCrop(int x, int y, int w, int h)
     {
         var child = new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(X, Y));
         return AddChild(child);
+    }
+
+    public ImageRegion DeriveCrop(Rect rect)
+    {
+        return DeriveCrop(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
     public ImageRegion Derive(Mat mat, int x, int y)
@@ -173,7 +178,7 @@ public class ImageRegion : Region
                 var newRa = Derive(template.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y);
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
-                    newRa.DrawRect(ro.Name, ro.DrawOnWindowPen);
+                    newRa.DrawSelf(ro.Name, ro.DrawOnWindowPen);
                 }
 
                 successAction?.Invoke(newRa);
@@ -333,7 +338,7 @@ public class ImageRegion : Region
 
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
-                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, resRaList.Select(ra => ra.ToRectDrawable(ro.Name)).ToList());
+                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, resRaList.Select(ra => ra.SelfToRectDrawable(ro.Name)).ToList());
                 }
 
                 successAction?.Invoke(resRaList);

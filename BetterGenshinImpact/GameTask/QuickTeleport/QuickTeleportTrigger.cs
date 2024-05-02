@@ -9,6 +9,7 @@ using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Model;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -67,7 +68,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
             IsExclusive = true;
 
             // 2. 判断是否有传送按钮
-            var hasTeleportButton = CheckTeleportButton(content);
+            var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
 
             if (!hasTeleportButton)
             {
@@ -90,19 +91,18 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 if (hasMapChooseIcon)
                 {
                     TaskControl.Sleep(_config.WaitTeleportPanelDelay);
-                    content = TaskControl.CaptureToContent();
-                    CheckTeleportButton(content);
+                    CheckTeleportButton(TaskControl.CaptureToRectArea());
                 }
             }
         });
     }
 
-    private bool CheckTeleportButton(CaptureContent content)
+    private bool CheckTeleportButton(ImageRegion imageRegion)
     {
         var hasTeleportButton = false;
-        content.CaptureRectArea.Find(_assets.TeleportButtonRo, ra =>
+        imageRegion.Find(_assets.TeleportButtonRo, ra =>
         {
-            ra.ClickCenter();
+            ra.Click();
             hasTeleportButton = true;
             // if ((DateTime.Now - _prevClickTeleportButtonTime).TotalSeconds > 1)
             // {
@@ -132,8 +132,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
             // 点击最高的
             foreach (var iconRect in rResultList)
             {
-                var ra = content.CaptureRectArea.Crop(_assets.MapChooseIconRoi).Crop(iconRect);
-                var text = GetOptionText(content.CaptureRectArea.SrcGreyMat, ra.ConvertRelativePositionToCaptureArea(), 200);
+                using var ra = content.CaptureRectArea.DeriveCrop(_assets.MapChooseIconRoi).DeriveCrop(iconRect);
+                var text = GetOptionText(content.CaptureRectArea.SrcGreyMat, ra.ConvertSelfPositionToGameCaptureRegion(), 200);
                 if (string.IsNullOrEmpty(text) || text.Length == 1)
                 {
                     continue;
@@ -146,7 +146,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
                 _prevClickOptionButtonTime = DateTime.Now;
                 TaskControl.Sleep(_config.TeleportListClickDelay);
-                ra.ClickCenter();
+                ra.Click();
                 hasMapChooseIcon = true;
                 break;
             }

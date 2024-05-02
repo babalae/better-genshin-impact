@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -16,12 +17,12 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickWhiteConfirmButton(RectArea captureRa)
+    public static bool ClickWhiteConfirmButton(ImageRegion captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnWhiteConfirm);
         if (ra.IsExist())
         {
-            ra.ClickCenter();
+            ra.Click();
             return true;
         }
         return false;
@@ -32,12 +33,12 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickWhiteCancelButton(RectArea captureRa)
+    public static bool ClickWhiteCancelButton(ImageRegion captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnWhiteCancel);
         if (ra.IsExist())
         {
-            ra.ClickCenter();
+            ra.Click();
             return true;
         }
         return false;
@@ -48,12 +49,12 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickBlackConfirmButton(RectArea captureRa)
+    public static bool ClickBlackConfirmButton(ImageRegion captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnBlackConfirm);
         if (ra.IsExist())
         {
-            ra.ClickCenter();
+            ra.Click();
             return true;
         }
         return false;
@@ -64,12 +65,12 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickBlackCancelButton(RectArea captureRa)
+    public static bool ClickBlackCancelButton(ImageRegion captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnBlackCancel);
         if (ra.IsExist())
         {
-            ra.ClickCenter();
+            ra.Click();
             return true;
         }
         return false;
@@ -80,12 +81,12 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickOnlineYesButton(RectArea captureRa)
+    public static bool ClickOnlineYesButton(ImageRegion captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnOnlineYes);
         if (ra.IsExist())
         {
-            ra.ClickCenter();
+            ra.Click();
             return true;
         }
         return false;
@@ -96,12 +97,12 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickOnlineNoButton(RectArea captureRa)
+    public static bool ClickOnlineNoButton(ImageRegion captureRa)
     {
         var ra = captureRa.Find(ElementAssets.Instance.BtnOnlineNo);
         if (ra.IsExist())
         {
-            ra.ClickCenter();
+            ra.Click();
             return true;
         }
         return false;
@@ -112,7 +113,7 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickConfirmButton(RectArea captureRa)
+    public static bool ClickConfirmButton(ImageRegion captureRa)
     {
         return ClickBlackConfirmButton(captureRa) || ClickWhiteConfirmButton(captureRa) || ClickOnlineYesButton(captureRa);
     }
@@ -122,7 +123,7 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool ClickCancelButton(RectArea captureRa)
+    public static bool ClickCancelButton(ImageRegion captureRa)
     {
         return ClickBlackCancelButton(captureRa) || ClickWhiteCancelButton(captureRa) || ClickOnlineNoButton(captureRa);
     }

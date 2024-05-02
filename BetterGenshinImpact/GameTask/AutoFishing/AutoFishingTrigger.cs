@@ -7,7 +7,6 @@ using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
@@ -15,13 +14,11 @@ using BetterGenshinImpact.View.Drawable;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Compunet.YoloV8;
-using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
@@ -371,8 +368,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Simulation.SendInputEx.Mouse.MoveMouseBy(0, 200); // 鼠标移走，防止干扰
             Sleep(500);
 
-            // 截图
-            var bitmap = CaptureGameBitmap(TaskTriggerDispatcher.Instance().GameCapture);
             _selectedBaitName = fishpond.Fishes[0].FishType.BaitName; // 选择最多鱼吃的饵料
             _logger.LogInformation("选择鱼饵 {Text}", BaitType.FromName(_selectedBaitName).ChineseName);
 
@@ -387,9 +382,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 DrawOnWindow = false
             }.InitTemplate();
 
+            // 截图
             var systemInfo = TaskContext.Instance().SystemInfo;
-            var ra = new RectArea(bitmap, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y, systemInfo.DesktopRectArea);
-            var resRa = ra.Find(ro);
+            var resRa = TaskControl.CaptureToRectArea().Find(ro);
             if (resRa.IsEmpty())
             {
                 _logger.LogWarning("没有找到目标鱼饵");
@@ -398,7 +393,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                resRa.ClickCenter();
+                resRa.Click();
                 Sleep(700);
                 // 可能重复点击，所以固定界面点击下
                 var rect = systemInfo.CaptureAreaRect;
@@ -432,7 +427,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             while (IsEnabled)
             {
                 // 截图
-                var bitmap = CaptureGameBitmap(TaskTriggerDispatcher.Instance().GameCapture);
+                var bitmap = TaskControl.CaptureGameBitmap();
 
                 // 找 鱼饵落点
                 using var memoryStream = new MemoryStream();
@@ -729,29 +724,29 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-        public Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
-        {
-            var bitmap = gameCapture?.Capture();
-            // wgc 缓冲区设置的2 所以至少截图3次
-            if (gameCapture?.Mode == CaptureModes.WindowsGraphicsCapture)
-            {
-                for (int i = 0; i < 2; i++)
-                {
-                    bitmap = gameCapture?.Capture();
-                    Sleep(50);
-                }
-            }
-
-            if (bitmap == null)
-            {
-                _logger.LogWarning("截图失败!");
-                throw new Exception("截图失败");
-            }
-
-            // 更新当前捕获内容
-            _currContent = new CaptureContent(bitmap, _currContent.FrameIndex, _currContent.TimerInterval);
-            return bitmap;
-        }
+        // public Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+        // {
+        //     var bitmap = gameCapture?.Capture();
+        //     // wgc 缓冲区设置的2 所以至少截图3次
+        //     if (gameCapture?.Mode == CaptureModes.WindowsGraphicsCapture)
+        //     {
+        //         for (int i = 0; i < 2; i++)
+        //         {
+        //             bitmap = gameCapture?.Capture();
+        //             Sleep(50);
+        //         }
+        //     }
+        //
+        //     if (bitmap == null)
+        //     {
+        //         _logger.LogWarning("截图失败!");
+        //         throw new Exception("截图失败");
+        //     }
+        //
+        //     // 更新当前捕获内容
+        //     _currContent = new CaptureContent(bitmap, _currContent.FrameIndex, _currContent.TimerInterval);
+        //     return bitmap;
+        // }
 
         public void Sleep(int millisecondsTimeout)
         {

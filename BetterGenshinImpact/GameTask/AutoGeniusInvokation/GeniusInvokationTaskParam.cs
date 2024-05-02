@@ -3,15 +3,7 @@ using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
-public class GeniusInvokationTaskParam : BaseTaskParam
+public class GeniusInvokationTaskParam(CancellationTokenSource cts, string strategyContent) : BaseTaskParam(cts)
 {
-    public string StrategyContent { get; set; }
-
-    public TaskTriggerDispatcher Dispatcher { get; set; }
-
-    public GeniusInvokationTaskParam(CancellationTokenSource cts, TaskTriggerDispatcher dispatcher, string strategyContent) : base(cts)
-    {
-        StrategyContent = strategyContent;
-        Dispatcher = dispatcher;
-    }
+    public string StrategyContent { get; set; } = strategyContent;
 }

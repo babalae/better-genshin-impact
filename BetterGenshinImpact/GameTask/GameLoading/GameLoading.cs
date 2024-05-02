@@ -41,7 +41,7 @@ public class GameLoadingTrigger : ITaskTrigger
         }
 
         _enterGameClickCount = 0;
-        
+
         // var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         // var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         // _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
@@ -84,13 +84,12 @@ public class GameLoadingTrigger : ITaskTrigger
             }
         }
 
-
         if (_enterGameClickCount > 0 && _config.AutoClickBlessingOfTheWelkinMoonEnabled)
         {
             var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
             if (!wmRa.IsEmpty())
             {
-                wmRa.ClickCenter();
+                wmRa.Click();
                 _welkinMoonClickCount++;
                 Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
                 if (_welkinMoonClickCount > 2)

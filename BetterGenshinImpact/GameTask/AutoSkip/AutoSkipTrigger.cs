@@ -6,7 +6,6 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
@@ -21,8 +20,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -147,13 +146,13 @@ public class AutoSkipTrigger : ITaskTrigger
             content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
             if (!isPlaying)
             {
-                var textRa = content.CaptureRectArea.Crop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
+                var textRa = content.CaptureRectArea.DeriveCrop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
                 // 过滤出白色
                 var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(textRa.SrcMat, new Scalar(0, 0, 170), new Scalar(255, 80, 245));
                 var result = OcrFactory.Paddle.Ocr(hsvFilterMat);
                 if (result.Contains("播") || result.Contains("番") || result.Contains("放") || result.Contains("中") || result.Contains("潘") || result.Contains("故"))
                 {
-                    VisionContext.Instance().DrawContent.PutRect("PlayingText", textRa.ConvertRelativePositionToCaptureArea().ToRectDrawable());
+                    textRa.DrawSelf("PlayingText");
                     isPlaying = true;
                 }
             }
@@ -322,7 +321,7 @@ public class AutoSkipTrigger : ITaskTrigger
     /// <param name="chatOptionTextWidth"></param>
     /// <returns></returns>
     [Obsolete]
-    private string GetOrangeOptionText(Mat captureMat, RectArea foundIconRectArea, int chatOptionTextWidth)
+    private string GetOrangeOptionText(Mat captureMat, ImageRegion foundIconRectArea, int chatOptionTextWidth)
     {
         var textRect = new Rect(foundIconRectArea.X + foundIconRectArea.Width, foundIconRectArea.Y, chatOptionTextWidth, foundIconRectArea.Height);
         using var mat = new Mat(captureMat, textRect);
@@ -403,7 +402,7 @@ public class AutoSkipTrigger : ITaskTrigger
         if (!exclamationIconRa.IsEmpty())
         {
             TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
-            exclamationIconRa.ClickCenter();
+            exclamationIconRa.Click();
             AutoSkipLog("点击感叹号选项");
             exclamationIconRa.Dispose();
             return true;
@@ -573,7 +572,7 @@ public class AutoSkipTrigger : ITaskTrigger
     {
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
-            pageCloseRoRa.ClickCenter();
+            pageCloseRoRa.Click();
 
             AutoSkipLog("关闭弹出页");
             pageCloseRoRa.Dispose();
@@ -608,24 +607,22 @@ public class AutoSkipTrigger : ITaskTrigger
                 clickOffset.ClickWithoutScale(rects[i].X + rects[i].Width / 2, rects[i].Y + rects[i].Height / 2);
                 _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
                 TaskControl.Sleep(800);
-                content = TaskControl.CaptureToContent();
 
-                var btnBlackConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnBlackConfirm);
+                var btnBlackConfirmRa = TaskControl.CaptureToRectArea().Find(ElementAssets.Instance.BtnBlackConfirm);
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
-                    btnBlackConfirmRa.ClickCenter();
+                    btnBlackConfirmRa.Click();
                     _logger.LogInformation("提交物品：{Text}", "2. 放入" + i);
                     TaskControl.Sleep(200);
                 }
             }
 
             TaskControl.Sleep(500);
-            content = TaskControl.CaptureToContent();
 
-            var btnWhiteConfirmRa = content.CaptureRectArea.Find(ElementAssets.Instance.BtnWhiteConfirm);
+            using var btnWhiteConfirmRa = TaskControl.CaptureToRectArea().Find(ElementAssets.Instance.BtnWhiteConfirm);
             if (!btnWhiteConfirmRa.IsEmpty())
             {
-                btnWhiteConfirmRa.ClickCenter();
+                btnWhiteConfirmRa.Click();
                 _logger.LogInformation("提交物品：{Text}", "3. 交付");
 
                 VisionContext.Instance().DrawContent.ClearAll();

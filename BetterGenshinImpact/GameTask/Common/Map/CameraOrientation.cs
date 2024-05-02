@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using Point = OpenCvSharp.Point;
@@ -14,11 +15,11 @@ public class CameraOrientation
     /// <summary>
     /// 计算当前小地图摄像机朝向的角度
     /// </summary>
-    /// <param name="content">完整游戏截图</param>
+    /// <param name="greyMat">完整游戏截图</param>
     /// <returns>角度</returns>
-    public static int Compute(CaptureContent content)
+    public static int Compute(Mat greyMat)
     {
-        var mat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(62, 19, 212, 212));
+        var mat = new Mat(greyMat, new Rect(62, 19, 212, 212));
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         // 极坐标展开
         var centerPoint = new Point2f(mat.Width / 2f, mat.Height / 2f);
