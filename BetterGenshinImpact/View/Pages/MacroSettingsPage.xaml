@@ -36,7 +36,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="当前角色一键宏"
+                                  Text="一键宏（按角色）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -90,13 +90,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="战斗宏配置"
+                                  Text="宏配置"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="配置每个角色执行的战斗宏，修改需重启软件生效，比如：胡桃A重跳"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        配置每个角色执行的宏，比如：胡桃A重跳，<Hyperlink Command="{Binding GoToOneKeyMacroUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看说明
+                        </Hyperlink>
+                    </ui:TextBlock>
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"

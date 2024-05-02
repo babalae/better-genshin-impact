@@ -5,6 +5,7 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Diagnostics;
 using System.Windows.Input;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -44,5 +45,11 @@ public partial class MacroSettingsPageViewModel : ObservableObject, INavigationA
     public void OnEditAvatarMacro()
     {
         JsonMonoDialog.Show(@"User\avatar_macro.json");
+    }
+
+    [RelayCommand]
+    public void OnGoToOneKeyMacroUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/onem.html") { UseShellExecute = true });
     }
 }
