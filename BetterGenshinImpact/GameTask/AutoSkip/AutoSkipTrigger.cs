@@ -145,7 +145,7 @@ public class AutoSkipTrigger : ITaskTrigger
             content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
             if (!isPlaying)
             {
-                var textRa = content.CaptureRectArea.DeriveCrop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
+                using var textRa = content.CaptureRectArea.DeriveCrop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
                 // 过滤出白色
                 var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(textRa.SrcMat, new Scalar(0, 0, 170), new Scalar(255, 80, 245));
                 var result = OcrFactory.Paddle.Ocr(hsvFilterMat);
@@ -389,7 +389,7 @@ public class AutoSkipTrigger : ITaskTrigger
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
         // 感叹号识别 遇到直接点击
-        var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
+        using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
         if (!exclamationIconRa.IsEmpty())
         {
             TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
@@ -453,7 +453,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 // 橙色选项
                 foreach (var item in rs)
                 {
-                    var textMat = item.ToImageRegion().SrcGreyMat;
+                    var textMat = item.ToImageRegion().SrcMat;
                     if (IsOrangeOption(textMat))
                     {
                         if (item.Text.Contains("每日委托"))
@@ -565,7 +565,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private bool SubmitGoods(CaptureContent content)
     {
-        var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
+        using var exclamationRa = content.CaptureRectArea.Find(_autoSkipAssets.SubmitExclamationIconRo);
         if (!exclamationRa.IsEmpty())
         {
             // var rects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcMat.CvtColor(ColorConversionCodes.BGRA2BGR),
@@ -583,12 +583,9 @@ public class AutoSkipTrigger : ITaskTrigger
             // }
             // Cv2.ImWrite("log/提交物品.png", content.CaptureRectArea.SrcMat);
 
-            var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-            var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
             for (var i = 0; i < rects.Count; i++)
             {
-                clickOffset.ClickWithoutScale(rects[i].X + rects[i].Width / 2, rects[i].Y + rects[i].Height / 2);
+                content.CaptureRectArea.Derive(rects[i]).Click();
                 _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
                 TaskControl.Sleep(800);
 
@@ -603,7 +600,8 @@ public class AutoSkipTrigger : ITaskTrigger
 
             TaskControl.Sleep(500);
 
-            using var btnWhiteConfirmRa = TaskControl.CaptureToRectArea().Find(ElementAssets.Instance.BtnWhiteConfirm);
+            using var ra = TaskControl.CaptureToRectArea();
+            using var btnWhiteConfirmRa = ra.Find(ElementAssets.Instance.BtnWhiteConfirm);
             if (!btnWhiteConfirmRa.IsEmpty())
             {
                 btnWhiteConfirmRa.Click();
