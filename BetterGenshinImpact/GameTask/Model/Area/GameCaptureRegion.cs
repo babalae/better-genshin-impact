@@ -47,7 +47,7 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
         var scale = Width / 1920d;
 
         var newMat = new Mat();
-        Cv2.Resize(SrcMat, newMat, new Size(1920, 1090));
+        Cv2.Resize(SrcMat, newMat, new Size(1920, 1080));
         var child = new ImageRegion(newMat, X, Y, this, new ScaleConverter(scale));
         return AddChild(child);
     }

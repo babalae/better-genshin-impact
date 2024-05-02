@@ -1,21 +1,19 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using System.Collections.Generic;
+using OpenCvSharp.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
-using BetterGenshinImpact.GameTask.Common;
-using OpenCvSharp.Extensions;
 using Point = OpenCvSharp.Point;
-using BetterGenshinImpact.GameTask.Model.Area.Converter;
-using Microsoft.Extensions.Logging;
-using static Vanara.PInvoke.Kernel32;
-using SharpDX;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
 

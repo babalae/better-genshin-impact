@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Diagnostics;
+using OpenCvSharp;
 using Vanara.PInvoke;
 using Size = System.Drawing.Size;
 
@@ -25,10 +26,25 @@ namespace BetterGenshinImpact.GameTask.Model
         public double AssetScale { get; } = 1;
 
         /// <summary>
-        /// 捕获窗口区域 现在已经和实际游戏画面一致
+        /// 真·素材缩放比例
+        /// </summary>
+        public double RealAssetScale { get; } = 1;
+
+        /// <summary>
+        /// 捕获游戏区域缩放比例
+        /// </summary>
+        public double CaptureAreaScale { get; } = 1;
+
+        /// <summary>
+        /// 捕获窗口区域 和实际游戏画面一致
         /// CaptureAreaRect = GameScreenSize or GameWindowRect
         /// </summary>
         public RECT CaptureAreaRect { get; set; }
+
+        /// <summary>
+        /// 捕获窗口区域 缩放至1920x1080
+        /// </summary>
+        public Rect ScaleCaptureAreaRect { get; set; }
 
         public Process GameProcess { get; }
 
@@ -67,7 +83,9 @@ namespace BetterGenshinImpact.GameTask.Model
             {
                 AssetScale = GameScreenSize.Width / 1920d;
             }
+
             CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
+            ScaleCaptureAreaRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width > 1920 ? 1920 : CaptureAreaRect.Width, CaptureAreaRect.Height > 1080 ? 1080 : CaptureAreaRect.Height);
         }
     }
 }

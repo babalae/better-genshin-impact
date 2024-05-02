@@ -3,6 +3,7 @@ using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -43,6 +44,9 @@ public class Region : IDisposable
 
     public Region? Prev { get; }
 
+    /// <summary>
+    /// 本区域节点向上一个区域节点坐标的转换器
+    /// </summary>
     public INodeConverter? PrevConverter { get; }
 
     public List<Region>? NextChildren { get; protected set; }
@@ -146,6 +150,24 @@ public class Region : IDisposable
         return new Rect(X, Y, Width, Height);
     }
 
+    /// <summary>
+    /// 生成一个新的区域，但是不会添加到子节点
+    /// 请使用 using var newRegion
+    /// </summary>
+    /// <returns></returns>
+    public ImageRegion ToImageRegion()
+    {
+        if (this is ImageRegion imageRegion)
+        {
+            Debug.WriteLine("ToImageRegion 但已经是 ImageRegion");
+            return imageRegion;
+        }
+
+        var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(X, Y, Width, Height, this);
+        var newRegion = new ImageRegion(new Mat(res.TargetRegion.SrcMat, res.ToRect()), X, Y, Prev, PrevConverter);
+        return newRegion;
+    }
+
     public bool IsEmpty()
     {
         return Width == 0 && Height == 0 && X == 0 && Y == 0;
@@ -174,8 +196,7 @@ public class Region : IDisposable
     /// <returns></returns>
     public Region Derive(int x, int y)
     {
-        var child = new Region(x, y, 0, 0, this, new TranslationConverter(X, Y));
-        return AddChild(child);
+        return Derive(x, y, 0, 0);
     }
 
     /// <summary>
@@ -188,14 +209,13 @@ public class Region : IDisposable
     /// <returns></returns>
     public Region Derive(int x, int y, int w, int h)
     {
-        var child = new Region(x, y, w, h, this, new TranslationConverter(X, Y));
+        var child = new Region(x, y, w, h, this, new TranslationConverter(x, y));
         return AddChild(child);
     }
 
     public Region Derive(Rect rect)
     {
-        var child = new Region(rect.X, rect.Y, rect.Width, rect.Height, this, new TranslationConverter(X, Y));
-        return AddChild(child);
+        return Derive(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
     protected Region AddChild(Region region)

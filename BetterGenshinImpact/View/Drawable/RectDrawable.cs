@@ -50,13 +50,15 @@ namespace BetterGenshinImpact.View.Drawable
         public bool IsEmpty => Rect.IsEmpty;
     }
 
-
+    /// <summary>
+    /// 只有在坐标是整个游戏窗口捕获区域的时候才能使用这里的方法进行转换
+    /// </summary>
     public static class RectDrawableExtension
     {
         public static RectDrawable ToRectDrawable(this Rect rect, Pen? pen = null, string? name = null)
         {
             var scale = TaskContext.Instance().DpiScale;
-            Rect newRect = new(rect.X / scale, rect.Y / scale, rect.Width /scale, rect.Height / scale);
+            Rect newRect = new(rect.X / scale, rect.Y / scale, rect.Width / scale, rect.Height / scale);
             return new RectDrawable(newRect, pen, name);
         }
 

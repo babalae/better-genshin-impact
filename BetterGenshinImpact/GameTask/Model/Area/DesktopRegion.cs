@@ -21,7 +21,7 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
 
     public GameCaptureRegion Derive(Bitmap captureBitmap, int x, int y)
     {
-        var child = new GameCaptureRegion(captureBitmap, x, y, this, new TranslationConverter(X, Y));
+        var child = new GameCaptureRegion(captureBitmap, x, y, this, new TranslationConverter(x, y));
         NextChildren ??= [];
         NextChildren.Add(child);
         return child;

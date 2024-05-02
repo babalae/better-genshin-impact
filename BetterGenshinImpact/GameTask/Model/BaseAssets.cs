@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Model;
+using OpenCvSharp;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Model;
@@ -11,7 +12,6 @@ namespace BetterGenshinImpact.GameTask.Model;
 /// <typeparam name="T"></typeparam>
 public class BaseAssets<T> : Singleton<T> where T : class
 {
-    protected SystemInfo Info => TaskContext.Instance().SystemInfo;
-    protected RECT CaptureRect => TaskContext.Instance().SystemInfo.CaptureAreaRect;
-    protected double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+    protected Rect CaptureRect => TaskContext.Instance().SystemInfo.ScaleCaptureAreaRect;
+    protected double AssetScale => TaskContext.Instance().SystemInfo.RealAssetScale;
 }

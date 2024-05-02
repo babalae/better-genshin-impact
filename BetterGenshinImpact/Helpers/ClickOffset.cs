@@ -10,6 +10,8 @@ public class ClickOffset
     public int OffsetY { get; set; }
     public double AssetScale { get; set; }
 
+    public double CaptureAreaScale { get; set; }
+
     public ClickOffset()
     {
         if (!TaskContext.Instance().IsInitialized)
@@ -21,10 +23,17 @@ public class ClickOffset
         OffsetX = captureArea.X;
         OffsetY = captureArea.Y;
         AssetScale = assetScale;
+        CaptureAreaScale = TaskContext.Instance().SystemInfo.CaptureAreaScale;
     }
 
     public ClickOffset(int offsetX, int offsetY, double assetScale)
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            throw new Exception("请先启动");
+        }
+        CaptureAreaScale = TaskContext.Instance().SystemInfo.CaptureAreaScale;
+
         OffsetX = offsetX;
         OffsetY = offsetY;
         AssetScale = assetScale;
