@@ -62,12 +62,6 @@ namespace BetterGenshinImpact.GameTask
 
         public event EventHandler UiTaskStartTickEvent;
 
-        // 记录 start 的参数
-        private IntPtr _hWnd;
-
-        private CaptureModes _mode;
-        private int _interval;
-
         public TaskTriggerDispatcher()
         {
             _instance = this;
@@ -102,10 +96,6 @@ namespace BetterGenshinImpact.GameTask
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
-            _hWnd = hWnd;
-            _mode = mode;
-            _interval = interval;
-
             // 初始化截图器
             GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
