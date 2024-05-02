@@ -48,7 +48,10 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
 
         var newMat = new Mat();
         Cv2.Resize(SrcMat, newMat, new Size(1920, 1080));
-        var child = new ImageRegion(newMat, X, Y, this, new ScaleConverter(scale));
-        return AddChild(child);
+        _srcGreyMat?.Dispose();
+        _srcMat?.Dispose();
+        _srcBitmap?.Dispose();
+        this.SrcBitmap.Dispose();
+        return new ImageRegion(newMat, X, Y, this, new ScaleConverter(scale));
     }
 }

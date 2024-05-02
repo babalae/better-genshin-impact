@@ -19,9 +19,9 @@ namespace BetterGenshinImpact.GameTask.Model.Area;
 
 public class ImageRegion : Region
 {
-    private Bitmap? _srcBitmap;
-    private Mat? _srcMat;
-    private Mat? _srcGreyMat;
+    protected Bitmap? _srcBitmap;
+    protected Mat? _srcMat;
+    protected Mat? _srcGreyMat;
 
     public Bitmap SrcBitmap
     {
@@ -96,8 +96,7 @@ public class ImageRegion : Region
     /// <returns></returns>
     public ImageRegion DeriveCrop(int x, int y, int w, int h)
     {
-        var child = new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(X, Y));
-        return AddChild(child);
+        return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(X, Y));
     }
 
     public ImageRegion DeriveCrop(Rect rect)
@@ -107,15 +106,7 @@ public class ImageRegion : Region
 
     public ImageRegion Derive(Mat mat, int x, int y)
     {
-        var child = new ImageRegion(mat, x, y, this, new TranslationConverter(X, Y));
-        return AddChild(child);
-    }
-
-    protected ImageRegion AddChild(ImageRegion region)
-    {
-        NextChildren ??= [];
-        NextChildren.Add(region);
-        return region;
+        return new ImageRegion(mat, x, y, this, new TranslationConverter(X, Y));
     }
 
     /// <summary>
@@ -400,8 +391,6 @@ public class ImageRegion : Region
 
     public new void Dispose()
     {
-        // 所有下级节点都会被释放
-        NextChildren?.ForEach(x => x.Dispose());
         _srcGreyMat?.Dispose();
         _srcMat?.Dispose();
         _srcBitmap?.Dispose();

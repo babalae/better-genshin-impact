@@ -19,6 +19,31 @@ public class Region : IDisposable
     public int Width { get; set; }
     public int Height { get; set; }
 
+    public int Top
+    {
+        get => Y;
+        set => Y = value;
+    }
+
+    /// <summary>
+    /// Gets the y-coordinate that is the sum of the Y and Height property values of this Rect structure.
+    /// </summary>
+    public int Bottom => Y + Height;
+
+    /// <summary>
+    /// Gets the x-coordinate of the left edge of this Rect structure.
+    /// </summary>
+    public int Left
+    {
+        get => X;
+        set => X = value;
+    }
+
+    /// <summary>
+    /// Gets the x-coordinate that is the sum of X and Width property values of this Rect structure.
+    /// </summary>
+    public int Right => X + Width;
+
     /// <summary>
     /// 存放OCR识别的结果文本
     /// </summary>
@@ -49,7 +74,7 @@ public class Region : IDisposable
     /// </summary>
     public INodeConverter? PrevConverter { get; }
 
-    public List<Region>? NextChildren { get; protected set; }
+    // public List<Region>? NextChildren { get; protected set; }
 
     /// <summary>
     /// 点击【自己】的中心
@@ -185,7 +210,7 @@ public class Region : IDisposable
     public void Dispose()
     {
         // 子节点全部释放
-        NextChildren?.ForEach(x => x.Dispose());
+        // NextChildren?.ForEach(x => x.Dispose());
     }
 
     /// <summary>
@@ -209,19 +234,11 @@ public class Region : IDisposable
     /// <returns></returns>
     public Region Derive(int x, int y, int w, int h)
     {
-        var child = new Region(x, y, w, h, this, new TranslationConverter(x, y));
-        return AddChild(child);
+        return new Region(x, y, w, h, this, new TranslationConverter(x, y));
     }
 
     public Region Derive(Rect rect)
     {
         return Derive(rect.X, rect.Y, rect.Width, rect.Height);
-    }
-
-    protected Region AddChild(Region region)
-    {
-        NextChildren ??= [];
-        NextChildren.Add(region);
-        return region;
     }
 }

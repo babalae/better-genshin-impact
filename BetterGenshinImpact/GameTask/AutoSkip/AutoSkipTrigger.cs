@@ -131,8 +131,6 @@ public class AutoSkipTrigger : ITaskTrigger
 
         _prevExecute = DateTime.Now;
 
-        VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
-
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
@@ -199,7 +197,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 }
 
                 _prevHangoutExecute = DateTime.Now;
-                HangoutOptionChoose(content);
+                HangoutOptionChoose(content.CaptureRectArea);
             }
         }
         else
@@ -234,20 +232,12 @@ public class AutoSkipTrigger : ITaskTrigger
         return false;
     }
 
-    private void HangoutOptionChoose(CaptureContent content)
+    private void HangoutOptionChoose(ImageRegion captureRegion)
     {
-        var selectedRects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcGreyMat, _autoSkipAssets.HangoutSelectedMat);
-        var unselectedRects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcGreyMat, _autoSkipAssets.HangoutUnselectedMat);
+        var selectedRects = captureRegion.FindMulti(_autoSkipAssets.HangoutSelectedRo);
+        var unselectedRects = captureRegion.FindMulti(_autoSkipAssets.HangoutUnselectedRo);
         if (selectedRects.Count > 0 || unselectedRects.Count > 0)
         {
-            var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-            var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-
-            // 识别结果显示在遮罩上
-            var drawList = selectedRects.Concat(unselectedRects).Select(rect => rect.ToRectDrawable()).ToList();
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList("HangoutIcon", drawList);
-
             List<HangoutOption> hangoutOptionList =
             [
                 .. selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)),
@@ -261,7 +251,7 @@ public class AutoSkipTrigger : ITaskTrigger
             //     return;
             // }
 
-            hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != Rect.Empty).ToList();
+            hangoutOptionList = hangoutOptionList.Where(hangoutOption => hangoutOption.TextRect != null).ToList();
             if (hangoutOptionList.Count == 0)
             {
                 return;
@@ -270,8 +260,7 @@ public class AutoSkipTrigger : ITaskTrigger
             // OCR识别选项文字
             foreach (var hangoutOption in hangoutOptionList)
             {
-                using var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, hangoutOption.TextRect);
-                var text = OcrFactory.Paddle.Ocr(textMat);
+                var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcGreyMat);
                 hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
             }
 
@@ -285,10 +274,11 @@ public class AutoSkipTrigger : ITaskTrigger
                     {
                         if (hangoutOption.OptionTextSrc.Contains(str))
                         {
-                            hangoutOption.Click(clickOffset);
+                            hangoutOption.Click();
                             _logger.LogInformation("邀约分支[{Text}]关键词[{Str}]命中", _config.AutoHangoutEndChoose, str);
                             AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
-                            VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
+                            VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+                            VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
                             return;
                         }
                     }
@@ -300,17 +290,19 @@ public class AutoSkipTrigger : ITaskTrigger
             {
                 if (!hangoutOption.IsSelected)
                 {
-                    hangoutOption.Click(clickOffset);
+                    hangoutOption.Click();
                     AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
-                    VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
+                    VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+                    VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
                     return;
                 }
             }
 
             // 没有未点击的选项 选择第一个已点击选项
-            hangoutOptionList[0].Click(clickOffset);
+            hangoutOptionList[0].Click();
             AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
-            VisionContext.Instance().DrawContent.RemoveRect("HangoutIcon");
+            VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
+            VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
         }
     }
 
