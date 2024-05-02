@@ -131,7 +131,13 @@
                               Grid.Column="1"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding ModeNames, Mode=OneWay}"
-                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding CaptureModeDropDownChangedCommand}" CommandParameter="GeniusInvocation" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">

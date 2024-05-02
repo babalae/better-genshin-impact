@@ -95,6 +95,18 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     }
 
     [RelayCommand]
+    private async Task OnCaptureModeDropDownChanged()
+    {
+        // 启动的情况下重启
+        if (TaskDispatcherEnabled)
+        {
+            _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
+            OnStopTrigger();
+            await OnStartTriggerAsync();
+        }
+    }
+
+    [RelayCommand]
     private void OnStartCaptureTest()
     {
         var picker = new PickerWindow();
