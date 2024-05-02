@@ -275,13 +275,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
         ));
 
-        HotKeySettingModels.Add(new HotKeySettingModel(
-            "启动/停止自动追踪",
-            nameof(Config.HotKeyConfig.AutoTrackHotkey),
-            Config.HotKeyConfig.AutoTrackHotkey,
-            Config.HotKeyConfig.AutoTrackHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrack(); }
-        ));
+        // HotKeySettingModels.Add(new HotKeySettingModel(
+        //     "启动/停止自动追踪",
+        //     nameof(Config.HotKeyConfig.AutoTrackHotkey),
+        //     Config.HotKeyConfig.AutoTrackHotkey,
+        //     Config.HotKeyConfig.AutoTrackHotkeyType,
+        //     (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrack(); }
+        // ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
             "快捷点击原神内确认按钮",

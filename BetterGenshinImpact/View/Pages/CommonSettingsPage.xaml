@@ -261,13 +261,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用截图功能（开发者）"
+                                  Text="启用保存截图功能（开发者）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        启用后可以通过快捷键截图，文件保存在<Hyperlink Command="{Binding GoToFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        可以通过快捷键保存截图，文件保存在<Hyperlink Command="{Binding GoToFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             log/screenshot
                         </Hyperlink>
                     </ui:TextBlock>
@@ -367,7 +367,7 @@
         </ui:CardControl>
 
         <!--  地图  -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -389,7 +389,7 @@
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看地图" />
-        </ui:CardControl>
+        </ui:CardControl>-->
 
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>
