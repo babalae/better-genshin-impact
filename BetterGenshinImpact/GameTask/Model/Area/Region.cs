@@ -137,6 +137,12 @@ public class Region : IDisposable
         VisionContext.Instance().DrawContent.PutRect(name, drawable);
     }
 
+    public void DrawRect(Rect rect, string name, Pen? pen = null)
+    {
+        var drawable = ToRectDrawable(rect.X, rect.Y, rect.Width, rect.Height, name, pen);
+        VisionContext.Instance().DrawContent.PutRect(name, drawable);
+    }
+
     /// <summary>
     /// 转换【自己】到遮罩窗口绘制矩形
     /// </summary>

@@ -211,20 +211,16 @@ public class ExpeditionTask
 
     private PaddleOcrResult CaptureAndOcr(CaptureContent content)
     {
-        using var bitmap = TaskControl.CaptureGameBitmap();
-        using var mat = bitmap.ToMat();
-        Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
-        var result = OcrFactory.Paddle.OcrResult(mat);
+        using var ra = TaskControl.CaptureToRectArea();
+        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 
     private PaddleOcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
-        using var bitmap = TaskControl.CaptureGameBitmap();
-        using var mat = new Mat(bitmap.ToMat(), rect);
-        Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
-        var result = OcrFactory.Paddle.OcrResult(mat);
+        using var ra = TaskControl.CaptureToRectArea();
+        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }

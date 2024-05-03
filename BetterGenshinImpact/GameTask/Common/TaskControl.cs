@@ -82,7 +82,7 @@ public class TaskControl
         }
     }
 
-    public static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+    private static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
     {
         var bitmap = gameCapture?.Capture();
         // wgc 缓冲区设置的2 所以至少截图3次
@@ -118,6 +118,7 @@ public class TaskControl
         }
     }
 
+    [Obsolete]
     public static Bitmap CaptureGameBitmap()
     {
         return CaptureGameBitmap(TaskTriggerDispatcher.GlobalGameCapture);
