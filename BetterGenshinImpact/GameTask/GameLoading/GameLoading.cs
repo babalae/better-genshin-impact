@@ -17,7 +17,7 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public bool IsExclusive => false;
 
-    private readonly GameLoadingAssets _assets = new();
+    private readonly GameLoadingAssets _assets;
 
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
 
@@ -30,6 +30,12 @@ public class GameLoadingTrigger : ITaskTrigger
     // private ClickOffset? _clickOffset;
 
     private PostMessageSimulator? _postMessageSimulator;
+
+    public GameLoadingTrigger()
+    {
+        GameLoadingAssets.DestroyInstance();
+        _assets = GameLoadingAssets.Instance;
+    }
 
     public void Init()
     {
