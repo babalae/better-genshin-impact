@@ -78,14 +78,17 @@ public class Region : IDisposable
 
     /// <summary>
     /// 点击【自己】的中心
+    /// region.Derive(x,y).Click() 等效于 region.ClickTo(x,y)
     /// </summary>
     public void Click()
     {
-        ClickTo(X, Y, Width, Height);
+        // 相对自己是 0, 0 坐标
+        ClickTo(0, 0, Width, Height);
     }
 
     /// <summary>
     /// 点击区域内【指定位置】
+    /// region.Derive(x,y).Click() 等效于 region.ClickTo(x,y)
     /// </summary>
     /// <param name="x"></param>
     /// <param name="y"></param>
@@ -108,11 +111,26 @@ public class Region : IDisposable
         res.TargetRegion.DesktopRegionClick(res.X, res.Y, res.Width, res.Height);
     }
 
+    /// <summary>
+    /// 直接在遮罩窗口绘制【自己】
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="pen"></param>
     public void DrawSelf(string name, Pen? pen = null)
     {
-        DrawRect(X, Y, Width, Height, name, pen);
+        // 相对自己是 0, 0 坐标
+        DrawRect(0, 0, Width, Height, name, pen);
     }
 
+    /// <summary>
+    /// 直接在遮罩窗口绘制当前区域下的【指定区域】
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="w"></param>
+    /// <param name="h"></param>
+    /// <param name="name"></param>
+    /// <param name="pen"></param>
     public void DrawRect(int x, int y, int w, int h, string name, Pen? pen = null)
     {
         var drawable = ToRectDrawable(x, y, w, h, name, pen);
@@ -127,7 +145,8 @@ public class Region : IDisposable
     /// <returns></returns>
     public RectDrawable SelfToRectDrawable(string name, Pen? pen = null)
     {
-        return ToRectDrawable(X, Y, Width, Height, name, pen);
+        // 相对自己是 0, 0 坐标
+        return ToRectDrawable(0, 0, Width, Height, name, pen);
     }
 
     /// <summary>
@@ -176,7 +195,7 @@ public class Region : IDisposable
     }
 
     /// <summary>
-    /// 生成一个新的区域，但是不会添加到子节点
+    /// 生成一个新的区域
     /// 请使用 using var newRegion
     /// </summary>
     /// <returns></returns>
@@ -188,7 +207,7 @@ public class Region : IDisposable
             return imageRegion;
         }
 
-        var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(X, Y, Width, Height, this);
+        var res = ConvertRes<ImageRegion>.ConvertPositionToTargetRegion(0, 0, Width, Height, this);
         var newRegion = new ImageRegion(new Mat(res.TargetRegion.SrcMat, res.ToRect()), X, Y, Prev, PrevConverter);
         return newRegion;
     }

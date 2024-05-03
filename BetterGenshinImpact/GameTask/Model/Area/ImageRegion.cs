@@ -96,7 +96,7 @@ public class ImageRegion : Region
     /// <returns></returns>
     public ImageRegion DeriveCrop(int x, int y, int w, int h)
     {
-        return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(X, Y));
+        return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(x, y));
     }
 
     public ImageRegion DeriveCrop(Rect rect)
@@ -104,10 +104,10 @@ public class ImageRegion : Region
         return DeriveCrop(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
-    public ImageRegion Derive(Mat mat, int x, int y)
-    {
-        return new ImageRegion(mat, x, y, this, new TranslationConverter(X, Y));
-    }
+    // public ImageRegion Derive(Mat mat, int x, int y)
+    // {
+    //     return new ImageRegion(mat, x, y, this, new TranslationConverter(x, y));
+    // }
 
     /// <summary>
     /// 在本区域内查找最优识别对象
@@ -170,7 +170,7 @@ public class ImageRegion : Region
             var p = MatchTemplateHelper.MatchTemplate(roi, template, ro.TemplateMatchMode, ro.MaskMat, ro.Threshold);
             if (p != new Point())
             {
-                var newRa = Derive(template.Clone(), p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y);
+                var newRa = Derive(p.X + ro.RegionOfInterest.X, p.Y + ro.RegionOfInterest.Y, template.Width, template.Height);
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
                     newRa.DrawSelf(ro.Name, ro.DrawOnWindowPen);

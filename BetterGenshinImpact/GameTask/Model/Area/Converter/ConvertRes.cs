@@ -19,7 +19,7 @@ public class ConvertRes<T>(int x, int y, int width, int height, T node) where T 
 
     public static ConvertRes<T> ConvertPositionToTargetRegion(int x, int y, int w, int h, Region startNode)
     {
-        var node = startNode.Prev;
+        var node = startNode;
         while (node != null)
         {
             if (node is T)
@@ -45,7 +45,7 @@ public class ConvertRes<T>(int x, int y, int width, int height, T node) where T 
         }
         else
         {
-            throw new Exception("Desktop Region not found");
+            throw new Exception("Target Region not found");
         }
     }
 }
