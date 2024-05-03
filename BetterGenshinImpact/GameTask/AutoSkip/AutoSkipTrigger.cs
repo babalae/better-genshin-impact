@@ -395,7 +395,6 @@ public class AutoSkipTrigger : ITaskTrigger
             TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
             exclamationIconRa.Click();
             AutoSkipLog("点击感叹号选项");
-            exclamationIconRa.Dispose();
             return true;
         }
 
@@ -408,8 +407,8 @@ public class AutoSkipTrigger : ITaskTrigger
 
             // 通过最下面的气泡框来文字识别
             var lowest = chatOptionResultList[0];
-            var ocrRect = new Rect((int)(lowest.X + lowest.Width + 8 * assetScale), 0,
-                (int)(535 * assetScale), (int)(lowest.Y + lowest.Height + 30 * assetScale));
+            var ocrRect = new Rect((int)(lowest.X + lowest.Width + 8 * assetScale), region.Height / 12,
+                (int)(535 * assetScale), (int)(lowest.Y + lowest.Height + 30 * assetScale - region.Height / 12d));
             var ocrResList = region.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,
