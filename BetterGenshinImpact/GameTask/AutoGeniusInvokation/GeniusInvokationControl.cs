@@ -458,6 +458,7 @@ public class GeniusInvokationControl
         if (!foundRectArea.IsEmpty())
         {
             foundRectArea.Click();
+            foundRectArea.Dispose();
             return true;
         }
 

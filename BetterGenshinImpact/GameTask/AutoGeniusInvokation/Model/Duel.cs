@@ -296,6 +296,8 @@ public class Duel
 
                 // 等待对方行动+回合结算
                 GeniusInvokationControl.GetInstance().WaitOpponentAction(this);
+
+                VisionContext.Instance().DrawContent.ClearAll();
                 RoundNum++;
             }
         }
