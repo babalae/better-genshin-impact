@@ -18,6 +18,14 @@ public interface IMouseSimulator
 
     public IMouseSimulator LeftButtonDoubleClick();
 
+    public IMouseSimulator MiddleButtonDown();
+
+    public IMouseSimulator MiddleButtonUp();
+
+    public IMouseSimulator MiddleButtonClick();
+
+    public IMouseSimulator MiddleButtonDoubleClick();
+
     public IMouseSimulator RightButtonDown();
 
     public IMouseSimulator RightButtonUp();
