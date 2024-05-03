@@ -111,6 +111,12 @@ public class ImageRegion : Region
 
     /// <summary>
     /// 在本区域内查找最优识别对象
+    /// 或者对该区域进行识别
+    /// 匹配
+    /// RecognitionTypes.TemplateMatch
+    /// RecognitionTypes.OcrMatch
+    /// 识别
+    /// RecognitionTypes.Ocr
     /// </summary>
     /// <param name="ro"></param>
     /// <param name="successAction">成功找到后做什么</param>
@@ -252,6 +258,50 @@ public class ImageRegion : Region
 
                 successAction?.Invoke(newRa);
                 return newRa;
+            }
+            else
+            {
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                }
+
+                failAction?.Invoke();
+                return new Region();
+            }
+        }
+        else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
+        {
+            var roi = SrcGreyMat;
+            if (ro.RegionOfInterest != Rect.Empty)
+            {
+                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+            }
+
+            var result = OcrFactory.Paddle.OcrResult(roi);
+            var text = StringUtils.RemoveAllSpace(result.Text);
+
+            if (!string.IsNullOrEmpty(text))
+            {
+                if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
+                {
+                    // 画出OCR识别到的区域
+                    var drawList = result.Regions.Select(item => this.ToRectDrawable(item.Rect.BoundingRect() + ro.RegionOfInterest.Location, ro.Name, ro.DrawOnWindowPen)).ToList();
+                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, drawList);
+                }
+                if (ro.RegionOfInterest != Rect.Empty)
+                {
+                    var newRa = Derive(ro.RegionOfInterest);
+                    newRa.Text = text;
+                    successAction?.Invoke(newRa);
+                    return newRa;
+                }
+                else
+                {
+                    this.Text = text;
+                    successAction?.Invoke(this);
+                    return this;
+                }
             }
             else
             {
