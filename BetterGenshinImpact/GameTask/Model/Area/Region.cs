@@ -184,6 +184,29 @@ public class Region : IDisposable
         return res.TargetRegion.ConvertToRectDrawable(res.X, res.Y, res.Width, res.Height, pen, name);
     }
 
+    /// <summary>
+    /// 转换【指定直线】到遮罩窗口绘制直线
+    /// </summary>
+    /// <param name="x1"></param>
+    /// <param name="y1"></param>
+    /// <param name="x2"></param>
+    /// <param name="y2"></param>
+    /// <param name="name"></param>
+    /// <param name="pen"></param>
+    /// <returns></returns>
+    public LineDrawable ToLineDrawable(int x1, int y1, int x2, int y2, string name, Pen? pen = null)
+    {
+        var res1 = ConvertRes<GameCaptureRegion>.ConvertPositionToTargetRegion(x1, y1, 0, 0, this);
+        var res2 = ConvertRes<GameCaptureRegion>.ConvertPositionToTargetRegion(x2, y2, 0, 0, this);
+        return res1.TargetRegion.ConvertToLineDrawable(res1.X, res1.Y, res2.X, res2.Y, pen, name);
+    }
+
+    public void DrawLine(int x1, int y1, int x2, int y2, string name, Pen? pen = null)
+    {
+        var drawable = ToLineDrawable(x1, y1, x2, y2, name, pen);
+        VisionContext.Instance().DrawContent.PutLine(name, drawable);
+    }
+
     public Rect ConvertSelfPositionToGameCaptureRegion()
     {
         return ConvertPositionToGameCaptureRegion(X, Y, Width, Height);

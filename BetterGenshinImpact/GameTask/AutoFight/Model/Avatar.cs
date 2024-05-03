@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -104,7 +105,7 @@ public class Avatar
     /// <returns></returns>
     public void ThrowWhenDefeated(ImageRegion region)
     {
-        var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
         if (!confirmRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);

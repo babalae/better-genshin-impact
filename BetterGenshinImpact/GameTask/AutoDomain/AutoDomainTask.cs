@@ -399,7 +399,7 @@ public class AutoDomainTask
         CancellationTokenSource treeCts = new CancellationTokenSource();
         _taskParam.Cts.Token.Register(treeCts.Cancel);
         // 中键回正视角
-        Simulation.SendInput.Mouse.MiddleButtonClick();
+        Simulation.SendInputEx.Mouse.MiddleButtonClick();
         Sleep(900, _taskParam.Cts);
 
         // 左右移动直到石化古树位于屏幕中心任务
@@ -415,7 +415,7 @@ public class AutoDomainTask
     {
         return new Task(() =>
         {
-            var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+            var captureArea = TaskContext.Instance().SystemInfo.ScaleCaptureAreaRect;
             var middleX = captureArea.Width / 2;
             var leftKeyDown = false;
             var rightKeyDown = false;
@@ -572,7 +572,7 @@ public class AutoDomainTask
         foreach (var box in result.Boxes)
         {
             var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-            list.Add(rect.ToRectDrawable());
+            list.Add(region.ToRectDrawable(rect, "tree"));
         }
 
         VisionContext.Instance().DrawContent.PutOrRemoveRectList("TreeBox", list);
@@ -594,7 +594,9 @@ public class AutoDomainTask
             var started = false;
             while (!cts.Token.IsCancellationRequested)
             {
-                var angle = CameraOrientation.Compute(GetRectAreaFromDispatcher().SrcGreyMat);
+                using var captureRegion = GetRectAreaFromDispatcher();
+                var angle = CameraOrientation.Compute(captureRegion.SrcGreyMat);
+                CameraOrientation.DrawDirection(captureRegion, angle);
                 if (angle is >= 356 or <= 4)
                 {
                     // 算作对准了

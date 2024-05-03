@@ -25,8 +25,29 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
     public RectDrawable ConvertToRectDrawable(int x, int y, int w, int h, Pen? pen = null, string? name = null)
     {
         var scale = TaskContext.Instance().DpiScale;
-        System.Windows.Rect newRect = new((int)(x / scale), (int)(y / scale), (int)(w / scale), (int)(h / scale));
+        System.Windows.Rect newRect = new(x / scale, y / scale, w / scale, h / scale);
         return new RectDrawable(newRect, pen, name);
+    }
+
+    /// <summary>
+    /// 在游戏捕获图像的坐标维度进行转换到遮罩窗口的坐标维度
+    /// </summary>
+    /// <param name="x1"></param>
+    /// <param name="y1"></param>
+    /// <param name="x2"></param>
+    /// <param name="y2"></param>
+    /// <param name="pen"></param>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public LineDrawable ConvertToLineDrawable(int x1, int y1, int x2, int y2, Pen? pen = null, string? name = null)
+    {
+        var scale = TaskContext.Instance().DpiScale;
+        var drawable = new LineDrawable(x1 / scale, y1 / scale, x2 / scale, y2 / scale);
+        if (pen != null)
+        {
+            drawable.Pen = pen;
+        }
+        return drawable;
     }
 
     // public void DrawRect(int x, int y, int w, int h, Pen? pen = null, string? name = null)

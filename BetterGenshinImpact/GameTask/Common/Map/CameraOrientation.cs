@@ -77,19 +77,25 @@ public class CameraOrientation
             angle -= 360;
         }
 
+        return angle;
+    }
+
+    public static void DrawDirection(ImageRegion region, int angle)
+    {
         // 绘图
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
         const int r = 100;
-        var center = new Point(168, 125);
+        var center = new Point(168 * scale, 125 * scale); // 地图中心点 后续建议调整
         var x1 = center.X + r * Math.Cos(angle * Math.PI / 180);
         var y1 = center.Y + r * Math.Sin(angle * Math.PI / 180);
 
-        var line = new LineDrawable(center, new Point(x1, y1))
-        {
-            Pen = new Pen(Color.Yellow, 1)
-        };
-        VisionContext.Instance().DrawContent.PutLine("camera", line);
+        // var line = new LineDrawable(center, new Point(x1, y1))
+        // {
+        //     Pen = new Pen(Color.Yellow, 1)
+        // };
+        // VisionContext.Instance().DrawContent.PutLine("camera", line);
 
-        return angle;
+        region.DrawLine(center.X, center.Y, (int)x1, (int)y1, "camera", new Pen(Color.Yellow, 1));
     }
 
     static List<int> FindPeaks(float[] data)

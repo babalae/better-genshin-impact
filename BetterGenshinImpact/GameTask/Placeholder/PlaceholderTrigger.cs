@@ -221,7 +221,7 @@ public class TestTrigger : ITaskTrigger
                     }
                 }
 
-                VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(correctP1, correctP2 + (correctP2 - correctP1) * 3));
+                // VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(correctP1, correctP2 + (correctP2 - correctP1) * 3));
             }
         }
     }
@@ -294,9 +294,9 @@ public class TestTrigger : ITaskTrigger
         var x1 = center.X + r * Math.Cos(angle * Math.PI / 180);
         var y1 = center.Y + r * Math.Sin(angle * Math.PI / 180);
 
-        var line = new LineDrawable(center, new Point(x1, y1));
-        line.Pen = new Pen(Color.Yellow, 1);
-        VisionContext.Instance().DrawContent.PutLine("camera", line);
+        // var line = new LineDrawable(center, new Point(x1, y1));
+        // line.Pen = new Pen(Color.Yellow, 1);
+        // VisionContext.Instance().DrawContent.PutLine("camera", line);
     }
 
     static List<int> FindPeaks(float[] data)
