@@ -21,6 +21,7 @@ public class ConfigService : IConfigService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters =
         {
+            new OpenCvPointJsonConverter(),
             new OpenCvRectJsonConverter(),
         },
         WriteIndented = true,
@@ -137,5 +138,27 @@ public class OpenCvRectJsonConverter : JsonConverter<Rect>
         public int Y { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
+    }
+}
+
+public class OpenCvPointJsonConverter : JsonConverter<Point>
+{
+    public override unsafe Point Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        PointHelper helper = JsonSerializer.Deserialize<PointHelper>(ref reader, options);
+        return *(Point*)&helper;
+    }
+
+    public override unsafe void Write(Utf8JsonWriter writer, Point value, JsonSerializerOptions options)
+    {
+        PointHelper helper = *(PointHelper*)&value;
+        JsonSerializer.Serialize(writer, helper, options);
+    }
+
+    // DO NOT MODIFY: Keep the layout same as OpenCvSharp.Point
+    private struct PointHelper
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
     }
 }

@@ -134,4 +134,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _oneKeyFightHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 地图路线录制开始/停止
+    [ObservableProperty]
+    private string _mapPosRecordHotkey = "";
+
+    [ObservableProperty]
+    private string _mapPosRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

@@ -1,12 +1,14 @@
-﻿using OpenCvSharp;
+﻿using System;
+using OpenCvSharp;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackWay.Model;
 
+[Serializable]
 public class Way
 {
-    private List<WayPoint> WayPointList { get; set; } = new();
+    public List<WayPoint> WayPointList { get; set; } = new();
 
     public void AddPoint(Rect matchRect)
     {
