@@ -93,6 +93,14 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
         DesktopRegion.DesktopRegionClick(captureAreaRect.X + cx, captureAreaRect.Y + cy);
     }
 
+    public static void GameRegionMove(Func<Size, double, (double, double)> posFunc)
+    {
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (cx, cy) = posFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
+        DesktopRegion.DesktopRegionMove(captureAreaRect.X + cx, captureAreaRect.Y + cy);
+    }
+
     /// <summary>
     /// 静态方法,输入1080P下的坐标,方法会自动转换到当前游戏捕获区域大小下的坐标并点击
     /// </summary>
@@ -102,5 +110,11 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
     {
         // 1080P坐标 转换到实际游戏窗口坐标
         GameRegionClick((_, scale) => (cx * scale, cy * scale));
+    }
+
+    public static void GameRegion1080PPosMove(double cx, double cy)
+    {
+        // 1080P坐标 转换到实际游戏窗口坐标
+        GameRegionMove((_, scale) => (cx * scale, cy * scale));
     }
 }
