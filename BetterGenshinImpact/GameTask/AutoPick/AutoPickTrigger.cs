@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Windows.Forms;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Helpers;
 using WindowsInput;
 using BetterGenshinImpact.Service;
@@ -144,8 +145,17 @@ public class AutoPickTrigger : ITaskTrigger
 
             var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
 
-            var paddedMat = PreProcessForInference(textMat);
-            var text = _pickTextInference.Inference(paddedMat);
+            string text;
+            if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
+            {
+                var paddedMat = PreProcessForInference(textMat);
+                text = _pickTextInference.Inference(paddedMat);
+            }
+            else
+            {
+                text = OcrFactory.Paddle.Ocr(textMat);
+            }
+
             speedTimer.Record("文字识别");
             if (!string.IsNullOrEmpty(text))
             {

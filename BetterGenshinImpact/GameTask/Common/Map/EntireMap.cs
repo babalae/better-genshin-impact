@@ -73,7 +73,7 @@ public class EntireMap
     }
 
     /// <summary>
-    /// 基于Surf匹配获取地图位置(1024区块)
+    /// 基于特征匹配获取地图位置(1024区块)
     /// 支持大地图和小地图
     /// </summary>
     /// <param name="greyMat">灰度图</param>
@@ -104,7 +104,7 @@ public class EntireMap
         catch
         {
             (_prevX, _prevY) = (-1, -1);
-            Debug.WriteLine("Surf Match Failed");
+            Debug.WriteLine("Feature Match Failed");
             return Rect.Empty;
         }
     }
