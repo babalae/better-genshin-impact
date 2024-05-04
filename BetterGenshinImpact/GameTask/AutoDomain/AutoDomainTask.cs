@@ -415,7 +415,7 @@ public class AutoDomainTask
     {
         return new Task(() =>
         {
-            var captureArea = TaskContext.Instance().SystemInfo.ScaleCaptureAreaRect;
+            var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
             var middleX = captureArea.Width / 2;
             var leftKeyDown = false;
             var rightKeyDown = false;

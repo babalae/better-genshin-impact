@@ -21,19 +21,21 @@ namespace BetterGenshinImpact.GameTask.Model
         public RECT GameScreenSize { get; }
 
         /// <summary>
-        /// 素材缩放比例
+        /// 以1080P为标准的素材缩放比例,不会大于1
+        /// 与 ZoomOutMax1080PRatio 相等
         /// </summary>
         public double AssetScale { get; } = 1;
 
         /// <summary>
-        /// 真·素材缩放比例
+        /// 游戏区域比1080P缩小的比例
+        /// 最大值为1
         /// </summary>
-        public double RealAssetScale { get; } = 1;
+        public double ZoomOutMax1080PRatio { get; } = 1;
 
         /// <summary>
-        /// 捕获游戏区域缩放比例
+        /// 捕获游戏区域缩放至1080P的比例
         /// </summary>
-        public double CaptureAreaScale { get; } = 1;
+        public double ScaleTo1080PRatio { get; }
 
         /// <summary>
         /// 捕获窗口区域 和实际游戏画面一致
@@ -42,9 +44,9 @@ namespace BetterGenshinImpact.GameTask.Model
         public RECT CaptureAreaRect { get; set; }
 
         /// <summary>
-        /// 捕获窗口区域 缩放至1920x1080
+        /// 捕获窗口区域 大于1080P则为1920x1080
         /// </summary>
-        public Rect ScaleCaptureAreaRect { get; set; }
+        public Rect ScaleMax1080PCaptureRect { get; set; }
 
         public Process GameProcess { get; }
 
@@ -81,11 +83,13 @@ namespace BetterGenshinImpact.GameTask.Model
             // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
             if (GameScreenSize.Width < 1920)
             {
-                AssetScale = GameScreenSize.Width / 1920d;
+                ZoomOutMax1080PRatio = GameScreenSize.Width / 1920d;
+                AssetScale = ZoomOutMax1080PRatio;
             }
+            ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
 
             CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
-            ScaleCaptureAreaRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width > 1920 ? 1920 : CaptureAreaRect.Width, CaptureAreaRect.Height > 1080 ? 1080 : CaptureAreaRect.Height);
+            ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width > 1920 ? 1920 : CaptureAreaRect.Width, CaptureAreaRect.Height > 1080 ? 1080 : CaptureAreaRect.Height);
         }
     }
 }

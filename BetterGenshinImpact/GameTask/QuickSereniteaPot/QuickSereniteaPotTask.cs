@@ -1,11 +1,11 @@
-﻿using System;
-using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
+using System;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
@@ -57,21 +57,17 @@ public class QuickSereniteaPotTask
             return;
         }
 
+        QuickSereniteaPotAssets.DestroyInstance();
+
         try
         {
-            var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-            var info = TaskContext.Instance().SystemInfo;
-
-            var clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-
             // 打开背包
             Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_B);
             TaskControl.CheckAndSleep(500);
             WaitForBagToOpen();
 
             // 点击道具页
-            clickOffset.ClickWithoutScale((int)(1050 * assetScale), (int)(50 * assetScale));
+            GameCaptureRegion.GameRegion1080PPosClick(1050, 50);
             TaskControl.CheckAndSleep(200);
 
             // 尝试放置壶
@@ -79,7 +75,9 @@ public class QuickSereniteaPotTask
             TaskControl.CheckAndSleep(200);
 
             // 点击放置 右下225,60
-            clickOffset.ClickWithoutScale(captureArea.Width - (int)(225 * assetScale), captureArea.Height - (int)(60 * assetScale));
+            GameCaptureRegion.GameRegionClick((size, assetScale) => (size.Width - 225 * assetScale, size.Height - 60 * assetScale));
+            // 也可以使用下面的方法点击放置按钮
+            // Bv.ClickWhiteConfirmButton(TaskControl.CaptureToRectArea());
             TaskControl.CheckAndSleep(800);
 
             // 按F进入

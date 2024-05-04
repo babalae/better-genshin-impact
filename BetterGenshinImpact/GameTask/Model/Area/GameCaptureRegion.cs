@@ -1,7 +1,8 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.View.Drawable;
-using System.Drawing;
 using OpenCvSharp;
+using System;
+using System.Drawing;
 using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -56,7 +57,7 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
     // }
 
     /// <summary>
-    /// 统一转换到1080P
+    /// 游戏窗口初始截图统一转换到1080P
     /// </summary>
     /// <returns></returns>
     public ImageRegion DeriveTo1080P()
@@ -72,7 +73,34 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
         _srcGreyMat?.Dispose();
         _srcMat?.Dispose();
         _srcBitmap?.Dispose();
-        this.SrcBitmap.Dispose();
         return new ImageRegion(newMat, X, Y, this, new ScaleConverter(scale));
+    }
+
+    /// <summary>
+    /// 静态方法,在游戏窗体捕获区域维度进行点击
+    /// </summary>
+    /// <param name="posFunc">
+    /// 实现一个方法输出要点击的的坐标(相对游戏捕获区域内坐标),提供以下参数供计算使用
+    /// Size = 当前游戏捕获区域大小
+    /// double = 当前游戏捕获区域到 1080P 的缩放比例
+    /// 也就是说方法内的魔法数字必须是 1080P下的数字
+    /// </param>
+    public static void GameRegionClick(Func<Size, double, (double, double)> posFunc)
+    {
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (cx, cy) = posFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
+        DesktopRegion.DesktopRegionClick(captureAreaRect.X + cx, captureAreaRect.Y + cy);
+    }
+
+    /// <summary>
+    /// 静态方法,输入1080P下的坐标,方法会自动转换到当前游戏捕获区域大小下的坐标并点击
+    /// </summary>
+    /// <param name="cx"></param>
+    /// <param name="cy"></param>
+    public static void GameRegion1080PPosClick(double cx, double cy)
+    {
+        // 1080P坐标 转换到实际游戏窗口坐标
+        GameRegionClick((_, scale) => (cx * scale, cy * scale));
     }
 }

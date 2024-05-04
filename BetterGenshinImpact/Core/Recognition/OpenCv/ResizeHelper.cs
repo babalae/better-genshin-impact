@@ -13,7 +13,10 @@ public class ResizeHelper
     /// <returns></returns>
     public static Mat Resize(Mat src, double scale)
     {
-        if (Math.Abs(scale - 1) > 0.00001) return Resize(src, scale, scale);
+        if (Math.Abs(scale - 1) > 0.00001)
+        {
+            return Resize(src, scale, scale);
+        }
         return src;
     }
 

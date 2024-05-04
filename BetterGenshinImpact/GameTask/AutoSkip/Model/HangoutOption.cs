@@ -24,7 +24,7 @@ public class HangoutOption : IDisposable
         // 选项文字所在区域初始化
         // 选项图标往上下区域扩展 2/3
         var r = Rect.Empty;
-        var captureArea = TaskContext.Instance().SystemInfo.ScaleCaptureAreaRect;
+        var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         if (IconRect.Left > captureArea.Width / 2)
         {

@@ -4,13 +4,18 @@ using System;
 
 namespace BetterGenshinImpact.Helpers;
 
+/// <summary>
+/// 不推荐使用
+/// 请使用 GameCaptureRegion.GameRegionClick 或 GameCaptureRegion.GameRegion1080PPosClick 替代
+/// </summary>
+[Obsolete]
 public class ClickOffset
 {
     public int OffsetX { get; set; }
     public int OffsetY { get; set; }
     public double AssetScale { get; set; }
 
-    public double CaptureAreaScale { get; set; }
+    // public double CaptureAreaScale { get; set; }
 
     public ClickOffset()
     {
@@ -23,7 +28,7 @@ public class ClickOffset
         OffsetX = captureArea.X;
         OffsetY = captureArea.Y;
         AssetScale = assetScale;
-        CaptureAreaScale = TaskContext.Instance().SystemInfo.CaptureAreaScale;
+        // CaptureAreaScale = TaskContext.Instance().SystemInfo.CaptureAreaScale;
     }
 
     public ClickOffset(int offsetX, int offsetY, double assetScale)
@@ -32,7 +37,7 @@ public class ClickOffset
         {
             throw new Exception("请先启动");
         }
-        CaptureAreaScale = TaskContext.Instance().SystemInfo.CaptureAreaScale;
+        // CaptureAreaScale = TaskContext.Instance().SystemInfo.CaptureAreaScale;
 
         OffsetX = offsetX;
         OffsetY = offsetY;
@@ -44,12 +49,12 @@ public class ClickOffset
         ClickExtension.Click(OffsetX + (int)(x * AssetScale), OffsetY + (int)(y * AssetScale));
     }
 
+    /// <summary>
+    /// 输入的x,y 注意处理缩放
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
     public void ClickWithoutScale(int x, int y)
-    {
-        ClickExtension.Click(OffsetX + x, OffsetY + y);
-    }
-
-    public void ClickWithoutScale(double x, double y)
     {
         ClickExtension.Click(OffsetX + x, OffsetY + y);
     }

@@ -605,12 +605,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private double NormalizeXTo1024(int x)
         {
-            return x * 1.0 / TaskContext.Instance().SystemInfo.CaptureAreaRect.Width * 1024;
+            return x * 1.0 / TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width * 1024;
         }
 
         private double NormalizeYTo576(int y)
         {
-            return y * 1.0 / TaskContext.Instance().SystemInfo.CaptureAreaRect.Height * 576;
+            return y * 1.0 / TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Height * 576;
         }
 
         /// <summary>
