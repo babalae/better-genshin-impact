@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = "0.28.0";
+    public static string Version { get; } = "0.28.5";
 
     public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
 

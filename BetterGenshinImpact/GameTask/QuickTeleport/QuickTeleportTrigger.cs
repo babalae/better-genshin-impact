@@ -137,7 +137,9 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 using var ra = content.CaptureRectArea.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y, 200, iconRect.Height);
                 using var textRegion = ra.Find(new RecognitionObject
                 {
-                    RecognitionType = RecognitionTypes.Ocr
+                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
+                    LowerColor = new Scalar(249, 249, 249),  // 只取白色文字
+                    UpperColor = new Scalar(255, 255, 255),
                 });
                 if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)
                 {

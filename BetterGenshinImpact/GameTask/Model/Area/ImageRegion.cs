@@ -270,12 +270,30 @@ public class ImageRegion : Region
                 return new Region();
             }
         }
-        else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
+        else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType) || RecognitionTypes.ColorRangeAndOcr.Equals(ro.RecognitionType))
         {
-            var roi = SrcGreyMat;
-            if (ro.RegionOfInterest != Rect.Empty)
+            Mat roi;
+            if (RecognitionTypes.ColorRangeAndOcr.Equals(ro.RecognitionType))
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = SrcMat;
+                if (ro.RegionOfInterest != Rect.Empty)
+                {
+                    roi = new Mat(SrcMat, ro.RegionOfInterest);
+                }
+                roi = roi.Clone();
+                if (ro.ColorConversionCode != ColorConversionCodes.BGRA2BGR)
+                {
+                    Cv2.CvtColor(roi, roi, ro.ColorConversionCode);
+                }
+                Cv2.InRange(roi, ro.LowerColor, ro.UpperColor, roi);
+            }
+            else
+            {
+                roi = SrcGreyMat;
+                if (ro.RegionOfInterest != Rect.Empty)
+                {
+                    roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                }
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);
