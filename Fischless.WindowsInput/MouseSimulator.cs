@@ -72,6 +72,34 @@ public class MouseSimulator : IMouseSimulator
         return this;
     }
 
+    public IMouseSimulator MiddleButtonDown()
+    {
+        User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDown(MouseButton.MiddleButton).ToArray();
+        SendSimulatedInput(inputList);
+        return this;
+    }
+
+    public IMouseSimulator MiddleButtonUp()
+    {
+        User32.INPUT[] inputList = new InputBuilder().AddMouseButtonUp(MouseButton.MiddleButton).ToArray();
+        this.SendSimulatedInput(inputList);
+        return this;
+    }
+
+    public IMouseSimulator MiddleButtonClick()
+    {
+        User32.INPUT[] inputList = new InputBuilder().AddMouseButtonClick(MouseButton.MiddleButton).ToArray();
+        SendSimulatedInput(inputList);
+        return this;
+    }
+
+    public IMouseSimulator MiddleButtonDoubleClick()
+    {
+        User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDoubleClick(MouseButton.MiddleButton).ToArray();
+        SendSimulatedInput(inputList);
+        return this;
+    }
+
     public IMouseSimulator RightButtonDown()
     {
         User32.INPUT[] inputList = new InputBuilder().AddMouseButtonDown(MouseButton.RightButton).ToArray();

@@ -5,13 +5,9 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
-using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +15,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Point = OpenCvSharp.Point;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -67,12 +65,12 @@ public class GeniusInvokationControl
 
     private readonly AutoGeniusInvokationAssets _assets = AutoGeniusInvokationAssets.Instance;
 
-    private IGameCapture? _gameCapture;
+    // private IGameCapture? _gameCapture;
 
     public void Init(GeniusInvokationTaskParam taskParam)
     {
         _cts = taskParam.Cts;
-        _gameCapture = taskParam.Dispatcher.GameCapture;
+        // _gameCapture = taskParam.Dispatcher.GameCapture;
     }
 
     public void Sleep(int millisecondsTimeout)
@@ -88,55 +86,17 @@ public class GeniusInvokationControl
 
     public Mat CaptureGameMat()
     {
-        VisionContext.Instance().DrawContent.ClearAll();
-        CheckTask();
-        var bitmap = _gameCapture?.Capture();
-        // wgc 缓冲区设置的2 所以至少截图3次
-        if (_gameCapture?.Mode == CaptureModes.WindowsGraphicsCapture)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                bitmap = _gameCapture?.Capture();
-                Sleep(50);
-            }
-        }
-
-        if (bitmap == null)
-        {
-            _logger.LogWarning("截图失败!");
-            // 重试5次
-            for (var i = 0; i < 5; i++)
-            {
-                bitmap = _gameCapture?.Capture();
-                if (bitmap != null)
-                {
-                    return bitmap.ToMat();
-                }
-
-                Sleep(20);
-            }
-
-            throw new RetryException("尝试多次后,截图失败!");
-        }
-        else
-        {
-            return bitmap.ToMat();
-        }
+        return CaptureToRectArea().SrcMat;
     }
 
     public Mat CaptureGameGreyMat()
     {
-        var mat = CaptureGameMat();
-        Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
-        return mat;
+        return CaptureToRectArea().SrcGreyMat;
     }
 
-    public RectArea CaptureGameRectArea()
+    public ImageRegion CaptureGameRectArea()
     {
-        var mat = CaptureGameMat();
-        var systemInfo = TaskContext.Instance().SystemInfo;
-        return new RectArea(mat, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y, systemInfo.DesktopRectArea);
-        ;
+        return CaptureToRectArea();
     }
 
     public void CheckTask()
@@ -497,7 +457,8 @@ public class GeniusInvokationControl
         var foundRectArea = CaptureGameRectArea().Find(_assets.ConfirmButtonRo);
         if (!foundRectArea.IsEmpty())
         {
-            foundRectArea.ClickCenter();
+            foundRectArea.Click();
+            foundRectArea.Dispose();
             return true;
         }
 
@@ -578,7 +539,7 @@ public class GeniusInvokationControl
     public void ActionPhaseElementalTuning(int currentCardCount)
     {
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var m = Simulation.SendInput.Mouse;
+        var m = Simulation.SendInputEx.Mouse;
         ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
         Sleep(1500);
         if (currentCardCount == 1)
@@ -604,7 +565,7 @@ public class GeniusInvokationControl
         var foundRectArea = ra.Find(_assets.ElementalTuningConfirmButtonRo);
         if (!foundRectArea.IsEmpty())
         {
-            foundRectArea.ClickCenter();
+            foundRectArea.Click();
             return true;
         }
 
@@ -754,9 +715,9 @@ public class GeniusInvokationControl
     {
         CaptureGameRectArea().Find(_assets.RoundEndButtonRo, foundRectArea =>
         {
-            foundRectArea.ClickCenter();
+            foundRectArea.Click();
             Sleep(1000); // 有弹出动画
-            foundRectArea.ClickCenter();
+            foundRectArea.Click();
             Sleep(300);
         });
 

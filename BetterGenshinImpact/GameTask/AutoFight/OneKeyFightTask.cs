@@ -127,8 +127,8 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     /// </summary>
     private Task FightTask(CancellationTokenSource cts)
     {
-        var content = GetContentFromDispatcher();
-        var combatScenes = new CombatScenes().InitializeTeam(content);
+        var imageRegion = GetRectAreaFromDispatcher();
+        var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
         if (!combatScenes.CheckTeamInitialized())
         {
             if (_currentCombatScenes == null)
@@ -146,7 +146,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             _currentCombatScenes = combatScenes;
         }
         // 找到出战角色
-        var activeAvatar = _currentCombatScenes.Avatars.First(avatar => avatar.IsActive(content));
+        var activeAvatar = _currentCombatScenes.Avatars.First(avatar => avatar.IsActive(imageRegion));
 
         if (_avatarMacros != null && _avatarMacros.TryGetValue(activeAvatar.Name, out var combatCommands))
         {

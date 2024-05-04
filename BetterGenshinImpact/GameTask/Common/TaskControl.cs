@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -81,7 +82,7 @@ public class TaskControl
         }
     }
 
-    public static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+    private static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
     {
         var bitmap = gameCapture?.Capture();
         // wgc 缓冲区设置的2 所以至少截图3次
@@ -117,42 +118,45 @@ public class TaskControl
         }
     }
 
+    [Obsolete]
     public static Bitmap CaptureGameBitmap()
     {
         return CaptureGameBitmap(TaskTriggerDispatcher.GlobalGameCapture);
     }
 
-    public static CaptureContent CaptureToContent(IGameCapture? gameCapture)
+    private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
     {
         var bitmap = CaptureGameBitmap(gameCapture);
         return new CaptureContent(bitmap, 0, 0);
     }
 
-    public static CaptureContent CaptureToContent()
+    // [Obsolete]
+    // public static CaptureContent CaptureToContent()
+    // {
+    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
+    // }
+
+    public static ImageRegion CaptureToRectArea()
     {
-        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
+        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture).CaptureRectArea;
     }
 
-    public static RectArea CaptureToRectArea()
-    {
-        return CaptureToContent().CaptureRectArea;
-    }
+    // /// <summary>
+    // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    // /// </summary>
+    // /// <returns></returns>
+    // [Obsolete]
+    // public static CaptureContent GetContentFromDispatcher()
+    // {
+    //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
+    // }
 
     /// <summary>
     /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
     /// </summary>
     /// <returns></returns>
-    public static CaptureContent GetContentFromDispatcher()
+    public static ImageRegion GetRectAreaFromDispatcher()
     {
-        return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
-    }
-
-    /// <summary>
-    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
-    /// </summary>
-    /// <returns></returns>
-    public static RectArea GetRectAreaFromDispatcher()
-    {
-        return GetContentFromDispatcher().CaptureRectArea;
+        return TaskTriggerDispatcher.Instance().GetLastCaptureContent().CaptureRectArea;
     }
 }

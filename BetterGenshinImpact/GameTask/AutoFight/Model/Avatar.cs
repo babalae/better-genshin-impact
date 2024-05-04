@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
@@ -99,11 +101,11 @@ public class Avatar
     /// 是否存在角色被击败
     /// 通过判断确认按钮
     /// </summary>
-    /// <param name="content"></param>
+    /// <param name="region"></param>
     /// <returns></returns>
-    public void ThrowWhenDefeated(CaptureContent content)
+    public void ThrowWhenDefeated(ImageRegion region)
     {
-        var confirmRectArea = content.CaptureRectArea.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
         if (!confirmRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
@@ -126,11 +128,11 @@ public class Avatar
                 return;
             }
 
-            var content = GetContentFromDispatcher();
-            ThrowWhenDefeated(content);
+            var region = GetRectAreaFromDispatcher();
+            ThrowWhenDefeated(region);
 
-            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(content));
-            if (IsActive(content) && notActiveCount == 3)
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            if (IsActive(region) && notActiveCount == 3)
             {
                 return;
             }
@@ -146,7 +148,7 @@ public class Avatar
     /// 是否出战状态
     /// </summary>
     /// <returns></returns>
-    public bool IsActive(CaptureContent content)
+    public bool IsActive(ImageRegion region)
     {
         if (IndexRect == Rect.Empty)
         {
@@ -155,7 +157,7 @@ public class Avatar
         else
         {
             // 剪裁出IndexRect区域
-            var indexRa = content.CaptureRectArea.Crop(IndexRect);
+            var indexRa = region.DeriveCrop(IndexRect);
             // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 251, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
@@ -174,16 +176,16 @@ public class Avatar
     /// </summary>
     /// <returns></returns>
     [Obsolete]
-    public bool IsActiveNoIndexRect(CaptureContent content)
+    public bool IsActiveNoIndexRect(ImageRegion region)
     {
         // 通过寻找右侧人物编号来判断是否出战
         if (IndexRect == Rect.Empty)
         {
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // 剪裁出队伍区域
-            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
-            var block = teamRa.Crop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
+            var block = teamRa.DeriveCrop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
             // Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
             // 取白色区域
             var bMat = OpenCvCommonHelper.Threshold(block.SrcMat, new Scalar(255, 255, 255), new Scalar(255, 255, 255));
@@ -204,9 +206,9 @@ public class Avatar
         else
         {
             // 剪裁出IndexRect区域
-            var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
-            var indexBlock = teamRa.Crop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
+            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
@@ -277,9 +279,9 @@ public class Avatar
 
             Sleep(200, Cts);
 
-            var content = GetContentFromDispatcher();
-            ThrowWhenDefeated(content);
-            var cd = GetSkillCurrentCd(content);
+            var region = GetRectAreaFromDispatcher();
+            ThrowWhenDefeated(region);
+            var cd = GetSkillCurrentCd(region);
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
@@ -294,9 +296,9 @@ public class Avatar
     /// 右下 267x132
     /// 77x77
     /// </summary>
-    public double GetSkillCurrentCd(CaptureContent content)
+    public double GetSkillCurrentCd(ImageRegion imageRegion)
     {
-        var eRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.ERect);
+        var eRa = imageRegion.DeriveCrop(AutoFightContext.Instance.FightAssets.ERect);
         var text = OcrFactory.Paddle.Ocr(eRa.SrcGreyMat);
         return StringUtils.TryParseDouble(text);
     }
@@ -318,9 +320,9 @@ public class Avatar
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
             Sleep(200, Cts);
 
-            var content = GetContentFromDispatcher();
-            ThrowWhenDefeated(content);
-            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(content));
+            var region = GetRectAreaFromDispatcher();
+            ThrowWhenDefeated(region);
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (notActiveCount == 0)
             {
                 // isBurstReleased = true;
@@ -343,17 +345,17 @@ public class Avatar
         }
     }
 
-    /// <summary>
-    /// 元素爆发是否正在CD中
-    /// 右下 157x165
-    /// 110x110
-    /// </summary>
-    public double GetBurstCurrentCd(CaptureContent content)
-    {
-        var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.QRect);
-        var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
-        return StringUtils.TryParseDouble(text);
-    }
+    // /// <summary>
+    // /// 元素爆发是否正在CD中
+    // /// 右下 157x165
+    // /// 110x110
+    // /// </summary>
+    // public double GetBurstCurrentCd(CaptureContent content)
+    // {
+    //     var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.QRect);
+    //     var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
+    //     return StringUtils.TryParseDouble(text);
+    // }
 
     /// <summary>
     /// 冲刺

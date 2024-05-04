@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.ViewModel.Pages;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -114,10 +115,10 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             Sleep(800, param.Cts);
             // TODO 识别是否在任务界面
             // 切换追踪
-            var btn = ra.DerivePoint(CaptureRect.Width - 250, CaptureRect.Height - 60);
-            btn.ClickCenter();
+            var btn = ra.Derive(CaptureRect.Width - 250, CaptureRect.Height - 60);
+            btn.Click();
             Sleep(200, param.Cts);
-            btn.ClickCenter();
+            btn.Click();
             Sleep(1500, param.Cts);
 
             // 寻找所有传送点
@@ -140,7 +141,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     }
                 }
 
-                ra.Derive(nearestRect).ClickCenter();
+                ra.Derive(nearestRect).Click();
                 // 等待自动传送完成
                 Sleep(2000, param.Cts);
 
@@ -276,7 +277,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         // });
     }
 
-    private int GetDistanceFromMissionText(List<RectArea> textRaList)
+    private int GetDistanceFromMissionText(List<Region> textRaList)
     {
         // 打印所有任务文字
         var text = textRaList.Aggregate(string.Empty, (current, textRa) => current + textRa.Text.Trim() + "|");
@@ -286,7 +287,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         {
             if (textRa.Text.Length < 8 && (textRa.Text.Contains("m") || textRa.Text.Contains("M")))
             {
-                _missionDistanceRect = textRa.ConvertRelativePositionToCaptureArea();
+                _missionDistanceRect = textRa.ConvertSelfPositionToGameCaptureRegion();
                 return StringUtils.TryExtractPositiveInt(textRa.Text);
             }
         }
@@ -294,7 +295,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         return -1;
     }
 
-    private List<RectArea> OcrMissionTextRaList(RectArea paimonMenuRa)
+    private List<Region> OcrMissionTextRaList(Region paimonMenuRa)
     {
         return GetRectAreaFromDispatcher().FindMulti(new RecognitionObject
         {

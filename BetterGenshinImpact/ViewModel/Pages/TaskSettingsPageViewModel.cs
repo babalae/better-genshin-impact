@@ -130,7 +130,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                     var content = File.ReadAllText(path);
                     _cts?.Cancel();
                     _cts = new CancellationTokenSource();
-                    var param = new GeniusInvokationTaskParam(_cts, _taskDispatcher, content);
+                    var param = new GeniusInvokationTaskParam(_cts, content);
                     _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoGeniusInvokation, param);
                     SwitchAutoGeniusInvokationButtonText = "停止";
                 }
@@ -164,7 +164,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 {
                     _cts?.Cancel();
                     _cts = new CancellationTokenSource();
-                    var param = new WoodTaskParam(_cts, _taskDispatcher, AutoWoodRoundNum);
+                    var param = new WoodTaskParam(_cts, AutoWoodRoundNum);
                     _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
                     SwitchAutoWoodButtonText = "停止";
                 }

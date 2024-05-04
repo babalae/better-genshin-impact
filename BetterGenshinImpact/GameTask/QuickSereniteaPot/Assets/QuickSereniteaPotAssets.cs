@@ -11,17 +11,15 @@ public class QuickSereniteaPotAssets : BaseAssets<QuickSereniteaPotAssets>
 
     private QuickSereniteaPotAssets()
     {
-        var info = TaskContext.Instance().SystemInfo;
-
         BagCloseButtonRo = new RecognitionObject
         {
             Name = "MapCloseButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapCloseButton.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - (int)(107 * info.AssetScale),
-                (int)(19 * info.AssetScale),
-                (int)(58 * info.AssetScale),
-                (int)(58 * info.AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(107 * AssetScale),
+                (int)(19 * AssetScale),
+                (int)(58 * AssetScale),
+                (int)(58 * AssetScale)),
             DrawOnWindow = true
         }.InitTemplate();
 
@@ -31,10 +29,10 @@ public class QuickSereniteaPotAssets : BaseAssets<QuickSereniteaPotAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickSereniteaPot", "SereniteaPotIcon.png"),
             RegionOfInterest = new Rect(
-                (int)(100 * info.AssetScale),
-                (int)(100 * info.AssetScale),
-                (int)(1190 * info.AssetScale),
-                (int)(860 * info.AssetScale)),
+                (int)(100 * AssetScale),
+                (int)(100 * AssetScale),
+                (int)(1190 * AssetScale),
+                (int)(860 * AssetScale)),
             DrawOnWindow = true
         }.InitTemplate();
     }

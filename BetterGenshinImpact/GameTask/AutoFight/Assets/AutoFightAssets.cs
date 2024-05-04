@@ -69,7 +69,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             { "Yu", "玄玉瑶芳" },
             { "Dancer", "帆影游风" },
             { "Witch", "琪花星烛" },
-            { "Wic", "和谐和谐" },
+            { "Wic", "和谐" },
             { "Studentin", "叶隐芳名" },
             { "Fruhling", "花时来信" },
             { "Highness", "极夜真梦" },

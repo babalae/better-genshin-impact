@@ -1,6 +1,7 @@
 ﻿using System;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -23,7 +24,7 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool IsInMainUi(RectArea captureRa)
+    public static bool IsInMainUi(ImageRegion captureRa)
     {
         return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
     }
@@ -33,7 +34,7 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool IsInBigMapUi(RectArea captureRa)
+    public static bool IsInBigMapUi(ImageRegion captureRa)
     {
         return captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo).IsExist();
     }
@@ -44,7 +45,7 @@ public static partial class Bv
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
-    public static bool BigMapIsUnderground(RectArea captureRa)
+    public static bool BigMapIsUnderground(ImageRegion captureRa)
     {
         return captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo).IsExist();
     }

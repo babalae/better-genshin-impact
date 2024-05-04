@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using BetterGenshinImpact.Helpers;
 using WindowsInput;
 using BetterGenshinImpact.Service;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -163,7 +164,7 @@ public class AutoPickTrigger : ITaskTrigger
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
-                    Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                    Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_F);
                     return;
                 }
 
@@ -183,7 +184,7 @@ public class AutoPickTrigger : ITaskTrigger
                 speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+                Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_F);
             }
         });
         speedTimer.DebugPrint();

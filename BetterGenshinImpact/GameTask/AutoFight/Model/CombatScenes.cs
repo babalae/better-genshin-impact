@@ -18,6 +18,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -41,8 +42,8 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 通过YOLO分类器识别队伍内角色
     /// </summary>
-    /// <param name="content">完整游戏画面的捕获截图</param>
-    public CombatScenes InitializeTeam(CaptureContent content)
+    /// <param name="imageRegion">完整游戏画面的捕获截图</param>
+    public CombatScenes InitializeTeam(ImageRegion imageRegion)
     {
         // 优先取配置
         if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
@@ -58,7 +59,7 @@ public class CombatScenes : IDisposable
         {
             for (var i = 0; i < AutoFightAssets.Instance.AvatarSideIconRectList.Count; i++)
             {
-                var ra = content.CaptureRectArea.Crop(AutoFightAssets.Instance.AvatarSideIconRectList[i]);
+                var ra = imageRegion.DeriveCrop(AutoFightAssets.Instance.AvatarSideIconRectList[i]);
                 var pair = ClassifyAvatarCnName(ra.SrcBitmap, i + 1);
                 names[i] = pair.Item1;
                 if (!string.IsNullOrEmpty(pair.Item2))
@@ -200,7 +201,7 @@ public class CombatScenes : IDisposable
         }
 
         // 剪裁出队伍区域
-        var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRectNoIndex);
+        var teamRa = content.CaptureRectArea.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRectNoIndex);
         // 过滤出白色
         var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
 
@@ -211,7 +212,7 @@ public class CombatScenes : IDisposable
     }
 
     [Obsolete]
-    private void ParseTeamOcrResult(PaddleOcrResult result, RectArea rectArea)
+    private void ParseTeamOcrResult(PaddleOcrResult result, ImageRegion rectArea)
     {
         List<string> names = new();
         List<Rect> nameRects = new();
