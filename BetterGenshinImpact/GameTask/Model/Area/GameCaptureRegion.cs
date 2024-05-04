@@ -57,12 +57,12 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
     // }
 
     /// <summary>
-    /// 游戏窗口初始截图统一转换到1080P
+    /// 游戏窗口初始截图大于1080P的统一转换到1080P
     /// </summary>
     /// <returns></returns>
     public ImageRegion DeriveTo1080P()
     {
-        if (Width == 1920)
+        if (Width <= 1920)
         {
             return this;
         }

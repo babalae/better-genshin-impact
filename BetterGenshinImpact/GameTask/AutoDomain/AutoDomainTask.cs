@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using System.Windows.Media.Media3D;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -161,9 +162,13 @@ public class AutoDomainTask
     private void LogScreenResolution()
     {
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-        if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
+        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogWarning("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏可能无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
+        }
+        if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
+        {
+            Logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏可能无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
         }
     }
 
@@ -183,7 +188,7 @@ public class AutoDomainTask
     {
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
-        var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
+        using var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
             Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
@@ -196,7 +201,7 @@ public class AutoDomainTask
         while (retryTimes < 20 && clickCount < 2)
         {
             retryTimes++;
-            var confirmRectArea = GetRectAreaFromDispatcher().Find(fightAssets.ConfirmRa);
+            using var confirmRectArea = GetRectAreaFromDispatcher().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 confirmRectArea.Click();
@@ -217,7 +222,7 @@ public class AutoDomainTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            var cactRectArea = GetRectAreaFromDispatcher().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
+            using var cactRectArea = GetRectAreaFromDispatcher().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
                 Sleep(1000, _taskParam.Cts);
@@ -365,7 +370,7 @@ public class AutoDomainTask
 
     private bool IsDomainEnd()
     {
-        var ra = GetRectAreaFromDispatcher();
+        using var ra = GetRectAreaFromDispatcher();
 
         var endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);

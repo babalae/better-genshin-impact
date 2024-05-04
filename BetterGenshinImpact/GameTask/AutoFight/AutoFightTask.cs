@@ -108,9 +108,9 @@ public class AutoFightTask
     private void LogScreenResolution()
     {
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-        if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
+        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogWarning("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏可能无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
         }
     }
 }
