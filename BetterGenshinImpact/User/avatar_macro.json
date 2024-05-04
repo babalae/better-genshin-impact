@@ -248,7 +248,7 @@
   },
   {
     "name": "流浪者",
-    "scriptContent1": ""
+    "scriptContent1": "e,wait(0.3),charge(0.71),wait(0.101),charge(0.69),wait(0.09),charge(0.702),wait(0.101),charge(0.703),wait(0.102),charge(0.698),wait(0.099),charge(0.703),wait(0.098),charge(0.703),wait(0.101),charge(0.704),wait(0.099),charge(0.701),wait(0.101),charge(0.701),wait(0.101),charge(0.702),wait(0.103),charge(0.704),wait(0.103),charge(0.704)"
   },
   {
     "name": "珐露珊",
