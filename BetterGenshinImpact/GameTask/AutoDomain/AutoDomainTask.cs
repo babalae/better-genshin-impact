@@ -37,8 +37,6 @@ public class AutoDomainTask
 
     private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
 
-    private readonly ClickOffset _clickOffset;
-
     private readonly AutoDomainConfig _config;
 
     private readonly CombatScriptBag _combatScriptBag;
@@ -48,9 +46,6 @@ public class AutoDomainTask
         _taskParam = taskParam;
         _simulator = AutoFightContext.Instance.Simulator;
 
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
@@ -689,9 +684,9 @@ public class AutoDomainTask
         for (var i = 0; i < 30; i++)
         {
             // 跳过领取动画
-            _clickOffset.ClickWithoutScale(captureArea.Width - (int)(140 * _clickOffset.AssetScale), (int)(53 * _clickOffset.AssetScale));
+            GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
             Sleep(200, _taskParam.Cts);
-            _clickOffset.ClickWithoutScale(captureArea.Width - (int)(140 * _clickOffset.AssetScale), (int)(53 * _clickOffset.AssetScale));
+            GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
 
             // 优先点击继续
             var ra = GetRectAreaFromDispatcher();

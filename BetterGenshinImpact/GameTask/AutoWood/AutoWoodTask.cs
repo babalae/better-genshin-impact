@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
@@ -26,17 +27,12 @@ public class AutoWoodTask
 
     private bool _first = true;
 
-    private readonly ClickOffset _clickOffset;
-
     private readonly Login3rdParty _login3rdParty;
 
     private VK _zKey = VK.VK_Z;
 
     public AutoWoodTask()
     {
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
         _login3rdParty = new();
         _assets = AutoWoodAssets.Instance;
     }
@@ -215,9 +211,8 @@ public class AutoWoodTask
         }
 
         // 点击退出
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        _clickOffset.ClickWithoutScale((int)(50 * assetScale), captureArea.Height - (int)(50 * assetScale));
+        GameCaptureRegion.GameRegionClick((size, scale) => (50 * scale, size.Height - 50 * scale));
+
         Debug.WriteLine("[AutoWood] Click exit button");
 
         Sleep(500, taskParam.Cts);
@@ -250,7 +245,7 @@ public class AutoWoodTask
             if (!ra.IsEmpty())
             {
                 clickCnt++;
-                _clickOffset.Click(955, 666);
+                GameCaptureRegion.GameRegion1080PPosClick(955, 666);
                 Debug.WriteLine("[AutoWood] Click entry");
             }
             else
