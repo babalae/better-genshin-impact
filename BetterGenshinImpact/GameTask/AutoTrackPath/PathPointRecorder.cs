@@ -1,27 +1,27 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Common.Map;
-using OpenCvSharp;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoTrackWay.Model;
-using BetterGenshinImpact.Model;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
-using BetterGenshinImpact.GameTask.Model.Enum;
+using OpenCvSharp;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
-namespace BetterGenshinImpact.GameTask.AutoTrackWay;
+namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
-public class WayPointRecorder : Singleton<WayPointRecorder>
+public class PathPointRecorder : Singleton<PathPointRecorder>
 {
-    private readonly Lazy<EntireMap> _bigMap = new();
+    private readonly EntireMap _bigMap = EntireMap.Instance;
 
     private Task? _recordTask;
     private CancellationTokenSource? _recordTaskCts;
@@ -60,7 +60,7 @@ public class WayPointRecorder : Singleton<WayPointRecorder>
     {
         return new Task(() =>
         {
-            Way way = new();
+            GiPath way = new();
 
             while (!cts.Token.IsCancellationRequested)
             {
@@ -78,7 +78,7 @@ public class WayPointRecorder : Singleton<WayPointRecorder>
                         continue;
                     }
 
-                    var rect = _bigMap.Value.GetMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    var rect = _bigMap.GetMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
                     if (rect != Rect.Empty)
                     {
                         way.AddPoint(rect);

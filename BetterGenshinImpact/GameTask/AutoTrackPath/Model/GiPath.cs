@@ -1,14 +1,14 @@
 ﻿using System;
-using OpenCvSharp;
 using System.Collections.Generic;
 using System.Diagnostics;
+using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.AutoTrackWay.Model;
+namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 
 [Serializable]
-public class Way
+public class GiPath
 {
-    public List<WayPoint> WayPointList { get; set; } = new();
+    public List<GiPathPoint> WayPointList { get; set; } = new();
 
     public void AddPoint(Rect matchRect)
     {
@@ -20,6 +20,6 @@ public class Way
             return;
         }
 
-        WayPointList.Add(WayPoint.BuildFrom(matchRect, WayPointList.Count));
+        WayPointList.Add(GiPathPoint.BuildFrom(matchRect, WayPointList.Count));
     }
 }

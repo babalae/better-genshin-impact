@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.Test.Simple.AllMap;
 
 public class MapPuzzle
 {
-    public static readonly int block = 1024;
+    public static readonly int block = 2048;
 
     public static List<string> PicWhiteHashList = new List<string>
     {
@@ -72,11 +72,12 @@ public class MapPuzzle
                 continue;
             }
 
-            if (block == 2048 && img.Width != 2048)
-            {
-                Debug.WriteLine($"不是2048的不要 ({row}, {col}) {img.Width} {img.Height}  {name}");
-                continue;
-            }
+            // 如果只要城市拼接，取消注释这段
+            // if (block == 2048 && img.Width != 2048)
+            // {
+            //     Debug.WriteLine($"不是2048的不要 ({row}, {col}) {img.Width} {img.Height}  {name}");
+            //     continue;
+            // }
 
             // 如果当前位置已经有图片了，保留尺寸较大的图片
             if (imageLocations.ContainsKey((row, col)))

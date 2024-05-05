@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoTrackWay;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -338,7 +338,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.MapPosRecordHotkeyType,
             (_, _) =>
             {
-                WayPointRecorder.Instance.Switch();
+                PathPointRecorder.Instance.Switch();
             }));
     }
 

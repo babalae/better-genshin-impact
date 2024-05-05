@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
+﻿using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Enum;
@@ -6,9 +7,7 @@ using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -75,7 +74,7 @@ public class AutoFightTask
         }
         catch (NormalEndException)
         {
-            Logger.LogInformation("手动中断自动秘境");
+            Logger.LogInformation("手动中断自动战斗");
         }
         catch (Exception e)
         {

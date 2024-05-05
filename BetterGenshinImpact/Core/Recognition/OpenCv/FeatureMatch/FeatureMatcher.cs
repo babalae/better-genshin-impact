@@ -23,7 +23,7 @@ public class FeatureMatcher
     private readonly int _splitCol = MapCoordinate.GameMapCols * 2; // 特征点拆分列数
     private KeyPointFeatureBlock? _lastMergedBlock; // 上次合并的特征块
 
-    public FeatureMatcher(Mat trainMat, Feature2DType type = Feature2DType.SIFT, double threshold = 100)
+    public FeatureMatcher(Mat trainMat, FeatureStorage? featureStorage = null, Feature2DType type = Feature2DType.SIFT, double threshold = 100)
     {
         _threshold = threshold;
         _trainMat = trainMat;
@@ -36,18 +36,21 @@ public class FeatureMatcher
             _feature2D = SIFT.Create();
         }
 
-        var featureStorage = new FeatureStorage(type, "mainMap1024Block");
-        var kpFromDisk = featureStorage.LoadKeyPointArray();
-        if (kpFromDisk == null)
+        if (featureStorage != null)
         {
-            _feature2D.DetectAndCompute(trainMat, null, out _trainKeyPoints, _trainRet);
-            featureStorage.SaveKeyPointArray(_trainKeyPoints);
-            featureStorage.SaveDescMat(_trainRet);
-        }
-        else
-        {
-            _trainKeyPoints = kpFromDisk;
-            _trainRet = featureStorage.LoadDescMat() ?? throw new Exception("加载特征描述矩阵失败");
+            featureStorage.TypeName = type.ToString();
+            var kpFromDisk = featureStorage.LoadKeyPointArray();
+            if (kpFromDisk == null)
+            {
+                _feature2D.DetectAndCompute(trainMat, null, out _trainKeyPoints, _trainRet);
+                featureStorage.SaveKeyPointArray(_trainKeyPoints);
+                featureStorage.SaveDescMat(_trainRet);
+            }
+            else
+            {
+                _trainKeyPoints = kpFromDisk;
+                _trainRet = featureStorage.LoadDescMat() ?? throw new Exception("加载特征描述矩阵失败");
+            }
         }
 
         Debug.WriteLine("被匹配的图像生成初始化KeyPoint完成");

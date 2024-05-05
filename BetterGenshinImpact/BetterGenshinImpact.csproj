@@ -582,4 +582,8 @@
 		</None>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="GameTask\Common\Element\Assets\MapPoint\" />
+	</ItemGroup>
+
 </Project>

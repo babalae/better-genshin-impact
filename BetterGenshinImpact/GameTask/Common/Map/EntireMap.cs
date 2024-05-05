@@ -10,10 +10,11 @@ using BetterGenshinImpact.Model;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
-public class EntireMap
+public class EntireMap : Singleton<EntireMap>
 {
     // 这个模板缩放大小的计算方式 https://github.com/babalae/better-genshin-impact/issues/318
     public static readonly Size TemplateSize = new(240, 135);
@@ -26,15 +27,15 @@ public class EntireMap
     /// </summary>
     private readonly Mat _mainMap100BlockMat;
 
-    /// <summary>
-    /// 1024区块拼接的主要地图
-    /// </summary>
-    private readonly Mat _mainMap1024BlockMat;
-
-    /// <summary>
-    /// 2048城市区块拼接的主要地图
-    /// </summary>
-    private readonly Mat _cityMap2048BlockMat;
+    // /// <summary>
+    // /// 1024区块拼接的主要地图
+    // /// </summary>
+    // private readonly Mat _mainMap1024BlockMat;
+    //
+    // /// <summary>
+    // /// 2048城市区块拼接的主要地图
+    // /// </summary>
+    // private readonly Mat _cityMap2048BlockMat;
 
     private readonly FeatureMatcher _featureMatcher;
 
@@ -45,9 +46,11 @@ public class EntireMap
     {
         // 大地图模板匹配使用的模板
         _mainMap100BlockMat = MapAssets.Instance.MainMap100BlockMat.Value;
-        _mainMap1024BlockMat = MapAssets.Instance.MainMap1024BlockMat.Value;
+        // _mainMap1024BlockMat = MapAssets.Instance.MainMap1024BlockMat.Value;
         // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
-        _featureMatcher = new FeatureMatcher(_mainMap1024BlockMat);
+        // Mat grey = new();
+        // Cv2.CvtColor(_mainMap100BlockMat, grey, ColorConversionCodes.BGR2GRAY);
+        _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap1024BlockMat.Value, new FeatureStorage("mainMap1024BlockMat"));
     }
 
     /// <summary>

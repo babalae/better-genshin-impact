@@ -8,14 +8,21 @@ using System.Runtime.InteropServices;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
-public class FeatureStorage(Feature2DType type, string name)
+public class FeatureStorage(string name)
 {
     private readonly string rootPath = Global.Absolute(@"User\Map\");
+
+    public void SetType(Feature2DType type)
+    {
+        TypeName = type.ToString();
+    }
+
+    public string TypeName { get; set; } = "UNKNOWN";
 
     public KeyPoint[]? LoadKeyPointArray()
     {
         CreateFolder();
-        string kpPath = Path.Combine(rootPath, $"{name}_{type}.kp");
+        string kpPath = Path.Combine(rootPath, $"{name}_{TypeName}.kp");
         if (File.Exists(kpPath))
         {
             return ObjectUtils.Deserialize(File.ReadAllBytes(kpPath)) as KeyPoint[];
@@ -26,7 +33,7 @@ public class FeatureStorage(Feature2DType type, string name)
     public void SaveKeyPointArray(KeyPoint[] kpArray)
     {
         CreateFolder();
-        string kpPath = Path.Combine(rootPath, $"{name}_{type}.kp");
+        string kpPath = Path.Combine(rootPath, $"{name}_{TypeName}.kp");
         File.WriteAllBytes(kpPath, ObjectUtils.Serialize(kpArray));
     }
 
@@ -42,7 +49,7 @@ public class FeatureStorage(Feature2DType type, string name)
     {
         CreateFolder();
         // 格式: Surf_336767x128.mat
-        var files = Directory.GetFiles(rootPath, $"{name}_{type}_*.mat", SearchOption.AllDirectories);
+        var files = Directory.GetFiles(rootPath, $"{name}_{TypeName}_*.mat", SearchOption.AllDirectories);
         if (files.Length == 0)
         {
             return null;
@@ -52,7 +59,7 @@ public class FeatureStorage(Feature2DType type, string name)
             Debug.WriteLine($"[FeatureSerializer] Found multiple files: {string.Join(", ", files)}");
         }
         var rowColPair = Path.GetFileNameWithoutExtension(files[0])
-            .Replace($"{name}_{type}_", "")
+            .Replace($"{name}_{TypeName}_", "")
             .Split('x');
         if (rowColPair.Length != 2)
         {
@@ -68,13 +75,13 @@ public class FeatureStorage(Feature2DType type, string name)
     {
         CreateFolder();
         // 删除旧文件
-        var files = Directory.GetFiles(rootPath, $"{name}_{type}_*.mat", SearchOption.AllDirectories);
+        var files = Directory.GetFiles(rootPath, $"{name}_{TypeName}_*.mat", SearchOption.AllDirectories);
         foreach (var file in files)
         {
             File.Delete(file);
         }
 
-        var descPath = Path.Combine(rootPath, $"{name}_{type}_{descMat.Rows}x{descMat.Cols}.mat");
+        var descPath = Path.Combine(rootPath, $"{name}_{TypeName}_{descMat.Rows}x{descMat.Cols}.mat");
         var bytes = new byte[descMat.Step(0) * descMat.Rows]; // matSrcRet.Total() * matSrcRet.ElemSize()
         Marshal.Copy(descMat.Data, bytes, 0, bytes.Length);
         File.WriteAllBytes(descPath, ObjectUtils.Serialize(bytes));
