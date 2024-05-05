@@ -9,9 +9,14 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.AutoWood.Assets;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
+using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using BetterGenshinImpact.GameTask.Placeholder;
+using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
 
@@ -71,12 +76,16 @@ namespace BetterGenshinImpact.GameTask
 
         public static void ReloadAssets()
         {
-            AutoSkipAssets.DestroyInstance();
+            AutoPickAssets.DestroyInstance();
             AutoSkipAssets.DestroyInstance();
             AutoFishingAssets.DestroyInstance();
             QuickTeleportAssets.DestroyInstance();
-            AutoFightAssets.DestroyInstance();
+            AutoWoodAssets.DestroyInstance();
             AutoGeniusInvokationAssets.DestroyInstance();
+            AutoFightAssets.DestroyInstance();
+            ElementAssets.DestroyInstance();
+            QuickSereniteaPotAssets.DestroyInstance();
+            GameLoadingAssets.DestroyInstance();
         }
 
         /// <summary>

@@ -12,14 +12,12 @@ namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
 
 public class QuickSereniteaPotTask
 {
-    private static readonly QuickSereniteaPotAssets _assets = QuickSereniteaPotAssets.Instance;
-
     private static void WaitForBagToOpen()
     {
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea().Find(_assets.BagCloseButtonRo);
+            using var ra2 = TaskControl.CaptureToRectArea().Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("背包未打开");
@@ -32,7 +30,7 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea().Find(_assets.SereniteaPotIconRo);
+            using var ra2 = TaskControl.CaptureToRectArea().Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("未检测到壶");

@@ -34,6 +34,7 @@ public class AutoWoodTask
     public AutoWoodTask()
     {
         _login3rdParty = new();
+        AutoWoodAssets.DestroyInstance();
         _assets = AutoWoodAssets.Instance;
     }
 

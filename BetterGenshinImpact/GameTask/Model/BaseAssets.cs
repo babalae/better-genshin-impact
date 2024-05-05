@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Model;
 using OpenCvSharp;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
@@ -14,4 +15,29 @@ public class BaseAssets<T> : Singleton<T> where T : class
 {
     protected Rect CaptureRect => TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     protected double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+
+    // private int _gameWidth;
+    // private int _gameHeight;
+    //
+    // public new static T Instance
+    // {
+    //     get
+    //     {
+    //         // 统一在这里处理 重新生成实例
+    //         if (_instance != null)
+    //         {
+    //             var r = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    //             if (_instance is BaseAssets<T> baseAssets)
+    //             {
+    //                 if (baseAssets._gameWidth != r.Width || baseAssets._gameHeight != r.Height)
+    //                 {
+    //                     baseAssets._gameWidth = r.Width;
+    //                     baseAssets._gameHeight = r.Height;
+    //                     _instance = null;
+    //                 }
+    //             }
+    //         }
+    //         return LazyInitializer.EnsureInitialized(ref _instance, ref syncRoot, CreateInstance);
+    //     }
+    // }
 }

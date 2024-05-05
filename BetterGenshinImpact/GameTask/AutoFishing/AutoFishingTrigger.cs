@@ -118,76 +118,76 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-        /// <summary>
-        /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
-        /// 点击按钮进入独占模式
-        /// </summary>
-        /// <param name="content"></param>
-        /// <returns></returns>
-        [Obsolete]
-        private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
-        {
-            VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
-            var info = TaskContext.Instance().SystemInfo;
-            var srcMat = content.CaptureRectArea.SrcMat;
-            var rightBottomMat = CropHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
-            var list = CommonRecognition.FindGameButton(rightBottomMat);
-            if (list.Count > 0)
-            {
-                foreach (var rect in list)
-                {
-                    var ro = new RecognitionObject()
-                    {
-                        Name = "StartFishingText",
-                        RecognitionType = RecognitionTypes.OcrMatch,
-                        RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2,
-                            srcMat.Height - srcMat.Height / 2),
-                        AllContainMatchText = new List<string>
-                        {
-                            "开始", "钓鱼"
-                        },
-                        DrawOnWindow = false
-                    };
-                    var ocrRaRes = content.CaptureRectArea.Find(ro);
-                    if (ocrRaRes.IsEmpty())
-                    {
-                        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
-                    }
-                    else
-                    {
-                        VisionContext.Instance().DrawContent.PutRect("StartFishingButton", rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
-
-                        var btnPosition = new Rect(rect.X + srcMat.Width / 2, rect.Y + srcMat.Height / 2 - rect.Height - 10, rect.Width, rect.Height);
-                        var maskButton = new MaskButton("开始自动钓鱼", btnPosition, () =>
-                        {
-                            VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
-                            _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
-                            // 点击下面的按钮
-                            var rc = info.CaptureAreaRect;
-                            Simulation.SendInputEx
-                                .Mouse
-                                .MoveMouseTo(
-                                    (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 / info.DesktopRectArea.Width,
-                                    (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 / info.DesktopRectArea.Height)
-                                .LeftButtonClick();
-                            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
-                            // 启动要延时一会等待钓鱼界面切换
-                            Sleep(1000);
-                            IsExclusive = true;
-                            _switchBaitContinuouslyFrameNum = 0;
-                            _waitBiteContinuouslyFrameNum = 0;
-                            _noFishActionContinuouslyFrameNum = 0;
-                            _isThrowRod = false;
-                        });
-                        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "AddButton", new object(), maskButton));
-                    }
-                }
-            }
-            else
-            {
-                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
-            }
-        }
+        // /// <summary>
+        // /// 在“开始钓鱼”按钮上方安排一个我们的“开始自动钓鱼”按钮
+        // /// 点击按钮进入独占模式
+        // /// </summary>
+        // /// <param name="content"></param>
+        // /// <returns></returns>
+        // [Obsolete]
+        // private void DisplayButtonOnStartFishPageForExclusive(CaptureContent content)
+        // {
+        //     VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
+        //     var info = TaskContext.Instance().SystemInfo;
+        //     var srcMat = content.CaptureRectArea.SrcMat;
+        //     var rightBottomMat = CropHelper.CutRightBottom(srcMat, srcMat.Width / 2, srcMat.Height / 2);
+        //     var list = CommonRecognition.FindGameButton(rightBottomMat);
+        //     if (list.Count > 0)
+        //     {
+        //         foreach (var rect in list)
+        //         {
+        //             var ro = new RecognitionObject()
+        //             {
+        //                 Name = "StartFishingText",
+        //                 RecognitionType = RecognitionTypes.OcrMatch,
+        //                 RegionOfInterest = new Rect(srcMat.Width / 2, srcMat.Height / 2, srcMat.Width - srcMat.Width / 2,
+        //                     srcMat.Height - srcMat.Height / 2),
+        //                 AllContainMatchText = new List<string>
+        //                 {
+        //                     "开始", "钓鱼"
+        //                 },
+        //                 DrawOnWindow = false
+        //             };
+        //             var ocrRaRes = content.CaptureRectArea.Find(ro);
+        //             if (ocrRaRes.IsEmpty())
+        //             {
+        //                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
+        //             }
+        //             else
+        //             {
+        //                 VisionContext.Instance().DrawContent.PutRect("StartFishingButton", rect.ToWindowsRectangleOffset(srcMat.Width / 2, srcMat.Height / 2).ToRectDrawable());
+        //
+        //                 var btnPosition = new Rect(rect.X + srcMat.Width / 2, rect.Y + srcMat.Height / 2 - rect.Height - 10, rect.Width, rect.Height);
+        //                 var maskButton = new MaskButton("开始自动钓鱼", btnPosition, () =>
+        //                 {
+        //                     VisionContext.Instance().DrawContent.RemoveRect("StartFishingButton");
+        //                     _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
+        //                     // 点击下面的按钮
+        //                     var rc = info.CaptureAreaRect;
+        //                     Simulation.SendInputEx
+        //                         .Mouse
+        //                         .MoveMouseTo(
+        //                             (rc.X + srcMat.Width * 1d / 2 + rect.X + rect.Width * 1d / 2) * 65535 / info.DesktopRectArea.Width,
+        //                             (rc.Y + srcMat.Height * 1d / 2 + rect.Y + rect.Height * 1d / 2) * 65535 / info.DesktopRectArea.Height)
+        //                         .LeftButtonClick();
+        //                     WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
+        //                     // 启动要延时一会等待钓鱼界面切换
+        //                     Sleep(1000);
+        //                     IsExclusive = true;
+        //                     _switchBaitContinuouslyFrameNum = 0;
+        //                     _waitBiteContinuouslyFrameNum = 0;
+        //                     _noFishActionContinuouslyFrameNum = 0;
+        //                     _isThrowRod = false;
+        //                 });
+        //                 WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "AddButton", new object(), maskButton));
+        //             }
+        //         }
+        //     }
+        //     else
+        //     {
+        //         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RemoveButton", new object(), "开始自动钓鱼"));
+        //     }
+        // }
 
         //private bool OcrStartFishingForExclusive(CaptureContent content)
         //{

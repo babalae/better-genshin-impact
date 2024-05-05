@@ -11,12 +11,12 @@ namespace BetterGenshinImpact.Model;
 /// <typeparam name="T"></typeparam>
 public class Singleton<T> where T : class
 {
-    private static T? _instance;
-    private static object? syncRoot;
+    protected static T? _instance;
+    protected static object? syncRoot;
 
     public static T Instance => LazyInitializer.EnsureInitialized(ref _instance, ref syncRoot, CreateInstance);
 
-    private static T CreateInstance()
+    protected static T CreateInstance()
     {
         return (T)Activator.CreateInstance(typeof(T), true)!;
     }

@@ -1,19 +1,19 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Helpers;
-using WindowsInput;
-using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
@@ -159,6 +159,7 @@ public class AutoPickTrigger : ITaskTrigger
             speedTimer.Record("文字识别");
             if (!string.IsNullOrEmpty(text))
             {
+                text = Regex.Replace(text, @"^[\p{P} ]+|[\p{P} ]+$", "");
                 // 唯一一个动态拾取项，特殊处理，不拾取
                 if (text.Contains("生长时间"))
                 {
