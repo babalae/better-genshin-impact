@@ -38,8 +38,8 @@ public class TestTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = true;
-        IsExclusive = true;
+        IsEnabled = false;
+        IsExclusive = false;
     }
 
     public void OnCapture(CaptureContent content)
