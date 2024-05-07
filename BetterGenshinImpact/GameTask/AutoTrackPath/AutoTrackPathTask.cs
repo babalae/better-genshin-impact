@@ -103,6 +103,18 @@ public class AutoTrackPathTask
     public void Tp(double x, double y)
     {
         // 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
+
+        // M 打开地图识别当前位置，中心点为当前位置
+
+        // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
+
+        // 移动部分内容测试移动偏移
+
+        // 快速移动到目标传送点所在的区域
+
+        // 计算坐标后点击
+
+        // 触发一次快速传送功能
     }
 
     public void TpByF1(string name)

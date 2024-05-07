@@ -132,6 +132,29 @@ public class PostMessageSimulator
         return this;
     }
 
+    public PostMessageSimulator KeyPressBackground(User32.VK vk)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        return this;
+    }
+
+    public PostMessageSimulator KeyDownBackground(User32.VK vk)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
+        return this;
+    }
+
+    public PostMessageSimulator KeyUpBackground(User32.VK vk)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        return this;
+    }
+
     public PostMessageSimulator Sleep(int ms)
     {
         Thread.Sleep(ms);

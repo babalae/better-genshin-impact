@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -223,6 +224,10 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoTrack)
             {
                 Task.Run(() => { new AutoTrackTask((AutoTrackParam)param).Start(); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoMusicGame)
+            {
+                Task.Run(() => { new AutoMusicGameTask((AutoMusicGameParam)param).Start(); });
             }
         }
 

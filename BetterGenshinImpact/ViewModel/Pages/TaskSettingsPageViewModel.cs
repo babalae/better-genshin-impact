@@ -17,6 +17,7 @@ using System.Threading;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -41,6 +42,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
     [ObservableProperty] private string _switchAutoFightButtonText = "启动";
     [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
+    [ObservableProperty] private string _switchAutoMusicGameButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -330,6 +332,40 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     public void OnGoToAutoTrackUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnSwitchAutoMusicGame()
+    {
+        try
+        {
+            lock (_locker)
+            {
+                if (SwitchAutoMusicGameButtonText == "启动")
+                {
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new AutoMusicGameParam(_cts);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoMusicGame, param);
+                    SwitchAutoMusicGameButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoMusicGameButtonText = "启动";
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoMusicGameUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/") { UseShellExecute = true });
     }
 
     public static void SetSwitchAutoTrackButtonText(bool running)

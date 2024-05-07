@@ -7,4 +7,5 @@ public enum IndependentTaskEnum
     AutoFight,
     AutoDomain,
     AutoTrack,
+    AutoMusicGame,
 }

@@ -141,4 +141,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _mapPosRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 活动音游开始/停止
+    [ObservableProperty]
+    private string _autoMusicGameHotkey = "";
+
+    [ObservableProperty]
+    private string _autoMusicGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

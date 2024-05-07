@@ -331,15 +331,23 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
         });
 
+        // HotKeySettingModels.Add(new HotKeySettingModel(
+        //     "（测试）地图路线录制",
+        //     nameof(Config.HotKeyConfig.MapPosRecordHotkey),
+        //     Config.HotKeyConfig.MapPosRecordHotkey,
+        //     Config.HotKeyConfig.MapPosRecordHotkeyType,
+        //     (_, _) =>
+        //     {
+        //         PathPointRecorder.Instance.Switch();
+        //     }));
+
         HotKeySettingModels.Add(new HotKeySettingModel(
-            "（测试）地图路线录制",
-            nameof(Config.HotKeyConfig.MapPosRecordHotkey),
-            Config.HotKeyConfig.MapPosRecordHotkey,
-            Config.HotKeyConfig.MapPosRecordHotkeyType,
-            (_, _) =>
-            {
-                PathPointRecorder.Instance.Switch();
-            }));
+            "启动/停止自动活动音游",
+            nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
+            Config.HotKeyConfig.AutoMusicGameHotkey,
+            Config.HotKeyConfig.AutoMusicGameHotkeyType,
+            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
+        ));
     }
 
     private string ToChinese(bool enabled)
