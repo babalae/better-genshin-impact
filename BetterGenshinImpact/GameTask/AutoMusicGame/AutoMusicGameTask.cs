@@ -6,7 +6,9 @@ using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using OpenCvSharp.Aruco;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +28,18 @@ public class AutoMusicGameTask
     private readonly double assetScale;
 
     private PostMessageSimulator _simulator;
+
+    private readonly Dictionary<User32.VK, int> _keyX = new()
+    {
+        [User32.VK.VK_A] = 417,
+        [User32.VK.VK_S] = 632,
+        [User32.VK.VK_D] = 846,
+        [User32.VK.VK_J] = 1065,
+        [User32.VK.VK_K] = 1282,
+        [User32.VK.VK_L] = 1497
+    };
+
+    private readonly int _keyY = 916;
 
     public AutoMusicGameTask(AutoMusicGameParam taskParam)
     {
@@ -96,6 +110,36 @@ public class AutoMusicGameTask
         }
     }
 
+    private void NotWhite()
+    {
+        var gameCaptureRegion = CaptureToRectArea();
+        var srcMat = gameCaptureRegion.SrcMat;
+        Parallel.ForEach(_keyX, kvp => { WhitePress(srcMat, kvp.Key, kvp.Value); });
+        gameCaptureRegion.Dispose();
+    }
+
+    private unsafe void WhitePress(Mat srcMat, User32.VK key, int x)
+    {
+        // 获取图像的指针
+        byte* ptr = (byte*)srcMat.Data.ToPointer();
+
+        // 计算特定坐标下的像素偏移量
+        long offset = srcMat.Step() * _keyY + srcMat.Channels() * x;
+
+        // 获取像素的 RGB 值
+        // byte r = ptr[offset];
+        byte g = ptr[offset + 1];
+        // byte b = ptr[offset + 2];
+        if (g < 240)
+        {
+            KeyDownOnce(key);
+        }
+        else
+        {
+            KeyUpOnce(key);
+        }
+    }
+
     private void AllPress()
     {
         using var gameCaptureRegion = CaptureToRectArea();
@@ -127,7 +171,7 @@ public class AutoMusicGameTask
     {
         ContoursHelper.FindSpecifyColorRects(srcMat, new Scalar(143, 119, 238), new Scalar(163, 140, 245), 50, 50).ForEach(rect =>
         {
-            if (srcMat.Height - rect.Height - rect.Y <= 135 * assetScale)
+            if (srcMat.Height - rect.Height - rect.Y <= 150 * assetScale)
             {
                 var x = rect.X + rect.Width / 2;
                 var key = GetKey(x);
@@ -141,12 +185,6 @@ public class AutoMusicGameTask
                 }
             }
         });
-    }
-
-    private void PurplePress()
-    {
-        using var gameCaptureRegion = CaptureToRectArea();
-        var srcMat = gameCaptureRegion.SrcMat[new Rect(0, gameCaptureRegion.Height - gameCaptureRegion.Height / 4, gameCaptureRegion.Width, gameCaptureRegion.Height / 4)];
     }
 
     private User32.VK GetKey(int i)
@@ -197,6 +235,34 @@ public class AutoMusicGameTask
     private void KeyDown(User32.VK key)
     {
         _simulator.KeyDown(key);
+    }
+
+    private void KeyUpOnce(User32.VK key)
+    {
+        if (_keyStatus.TryGetValue(key, out var v))
+        {
+            if (v)
+            {
+                _keyStatus[key] = false;
+                _simulator.KeyUp(key);
+            }
+        }
+    }
+
+    private void KeyDownOnce(User32.VK key)
+    {
+        if (_keyStatus.TryGetValue(key, out var v))
+        {
+            if (!v)
+            {
+                _keyStatus[key] = true;
+                _simulator.KeyDown(key);
+            }
+        }
+        else
+        {
+            _simulator.KeyDown(key);
+        }
     }
 
     private void Init()

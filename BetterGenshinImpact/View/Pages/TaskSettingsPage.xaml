@@ -285,7 +285,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动战斗（实验功能）"
+                                  Text="自动战斗"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -665,9 +665,7 @@
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
-                         Icon="{ui:SymbolIcon PeopleQueue24}"
-                         Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
-                                                       Converter={StaticResource BooleanToVisibilityConverter}}">
+                         Icon="{ui:SymbolIcon MusicNote224}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
