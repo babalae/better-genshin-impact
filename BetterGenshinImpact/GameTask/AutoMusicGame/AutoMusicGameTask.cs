@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -10,6 +11,7 @@ using OpenCvSharp.Aruco;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
@@ -29,7 +31,7 @@ public class AutoMusicGameTask
 
     private PostMessageSimulator _simulator;
 
-    private readonly Dictionary<User32.VK, int> _keyX = new()
+    private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     {
         [User32.VK.VK_A] = 417,
         [User32.VK.VK_S] = 632,
@@ -71,13 +73,22 @@ public class AutoMusicGameTask
 
             Init();
 
+            var gameCaptureRegion = CaptureToRectArea();
+            ConcurrentDictionary<User32.VK, Point> posDic = new();
+
+            foreach (var keyValuePair in _keyX)
+            {
+                var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion(keyValuePair.Value, _keyY);
+                posDic[keyValuePair.Key] = new Point(x, y);
+            }
+
             await Task.Run(() =>
             {
                 try
                 {
                     while (!_taskParam.Cts.Token.IsCancellationRequested)
                     {
-                        AllPress();
+                        NotWhiteWin32(posDic);
                     }
                 }
                 catch (Exception e)
@@ -110,6 +121,36 @@ public class AutoMusicGameTask
         }
     }
 
+    private void NotWhiteWin32(ConcurrentDictionary<User32.VK, Point> posDic)
+    {
+        Parallel.ForEach(posDic, kvp => { WhitePressWin32(kvp.Key, kvp.Value); });
+
+        // foreach (var keyValuePair in posDic)
+        // {
+        //     WhitePressWin32(keyValuePair.Key, keyValuePair.Value);
+        // }
+    }
+
+    private void WhitePressWin32(User32.VK key, Point point)
+    {
+        Stopwatch sw = new();
+        sw.Start();
+        var hdc = User32.GetDC(TaskContext.Instance().GameHandle);
+        var c = Gdi32.GetPixel(hdc, point.X, point.Y);
+
+        if (c.B < 220)
+        {
+            KeyDown(key);
+        }
+        else
+        {
+            KeyUp(key);
+        }
+        Gdi32.DeleteDC(hdc);
+        sw.Stop();
+        Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
+    }
+
     private void NotWhite()
     {
         var gameCaptureRegion = CaptureToRectArea();
@@ -132,11 +173,11 @@ public class AutoMusicGameTask
         // byte b = ptr[offset + 2];
         if (g < 240)
         {
-            KeyDownOnce(key);
+            KeyDown(key);
         }
         else
         {
-            KeyUpOnce(key);
+            KeyUp(key);
         }
     }
 
@@ -229,12 +270,12 @@ public class AutoMusicGameTask
 
     private void KeyUp(User32.VK key)
     {
-        _simulator.KeyUp(key);
+        Simulation.SendInputEx.Keyboard.KeyUp(key);
     }
 
     private void KeyDown(User32.VK key)
     {
-        _simulator.KeyDown(key);
+        Simulation.SendInputEx.Keyboard.KeyDown(key);
     }
 
     private void KeyUpOnce(User32.VK key)

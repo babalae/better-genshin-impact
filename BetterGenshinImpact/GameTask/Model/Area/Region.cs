@@ -218,6 +218,18 @@ public class Region : IDisposable
         return res.ToRect();
     }
 
+    public (int, int) ConvertPositionToGameCaptureRegion(int x, int y)
+    {
+        var res = ConvertRes<GameCaptureRegion>.ConvertPositionToTargetRegion(x, y, 0, 0, this);
+        return (res.X, res.Y);
+    }
+
+    public (int, int) ConvertPositionToDesktopRegion(int x, int y)
+    {
+        var res = ConvertRes<DesktopRegion>.ConvertPositionToTargetRegion(x, y, 0, 0, this);
+        return (res.X, res.Y);
+    }
+
     public Rect ToRect()
     {
         return new Rect(X, Y, Width, Height);
