@@ -23,13 +23,12 @@ public class AutoMusicGameTask
 {
     private readonly AutoMusicGameParam _taskParam;
 
-    private readonly int _judgeLineDisY; // 判定线的Y相对底部坐标
-    private readonly int[] _judgeLineX;
-    private readonly User32.VK[] _keyMap;
-    private readonly Dictionary<User32.VK, bool> _keyStatus = new Dictionary<User32.VK, bool>();
-    private readonly double assetScale;
-
-    private PostMessageSimulator _simulator;
+    // private readonly int _judgeLineDisY; // 判定线的Y相对底部坐标
+    // private readonly int[] _judgeLineX;
+    // private readonly User32.VK[] _keyMap;
+    // private readonly Dictionary<User32.VK, bool> _keyStatus = new Dictionary<User32.VK, bool>();
+    //
+    // private PostMessageSimulator _simulator;
 
     private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     {
@@ -38,25 +37,28 @@ public class AutoMusicGameTask
         [User32.VK.VK_D] = 846,
         [User32.VK.VK_J] = 1065,
         [User32.VK.VK_K] = 1282,
-        [User32.VK.VK_L] = 1497
+        [User32.VK.VK_L] = 1500
     };
 
     private readonly int _keyY = 916;
+
+    private readonly IntPtr _hWnd;
 
     public AutoMusicGameTask(AutoMusicGameParam taskParam)
     {
         _taskParam = taskParam;
 
-        assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        var rect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var w = rect.Width;
-        _judgeLineDisY = (int)(130 * assetScale); // 127 是线的位置
-        int k1 = (int)(520 * assetScale);
-        int k2 = (int)(745 * assetScale);
-        _judgeLineX = [0, k1, k2, w / 2, w - k2, w - k1, w];
-        _keyMap = [User32.VK.VK_A, User32.VK.VK_S, User32.VK.VK_D, User32.VK.VK_J, User32.VK.VK_K, User32.VK.VK_L];
+        // var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        // var rect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        // var w = rect.Width;
+        // _judgeLineDisY = (int)(130 * assetScale); // 127 是线的位置
+        // int k1 = (int)(520 * assetScale);
+        // int k2 = (int)(745 * assetScale);
+        // _judgeLineX = [0, k1, k2, w / 2, w - k2, w - k1, w];
+        // _keyMap = [User32.VK.VK_A, User32.VK.VK_S, User32.VK.VK_D, User32.VK.VK_J, User32.VK.VK_K, User32.VK.VK_L];
 
-        _simulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+        _hWnd = TaskContext.Instance().GameHandle;
+        // _simulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
     }
 
     public async void Start()
@@ -73,30 +75,20 @@ public class AutoMusicGameTask
 
             Init();
 
+            var taskFactory = new TaskFactory();
+            var taskList = new List<Task>();
+
+            // 计算按键位置
             var gameCaptureRegion = CaptureToRectArea();
-            ConcurrentDictionary<User32.VK, Point> posDic = new();
 
             foreach (var keyValuePair in _keyX)
             {
                 var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion(keyValuePair.Value, _keyY);
-                posDic[keyValuePair.Key] = new Point(x, y);
+                // 添加任务
+                taskList.Add(taskFactory.StartNew(() => DoWhitePressWin32(_taskParam.Cts, keyValuePair.Key, new Point(x, y))));
             }
 
-            await Task.Run(() =>
-            {
-                try
-                {
-                    while (!_taskParam.Cts.Token.IsCancellationRequested)
-                    {
-                        NotWhiteWin32(posDic);
-                    }
-                }
-                catch (Exception e)
-                {
-                    Logger.LogWarning(e.Message);
-                    throw;
-                }
-            });
+            Task.WaitAll([.. taskList]);
         }
         catch (NormalEndException)
         {
@@ -121,152 +113,185 @@ public class AutoMusicGameTask
         }
     }
 
-    private void NotWhiteWin32(ConcurrentDictionary<User32.VK, Point> posDic)
+    private void DoWhitePressWin32(CancellationTokenSource cts, User32.VK key, Point point)
     {
-        Parallel.ForEach(posDic, kvp => { WhitePressWin32(kvp.Key, kvp.Value); });
-
-        // foreach (var keyValuePair in posDic)
-        // {
-        //     WhitePressWin32(keyValuePair.Key, keyValuePair.Value);
-        // }
-    }
-
-    private void WhitePressWin32(User32.VK key, Point point)
-    {
-        Stopwatch sw = new();
-        sw.Start();
-        var hdc = User32.GetDC(TaskContext.Instance().GameHandle);
-        var c = Gdi32.GetPixel(hdc, point.X, point.Y);
-
-        if (c.B < 220)
+        while (!cts.Token.IsCancellationRequested)
         {
-            KeyDown(key);
-        }
-        else
-        {
-            KeyUp(key);
-        }
-        Gdi32.DeleteDC(hdc);
-        sw.Stop();
-        Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
-    }
+            Thread.Sleep(10);
+            // Stopwatch sw = new();
+            // sw.Start();
+            var hdc = User32.GetDC(_hWnd);
+            var c = Gdi32.GetPixel(hdc, point.X, point.Y);
+            Gdi32.DeleteDC(hdc);
 
-    private void NotWhite()
-    {
-        var gameCaptureRegion = CaptureToRectArea();
-        var srcMat = gameCaptureRegion.SrcMat;
-        Parallel.ForEach(_keyX, kvp => { WhitePress(srcMat, kvp.Key, kvp.Value); });
-        gameCaptureRegion.Dispose();
-    }
-
-    private unsafe void WhitePress(Mat srcMat, User32.VK key, int x)
-    {
-        // 获取图像的指针
-        byte* ptr = (byte*)srcMat.Data.ToPointer();
-
-        // 计算特定坐标下的像素偏移量
-        long offset = srcMat.Step() * _keyY + srcMat.Channels() * x;
-
-        // 获取像素的 RGB 值
-        // byte r = ptr[offset];
-        byte g = ptr[offset + 1];
-        // byte b = ptr[offset + 2];
-        if (g < 240)
-        {
-            KeyDown(key);
-        }
-        else
-        {
-            KeyUp(key);
-        }
-    }
-
-    private void AllPress()
-    {
-        using var gameCaptureRegion = CaptureToRectArea();
-        var srcMat = gameCaptureRegion.SrcMat[new Rect(0, gameCaptureRegion.Height - gameCaptureRegion.Height / 4, gameCaptureRegion.Width, gameCaptureRegion.Height / 4)];
-        Parallel.Invoke(() => { PressPurple(srcMat); }, () => { PressYellow(srcMat); });
-    }
-
-    private void PressYellow(Mat srcMat)
-    {
-        ContoursHelper.FindSpecifyColorRects(srcMat, new Scalar(230, 176, 60), new Scalar(244, 191, 75), 50, 50).ForEach(rect =>
-        {
-            if (srcMat.Height - rect.Height - rect.Y < _judgeLineDisY)
+            if (c.B < 220)
             {
-                var x = rect.X + rect.Width / 2;
-                var key = GetKey(x);
-                if (key != User32.VK.VK_0)
-                {
-                    KeyPress(key);
-                }
-                else
-                {
-                    Logger.LogWarning("X轴位找到对应值");
-                }
-            }
-        });
-    }
-
-    private void PressPurple(Mat srcMat)
-    {
-        ContoursHelper.FindSpecifyColorRects(srcMat, new Scalar(143, 119, 238), new Scalar(163, 140, 245), 50, 50).ForEach(rect =>
-        {
-            if (srcMat.Height - rect.Height - rect.Y <= 150 * assetScale)
-            {
-                var x = rect.X + rect.Width / 2;
-                var key = GetKey(x);
-                if (key != User32.VK.VK_0)
-                {
-                    PurpleKeyPress(key);
-                }
-                else
-                {
-                    Logger.LogWarning("X轴位找到对应值");
-                }
-            }
-        });
-    }
-
-    private User32.VK GetKey(int i)
-    {
-        for (int j = 0; j < _judgeLineX.Length - 1; j++)
-        {
-            if (_judgeLineX[j] <= i && i < _judgeLineX[j + 1])
-            {
-                return _keyMap[j];
-            }
-        }
-
-        return User32.VK.VK_0;
-    }
-
-    private void KeyPress(User32.VK key)
-    {
-        _simulator.KeyPress(key);
-    }
-
-    private void PurpleKeyPress(User32.VK key)
-    {
-        if (_keyStatus.TryGetValue(key, out var v))
-        {
-            if (v)
-            {
-                KeyUp(key);
-                _keyStatus[key] = false;
-            }
-            else
-            {
-                _keyStatus[key] = true;
                 KeyDown(key);
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    Thread.Sleep(10);
+                    hdc = User32.GetDC(_hWnd);
+                    c = Gdi32.GetPixel(hdc, point.X, point.Y);
+                    Gdi32.DeleteDC(hdc);
+                    if (c.B >= 220)
+                    {
+                        break;
+                    }
+                }
+                KeyUp(key);
             }
-        }
-        else
-        {
-            _keyStatus[key] = true;
-            KeyDown(key);
+
+            // sw.Stop();
+            // Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
         }
     }
+
+    // private void NotWhiteWin32(ConcurrentDictionary<User32.VK, Point> posDic)
+    // {
+    //     Parallel.ForEach(posDic, kvp => { WhitePressWin32(kvp.Key, kvp.Value); });
+    //
+    //     // foreach (var keyValuePair in posDic)
+    //     // {
+    //     //     WhitePressWin32(keyValuePair.Key, keyValuePair.Value);
+    //     // }
+    // }
+    //
+    // private void WhitePressWin32(User32.VK key, Point point)
+    // {
+    //     Stopwatch sw = new();
+    //     sw.Start();
+    //     var hdc = User32.GetDC(TaskContext.Instance().GameHandle);
+    //     var c = Gdi32.GetPixel(hdc, point.X, point.Y);
+    //
+    //     if (c.B < 220)
+    //     {
+    //         KeyDown(key);
+    //     }
+    //     else
+    //     {
+    //         KeyUp(key);
+    //     }
+    //     Gdi32.DeleteDC(hdc);
+    //     sw.Stop();
+    //     Debug.WriteLine($"GetPixel 耗时：{sw.ElapsedMilliseconds} （{point.X},{point.Y}）颜色{c.R},{c.G},{c.B}");
+    // }
+    //
+    // private void NotWhite()
+    // {
+    //     var gameCaptureRegion = CaptureToRectArea();
+    //     var srcMat = gameCaptureRegion.SrcMat;
+    //     Parallel.ForEach(_keyX, kvp => { WhitePress(srcMat, kvp.Key, kvp.Value); });
+    //     gameCaptureRegion.Dispose();
+    // }
+    //
+    // private unsafe void WhitePress(Mat srcMat, User32.VK key, int x)
+    // {
+    //     // 获取图像的指针
+    //     byte* ptr = (byte*)srcMat.Data.ToPointer();
+    //
+    //     // 计算特定坐标下的像素偏移量
+    //     long offset = srcMat.Step() * _keyY + srcMat.Channels() * x;
+    //
+    //     // 获取像素的 RGB 值
+    //     // byte r = ptr[offset];
+    //     byte g = ptr[offset + 1];
+    //     // byte b = ptr[offset + 2];
+    //     if (g < 240)
+    //     {
+    //         KeyDown(key);
+    //     }
+    //     else
+    //     {
+    //         KeyUp(key);
+    //     }
+    // }
+    //
+    // private void AllPress()
+    // {
+    //     using var gameCaptureRegion = CaptureToRectArea();
+    //     var srcMat = gameCaptureRegion.SrcMat[new Rect(0, gameCaptureRegion.Height - gameCaptureRegion.Height / 4, gameCaptureRegion.Width, gameCaptureRegion.Height / 4)];
+    //     Parallel.Invoke(() => { PressPurple(srcMat); }, () => { PressYellow(srcMat); });
+    // }
+    //
+    // private void PressYellow(Mat srcMat)
+    // {
+    //     ContoursHelper.FindSpecifyColorRects(srcMat, new Scalar(230, 176, 60), new Scalar(244, 191, 75), 50, 50).ForEach(rect =>
+    //     {
+    //         if (srcMat.Height - rect.Height - rect.Y < _judgeLineDisY)
+    //         {
+    //             var x = rect.X + rect.Width / 2;
+    //             var key = GetKey(x);
+    //             if (key != User32.VK.VK_0)
+    //             {
+    //                 KeyPress(key);
+    //             }
+    //             else
+    //             {
+    //                 Logger.LogWarning("X轴位找到对应值");
+    //             }
+    //         }
+    //     });
+    // }
+    //
+    // private void PressPurple(Mat srcMat)
+    // {
+    //     ContoursHelper.FindSpecifyColorRects(srcMat, new Scalar(143, 119, 238), new Scalar(163, 140, 245), 50, 50).ForEach(rect =>
+    //     {
+    //         if (srcMat.Height - rect.Height - rect.Y <= 150 * assetScale)
+    //         {
+    //             var x = rect.X + rect.Width / 2;
+    //             var key = GetKey(x);
+    //             if (key != User32.VK.VK_0)
+    //             {
+    //                 PurpleKeyPress(key);
+    //             }
+    //             else
+    //             {
+    //                 Logger.LogWarning("X轴位找到对应值");
+    //             }
+    //         }
+    //     });
+    // }
+    //
+    // private User32.VK GetKey(int i)
+    // {
+    //     for (int j = 0; j < _judgeLineX.Length - 1; j++)
+    //     {
+    //         if (_judgeLineX[j] <= i && i < _judgeLineX[j + 1])
+    //         {
+    //             return _keyMap[j];
+    //         }
+    //     }
+    //
+    //     return User32.VK.VK_0;
+    // }
+
+    // private void KeyPress(User32.VK key)
+    // {
+    //     _simulator.KeyPress(key);
+    // }
+    //
+    // private void PurpleKeyPress(User32.VK key)
+    // {
+    //     if (_keyStatus.TryGetValue(key, out var v))
+    //     {
+    //         if (v)
+    //         {
+    //             KeyUp(key);
+    //             _keyStatus[key] = false;
+    //         }
+    //         else
+    //         {
+    //             _keyStatus[key] = true;
+    //             KeyDown(key);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         _keyStatus[key] = true;
+    //         KeyDown(key);
+    //     }
+    // }
 
     private void KeyUp(User32.VK key)
     {
@@ -278,33 +303,33 @@ public class AutoMusicGameTask
         Simulation.SendInputEx.Keyboard.KeyDown(key);
     }
 
-    private void KeyUpOnce(User32.VK key)
-    {
-        if (_keyStatus.TryGetValue(key, out var v))
-        {
-            if (v)
-            {
-                _keyStatus[key] = false;
-                _simulator.KeyUp(key);
-            }
-        }
-    }
-
-    private void KeyDownOnce(User32.VK key)
-    {
-        if (_keyStatus.TryGetValue(key, out var v))
-        {
-            if (!v)
-            {
-                _keyStatus[key] = true;
-                _simulator.KeyDown(key);
-            }
-        }
-        else
-        {
-            _simulator.KeyDown(key);
-        }
-    }
+    // private void KeyUpOnce(User32.VK key)
+    // {
+    //     if (_keyStatus.TryGetValue(key, out var v))
+    //     {
+    //         if (v)
+    //         {
+    //             _keyStatus[key] = false;
+    //             _simulator.KeyUp(key);
+    //         }
+    //     }
+    // }
+    //
+    // private void KeyDownOnce(User32.VK key)
+    // {
+    //     if (_keyStatus.TryGetValue(key, out var v))
+    //     {
+    //         if (!v)
+    //         {
+    //             _keyStatus[key] = true;
+    //             _simulator.KeyDown(key);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         _simulator.KeyDown(key);
+    //     }
+    // }
 
     private void Init()
     {
