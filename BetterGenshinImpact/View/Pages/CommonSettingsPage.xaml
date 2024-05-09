@@ -3,7 +3,9 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+      xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -367,7 +369,10 @@
         </ui:CardControl>
 
         <!--  地图  -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Cursor24}">
+        <ui:CardControl Margin="0,0,0,12"
+                        Icon="{ui:SymbolIcon Cursor24}"
+                        Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                      Converter={StaticResource BooleanToVisibilityConverter}}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
