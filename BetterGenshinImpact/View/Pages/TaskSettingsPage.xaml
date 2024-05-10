@@ -678,8 +678,11 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="下落模式必须选择垂落模式，进入演奏界面使用，建议配置快捷键"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        进入演奏界面使用，下落模式必须选择垂落模式 -<Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
+                    </ui:TextBlock>
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
