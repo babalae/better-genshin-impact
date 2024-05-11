@@ -182,7 +182,7 @@ public class AutoSkipTrigger : ITaskTrigger
             _prevPlayingTime = DateTime.Now;
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
-                Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
             }
 
             // 对话选项选择
@@ -221,7 +221,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
             if (rate is >= 0.5 and < 0.98999)
             {
-                Simulation.SendInputEx.Mouse.LeftButtonClick();
+                Simulation.SendInput.Mouse.LeftButtonClick();
 
                 _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
 
@@ -367,7 +367,7 @@ public class AutoSkipTrigger : ITaskTrigger
         content.CaptureRectArea.Find(_autoSkipAssets.PrimogemRo, primogemRa =>
         {
             Thread.Sleep(100);
-            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             _prevGetDailyRewardsTime = DateTime.MinValue;
             primogemRa.Dispose();
         });

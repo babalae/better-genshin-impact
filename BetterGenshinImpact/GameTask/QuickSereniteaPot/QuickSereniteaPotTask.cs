@@ -60,7 +60,7 @@ public class QuickSereniteaPotTask
         try
         {
             // 打开背包
-            Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_B);
+            Simulation.SendInput.Keyboard.KeyPress(VK.VK_B);
             TaskControl.CheckAndSleep(500);
             WaitForBagToOpen();
 
@@ -79,7 +79,7 @@ public class QuickSereniteaPotTask
             TaskControl.CheckAndSleep(800);
 
             // 按F进入
-            Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
+            Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
         }
         catch (Exception e)
         {

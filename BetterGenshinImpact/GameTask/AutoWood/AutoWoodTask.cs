@@ -154,7 +154,7 @@ public class AutoWoodTask
             }
             else
             {
-                Simulation.SendInputEx.Keyboard.KeyPress(_zKey);
+                Simulation.SendInput.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
             }
@@ -175,7 +175,7 @@ public class AutoWoodTask
 #endif
                 }
 
-                Simulation.SendInputEx.Keyboard.KeyPress(_zKey);
+                Simulation.SendInput.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 Sleep(500, taskParam.Cts);
             }, TimeSpan.FromSeconds(1), 120);
@@ -188,7 +188,7 @@ public class AutoWoodTask
     private void PressEsc(WoodTaskParam taskParam)
     {
         SystemControl.Focus(TaskContext.Instance().GameHandle);
-        Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_ESCAPE);
+        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         Debug.WriteLine("[AutoWood] Esc");
         Sleep(800, taskParam.Cts);
         // 确认在菜单界面

@@ -108,9 +108,9 @@ public class Avatar
         using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
         if (!confirmRectArea.IsEmpty())
         {
-            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             Sleep(600, Cts);
-            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_M);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
             throw new Exception("存在角色被击败，按 M 键打开地图，并停止自动秘境。");
         }
     }
@@ -260,7 +260,7 @@ public class Avatar
                     Sleep(300, Cts);
                     for (int j = 0; j < 10; j++)
                     {
-                        Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
+                        Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
                         Sleep(50); // 持续操作不应该被cts取消
                     }
 
@@ -419,7 +419,7 @@ public class Avatar
     /// <param name="pixelDeltaY"></param>
     public void MoveCamera(int pixelDeltaX, int pixelDeltaY)
     {
-        Simulation.SendInputEx.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
+        Simulation.SendInput.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
     }
 
     /// <summary>
@@ -459,7 +459,7 @@ public class Avatar
                     return;
                 }
 
-                Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
+                Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
                 ms -= 50;
                 Sleep(50); // 持续操作不应该被cts取消
             }
@@ -527,7 +527,7 @@ public class Avatar
 
     public void MoveBy(int x, int y)
     {
-        Simulation.SendInputEx.Mouse.MoveMouseBy(x, y);
+        Simulation.SendInput.Mouse.MoveMouseBy(x, y);
     }
 
     public void KeyDown(string key)

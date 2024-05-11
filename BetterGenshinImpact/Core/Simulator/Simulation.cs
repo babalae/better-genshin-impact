@@ -1,14 +1,11 @@
-﻿using System;
-using WindowsInput;
+﻿using Fischless.WindowsInput;
+using System;
 
 namespace BetterGenshinImpact.Core.Simulator;
 
 public class Simulation
 {
-    [Obsolete]
     public static InputSimulator SendInput { get; } = new();
-
-    public static Fischless.WindowsInput.InputSimulator SendInputEx { get; } = new();
 
     public static MouseEventSimulator MouseEvent { get; } = new();
 

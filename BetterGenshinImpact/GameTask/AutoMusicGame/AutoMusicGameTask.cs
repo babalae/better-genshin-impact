@@ -118,12 +118,12 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam)
 
     private void KeyUp(User32.VK key)
     {
-        Simulation.SendInputEx.Keyboard.KeyUp(key);
+        Simulation.SendInput.Keyboard.KeyUp(key);
     }
 
     private void KeyDown(User32.VK key)
     {
-        Simulation.SendInputEx.Keyboard.KeyDown(key);
+        Simulation.SendInput.Keyboard.KeyDown(key);
     }
 
     private void Init()

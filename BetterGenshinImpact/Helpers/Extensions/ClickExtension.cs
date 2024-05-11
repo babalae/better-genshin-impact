@@ -11,7 +11,7 @@ public static class ClickExtension
 
     public static void Click(this Point point)
     {
-        Simulation.SendInputEx.Mouse.MoveMouseTo(point.X * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+        Simulation.SendInput.Mouse.MoveMouseTo(point.X * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             point.Y * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonDown().Sleep(50).LeftButtonUp();
     }
 
@@ -23,13 +23,13 @@ public static class ClickExtension
 
     public static IMouseSimulator Click(double x, double y)
     {
-        return Simulation.SendInputEx.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+        return Simulation.SendInput.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             y * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonDown().Sleep(50).LeftButtonUp();
     }
 
     public static IMouseSimulator Move(double x, double y)
     {
-        return Simulation.SendInputEx.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+        return Simulation.SendInput.Mouse.MoveMouseTo(x * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             y * 65535 * 1d / PrimaryScreen.WorkingArea.Height);
     }
 

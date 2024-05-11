@@ -92,7 +92,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         }
 
         // 任务文字有动效，等待2s重新截图
-        Simulation.SendInputEx.Mouse.MoveMouseBy(0, 7000);
+        Simulation.SendInput.Mouse.MoveMouseBy(0, 7000);
         Sleep(2000, param.Cts);
 
         // OCR 任务文字 在小地图下方
@@ -111,7 +111,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         {
             // 距离大于150米，先传送到最近的传送点
             // J 打开任务 切换追踪打开地图 中心点就是任务点
-            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_J);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_J);
             Sleep(800, param.Cts);
             // TODO 识别是否在任务界面
             // 切换追踪
@@ -177,7 +177,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     private void StartTrackPoint()
     {
         // V键直接追踪
-        Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_V);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_V);
         Sleep(3000, param.Cts);
 
         var ra = GetRectAreaFromDispatcher();
@@ -211,10 +211,10 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 var centerY = blueTrackPointRa.Y + blueTrackPointRa.Height / 2;
                 if (centerY > CaptureRect.Height / 2)
                 {
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(-50, 0);
+                    Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
                     if (wDown)
                     {
-                        Simulation.SendInputEx.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         wDown = false;
                     }
                     Debug.WriteLine("使追踪点位于俯视角上方");
@@ -232,7 +232,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 };
                 if (moveX != 0)
                 {
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, 0);
+                    Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
                     Debug.WriteLine("调整方向:" + moveX);
                 }
 
@@ -240,7 +240,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (!wDown)
                     {
-                        Simulation.SendInputEx.Keyboard.KeyDown(User32.VK.VK_W);
+                        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
                         wDown = true;
                     }
                 }
@@ -249,7 +249,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (wDown)
                     {
-                        Simulation.SendInputEx.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         wDown = false;
                     }
                     // 识别距离
@@ -271,7 +271,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 Logger.LogInformation("未找到追踪点");
             }
 
-            Simulation.SendInputEx.Mouse.MoveMouseBy(0, 500); // 保证俯视角
+            Simulation.SendInput.Mouse.MoveMouseBy(0, 500); // 保证俯视角
             Sleep(100);
         }
         // });

@@ -42,7 +42,7 @@ public class OneKeyExpeditionTask
 
                 // 3.退出派遣页面 ESC
                 Sleep(500);
-                Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_ESCAPE);
+                Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
                 Logger.LogInformation("探索派遣：{Text}", "完成");
             });
         }

@@ -75,7 +75,7 @@ public class GameLoadingTrigger : ITaskTrigger
             // 随便找个相对点击的位置
             // _clickOffset?.Click(955, 666);
             _postMessageSimulator?.LeftButtonClick();
-            Simulation.SendInputEx.Mouse.LeftButtonClick();
+            Simulation.SendInput.Mouse.LeftButtonClick();
             _enterGameClickCount++;
         }
         else

@@ -14,7 +14,7 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
 {
     public void DesktopRegionClick(int x, int y, int w, int h)
     {
-        Simulation.SendInputEx.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
+        Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
     }
 
@@ -25,13 +25,13 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
     /// <param name="cy"></param>
     public static void DesktopRegionClick(double cx, double cy)
     {
-        Simulation.SendInputEx.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+        Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonDown().Sleep(50).LeftButtonUp();
     }
 
     public static void DesktopRegionMove(double cx, double cy)
     {
-        Simulation.SendInputEx.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
+        Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height);
     }
 

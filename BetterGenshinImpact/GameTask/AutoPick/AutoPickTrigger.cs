@@ -175,7 +175,7 @@ public class AutoPickTrigger : ITaskTrigger
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
-                    Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_F);
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
                     return;
                 }
 
@@ -195,7 +195,7 @@ public class AutoPickTrigger : ITaskTrigger
                 speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);
-                Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_F);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
             }
         });
         speedTimer.DebugPrint();

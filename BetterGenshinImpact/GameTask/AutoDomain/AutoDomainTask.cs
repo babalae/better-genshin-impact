@@ -191,7 +191,7 @@ public class AutoDomainTask
         using var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
-            Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
+            Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
             Logger.LogInformation("自动秘境：{Text}", "进入秘境");
             // 秘境开门动画 5s
             Sleep(5000, _taskParam.Cts);
@@ -254,7 +254,7 @@ public class AutoDomainTask
             // 组合键好像不能直接用 postmessage
             if (!_config.WalkToF)
             {
-                Simulation.SendInputEx.Keyboard.KeyDown(VK.VK_SHIFT);
+                Simulation.SendInput.Keyboard.KeyDown(VK.VK_SHIFT);
             }
 
             try
@@ -269,7 +269,7 @@ public class AutoDomainTask
                     else
                     {
                         Logger.LogInformation("检测到交互键");
-                        Simulation.SendInputEx.Keyboard.KeyPress(VK.VK_F);
+                        Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
                         break;
                     }
                 }
@@ -280,7 +280,7 @@ public class AutoDomainTask
                 Sleep(50);
                 if (!_config.WalkToF)
                 {
-                    Simulation.SendInputEx.Keyboard.KeyUp(VK.VK_SHIFT);
+                    Simulation.SendInput.Keyboard.KeyUp(VK.VK_SHIFT);
                 }
             }
         });
@@ -399,7 +399,7 @@ public class AutoDomainTask
         CancellationTokenSource treeCts = new CancellationTokenSource();
         _taskParam.Cts.Token.Register(treeCts.Cancel);
         // 中键回正视角
-        Simulation.SendInputEx.Mouse.MiddleButtonClick();
+        Simulation.SendInput.Mouse.MiddleButtonClick();
         Sleep(900, _taskParam.Cts);
 
         // 左右移动直到石化古树位于屏幕中心任务
@@ -612,7 +612,7 @@ public class AutoDomainTask
                         moveAngle *= 2;
                     }
 
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(-moveAngle, 0);
+                    Simulation.SendInput.Mouse.MoveMouseBy(-moveAngle, 0);
                     continuousCount = 0;
                 }
                 else if (angle is > 180 and < 360)
@@ -624,7 +624,7 @@ public class AutoDomainTask
                         moveAngle *= 2;
                     }
 
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(moveAngle, 0);
+                    Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
                     continuousCount = 0;
                 }
                 else

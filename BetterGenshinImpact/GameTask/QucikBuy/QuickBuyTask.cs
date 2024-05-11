@@ -30,13 +30,13 @@ public class QuickBuyTask
             // 选中左边点 742x601
             GameCaptureRegion.GameRegion1080PPosMove(742, 601);
             TaskControl.CheckAndSleep(100);
-            Simulation.SendInputEx.Mouse.LeftButtonDown();
+            Simulation.SendInput.Mouse.LeftButtonDown();
             TaskControl.CheckAndSleep(50);
 
             // 向右滑动
-            Simulation.SendInputEx.Mouse.MoveMouseBy(1000, 0);
+            Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
             TaskControl.CheckAndSleep(200);
-            Simulation.SendInputEx.Mouse.LeftButtonUp();
+            Simulation.SendInput.Mouse.LeftButtonUp();
             TaskControl.CheckAndSleep(100);
 
             // 点击弹出页的购买/兑换 1100x780
