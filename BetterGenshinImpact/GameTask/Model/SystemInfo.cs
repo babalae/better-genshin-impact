@@ -92,7 +92,7 @@ namespace BetterGenshinImpact.GameTask.Model
             if (CaptureAreaRect.Width > 1920)
             {
                 var scale = CaptureAreaRect.Width / 1920d;
-                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, 1920, (int)(CaptureAreaRect.Height * scale));
+                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, 1920, (int)(CaptureAreaRect.Height / scale));
             }
             else
             {
