@@ -89,7 +89,15 @@ namespace BetterGenshinImpact.GameTask.Model
             ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
 
             CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
-            ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width > 1920 ? 1920 : CaptureAreaRect.Width, CaptureAreaRect.Height > 1080 ? 1080 : CaptureAreaRect.Height);
+            if (CaptureAreaRect.Width > 1920)
+            {
+                var scale = CaptureAreaRect.Width / 1920d;
+                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, 1920, (int)(CaptureAreaRect.Height * scale));
+            }
+            else
+            {
+                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width, CaptureAreaRect.Height);
+            }
         }
     }
 }
