@@ -26,3 +26,6 @@ Tmp/
 node_modules/
 
 *.zip
+
+# Rider
+.idea

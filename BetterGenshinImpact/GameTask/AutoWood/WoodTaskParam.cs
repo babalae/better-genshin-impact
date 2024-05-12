@@ -7,6 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoWood;
 public class WoodTaskParam : BaseTaskParam
 {
     public int WoodRoundNum { get; set; }
+    public int WoodDailyMaxCount { get; set; }
 
     public WoodTaskParam(CancellationTokenSource cts, int woodRoundNum) : base(cts)
     {
@@ -15,5 +16,7 @@ public class WoodTaskParam : BaseTaskParam
         {
             WoodRoundNum = 9999;
         }
+        
+        WoodDailyMaxCount = 2000;
     }
 }

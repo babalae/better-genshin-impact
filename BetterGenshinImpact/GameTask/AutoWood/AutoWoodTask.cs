@@ -10,11 +10,15 @@ using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using GC = System.GC;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace BetterGenshinImpact.GameTask.AutoWood;
 
@@ -26,6 +30,12 @@ public class AutoWoodTask
     private readonly AutoWoodAssets _assets;
 
     private bool _first = true;
+    
+    private bool _shouldContinue = true;
+    private int _nothingCount;
+    private bool _firstWoodOcr = true;
+    private readonly ConcurrentDictionary<string, int> _woodTotalDict;
+    private readonly Dictionary<string, int> _enumWoodDict;
 
     private readonly Login3rdParty _login3rdParty;
 
@@ -36,6 +46,8 @@ public class AutoWoodTask
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
         _assets = AutoWoodAssets.Instance;
+        _woodTotalDict = new ConcurrentDictionary<string, int>();
+        _enumWoodDict = new Dictionary<string, int>();
     }
 
     public void Start(WoodTaskParam taskParam)
@@ -77,8 +89,13 @@ public class AutoWoodTask
             SystemControl.ActivateWindow();
             for (var i = 0; i < taskParam.WoodRoundNum; i++)
             {
+                if (_nothingCount >= 3)
+                {
+                    Logger.LogInformation("连续{Cnt}次获取木材数量为0。已达每日上限或者当前地图中没有树木", _nothingCount);
+                    break;
+                }
                 Logger.LogInformation("第{Cnt}次伐木", i + 1);
-                if (taskParam.Cts.IsCancellationRequested)
+                if (taskParam.Cts.IsCancellationRequested || !_shouldContinue)
                 {
                     break;
                 }
@@ -111,6 +128,176 @@ public class AutoWoodTask
             }
         }
     }
+    
+    private void RecognizeWoodCount(WoodTaskParam taskParam)
+    {
+        var firstTextFound = false;
+        var recognizedText = "";
+        var firstOcrResultList = new List<string>();
+        
+        // 创建一个计时器，循环识别文本，直到超时
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.ElapsedMilliseconds < 3000) // 3秒超时
+        {
+            // OCR识别木材文本
+            recognizedText = PerformOcr(taskParam, firstTextFound, firstOcrResultList);
+            if (firstTextFound)
+            {
+                _nothingCount = 0;
+                break;
+            }
+
+            firstTextFound = StartRecognizedText(recognizedText);
+        }
+        stopwatch.Stop(); // 停止计时
+
+        ProcessRecognizedText(taskParam, recognizedText, firstOcrResultList);
+    }
+    
+    private string PerformOcr(WoodTaskParam taskParam, bool firstTextFound, List<string> firstOcrResultList)
+    {
+        if (_firstWoodOcr)
+        {
+            var firstWoodCountRect = CaptureToRectArea().DeriveCrop(_assets.WoodCountUpperRect);
+            var recognizedText = OcrFactory.Paddle.Ocr(firstWoodCountRect.SrcGreyMat);
+            firstOcrResultList.Add(recognizedText);
+            Sleep(500, taskParam.Cts);
+            return recognizedText;
+        }
+
+        if (firstTextFound)
+        {
+            // 多个木材时休眠下，然后重新OCR识别所有的文本。因为多个时木材文本是依次出现的，有延迟
+            Sleep(200 * _woodTotalDict.Keys.Count, taskParam.Cts);
+        }
+
+        var woodCountRect = CaptureToRectArea().DeriveCrop(_assets.WoodCountUpperRect);
+        return OcrFactory.Paddle.Ocr(woodCountRect.SrcGreyMat);
+    }
+    
+    private static bool StartRecognizedText(string recognizedText)
+    {
+        return !string.IsNullOrEmpty(recognizedText) && 
+               recognizedText.Contains("获得") &&
+               (recognizedText.Contains('×') || recognizedText.Contains('x'));
+    }
+    
+    private void ProcessRecognizedText(WoodTaskParam taskParam, string recognizedText, List<string> firstOcrResultList) 
+    {
+        if (_firstWoodOcr)
+        {
+            // 首次识别时，找到最长的OCR结果
+            recognizedText = FindLongestOcrResult(firstOcrResultList, recognizedText);
+        }
+
+        if (!string.IsNullOrEmpty(recognizedText))
+        {
+            ParseWoodCount(taskParam, recognizedText);
+        }
+        else
+        {
+            _nothingCount++;
+            Logger.LogWarning("未能识别到伐木数量");
+            return;
+        }
+
+        CheckWoodQuantitiesAndContinue(taskParam);
+    }
+    
+    private void ParseWoodCount(WoodTaskParam taskParam, string text)
+    {
+        // 从识别的文本中提取木材名称和数量
+        // 格式示例："获得\n竹节×30\n杉木×20"
+        int index = text.IndexOf('×');
+        if (index == -1)
+        {
+            index = text.IndexOf('X');
+        }
+        
+        if (index != -1)
+        {
+            // 匹配模式 "名称×数量"，其中名称可能包含中文或字母，数量为数字
+            var matches = Regex.Matches(text, @"([^\d\n]+)[×x](\d+)");
+            
+            // 如果OCR识别木材的种类小于等于最初保存的一样时，直接使用最初的木材数量。
+            if (!_firstWoodOcr && 1 <= matches.Count && matches.Count <= _enumWoodDict.Count)
+            {
+                foreach (var entry in _enumWoodDict.Where(entry => entry.Value <= taskParam.WoodDailyMaxCount))
+                {
+                    UpdateWoodCount(entry.Key, entry.Value);
+                }
+            }
+            else
+            {
+                foreach (Match match in matches)
+                {
+                    if (match.Success)
+                    {
+                        var materialName = match.Groups[1].Value.Trim();
+                        var quantityStr = match.Groups[2].Value.Trim();
+                        var quantity = int.Parse(quantityStr);
+                        Debug.WriteLine($"首次获取木材的名称：{materialName}, 数量：{quantity}");
+                        UpdateWoodCount(materialName, quantity);
+                    }
+                    else
+                    {
+                        Logger.LogWarning("识别到的数量不是有效的整数：{woodText}", text);
+                    }
+                }
+            
+                // 所有数据都保存一遍后，首次OCR识别结束
+                _firstWoodOcr = false;
+            }
+        }
+        else
+        {
+            Logger.LogWarning("未能正确解析木材信息格式：{woodText}", text);
+        }
+    }
+    
+    private void UpdateWoodCount(string materialName, int quantity)
+    {
+        // 检查字典中是否已包含这种木材名称
+        if (!_firstWoodOcr && !_woodTotalDict.ContainsKey(materialName))
+        {
+            Logger.LogWarning("未知的木材名：{woodName}，数量{Cnt}", materialName, quantity);
+        }
+        _woodTotalDict.AddOrUpdate(
+            key: materialName,
+            addValue: quantity,
+            updateValueFactory: (_, existingValue) => existingValue + quantity
+        );
+        if (_firstWoodOcr)
+        {
+            // 保存木材单次获取的值
+            _enumWoodDict.Add(materialName, quantity);
+        }
+    }
+
+    private static string FindLongestOcrResult(List<string> firstOcrResultList, string recognizedText)
+    {
+        foreach (var str in firstOcrResultList.Where(str => str.Length > recognizedText.Length))
+        {
+            recognizedText = str;
+        }
+
+        return recognizedText;
+    }
+    
+    private void CheckWoodQuantitiesAndContinue(WoodTaskParam taskParam)
+    {
+        var allMax = true;
+        foreach (var entry in _woodTotalDict)
+        {
+            // 打印每个条目的键（木材名称）和值（数量）
+            Logger.LogInformation("木材{woodName}累积获取数量：{Cnt}", entry.Key, entry.Value);
+            // 检查木材是否超过每日上限
+            if (entry.Value < taskParam.WoodDailyMaxCount) allMax = false;
+            else Logger.LogInformation("木材{Name}已达到每日数量上限：{Count}", entry.Key, entry.Value);
+        }
+
+        _shouldContinue = !_woodTotalDict.IsEmpty || !allMax;
+    }
 
     private void Felling(WoodTaskParam taskParam, bool isLast = false)
     {
@@ -121,6 +308,9 @@ public class AutoWoodTask
         {
             return;
         }
+        
+        // 计算木材数量
+        RecognizeWoodCount(taskParam);
 
         // 2. 按下 ESC 打开菜单 并退出游戏
         PressEsc(taskParam);
