@@ -9,7 +9,7 @@ public class WoodTaskParam : BaseTaskParam
     public int WoodRoundNum { get; set; }
     public int WoodDailyMaxCount { get; set; }
 
-    public WoodTaskParam(CancellationTokenSource cts, int woodRoundNum) : base(cts)
+    public WoodTaskParam(CancellationTokenSource cts, int woodRoundNum, int woodDailyMaxCount) : base(cts)
     {
         WoodRoundNum = woodRoundNum;
         if (woodRoundNum == 0)
@@ -17,6 +17,6 @@ public class WoodTaskParam : BaseTaskParam
             WoodRoundNum = 9999;
         }
         
-        WoodDailyMaxCount = 2000;
+        if (WoodDailyMaxCount is 0 or >= 2000) WoodDailyMaxCount = 2000;
     }
 }
