@@ -16,7 +16,8 @@ public class WoodTaskParam : BaseTaskParam
         {
             WoodRoundNum = 9999;
         }
-        
+
+        WoodDailyMaxCount = woodDailyMaxCount;
         if (WoodDailyMaxCount is 0 or >= 2000) WoodDailyMaxCount = 2000;
     }
 }
