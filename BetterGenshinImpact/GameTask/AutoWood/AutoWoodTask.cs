@@ -186,7 +186,6 @@ public partial class AutoWoodTask
             while (stopwatch.ElapsedMilliseconds < 3500)
             {
                 // OCR识别木材文本
-                SleepDurationBetweenOcrs(taskParam);
                 var recognizedText = WoodTextAreaOcr();
                 if (_firstWoodOcr)
                 {
@@ -194,11 +193,16 @@ public partial class AutoWoodTask
                     var isFound = HasDetectedWoodText(recognizedText);
                     if (isFound) firstOcrResultList.Add(recognizedText);
                     if (firstOcrResultList.Count != 0 && !isFound) break;
+                    SleepDurationBetweenOcrs(taskParam);
                 }
                 else
                 {
                     var isFound = HasDetectedWoodText(recognizedText);
-                    if (!isFound) continue;
+                    if (!isFound)
+                    {
+                        SleepDurationBetweenOcrs(taskParam);
+                        continue;
+                    }
      
                     NothingCount = 0;
                     // 等待伐木的木材数量显示全，再次OCR识别。
