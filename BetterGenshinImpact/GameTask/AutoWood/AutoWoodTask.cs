@@ -30,19 +30,9 @@ public partial class AutoWoodTask
     private readonly AutoWoodAssets _assets;
 
     private bool _first = true;
-    
-    private bool _reachedWoodMaxCount;
-    private int _nothingCount;
-    private bool _firstWoodOcr = true;
-    private string _firstWoodOcrText = "";
-    private readonly ConcurrentDictionary<string, int> _woodTotalDict;
-    private readonly Dictionary<string, int> _woodMetricsDict;
-    private readonly Dictionary<string, bool> _woodNotPrintDict;
-    private readonly List<string> _existWoods;
-    
-    [GeneratedRegex("([^\\d\\n]+)[×x](\\d+)")]
-    private static partial Regex _parseWoodStatisticsRegex();
 
+    private readonly WoodStatisticsPrinter _printer;
+    
     private readonly Login3rdParty _login3rdParty;
 
     private VK _zKey = VK.VK_Z;
@@ -52,16 +42,7 @@ public partial class AutoWoodTask
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
         _assets = AutoWoodAssets.Instance;
-        _woodTotalDict = new ConcurrentDictionary<string, int>();
-        _woodMetricsDict = new Dictionary<string, int>();
-        _woodNotPrintDict = new Dictionary<string, bool>();
-        
-        // from:https://api-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=13
-        _existWoods = new List<string>
-        {
-            "悬铃木", "白梣木", "炬木", "椴木", "香柏木", "刺葵木", "柽木", "辉木", "业果木", "证悟木", "枫木", "垂香木",
-            "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
-        };
+        _printer = new WoodStatisticsPrinter(_assets);
     }
 
     public void Start(WoodTaskParam taskParam)
@@ -106,15 +87,15 @@ public partial class AutoWoodTask
             runTimeWatch.Start();
             for (var i = 0; i < taskParam.WoodRoundNum; i++)
             {
-                if (WoodStatisticsAlwaysEmpty())
+                if (_printer.WoodStatisticsAlwaysEmpty())
                 {
-                    Logger.LogInformation("连续{Cnt}次获取木材数量为0。判定附近没有能响应「王树瑞佑」的树木！或者已达每日数量上限", _nothingCount);
+                    Logger.LogInformation("连续{Cnt}次获取木材数量为0。判定附近没有能响应「王树瑞佑」的树木！或者已达每日数量上限", _printer.NothingCount);
                     break;
                 }
 
-                if (_reachedWoodMaxCount)
+                if (_printer.ReachedWoodMaxCount)
                 {
-                    Logger.LogInformation("{Names}已达到设置的上限：{MaxCnt}", _woodTotalDict.Keys, taskParam.WoodDailyMaxCount);
+                    Logger.LogInformation("{Names}已达到设置的上限：{MaxCnt}", _printer.WoodTotalDict.Keys, taskParam.WoodDailyMaxCount);
                     break;
                 }
                 
@@ -156,185 +137,207 @@ public partial class AutoWoodTask
             }
         }
     }
-
-    private bool WoodStatisticsAlwaysEmpty()
-    {
-        return _nothingCount >= 3;
-    }
     
-    private void PrintWoodStatistics(WoodTaskParam taskParam)
+    private partial class WoodStatisticsPrinter(AutoWoodAssets assert)
     {
-        var woodStatisticsText = GetWoodStatisticsText(taskParam);
-        if (string.IsNullOrEmpty(woodStatisticsText))
+        public bool ReachedWoodMaxCount;
+        public int NothingCount;
+        public readonly ConcurrentDictionary<string, int> WoodTotalDict = new();
+
+        private bool _firstWoodOcr = true;
+        private string _firstWoodOcrText = "";
+        private readonly Dictionary<string, int> _woodMetricsDict = new();
+        private readonly Dictionary<string, bool> _woodNotPrintDict = new();
+        
+        // from:https://api-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=13
+        private readonly List<string> _existWoods =
+        [
+            "悬铃木", "白梣木", "炬木", "椴木", "香柏木", "刺葵木", "柽木", "辉木", "业果木", "证悟木", "枫木", "垂香木",
+            "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
+        ];
+        
+        [GeneratedRegex("([^\\d\\n]+)[×x](\\d+)")]
+        private static partial Regex _parseWoodStatisticsRegex();
+
+        public bool WoodStatisticsAlwaysEmpty()
         {
-            _nothingCount++;
-            Logger.LogWarning("未能识别到伐木的统计数据");
-            return;
+            return NothingCount >= 3;
         }
         
-        ParseWoodStatisticsText(taskParam, woodStatisticsText);
-        CheckAndPrintWoodQuantities(taskParam);
-    }
-
-    private string GetWoodStatisticsText(WoodTaskParam taskParam)   
-    {
-        var firstOcrResultList = new List<string>();
-        // 创建一个计时器，循环识别文本，直到超时
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < 3500)
+        public void PrintWoodStatistics(WoodTaskParam taskParam)
         {
-            // OCR识别木材文本
-            SleepDurationBetweenOcrs(taskParam);
-            var recognizedText = WoodTextAreaOcr();
-            if (_firstWoodOcr)
+            var woodStatisticsText = GetWoodStatisticsText(taskParam);
+            if (string.IsNullOrEmpty(woodStatisticsText))
             {
-                // 首次时会重复OCR识别，然后找到最好的OCR结果（即最长的那个）
-                firstOcrResultList.Add(recognizedText);
+                NothingCount++;
+                Logger.LogWarning("未能识别到伐木的统计数据");
+                return;
             }
-            else
-            {
-                var isFound = HasDetectedWoodText(recognizedText);
-                if (!isFound) continue;
- 
-                _nothingCount = 0;
-                // 等待伐木的木材数量显示全，再次OCR识别。
-                // SleepDurationBetweenOcrs(taskParam);
-                // return WoodTextAreaOcr();
-                
-                // 直接返回首次的识别结果
-                return _firstWoodOcrText;
-            }
+            
+            ParseWoodStatisticsText(taskParam, woodStatisticsText);
+            CheckAndPrintWoodQuantities(taskParam);
         }
-        stopwatch.Stop(); // 停止计时
-        _firstWoodOcrText = FindBestOcrResult(firstOcrResultList);
-        return _firstWoodOcrText;
-    }
 
-    private void SleepDurationBetweenOcrs(WoodTaskParam taskParam)
-    {
-        if (_firstWoodOcr) Sleep(500, taskParam.Cts);
-        // 多个木材时休眠下，然后重新OCR识别所有的文本。因为多个时木材文本是依次出现的，有延迟
-        else Sleep(200 * _woodTotalDict.Keys.Count, taskParam.Cts);
-    }
-
-    private string WoodTextAreaOcr()
-    {
-        // OCR识别文本区域
-        var woodCountRect = CaptureToRectArea().DeriveCrop(_assets.WoodCountUpperRect);
-        return OcrFactory.Paddle.Ocr(woodCountRect.SrcGreyMat);
-    }
-    
-    private static bool HasDetectedWoodText(string recognizedText)
-    {
-        return !string.IsNullOrEmpty(recognizedText) && 
-               recognizedText.Contains("获得") &&
-               (recognizedText.Contains('×') || recognizedText.Contains('x'));
-    }
-    
-    private void ParseWoodStatisticsText(WoodTaskParam taskParam, string text)
-    {
-        // 从识别的文本中提取木材名称和数量
-        // 格式示例："获得\n竹节×30\n杉木×20"
-        var index = text.IndexOf('×');
-        if (index == -1) index = text.IndexOf('X');
-        if (index == -1)
+        private string GetWoodStatisticsText(WoodTaskParam taskParam)   
         {
-            Logger.LogWarning("未能正确解析木材信息格式：{woodText}", text);
-            return;
-        }
-        
-        // 匹配模式 "名称×数量"
-        var matches = _parseWoodStatisticsRegex().Matches(text);
-        
-        // 如果OCR识别木材的种类小于等于首次保存的一样时，直接使用首次的木材数量。
-        if (!_firstWoodOcr && 1 <= matches.Count && matches.Count <= _woodMetricsDict.Count)
-        {
-            foreach (var entry in _woodMetricsDict.Where(entry => entry.Value <= taskParam.WoodDailyMaxCount))
+            var firstOcrResultList = new List<string>();
+            // 创建一个计时器，循环识别文本，直到超时
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.ElapsedMilliseconds < 3500)
             {
-                UpdateWoodCount(entry.Key, entry.Value);
-            }
-        }
-        else
-        {
-            foreach (Match match in matches)
-            {
-                if (match.Success)
+                // OCR识别木材文本
+                SleepDurationBetweenOcrs(taskParam);
+                var recognizedText = WoodTextAreaOcr();
+                if (_firstWoodOcr)
                 {
-                    var materialName = match.Groups[1].Value.Trim();
-                    var quantityStr = match.Groups[2].Value.Trim();
-                    var quantity = int.Parse(quantityStr);
-                    Debug.WriteLine($"首次获取木材的名称：{materialName}, 数量：{quantity}");
-                    UpdateWoodCount(materialName, quantity);
+                    // 首次时会重复OCR识别，然后找到最好的OCR结果（即最长的那个）
+                    firstOcrResultList.Add(recognizedText);
                 }
                 else
                 {
-                    Logger.LogWarning("识别到的数量不是有效的整数：{woodText}", text);
+                    var isFound = HasDetectedWoodText(recognizedText);
+                    if (!isFound) continue;
+     
+                    NothingCount = 0;
+                    // 等待伐木的木材数量显示全，再次OCR识别。
+                    // SleepDurationBetweenOcrs(taskParam);
+                    // return WoodTextAreaOcr();
+                    
+                    // 直接返回首次的识别结果
+                    return _firstWoodOcrText;
                 }
             }
-        
-            // 所有数据都保存一遍后，首次OCR识别结束
-            _firstWoodOcr = false;
-        }
-    }
-        
-    private void UpdateWoodCount(string materialName, int quantity)
-    {
-        
-        // 检查字典中是否已包含这种木材名称
-        if (!_existWoods.Contains(materialName))
-        {
-            Logger.LogWarning("未知的木材名：{woodName}，数量{Cnt}", materialName, quantity);
-            return;
-        }
-        _woodTotalDict.AddOrUpdate(
-            key: materialName,
-            addValue: quantity,
-            updateValueFactory: (_, existingValue) => existingValue + quantity
-        );
-        if (_firstWoodOcr)
-        {
-            // 记录木材单次获取的值
-            _woodMetricsDict.Add(materialName, quantity);
-        }
-    }
-
-    private static string FindBestOcrResult(List<string> firstOcrResultList)
-    {
-        if (firstOcrResultList.Count == 0) return "";
-        var recognizedText = "";
-        foreach (var str in firstOcrResultList.Where(str => str.Length > recognizedText.Length))
-        {
-            recognizedText = str;
+            stopwatch.Stop(); // 停止计时
+            _firstWoodOcrText = FindBestOcrResult(firstOcrResultList);
+            return _firstWoodOcrText;
         }
 
-        return recognizedText;
+        private void SleepDurationBetweenOcrs(WoodTaskParam taskParam)
+        {
+            if (_firstWoodOcr) Sleep(500, taskParam.Cts);
+            // 多个木材时休眠下，然后重新OCR识别所有的文本。因为多个时木材文本是依次出现的，有延迟
+            else Sleep(200 * WoodTotalDict.Keys.Count, taskParam.Cts);
+        }
+
+        private string WoodTextAreaOcr()
+        {
+            // OCR识别文本区域
+            var woodCountRect = CaptureToRectArea().DeriveCrop(assert.WoodCountUpperRect);
+            return OcrFactory.Paddle.Ocr(woodCountRect.SrcGreyMat);
+        }
+        
+        private static bool HasDetectedWoodText(string recognizedText)
+        {
+            return !string.IsNullOrEmpty(recognizedText) && 
+                   recognizedText.Contains("获得") &&
+                   (recognizedText.Contains('×') || recognizedText.Contains('x'));
+        }
+        
+        private void ParseWoodStatisticsText(WoodTaskParam taskParam, string text)
+        {
+            // 从识别的文本中提取木材名称和数量
+            // 格式示例："获得\n竹节×30\n杉木×20"
+            var index = text.IndexOf('×');
+            if (index == -1) index = text.IndexOf('X');
+            if (index == -1)
+            {
+                Logger.LogWarning("未能正确解析木材信息格式：{woodText}", text);
+                return;
+            }
+            
+            // 匹配模式 "名称×数量"
+            var matches = _parseWoodStatisticsRegex().Matches(text);
+            
+            // 如果OCR识别木材的种类小于等于首次保存的一样时，直接使用首次的木材数量。
+            if (!_firstWoodOcr && 1 <= matches.Count && matches.Count <= _woodMetricsDict.Count)
+            {
+                foreach (var entry in _woodMetricsDict.Where(entry => entry.Value <= taskParam.WoodDailyMaxCount))
+                {
+                    UpdateWoodCount(entry.Key, entry.Value);
+                }
+            }
+            else
+            {
+                foreach (Match match in matches)
+                {
+                    if (match.Success)
+                    {
+                        var materialName = match.Groups[1].Value.Trim();
+                        var quantityStr = match.Groups[2].Value.Trim();
+                        var quantity = int.Parse(quantityStr);
+                        Debug.WriteLine($"首次获取木材的名称：{materialName}, 数量：{quantity}");
+                        UpdateWoodCount(materialName, quantity);
+                    }
+                    else
+                    {
+                        Logger.LogWarning("识别到的数量不是有效的整数：{woodText}", text);
+                    }
+                }
+            
+                // 所有数据都保存一遍后，首次OCR识别结束
+                _firstWoodOcr = false;
+            }
+        }
+            
+        private void UpdateWoodCount(string materialName, int quantity)
+        {
+            
+            // 检查字典中是否已包含这种木材名称
+            if (!_existWoods.Contains(materialName))
+            {
+                Logger.LogWarning("未知的木材名：{woodName}，数量{Cnt}", materialName, quantity);
+                return;
+            }
+            WoodTotalDict.AddOrUpdate(
+                key: materialName,
+                addValue: quantity,
+                updateValueFactory: (_, existingValue) => existingValue + quantity
+            );
+            if (_firstWoodOcr)
+            {
+                // 记录木材单次获取的值
+                _woodMetricsDict.Add(materialName, quantity);
+            }
+        }
+
+        private static string FindBestOcrResult(List<string> firstOcrResultList)
+        {
+            if (firstOcrResultList.Count == 0) return "";
+            var recognizedText = "";
+            foreach (var str in firstOcrResultList.Where(str => str.Length > recognizedText.Length))
+            {
+                recognizedText = str;
+            }
+
+            return recognizedText;
+        }
+        
+        private void CheckAndPrintWoodQuantities(WoodTaskParam taskParam)
+        {
+            if (WoodTotalDict.IsEmpty)
+            {
+                ReachedWoodMaxCount = false;
+                NothingCount++;
+                return;
+            }
+
+            foreach (var entry in WoodTotalDict)
+            {
+                if (_woodNotPrintDict.GetValueOrDefault(entry.Key)) continue;
+                // 打印每个条目的键（木材名称）和值（数量）
+                Logger.LogInformation("木材{woodName}累积获取数量：{Cnt}", entry.Key, entry.Value);
+                
+                // 检查木材是否超过上限
+                if (entry.Value < taskParam.WoodDailyMaxCount) continue;
+                Logger.LogInformation("木材{Name}已达到数量设置的上限：{Count}", entry.Key, taskParam.WoodDailyMaxCount);
+                _woodNotPrintDict.TryAdd(entry.Key, true);
+            }
+
+            // 如果木材统计的最小值都大于设置的上限，则停止伐木
+            ReachedWoodMaxCount = WoodTotalDict.Values.Min() >= taskParam.WoodDailyMaxCount;
+        }
     }
     
-    private void CheckAndPrintWoodQuantities(WoodTaskParam taskParam)
-    {
-        if (_woodTotalDict.IsEmpty)
-        {
-            _reachedWoodMaxCount = false;
-            _nothingCount++;
-            return;
-        }
-
-        foreach (var entry in _woodTotalDict)
-        {
-            if (_woodNotPrintDict.GetValueOrDefault(entry.Key)) continue;
-            // 打印每个条目的键（木材名称）和值（数量）
-            Logger.LogInformation("木材{woodName}累积获取数量：{Cnt}", entry.Key, entry.Value);
-            
-            // 检查木材是否超过上限
-            if (entry.Value < taskParam.WoodDailyMaxCount) continue;
-            Logger.LogInformation("木材{Name}已达到数量设置的上限：{Count}", entry.Key, taskParam.WoodDailyMaxCount);
-            _woodNotPrintDict.TryAdd(entry.Key, true);
-        }
-
-        // 如果木材统计的最小值都大于设置的上限，则停止伐木
-        _reachedWoodMaxCount = _woodTotalDict.Values.Min() >= taskParam.WoodDailyMaxCount;
-    }
-
     private void Felling(WoodTaskParam taskParam, bool isLast = false)
     {
         // 1. 按 z 触发「王树瑞佑」
@@ -346,8 +349,8 @@ public partial class AutoWoodTask
         }
         
         // 打印伐木的统计数据
-        PrintWoodStatistics(taskParam);
-        if (WoodStatisticsAlwaysEmpty() || _reachedWoodMaxCount) return;
+        _printer.PrintWoodStatistics(taskParam);
+        if (_printer.WoodStatisticsAlwaysEmpty() || _printer.ReachedWoodMaxCount) return;
 
         // 2. 按下 ESC 打开菜单 并退出游戏
         PressEsc(taskParam);
