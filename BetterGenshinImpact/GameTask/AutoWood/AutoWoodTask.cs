@@ -191,7 +191,9 @@ public partial class AutoWoodTask
                 if (_firstWoodOcr)
                 {
                     // 首次时会重复OCR识别，然后找到最好的OCR结果（即最长的那个）
-                    firstOcrResultList.Add(recognizedText);
+                    var isFound = HasDetectedWoodText(recognizedText);
+                    if (isFound) firstOcrResultList.Add(recognizedText);
+                    if (firstOcrResultList.Count != 0 && !isFound) break;
                 }
                 else
                 {
@@ -214,9 +216,7 @@ public partial class AutoWoodTask
 
         private void SleepDurationBetweenOcrs(WoodTaskParam taskParam)
         {
-            if (_firstWoodOcr) Sleep(500, taskParam.Cts);
-            // 多个木材时休眠下，然后重新OCR识别所有的文本。因为多个时木材文本是依次出现的，有延迟
-            else Sleep(200 * WoodTotalDict.Keys.Count, taskParam.Cts);
+            Sleep(_firstWoodOcr ? 300 : 100, taskParam.Cts);
         }
 
         private string WoodTextAreaOcr()
@@ -302,14 +302,7 @@ public partial class AutoWoodTask
 
         private static string FindBestOcrResult(List<string> firstOcrResultList)
         {
-            if (firstOcrResultList.Count == 0) return "";
-            var recognizedText = "";
-            foreach (var str in firstOcrResultList.Where(str => str.Length > recognizedText.Length))
-            {
-                recognizedText = str;
-            }
-
-            return recognizedText;
+            return firstOcrResultList.Count == 0 ? "" : firstOcrResultList.OrderByDescending(s => s.Length).First();
         }
         
         private void CheckAndPrintWoodQuantities(WoodTaskParam taskParam)
