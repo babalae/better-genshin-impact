@@ -12,6 +12,7 @@
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
                  Tag="JsonMonoDialog"
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">

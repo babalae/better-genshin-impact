@@ -17,6 +17,7 @@
 		<None Remove="Assets\*.jpg" />
 		<None Remove="Assets\*.png" />
 		<None Remove="Assets\*.ico" />
+		<None Remove="Assets\Fonts\*.ttf" />
 		<None Remove="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
@@ -24,6 +25,7 @@
 		<Resource Include="Assets\*.jpg" />
 		<Resource Include="Assets\*.png" />
 		<Resource Include="Assets\*.ico" />
+		<Resource Include="Assets\Fonts\*.ttf" />
 		<Resource Include="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
