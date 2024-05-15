@@ -230,8 +230,13 @@ public partial class AutoWoodTask
             return OcrFactory.Paddle.Ocr(woodCountRect.SrcGreyMat);
         }
         
-        private static bool HasDetectedWoodText(string recognizedText)
+        private bool HasDetectedWoodText(string recognizedText)
         {
+            if (!_firstWoodOcr)
+            {
+                return !string.IsNullOrEmpty(recognizedText) &&
+                       recognizedText.Contains("获得");
+            }
             return !string.IsNullOrEmpty(recognizedText) && 
                    recognizedText.Contains("获得") &&
                    (recognizedText.Contains('×') || recognizedText.Contains('x'));
@@ -241,9 +246,7 @@ public partial class AutoWoodTask
         {
             // 从识别的文本中提取木材名称和数量
             // 格式示例："获得\n竹节×30\n杉木×20"
-            var index = text.IndexOf('×');
-            if (index == -1) index = text.IndexOf('X');
-            if (index == -1)
+            if (!text.Contains('×') && !text.Contains('X'))
             {
                 Logger.LogWarning("未能正确解析木材信息格式：{woodText}", text);
                 return;
