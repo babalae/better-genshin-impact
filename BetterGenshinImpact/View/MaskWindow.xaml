@@ -8,6 +8,7 @@
         Width="500"
         Height="800"
         AllowsTransparency="True"
+        FontFamily="{DynamicResource TextThemeFontFamily}"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None">
@@ -97,10 +98,10 @@
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel.Resources>
                                     <Style TargetType="{x:Type TextBlock}">
-                                        <Setter Property="Margin" Value="0,0,8,0"/>
+                                        <Setter Property="Margin" Value="0,0,8,0" />
                                     </Style>
                                 </StackPanel.Resources>
-                                <TextBlock Text="{Binding Name}" FontSize="12">
+                                <TextBlock FontSize="12" Text="{Binding Name}">
                                     <TextBlock.Style>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Setter Property="Foreground" Value="LightGray" />
@@ -123,7 +124,6 @@
                             Canvas.Top="150"
                             Canvas.Left="470"
                             Style="{StaticResource DraggableResizableItemStyle}">
-                <Grid>
                     <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
                     <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Grid>

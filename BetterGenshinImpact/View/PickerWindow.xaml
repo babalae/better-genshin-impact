@@ -3,27 +3,28 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        Title="选择捕获窗口" Height="450" Width="800">
+        Title="选择捕获窗口"
+        Width="800"
+        Height="450"
+        FontFamily="{DynamicResource TextThemeFontFamily}"
+        mc:Ignorable="d">
     <Grid Background="Black">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel 
-            Grid.Row="0"
-            Margin="5,0"
-            Orientation="Horizontal"
-            Background="White">
+        <StackPanel Grid.Row="0"
+                    Margin="5,0"
+                    Background="White"
+                    Orientation="Horizontal">
             <TextBlock FontSize="20" Text="双击选中要捕获的窗口" />
         </StackPanel>
 
-        <ListBox
-            x:Name="WindowList"
-            Grid.Row="1"
-            Padding="0,10"
-            BorderThickness="0">
+        <ListBox x:Name="WindowList"
+                 Grid.Row="1"
+                 Padding="0,10"
+                 BorderThickness="0">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <ContentControl MouseDoubleClick="WindowsOnMouseDoubleClick">
