@@ -338,7 +338,7 @@ public partial class AutoWoodTask
 
                     if (ExistWoods.Contains(materialName))
                     {
-                        return materialName;
+                        return ocrResult;
                     }
                 }
             }
