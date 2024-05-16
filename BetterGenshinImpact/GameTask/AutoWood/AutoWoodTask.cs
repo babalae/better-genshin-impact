@@ -150,7 +150,7 @@ public partial class AutoWoodTask
         private readonly Dictionary<string, bool> _woodNotPrintDict = new();
         
         // from:https://api-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=13
-        private readonly List<string> _existWoods =
+        private static readonly List<string> ExistWoods =
         [
             "悬铃木", "白梣木", "炬木", "椴木", "香柏木", "刺葵木", "柽木", "辉木", "业果木", "证悟木", "枫木", "垂香木",
             "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
@@ -290,7 +290,7 @@ public partial class AutoWoodTask
         {
             
             // 检查字典中是否已包含这种木材名称
-            if (!_existWoods.Contains(materialName))
+            if (!ExistWoods.Contains(materialName))
             {
                 Logger.LogWarning("未知的木材名：{woodName}，数量{Cnt}", materialName, quantity);
                 return;
@@ -309,7 +309,42 @@ public partial class AutoWoodTask
 
         private static string FindBestOcrResult(List<string> firstOcrResultList)
         {
-            return firstOcrResultList.Count == 0 ? "" : firstOcrResultList.OrderByDescending(s => s.Length).First();
+            // return firstOcrResultList.Count == 0 ? "" : firstOcrResultList.OrderByDescending(s => s.Length).First();
+            if (firstOcrResultList.Count == 0) return "";
+            
+            // 先排序再查找
+            var sortedOcrResults = firstOcrResultList.OrderByDescending(s => s.Length).ToList();
+            int? targetLength = null;
+            
+            foreach (var ocrResult in sortedOcrResults)
+            {
+                if (targetLength == null)
+                {
+                    targetLength = ocrResult.Length;
+                }
+                else if (ocrResult.Length != targetLength)
+                {
+                    // 如果当前结果长度与第一个匹配项的长度不同，则跳过
+                    continue;
+                }
+
+                // 分解 OCR 结果中的多个条目
+                var matches = _parseWoodStatisticsRegex().Matches(ocrResult);
+
+                foreach (Match match in matches)
+                {
+                    if (!match.Success) continue;
+                    var materialName = match.Groups[1].Value.Trim();
+
+                    if (ExistWoods.Contains(materialName))
+                    {
+                        return materialName;
+                    }
+                }
+            }
+
+            // 如果没有找到匹配的结果
+            return "";
         }
         
         private void CheckAndPrintWoodQuantities(WoodTaskParam taskParam)
