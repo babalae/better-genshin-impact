@@ -18,6 +18,7 @@ using Wpf.Ui;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoWindtrace;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -43,6 +44,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string _switchAutoFightButtonText = "启动";
     [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
     [ObservableProperty] private string _switchAutoMusicGameButtonText = "启动";
+    [ObservableProperty] private string _switchAutoWindtraceButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -421,5 +423,50 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         }
 
         instance.SwitchAutoFightButtonText = running ? "停止" : "启动";
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoWindtraceUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/") { UseShellExecute = true });//TODO:写功能指引
+    }
+
+    [RelayCommand]
+    public void OnSwitchAutoWindtrace()
+    {
+        try
+        {
+            lock (_locker)
+            {
+                if (SwitchAutoWindtraceButtonText == "启动")
+                {
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new AutoMusicGameParam(_cts);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWindtrace, param);
+                    SwitchAutoWindtraceButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoWindtraceButtonText = "启动";
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    public static void SetSwitchAutoWindtraceButtonText(bool running)
+    {
+        var instance = App.GetService<TaskSettingsPageViewModel>();
+        if (instance == null)
+        {
+            return;
+        }
+
+        instance.SwitchAutoWindtraceButtonText = running ? "停止" : "启动";
     }
 }

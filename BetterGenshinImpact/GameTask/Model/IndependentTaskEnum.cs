@@ -8,4 +8,5 @@ public enum IndependentTaskEnum
     AutoDomain,
     AutoTrack,
     AutoMusicGame,
+    AutoWindtrace,
 }

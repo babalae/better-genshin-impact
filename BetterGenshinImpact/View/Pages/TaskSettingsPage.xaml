@@ -102,7 +102,8 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动打牌 -<Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        全自动打牌 -
+                        <Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -201,7 +202,8 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        需要装备「王树瑞佑」 -<Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        需要装备「王树瑞佑」 -
+                        <Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -291,7 +293,8 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动执行选择的战斗策略 -<Hyperlink Command="{Binding GoToAutoFightUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        自动执行选择的战斗策略 -
+                        <Hyperlink Command="{Binding GoToAutoFightUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -378,28 +381,30 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="91*" />
+                        <ColumnDefinition Width="177*"/>
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
                                   Text="自动秘境"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap" Grid.ColumnSpan="2" Margin="0,0,0,34" Grid.RowSpan="2" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        基于钟离的自动循环刷本 -<Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                                  TextWrapping="Wrap" Grid.ColumnSpan="2" Margin="0,0,0,16">
+                        基于钟离的自动循环刷本 -
+                        <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,24,0"
+                               Grid.Column="2"
+                               Margin="0,12,0,0"
                                Command="{Binding SwitchAutoDomainCommand}"
-                               Content="{Binding SwitchAutoDomainButtonText}" />
+                               Content="{Binding SwitchAutoDomainButtonText}" VerticalAlignment="Top" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -619,7 +624,8 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动走路跟踪剧情任务，不支持每日任务 -<Hyperlink Command="{Binding GoToAutoTrackUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        自动走路跟踪剧情任务，不支持每日任务 -
+                        <Hyperlink Command="{Binding GoToAutoTrackUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -679,7 +685,8 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        进入演奏界面使用，下落模式必须选择垂落模式 -<Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        进入演奏界面使用，下落模式必须选择垂落模式 -
+                        <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -690,7 +697,33 @@
                        Content="{Binding SwitchAutoMusicGameButtonText}" />
         </ui:CardControl>
 
-
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon PersonRunning20}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                          Grid.Column="0"
+                          FontTypography="Body"
+                          Text="活动捉迷藏"
+                          TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                          Grid.Column="0"
+                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                          TextWrapping="Wrap">
+                        自动捉迷藏，启动前需移动到npc吉盖克斯旁 -
+                        <Hyperlink Command="{Binding GoToAutoWindtraceUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
+                    </ui:TextBlock>
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+               Command="{Binding SwitchAutoWindtraceCommand}"
+               Content="{Binding SwitchAutoWindtraceButtonText}" />
+        </ui:CardControl>
 
         <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Accessibility24}">
             <ui:CardExpander.Header>

@@ -25,6 +25,7 @@ using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoWindtrace;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -228,6 +229,10 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoMusicGame)
             {
                 Task.Run(() => { new AutoMusicGameTask((AutoMusicGameParam)param).Start(); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoWindtrace)
+            {
+                Task.Run(() => { new AutoWindtraceTask().Start((WindtraceTaskParam)param); });
             }
         }
 
