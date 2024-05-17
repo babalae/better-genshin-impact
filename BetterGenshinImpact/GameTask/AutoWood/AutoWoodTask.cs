@@ -330,17 +330,23 @@ public partial class AutoWoodTask
 
                 // 分解 OCR 结果中的多个条目
                 var matches = _parseWoodStatisticsRegex().Matches(ocrResult);
-
+                var isFound = true;
                 foreach (Match match in matches)
                 {
-                    if (!match.Success) continue;
-                    var materialName = match.Groups[1].Value.Trim();
-
-                    if (ExistWoods.Contains(materialName))
+                    if (!match.Success)
                     {
-                        return ocrResult;
+                        isFound = false;
+                        continue;
+                    }
+                    var materialName = match.Groups[1].Value.Trim();
+                    Debug.WriteLine($"第一次获取的木材名称：{materialName}");
+                    if (!ExistWoods.Contains(materialName))
+                    {
+                        isFound = false;
                     }
                 }
+
+                if (isFound) return ocrResult;
             }
 
             // 如果没有找到匹配的结果
