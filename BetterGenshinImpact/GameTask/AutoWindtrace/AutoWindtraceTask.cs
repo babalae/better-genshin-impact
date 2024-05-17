@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoWindtrace.Assets;
 //using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common;
@@ -13,6 +14,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using GC = System.GC;
@@ -126,15 +129,18 @@ public class AutoWindtraceTask
         NewRetry.Do(() =>
         {
             Sleep(5, taskParam.Cts);
-            using var contentRegion = CaptureToRectArea();
-            using var ra = contentRegion.Find(_assets.Conversation);
-            if (ra.IsEmpty())
+            using var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
+            if (fRectArea.IsEmpty())
             {
                 throw new RetryException("未找到「风行迷踪」对话");
             }
-
-            Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
-            Debug.WriteLine("[AutoWindtrace] Enter panel");
+            else
+            {
+                Logger.LogInformation("检测到交互键");
+                Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
+                Debug.WriteLine("[AutoWindtrace] Enter panel");
+            }
+            
             Sleep(500, taskParam.Cts);
         }, TimeSpan.FromSeconds(1), 120);
 
@@ -215,13 +221,70 @@ public class AutoWindtraceTask
 
     }
 
-    private void InGame(WindtraceTaskParam taskParam)
+    private async void InGame(WindtraceTaskParam taskParam)
     {
-        //TODO: 局内行为待定
+        if (taskParam.Cts.Token.IsCancellationRequested)
+        {
+            return;
+        }
+        var moveCts = new CancellationTokenSource();
+        
+        Task.Run(() => { onGameFinished(taskParam.Cts,moveCts); });//vs提示我这里应该await？
+
+        Move(VK.VK_W, 20, taskParam.Cts).Wait();//自动副本任务的移动代码用了async&await，但我不清楚其目的。如果此处不需要异步，请指正。
+        while (true)
+        {
+            await Move(VK.VK_A, 10, moveCts);
+            if (moveCts.Token.IsCancellationRequested) break;
+            await Move(VK.VK_S, 10, moveCts);
+            if (moveCts.Token.IsCancellationRequested) break;
+            await Move(VK.VK_D, 10, moveCts);
+            if (moveCts.Token.IsCancellationRequested) break;
+            await Move(VK.VK_W, 10, moveCts);
+            if (moveCts.Token.IsCancellationRequested) break;
+        }
     }
 
     private void AfterGame(WindtraceTaskParam taskParam)
     {
         //理论上自动退出，什么都不需要做
+    }
+
+    private async Task Move(VK key,int seconds, CancellationTokenSource Cts)
+    {
+        await Task.Run(() =>
+        {
+            Simulation.SendInput.Keyboard.KeyDown(key);
+            Sleep(20, Cts);
+            Simulation.SendInput.Keyboard.KeyDown(VK.VK_SHIFT);
+            Sleep(seconds * 1000, Cts);
+            Simulation.SendInput.Keyboard.KeyUp(key);
+            Sleep(20, Cts);
+            Simulation.SendInput.Keyboard.KeyUp(VK.VK_SHIFT);
+        });
+    }
+
+    private async Task onGameFinished(CancellationTokenSource paramCts, CancellationTokenSource moveCts)
+    {
+        while (!paramCts.Token.IsCancellationRequested && !moveCts.Token.IsCancellationRequested)
+        {
+            if (isGameFinished())
+            {
+                moveCts.Cancel();
+                break;
+            }
+
+            try
+            {
+                await Task.Delay(1000, paramCts.Token); // 每秒检查一次游戏结束
+            }
+            catch (TaskCanceledException) { }
+        }
+    }
+
+    private bool isGameFinished()
+    {
+        //TODO: OCR结束界面
+        return true;
     }
 }
