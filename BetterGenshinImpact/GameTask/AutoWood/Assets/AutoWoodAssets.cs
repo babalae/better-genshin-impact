@@ -14,8 +14,14 @@ public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
     public RecognitionObject ConfirmRo;
     public RecognitionObject EnterGameRo;
 
+    // 木头数量
+    public Rect WoodCountUpperRect;
+    
     private AutoWoodAssets()
     {
+
+        WoodCountUpperRect = new Rect((int)(100 * AssetScale), (int)(450 * AssetScale), (int)(300 * AssetScale), (int)(250 * AssetScale));
+
         //「王树瑞佑」
         TheBoonOfTheElderTreeRo = new RecognitionObject
         {

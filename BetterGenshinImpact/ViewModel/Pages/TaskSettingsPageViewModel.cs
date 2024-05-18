@@ -35,6 +35,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string _switchAutoGeniusInvokationButtonText = "启动";
 
     [ObservableProperty] private int _autoWoodRoundNum;
+    [ObservableProperty] private int _autoWoodDailyMaxCount;
     [ObservableProperty] private string _switchAutoWoodButtonText = "启动";
 
     [ObservableProperty] private string[] _combatStrategyList;
@@ -166,7 +167,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 {
                     _cts?.Cancel();
                     _cts = new CancellationTokenSource();
-                    var param = new WoodTaskParam(_cts, AutoWoodRoundNum);
+                    var param = new WoodTaskParam(_cts, AutoWoodRoundNum, AutoWoodDailyMaxCount);
                     _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
                     SwitchAutoWoodButtonText = "停止";
                 }
