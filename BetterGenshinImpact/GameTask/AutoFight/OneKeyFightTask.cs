@@ -10,6 +10,7 @@ using System.Threading;
 using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 
@@ -127,6 +128,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     /// </summary>
     private Task FightTask(CancellationTokenSource cts)
     {
+        // 切换截图模式
+        var dispatcherCaptureMode = TaskTriggerDispatcher.Instance().GetCacheCaptureMode();
+        if (dispatcherCaptureMode != DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+        {
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+            Sleep(TaskContext.Instance().Config.TriggerInterval * 2, cts); // 等待缓存图像
+        }
+
         var imageRegion = GetRectAreaFromDispatcher();
         var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
         if (!combatScenes.CheckTeamInitialized())
