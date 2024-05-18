@@ -398,7 +398,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 resRa.Click();
                 Sleep(700);
                 // 可能重复点击，所以固定界面点击下
-                captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 2d));
+                captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d));
                 Sleep(200);
                 // 点击确定
                 Bv.ClickWhiteConfirmButton(captureRegion);
