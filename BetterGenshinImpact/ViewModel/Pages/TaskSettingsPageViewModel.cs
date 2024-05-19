@@ -35,7 +35,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string _switchAutoGeniusInvokationButtonText = "启动";
 
     [ObservableProperty] private int _autoWoodRoundNum;
-    [ObservableProperty] private int _autoWoodDailyMaxCount;
+    [ObservableProperty] private int _autoWoodDailyMaxCount = 2000;
     [ObservableProperty] private string _switchAutoWoodButtonText = "启动";
 
     [ObservableProperty] private string[] _combatStrategyList;
