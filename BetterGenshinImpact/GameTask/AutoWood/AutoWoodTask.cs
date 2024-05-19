@@ -1,24 +1,24 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Genshin.Settings;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using GC = System.GC;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using System.Text.RegularExpressions;
-using System.Collections.Concurrent;
 
 namespace BetterGenshinImpact.GameTask.AutoWood;
 
@@ -59,6 +59,7 @@ public partial class AutoWoodTask
             }
 
             TaskTriggerDispatcher.Instance().StopTimer();
+            Kernel32.SetThreadExecutionState(Kernel32.EXECUTION_STATE.ES_CONTINUOUS | Kernel32.EXECUTION_STATE.ES_SYSTEM_REQUIRED | Kernel32.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
             Logger.LogInformation("→ {Text} 设置伐木总次数：{Cnt}，设置木材数量上限：{MaxCnt}", "自动伐木，启动！", taskParam.WoodRoundNum, taskParam.WoodDailyMaxCount);
 
             _login3rdParty.RefreshAvailabled();
@@ -129,6 +130,7 @@ public partial class AutoWoodTask
             TaskSettingsPageViewModel.SetSwitchAutoWoodButtonText(false);
             // 伐木结束计时
             runTimeWatch.Stop();
+            Kernel32.SetThreadExecutionState(Kernel32.EXECUTION_STATE.ES_CONTINUOUS);
             var elapsedTime = runTimeWatch.Elapsed;
             Logger.LogInformation(@"本次伐木总耗时：{Time:hh\:mm\:ss}", elapsedTime);
             Logger.LogInformation("← {Text}", "退出自动伐木");
