@@ -465,6 +465,11 @@ public partial class AutoWoodTask
     {
         SystemControl.Focus(TaskContext.Instance().GameHandle);
         Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        // if (TaskContext.Instance().Config.AutoWoodConfig.PressTwoEscEnabled)
+        // {
+        //     Sleep(1500, taskParam.Cts);
+        //     Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        // }
         Debug.WriteLine("[AutoWood] Esc");
         Sleep(800, taskParam.Cts);
         // 确认在菜单界面
@@ -477,9 +482,10 @@ public partial class AutoWoodTask
                 using var ra = contentRegion.Find(_assets.MenuBagRo);
                 if (ra.IsEmpty())
                 {
+                    Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
                     throw new RetryException("未检测到弹出菜单");
                 }
-            }, TimeSpan.FromSeconds(1), 3);
+            }, TimeSpan.FromSeconds(1.2), 5);
         }
         catch (Exception e)
         {

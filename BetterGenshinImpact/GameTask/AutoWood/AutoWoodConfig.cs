@@ -20,4 +20,11 @@ public partial class AutoWoodConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _woodCountOcrEnabled = true;
+
+    // /// <summary>
+    // /// 按下两次ESC键，原因见：
+    // /// https://github.com/babalae/better-genshin-impact/issues/235
+    // /// </summary>
+    // [ObservableProperty]
+    // private bool _pressTwoEscEnabled = false;
 }
