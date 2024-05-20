@@ -1,9 +1,5 @@
 ﻿using MicaSetup.Design.Controls;
-
-using MicaSetup.Design.Controls;
-
 using MicaSetup.Helper;
-using System;
 using System.ComponentModel;
 using System.Windows.Media;
 
