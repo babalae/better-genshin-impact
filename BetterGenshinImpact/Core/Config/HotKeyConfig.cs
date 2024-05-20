@@ -148,4 +148,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _autoMusicGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 自动寻路
+    [ObservableProperty]
+    private string _autoTrackPathHotkey = "";
+
+    [ObservableProperty]
+    private string _autoTrackPathHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

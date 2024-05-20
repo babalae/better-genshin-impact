@@ -18,6 +18,7 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using BetterGenshinImpact.GameTask.QucikBuy;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -275,14 +276,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
         ));
 
-        // HotKeySettingModels.Add(new HotKeySettingModel(
-        //     "（测试）启动/停止自动追踪",
-        //     nameof(Config.HotKeyConfig.AutoTrackHotkey),
-        //     Config.HotKeyConfig.AutoTrackHotkey,
-        //     Config.HotKeyConfig.AutoTrackHotkeyType,
-        //     (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrack(); }
-        // ));
-
         HotKeySettingModels.Add(new HotKeySettingModel(
             "快捷点击原神内确认按钮",
             nameof(Config.HotKeyConfig.ClickGenshinConfirmButtonHotkey),
@@ -331,16 +324,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
         });
 
-        // HotKeySettingModels.Add(new HotKeySettingModel(
-        //     "（测试）地图路线录制",
-        //     nameof(Config.HotKeyConfig.MapPosRecordHotkey),
-        //     Config.HotKeyConfig.MapPosRecordHotkey,
-        //     Config.HotKeyConfig.MapPosRecordHotkeyType,
-        //     (_, _) =>
-        //     {
-        //         PathPointRecorder.Instance.Switch();
-        //     }));
-
         HotKeySettingModels.Add(new HotKeySettingModel(
             "启动/停止自动活动音游",
             nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
@@ -348,6 +331,33 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoMusicGameHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
         ));
+
+        if (RuntimeHelper.IsDebug)
+        {
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）启动/停止自动追踪",
+                nameof(Config.HotKeyConfig.AutoTrackHotkey),
+                Config.HotKeyConfig.AutoTrackHotkey,
+                Config.HotKeyConfig.AutoTrackHotkeyType,
+                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrack(); }
+            ));
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）地图路线录制",
+                nameof(Config.HotKeyConfig.MapPosRecordHotkey),
+                Config.HotKeyConfig.MapPosRecordHotkey,
+                Config.HotKeyConfig.MapPosRecordHotkeyType,
+                (_, _) =>
+                {
+                    PathPointRecorder.Instance.Switch();
+                }));
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）自动寻路",
+                nameof(Config.HotKeyConfig.AutoTrackPathHotkey),
+                Config.HotKeyConfig.AutoTrackPathHotkey,
+                Config.HotKeyConfig.AutoTrackPathHotkeyType,
+                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
+            ));
+        }
     }
 
     private string ToChinese(bool enabled)

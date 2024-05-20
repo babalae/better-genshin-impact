@@ -18,6 +18,7 @@ using Wpf.Ui;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -43,6 +44,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
     [ObservableProperty] private string _switchAutoFightButtonText = "启动";
     [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
+    [ObservableProperty] private string _switchAutoTrackPathButtonText = "启动";
     [ObservableProperty] private string _switchAutoMusicGameButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
@@ -331,6 +333,40 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     [RelayCommand]
     public void OnGoToAutoTrackUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnSwitchAutoTrackPath()
+    {
+        try
+        {
+            lock (_locker)
+            {
+                if (SwitchAutoTrackPathButtonText == "启动")
+                {
+                    _cts?.Cancel();
+                    _cts = new CancellationTokenSource();
+                    var param = new AutoTrackPathParam(_cts);
+                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrackPath, param);
+                    SwitchAutoTrackPathButtonText = "停止";
+                }
+                else
+                {
+                    _cts?.Cancel();
+                    SwitchAutoTrackPathButtonText = "启动";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    public void OnGoToAutoTrackPathUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
     }

@@ -50,7 +50,7 @@ public class EntireMap : Singleton<EntireMap>
         // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
         // Mat grey = new();
         // Cv2.CvtColor(_mainMap100BlockMat, grey, ColorConversionCodes.BGR2GRAY);
-        _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap1024BlockMat.Value, new FeatureStorage("mainMap1024BlockMat"));
+        _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap1024BlockMat.Value, new FeatureStorage("mainMap1024Block"));
     }
 
     /// <summary>
@@ -77,11 +77,11 @@ public class EntireMap : Singleton<EntireMap>
 
     /// <summary>
     /// 基于特征匹配获取地图位置(1024区块)
-    /// 支持大地图和小地图
+    /// 移动匹配
     /// </summary>
     /// <param name="greyMat">灰度图</param>
     /// <returns></returns>
-    public Rect GetMapPositionByFeatureMatch(Mat greyMat)
+    public Rect GetMiniMapPositionByFeatureMatch(Mat greyMat)
     {
         try
         {
@@ -112,6 +112,29 @@ public class EntireMap : Singleton<EntireMap>
         }
     }
 
+    /// <summary>
+    /// 基于特征匹配获取地图位置 全部匹配
+    /// </summary>
+    /// <param name="greyMat"></param>
+    /// <returns></returns>
+    public Rect GetBigMapPositionByFeatureMatch(Mat greyMat)
+    {
+        try
+        {
+            var pArray = _featureMatcher.Match(greyMat);
+            if (pArray == null || pArray.Length < 4)
+            {
+                throw new InvalidOperationException();
+            }
+            return Cv2.BoundingRect(pArray);
+        }
+        catch
+        {
+            Debug.WriteLine("Feature Match Failed");
+            return Rect.Empty;
+        }
+    }
+
     // public static Point GetIntersection(Point2f[] points)
     // {
     //     double a1 = (points[0].Y - points[2].Y) / (double)(points[0].X - points[2].X);
@@ -133,7 +156,7 @@ public class EntireMap : Singleton<EntireMap>
 
     public void GetMapPositionAndDrawByFeatureMatch(Mat captureGreyMat)
     {
-        var rect = GetMapPositionByFeatureMatch(captureGreyMat);
+        var rect = GetMiniMapPositionByFeatureMatch(captureGreyMat);
         if (rect != Rect.Empty)
         {
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),

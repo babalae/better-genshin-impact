@@ -78,7 +78,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                         continue;
                     }
 
-                    var rect = _bigMap.GetMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    var rect = _bigMap.GetMiniMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
                     if (rect != Rect.Empty)
                     {
                         way.AddPoint(rect);
