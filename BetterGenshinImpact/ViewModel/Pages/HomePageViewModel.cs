@@ -13,6 +13,7 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Interop;
 using Windows.System;
@@ -52,6 +53,14 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         _taskDispatcher = taskTriggerDispatcher;
         Config = configService.Get();
         ReadGameInstallPath();
+
+        // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
+        // https://github.com/babalae/better-genshin-impact/issues/394
+        if (OsVersionHelper.IsWindows10_1903_OrGreater)
+        {
+            _modeNames = _modeNames.Where(x => x != CaptureModes.WindowsGraphicsCapture.ToString()).ToArray();
+        }
+
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "Close")
