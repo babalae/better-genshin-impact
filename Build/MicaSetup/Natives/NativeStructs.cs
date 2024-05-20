@@ -177,7 +177,6 @@ public struct OSVERSIONINFOEX
     public int MajorVersion;
     public int MinorVersion;
     public int BuildNumber;
-    public int Revision;
     public int PlatformId;
 
     [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
