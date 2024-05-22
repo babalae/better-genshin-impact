@@ -597,6 +597,30 @@
             </StackPanel>
         </ui:CardExpander>
 
+        <!--  自动烹饪  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Fireplace24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动烹饪"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        手动烹饪时，自动在完美状态下结束烹饪（不用的时候请关闭）
+                    </ui:TextBlock>
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.AutoCookConfig.Enabled, Mode=TwoWay}" />
+        </ui:CardControl>
+
         <!--  一键战斗  -->
         <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon ArrowSync24}">
             <ui:CardExpander.Header>

@@ -468,6 +468,12 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\submit_icon_exclamation.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\ui_left_top_cook_icon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\ui_lt_cook_icon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\yellow_track_point_28x.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

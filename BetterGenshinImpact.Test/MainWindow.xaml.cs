@@ -60,4 +60,9 @@ public partial class MainWindow : Window
     {
         AvatarClassifyGen.GenAll();
     }
+
+    private void AutoCookTestCase(object sender, RoutedEventArgs e)
+    {
+        AutoCookTest.Test();
+    }
 }

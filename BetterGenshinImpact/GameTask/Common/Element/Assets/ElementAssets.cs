@@ -16,6 +16,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject PaimonMenuRo;
     public RecognitionObject BlueTrackPoint;
 
+    public RecognitionObject UiLeftTopCookIcon;
+
     private ElementAssets()
     {
         // 按钮
@@ -82,6 +84,16 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = new Rect((int)(300 * AssetScale), 0, CaptureRect.Width - (int)(600 * AssetScale), CaptureRect.Height),
             Threshold = 0.6,
             DrawOnWindow = true
+        }.InitTemplate();
+
+        // 左上角UI元素
+        UiLeftTopCookIcon = new RecognitionObject
+        {
+            Name = "UiLeftTopCookIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ui_left_top_cook_icon.png"),
+            RegionOfInterest = new Rect(0, 0, (int)(150 * AssetScale), (int)(120 * AssetScale)),
+            DrawOnWindow = false
         }.InitTemplate();
     }
 }
