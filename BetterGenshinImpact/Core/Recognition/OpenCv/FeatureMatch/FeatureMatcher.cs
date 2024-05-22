@@ -81,8 +81,10 @@ public class FeatureMatcher
     public Point2f[]? Match(Mat queryMat, int prevX, int prevY)
     {
         var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(_trainMat, _splitRow, _splitCol, prevX, prevY);
+        Debug.WriteLine($"当前坐标({prevX},{prevY})在特征块({cellRow},{cellCol})中");
         if (_lastMergedBlock == null || _lastMergedBlock.MergedCenterCellRow != cellRow || _lastMergedBlock.MergedCenterCellCol != cellCol)
         {
+            Debug.WriteLine($"---------切换到新的特征块({cellRow},{cellCol})，合并特征点--------");
             _lastMergedBlock = KeyPointFeatureBlockHelper.MergeNeighboringFeatures(_blocks, _trainRet, cellRow, cellCol);
         }
 
@@ -124,8 +126,8 @@ public class FeatureMatcher
             }
         }
 
-        Debug.WriteLine($"max distance : {maxDistance}");
-        Debug.WriteLine($"min distance : {minDistance}");
+        // Debug.WriteLine($"max distance : {maxDistance}");
+        // Debug.WriteLine($"min distance : {minDistance}");
 
         var pointsQuery = new List<Point2f>();
         var pointsTrain = new List<Point2f>();

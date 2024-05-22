@@ -42,4 +42,31 @@ public class MapCoordinate
     {
         return new Point((GameMapLeftCols + 1) * GameMapBlockWidth - point.X, (GameMapUpRows + 1) * GameMapBlockWidth - point.Y);
     }
+
+    /// <summary>
+    /// 原神游戏坐标系 -> 主地图1024区块坐标系
+    /// </summary>
+    /// <param name="position">[a,b,c]</param>
+    /// <returns></returns>
+    public static Point GameToMain2048(decimal[] position)
+    {
+        // 四舍六入五取偶
+        var a = position[0]; // 上
+        var c = position[2]; // 左
+
+        // 转换1024区块坐标，大地图坐标系正轴是往左上方向的
+        // 这里写最左上角的区块坐标(GameMapUpRows,GameMapLeftCols)/(上,左),截止4.5版本，最左上角的区块坐标是(5,7)
+
+        return new Point((int)(((GameMapLeftCols + 1) * GameMapBlockWidth - c) * 2), (int)(((GameMapUpRows + 1) * GameMapBlockWidth - a) * 2));
+    }
+
+    /// <summary>
+    /// 主地图1024区块坐标系 -> 原神游戏坐标系
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    public static Point Main2048ToGame(Point point)
+    {
+        return new Point((GameMapLeftCols + 1) * GameMapBlockWidth - point.X / 2, (GameMapUpRows + 1) * GameMapBlockWidth - point.Y / 2);
+    }
 }

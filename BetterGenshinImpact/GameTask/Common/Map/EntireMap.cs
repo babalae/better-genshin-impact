@@ -1,16 +1,14 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
-using BetterGenshinImpact.Model;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
@@ -50,7 +48,8 @@ public class EntireMap : Singleton<EntireMap>
         // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
         // Mat grey = new();
         // Cv2.CvtColor(_mainMap100BlockMat, grey, ColorConversionCodes.BGR2GRAY);
-        _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap1024BlockMat.Value, new FeatureStorage("mainMap1024Block"));
+        // _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap1024BlockMat.Value, new FeatureStorage("mainMap1024Block"));
+        _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap2048BlockMat.Value, new FeatureStorage("mainMap2048Block"));
     }
 
     /// <summary>
@@ -75,8 +74,10 @@ public class EntireMap : Singleton<EntireMap>
             new System.Windows.Rect(p.X, p.Y, TemplateSizeRoi.Width, TemplateSizeRoi.Height)));
     }
 
+    private int _failCnt = 0;
+
     /// <summary>
-    /// 基于特征匹配获取地图位置(1024区块)
+    /// 基于特征匹配获取地图位置
     /// 移动匹配
     /// </summary>
     /// <param name="greyMat">灰度图</param>
@@ -102,12 +103,19 @@ public class EntireMap : Singleton<EntireMap>
             var rect = Cv2.BoundingRect(pArray);
             _prevX = rect.X + rect.Width / 2;
             _prevY = rect.Y + rect.Height / 2;
+            _failCnt = 0;
             return rect;
         }
         catch
         {
-            (_prevX, _prevY) = (-1, -1);
             Debug.WriteLine("Feature Match Failed");
+            _failCnt++;
+            if (_failCnt > 5)
+            {
+                Debug.WriteLine("Feature Match Failed Too Many Times, 重新从全地图进行特征匹配");
+                _failCnt = 0;
+                (_prevX, _prevY) = (-1, -1);
+            }
             return Rect.Empty;
         }
     }
@@ -160,7 +168,9 @@ public class EntireMap : Singleton<EntireMap>
         if (rect != Rect.Empty)
         {
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
-                new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
+                new System.Windows.Rect(rect.X / 20.48, rect.Y / 20.48, rect.Width / 20.48, rect.Height / 20.48)));
+            // WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+            //     new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
         }
     }
 }

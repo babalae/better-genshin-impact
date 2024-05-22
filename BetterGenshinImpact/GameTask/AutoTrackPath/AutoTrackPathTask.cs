@@ -197,18 +197,23 @@ public class AutoTrackPathTask
 
     public Point GetPositionFromBigMap()
     {
+        var bigMapRect = GetBigMapRect();
+        // 中心点
+        var bigMapCenterPoint = bigMapRect.GetCenterPoint();
+        Debug.WriteLine("识别大地图中心点：" + bigMapCenterPoint);
+        var gamePoint = MapCoordinate.Main2048ToGame(bigMapCenterPoint);
+        Debug.WriteLine("转换到游戏坐标：" + gamePoint);
+        return gamePoint;
+    }
+
+    public Rect GetBigMapRect()
+    {
         // 判断是否在地图界面
         using var ra = GetRectAreaFromDispatcher();
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
-            var bigMapRect = EntireMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
-            // 中心点
-            var bigMapCenterPoint = bigMapRect.GetCenterPoint();
-            Debug.WriteLine("识别大地图中心点：" + bigMapCenterPoint);
-            var gamePoint = MapCoordinate.Main1024ToGame(bigMapCenterPoint);
-            Debug.WriteLine("转换到游戏坐标：" + gamePoint);
-            return gamePoint;
+            return EntireMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
         }
         else
         {

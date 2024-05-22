@@ -1,7 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
+using OpenCvSharp.Detail;
 using System.Diagnostics;
+using System.Windows.Forms;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 
@@ -44,5 +47,11 @@ public class EntireMapTest
             Debug.WriteLine("No match 1");
         }
         speedTimer.DebugPrint();
+    }
+
+    public static void Storage()
+    {
+        var featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap2048BlockMat.Value, new FeatureStorage("mainMap2048Block"));
+        MessageBox.Show("特征点生成完成");
     }
 }
