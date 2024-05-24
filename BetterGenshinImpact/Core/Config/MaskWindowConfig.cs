@@ -69,6 +69,11 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     public Rect UidCoverRect { get; set; } = new(1690, 1052, 173, 22);
 
+    /// <summary>
+    ///     1080p下UID遮盖的位置与大小
+    /// </summary>
+    public Rect UidCoverRightBottomRect { get; set; } = new(1920 - 1690, 1080 - 1052, 173, 22);
+
     public Point EastPoint { get; set; } = new(274, 109);
     public Point SouthPoint { get; set; } = new(150, 233);
     public Point WestPoint { get; set; } = new(32, 109);

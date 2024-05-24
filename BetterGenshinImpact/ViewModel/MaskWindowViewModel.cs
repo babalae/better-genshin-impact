@@ -30,7 +30,6 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private Point _westPoint = new(32, 109);
         [ObservableProperty] private Point _northPoint = new(150, -9);
 
-
         public MaskWindowViewModel()
         {
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -98,12 +97,13 @@ namespace BetterGenshinImpact.ViewModel
                 // 比较特殊，必须要启动过任务调度器才能够获取到缩放信息
                 if (TaskContext.Instance().SystemInfo != null)
                 {
-                    var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+                    var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+                    var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
                     var dpiScale = TaskContext.Instance().DpiScale;
-                    UidCoverRect = new Rect(Config.MaskWindowConfig.UidCoverRect.X * assetScale / dpiScale,
-                        Config.MaskWindowConfig.UidCoverRect.Y * assetScale / dpiScale,
-                        Config.MaskWindowConfig.UidCoverRect.Width * assetScale / dpiScale,
-                        Config.MaskWindowConfig.UidCoverRect.Height * assetScale / dpiScale);
+                    UidCoverRect = new Rect((captureRect.Width - Config.MaskWindowConfig.UidCoverRightBottomRect.X * assetScale) / dpiScale,
+                        (captureRect.Height - Config.MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale) / dpiScale,
+                        Config.MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale / dpiScale,
+                        Config.MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale / dpiScale);
                     EastPoint = new Point(Config.MaskWindowConfig.EastPoint.X * assetScale / dpiScale,
                         Config.MaskWindowConfig.EastPoint.Y * assetScale / dpiScale);
                     SouthPoint = new Point(Config.MaskWindowConfig.SouthPoint.X * assetScale / dpiScale,
