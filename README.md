@@ -99,6 +99,10 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；
 
+## 许可证
+
+![GPL-v3](https://www.gnu.org/graphics/gplv3-127x51.png)
+
 ## 问题反馈
 
 提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[906536632](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=_nmC8Neh7mZaGb2hIsO3p4-DKdxBlReQ&authKey=X7rGdx4jbA%2Bs2Juotlov0cg57%2Bv8CwRdjMgYYsxPtdtkl5NKniJhbDILKhWCYS4B&noverify=0&group_code=906536632)
