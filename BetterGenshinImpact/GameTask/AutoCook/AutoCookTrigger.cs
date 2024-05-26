@@ -25,7 +25,7 @@ public class AutoCookTrigger : ITaskTrigger
     {
         // 判断是否处于烹饪界面
         IsExclusive = false;
-        content.CaptureRectArea.Find(ElementAssets.Instance.UiLeftTopCookIcon, foundRectArea =>
+        content.CaptureRectArea.Find(ElementAssets.Instance.UiLeftTopCookIcon, _ =>
         {
             IsExclusive = true;
             var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;

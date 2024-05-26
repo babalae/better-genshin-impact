@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
@@ -20,6 +21,7 @@ using BetterGenshinImpact.GameTask.QucikBuy;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -356,6 +358,23 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.AutoTrackPathHotkey,
                 Config.HotKeyConfig.AutoTrackPathHotkeyType,
                 (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
+            ));
+
+            PostMessageSimulator? postMessageSimulator = null;
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）按键模拟测试",
+                nameof(Config.HotKeyConfig.Test1Hotkey),
+                Config.HotKeyConfig.Test1Hotkey,
+                Config.HotKeyConfig.Test1HotkeyType,
+                (_, _) =>
+                {
+                    if (postMessageSimulator == null)
+                    {
+                        postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+                    }
+                    // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
+                    postMessageSimulator.LeftButtonClickBackground(1340, 655);
+                }
             ));
         }
     }

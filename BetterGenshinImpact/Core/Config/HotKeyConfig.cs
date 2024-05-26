@@ -155,4 +155,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _autoTrackPathHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 测试
+    [ObservableProperty]
+    private string _test1Hotkey = "";
+
+    [ObservableProperty]
+    private string _test1HotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

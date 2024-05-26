@@ -39,6 +39,23 @@ public class PostMessageSimulator
         return this;
     }
 
+    /// <summary>
+    ///     指定位置并按下左键
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public PostMessageSimulator LeftButtonClickBackground(int x, int y)
+    {
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
+        var p = MakeLParam(x, y);
+        User32.PostMessage(_hWnd, WM_LBUTTONDOWN, 1, p);
+        Thread.Sleep(100);
+        User32.PostMessage(_hWnd, WM_LBUTTONUP, 0, p);
+        return this;
+    }
+
+    public static int MakeLParam(int x, int y) => (y << 16) | (x & 0xFFFF);
+
     public PostMessageSimulator LeftButtonClick()
     {
         IntPtr p = (16 << 16) | 16;
