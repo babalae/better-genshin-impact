@@ -750,7 +750,11 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon MusicNote224}">
+        <!--  活动音游（限时，已失效）  -->
+        <ui:CardControl Margin="0,0,0,12"
+                        Icon="{ui:SymbolIcon MusicNote224}"
+                        Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                      Converter={StaticResource BooleanToVisibilityConverter}}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -760,7 +764,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="活动音游（限时）"
+                                  Text="活动音游（限时，已失效）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"

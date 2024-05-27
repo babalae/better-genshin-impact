@@ -102,7 +102,9 @@
                                         <Setter Property="Margin" Value="0,0,8,0" />
                                     </Style>
                                 </StackPanel.Resources>
-                                <TextBlock FontSize="12" Text="{Binding Name}">
+                                <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
+                                           FontSize="12"
+                                           Text="{Binding Name}">
                                     <TextBlock.Style>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Setter Property="Foreground" Value="LightGray" />

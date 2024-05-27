@@ -73,11 +73,11 @@ namespace BetterGenshinImpact.ViewModel
         {
             if (Config != null)
             {
-                StatusList.Add(new StatusItem("自动拾取", Config.AutoPickConfig));
-                StatusList.Add(new StatusItem("自动剧情", Config.AutoSkipConfig));
-                StatusList.Add(new StatusItem("自动邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
-                StatusList.Add(new StatusItem("自动钓鱼", Config.AutoFishingConfig));
-                StatusList.Add(new StatusItem("快速传送", Config.QuickTeleportConfig));
+                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
+                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig));
             }
         }
 
