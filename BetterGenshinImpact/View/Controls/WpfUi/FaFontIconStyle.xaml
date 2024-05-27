@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <FontFamily x:Key="FgiIconFontFamily">/Assets/Fonts/#FgiRegular</FontFamily>
+    <Style x:Key="FaFontIconStyle" TargetType="ui:FontIcon">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Margin" Value="0,0,-8,0" />
+        <Setter Property="FontFamily" Value="{StaticResource FgiIconFontFamily}" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="0.79167" ScaleY="0.79167" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

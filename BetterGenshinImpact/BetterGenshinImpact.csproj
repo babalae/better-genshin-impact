@@ -592,6 +592,7 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\Common\Element\Assets\MapPoint\" />
+	  <Folder Include="View\Controls\WpfUi\" />
 	</ItemGroup>
 
 </Project>

@@ -163,9 +163,10 @@
         </ui:CardExpander>
 
         <!--  自动剧情  -->
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon PlayCircle24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf075;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -334,9 +335,10 @@
 
 
         <!--  自动邀约  -->
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon CommentMultiple24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xe5c8;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -487,14 +489,7 @@
         <!--  快速传送  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Margin="0,0,-5,0"
-                             FontFamily="{StaticResource FgiIconFontFamily}"
-                             FontSize="19"
-                             Glyph="&#xe43f;">
-                    <ui:FontIcon.RenderTransform>
-                        <ScaleTransform CenterX="9.5" CenterY="9.5" ScaleX="0.79" ScaleY="0.79" />
-                    </ui:FontIcon.RenderTransform>
-                </ui:FontIcon>
+                <ui:FontIcon Glyph="&#xf3c5;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
@@ -610,14 +605,7 @@
         <!--  自动烹饪  -->
         <ui:CardControl Margin="0,0,0,12">
             <ui:CardControl.Icon>
-                <ui:FontIcon Margin="0,0,-5,0"
-                             FontFamily="{StaticResource FgiIconFontFamily}"
-                             FontSize="19"
-                             Glyph="&#xe43f;">
-                    <ui:FontIcon.RenderTransform>
-                        <ScaleTransform CenterX="9.5" CenterY="9.5" ScaleX="0.79" ScaleY="0.79" />
-                    </ui:FontIcon.RenderTransform>
-                </ui:FontIcon>
+                <ui:FontIcon Glyph="&#xe43f;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardControl.Icon>
             <ui:CardControl.Header>
                 <Grid>

@@ -81,9 +81,10 @@
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="独立任务设置" />
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon PlayingCards20}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf6d2;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -180,9 +181,10 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon LeafThree24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf6b2;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -346,9 +348,11 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon ArrowSyncCircle24}">
+        <!--  自动战斗  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf71d;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -445,9 +449,11 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon BuildingBankToolbox24}">
+        <!--  自动刷本  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf438;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -674,9 +680,13 @@
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
-                         Icon="{ui:SymbolIcon PeopleQueue24}"
                          Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
                                                        Converter={StaticResource BooleanToVisibilityConverter}}">
+
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf54b;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
