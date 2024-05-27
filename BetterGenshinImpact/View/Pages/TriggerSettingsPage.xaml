@@ -487,10 +487,14 @@
         <!--  快速传送  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Width="24"
+                <ui:FontIcon Margin="0,0,-5,0"
                              FontFamily="{StaticResource FgiIconFontFamily}"
                              FontSize="19"
-                             Glyph="&#xe43f;" />
+                             Glyph="&#xe43f;">
+                    <ui:FontIcon.RenderTransform>
+                        <ScaleTransform CenterX="9.5" CenterY="9.5" ScaleX="0.79" ScaleY="0.79" />
+                    </ui:FontIcon.RenderTransform>
+                </ui:FontIcon>
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
@@ -606,9 +610,14 @@
         <!--  自动烹饪  -->
         <ui:CardControl Margin="0,0,0,12">
             <ui:CardControl.Icon>
-                <ui:FontIcon FontFamily="{StaticResource FgiIconFontFamily}"
+                <ui:FontIcon Margin="0,0,-5,0"
+                             FontFamily="{StaticResource FgiIconFontFamily}"
                              FontSize="19"
-                             Glyph="&#xe43f;" />
+                             Glyph="&#xe43f;">
+                    <ui:FontIcon.RenderTransform>
+                        <ScaleTransform CenterX="9.5" CenterY="9.5" ScaleX="0.79" ScaleY="0.79" />
+                    </ui:FontIcon.RenderTransform>
+                </ui:FontIcon>
             </ui:CardControl.Icon>
             <ui:CardControl.Header>
                 <Grid>
