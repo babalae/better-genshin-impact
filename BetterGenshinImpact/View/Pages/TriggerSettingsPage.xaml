@@ -487,7 +487,8 @@
         <!--  快速传送  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon FontFamily="{StaticResource FgiIconFontFamily}"
+                <ui:FontIcon Width="24"
+                             FontFamily="{StaticResource FgiIconFontFamily}"
                              FontSize="19"
                              Glyph="&#xe43f;" />
             </ui:CardExpander.Icon>
@@ -603,9 +604,11 @@
         </ui:CardExpander>
 
         <!--  自动烹饪  -->
-        <ui:CardControl Margin="0,0,0,12" Style="{StaticResource CustomIconCardControlStyle}">
+        <ui:CardControl Margin="0,0,0,12">
             <ui:CardControl.Icon>
-                <ui:FontIcon FontFamily="{StaticResource FgiIconFontFamily}" Glyph="&#xe43f;" />
+                <ui:FontIcon FontFamily="{StaticResource FgiIconFontFamily}"
+                             FontSize="19"
+                             Glyph="&#xe43f;" />
             </ui:CardControl.Icon>
             <ui:CardControl.Header>
                 <Grid>

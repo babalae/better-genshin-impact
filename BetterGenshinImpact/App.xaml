@@ -8,8 +8,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
-                <ResourceDictionary Source="/View/Controls/WpfUi/CustomIconCardControlStyle.xaml" />
-                <ResourceDictionary Source="/View/Controls/WpfUi/CustomIconCardExpanderStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <FontFamily x:Key="TextThemeFontFamily">/Assets/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="FgiIconFontFamily">/Assets/Fonts/#FgiRegular</FontFamily>
