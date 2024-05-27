@@ -2,9 +2,9 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="HomePage"
       d:DataContext="{d:DesignInstance Type=pages:TriggerSettingsPageViewModel}"
@@ -15,7 +15,9 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
+
     <StackPanel Margin="42,16,42,12">
+
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="实时触发的自动化任务设置" />
@@ -483,9 +485,12 @@
         </ui:CardExpander>
 
         <!--  快速传送  -->
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon DoorArrowLeft24}">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon FontFamily="{StaticResource FgiIconFontFamily}"
+                             FontSize="19"
+                             Glyph="&#xe43f;" />
+            </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -598,7 +603,10 @@
         </ui:CardExpander>
 
         <!--  自动烹饪  -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Fireplace24}">
+        <ui:CardControl Margin="0,0,0,12" Style="{StaticResource CustomIconCardControlStyle}">
+            <ui:CardControl.Icon>
+                <ui:FontIcon FontFamily="{StaticResource FgiIconFontFamily}" Glyph="&#xe43f;" />
+            </ui:CardControl.Icon>
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
