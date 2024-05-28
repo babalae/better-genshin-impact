@@ -4,8 +4,10 @@ using Sdcb.PaddleInference;
 using Sdcb.PaddleOCR;
 using Sdcb.PaddleOCR.Models;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
@@ -28,6 +30,12 @@ public class PaddleOcrService : IOcrService
         var localClsModel = ClassificationModel.FromDirectory(Path.Combine(path, "ch_ppocr_mobile_v2.0_cls"));
         var localRecModel = RecognizationModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_rec"), Path.Combine(path, "ppocr_keys_v1.txt"), ModelVersion.V4);
         var model = new FullOcrModel(localDetModel, localClsModel, localRecModel);
+        // Action<PaddleConfig> device = TaskContext.Instance().Config.InferenceDevice switch
+        // {
+        //     "CPU" => PaddleDevice.Onnx(),
+        //     "GPU_DirectML" => PaddleDevice.Onnx(),
+        //     _ => throw new InvalidEnumArgumentException("无效的推理设备")
+        // };
         _paddleOcrAll = new PaddleOcrAll(model, PaddleDevice.Onnx())
         {
             AllowRotateDetection = false, /* 允许识别有角度的文字 */

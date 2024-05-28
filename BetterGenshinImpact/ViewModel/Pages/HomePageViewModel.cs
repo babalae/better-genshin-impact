@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
@@ -47,6 +48,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
+
+    [ObservableProperty]
+    private string[] _inferenceDeviceTypes = BgiSessionOption.InferenceDeviceTypes;
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -113,6 +117,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
             OnStopTrigger();
             await OnStartTriggerAsync();
         }
+    }
+
+    [RelayCommand]
+    private void OnInferenceDeviceTypeDropDownChanged(string value)
+    {
     }
 
     [RelayCommand]

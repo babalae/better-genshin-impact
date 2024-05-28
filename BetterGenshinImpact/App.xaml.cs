@@ -57,6 +57,7 @@ public partial class App : Application
                 {
                     loggerConfiguration.WriteTo.RichTextBox(maskWindow.LogBox, LogEventLevel.Information, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
                 }
+
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
 
@@ -227,8 +228,14 @@ public partial class App : Application
 
     private static void HandleException(Exception e)
     {
+        if (e.InnerException != null)
+        {
+            e = e.InnerException;
+        }
+
         MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
 
         // log
+        GetLogger<App>().LogDebug(e, "UnHandle Exception");
     }
 }

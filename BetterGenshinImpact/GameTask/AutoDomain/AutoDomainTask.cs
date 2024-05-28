@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -8,6 +9,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
@@ -23,10 +25,8 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
-using System.Windows.Media.Media3D;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -36,7 +36,7 @@ public class AutoDomainTask
 
     private readonly PostMessageSimulator _simulator;
 
-    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
+    private readonly YoloV8 _predictor;
 
     private readonly AutoDomainConfig _config;
 
@@ -46,6 +46,8 @@ public class AutoDomainTask
     {
         _taskParam = taskParam;
         _simulator = AutoFightContext.Instance.Simulator;
+
+        _predictor = new YoloV8(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"), BgiSessionOption.Instance.Options);
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
