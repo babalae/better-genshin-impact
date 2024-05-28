@@ -1,5 +1,4 @@
 ﻿using OpenCvSharp;
-using Sdcb.PaddleOCR;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 

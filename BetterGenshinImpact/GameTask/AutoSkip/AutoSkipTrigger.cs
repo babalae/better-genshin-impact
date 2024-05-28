@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
@@ -6,12 +7,12 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,8 +21,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;

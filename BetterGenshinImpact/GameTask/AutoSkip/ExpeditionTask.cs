@@ -4,8 +4,6 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
