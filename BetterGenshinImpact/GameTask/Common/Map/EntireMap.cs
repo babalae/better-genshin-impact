@@ -1,5 +1,7 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
@@ -10,7 +12,7 @@ using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
-public class EntireMap
+public class EntireMap : Singleton<EntireMap>
 {
     // 这个模板缩放大小的计算方式 https://github.com/babalae/better-genshin-impact/issues/318
     public static readonly Size TemplateSize = new(240, 135);
@@ -23,25 +25,31 @@ public class EntireMap
     /// </summary>
     private readonly Mat _mainMap100BlockMat;
 
-    /// <summary>
-    /// 1024区块拼接的主要地图
-    /// </summary>
-    private readonly Mat _mainMap1024BlockMat;
+    // /// <summary>
+    // /// 1024区块拼接的主要地图
+    // /// </summary>
+    // private readonly Mat _mainMap1024BlockMat;
+    //
+    // /// <summary>
+    // /// 2048城市区块拼接的主要地图
+    // /// </summary>
+    // private readonly Mat _cityMap2048BlockMat;
 
-    /// <summary>
-    /// 2048城市区块拼接的主要地图
-    /// </summary>
-    private readonly Mat _cityMap2048BlockMat;
+    private readonly FeatureMatcher _featureMatcher;
 
-    private readonly SurfMatcher _surfMatcher;
+    private int _prevX = -1;
+    private int _prevY = -1;
 
     public EntireMap()
     {
         // 大地图模板匹配使用的模板
-        _mainMap100BlockMat = new Mat(Global.Absolute(@"Assets\Map\mainMap100Block.png"));
-        _mainMap1024BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap1024Block.png", ImreadModes.Grayscale);
-        _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
-        _surfMatcher = new SurfMatcher(_mainMap1024BlockMat);
+        _mainMap100BlockMat = MapAssets.Instance.MainMap100BlockMat.Value;
+        // _mainMap1024BlockMat = MapAssets.Instance.MainMap1024BlockMat.Value;
+        // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
+        // Mat grey = new();
+        // Cv2.CvtColor(_mainMap100BlockMat, grey, ColorConversionCodes.BGR2GRAY);
+        // _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap1024BlockMat.Value, new FeatureStorage("mainMap1024Block"));
+        _featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap2048BlockMat.Value, new FeatureStorage("mainMap2048Block"));
     }
 
     /// <summary>
@@ -66,21 +74,73 @@ public class EntireMap
             new System.Windows.Rect(p.X, p.Y, TemplateSizeRoi.Width, TemplateSizeRoi.Height)));
     }
 
-    /// <summary>
-    /// 基于Surf匹配获取地图位置(1024区块)
-    /// 支持大地图和小地图
-    /// </summary>
-    /// <param name="captureGreyMat">灰度图</param>
-    /// <returns></returns>
-    public Rect GetMapPositionBySurf(Mat captureGreyMat)
-    {
-        var pArray = _surfMatcher.Match(captureGreyMat);
-        if (pArray == null || pArray.Length < 4)
-        {
-            throw new InvalidOperationException();
-        }
+    private int _failCnt = 0;
 
-        return Cv2.BoundingRect(pArray);
+    /// <summary>
+    /// 基于特征匹配获取地图位置
+    /// 移动匹配
+    /// </summary>
+    /// <param name="greyMat">灰度图</param>
+    /// <returns></returns>
+    public Rect GetMiniMapPositionByFeatureMatch(Mat greyMat)
+    {
+        try
+        {
+            Point2f[]? pArray;
+            if (_prevX != -1 && _prevY != -1)
+            {
+                pArray = _featureMatcher.Match(greyMat, _prevX, _prevY);
+            }
+            else
+            {
+                pArray = _featureMatcher.Match(greyMat);
+            }
+
+            if (pArray == null || pArray.Length < 4)
+            {
+                throw new InvalidOperationException();
+            }
+            var rect = Cv2.BoundingRect(pArray);
+            _prevX = rect.X + rect.Width / 2;
+            _prevY = rect.Y + rect.Height / 2;
+            _failCnt = 0;
+            return rect;
+        }
+        catch
+        {
+            Debug.WriteLine("Feature Match Failed");
+            _failCnt++;
+            if (_failCnt > 5)
+            {
+                Debug.WriteLine("Feature Match Failed Too Many Times, 重新从全地图进行特征匹配");
+                _failCnt = 0;
+                (_prevX, _prevY) = (-1, -1);
+            }
+            return Rect.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 基于特征匹配获取地图位置 全部匹配
+    /// </summary>
+    /// <param name="greyMat"></param>
+    /// <returns></returns>
+    public Rect GetBigMapPositionByFeatureMatch(Mat greyMat)
+    {
+        try
+        {
+            var pArray = _featureMatcher.Match(greyMat);
+            if (pArray == null || pArray.Length < 4)
+            {
+                throw new InvalidOperationException();
+            }
+            return Cv2.BoundingRect(pArray);
+        }
+        catch
+        {
+            Debug.WriteLine("Feature Match Failed");
+            return Rect.Empty;
+        }
     }
 
     // public static Point GetIntersection(Point2f[] points)
@@ -102,17 +162,15 @@ public class EntireMap
     //     return new Point((int)x, (int)y);
     // }
 
-    public void GetMapPositionAndDrawBySurf(Mat captureGreyMat)
+    public void GetMapPositionAndDrawByFeatureMatch(Mat captureGreyMat)
     {
-        try
+        var rect = GetMiniMapPositionByFeatureMatch(captureGreyMat);
+        if (rect != Rect.Empty)
         {
-            var rect = GetMapPositionBySurf(captureGreyMat);
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
-                new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
-        }
-        catch (Exception)
-        {
-            Debug.WriteLine("Surf Match Failed");
+                new System.Windows.Rect(rect.X / 20.48, rect.Y / 20.48, rect.Width / 20.48, rect.Height / 20.48)));
+            // WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+            //     new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
         }
     }
 }

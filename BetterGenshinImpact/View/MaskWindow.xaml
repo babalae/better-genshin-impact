@@ -8,6 +8,7 @@
         Width="500"
         Height="800"
         AllowsTransparency="True"
+        FontFamily="{DynamicResource TextThemeFontFamily}"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None">
@@ -63,9 +64,10 @@
                             Height="188"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
                 <RichTextBox x:Name="LogTextBox"
+                             Padding="0,5,0,0"
                              Background="Transparent"
                              BorderThickness="0"
-                             FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                             FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Assets/Fonts/MiSans-Regular.ttf#MiSans"
                              FontSize="12"
                              Foreground="LightGray"
                              IsHitTestVisible="False"
@@ -97,10 +99,12 @@
                             <StackPanel Orientation="Horizontal">
                                 <StackPanel.Resources>
                                     <Style TargetType="{x:Type TextBlock}">
-                                        <Setter Property="Margin" Value="0,0,8,0"/>
+                                        <Setter Property="Margin" Value="0,0,8,0" />
                                     </Style>
                                 </StackPanel.Resources>
-                                <TextBlock Text="{Binding Name}" FontSize="12">
+                                <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
+                                           FontSize="12"
+                                           Text="{Binding Name}">
                                     <TextBlock.Style>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Setter Property="Foreground" Value="LightGray" />
@@ -123,7 +127,6 @@
                             Canvas.Top="150"
                             Canvas.Left="470"
                             Style="{StaticResource DraggableResizableItemStyle}">
-                <Grid>
                     <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
                     <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Grid>

@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using BetterGenshinImpact.GameTask.AutoFight;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -48,4 +49,22 @@ public partial class MacroConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _spacePressHoldToContinuationEnabled;
+
+    /// <summary>
+    ///     一键战斗宏启用状态
+    /// </summary>
+    [ObservableProperty]
+    private bool _combatMacroEnabled;
+
+    /// <summary>
+    ///     一键战斗宏快捷键模式
+    /// </summary>
+    [ObservableProperty]
+    private string _combatMacroHotkeyMode = OneKeyFightTask.HoldOnMode;
+
+    /// <summary>
+    ///     一键战斗宏优先级
+    /// </summary>
+    [ObservableProperty]
+    private int _combatMacroPriority = 1;
 }

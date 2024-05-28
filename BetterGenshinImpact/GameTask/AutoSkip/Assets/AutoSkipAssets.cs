@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using BetterGenshinImpact.Core.Recognition;
+﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
@@ -28,8 +26,11 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
     public RecognitionObject SubmitGoodsRo;
     public Mat SubmitGoodsMat;
 
-    public Mat HangoutSelectedMat;
-    public Mat HangoutUnselectedMat;
+    // public Mat HangoutSelectedMat;
+    // public Mat HangoutUnselectedMat;
+    public RecognitionObject HangoutSelectedRo;
+
+    public RecognitionObject HangoutUnselectedRo;
 
     private AutoSkipAssets()
     {
@@ -60,7 +61,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             DrawOnWindow = true
         }.InitTemplate();
 
-        OptionRoi = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width - CaptureRect.Width / 2 - CaptureRect.Width / 6, CaptureRect.Height);
+        OptionRoi = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 12, CaptureRect.Width - CaptureRect.Width / 2 - CaptureRect.Width / 6, CaptureRect.Height - CaptureRect.Height / 12 - 10);
         OptionIconRo = new RecognitionObject
         {
             Name = "OptionIcon",
@@ -155,7 +156,22 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
         SubmitGoodsMat = GameTaskManager.LoadAssetImage("AutoSkip", "submit_goods.png");
 
         // 邀约
-        HangoutSelectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_selected.png", ImreadModes.Grayscale);
-        HangoutUnselectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_unselected.png", ImreadModes.Grayscale);
+        // HangoutSelectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_selected.png", ImreadModes.Grayscale);
+        // HangoutUnselectedMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_unselected.png", ImreadModes.Grayscale);
+
+        HangoutSelectedRo = new RecognitionObject
+        {
+            Name = "HangoutSelected",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_selected.png"),
+            DrawOnWindow = true
+        }.InitTemplate();
+        HangoutUnselectedRo = new RecognitionObject
+        {
+            Name = "HangoutUnselected",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_unselected.png"),
+            DrawOnWindow = true
+        }.InitTemplate();
     }
 }

@@ -13,6 +13,7 @@
       d:DesignWidth="800"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
@@ -79,13 +80,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="BetterGI · 更好的原神，启动！"
+                                  Text="BetterGI 截图器，启动！"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
+                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
                             点击展开启动相关配置
                         </Run>
                         。</ui:TextBlock>
@@ -130,8 +131,14 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding ModeNames}"
-                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}" />
+                              ItemsSource="{Binding ModeNames, Mode=OneWay}"
+                              SelectedItem="{Binding Config.CaptureMode, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding CaptureModeDropDownChangedCommand}" CommandParameter="GeniusInvocation" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -319,7 +326,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动 BetterGI 时，如果原神未启动，则自动启动原神。"
+                                  Text="启动截图器时，如果原神未启动，则自动启动原神。"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"

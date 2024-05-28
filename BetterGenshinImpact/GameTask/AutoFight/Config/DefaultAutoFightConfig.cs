@@ -13,6 +13,7 @@ public class DefaultAutoFightConfig
     public static List<CombatAvatar> CombatAvatars { get; set; }
     public static List<string> CombatAvatarNames { get; set; }
     public static Dictionary<string, CombatAvatar> CombatAvatarMap { get; set; }
+    public static Dictionary<string, CombatAvatar> CombatAvatarNameEnMap { get; set; }
 
     static DefaultAutoFightConfig()
     {
@@ -21,6 +22,7 @@ public class DefaultAutoFightConfig
         CombatAvatars = config ?? throw new Exception("combat_avatar.json deserialize failed");
         CombatAvatarNames = config.Select(x => x.Name).ToList();
         CombatAvatarMap = config.ToDictionary(x => x.Name);
+        CombatAvatarNameEnMap = config.ToDictionary(x => x.NameEn);
     }
 
     public static string AvatarAliasToStandardName(string alias)

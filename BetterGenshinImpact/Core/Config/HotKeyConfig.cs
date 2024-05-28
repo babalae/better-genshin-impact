@@ -11,6 +11,12 @@ namespace BetterGenshinImpact.Core.Config;
 public partial class HotKeyConfig : ObservableObject
 {
     [ObservableProperty]
+    private string _autoTrackHotkey = "";
+
+    [ObservableProperty]
+    private string _autoTrackHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    [ObservableProperty]
     private string _autoDomainHotkey = "";
 
     [ObservableProperty]
@@ -107,4 +113,53 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _turnAroundHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 点击确认按钮
+    [ObservableProperty]
+    private string _clickGenshinConfirmButtonHotkey = "";
+
+    [ObservableProperty]
+    private string _clickGenshinConfirmButtonHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 点击取消按钮
+    [ObservableProperty]
+    private string _clickGenshinCancelButtonHotkey = "";
+
+    [ObservableProperty]
+    private string _clickGenshinCancelButtonHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 一键战斗宏
+    [ObservableProperty]
+    private string _oneKeyFightHotkey = "";
+
+    [ObservableProperty]
+    private string _oneKeyFightHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 地图路线录制开始/停止
+    [ObservableProperty]
+    private string _mapPosRecordHotkey = "";
+
+    [ObservableProperty]
+    private string _mapPosRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 活动音游开始/停止
+    [ObservableProperty]
+    private string _autoMusicGameHotkey = "";
+
+    [ObservableProperty]
+    private string _autoMusicGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 自动寻路
+    [ObservableProperty]
+    private string _autoTrackPathHotkey = "";
+
+    [ObservableProperty]
+    private string _autoTrackPathHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 测试
+    [ObservableProperty]
+    private string _test1Hotkey = "";
+
+    [ObservableProperty]
+    private string _test1HotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

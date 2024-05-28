@@ -49,13 +49,30 @@ namespace BetterGenshinImpact.GameTask.AutoSkip
         [ObservableProperty] private string _autoReExploreCharacter = "";
 
         /// <summary>
-        /// 优先点击第一个选项
+        /// 优先选择第一个选项
+        /// 优先选择最后一个选项
+        /// 不选择选项
         /// </summary>
-        [ObservableProperty] private bool _clickFirstOptionEnabled = false;
+        [ObservableProperty] private string _clickChatOption = "优先选择最后一个选项";
 
         /// <summary>
         /// 自动邀约启用
         /// </summary>
         [ObservableProperty] private bool _autoHangoutEventEnabled = false;
+
+        /// <summary>
+        /// 自动邀约启用
+        /// </summary>
+        [ObservableProperty] private string _autoHangoutEndChoose = string.Empty;
+
+        public bool IsClickFirstChatOption()
+        {
+            return ClickChatOption == "优先选择第一个选项";
+        }
+
+        public bool IsClickNoneChatOption()
+        {
+            return ClickChatOption == "不选择选项";
+        }
     }
 }

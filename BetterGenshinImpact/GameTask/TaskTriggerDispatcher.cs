@@ -24,6 +24,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -59,6 +61,8 @@ namespace BetterGenshinImpact.GameTask
         private static readonly object _bitmapLocker = new();
 
         public event EventHandler UiTaskStopTickEvent;
+
+        public event EventHandler UiTaskStartTickEvent;
 
         public TaskTriggerDispatcher()
         {
@@ -115,7 +119,7 @@ namespace BetterGenshinImpact.GameTask
             );
 
             // 捕获模式初始化配置
-            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled)
+            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
             {
                 _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
             }
@@ -156,7 +160,7 @@ namespace BetterGenshinImpact.GameTask
             var width = systemInfo.GameScreenSize.Width;
             var height = systemInfo.GameScreenSize.Height;
             var dpiScale = TaskContext.Instance().DpiScale;
-            _logger.LogInformation("当前游戏分辨率{Width}x{Height}，素材缩放比率{Scale}，DPI缩放{Dpi}",
+            _logger.LogInformation("截图器已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
                 width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
 
             if (width * 9 != height * 16)
@@ -221,6 +225,14 @@ namespace BetterGenshinImpact.GameTask
             else if (taskType == IndependentTaskEnum.AutoTrack)
             {
                 Task.Run(() => { new AutoTrackTask((AutoTrackParam)param).Start(); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoTrackPath)
+            {
+                Task.Run(() => { new AutoTrackPathTask((AutoTrackPathParam)param).Start(); });
+            }
+            else if (taskType == IndependentTaskEnum.AutoMusicGame)
+            {
+                Task.Run(() => { new AutoMusicGameTask((AutoMusicGameParam)param).Start(); });
             }
         }
 
@@ -381,7 +393,10 @@ namespace BetterGenshinImpact.GameTask
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 请重新启动捕获程序!", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    UiTaskStopTickEvent.Invoke(null, EventArgs.Empty);
+                    UiTaskStartTickEvent.Invoke(null, EventArgs.Empty);
+                    _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
                 }
 
                 _gameRect = new RECT(currentRect);

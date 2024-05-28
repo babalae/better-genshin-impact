@@ -9,6 +9,8 @@ using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Model;
 using System.Windows.Forms;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -67,7 +69,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
             IsExclusive = true;
 
             // 2. 判断是否有传送按钮
-            var hasTeleportButton = CheckTeleportButton(content);
+            var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
 
             if (!hasTeleportButton)
             {
@@ -90,19 +92,18 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 if (hasMapChooseIcon)
                 {
                     TaskControl.Sleep(_config.WaitTeleportPanelDelay);
-                    content = TaskControl.CaptureToContent();
-                    CheckTeleportButton(content);
+                    CheckTeleportButton(TaskControl.CaptureToRectArea());
                 }
             }
         });
     }
 
-    private bool CheckTeleportButton(CaptureContent content)
+    private bool CheckTeleportButton(ImageRegion imageRegion)
     {
         var hasTeleportButton = false;
-        content.CaptureRectArea.Find(_assets.TeleportButtonRo, ra =>
+        imageRegion.Find(_assets.TeleportButtonRo, ra =>
         {
-            ra.ClickCenter();
+            ra.Click();
             hasTeleportButton = true;
             // if ((DateTime.Now - _prevClickTeleportButtonTime).TotalSeconds > 1)
             // {
@@ -132,21 +133,27 @@ internal class QuickTeleportTrigger : ITaskTrigger
             // 点击最高的
             foreach (var iconRect in rResultList)
             {
-                var ra = content.CaptureRectArea.Crop(_assets.MapChooseIconRoi).Crop(iconRect);
-                var text = GetOptionText(content.CaptureRectArea.SrcGreyMat, ra.ConvertRelativePositionToCaptureArea(), 200);
-                if (string.IsNullOrEmpty(text) || text.Length == 1)
+                // 200宽度的文字区域
+                using var ra = content.CaptureRectArea.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y, 200, iconRect.Height);
+                using var textRegion = ra.Find(new RecognitionObject
+                {
+                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
+                    LowerColor = new Scalar(249, 249, 249),  // 只取白色文字
+                    UpperColor = new Scalar(255, 255, 255),
+                });
+                if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)
                 {
                     continue;
                 }
 
                 if ((DateTime.Now - _prevClickOptionButtonTime).TotalMilliseconds > 500)
                 {
-                    TaskControl.Logger.LogInformation("快速传送：点击 {Option}", text);
+                    TaskControl.Logger.LogInformation("快速传送：点击 {Option}", textRegion.Text);
                 }
 
                 _prevClickOptionButtonTime = DateTime.Now;
                 TaskControl.Sleep(_config.TeleportListClickDelay);
-                ra.ClickCenter();
+                ra.Click();
                 hasMapChooseIcon = true;
                 break;
             }
@@ -198,20 +205,21 @@ internal class QuickTeleportTrigger : ITaskTrigger
         return hasMapChooseIcon;
     }
 
-    /// <summary>
-    /// 获取选项的文字
-    /// </summary>
-    /// <param name="captureMat"></param>
-    /// <param name="foundIconRect"></param>
-    /// <param name="chatOptionTextWidth"></param>
-    /// <returns></returns>
-    private string GetOptionText(Mat captureMat, Rect foundIconRect, int chatOptionTextWidth)
-    {
-        var textRect = new Rect(foundIconRect.X + foundIconRect.Width, foundIconRect.Y, chatOptionTextWidth, foundIconRect.Height);
-        using var mat = new Mat(captureMat, textRect);
-        var text = OcrFactory.Paddle.Ocr(mat);
-        return text;
-    }
+    // /// <summary>
+    // /// 获取选项的文字
+    // /// </summary>
+    // /// <param name="captureMat"></param>
+    // /// <param name="foundIconRect"></param>
+    // /// <param name="chatOptionTextWidth"></param>
+    // /// <returns></returns>
+    // [Obsolete]
+    // private string GetOptionText(Mat captureMat, Rect foundIconRect, int chatOptionTextWidth)
+    // {
+    //     var textRect = new Rect(foundIconRect.X + foundIconRect.Width, foundIconRect.Y, chatOptionTextWidth, foundIconRect.Height);
+    //     using var mat = new Mat(captureMat, textRect);
+    //     var text = OcrFactory.Paddle.Ocr(mat);
+    //     return text;
+    // }
 
     private bool IsHotkeyPressed()
     {

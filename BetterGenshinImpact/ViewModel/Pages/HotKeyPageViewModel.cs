@@ -7,6 +7,11 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
@@ -14,7 +19,9 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using BetterGenshinImpact.GameTask.QucikBuy;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -24,7 +31,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     public AllConfig Config { get; set; }
 
-    [ObservableProperty] private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
+    [ObservableProperty]
+    private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
 
     public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
     {
@@ -161,7 +169,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             (_, _) =>
             {
                 TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled = !TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动邀约", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.Enabled));
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动邀约", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled));
             }
         ));
 
@@ -235,8 +243,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.QuickSereniteaPotHotkey),
             Config.HotKeyConfig.QuickSereniteaPotHotkey,
             Config.HotKeyConfig.QuickSereniteaPotHotkeyType,
-            (_, _) => { QuickSereniteaPotTask.Done(); },
-            true
+            (_, _) => { QuickSereniteaPotTask.Done(); }
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -270,6 +277,106 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoDomainHotkeyType,
             (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
         ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "快捷点击原神内确认按钮",
+            nameof(Config.HotKeyConfig.ClickGenshinConfirmButtonHotkey),
+            Config.HotKeyConfig.ClickGenshinConfirmButtonHotkey,
+            Config.HotKeyConfig.ClickGenshinConfirmButtonHotkeyType,
+            (_, _) =>
+            {
+                if (Bv.ClickConfirmButton(TaskControl.CaptureToRectArea()))
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "确认");
+                }
+                else
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "确认");
+                }
+            }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "快捷点击原神内取消按钮",
+            nameof(Config.HotKeyConfig.ClickGenshinCancelButtonHotkey),
+            Config.HotKeyConfig.ClickGenshinCancelButtonHotkey,
+            Config.HotKeyConfig.ClickGenshinCancelButtonHotkeyType,
+            (_, _) =>
+            {
+                if (Bv.ClickCancelButton(TaskControl.CaptureToRectArea()))
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "取消");
+                }
+                else
+                {
+                    TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "取消");
+                }
+            }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "一键战斗宏快捷键",
+            nameof(Config.HotKeyConfig.OneKeyFightHotkey),
+            Config.HotKeyConfig.OneKeyFightHotkey,
+            Config.HotKeyConfig.OneKeyFightHotkeyType,
+            null,
+            true)
+        {
+            OnKeyDownAction = (_, _) => { OneKeyFightTask.Instance.KeyDown(); },
+            OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
+        });
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "启动/停止自动活动音游",
+            nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
+            Config.HotKeyConfig.AutoMusicGameHotkey,
+            Config.HotKeyConfig.AutoMusicGameHotkeyType,
+            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
+        ));
+
+        if (RuntimeHelper.IsDebug)
+        {
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）启动/停止自动追踪",
+                nameof(Config.HotKeyConfig.AutoTrackHotkey),
+                Config.HotKeyConfig.AutoTrackHotkey,
+                Config.HotKeyConfig.AutoTrackHotkeyType,
+                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrack(); }
+            ));
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）地图路线录制",
+                nameof(Config.HotKeyConfig.MapPosRecordHotkey),
+                Config.HotKeyConfig.MapPosRecordHotkey,
+                Config.HotKeyConfig.MapPosRecordHotkeyType,
+                (_, _) =>
+                {
+                    PathPointRecorder.Instance.Switch();
+                }));
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）自动寻路",
+                nameof(Config.HotKeyConfig.AutoTrackPathHotkey),
+                Config.HotKeyConfig.AutoTrackPathHotkey,
+                Config.HotKeyConfig.AutoTrackPathHotkeyType,
+                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
+            ));
+
+            PostMessageSimulator? postMessageSimulator = null;
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）按键模拟测试",
+                nameof(Config.HotKeyConfig.Test1Hotkey),
+                Config.HotKeyConfig.Test1Hotkey,
+                Config.HotKeyConfig.Test1HotkeyType,
+                (_, _) =>
+                {
+                    if (postMessageSimulator == null)
+                    {
+                        postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+                    }
+                    // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
+                    postMessageSimulator.LeftButtonClickBackground(1340, 655);
+                }
+            ));
+        }
     }
 
     private string ToChinese(bool enabled)

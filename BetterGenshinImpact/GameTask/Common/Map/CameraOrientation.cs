@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using Point = OpenCvSharp.Point;
@@ -14,11 +15,11 @@ public class CameraOrientation
     /// <summary>
     /// 计算当前小地图摄像机朝向的角度
     /// </summary>
-    /// <param name="content">完整游戏截图</param>
+    /// <param name="greyMat">完整游戏截图</param>
     /// <returns>角度</returns>
-    public static int Compute(CaptureContent content)
+    public static int Compute(Mat greyMat)
     {
-        var mat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(62, 19, 212, 212));
+        var mat = new Mat(greyMat, new Rect(62, 19, 212, 212));
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         // 极坐标展开
         var centerPoint = new Point2f(mat.Width / 2f, mat.Height / 2f);
@@ -76,19 +77,25 @@ public class CameraOrientation
             angle -= 360;
         }
 
+        return angle;
+    }
+
+    public static void DrawDirection(ImageRegion region, int angle)
+    {
         // 绘图
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
         const int r = 100;
-        var center = new Point(168, 125);
+        var center = new Point(168 * scale, 125 * scale); // 地图中心点 后续建议调整
         var x1 = center.X + r * Math.Cos(angle * Math.PI / 180);
         var y1 = center.Y + r * Math.Sin(angle * Math.PI / 180);
 
-        var line = new LineDrawable(center, new Point(x1, y1))
-        {
-            Pen = new Pen(Color.Yellow, 1)
-        };
-        VisionContext.Instance().DrawContent.PutLine("camera", line);
+        // var line = new LineDrawable(center, new Point(x1, y1))
+        // {
+        //     Pen = new Pen(Color.Yellow, 1)
+        // };
+        // VisionContext.Instance().DrawContent.PutLine("camera", line);
 
-        return angle;
+        region.DrawLine(center.X, center.Y, (int)x1, (int)y1, "camera", new Pen(Color.Yellow, 1));
     }
 
     static List<int> FindPeaks(float[] data)

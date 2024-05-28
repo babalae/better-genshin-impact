@@ -44,7 +44,7 @@ public class ExpeditionTask
                 content.CaptureRectArea
                     .Derive(new Rect((int)(110 * assetScale), (int)((145 + 70 * i) * assetScale),
                         (int)(60 * assetScale), (int)(33 * assetScale)))
-                    .ClickCenter();
+                    .Click();
                 TaskControl.Sleep(500);
                 ReExplorationGameArea(content);
             }
@@ -79,7 +79,7 @@ public class ExpeditionTask
             if (rect != Rect.Empty)
             {
                 // 点击探险完成下方的人物头像
-                content.CaptureRectArea.Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale))).ClickCenter();
+                content.CaptureRectArea.Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale))).Click();
                 TaskControl.Sleep(100);
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
@@ -87,11 +87,11 @@ public class ExpeditionTask
                 if (rect != Rect.Empty)
                 {
                     using var ra = content.CaptureRectArea.Derive(rect);
-                    ra.ClickCenter();
+                    ra.Click();
                     //TaskControl.Logger.LogInformation("探索派遣：点击{Text}", "领取");
                     TaskControl.Sleep(200);
                     // 点击空白区域继续
-                    ra.ClickCenter();
+                    ra.Click();
                     TaskControl.Sleep(250);
 
                     // 选择角色
@@ -99,7 +99,7 @@ public class ExpeditionTask
                     rect = result.FindRectByText("选择角色");
                     if (rect != Rect.Empty)
                     {
-                        content.CaptureRectArea.Derive(rect).ClickCenter();
+                        content.CaptureRectArea.Derive(rect).Click();
                         TaskControl.Sleep(400); // 等待动画
                         var success = SelectCharacter(content);
                         if (success)
@@ -138,7 +138,7 @@ public class ExpeditionTask
                 var rect = card.Rects.First();
 
                 using var ra = content.CaptureRectArea.Derive(rect);
-                ra.ClickCenter();
+                ra.Click();
                 TaskControl.Logger.LogInformation("探索派遣：派遣 {Name}", card.Name);
                 TaskControl.Sleep(500);
                 return true;
@@ -211,20 +211,16 @@ public class ExpeditionTask
 
     private PaddleOcrResult CaptureAndOcr(CaptureContent content)
     {
-        using var bitmap = TaskControl.CaptureGameBitmap();
-        using var mat = bitmap.ToMat();
-        Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
-        var result = OcrFactory.Paddle.OcrResult(mat);
+        using var ra = TaskControl.CaptureToRectArea();
+        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 
     private PaddleOcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
-        using var bitmap = TaskControl.CaptureGameBitmap();
-        using var mat = new Mat(bitmap.ToMat(), rect);
-        Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
-        var result = OcrFactory.Paddle.OcrResult(mat);
+        using var ra = TaskControl.CaptureToRectArea();
+        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }

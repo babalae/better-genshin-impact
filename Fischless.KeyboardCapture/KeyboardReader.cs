@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using Vanara.PInvoke;
 
 namespace Fischless.KeyboardCapture;
 
@@ -117,8 +116,8 @@ public class KeyboardReader : IDisposable
 
         DateTime now = DateTime.Now;
 
-#if true
-        //Debug.WriteLine(e.KeyCode);
+#if false
+        Debug.WriteLine(e.KeyCode);
 #endif
 
         KeyboardItem item;

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Threading;
 
 namespace BetterGenshinImpact.Model;
 
@@ -9,18 +11,18 @@ namespace BetterGenshinImpact.Model;
 /// <typeparam name="T"></typeparam>
 public class Singleton<T> where T : class
 {
-    // 使用Lazy<T>确保线程安全的延迟初始化
-    private static readonly Lazy<T> _instance = new(() => CreateInstanceOfT()!, isThreadSafe: true);
+    protected static T? _instance;
+    protected static object? syncRoot;
 
-    public static T Instance => _instance.Value;
+    public static T Instance => LazyInitializer.EnsureInitialized(ref _instance, ref syncRoot, CreateInstance);
 
-    // 保护的构造函数，防止直接实例化
-    protected Singleton()
+    protected static T CreateInstance()
     {
+        return (T)Activator.CreateInstance(typeof(T), true)!;
     }
 
-    private static T? CreateInstanceOfT()
+    public static void DestroyInstance()
     {
-        return Activator.CreateInstance(typeof(T), true) as T;
+        _instance = null;
     }
 }

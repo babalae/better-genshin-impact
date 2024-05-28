@@ -103,8 +103,8 @@ public class RecognitionObject
     /// </summary>
     public ColorConversionCodes ColorConversionCode { get; set; } = ColorConversionCodes.BGR2RGB;
 
-    public Color LowerColor { get; set; }
-    public Color UpperColor { get; set; }
+    public Scalar LowerColor { get; set; }
+    public Scalar UpperColor { get; set; }
 
     /// <summary>
     ///     符合的点的数量要求。可选，默认 1
@@ -116,7 +116,7 @@ public class RecognitionObject
     #region OCR文字识别
 
     /// <summary>
-    ///     OCR 引擎。可选，默认 Media.Ocr。
+    ///     OCR 引擎。可选，只有 Paddle。
     /// </summary>
     public OcrEngineTypes OcrEngine { get; set; } = OcrEngineTypes.Paddle;
 

@@ -14,9 +14,11 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.ViewModel.Pages;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -49,6 +51,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             }
 
             SystemControl.ActivateWindow();
+
+            Logger.LogInformation("→ {Text}", "自动追踪，启动！");
 
             TrackMission();
         }
@@ -88,7 +92,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         }
 
         // 任务文字有动效，等待2s重新截图
-        Simulation.SendInputEx.Mouse.MoveMouseBy(0, 7000);
+        Simulation.SendInput.Mouse.MoveMouseBy(0, 7000);
         Sleep(2000, param.Cts);
 
         // OCR 任务文字 在小地图下方
@@ -107,14 +111,14 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         {
             // 距离大于150米，先传送到最近的传送点
             // J 打开任务 切换追踪打开地图 中心点就是任务点
-            Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_J);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_J);
             Sleep(800, param.Cts);
             // TODO 识别是否在任务界面
             // 切换追踪
-            var btn = ra.DerivePoint(CaptureRect.Width - 250, CaptureRect.Height - 60);
-            btn.ClickCenter();
+            var btn = ra.Derive(CaptureRect.Width - 250, CaptureRect.Height - 60);
+            btn.Click();
             Sleep(200, param.Cts);
-            btn.ClickCenter();
+            btn.Click();
             Sleep(1500, param.Cts);
 
             // 寻找所有传送点
@@ -137,7 +141,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     }
                 }
 
-                ra.Derive(nearestRect).ClickCenter();
+                ra.Derive(nearestRect).Click();
                 // 等待自动传送完成
                 Sleep(2000, param.Cts);
 
@@ -173,7 +177,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     private void StartTrackPoint()
     {
         // V键直接追踪
-        Simulation.SendInputEx.Keyboard.KeyPress(User32.VK.VK_V);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_V);
         Sleep(3000, param.Cts);
 
         var ra = GetRectAreaFromDispatcher();
@@ -203,33 +207,40 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             var blueTrackPointRa = ra.Find(ElementAssets.Instance.BlueTrackPoint);
             if (blueTrackPointRa.IsExist())
             {
-                // 调整整体高度
+                // 使追踪点位于俯视角上方
                 var centerY = blueTrackPointRa.Y + blueTrackPointRa.Height / 2;
                 if (centerY > CaptureRect.Height / 2)
                 {
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(-100, 0);
+                    Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
                     if (wDown)
                     {
-                        Simulation.SendInputEx.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         wDown = false;
                     }
-
+                    Debug.WriteLine("使追踪点位于俯视角上方");
                     continue;
                 }
 
                 // 调整方向
                 var centerX = blueTrackPointRa.X + blueTrackPointRa.Width / 2;
-                var moveX = centerX - CaptureRect.Width / 2;
+                var moveX = (centerX - CaptureRect.Width / 2) / 8;
+                moveX = moveX switch
+                {
+                    > 0 and < 10 => 10,
+                    > -10 and < 0 => -10,
+                    _ => moveX
+                };
                 if (moveX != 0)
                 {
-                    Simulation.SendInputEx.Mouse.MoveMouseBy(moveX, 0);
+                    Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                    Debug.WriteLine("调整方向:" + moveX);
                 }
 
                 if (moveX == 0 || prevMoveX * moveX < 0)
                 {
                     if (!wDown)
                     {
-                        Simulation.SendInputEx.Keyboard.KeyDown(User32.VK.VK_W);
+                        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
                         wDown = true;
                     }
                 }
@@ -238,7 +249,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (wDown)
                     {
-                        Simulation.SendInputEx.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         wDown = false;
                     }
                     // 识别距离
@@ -260,13 +271,13 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 Logger.LogInformation("未找到追踪点");
             }
 
-            Simulation.SendInputEx.Mouse.MoveMouseBy(0, 500); // 保证俯视角
+            Simulation.SendInput.Mouse.MoveMouseBy(0, 500); // 保证俯视角
             Sleep(100);
         }
         // });
     }
 
-    private int GetDistanceFromMissionText(List<RectArea> textRaList)
+    private int GetDistanceFromMissionText(List<Region> textRaList)
     {
         // 打印所有任务文字
         var text = textRaList.Aggregate(string.Empty, (current, textRa) => current + textRa.Text.Trim() + "|");
@@ -276,7 +287,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         {
             if (textRa.Text.Length < 8 && (textRa.Text.Contains("m") || textRa.Text.Contains("M")))
             {
-                _missionDistanceRect = textRa.ConvertRelativePositionToCaptureArea();
+                _missionDistanceRect = textRa.ConvertSelfPositionToGameCaptureRegion();
                 return StringUtils.TryExtractPositiveInt(textRa.Text);
             }
         }
@@ -284,7 +295,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         return -1;
     }
 
-    private List<RectArea> OcrMissionTextRaList(RectArea paimonMenuRa)
+    private List<Region> OcrMissionTextRaList(Region paimonMenuRa)
     {
         return GetRectAreaFromDispatcher().FindMulti(new RecognitionObject
         {

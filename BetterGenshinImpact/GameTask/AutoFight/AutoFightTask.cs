@@ -1,17 +1,14 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
+﻿using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -19,12 +16,12 @@ public class AutoFightTask
 {
     private readonly AutoFightParam _taskParam;
 
-    private readonly List<CombatCommand> _combatCommands;
+    private readonly CombatScriptBag _combatScriptBag;
 
     public AutoFightTask(AutoFightParam taskParam)
     {
         _taskParam = taskParam;
-        _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
+        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
     public async void Start()
@@ -32,6 +29,7 @@ public class AutoFightTask
         var hasLock = false;
         try
         {
+            AutoFightAssets.DestroyInstance();
             hasLock = await TaskSemaphore.WaitAsync(0);
             if (!hasLock)
             {
@@ -40,11 +38,12 @@ public class AutoFightTask
             }
 
             Init();
-            var combatScenes = new CombatScenes().InitializeTeam(GetContentFromDispatcher());
+            var combatScenes = new CombatScenes().InitializeTeam(GetRectAreaFromDispatcher());
             if (!combatScenes.CheckTeamInitialized())
             {
-                throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。或者直接使用强制指定当前队伍角色的功能。");
+                throw new Exception("识别队伍角色失败");
             }
+            var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
 
             combatScenes.BeforeTask(_taskParam.Cts);
 
@@ -56,7 +55,7 @@ public class AutoFightTask
                     while (!_taskParam.Cts.Token.IsCancellationRequested)
                     {
                         // 通用化战斗策略
-                        foreach (var command in _combatCommands)
+                        foreach (var command in combatCommands)
                         {
                             command.Execute(combatScenes);
                         }
@@ -75,7 +74,7 @@ public class AutoFightTask
         }
         catch (NormalEndException)
         {
-            Logger.LogInformation("手动中断自动秘境");
+            Logger.LogInformation("手动中断自动战斗");
         }
         catch (Exception e)
         {
@@ -108,9 +107,9 @@ public class AutoFightTask
     private void LogScreenResolution()
     {
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-        if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
+        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogWarning("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏可能无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
         }
     }
 }

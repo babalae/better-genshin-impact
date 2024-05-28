@@ -8,8 +8,9 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <ResourceDictionary Source="/View/Controls/WpfUi/FaFontIconStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
+            <FontFamily x:Key="TextThemeFontFamily">/Assets/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:InverseBooleanConverter x:Key="InverseBooleanConverter" />

@@ -40,6 +40,6 @@ public class CommonRecognition
             Debug.WriteLine(e);
         }
 
-        return new List<Rect>();
+        return [];
     }
 }

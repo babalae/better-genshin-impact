@@ -13,6 +13,7 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Interop;
 using Windows.System;
@@ -51,6 +52,14 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         _taskDispatcher = taskTriggerDispatcher;
         Config = configService.Get();
         ReadGameInstallPath();
+
+        // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
+        // https://github.com/babalae/better-genshin-impact/issues/394
+        if (!OsVersionHelper.IsWindows10_1903_OrGreater)
+        {
+            _modeNames = _modeNames.Where(x => x != CaptureModes.WindowsGraphicsCapture.ToString()).ToArray();
+        }
+
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "Close")
@@ -94,6 +103,18 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     }
 
     [RelayCommand]
+    private async Task OnCaptureModeDropDownChanged()
+    {
+        // 启动的情况下重启
+        if (TaskDispatcherEnabled)
+        {
+            _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
+            OnStopTrigger();
+            await OnStartTriggerAsync();
+        }
+    }
+
+    [RelayCommand]
     private void OnStartCaptureTest()
     {
         var picker = new PickerWindow();
@@ -113,6 +134,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
         if (hWnd != IntPtr.Zero)
         {
+            _hWnd = hWnd;
             Start(hWnd);
         }
         else
@@ -161,8 +183,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     {
         if (!TaskDispatcherEnabled)
         {
+            _hWnd = hWnd;
             _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+            _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
             _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
+            _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
             _maskWindow = MaskWindow.Instance();
             _maskWindow.RefreshPosition(hWnd);
             _mouseKeyMonitor.Subscribe(hWnd);
@@ -183,7 +209,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         if (TaskDispatcherEnabled)
         {
             _taskDispatcher.Stop();
-            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
             _maskWindow?.Hide();
             TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
@@ -193,6 +218,11 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnUiTaskStopTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(Stop);
+    }
+
+    private void OnUiTaskStartTick(object? sender, EventArgs e)
+    {
+        UIDispatcherHelper.Invoke(() => Start(_hWnd));
     }
 
     public void OnNavigatedTo()

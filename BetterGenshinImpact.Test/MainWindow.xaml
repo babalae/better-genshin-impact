@@ -38,5 +38,23 @@
                 Height="23"
                 Click="DoMatchTemplateTest"
                 Content="模板匹配测试" />
+        <Button Canvas.Left="10"
+                Canvas.Top="160"
+                Width="100"
+                Height="23"
+                Click="MapDrawTeleportPoint"
+                Content="超大地图标点" />
+        <Button Canvas.Left="10"
+                Canvas.Top="190"
+                Width="100"
+                Height="23"
+                Click="GenAvatarData"
+                Content="生成侧面头像数据集" />
+        <Button Canvas.Left="10"
+                Canvas.Top="190"
+                Width="100"
+                Height="23"
+                Click="AutoCookTestCase"
+                Content="自动烹饪图像测试" />
     </Canvas>
 </Window>

@@ -14,17 +14,22 @@ public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
     public RecognitionObject ConfirmRo;
     public RecognitionObject EnterGameRo;
 
+    // 木头数量
+    public Rect WoodCountUpperRect;
+    
     private AutoWoodAssets()
     {
-        var info = TaskContext.Instance().SystemInfo;
+
+        WoodCountUpperRect = new Rect((int)(100 * AssetScale), (int)(450 * AssetScale), (int)(300 * AssetScale), (int)(250 * AssetScale));
+
         //「王树瑞佑」
         TheBoonOfTheElderTreeRo = new RecognitionObject
         {
             Name = "TheBoonOfTheElderTree",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "TheBoonOfTheElderTree.png"),
-            RegionOfInterest = new Rect(info.CaptureAreaRect.Width - info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height / 2,
-                info.CaptureAreaRect.Width / 4, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 2),
+            RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 4, CaptureRect.Height / 2,
+                CaptureRect.Width / 4, CaptureRect.Height - CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -33,7 +38,7 @@ public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
         //     Name = "CharacterGuide",
         //     RecognitionType = RecognitionTypes.TemplateMatch,
         //     TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "character_guide.png"),
-        //     RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+        //     RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 2, CaptureRect.Height),
         //     DrawOnWindow = false
         // }.InitTemplate();
 
@@ -42,7 +47,7 @@ public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
             Name = "MenuBag",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "menu_bag.png"),
-            RegionOfInterest = new Rect(0, 0, info.CaptureAreaRect.Width / 2, info.CaptureAreaRect.Height),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 2, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -59,7 +64,7 @@ public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
             Name = "EnterGame",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "exit_welcome.png"),
-            RegionOfInterest = new Rect(0, info.CaptureAreaRect.Height / 2, info.CaptureAreaRect.Width, info.CaptureAreaRect.Height - info.CaptureAreaRect.Height / 2),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height - CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
     }

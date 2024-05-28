@@ -10,14 +10,14 @@
     "alias": [ "荧", "女主", "女主角", "莹", "萤", "黄毛阿姨", "荧妹", "女爷" ],
     "id": "10000007",
     "name": "荧",
-    "nameEn": "荧",
+    "nameEn": "PlayerGirl",
     "weapon": "1"
   },
   {
     "alias": [ "空", "男主", "男主角", "龙哥", "空哥", "男爷" ],
     "id": "10000005",
     "name": "空",
-    "nameEn": "空",
+    "nameEn": "PlayerBoy",
     "weapon": "1"
   },
   {
@@ -734,5 +734,23 @@
     "nameEn": "Liuyun",
     "skillCD": 12.0,
     "weapon": "10"
+  },
+  {
+    "alias": [ "千织", "Chiori", "chiori", "老板娘", "裁锦师", "裁缝" ],
+    "burstCD": 13.5,
+    "id": "10000094",
+    "name": "千织",
+    "nameEn": "Chiori",
+    "skillCD": 16.0,
+    "weapon": "1"
+  },
+  {
+    "alias": [ "阿蕾奇诺", "Arlecchino", "阿雷奇诺", "仆人", "黑优菈", "黑暗优菈", "父亲", "佩露薇利" ],
+    "burstCD": 15.0,
+    "id": "10000096",
+    "name": "阿蕾奇诺",
+    "nameEn": "Arlecchino",
+    "skillCD": 30.0,
+    "weapon": "13"
   }
 ]

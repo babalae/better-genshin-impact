@@ -26,6 +26,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
     * 与凯瑟琳对话时有橙色选项会 [自动领取「每日委托」奖励](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)、[自动重新派遣](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
   * [自动邀约](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E9%82%80%E7%BA%A6)：自动剧情开启的情况下此功能才会生效，自动选择邀约选项
   * [全自动钓鱼](https://bgi.huiyadan.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
+  * [自动烹饪](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E7%83%B9%E9%A5%AA)：自动在完美区域完成食物烹饪，暂不支持“仙跳墙”
   * [全自动七圣召唤](https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
   * [自动伐木](http://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
   * [自动战斗](http://bgi.huiyadan.com/feats/domain.html)：编写战斗脚本，让队伍按照你的策略进行自动战斗
@@ -98,6 +99,10 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；
 
+## 许可证
+
+![GPL-v3](https://www.gnu.org/graphics/gplv3-127x51.png)
+
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/genius-invokation-auto-toy/issues) 或 QQ群[906536632](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=_nmC8Neh7mZaGb2hIsO3p4-DKdxBlReQ&authKey=X7rGdx4jbA%2Bs2Juotlov0cg57%2Bv8CwRdjMgYYsxPtdtkl5NKniJhbDILKhWCYS4B&noverify=0&group_code=906536632)
+提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[906536632](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=_nmC8Neh7mZaGb2hIsO3p4-DKdxBlReQ&authKey=X7rGdx4jbA%2Bs2Juotlov0cg57%2Bv8CwRdjMgYYsxPtdtkl5NKniJhbDILKhWCYS4B&noverify=0&group_code=906536632)

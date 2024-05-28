@@ -1,17 +1,24 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
-using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
+using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Xml.Linq;
+using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -19,7 +26,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// <summary>
 /// 战斗场景
 /// </summary>
-public class CombatScenes
+public class CombatScenes : IDisposable
 {
     /// <summary>
     /// 当前配队
@@ -30,11 +37,13 @@ public class CombatScenes
 
     public int AvatarCount { get; set; }
 
+    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Common\\avatar_side_classify_sim.onnx"));
+
     /// <summary>
-    /// 通过OCR识别队伍内角色
+    /// 通过YOLO分类器识别队伍内角色
     /// </summary>
-    /// <param name="content">完整游戏画面的捕获截图</param>
-    public CombatScenes InitializeTeam(CaptureContent content)
+    /// <param name="imageRegion">完整游戏画面的捕获截图</param>
+    public CombatScenes InitializeTeam(ImageRegion imageRegion)
     {
         // 优先取配置
         if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
@@ -43,15 +52,77 @@ public class CombatScenes
             return this;
         }
 
-        // 剪裁出队伍区域
-        var teamRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.TeamRectNoIndex);
-        // 过滤出白色
-        var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
+        // 识别队伍
+        var names = new string[4];
+        var displayNames = new string[4];
+        try
+        {
+            for (var i = 0; i < AutoFightAssets.Instance.AvatarSideIconRectList.Count; i++)
+            {
+                var ra = imageRegion.DeriveCrop(AutoFightAssets.Instance.AvatarSideIconRectList[i]);
+                var pair = ClassifyAvatarCnName(ra.SrcBitmap, i + 1);
+                names[i] = pair.Item1;
+                if (!string.IsNullOrEmpty(pair.Item2))
+                {
+                    var costumeName = pair.Item2;
+                    if (AutoFightAssets.Instance.AvatarCostumeMap.ContainsKey(costumeName))
+                    {
+                        costumeName = AutoFightAssets.Instance.AvatarCostumeMap[costumeName];
+                    }
 
-        // 识别队伍内角色
-        var result = OcrFactory.Paddle.OcrResult(hsvFilterMat);
-        ParseTeamOcrResult(result, teamRa);
+                    displayNames[i] = $"{pair.Item1}({costumeName})";
+                }
+                else
+                {
+                    displayNames[i] = pair.Item1;
+                }
+            }
+            Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
+            Avatars = BuildAvatars(names.ToList());
+            AvatarMap = Avatars.ToDictionary(x => x.Name);
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning(e.Message);
+        }
         return this;
+    }
+
+    public (string, string) ClassifyAvatarCnName(Bitmap src, int index)
+    {
+        var className = ClassifyAvatarName(src, index);
+
+        var nameEn = className;
+        var costumeName = "";
+        var i = className.IndexOf("Costume", StringComparison.Ordinal);
+        if (i > 0)
+        {
+            nameEn = className[..i];
+            costumeName = className[(i + 7)..];
+        }
+
+        var avatar = DefaultAutoFightConfig.CombatAvatarNameEnMap[nameEn];
+        return (avatar.Name, costumeName);
+    }
+
+    public string ClassifyAvatarName(Bitmap src, int index)
+    {
+        SpeedTimer speedTimer = new();
+        using var memoryStream = new MemoryStream();
+        src.Save(memoryStream, ImageFormat.Bmp);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        speedTimer.Record("角色侧面头像图像转换");
+        var result = _predictor.Classify(memoryStream);
+        speedTimer.Record("角色侧面头像分类识别");
+        Debug.WriteLine($"角色侧面头像识别结果：{result}");
+        speedTimer.DebugPrint();
+        if (result.Confidence < 0.8)
+        {
+            Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+            throw new Exception($"无法识别第{index}位角色，置信度{result.Confidence}，结果：{result.Class.Name}");
+        }
+
+        return result.Class.Name;
     }
 
     private void InitializeTeamFromConfig(string teamNames)
@@ -61,6 +132,7 @@ public class CombatScenes
         {
             throw new Exception($"强制指定队伍角色数量不正确，必须是4个，当前{names.Length}个");
         }
+
         // 别名转换为标准名称
         for (var i = 0; i < names.Length; i++)
         {
@@ -83,7 +155,64 @@ public class CombatScenes
         return true;
     }
 
-    private void ParseTeamOcrResult(PaddleOcrResult result, RectArea rectArea)
+    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null)
+    {
+        AvatarCount = names.Count;
+        var avatars = new Avatar[AvatarCount];
+        for (var i = 0; i < AvatarCount; i++)
+        {
+            var nameRect = nameRects?[i] ?? Rect.Empty;
+            avatars[i] = new Avatar(this, names[i], i + 1, nameRect)
+            {
+                IndexRect = AutoFightContext.Instance.FightAssets.AvatarIndexRectList[i]
+            };
+        }
+
+        return avatars;
+    }
+
+    public void BeforeTask(CancellationTokenSource cts)
+    {
+        for (var i = 0; i < AvatarCount; i++)
+        {
+            Avatars[i].Cts = cts;
+        }
+    }
+
+    public Avatar? SelectAvatar(string name)
+    {
+        return AvatarMap.TryGetValue(name, out var avatar) ? avatar : null;
+    }
+
+    #region OCR识别队伍（已弃用）
+
+    /// <summary>
+    /// 通过OCR识别队伍内角色
+    /// </summary>
+    /// <param name="content">完整游戏画面的捕获截图</param>
+    [Obsolete]
+    public CombatScenes InitializeTeamOldOcr(CaptureContent content)
+    {
+        // 优先取配置
+        if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
+        {
+            InitializeTeamFromConfig(TaskContext.Instance().Config.AutoFightConfig.TeamNames);
+            return this;
+        }
+
+        // 剪裁出队伍区域
+        var teamRa = content.CaptureRectArea.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRectNoIndex);
+        // 过滤出白色
+        var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
+
+        // 识别队伍内角色
+        var result = OcrFactory.Paddle.OcrResult(hsvFilterMat);
+        ParseTeamOcrResult(result, teamRa);
+        return this;
+    }
+
+    [Obsolete]
+    private void ParseTeamOcrResult(PaddleOcrResult result, ImageRegion rectArea)
     {
         List<string> names = new();
         List<Rect> nameRects = new();
@@ -102,7 +231,6 @@ public class CombatScenes
         {
             Logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
         }
-
 
         if (names.Count == 3)
         {
@@ -152,6 +280,7 @@ public class CombatScenes
         AvatarMap = Avatars.ToDictionary(x => x.Name);
     }
 
+    [Obsolete]
     private bool IsGenshinAvatarName(string name)
     {
         if (DefaultAutoFightConfig.CombatAvatarNames.Contains(name))
@@ -168,6 +297,7 @@ public class CombatScenes
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
+    [Obsolete]
     public string ErrorOcrCorrection(string name)
     {
         if (name.Contains("纳西"))
@@ -178,32 +308,10 @@ public class CombatScenes
         return name;
     }
 
-    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null)
-    {
-        AvatarCount = names.Count;
-        var avatars = new Avatar[AvatarCount];
-        for (var i = 0; i < AvatarCount; i++)
-        {
-            var nameRect = nameRects?[i] ?? Rect.Empty;
-            avatars[i] = new Avatar(this, names[i], i + 1, nameRect)
-            {
-                IndexRect = AutoFightContext.Instance.FightAssets.AvatarIndexRectList[i]
-            };
-        }
+    #endregion OCR识别队伍（已弃用）
 
-        return avatars;
-    }
-
-    public void BeforeTask(CancellationTokenSource cts)
+    public void Dispose()
     {
-        for (var i = 0; i < AvatarCount; i++)
-        {
-            Avatars[i].Cts = cts;
-        }
-    }
-
-    public Avatar? SelectAvatar(string name)
-    {
-        return AvatarMap.TryGetValue(name, out var avatar) ? avatar : null;
+        _predictor.Dispose();
     }
 }

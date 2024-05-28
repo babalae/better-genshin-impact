@@ -83,6 +83,11 @@ public class CombatCommand
             avatar.Switch();
         }
 
+        Execute(avatar);
+    }
+
+    public void Execute(Avatar avatar)
+    {
         if (Method == Method.Skill)
         {
             var hold = Args != null && Args.Contains("hold");

@@ -28,10 +28,19 @@ public partial class MaskWindow : Window
 {
     private static MaskWindow? _maskWindow;
 
-    private static readonly Typeface MyTypeface = new FontFamily("Microsoft Yahei UI").GetTypefaces().First();
+    private static readonly Typeface _typeface;
 
     static MaskWindow()
     {
+        if (Application.Current.TryFindResource("TextThemeFontFamily") is FontFamily fontFamily)
+        {
+            _typeface = fontFamily.GetTypefaces().First();
+        }
+        else
+        {
+            _typeface = new FontFamily("Microsoft Yahei UI").GetTypefaces().First();
+        }
+
         DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
     }
 
@@ -97,6 +106,7 @@ public partial class MaskWindow : Window
     {
         base.OnSourceInitialized(e);
         this.SetLayeredWindow();
+        this.HideFromAltTab();
     }
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
@@ -166,7 +176,7 @@ public partial class MaskWindow : Window
                         drawingContext.DrawText(new FormattedText(drawable.Text,
                             CultureInfo.GetCultureInfo("zh-cn"),
                             FlowDirection.LeftToRight,
-                            MyTypeface,
+                            _typeface,
                             36, Brushes.Black, 1), drawable.Point);
                     }
                 }
@@ -185,6 +195,19 @@ public partial class MaskWindow : Window
 
 file static class MaskWindowExtension
 {
+    public static void HideFromAltTab(this Window window)
+    {
+        HideFromAltTab(new WindowInteropHelper(window).Handle);
+    }
+
+    public static void HideFromAltTab(nint hWnd)
+    {
+        int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+
+        style |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+        User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
+    }
+
     public static void SetLayeredWindow(this Window window, bool isLayered = true)
     {
         SetLayeredWindow(new WindowInteropHelper(window).Handle, isLayered);

@@ -59,7 +59,7 @@ public static class OsVersionHelper
                 throw new PlatformNotSupportedException("Setup can only run on Windows.");
             }
 
-            versionCache = new Version(osv.MajorVersion, osv.MinorVersion, osv.BuildNumber, osv.Revision);
+            versionCache = new Version(osv.MajorVersion, osv.MinorVersion, osv.BuildNumber, osv.PlatformId);
         }
         return versionCache;
     }

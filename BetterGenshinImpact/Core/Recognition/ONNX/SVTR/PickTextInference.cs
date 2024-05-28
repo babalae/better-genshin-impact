@@ -4,11 +4,14 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
@@ -38,49 +41,56 @@ public class PickTextInference : ITextInference
 
     public string Inference(Mat mat)
     {
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
+        long startTime = Stopwatch.GetTimestamp();
         // 将输入数据调整为 (1, 1, 32, 384) 形状的张量
-        var reshapedInputData = ToTensorUnsafe(mat);
+        var reshapedInputData = ToTensorUnsafe(mat, out var owner);
 
-        // 创建输入 NamedOnnxValue
-        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", reshapedInputData) };
+        IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results;
 
-        // 运行模型推理
-        using var results = _session.Run(inputs);
-
-        // 获取输出数据
-        var resultsArray = results.ToArray();
-        var boxes = resultsArray[0].AsTensor<float>();
-
-        var ans = "";
-        var lastWord = "";
-        for (var i = 0; i < boxes.Dimensions[0]; i++)
+        using (owner)
         {
-            var maxIndex = 0;
-            var maxValue = -1.0;
-            for (var j = 0; j < _wordDictionary.Count; j++)
-            {
-                var value = boxes[i, 0, j];
-                if (value > maxValue)
-                {
-                    maxValue = value;
-                    maxIndex = j;
-                }
-            }
-
-            var word = _wordDictionary[maxIndex];
-            if (word != lastWord && word != "|") ans += word;
-
-            lastWord = word;
+            // 创建输入 NamedOnnxValue, 运行模型推理
+            results = _session.Run([NamedOnnxValue.CreateFromTensor("input", reshapedInputData)]);
         }
 
-        stopwatch.Stop();
-        Debug.WriteLine($"Yap模型识别 耗时{stopwatch.ElapsedMilliseconds}ms 结果: {ans}");
-        return ans;
+        using (results)
+        {
+            // 获取输出数据
+            var boxes = results[0].AsTensor<float>();
+
+            var ans = new StringBuilder();
+            var lastWord = default(string);
+            for (var i = 0; i < boxes.Dimensions[0]; i++)
+            {
+                var maxIndex = 0;
+                var maxValue = -1.0;
+                for (var j = 0; j < _wordDictionary.Count; j++)
+                {
+                    var value = boxes[[i, 0, j]];
+                    if (value > maxValue)
+                    {
+                        maxValue = value;
+                        maxIndex = j;
+                    }
+                }
+
+                var word = _wordDictionary[maxIndex];
+                if (word != lastWord && word != "|")
+                {
+                    ans.Append(word);
+                }
+
+                lastWord = word;
+            }
+
+            TimeSpan time = Stopwatch.GetElapsedTime(startTime);
+            string result = ans.ToString();
+            Debug.WriteLine($"Yap模型识别 耗时{time.TotalMilliseconds}ms 结果: {result}");
+            return result;
+        }
     }
 
-    public static Tensor<float> ToTensorUnsafe(Mat src)
+    public static Tensor<float> ToTensorUnsafe(Mat src, out IMemoryOwner<float> tensorMemoryOwnser)
     {
         var channels = src.Channels();
         var nRows = src.Rows;
@@ -91,18 +101,21 @@ public class PickTextInference : ITextInference
             nRows = 1;
         }
 
-        var inputData = new float[nCols];
+        //var inputData = new float[nCols];
+        tensorMemoryOwnser = MemoryPool<float>.Shared.Rent(nCols);
+        var memory = tensorMemoryOwnser.Memory[..nCols];
         unsafe
         {
             for (var i = 0; i < nRows; i++)
             {
-                var p = src.Ptr(i);
-                var b = (byte*)p.ToPointer();
-                for (var j = 0; j < nCols; j++) inputData[j] = b[j] / 255f;
+                var b = (byte*)src.Ptr(i);
+                for (var j = 0; j < nCols; j++)
+                {
+                    memory.Span[j] = b[j] / 255f;
+                }
             }
         }
 
-        return new DenseTensor<float>(new Memory<float>(inputData), new[] { 1, 1, 32, 384 });
-        ;
+        return new DenseTensor<float>(memory, [1, 1, 32, 384]);
     }
 }

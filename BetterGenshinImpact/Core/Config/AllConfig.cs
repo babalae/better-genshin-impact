@@ -13,6 +13,7 @@ using Fischless.GameCapture;
 using System;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.AutoCook;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -91,9 +92,14 @@ public partial class AllConfig : ObservableObject
     public AutoFishingConfig AutoFishingConfig { get; set; } = new();
 
     /// <summary>
-    ///     自动钓鱼配置
+    ///     快速传送配置
     /// </summary>
     public QuickTeleportConfig QuickTeleportConfig { get; set; } = new();
+
+    /// <summary>
+    ///     自动烹饪配置
+    /// </summary>
+    public AutoCookConfig AutoCookConfig { get; set; } = new();
 
     /// <summary>
     ///     自动打牌配置
@@ -146,6 +152,7 @@ public partial class AllConfig : ObservableObject
         AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
         QuickTeleportConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoCookConfig.PropertyChanged += OnAnyPropertyChanged;
         MacroConfig.PropertyChanged += OnAnyPropertyChanged;
         HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;

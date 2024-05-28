@@ -14,23 +14,19 @@ namespace BetterGenshinImpact.GameTask
     public class TaskContext
     {
         private static TaskContext? _uniqueInstance;
-        private static readonly object InstanceLocker = new();
+        private static object? InstanceLocker;
+
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑声明为可以为 null。
 
         private TaskContext()
         {
         }
 
+#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑声明为可以为 null。
+
         public static TaskContext Instance()
         {
-            if (_uniqueInstance == null)
-            {
-                lock (InstanceLocker)
-                {
-                    _uniqueInstance ??= new TaskContext();
-                }
-            }
-
-            return _uniqueInstance;
+            return LazyInitializer.EnsureInitialized(ref _uniqueInstance, ref InstanceLocker, () => new TaskContext());
         }
 
         public void Init(IntPtr hWnd)

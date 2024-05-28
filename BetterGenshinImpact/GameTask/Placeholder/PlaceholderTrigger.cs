@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Point = OpenCvSharp.Point;
@@ -29,8 +30,6 @@ public class TestTrigger : ITaskTrigger
     //private readonly AutoGeniusInvokationAssets _autoGeniusInvokationAssets;
 
     // private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
-
-    // private readonly EntireMap _bigMap = new();
 
     public TestTrigger()
     {
@@ -96,19 +95,28 @@ public class TestTrigger : ITaskTrigger
         //    Debug.WriteLine("没找到");
         //}
 
-        // var tar = ElementAssets.Instance().PaimonMenuRo.TemplateImageGreyMat!;
-        // var p = MatchTemplateHelper.MatchTemplate(content.CaptureRectArea.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
-        // if (p.X == 0 || p.Y == 0)
-        // {
-        //     return;
-        // }
+        // 小地图匹配测试
+        var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;
+        var p = MatchTemplateHelper.MatchTemplate(content.CaptureRectArea.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
+        if (p.X == 0 || p.Y == 0)
+        {
+            return;
+        }
 
-        // _bigMap.GetMapPositionAndDrawBySurf(new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+        var miniMapMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210));
+        var mask = new Mat(new Size(miniMapMat.Width, miniMapMat.Height), MatType.CV_8UC1, Scalar.Black);
+        Cv2.Circle(mask, new Point(miniMapMat.Width / 2, miniMapMat.Height / 2), 90, Scalar.White, -1);
+        var res = new Mat();
+        Cv2.BitwiseAnd(miniMapMat, miniMapMat, res, mask);
+        EntireMap.Instance.GetMapPositionAndDrawByFeatureMatch(res);
+        Cv2.ImWrite(Global.Absolute(@"log\minimap.png"), res);
 
+        // 大地图测试
         // var mat = content.CaptureRectArea.SrcGreyMat;
-        // _bigMap.GetMapPositionAndDrawBySurf(mat);
+        // // mat = mat.Resize(new Size(240, 135));
+        // EntireMap.Instance.GetMapPositionAndDrawByFeatureMatch(mat);
 
-        Bv.BigMapIsUnderground(content.CaptureRectArea);
+        // Bv.BigMapIsUnderground(content.CaptureRectArea);
     }
 
     // private void Detect(CaptureContent content)
@@ -219,7 +227,7 @@ public class TestTrigger : ITaskTrigger
                     }
                 }
 
-                VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(correctP1, correctP2 + (correctP2 - correctP1) * 3));
+                // VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(correctP1, correctP2 + (correctP2 - correctP1) * 3));
             }
         }
     }
@@ -292,9 +300,9 @@ public class TestTrigger : ITaskTrigger
         var x1 = center.X + r * Math.Cos(angle * Math.PI / 180);
         var y1 = center.Y + r * Math.Sin(angle * Math.PI / 180);
 
-        var line = new LineDrawable(center, new Point(x1, y1));
-        line.Pen = new Pen(Color.Yellow, 1);
-        VisionContext.Instance().DrawContent.PutLine("camera", line);
+        // var line = new LineDrawable(center, new Point(x1, y1));
+        // line.Pen = new Pen(Color.Yellow, 1);
+        // VisionContext.Instance().DrawContent.PutLine("camera", line);
     }
 
     static List<int> FindPeaks(float[] data)

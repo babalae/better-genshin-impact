@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.Macro
     {
         public static void Done()
         {
-            Simulation.SendInputEx.Mouse.MoveMouseBy(TaskContext.Instance().Config.MacroConfig.RunaroundMouseXInterval, 0);
+            Simulation.SendInput.Mouse.MoveMouseBy(TaskContext.Instance().Config.MacroConfig.RunaroundMouseXInterval, 0);
             Thread.Sleep(TaskContext.Instance().Config.MacroConfig.RunaroundInterval);
         }
     }

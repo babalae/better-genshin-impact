@@ -44,9 +44,9 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "GoTeleport.png"),
             RegionOfInterest = new Rect((int)(1440 * AssetScale),
-                (int)(979 * AssetScale),
-                (int)(60 * AssetScale),
-                (int)(60 * AssetScale)),
+                CaptureRect.Height - (int)(120 * AssetScale),
+                (int)(100 * AssetScale),
+                (int)(120 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 

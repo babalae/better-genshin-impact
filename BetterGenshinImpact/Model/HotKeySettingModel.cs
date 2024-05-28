@@ -15,7 +15,6 @@ public partial class HotKeySettingModel : ObservableObject
 {
     [ObservableProperty] private HotKey _hotKey;
 
-
     /// <summary>
     /// 键鼠监听、全局热键
     /// </summary>
@@ -27,7 +26,9 @@ public partial class HotKeySettingModel : ObservableObject
 
     public string ConfigPropertyName { get; set; }
 
-    public Action<object?, KeyPressedEventArgs> OnKeyAction { get; set; }
+    public Action<object?, KeyPressedEventArgs>? OnKeyPressAction { get; set; }
+    public Action<object?, KeyPressedEventArgs>? OnKeyDownAction { get; set; }
+    public Action<object?, KeyPressedEventArgs>? OnKeyUpAction { get; set; }
 
     public bool IsHold { get; set; }
 
@@ -48,15 +49,14 @@ public partial class HotKeySettingModel : ObservableObject
     /// </summary>
     public MouseHook? MouseMonitorHook { get; set; }
 
-
-    public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, string hotKeyTypeCode, Action<object?, KeyPressedEventArgs> onKeyAction, bool isHold = false)
+    public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, string hotKeyTypeCode, Action<object?, KeyPressedEventArgs>? onKeyPressAction, bool isHold = false)
     {
         FunctionName = functionName;
         ConfigPropertyName = configPropertyName;
         HotKey = HotKey.FromString(hotkey);
         HotKeyType = (HotKeyTypeEnum)Enum.Parse(typeof(HotKeyTypeEnum), hotKeyTypeCode);
         HotKeyTypeName = HotKeyType.ToChineseName();
-        OnKeyAction = onKeyAction;
+        OnKeyPressAction = onKeyPressAction;
         IsHold = isHold;
         SwitchHotkeyTypeEnabled = !isHold;
     }
@@ -75,8 +75,11 @@ public partial class HotKeySettingModel : ObservableObject
                 Hotkey hotkey = new(HotKey.ToString());
                 GlobalRegisterHook?.Dispose();
                 GlobalRegisterHook = new HotkeyHook();
-                GlobalRegisterHook.KeyPressed -= OnKeyPressed;
-                GlobalRegisterHook.KeyPressed += OnKeyPressed;
+                if (OnKeyPressAction != null)
+                {
+                    GlobalRegisterHook.KeyPressed -= OnKeyPressed;
+                    GlobalRegisterHook.KeyPressed += OnKeyPressed;
+                }
                 GlobalRegisterHook.RegisterHotKey(hotkey.ModifierKey, hotkey.Key);
             }
             else
@@ -89,8 +92,22 @@ public partial class HotKeySettingModel : ObservableObject
                     {
                         IsHold = IsHold
                     };
-                    MouseMonitorHook.MousePressed -= OnKeyPressed;
-                    MouseMonitorHook.MousePressed += OnKeyPressed;
+
+                    if (OnKeyPressAction != null)
+                    {
+                        MouseMonitorHook.MousePressed -= OnKeyPressed;
+                        MouseMonitorHook.MousePressed += OnKeyPressed;
+                    }
+                    if (OnKeyDownAction != null)
+                    {
+                        MouseMonitorHook.MouseDownEvent -= OnKeyDown;
+                        MouseMonitorHook.MouseDownEvent += OnKeyDown;
+                    }
+                    if (OnKeyUpAction != null)
+                    {
+                        MouseMonitorHook.MouseUpEvent -= OnKeyUp;
+                        MouseMonitorHook.MouseUpEvent += OnKeyUp;
+                    }
                     MouseMonitorHook.RegisterHotKey((MouseButtons)Enum.Parse(typeof(MouseButtons), HotKey.MouseButton.ToString()));
                 }
                 else
@@ -105,8 +122,22 @@ public partial class HotKeySettingModel : ObservableObject
                     {
                         IsHold = IsHold
                     };
-                    KeyboardMonitorHook.KeyPressed -= OnKeyPressed;
-                    KeyboardMonitorHook.KeyPressed += OnKeyPressed;
+                    if (OnKeyPressAction != null)
+                    {
+                        KeyboardMonitorHook.KeyPressedEvent -= OnKeyPressed;
+                        KeyboardMonitorHook.KeyPressedEvent += OnKeyPressed;
+                    }
+                    if (OnKeyDownAction != null)
+                    {
+                        KeyboardMonitorHook.KeyDownEvent -= OnKeyDown;
+                        KeyboardMonitorHook.KeyDownEvent += OnKeyDown;
+                    }
+                    if (OnKeyUpAction != null)
+                    {
+                        KeyboardMonitorHook.KeyUpEvent -= OnKeyUp;
+                        KeyboardMonitorHook.KeyUpEvent += OnKeyUp;
+                    }
+
                     KeyboardMonitorHook.RegisterHotKey((Keys)Enum.Parse(typeof(Keys), HotKey.Key.ToString()));
                 }
             }
@@ -120,7 +151,17 @@ public partial class HotKeySettingModel : ObservableObject
 
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)
     {
-        OnKeyAction.Invoke(sender, e);
+        OnKeyPressAction?.Invoke(sender, e);
+    }
+
+    private void OnKeyDown(object? sender, KeyPressedEventArgs e)
+    {
+        OnKeyDownAction?.Invoke(sender, e);
+    }
+
+    private void OnKeyUp(object? sender, KeyPressedEventArgs e)
+    {
+        OnKeyUpAction?.Invoke(sender, e);
     }
 
     public void UnRegisterHotKey()

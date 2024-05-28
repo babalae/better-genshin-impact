@@ -15,6 +15,10 @@ public class MouseHook
 
     public event EventHandler<KeyPressedEventArgs>? MousePressed = null;
 
+    public event EventHandler<KeyPressedEventArgs>? MouseDownEvent = null;
+
+    public event EventHandler<KeyPressedEventArgs>? MouseUpEvent = null;
+
     public bool IsHold { get; set; }
 
     public MouseButtons BindMouse { get; set; } = MouseButtons.Left;
@@ -31,6 +35,7 @@ public class MouseHook
         if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
             IsPressed = true;
+            MouseDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             if (IsHold)
             {
                 Task.Run(() => RunAction(e));
@@ -63,6 +68,10 @@ public class MouseHook
         if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
             IsPressed = false;
+            if (SystemControl.IsGenshinImpactActive())
+            {
+                MouseUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+            }
         }
     }
 

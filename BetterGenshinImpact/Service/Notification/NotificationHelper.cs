@@ -22,7 +22,7 @@ public class NotificationHelper
     public static void SendTaskNotificationWithScreenshotUsing(Func<TaskNotificationBuilder, INotificationData> builderFunc)
     {
         var builder = new TaskNotificationBuilder();
-        var screenShot = (Bitmap)TaskControl.GetContentFromDispatcher().SrcBitmap.Clone();
+        var screenShot = (Bitmap)TaskControl.GetRectAreaFromDispatcher().SrcBitmap.Clone();
         Notify(builderFunc(builder.WithScreenshot(screenShot)));
     }
 }

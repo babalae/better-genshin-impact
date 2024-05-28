@@ -17,6 +17,7 @@
 		<None Remove="Assets\*.jpg" />
 		<None Remove="Assets\*.png" />
 		<None Remove="Assets\*.ico" />
+		<None Remove="Assets\Fonts\*.ttf" />
 		<None Remove="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
@@ -24,13 +25,13 @@
 		<Resource Include="Assets\*.jpg" />
 		<Resource Include="Assets\*.png" />
 		<Resource Include="Assets\*.ico" />
+		<Resource Include="Assets\Fonts\*.ttf" />
 		<Resource Include="Assets\Highlighting\*.xshd" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="H.InputSimulator" Version="1.4.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
@@ -49,6 +50,7 @@
 		<PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
+		<PackageReference Include="Vanara.PInvoke.NtDll" Version="3.4.17" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.17" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
 		<PackageReference Include="WPF-UI" Version="3.0.0-preview.7" />
@@ -108,6 +110,9 @@
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Assets\Map\map_sd1024.png">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\Common\avatar_side_classify_sim.onnx">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="Assets\Model\Domain\bgi_tree.onnx">
@@ -365,7 +370,19 @@
 		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_explore.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoSkip\Assets\hangout.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\blue_track_point_28x.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_cancel.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_no.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_yes.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
@@ -452,6 +469,12 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\submit_icon_exclamation.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\ui_left_top_cook_icon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\ui_lt_cook_icon.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\Common\Element\Assets\1920x1080\yellow_track_point_28x.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -530,7 +553,7 @@
 		<None Update="User\AutoGeniusInvokation\6.皇女科莱莫娜.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="User\AutoGeniusInvokation\7.莫娜皇女白术.txt">
+		<None Update="User\AutoGeniusInvokation\7.莫娜白术皇女.txt">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\AutoGeniusInvokation\8.雷神柯莱刻晴[推荐].txt">
@@ -557,12 +580,20 @@
 		<None Update="User\AutoSkip\pause_options.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\avatar_macro.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="User\pick_black_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\pick_white_lists.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="GameTask\Common\Element\Assets\MapPoint\" />
+	  <Folder Include="View\Controls\WpfUi\" />
 	</ItemGroup>
 
 </Project>

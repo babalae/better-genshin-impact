@@ -1,9 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoPick
 {
@@ -22,14 +18,24 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         /// 1080p下拾取文字左边的起始偏移
         /// </summary>
         [ObservableProperty] private int _itemIconLeftOffset = 60;
+
         /// <summary>
         /// 1080p下拾取文字的起始偏移
         /// </summary>
         [ObservableProperty] private int _itemTextLeftOffset = 115;
+
         /// <summary>
         /// 1080p下拾取文字的终止偏移
         /// </summary>
         [ObservableProperty] private int _itemTextRightOffset = 400;
+
+        /// <summary>
+        /// 文字识别引擎
+        /// - Paddle
+        /// - Yap
+        /// </summary>
+        [ObservableProperty]
+        private string _ocrEngine = PickOcrEngineEnum.Paddle.ToString();
 
         /// <summary>
         /// 急速模式

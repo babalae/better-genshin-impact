@@ -1,11 +1,15 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System.Collections.Generic;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fischless.GameCapture;
 using System.Diagnostics;
 using System.Windows;
+using BetterGenshinImpact.GameTask.AutoPick;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -13,14 +17,24 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
+    [ObservableProperty]
+    private string[] _clickChatOptionNames = ["优先选择第一个选项", "优先选择最后一个选项", "不选择选项"];
+
+    [ObservableProperty]
+    private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
+
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;
+
+    [ObservableProperty]
+    private List<string> _hangoutBranches;
 
     public TriggerSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {
         Config = configService.Get();
         _navigationService = navigationService;
+        _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
     }
 
     public void OnNavigatedTo()
@@ -34,22 +48,13 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     [RelayCommand]
     private void OnEditBlacklist()
     {
-        ShowJsonMonoDialog(@"User\pick_black_lists.json");
+        JsonMonoDialog.Show(@"User\pick_black_lists.json");
     }
 
     [RelayCommand]
     private void OnEditWhitelist()
     {
-        ShowJsonMonoDialog(@"User\pick_white_lists.json");
-    }
-
-    private void ShowJsonMonoDialog(string path)
-    {
-        JsonMonoDialog dialog = new(path)
-        {
-            Owner = Application.Current.MainWindow
-        };
-        dialog.Show();
+        JsonMonoDialog.Show(@"User\pick_white_lists.json");
     }
 
     [RelayCommand]
