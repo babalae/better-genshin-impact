@@ -50,12 +50,6 @@ public class AutoDomainTask
 
         _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"), BgiSessionOption.Instance.Options);
 
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-        _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
-        _config = TaskContext.Instance().Config.AutoDomainConfig;
-
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
