@@ -373,7 +373,7 @@ public class AutoSkipTrigger : ITaskTrigger
         });
     }
 
-    private readonly Regex _enRegex = new(@"^[a-zA-Z]+$");
+    private readonly Regex _enOrNumRegex = new(@"^[a-zA-Z0-9]+$");
 
     /// <summary>
     /// 新的对话选项选择
@@ -422,7 +422,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var rs = new List<Region>();
             foreach (var item in ocrResList)
             {
-                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && _enRegex.IsMatch(item.Text)))
+                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && _enOrNumRegex.IsMatch(item.Text)))
                 {
                     continue;
                 }
@@ -455,12 +455,12 @@ public class AutoSkipTrigger : ITaskTrigger
                     var textMat = item.ToImageRegion().SrcMat;
                     if (IsOrangeOption(textMat))
                     {
-                        if (_config.AutoGetDailyRewardsEnabled && item.Text.Contains("每日委托"))
+                        if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
                         {
                             ClickOcrRegion(item);
                             _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                         }
-                        else if (_config.AutoReExploreEnabled && item.Text.Contains("探索派遣"))
+                        else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
                         {
                             ClickOcrRegion(item);
                             Thread.Sleep(800); // 等待探索派遣界面打开
