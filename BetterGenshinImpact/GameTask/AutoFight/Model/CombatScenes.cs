@@ -18,6 +18,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -37,7 +38,7 @@ public class CombatScenes : IDisposable
 
     public int AvatarCount { get; set; }
 
-    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Common\\avatar_side_classify_sim.onnx"));
+    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Common\\avatar_side_classify_sim.onnx"), BgiSessionOption.Instance.Options);
 
     /// <summary>
     /// 通过YOLO分类器识别队伍内角色
