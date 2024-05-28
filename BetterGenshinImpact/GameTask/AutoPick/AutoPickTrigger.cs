@@ -136,14 +136,14 @@ public class AutoPickTrigger : ITaskTrigger
             // 计算出文字区域
             var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
                 (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
-            if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width
-                || textRect.Y + textRect.Height > content.CaptureRectArea.SrcGreyMat.Height)
+            if (textRect.X + textRect.Width > content.CaptureRectArea.SrcMat.Width
+                || textRect.Y + textRect.Height > content.CaptureRectArea.SrcMat.Height)
             {
                 Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
                 return;
             }
 
-            var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+            var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
 
             string text;
             if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())

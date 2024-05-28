@@ -299,7 +299,7 @@ public class Avatar
     public double GetSkillCurrentCd(ImageRegion imageRegion)
     {
         var eRa = imageRegion.DeriveCrop(AutoFightContext.Instance.FightAssets.ERect);
-        var text = OcrFactory.Paddle.Ocr(eRa.SrcGreyMat);
+        var text = OcrFactory.Paddle.Ocr(eRa.SrcMat);
         return StringUtils.TryParseDouble(text);
     }
 
@@ -353,7 +353,7 @@ public class Avatar
     // public double GetBurstCurrentCd(CaptureContent content)
     // {
     //     var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.QRect);
-    //     var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
+    //     var text = OcrFactory.Paddle.Ocr(qRa.SrcMat);
     //     return StringUtils.TryParseDouble(text);
     // }
 

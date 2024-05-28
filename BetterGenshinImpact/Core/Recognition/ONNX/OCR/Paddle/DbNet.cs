@@ -61,7 +61,7 @@ class DbNet
             using (IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = dbNet.Run(inputs))
             {
                 var resultsArray = results.ToArray();
-                Debug.WriteLine(resultsArray);
+                // Debug.WriteLine(resultsArray);
                 var textBoxes = GetTextBoxes(resultsArray, srcResize.Rows, srcResize.Cols, scale, boxScoreThresh, boxThresh, unClipRatio);
                 return textBoxes;
             }

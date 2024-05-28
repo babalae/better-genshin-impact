@@ -375,7 +375,7 @@ public class AutoDomainTask
         using var ra = GetRectAreaFromDispatcher();
 
         var endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
-        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (text.Contains("挑战") || text.Contains("达成"))
         {
             Logger.LogInformation("检测到秘境结束提示(挑战达成)，结束秘境");
@@ -383,7 +383,7 @@ public class AutoDomainTask
         }
 
         endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsRect);
-        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (text.Contains("自动") || text.Contains("退出"))
         {
             Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
@@ -758,7 +758,7 @@ public class AutoDomainTask
             // 图像右侧就是浓缩树脂数量
             var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width, condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height);
             // Cv2.ImWrite($"log/resin_{DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")}.png", countArea.SrcGreyMat);
-            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcMat);
             condensedResinCount = StringUtils.TryParseInt(count);
         }
 
@@ -768,7 +768,7 @@ public class AutoDomainTask
         {
             // 图像右侧就是脆弱树脂数量
             var countArea = ra.DeriveCrop(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height);
-            var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.Ocr(countArea.SrcMat);
             fragileResinCount = StringUtils.TryParseInt(count);
         }
 

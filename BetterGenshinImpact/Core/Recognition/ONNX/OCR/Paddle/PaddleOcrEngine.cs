@@ -39,14 +39,27 @@ public class PaddleOcrEngine
         }
     }
 
+    public Mat ToChannel3Mat(Mat mat)
+    {
+        return mat.Channels() switch
+        {
+            4 => mat.CvtColor(ColorConversionCodes.RGBA2BGR),
+            1 => mat.CvtColor(ColorConversionCodes.GRAY2RGB),
+            3 => mat,
+            var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
+        };
+    }
+
     public RapidOcrResult Run(Mat mat)
     {
-        return Run(mat, 0, 1024, 0.5f, 0.3f, 1.6f, false, false);
+        using var channel3 = ToChannel3Mat(mat);
+        return Run(channel3, 0, 1024, 0.5f, 0.3f, 1.6f, false, false);
     }
 
     public string OnlyRecognizerRun(Mat mat)
     {
-        var textLine = crnnNet.GetTextLine(mat);
+        using var channel3 = ToChannel3Mat(mat);
+        var textLine = crnnNet.GetTextLine(channel3);
         return textLine.Text;
     }
 
@@ -78,14 +91,14 @@ public class PaddleOcrEngine
     {
         // Mat textBoxPaddingImg = src.Clone();
         // int thickness = OcrUtils.GetThickness(src);
-        Debug.WriteLine("=====Start detect=====");
+        // Debug.WriteLine("=====Start detect=====");
         var startTicks = DateTime.Now.Ticks;
 
-        Debug.WriteLine("---------- step: dbNet getTextBoxes ----------");
+        // Debug.WriteLine("---------- step: dbNet getTextBoxes ----------");
         var textBoxes = dbNet.GetTextBoxes(src, scale, boxScoreThresh, boxThresh, unClipRatio);
         var dbNetTime = (DateTime.Now.Ticks - startTicks) / 10000F;
 
-        Debug.WriteLine($"TextBoxesSize({textBoxes.Count})");
+        // Debug.WriteLine($"TextBoxesSize({textBoxes.Count})");
         textBoxes.ForEach(x => Debug.WriteLine(x));
         //Debug.WriteLine($"dbNetTime({dbNetTime}ms)");
 
@@ -103,7 +116,7 @@ public class PaddleOcrEngine
             }
         }
 
-        Debug.WriteLine("---------- step: angleNet getAngles ----------");
+        // Debug.WriteLine("---------- step: angleNet getAngles ----------");
         List<Angle> angles = angleNet.GetAngles(partImages, doAngle, mostAngle);
         //angles.ForEach(x => Debug.WriteLine(x));
 
@@ -120,7 +133,7 @@ public class PaddleOcrEngine
             }
         }
 
-        Debug.WriteLine("---------- step: crnnNet getTextLines ----------");
+        // Debug.WriteLine("---------- step: crnnNet getTextLines ----------");
         List<TextLine> textLines = crnnNet.GetTextLines(partImages);
         //textLines.ForEach(x => Debug.WriteLine(x));
 
