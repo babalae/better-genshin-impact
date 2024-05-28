@@ -136,7 +136,10 @@ public class HotKeyTextBox : TextBox
             return;
 
         // If Enter/Space/Tab is pressed without modifiers - return
-        if (key is Key.Enter or Key.Space or Key.Tab && modifiers == ModifierKeys.None)
+        if (key is Key.Enter or Key.Tab && modifiers == ModifierKeys.None)
+            return;
+
+        if (HotKeyTypeName == HotKeyTypeEnum.GlobalRegister.ToChineseName() && key is Key.Enter or Key.Space or Key.Tab && modifiers == ModifierKeys.None)
             return;
 
         // If key has a character and pressed without modifiers or only with Shift - return
