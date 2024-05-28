@@ -455,12 +455,12 @@ public class AutoSkipTrigger : ITaskTrigger
                     var textMat = item.ToImageRegion().SrcMat;
                     if (IsOrangeOption(textMat))
                     {
-                        if (item.Text.Contains("每日委托"))
+                        if (_config.AutoGetDailyRewardsEnabled && item.Text.Contains("每日委托"))
                         {
                             ClickOcrRegion(item);
                             _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                         }
-                        else if (item.Text.Contains("探索派遣"))
+                        else if (_config.AutoReExploreEnabled && item.Text.Contains("探索派遣"))
                         {
                             ClickOcrRegion(item);
                             Thread.Sleep(800); // 等待探索派遣界面打开
