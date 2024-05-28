@@ -212,7 +212,7 @@ public class CombatScenes : IDisposable
     }
 
     [Obsolete]
-    private void ParseTeamOcrResult(PaddleOcrResult result, ImageRegion rectArea)
+    private void ParseTeamOcrResult(OcrResult result, ImageRegion rectArea)
     {
         List<string> names = new();
         List<Rect> nameRects = new();

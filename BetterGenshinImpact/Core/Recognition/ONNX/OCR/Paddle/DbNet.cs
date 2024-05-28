@@ -4,6 +4,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
@@ -41,7 +42,7 @@ class DbNet
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message + ex.StackTrace);
+            Debug.WriteLine(ex.Message + ex.StackTrace);
             throw ex;
         }
     }
@@ -60,14 +61,14 @@ class DbNet
             using (IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = dbNet.Run(inputs))
             {
                 var resultsArray = results.ToArray();
-                Console.WriteLine(resultsArray);
+                Debug.WriteLine(resultsArray);
                 var textBoxes = GetTextBoxes(resultsArray, srcResize.Rows, srcResize.Cols, scale, boxScoreThresh, boxThresh, unClipRatio);
                 return textBoxes;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message + ex.StackTrace);
+            Debug.WriteLine(ex.Message + ex.StackTrace);
         }
         return null;
     }
@@ -275,7 +276,7 @@ class DbNet
             //         }
             //         catch (Exception ex2)
             //         {
-            //             Console.WriteLine(ex2.Message);
+            //             Debug.WriteLine(ex2.Message);
             //         }
             //     }
             // }
@@ -293,7 +294,7 @@ class DbNet
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message + ex.StackTrace);
+            Debug.WriteLine(ex.Message + ex.StackTrace);
         }
 
         return 0;

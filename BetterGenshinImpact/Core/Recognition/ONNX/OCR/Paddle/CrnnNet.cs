@@ -3,6 +3,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -43,7 +44,7 @@ class CrnnNet
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message + ex.StackTrace);
+            Debug.WriteLine(ex.Message + ex.StackTrace);
             throw ex;
         }
     }
@@ -56,11 +57,11 @@ class CrnnNet
         String line;
         while ((line = sr.ReadLine()) != null)
         {
-            //Console.WriteLine(line.ToString());
+            //Debug.WriteLine(line.ToString());
             keys.Add(line);
         }
         keys.Add(" ");
-        Console.WriteLine($"keys Size = {keys.Count}");
+        Debug.WriteLine($"keys Size = {keys.Count}");
         return keys;
     }
 
@@ -79,7 +80,7 @@ class CrnnNet
         return textLines;
     }
 
-    private TextLine GetTextLine(Mat src)
+    public TextLine GetTextLine(Mat src)
     {
         TextLine textLine = new TextLine();
 
@@ -106,7 +107,7 @@ class CrnnNet
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message + ex.StackTrace);
+            Debug.WriteLine(ex.Message + ex.StackTrace);
             //throw ex;
         }
 

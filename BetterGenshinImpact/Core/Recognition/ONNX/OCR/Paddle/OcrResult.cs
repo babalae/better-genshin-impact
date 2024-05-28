@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.OCR.Paddle;
@@ -72,12 +73,14 @@ public sealed class TextBlock
     }
 }
 
-public sealed class OcrResult
+public sealed class RapidOcrResult
 {
     public List<TextBlock> TextBlocks { get; set; }
     public float DbNetTime { get; set; }
-    public Mat BoxImg { get; set; }
+
+    // public Mat BoxImg { get; set; }
     public float DetectTime { get; set; }
+
     public string StrRes { get; set; }
 
     public override string ToString()
@@ -89,5 +92,16 @@ public sealed class OcrResult
         sb.AppendLine($"├─DetectTime({DetectTime}ms)");
         sb.AppendLine($"└─StrRes({StrRes})");
         return sb.ToString();
+    }
+
+    public OcrResult ToBgiOcrResult()
+    {
+        List<OcrResultRegion> regions = [];
+        foreach (var block in TextBlocks)
+        {
+            var rotatedRect = Cv2.MinAreaRect(block.BoxPoints);
+            regions.Add(new OcrResultRegion(rotatedRect, block.Text, block.BoxScore));
+        }
+        return new OcrResult([.. regions]);
     }
 }

@@ -6,7 +6,10 @@ using System.Text;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.OCR.Paddle;
 
-public class OcrLite
+/// <summary>
+/// edit from: https://github.com/RapidAI/RapidOCRCSharp
+/// </summary>
+public class PaddleOcrEngine
 {
     public bool isPartImg { get; set; }
     public bool isDebugImg { get; set; }
@@ -14,7 +17,7 @@ public class OcrLite
     private AngleNet angleNet;
     private CrnnNet crnnNet;
 
-    public OcrLite()
+    public PaddleOcrEngine()
     {
         dbNet = new DbNet();
         angleNet = new AngleNet();
@@ -32,14 +35,24 @@ public class OcrLite
         catch (Exception ex)
         {
             Debug.WriteLine(ex.Message + ex.StackTrace);
-            throw ex;
+            throw;
         }
     }
 
-    public OcrResult Detect(string img, int padding, int maxSideLen, float boxScoreThresh, float boxThresh,
+    public RapidOcrResult Run(Mat mat)
+    {
+        return Run(mat, 0, 1024, 0.5f, 0.3f, 1.6f, false, false);
+    }
+
+    public string OnlyRecognizerRun(Mat mat)
+    {
+        var textLine = crnnNet.GetTextLine(mat);
+        return textLine.Text;
+    }
+
+    public RapidOcrResult Run(Mat originSrc, int padding, int maxSideLen, float boxScoreThresh, float boxThresh,
         float unClipRatio, bool doAngle, bool mostAngle)
     {
-        Mat originSrc = Cv2.ImRead(img, ImreadModes.Color);//default : BGR
         int originMaxSide = Math.Max(originSrc.Cols, originSrc.Rows);
 
         int resize;
@@ -57,14 +70,14 @@ public class OcrLite
 
         ScaleParam scale = ScaleParam.GetScaleParam(paddingSrc, resize);
 
-        return DetectOnce(paddingSrc, paddingRect, scale, boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
+        return RunOnce(paddingSrc, paddingRect, scale, boxScoreThresh, boxThresh, unClipRatio, doAngle, mostAngle);
     }
 
-    private OcrResult DetectOnce(Mat src, Rect originRect, ScaleParam scale, float boxScoreThresh, float boxThresh,
+    private RapidOcrResult RunOnce(Mat src, Rect originRect, ScaleParam scale, float boxScoreThresh, float boxThresh,
         float unClipRatio, bool doAngle, bool mostAngle)
     {
-        Mat textBoxPaddingImg = src.Clone();
-        int thickness = OcrUtils.GetThickness(src);
+        // Mat textBoxPaddingImg = src.Clone();
+        // int thickness = OcrUtils.GetThickness(src);
         Debug.WriteLine("=====Start detect=====");
         var startTicks = DateTime.Now.Ticks;
 
@@ -76,8 +89,8 @@ public class OcrLite
         textBoxes.ForEach(x => Debug.WriteLine(x));
         //Debug.WriteLine($"dbNetTime({dbNetTime}ms)");
 
-        Debug.WriteLine("---------- step: drawTextBoxes ----------");
-        OcrUtils.DrawTextBoxes(textBoxPaddingImg, textBoxes, thickness);
+        // Debug.WriteLine("---------- step: drawTextBoxes ----------");
+        // OcrUtils.DrawTextBoxes(textBoxPaddingImg, textBoxes, thickness);
         //Cv2.Imshow("ResultPadding", textBoxPaddingImg);
 
         //---------- getPartImages ----------
@@ -114,16 +127,18 @@ public class OcrLite
         List<TextBlock> textBlocks = new List<TextBlock>();
         for (int i = 0; i < textLines.Count; ++i)
         {
-            TextBlock textBlock = new TextBlock();
-            textBlock.BoxPoints = textBoxes[i].Points;
-            textBlock.BoxScore = textBoxes[i].Score;
-            textBlock.AngleIndex = angles[i].Index;
-            textBlock.AngleScore = angles[i].Score;
-            textBlock.AngleTime = angles[i].Time;
-            textBlock.Text = textLines[i].Text;
-            textBlock.CharScores = textLines[i].CharScores;
-            textBlock.CrnnTime = textLines[i].Time;
-            textBlock.BlockTime = angles[i].Time + textLines[i].Time;
+            TextBlock textBlock = new()
+            {
+                BoxPoints = textBoxes[i].Points,
+                BoxScore = textBoxes[i].Score,
+                AngleIndex = angles[i].Index,
+                AngleScore = angles[i].Score,
+                AngleTime = angles[i].Time,
+                Text = textLines[i].Text,
+                CharScores = textLines[i].CharScores,
+                CrnnTime = textLines[i].Time,
+                BlockTime = angles[i].Time + textLines[i].Time
+            };
             textBlocks.Add(textBlock);
         }
         //textBlocks.ForEach(x => Debug.WriteLine(x));
@@ -133,17 +148,19 @@ public class OcrLite
         //Debug.WriteLine($"fullDetectTime({fullDetectTime}ms)");
 
         //cropped to original size
-        Mat boxImg = new Mat(textBoxPaddingImg, originRect);
+        // Mat boxImg = new Mat(textBoxPaddingImg, originRect);
 
         StringBuilder strRes = new StringBuilder();
         textBlocks.ForEach(x => strRes.AppendLine(x.Text));
 
-        OcrResult ocrResult = new OcrResult();
-        ocrResult.TextBlocks = textBlocks;
-        ocrResult.DbNetTime = dbNetTime;
-        ocrResult.BoxImg = boxImg;
-        ocrResult.DetectTime = fullDetectTime;
-        ocrResult.StrRes = strRes.ToString();
+        var ocrResult = new RapidOcrResult
+        {
+            TextBlocks = textBlocks,
+            DbNetTime = dbNetTime,
+            // ocrResult.BoxImg = boxImg;
+            DetectTime = fullDetectTime,
+            StrRes = strRes.ToString()
+        };
 
         return ocrResult;
     }

@@ -153,7 +153,7 @@ public class ExpeditionTask
     /// </summary>
     /// <param name="result"></param>
     /// <returns></returns>
-    private List<ExpeditionCharacterCard> GetCharacterCards(PaddleOcrResult result)
+    private List<ExpeditionCharacterCard> GetCharacterCards(OcrResult result)
     {
         var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -209,7 +209,7 @@ public class ExpeditionTask
 
     private readonly Pen _pen = new(Color.Red, 1);
 
-    private PaddleOcrResult CaptureAndOcr(CaptureContent content)
+    private OcrResult CaptureAndOcr(CaptureContent content)
     {
         using var ra = TaskControl.CaptureToRectArea();
         var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
@@ -217,7 +217,7 @@ public class ExpeditionTask
         return result;
     }
 
-    private PaddleOcrResult CaptureAndOcr(CaptureContent content, Rect rect)
+    private OcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
         using var ra = TaskControl.CaptureToRectArea();
         var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);

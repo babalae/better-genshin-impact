@@ -72,18 +72,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             {
                 try
                 {
-                    // var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
-                    // Debug.WriteLine("PaddleOcr预热结果:" + s);
-
-                    var ocrEngin = new OcrLite();
-                    var detPath = Global.Absolute("Assets\\Model\\PaddleOCR\\V3\\ch_PP-OCRv3_det_infer.onnx");
-                    var clsPath = Global.Absolute("Assets\\Model\\PaddleOCR\\V3\\ch_ppocr_mobile_v2.0_cls_infer.onnx");
-                    var recPath = Global.Absolute("Assets\\Model\\PaddleOCR\\V3\\ch_PP-OCRv3_rec_infer.onnx");
-                    var keysPath = Global.Absolute("Assets\\Model\\PaddleOCR\\V3\\ppocr_keys_v1.txt");
-                    ocrEngin.InitModels(detPath, clsPath, recPath, keysPath, 1);
-
-                    var ocrResult = ocrEngin.Detect(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), 50, 1024, 0.5f, 0.3f, 1.6f, false, false);
-                    Debug.WriteLine("PaddleOcr预热结果:\n" + ocrResult);
+                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png")));
+                    Debug.WriteLine("PaddleOcr预热结果:" + s);
                 }
                 catch (Exception e)
                 {
