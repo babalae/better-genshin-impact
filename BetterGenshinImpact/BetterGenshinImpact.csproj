@@ -43,7 +43,6 @@
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
-		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.cuda118_cudnn86_tr85_sm86_89" Version="2.5.1" />
 		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.5.1" />
 		<PackageReference Include="Sdcb.PaddleOCR" Version="2.7.0" />
 		<PackageReference Include="Sdcb.PaddleOCR.Models.Online" Version="2.7.0.1" />
@@ -55,7 +54,7 @@
 		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
 		<PackageReference Include="WPF-UI" Version="3.0.0-preview.7" />
 		<PackageReference Include="WPF-UI.Tray" Version="3.0.0-preview.7" />
-		<PackageReference Include="YoloV8.Gpu" Version="2.0.1" />
+		<PackageReference Include="YoloV8" Version="2.0.1" />
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
