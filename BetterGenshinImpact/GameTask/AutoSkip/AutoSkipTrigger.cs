@@ -420,11 +420,22 @@ public class AutoSkipTrigger : ITaskTrigger
 
             // 删除为空的结果 和 纯英文的结果
             var rs = new List<Region>();
-            foreach (var item in ocrResList)
+            // 按照y坐标排序
+            ocrResList = ocrResList.OrderBy(r => r.Y).ToList();
+            for (var i = 0; i < ocrResList.Count; i++)
             {
+                var item = ocrResList[i];
                 if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && _enOrNumRegex.IsMatch(item.Text)))
                 {
                     continue;
+                }
+                if (i != ocrResList.Count - 1)
+                {
+                    if (ocrResList[i + 1].Y - ocrResList[i].Y > 150)
+                    {
+                        Debug.WriteLine($"存在Y轴偏差过大的结果，忽略:{item.Text}");
+                        continue;
+                    }
                 }
 
                 rs.Add(item);
