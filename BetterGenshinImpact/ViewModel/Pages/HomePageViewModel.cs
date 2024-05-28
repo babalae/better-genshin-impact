@@ -45,6 +45,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
+    // 记录上次使用原神的句柄
+    private IntPtr _hWnd;
+
     [ObservableProperty] private string[] _inferenceDevices = ["CPU", "GPU"];
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)

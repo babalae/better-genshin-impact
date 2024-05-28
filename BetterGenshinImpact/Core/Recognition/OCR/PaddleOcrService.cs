@@ -33,7 +33,7 @@ public class PaddleOcrService : IOcrService
         Action<PaddleConfig> device = TaskContext.Instance().Config.InferenceDevice switch
         {
             "CPU" => PaddleDevice.Onnx(),
-            "GPU" => PaddleDevice.Gpu(),
+            "GPU" => PaddleDevice.Onnx(),
             _ => throw new InvalidEnumArgumentException("无效的推理设备")
         };
         _paddleOcrAll = new PaddleOcrAll(model, device)

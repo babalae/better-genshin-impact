@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
@@ -24,10 +25,8 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
-using System.Windows.Media.Media3D;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -48,12 +47,8 @@ public class AutoDomainTask
         _taskParam = taskParam;
         _simulator = AutoFightContext.Instance.Simulator;
 
-        _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"), BgiSessionOption.Instance.Options);
+        _predictor = new YoloV8(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"), BgiSessionOption.Instance.Options);
 
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-        _combatCommands = CombatScriptParser.Parse(_taskParam.CombatStrategyContent);
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
