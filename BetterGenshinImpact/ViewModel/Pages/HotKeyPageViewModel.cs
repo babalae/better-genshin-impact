@@ -135,6 +135,19 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         );
         HotKeySettingModels.Add(takeScreenshotHotKeySettingModel);
 
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "日志与状态窗口展示开关",
+            nameof(Config.HotKeyConfig.LogBoxDisplayHotkey),
+            Config.HotKeyConfig.LogBoxDisplayHotkey,
+            Config.HotKeyConfig.LogBoxDisplayHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox = !TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
+                // 与状态窗口同步
+                TaskContext.Instance().Config.MaskWindowConfig.ShowStatus = TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
+            }
+        ));
+
         var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),

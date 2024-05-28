@@ -162,4 +162,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _test1HotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 日志与状态窗口展示
+    [ObservableProperty]
+    private string _logBoxDisplayHotkey = "";
+
+    [ObservableProperty]
+    private string _logBoxDisplayHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }
