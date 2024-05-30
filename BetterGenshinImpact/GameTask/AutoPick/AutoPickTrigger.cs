@@ -92,13 +92,20 @@ public class AutoPickTrigger : ITaskTrigger
     public void OnCapture(CaptureContent content)
     {
         var speedTimer = new SpeedTimer();
-        content.CaptureRectArea.Find(_autoPickAssets.FRo, foundRectArea =>
+        
+        // 确定拾取键
+        bool useE = TaskContext.Instance().Config.AutoPickConfig.UseEtoPick;
+        var pickRo = useE ? _autoPickAssets.ERo : _autoPickAssets.FRo;
+        var pickKey = useE ? User32.VK.VK_E : User32.VK.VK_F;
+        var keyName = useE ? "E" : "F";
+
+        content.CaptureRectArea.Find(pickRo, foundRectArea =>
         {
-            speedTimer.Record("识别到 F 拾取键");
+            speedTimer.Record($"识别到 {keyName} 拾取键");
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
-            // 识别到F键，开始识别物品图标
+            // 识别到拾取键，开始识别物品图标
             var isExcludeIcon = false;
             _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
             var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
@@ -195,7 +202,7 @@ public class AutoPickTrigger : ITaskTrigger
                 speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
+                Simulation.SendInput.Keyboard.KeyPress(pickKey);
             }
         });
         speedTimer.DebugPrint();
