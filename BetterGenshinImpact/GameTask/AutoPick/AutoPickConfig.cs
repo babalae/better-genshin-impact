@@ -45,9 +45,8 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         [ObservableProperty] private bool _fastModeEnabled = false;
 
         /// <summary>
-        /// E按键拾取
-        /// 使用E按键拾取物品，而不是F
+        /// 自定义按键拾取
         /// </summary>
-        [ObservableProperty] private bool _useEtoPick = false;
+        [ObservableProperty] private string _pickKey = "F";
     }
 }

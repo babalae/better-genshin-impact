@@ -532,30 +532,19 @@ public class Avatar
 
     public void KeyDown(string key)
     {
-        var vk = ToVk(key);
+        var vk = User32Helper.ToVk(key);
         AutoFightContext.Instance.Simulator.KeyDown(vk);
     }
 
     public void KeyUp(string key)
     {
-        var vk = ToVk(key);
+        var vk = User32Helper.ToVk(key);
         AutoFightContext.Instance.Simulator.KeyUp(vk);
     }
 
     public void KeyPress(string key)
     {
-        var vk = ToVk(key);
+        var vk = User32Helper.ToVk(key);
         AutoFightContext.Instance.Simulator.KeyPress(vk);
-    }
-
-    public static User32.VK ToVk(string key)
-    {
-        key = key.ToUpper();
-        if (!key.StartsWith("VK_"))
-        {
-            key = $"VK_{key}";
-        }
-
-        return (User32.VK)Enum.Parse(typeof(User32.VK), key);
     }
 }

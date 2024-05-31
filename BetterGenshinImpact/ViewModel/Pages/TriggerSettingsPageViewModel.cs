@@ -23,6 +23,9 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
     [ObservableProperty]
     private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
 
+    [ObservableProperty]
+    private string[] _defaultPickButtonNames = ["F", "E"];
+
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;

@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Windows.Input;
 using TimeSpan = System.TimeSpan;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -48,7 +49,7 @@ public class CombatCommand
                 AssertUtils.IsTrue(Args.Count == 1, $"{Method.Alias[0]}方法必须有一个入参，代表按键");
                 try
                 {
-                    Avatar.ToVk(Args[0]);
+                    User32Helper.ToVk(Args[0]);
                 }
                 catch
                 {

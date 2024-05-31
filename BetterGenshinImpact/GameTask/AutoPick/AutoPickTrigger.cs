@@ -14,7 +14,9 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using BetterGenshinImpact.Core.Recognition;
 using Vanara.PInvoke;
+using System.Windows.Input;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -40,6 +42,12 @@ public class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private List<string> _whiteList = new();
 
+    // 自定义拾取按键
+    private string _pickKeyName = "F";
+
+    private User32.VK _pickVk = User32.VK.VK_F;
+    private RecognitionObject _pickRo;
+
     public AutoPickTrigger()
     {
         _autoPickAssets = AutoPickAssets.Instance;
@@ -47,6 +55,29 @@ public class AutoPickTrigger : ITaskTrigger
 
     public void Init()
     {
+        _pickRo = _autoPickAssets.FRo;
+        var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
+        if (!string.IsNullOrEmpty(keyName))
+        {
+            try
+            {
+                _pickRo = _autoPickAssets.LoadCustomPickKey(keyName);
+                _pickVk = User32Helper.ToVk(keyName);
+                _pickKeyName = keyName;
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug(e, "加载自定义拾取按键时发生异常");
+                _logger.LogError("加载自定义拾取按键失败，继续使用默认的F键");
+                TaskContext.Instance().Config.AutoPickConfig.PickKey = "F";
+                return;
+            }
+            if (_pickKeyName != "F")
+            {
+                _logger.LogInformation("自定义拾取按键：{Key}", _pickKeyName);
+            }
+        }
+
         IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
         try
         {
@@ -92,16 +123,10 @@ public class AutoPickTrigger : ITaskTrigger
     public void OnCapture(CaptureContent content)
     {
         var speedTimer = new SpeedTimer();
-        
-        // 确定拾取键
-        bool useE = TaskContext.Instance().Config.AutoPickConfig.UseEtoPick;
-        var pickRo = useE ? _autoPickAssets.ERo : _autoPickAssets.FRo;
-        var pickKey = useE ? User32.VK.VK_E : User32.VK.VK_F;
-        var keyName = useE ? "E" : "F";
 
-        content.CaptureRectArea.Find(pickRo, foundRectArea =>
+        content.CaptureRectArea.Find(_pickRo, foundRectArea =>
         {
-            speedTimer.Record($"识别到 {keyName} 拾取键");
+            speedTimer.Record($"识别到 {_pickKeyName} 拾取键");
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
@@ -202,7 +227,7 @@ public class AutoPickTrigger : ITaskTrigger
                 speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(pickKey);
+                Simulation.SendInput.Keyboard.KeyPress(_pickVk);
             }
         });
         speedTimer.DebugPrint();

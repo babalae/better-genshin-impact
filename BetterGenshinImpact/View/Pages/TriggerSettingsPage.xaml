@@ -102,7 +102,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Width="180"
+                              Width="100"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding PickOcrEngineNames}"
                               SelectedItem="{Binding Config.AutoPickConfig.OcrEngine, Mode=TwoWay}" />
@@ -171,13 +171,20 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用E键拾取"
+                                  Text="自定义拾取按键"
                                   TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.AutoPickConfig.UseEtoPick, Mode=TwoWay}" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="默认为 F，自带了 E 按键，需要改成其他键的请阅读文档"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="80"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding DefaultPickButtonNames}"
+                              SelectedItem="{Binding Config.AutoPickConfig.PickKey, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
