@@ -336,6 +336,9 @@
 		<None Update="GameTask\AutoPick\Assets\1920x1080\F.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoPick\Assets\1920x1080\E.png">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoPick\Assets\1920x1080\icon_settings.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
