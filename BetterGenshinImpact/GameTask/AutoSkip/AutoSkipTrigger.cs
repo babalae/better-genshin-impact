@@ -529,7 +529,7 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private void ClickOcrRegion(Region region, string optionType = "")
     {
-        if (!string.IsNullOrEmpty(optionType))
+        if (string.IsNullOrEmpty(optionType))
         {
             TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
         }
