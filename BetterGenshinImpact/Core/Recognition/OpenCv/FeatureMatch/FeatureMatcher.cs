@@ -39,9 +39,11 @@ public class FeatureMatcher
         if (featureStorage != null)
         {
             featureStorage.TypeName = type.ToString();
+            Debug.WriteLine("尝试从磁盘加载特征点");
             var kpFromDisk = featureStorage.LoadKeyPointArray();
             if (kpFromDisk == null)
             {
+                Debug.WriteLine("特征点不存在");
                 _feature2D.DetectAndCompute(trainMat, null, out _trainKeyPoints, _trainRet);
                 featureStorage.SaveKeyPointArray(_trainKeyPoints);
                 featureStorage.SaveDescMat(_trainRet);

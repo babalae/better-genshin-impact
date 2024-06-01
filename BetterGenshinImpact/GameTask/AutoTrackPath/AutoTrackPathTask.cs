@@ -1,13 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -22,9 +30,13 @@ public class AutoTrackPathTask
     private readonly AutoTrackPathParam _taskParam;
     private readonly Random _rd = new Random();
 
+    private readonly List<GiWorldPosition> _tpPositions;
+
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
         _taskParam = taskParam;
+        var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
+        _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed"); ;
     }
 
     public async void Start()
@@ -114,6 +126,9 @@ public class AutoTrackPathTask
     public void Tp(double x, double y)
     {
         // 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
+        // 获取最近的传送点位置
+        (x, y) = GetRecentlyTpPoint(x, y);
+        Debug.WriteLine("最近的传送点位置：" + x + "," + y);
 
         // M 打开地图识别当前位置，中心点为当前位置
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
@@ -121,8 +136,45 @@ public class AutoTrackPathTask
         Sleep(1000);
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
-        var bigMapCenterPoint = GetPositionFromBigMap();
+        // TODO
 
+        // 移动地图到指定传送点位置
+        Debug.WriteLine("移动地图到指定传送点位置");
+        MoveMapTo(x, y);
+
+        // 计算坐标后点击
+        var bigMapInAllMapRect = GetBigMapRect();
+        while (!bigMapInAllMapRect.Contains((int)x, (int)y))
+        {
+            Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
+            Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
+            MoveMapTo(x, y);
+            bigMapInAllMapRect = GetBigMapRect();
+        }
+        // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
+        // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
+        var (picX, picY) = MapCoordinate.GameToMain2048(x, y);
+        var picRect = MapCoordinate.GameToMain2048(bigMapInAllMapRect);
+        Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var clickX = (int)((picX - picRect.X) / picRect.Width * captureRect.Width);
+        var clickY = (int)((picY - picRect.Y) / picRect.Height * captureRect.Height);
+        Logger.LogInformation("点击坐标：({X},{Y})", clickX, clickY);
+        using var ra = GetRectAreaFromDispatcher();
+        ra.ClickTo(clickX, clickY);
+
+        // 触发一次快速传送功能
+    }
+
+    /// <summary>
+    /// 移动地图到指定传送点位置
+    /// 可能会移动不对，所以可以重试此方法
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void MoveMapTo(double x, double y)
+    {
+        var bigMapCenterPoint = GetPositionFromBigMap();
         // 移动部分内容测试移动偏移
         var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);
 
@@ -145,6 +197,7 @@ public class AutoTrackPathTask
         var diffMapY = newBigMapCenterPoint.Y - bigMapCenterPoint.Y;
         Debug.WriteLine($"每100移动的地图距离：({diffMapX},{diffMapY})");
 
+        // 快速移动到目标传送点所在的区域
         if (diffMapX > 0 && diffMapY > 0)
         {
             // // 计算需要移动的次数
@@ -162,12 +215,6 @@ public class AutoTrackPathTask
                 MouseMoveMapY(diffMouseY);
             }
         }
-
-        // 快速移动到目标传送点所在的区域
-
-        // 计算坐标后点击
-
-        // 触发一次快速传送功能
     }
 
     public void MouseMoveMapX(int dx)
@@ -198,12 +245,10 @@ public class AutoTrackPathTask
     public Point GetPositionFromBigMap()
     {
         var bigMapRect = GetBigMapRect();
-        // 中心点
+        Debug.WriteLine("地图位置转换到游戏坐标：" + bigMapRect);
         var bigMapCenterPoint = bigMapRect.GetCenterPoint();
-        Debug.WriteLine("识别大地图中心点：" + bigMapCenterPoint);
-        var gamePoint = MapCoordinate.Main2048ToGame(bigMapCenterPoint);
-        Debug.WriteLine("转换到游戏坐标：" + gamePoint);
-        return gamePoint;
+        Debug.WriteLine("地图中心坐标：" + bigMapCenterPoint);
+        return bigMapCenterPoint;
     }
 
     public Rect GetBigMapRect()
@@ -213,12 +258,39 @@ public class AutoTrackPathTask
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
-            return EntireMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
+            var rect = EntireMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
+            Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
+            return MapCoordinate.Main2048ToGame(rect);
         }
         else
         {
             throw new InvalidOperationException("当前不在地图界面");
         }
+    }
+
+    /// <summary>
+    /// 获取最近的传送点位置
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    public (int x, int y) GetRecentlyTpPoint(double x, double y)
+    {
+        var recentX = 0;
+        var recentY = 0;
+        var minDistance = double.MaxValue;
+        foreach (var tpPosition in _tpPositions)
+        {
+            var distance = Math.Sqrt(Math.Pow(tpPosition.X - x, 2) + Math.Pow(tpPosition.Y - y, 2));
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                recentX = (int)Math.Round(tpPosition.X);
+                recentY = (int)Math.Round(tpPosition.Y);
+            }
+        }
+
+        return (recentX, recentY);
     }
 
     public void TpByF1(string name)

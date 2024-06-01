@@ -1,5 +1,6 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
@@ -44,13 +45,12 @@ public class MapCoordinate
     }
 
     /// <summary>
-    /// 原神游戏坐标系 -> 主地图1024区块坐标系
+    /// 原神游戏坐标系 -> 主地图2048区块坐标系
     /// </summary>
     /// <param name="position">[a,b,c]</param>
     /// <returns></returns>
     public static Point GameToMain2048(decimal[] position)
     {
-        // 四舍六入五取偶
         var a = position[0]; // 上
         var c = position[2]; // 左
 
@@ -61,12 +61,46 @@ public class MapCoordinate
     }
 
     /// <summary>
-    /// 主地图1024区块坐标系 -> 原神游戏坐标系
+    /// 原神游戏坐标系 -> 主地图2048区块坐标系
+    /// </summary>
+    /// <returns></returns>
+    public static (double x, double y) GameToMain2048(double c, double a)
+    {
+        // 转换1024区块坐标，大地图坐标系正轴是往左上方向的
+        // 这里写最左上角的区块坐标(GameMapUpRows,GameMapLeftCols)/(上,左),截止4.5版本，最左上角的区块坐标是(5,7)
+
+        return new(((GameMapLeftCols + 1) * GameMapBlockWidth - c) * 2, ((GameMapUpRows + 1) * GameMapBlockWidth - a) * 2);
+    }
+
+    public static Rect GameToMain2048(Rect rect)
+    {
+        var center = rect.GetCenterPoint();
+        // 转换中心点坐标
+        (double newX, double newY) = GameToMain2048(center.X, center.Y);
+
+        // 返回转换后的矩形坐标
+        return new Rect((int)Math.Round(newX) - rect.Width, (int)Math.Round(newY) - rect.Height, rect.Width * 2, rect.Height * 2);
+    }
+
+    /// <summary>
+    /// 主地图2048区块坐标系 -> 原神游戏坐标系
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
     public static Point Main2048ToGame(Point point)
     {
         return new Point((GameMapLeftCols + 1) * GameMapBlockWidth - point.X / 2, (GameMapUpRows + 1) * GameMapBlockWidth - point.Y / 2);
+    }
+
+    /// <summary>
+    /// 主地图2048区块坐标系 -> 原神游戏坐标系
+    /// </summary>
+    /// <param name="rect"></param>
+    /// <returns></returns>
+    public static Rect Main2048ToGame(Rect rect)
+    {
+        var center = rect.GetCenterPoint();
+        var point = Main2048ToGame(center);
+        return new Rect(point.X - rect.Width / 4, point.Y - rect.Height / 4, rect.Width / 2, rect.Height / 2);
     }
 }
