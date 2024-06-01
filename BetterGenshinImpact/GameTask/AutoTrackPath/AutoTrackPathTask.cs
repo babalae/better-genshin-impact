@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -32,6 +33,15 @@ public class AutoTrackPathTask
 
     private readonly List<GiWorldPosition> _tpPositions;
 
+    private readonly Dictionary<string, double[]> _countryPositions = new()
+    {
+        { "蒙德", [-876, 2278] },
+        { "璃月", [270, -666] },
+        { "稻妻", [-4400, -3050] },
+        { "须弥", [2877, -374] },
+        { "枫丹", [4515, 3631] },
+    };
+
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
         _taskParam = taskParam;
@@ -53,7 +63,7 @@ public class AutoTrackPathTask
 
             Init();
 
-            Tp(4726.575195, 1852.823975);
+            Tp(_tpPositions[260].X, _tpPositions[260].Y);
         }
         catch (NormalEndException)
         {
@@ -123,12 +133,13 @@ public class AutoTrackPathTask
         // 通过大地图传送到指定传送点
     }
 
-    public void Tp(double x, double y)
+    public void Tp(double tpX, double tpY)
     {
         // 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
+
         // 获取最近的传送点位置
-        (x, y) = GetRecentlyTpPoint(x, y);
-        Debug.WriteLine("最近的传送点位置：" + x + "," + y);
+        var (x, y) = GetRecentlyTpPoint(tpX, tpY);
+        Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", tpX, tpY, x, y);
 
         // M 打开地图识别当前位置，中心点为当前位置
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
@@ -136,7 +147,7 @@ public class AutoTrackPathTask
         Sleep(1000);
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
-        // TODO
+        SwitchRecentlyCountryMap(x, y);
 
         // 移动地图到指定传送点位置
         Debug.WriteLine("移动地图到指定传送点位置");
@@ -159,7 +170,7 @@ public class AutoTrackPathTask
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         var clickX = (int)((picX - picRect.X) / picRect.Width * captureRect.Width);
         var clickY = (int)((picY - picRect.Y) / picRect.Height * captureRect.Height);
-        Logger.LogInformation("点击坐标：({X},{Y})", clickX, clickY);
+        Logger.LogInformation("点击传送点：({X},{Y})", clickX, clickY);
         using var ra = GetRectAreaFromDispatcher();
         ra.ClickTo(clickX, clickY);
 
@@ -193,22 +204,22 @@ public class AutoTrackPathTask
         MouseMoveMapX(diffMouseX);
         MouseMoveMapY(diffMouseY);
         var newBigMapCenterPoint = GetPositionFromBigMap();
-        var diffMapX = newBigMapCenterPoint.X - bigMapCenterPoint.X;
-        var diffMapY = newBigMapCenterPoint.Y - bigMapCenterPoint.Y;
+        var diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
+        var diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
         Debug.WriteLine($"每100移动的地图距离：({diffMapX},{diffMapY})");
 
         // 快速移动到目标传送点所在的区域
-        if (diffMapX > 0 && diffMapY > 0)
+        if (diffMapX > 10 && diffMapY > 10)
         {
             // // 计算需要移动的次数
-            var moveCount = (int)(xOffset / diffMapX); // 向下取整 本来还要加1的，但是已经移动了一次了
+            var moveCount = (int)Math.Abs(xOffset / diffMapX); // 向下取整 本来还要加1的，但是已经移动了一次了
             Debug.WriteLine("X需要移动的次数：" + moveCount);
             for (var i = 0; i < moveCount; i++)
             {
                 MouseMoveMapX(diffMouseX);
             }
 
-            moveCount = (int)(yOffset / diffMapY); // 向下取整 本来还要加1的，但是已经移动了一次了
+            moveCount = (int)Math.Abs(yOffset / diffMapY); // 向下取整 本来还要加1的，但是已经移动了一次了
             Debug.WriteLine("Y需要移动的次数：" + moveCount);
             for (var i = 0; i < moveCount; i++)
             {
@@ -242,7 +253,7 @@ public class AutoTrackPathTask
         Simulation.SendInput.Mouse.LeftButtonUp().Sleep(200);
     }
 
-    public Point GetPositionFromBigMap()
+    public static Point GetPositionFromBigMap()
     {
         var bigMapRect = GetBigMapRect();
         Debug.WriteLine("地图位置转换到游戏坐标：" + bigMapRect);
@@ -251,7 +262,7 @@ public class AutoTrackPathTask
         return bigMapCenterPoint;
     }
 
-    public Rect GetBigMapRect()
+    public static Rect GetBigMapRect()
     {
         // 判断是否在地图界面
         using var ra = GetRectAreaFromDispatcher();
@@ -291,6 +302,39 @@ public class AutoTrackPathTask
         }
 
         return (recentX, recentY);
+    }
+
+    public void SwitchRecentlyCountryMap(double x, double y)
+    {
+        var bigMapCenterPoint = GetPositionFromBigMap();
+        Logger.LogInformation("识别当前位置：{Pos}", bigMapCenterPoint);
+
+        var minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
+        var minCountry = "当前位置";
+        foreach (var (country, position) in _countryPositions)
+        {
+            var distance = Math.Sqrt(Math.Pow(position[0] - x, 2) + Math.Pow(position[1] - y, 2));
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                minCountry = country;
+            }
+        }
+        Logger.LogInformation("离目标传送点最近的区域是：{Country}", minCountry);
+        if (minCountry != "当前位置")
+        {
+            GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+            Sleep(200, _taskParam.Cts);
+            var ra = GetRectAreaFromDispatcher();
+            var list = ra.FindMulti(new RecognitionObject
+            {
+                RecognitionType = RecognitionTypes.Ocr,
+                RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
+            });
+            list.FirstOrDefault(r => r.Text.Contains(minCountry))?.Click();
+            Logger.LogInformation("切换到区域：{Country}", minCountry);
+            Sleep(500, _taskParam.Cts);
+        }
     }
 
     public void TpByF1(string name)

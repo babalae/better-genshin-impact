@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.Model.Enum;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -376,23 +377,28 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
             PostMessageSimulator? postMessageSimulator = null;
             HotKeySettingModels.Add(new HotKeySettingModel(
-                "（测试）按键模拟测试",
+                "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
                 Config.HotKeyConfig.Test1Hotkey,
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    if (postMessageSimulator == null)
-                    {
-                        postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
-                    }
-                    User32.GetCursorPos(out var p);
-                    Debug.WriteLine($"鼠标位置：{p.X},{p.Y}");
-                    // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
-                    GameCaptureRegion.GameRegion1080PPosMove(1340, 655);
-                    postMessageSimulator.LeftButtonClickBackground(1340, 655);
-                    Thread.Sleep(5);
-                    DesktopRegion.DesktopRegionMove(p.X, p.Y);
+                    // if (postMessageSimulator == null)
+                    // {
+                    //     postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+                    // }
+                    // User32.GetCursorPos(out var p);
+                    // Debug.WriteLine($"鼠标位置：{p.X},{p.Y}");
+                    // // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
+                    // GameCaptureRegion.GameRegion1080PPosMove(1340, 655);
+                    // postMessageSimulator.LeftButtonClickBackground(1340, 655);
+                    // Thread.Sleep(5);
+                    // DesktopRegion.DesktopRegionMove(p.X, p.Y);
+
+                    // 大地图位置
+                    TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
+                    Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+                    AutoTrackPathTask.GetPositionFromBigMap();
                 }
             ));
         }
