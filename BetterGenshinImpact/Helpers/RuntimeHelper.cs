@@ -25,8 +25,6 @@ internal static class RuntimeHelper
         false;
 #endif
 
-    public static bool IsGpuPackage => true;
-
     private static bool GetElevated()
     {
         using WindowsIdentity identity = WindowsIdentity.GetCurrent();
