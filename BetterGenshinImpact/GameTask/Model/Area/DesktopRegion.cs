@@ -18,6 +18,12 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
             (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
     }
 
+    public void DesktopRegionMove(int x, int y, int w, int h)
+    {
+        Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
+            (y + (h * 1d / 2)) * 65535 / Height);
+    }
+
     /// <summary>
     /// 静态方法,每次都会重新计算屏幕大小
     /// </summary>

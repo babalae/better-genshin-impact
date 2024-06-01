@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
@@ -6,12 +7,12 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,8 +21,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
@@ -37,6 +36,8 @@ public class AutoSkipTrigger : ITaskTrigger
     public bool IsEnabled { get; set; }
     public int Priority => 20;
     public bool IsExclusive => false;
+
+    public bool IsBackgroundRunning { get; set; }
 
     private readonly AutoSkipAssets _autoSkipAssets;
 
@@ -57,6 +58,8 @@ public class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private List<string> _selectList = new();
 
+    private PostMessageSimulator? _postMessageSimulator;
+
     public AutoSkipTrigger()
     {
         _autoSkipAssets = AutoSkipAssets.Instance;
@@ -65,7 +68,9 @@ public class AutoSkipTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = TaskContext.Instance().Config.AutoSkipConfig.Enabled;
+        IsEnabled = _config.Enabled;
+        IsBackgroundRunning = _config.RunBackgroundEnabled;
+        _postMessageSimulator = TaskContext.Instance().PostMessageSimulator;
 
         try
         {
@@ -182,7 +187,14 @@ public class AutoSkipTrigger : ITaskTrigger
             _prevPlayingTime = DateTime.Now;
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                if (IsBackgroundRunning)
+                {
+                    _postMessageSimulator?.KeyPressBackground(User32.VK.VK_SPACE);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                }
             }
 
             // 对话选项选择
@@ -392,7 +404,7 @@ public class AutoSkipTrigger : ITaskTrigger
         using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
         if (!exclamationIconRa.IsEmpty())
         {
-            TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
+            Thread.Sleep(_config.AfterChooseOptionSleepDelay);
             exclamationIconRa.Click();
             AutoSkipLog("点击感叹号选项");
             return true;
@@ -515,7 +527,7 @@ public class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 没OCR到文字，直接选择气泡选项
-                TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
+                Thread.Sleep(_config.AfterChooseOptionSleepDelay);
                 clickRect.Click();
                 var msg = _config.IsClickFirstChatOption() ? "第一个" : "最后一个";
                 AutoSkipLog($"点击{msg}气泡选项");
@@ -531,9 +543,20 @@ public class AutoSkipTrigger : ITaskTrigger
     {
         if (string.IsNullOrEmpty(optionType))
         {
-            TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
+            Thread.Sleep(_config.AfterChooseOptionSleepDelay);
         }
-        region.Click();
+        if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
+        {
+            User32.GetCursorPos(out var p);
+            region.Move();  // 必须移动实际鼠标
+            _postMessageSimulator?.LeftButtonClickBackground();
+            Thread.Sleep(10);
+            DesktopRegion.DesktopRegionMove(p.X, p.Y); // 鼠标移动回原来位置
+        }
+        else
+        {
+            region.Click();
+        }
         AutoSkipLog(region.Text);
     }
 

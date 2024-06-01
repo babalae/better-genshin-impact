@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
@@ -385,8 +386,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     {
                         postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
                     }
+                    User32.GetCursorPos(out var p);
+                    Debug.WriteLine($"鼠标位置：{p.X},{p.Y}");
                     // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
+                    GameCaptureRegion.GameRegion1080PPosMove(1340, 655);
                     postMessageSimulator.LeftButtonClickBackground(1340, 655);
+                    Thread.Sleep(5);
+                    DesktopRegion.DesktopRegionMove(p.X, p.Y);
                 }
             ));
         }

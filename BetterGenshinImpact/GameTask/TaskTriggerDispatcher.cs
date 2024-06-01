@@ -268,6 +268,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 检查游戏是否在前台
+                var hasBackgroundTriggerToRun = false;
                 var active = SystemControl.IsGenshinImpactActive();
                 if (!active)
                 {
@@ -291,7 +292,24 @@ namespace BetterGenshinImpact.GameTask
                     }
 
                     _prevGameActive = active;
-                    return;
+
+                    if (_triggers != null)
+                    {
+                        var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                        if (exclusive != null)
+                        {
+                            hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                        }
+                        else
+                        {
+                            hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                        }
+                    }
+                    if (!hasBackgroundTriggerToRun)
+                    {
+                        // 没有后台运行的触发器，这次不再进行截图
+                        return;
+                    }
                 }
                 else
                 {
@@ -342,7 +360,7 @@ namespace BetterGenshinImpact.GameTask
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
                 var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
-                var exclusiveTrigger = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                 if (exclusiveTrigger != null)
                 {
                     exclusiveTrigger.OnCapture(content);
@@ -350,7 +368,13 @@ namespace BetterGenshinImpact.GameTask
                 }
                 else
                 {
-                    foreach (var trigger in _triggers.Where(trigger => trigger.IsEnabled))
+                    var runningTriggers = _triggers.Where(t => t.IsEnabled);
+                    if (hasBackgroundTriggerToRun)
+                    {
+                        runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
+                    }
+
+                    foreach (var trigger in runningTriggers)
                     {
                         trigger.OnCapture(content);
                         speedTimer.Record(trigger.Name);

@@ -112,6 +112,41 @@ public class Region : IDisposable
     }
 
     /// <summary>
+    /// 移动到【自己】的中心
+    /// region.Derive(x,y).Move() 等效于 region.MoveTo(x,y)
+    /// </summary>
+    public void Move()
+    {
+        // 相对自己是 0, 0 坐标
+        MoveTo(0, 0, Width, Height);
+    }
+
+    /// <summary>
+    /// 移动到区域内【指定位置】
+    /// region.Derive(x,y).Move() 等效于 region.MoveTo(x,y)
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void MoveTo(int x, int y)
+    {
+        MoveTo(x, y, 0, 0);
+    }
+
+    /// <summary>
+    /// 移动到区域内【指定矩形区域】的中心
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="w"></param>
+    /// <param name="h"></param>
+    /// <exception cref="Exception"></exception>
+    public void MoveTo(int x, int y, int w, int h)
+    {
+        var res = ConvertRes<DesktopRegion>.ConvertPositionToTargetRegion(x, y, w, h, this);
+        res.TargetRegion.DesktopRegionMove(res.X, res.Y, res.Width, res.Height);
+    }
+
+    /// <summary>
     /// 直接在遮罩窗口绘制【自己】
     /// </summary>
     /// <param name="name"></param>

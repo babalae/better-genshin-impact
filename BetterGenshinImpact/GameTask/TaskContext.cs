@@ -5,6 +5,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -32,6 +33,7 @@ namespace BetterGenshinImpact.GameTask
         public void Init(IntPtr hWnd)
         {
             GameHandle = hWnd;
+            PostMessageSimulator = Simulation.PostMessage(GameHandle);
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
@@ -41,6 +43,8 @@ namespace BetterGenshinImpact.GameTask
         public bool IsInitialized { get; set; }
 
         public IntPtr GameHandle { get; set; }
+
+        public PostMessageSimulator PostMessageSimulator { get; private set; }
 
         //public IntPtr MaskWindowHandle { get; set; }
 
