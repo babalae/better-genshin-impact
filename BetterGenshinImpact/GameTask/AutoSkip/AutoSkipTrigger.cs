@@ -468,12 +468,12 @@ public class AutoSkipTrigger : ITaskTrigger
                     {
                         if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
                         {
-                            ClickOcrRegion(item);
+                            ClickOcrRegion(item, "每日委托");
                             _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                         }
                         else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
                         {
-                            ClickOcrRegion(item);
+                            ClickOcrRegion(item, "探索派遣");
                             Thread.Sleep(800); // 等待探索派遣界面打开
                             new OneKeyExpeditionTask().Run(_autoSkipAssets);
                         }
@@ -527,9 +527,12 @@ public class AutoSkipTrigger : ITaskTrigger
         return false;
     }
 
-    private void ClickOcrRegion(Region region)
+    private void ClickOcrRegion(Region region, string optionType = "")
     {
-        TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
+        if (!string.IsNullOrEmpty(optionType))
+        {
+            TaskControl.Sleep(_config.AfterChooseOptionSleepDelay);
+        }
         region.Click();
         AutoSkipLog(region.Text);
     }
