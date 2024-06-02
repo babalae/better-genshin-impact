@@ -233,7 +233,14 @@ public class AutoSkipTrigger : ITaskTrigger
             var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
             if (rate is >= 0.5 and < 0.98999)
             {
-                Simulation.SendInput.Mouse.LeftButtonClick();
+                if (IsBackgroundRunning)
+                {
+                    TaskContext.Instance().PostMessageSimulator?.LeftButtonClickBackground();
+                }
+                else
+                {
+                    Simulation.SendInput.Mouse.LeftButtonClick();
+                }
 
                 _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
 

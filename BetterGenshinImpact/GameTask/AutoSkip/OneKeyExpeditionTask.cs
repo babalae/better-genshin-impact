@@ -16,6 +16,7 @@ public class OneKeyExpeditionTask
     {
         try
         {
+            SystemControl.ActivateWindow();
             // 1.全部领取
             var region = CaptureToRectArea();
             region.Find(assets.CollectRo, ra =>
