@@ -207,7 +207,7 @@ public class AutoPickTrigger : ITaskTrigger
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
+                    Simulation.SendInput.Keyboard.KeyPress(_pickVk);
                     return;
                 }
 
