@@ -51,7 +51,7 @@
                 Click="GenAvatarData"
                 Content="生成侧面头像数据集" />
         <Button Canvas.Left="10"
-                Canvas.Top="190"
+                Canvas.Top="220"
                 Width="100"
                 Height="23"
                 Click="AutoCookTestCase"

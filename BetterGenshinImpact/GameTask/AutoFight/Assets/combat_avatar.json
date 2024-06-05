@@ -745,6 +745,15 @@
     "weapon": "1"
   },
   {
+    "alias": [ "希格雯", "Sigewinne", "希格文", "护士", "护士长" ],
+    "burstCD": 18.0,
+    "id": "10000095",
+    "name": "希格雯",
+    "nameEn": "Sigewinne",
+    "skillCD": 18.0,
+    "weapon": "12"
+  },
+  {
     "alias": [ "阿蕾奇诺", "Arlecchino", "阿雷奇诺", "仆人", "黑优菈", "黑暗优菈", "父亲", "佩露薇利" ],
     "burstCD": 15.0,
     "id": "10000096",
@@ -752,5 +761,23 @@
     "nameEn": "Arlecchino",
     "skillCD": 30.0,
     "weapon": "13"
+  },
+  {
+    "alias": [ "赛索斯", "Sethos", "丁真" ],
+    "burstCD": 15.0,
+    "id": "10000097",
+    "name": "赛索斯",
+    "nameEn": "Sethos",
+    "skillCD": 8.0,
+    "weapon": "12"
+  },
+  {
+    "alias": [ "克洛琳德", "Clorinde", "科洛琳德", "克洛林德", "美玉", "美玉学姐", "学姐" ],
+    "burstCD": 15.0,
+    "id": "10000098",
+    "name": "克洛琳德",
+    "nameEn": "Clorinde",
+    "skillCD": 16.0,
+    "weapon": "1"
   }
 ]

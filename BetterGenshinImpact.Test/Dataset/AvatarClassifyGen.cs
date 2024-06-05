@@ -19,7 +19,9 @@ public class AvatarClassifyGen
         // 读取基础图像
         // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Arlecchino.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Sethos.png", SearchOption.TopDirectoryOnly).ToList();
+        // List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Clorinde.png", SearchOption.TopDirectoryOnly).ToList();
+        // sideImageFiles.AddRange(sideImageFiles2);
 
         // 生成训练集
         GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 200);
