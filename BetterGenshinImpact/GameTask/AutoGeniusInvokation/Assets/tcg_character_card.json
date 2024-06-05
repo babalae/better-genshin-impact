@@ -713,6 +713,75 @@
         ]
     },
     {
+        "id": 1111,
+        "nameEn": "wriothesley",
+        "type": "character",
+        "name": "莱欧斯利",
+        "hp": 10,
+        "energy": 3,
+        "element": "冰元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "forceful_fists_of_frost",
+                "name": "迅烈倾霜拳",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "icefang_rush",
+                "name": "冰牙突驰",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "darkgold_wolfbite",
+                "name": "黑金狼噬",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1201,
         "nameEn": "barbara",
         "type": "character",
@@ -1423,6 +1492,83 @@
                         "count": 2
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 1211,
+        "nameEn": "furina",
+        "type": "character",
+        "name": "芙宁娜",
+        "hp": 10,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "soloists_solicitation",
+                "name": "独舞之邀",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "salon_solitaire",
+                "name": "孤心沙龙",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "let_the_people_rejoice",
+                "name": "万众狂欢",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 4
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "arkhe_seats_sacred_and_secular",
+                "name": "始基力：圣俗杂座",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },
@@ -2180,6 +2326,75 @@
             {
                 "nameEn": "crimson_ooyoroi",
                 "name": "真红炽火之大铠",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 1312,
+        "nameEn": "xinyan",
+        "type": "character",
+        "name": "辛焱",
+        "hp": 10,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "dance_on_fire",
+                "name": "炎舞",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "sweeping_fervor",
+                "name": "热情拂扫",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "riff_revolution",
+                "name": "叛逆刮弦",
                 "skillTag": [
                     "元素爆发"
                 ],
@@ -4026,6 +4241,75 @@
         ]
     },
     {
+        "id": 1607,
+        "nameEn": "yun_jin",
+        "type": "character",
+        "name": "云堇",
+        "hp": 10,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "cloudgrazing_strike",
+                "name": "拂云出手",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "opening_flourish",
+                "name": "旋云开相",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "cliffbreakers_banner",
+                "name": "破嶂见旌仪",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1701,
         "nameEn": "collei",
         "type": "character",
@@ -4524,6 +4808,75 @@
         ]
     },
     {
+        "id": 1708,
+        "nameEn": "kaveh",
+        "type": "character",
+        "name": "卡维",
+        "hp": 10,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "schematic_setup",
+                "name": "旋规设矩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "artistic_ingenuity",
+                "name": "画则巧施",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "painted_dome",
+                "name": "繁绘隅穹",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 2101,
         "nameEn": "fatui_cryo_cicin_mage",
         "type": "character",
@@ -4969,6 +5322,83 @@
             {
                 "nameEn": "watery_rebirth",
                 "name": "水之新生",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2204,
+        "nameEn": "alldevouring_narwhal",
+        "type": "character",
+        "name": "吞星之鲸",
+        "hp": 5,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "shattering_waves",
+                "name": "碎涛旋跃",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "starfall_shower",
+                "name": "迸落星雨",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "ravaging_devourer",
+                "name": "横噬鲸吞",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "insatiable_appetite",
+                "name": "无尽食欲",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -5585,6 +6015,83 @@
         ]
     },
     {
+        "id": 2405,
+        "nameEn": "consecrated_scorpion",
+        "type": "character",
+        "name": "圣骸毒蝎",
+        "hp": 10,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "scorpion_strike",
+                "name": "蝎爪钳击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "stinging_spine",
+                "name": "蝎尾锥刺",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "thunderbore_blast",
+                "name": "雷锥散射",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "immortal_remnants_electro",
+                "name": "不朽亡骸·雷",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 2501,
         "nameEn": "maguu_kenki",
         "type": "character",
@@ -5749,6 +6256,83 @@
                         "count": 2
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 2503,
+        "nameEn": "consecrated_flying_serpent",
+        "type": "character",
+        "name": "圣骸飞蛇",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "whirling_tail",
+                "name": "旋尾迅击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "swirling_squall",
+                "name": "盘绕风引",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "scattershot_vortex",
+                "name": "错落风涡",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "immortal_remnants_anemo",
+                "name": "不朽亡骸·风",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },
@@ -5976,6 +6560,83 @@
             {
                 "nameEn": "radical_vitality",
                 "name": "活化激能",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2702,
+        "nameEn": "guardian_of_apeps_oasis",
+        "type": "character",
+        "name": "阿佩普的绿洲守望者",
+        "hp": 10,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "strike_of_the_dispossessed",
+                "name": "失乡重击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "life_stream",
+                "name": "生命流束",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "the_end_falls",
+                "name": "终景迸落",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "invokation_of_propagation",
+                "name": "增殖感召",
                 "skillTag": [
                     "被动技能"
                 ],
