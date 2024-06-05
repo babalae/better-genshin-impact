@@ -68,19 +68,20 @@ public class FeatureMatcher
     /// </summary>
     /// <param name="queryMat"></param>
     /// <returns></returns>
-    public Point2f[]? Match(Mat queryMat)
+    public Point2f[]? Match(Mat queryMat, Mat? queryMatMask = null)
     {
-        return Match(_trainKeyPoints, _trainRet, queryMat);
+        return Match(_trainKeyPoints, _trainRet, queryMat, queryMatMask);
     }
 
     /// <summary>
     /// 合并邻近的特征点后匹配（临近特征）
     /// </summary>
-    /// <param name="queryMat"></param>
+    /// <param name="queryMat">查询的图</param>
     /// <param name="prevX">上次匹配到的坐标x</param>
     /// <param name="prevY">上次匹配到的坐标y</param>
+    /// <param name="queryMatMask">查询Mask</param>
     /// <returns></returns>
-    public Point2f[]? Match(Mat queryMat, int prevX, int prevY)
+    public Point2f[]? Match(Mat queryMat, int prevX, int prevY, Mat? queryMatMask = null)
     {
         var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(_trainMat, _splitRow, _splitCol, prevX, prevY);
         Debug.WriteLine($"当前坐标({prevX},{prevY})在特征块({cellRow},{cellCol})中");
@@ -90,7 +91,7 @@ public class FeatureMatcher
             _lastMergedBlock = KeyPointFeatureBlockHelper.MergeNeighboringFeatures(_blocks, _trainRet, cellRow, cellCol);
         }
 
-        return Match(_lastMergedBlock.KeyPointArray, _lastMergedBlock.Descriptor!, queryMat);
+        return Match(_lastMergedBlock.KeyPointArray, _lastMergedBlock.Descriptor!, queryMat, queryMatMask);
     }
 
     /// <summary>
@@ -99,14 +100,15 @@ public class FeatureMatcher
     /// <param name="trainKeyPoints"></param>
     /// <param name="trainRet"></param>
     /// <param name="queryMat"></param>
+    /// <param name="queryMatMask"></param>
     /// <returns></returns>
-    public Point2f[]? Match(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat)
+    public Point2f[]? Match(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat, Mat? queryMatMask = null)
     {
         SpeedTimer speedTimer = new();
 
         using var queryRet = new Mat();
 
-        _feature2D.DetectAndCompute(queryMat, null, out var queryKeyPoints, queryRet);
+        _feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryRet);
         speedTimer.Record("模板生成KeyPoint");
 
         using var flnMatcher = new FlannBasedMatcher();

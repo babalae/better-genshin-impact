@@ -81,19 +81,20 @@ public class EntireMap : Singleton<EntireMap>
     /// 移动匹配
     /// </summary>
     /// <param name="greyMat">灰度图</param>
+    /// <param name="mask">遮罩</param>
     /// <returns></returns>
-    public Rect GetMiniMapPositionByFeatureMatch(Mat greyMat)
+    public Rect GetMiniMapPositionByFeatureMatch(Mat greyMat, Mat? mask = null)
     {
         try
         {
             Point2f[]? pArray;
             if (_prevX != -1 && _prevY != -1)
             {
-                pArray = _featureMatcher.Match(greyMat, _prevX, _prevY);
+                pArray = _featureMatcher.Match(greyMat, _prevX, _prevY, mask);
             }
             else
             {
-                pArray = _featureMatcher.Match(greyMat);
+                pArray = _featureMatcher.Match(greyMat, mask);
             }
 
             if (pArray == null || pArray.Length < 4)

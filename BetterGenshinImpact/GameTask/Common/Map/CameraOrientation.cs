@@ -1,10 +1,9 @@
-﻿using System;
+﻿using BetterGenshinImpact.GameTask.Model.Area;
+using OpenCvSharp;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.View.Drawable;
-using OpenCvSharp;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 

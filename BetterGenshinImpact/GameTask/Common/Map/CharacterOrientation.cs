@@ -1,14 +1,12 @@
-﻿using BetterGenshinImpact.View.Drawable;
-using OpenCvSharp;
+﻿using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
 public class CharacterOrientation
 {
-    public static void Compute(CaptureContent content)
+    public static int Compute(Mat mat)
     {
-        var mat = new Mat(content.CaptureRectArea.SrcMat, new Rect(62, 19, 212, 212));
-
         var splitMat = mat.Split();
 
         // 1. 红蓝通道按位与
@@ -93,12 +91,20 @@ public class CharacterOrientation
                         maxBlackCount = blackCount;
                         correctP1 = midPoint; // 底边中点
                         correctP2 = targetPoint; // 顶点
+
+                        // 计算弧度
+                        double radians = Math.Atan2(correctP2.Y - correctP1.Y, correctP2.X - correctP1.X);
+
+                        // 将弧度转换为度数
+                        double angle = radians * (180.0 / Math.PI);
+                        return (int)angle;
                     }
                 }
 
                 // VisionContext.Instance().DrawContent.PutLine("co", new LineDrawable(correctP1, correctP2 + (correctP2 - correctP1) * 3));
             }
         }
+        return -1;
     }
 
     static Point Midpoint(Point p1, Point p2)

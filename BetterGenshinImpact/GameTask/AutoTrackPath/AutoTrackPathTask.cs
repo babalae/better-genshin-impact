@@ -12,6 +12,8 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
@@ -42,11 +44,19 @@ public class AutoTrackPathTask
         { "枫丹", [4515, 3631] },
     };
 
+    private GiPath _way;
+
+    // 视角偏移移动单位
+    private const int CharMovingUnit = 100;
+
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
         _taskParam = taskParam;
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-        _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed"); ;
+        _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
+
+        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way1.json"));
+        _way = JsonSerializer.Deserialize<GiPath>(wayJson, ConfigService.JsonOptions) ?? throw new Exception("way json deserialize failed");
     }
 
     public async void Start()
@@ -103,40 +113,88 @@ public class AutoTrackPathTask
 
     public void DoTask()
     {
-        // 解析路线，第一个点为起点
+        // 1. 传送到最近的传送点
+        var first = _way.WayPointList[0]; // 解析路线，第一个点为起点
+        Tp(first.Pt.X, first.Pt.Y);
 
-        // 找到起点最近的传送点位置
+        // 2. 等待传送完成
+        Sleep(1000);
+        NewRetry.Do(() =>
+        {
+            var ra = GetRectAreaFromDispatcher();
+            var miniMapMat = GetMiniMapMat(ra);
+            if (miniMapMat == null)
+            {
+                throw new RetryException("等待传送完成");
+            }
+        }, TimeSpan.FromSeconds(1), 100);
+        Logger.LogInformation("传送完成");
 
-        // 初始化全地图特征
+        // 3. 横向移动偏移量校准，移动指定偏移、按下W后识别朝向
+        var angleOffset = GetOffsetAngle();
 
-        // --- 地图传送模块 ---
+        // 4. 针对点位进行直线追踪
 
-        // M 打开地图识别当前位置，中心点为当前位置
+        // 循环每个点位
 
-        // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
+        // 识别当前位置、人物朝向任务 偏差太大要修正
 
-        // 快速移动到目标传送点所在的区域
+        // 计算当前位置到目标点的角度
 
-        // 计算坐标后点击
+        // 旋转到目标角度
 
-        // 触发一次快速传送功能
+        // 移动到目标点 不用太精准，只要在一定范围内就行
 
-        // --- 地图传送模块 ---
-
-        // 横向移动偏移量校准，移动指定偏移、按下W后识别朝向
-
-        // 针对点位进行直线追踪
+        // 移动时循环识别当前位置、人物朝向任务
     }
 
-    public void Tp(string name)
+    public void Track(List<GiPathPoint> pList)
     {
-        // 通过大地图传送到指定传送点
     }
 
+    public int GetOffsetAngle()
+    {
+        var angle1 = GetCharacterOrientationAngle();
+        Simulation.SendInput.Mouse.MoveMouseBy(CharMovingUnit, 0).Sleep(200)
+            .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
+        var angle2 = GetCharacterOrientationAngle();
+        var angleOffset = angle2 - angle1;
+        Logger.LogInformation("横向移动偏移量校准：鼠标平移100单位，角度转动{AngleOffset}", angleOffset);
+        return angleOffset;
+    }
+
+    public Mat? GetMiniMapMat(ImageRegion ra)
+    {
+        var paimon = ra.Find(ElementAssets.Instance.PaimonMenuRo);
+        if (paimon.IsExist())
+        {
+            return new Mat(ra.SrcMat, new Rect(paimon.X + 24, paimon.Y - 15, 210, 210));
+        }
+        return null;
+    }
+
+    public int GetCharacterOrientationAngle()
+    {
+        var ra = GetRectAreaFromDispatcher();
+        var miniMapMat = GetMiniMapMat(ra);
+        if (miniMapMat == null)
+        {
+            throw new InvalidOperationException("当前不在主界面");
+        }
+
+        var angle = CharacterOrientation.Compute(miniMapMat);
+        Logger.LogInformation("当前角度：{Angle}", angle);
+        CameraOrientation.DrawDirection(ra, angle);
+        return angle;
+    }
+
+    /// <summary>
+    /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
+    /// </summary>
+    /// <param name="tpX"></param>
+    /// <param name="tpY"></param>
     public void Tp(double tpX, double tpY)
     {
-        // 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
-
         // 获取最近的传送点位置
         var (x, y) = GetRecentlyTpPoint(tpX, tpY);
         Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", tpX, tpY, x, y);
@@ -335,6 +393,11 @@ public class AutoTrackPathTask
             Logger.LogInformation("切换到区域：{Country}", minCountry);
             Sleep(500, _taskParam.Cts);
         }
+    }
+
+    public void Tp(string name)
+    {
+        // 通过大地图传送到指定传送点
     }
 
     public void TpByF1(string name)

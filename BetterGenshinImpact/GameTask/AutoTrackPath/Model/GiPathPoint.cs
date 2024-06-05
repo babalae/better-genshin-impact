@@ -22,11 +22,11 @@ public class GiPathPoint
 
     public static GiPathPoint BuildFrom(Rect matchRect, int index)
     {
-        var pt = MapCoordinate.Main1024ToGame(matchRect.GetCenterPoint());
+        var pt = MapCoordinate.Main2048ToGame(matchRect.GetCenterPoint());
         return new GiPathPoint
         {
             Pt = pt,
-            MatchRect = new Rect(pt, matchRect.Size),
+            MatchRect = matchRect,
             Index = index,
             Time = DateTime.Now
         };
