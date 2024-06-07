@@ -90,287 +90,32 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="Assets\Map\cityMap2048Block.png">
+		<None Update="Assets\Map\**">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="Assets\Map\combined_image_2048_lim[quick].png">
+		<None Update="Assets\Model\**">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="Assets\Map\combined_image_lim[quick].png">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Map\mainMap100Block.png">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Map\mainMap1024Block.png">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Map\mainMapZoomOut1024.png">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Map\map_sd1024.png">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Common\avatar_side_classify_sim.onnx">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Domain\bgi_tree.onnx">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Domain\bgi_tree.pt">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Fish\bgi_fish.onnx">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdiparams">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdiparams.info">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_det\inference.pdmodel">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\inference.pdiparams">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\inference.pdiparams.info">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\inference.pdmodel">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\._inference.pdmodel">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\inference.pdiparams">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\inference.pdiparams.info">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_ppocr_mobile_v2.0_cls\inference.pdmodel">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ppocr_keys_v1.txt">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\test_ocr.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Yap\all_list.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Yap\index_2_word.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\Yap\model_training.onnx">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\click_any_close_tip.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\condensed_resin_count.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\confirm.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\exit.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\fragile_resin_count.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\use_condensed_resin.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFight\Assets\1920x1080\wanderer_icon_no_active.png">
+		<None Update="GameTask\AutoFight\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\combat_avatar.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\flashing maintenance mek bait.png">
+		<None Update="GameTask\AutoFishing\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\sour bait.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\sugardew bait.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\lift_rod.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\switch_bait.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\fake fly bait.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\false worm bait.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\fruit paste bait.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\bait\redrot bait.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\exit_fishing.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\space.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoFishing\Assets\1920x1080\wait_bite.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_anemo.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_cryo.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_dendro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_electro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_geo.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_hydro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_omni.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\action_pyro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_anemo.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_cryo.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_dendro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_electro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_geo.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_hydro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_omni.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\dice\roll_pyro.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\元素调和.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\元素骰子不足.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\冻结.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\出战角色.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\回合结束.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\回合结算阶段.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\对方行动中.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\满能量.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\确定.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\空能量.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色死亡.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色状态_冻结.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色状态_冻结2.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色状态_水泡.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色血量上方.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\角色被打败.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\other\退出挑战.png">
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\**.png">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoGeniusInvokation\Assets\tcg_character_card.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoPick\Assets\1920x1080\F.png">
+		<None Update="GameTask\AutoPick\Assets\1920x1080\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoPick\Assets\1920x1080\E.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoPick\Assets\1920x1080\icon_settings.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\collect.png">
+		<None Update="GameTask\AutoSkip\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\comfirm_btn1.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\comfirm_btn2.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\hangout_selected.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\hangout_unselected.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_exclamation.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\primogem.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\re.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_daily_reward.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_explore.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoSkip\Assets\hangout.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -378,221 +123,23 @@
 		<None Update="GameTask\AutoTrackPath\Assets\tp.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\blue_track_point_28x.png">
+		<None Update="GameTask\Common\Element\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_cancel.png">
+		<None Update="GameTask\AutoWood\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_no.png">
+		<None Update="GameTask\GameLoading\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_online_yes.png">
+		<None Update="GameTask\QuickTeleport\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\icon_option.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\page_close.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\stop_auto.png">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\submit_goods.png">
+		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoSkip\Assets\1920x1080\submit_icon_exclamation.png">
+		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoWood\Assets\1920x1080\character_guide.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoWood\Assets\1920x1080\confirm.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoWood\Assets\1920x1080\enter_game.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoWood\Assets\1920x1080\exit_welcome.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoWood\Assets\1920x1080\menu_bag.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\AutoWood\Assets\1920x1080\TheBoonOfTheElderTree.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_black_confirm.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_white_cancel.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\btn_white_confirm.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\collect.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\comfirm_btn1.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\comfirm_btn2.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_daily_reward.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_exclamation.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_explore.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\icon_option.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\paimon_menu.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\page_close.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\primogem.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\re.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\stop_auto.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\submit_icon_exclamation.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\ui_left_top_cook_icon.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\ui_lt_cook_icon.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\Common\Element\Assets\1920x1080\yellow_track_point_28x.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\GameLoading\Assets\1920x1080\welkin_moon_logo.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Domain.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Domain2.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\GoTeleport.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\Mansion.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapChoose.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapCloseButton.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapScaleButton.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\MapUndergroundSwitchButton.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\PortableWaypoint.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\ScaleWithMask.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\StatueOfTheSeven.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\SubSpaceWaypoint.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickTeleport\Assets\1920x1080\TeleportWaypoint.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\SereniteaPotIcon.png">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoFight\1.四神挂机[推荐].txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoFight\2.宵宫夜兰班行秋.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoFight\2.宵宫队[请看文件内说明].txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoFight\群友分享\*.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\1.莫娜砂糖琴.txt">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\2.刻晴雷神甘雨.txt">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\3.雷神阿贝多丘丘王.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\4.重云雷神申鹤.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\5.迪希雅白术皇女.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\6.皇女科莱莫娜.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\7.莫娜白术皇女.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\8.雷神柯莱刻晴[推荐].txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]东东.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]巴哈拉克.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]马鲁夫.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoGeniusInvokation\a.[惊喜牌组]黄衫.txt">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoSkip\default_pause_options.json">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoSkip\select_options.json">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\AutoSkip\pause_options.json">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\avatar_macro.json">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="User\pick_black_lists.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="User\pick_white_lists.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
