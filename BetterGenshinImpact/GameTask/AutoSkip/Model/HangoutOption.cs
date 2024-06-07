@@ -60,9 +60,19 @@ public class HangoutOption : IDisposable
         }
     }
 
+    public void Move()
+    {
+        IconRect.Move();
+    }
+
     public void Click()
     {
         IconRect.Click();
+    }
+
+    public void BackgroundClick()
+    {
+        IconRect.BackgroundClick();
     }
 
     public void Dispose()

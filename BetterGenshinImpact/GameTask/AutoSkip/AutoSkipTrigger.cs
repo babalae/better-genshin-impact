@@ -16,12 +16,14 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using Vanara.PInvoke;
+using Region = BetterGenshinImpact.GameTask.Model.Area.Region;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -293,7 +295,7 @@ public class AutoSkipTrigger : ITaskTrigger
                     {
                         if (hangoutOption.OptionTextSrc.Contains(str))
                         {
-                            hangoutOption.Click();
+                            HangoutOptionClick(hangoutOption);
                             _logger.LogInformation("邀约分支[{Text}]关键词[{Str}]命中", _config.AutoHangoutEndChoose, str);
                             AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
                             VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
@@ -309,7 +311,7 @@ public class AutoSkipTrigger : ITaskTrigger
             {
                 if (!hangoutOption.IsSelected)
                 {
-                    hangoutOption.Click();
+                    HangoutOptionClick(hangoutOption);
                     AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
                     VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
                     VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
@@ -318,10 +320,30 @@ public class AutoSkipTrigger : ITaskTrigger
             }
 
             // 没有未点击的选项 选择第一个已点击选项
-            hangoutOptionList[0].Click();
+            HangoutOptionClick(hangoutOptionList[0]);
             AutoHangoutSkipLog(hangoutOptionList[0].OptionTextSrc);
             VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
             VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
+        }
+        else
+        {
+            // 没有邀约选项 寻找跳过按钮
+            if (_config.AutoHangoutPressSkipEnabled)
+            {
+                using var skipRa = captureRegion.Find(_autoSkipAssets.HangoutSkipRo);
+                if (skipRa.IsExist())
+                {
+                    if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
+                    {
+                        skipRa.BackgroundClick();
+                    }
+                    else
+                    {
+                        skipRa.Click();
+                    }
+                    AutoHangoutSkipLog("点击跳过按钮");
+                }
+            }
         }
     }
 
@@ -554,11 +576,7 @@ public class AutoSkipTrigger : ITaskTrigger
         }
         if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
         {
-            User32.GetCursorPos(out var p);
-            region.Move();  // 必须移动实际鼠标
-            _postMessageSimulator?.LeftButtonClickBackground();
-            Thread.Sleep(10);
-            DesktopRegion.DesktopRegionMove(p.X, p.Y); // 鼠标移动回原来位置
+            region.BackgroundClick();
         }
         else
         {
@@ -567,13 +585,24 @@ public class AutoSkipTrigger : ITaskTrigger
         AutoSkipLog(region.Text);
     }
 
-    private void AutoHangoutSkipLog(string text)
+    private void HangoutOptionClick(HangoutOption option)
     {
         if (_config.AutoHangoutChooseOptionSleepDelay > 0)
         {
             Thread.Sleep(_config.AutoHangoutChooseOptionSleepDelay);
         }
+        if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
+        {
+            option.BackgroundClick();
+        }
+        else
+        {
+            option.Click();
+        }
+    }
 
+    private void AutoHangoutSkipLog(string text)
+    {
         if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
         {
             _logger.LogInformation("自动邀约：{Text}", text);

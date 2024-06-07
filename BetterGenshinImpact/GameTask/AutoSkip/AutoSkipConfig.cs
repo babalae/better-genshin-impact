@@ -70,6 +70,11 @@ public partial class AutoSkipConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private int _autoHangoutChooseOptionSleepDelay = 0;
 
+    /// <summary>
+    /// 自动邀约自动点击跳过按钮
+    /// </summary>
+    [ObservableProperty] private bool _autoHangoutPressSkipEnabled = true;
+
     public bool IsClickFirstChatOption()
     {
         return ClickChatOption == "优先选择第一个选项";

@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
 
@@ -75,6 +77,18 @@ public class Region : IDisposable
     public INodeConverter? PrevConverter { get; }
 
     // public List<Region>? NextChildren { get; protected set; }
+
+    /// <summary>
+    /// 后台点击【自己】的中心
+    /// </summary>
+    public void BackgroundClick()
+    {
+        User32.GetCursorPos(out var p);
+        this.Move();  // 必须移动实际鼠标
+        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+        Thread.Sleep(10);
+        DesktopRegion.DesktopRegionMove(p.X, p.Y); // 鼠标移动回原来位置
+    }
 
     /// <summary>
     /// 点击【自己】的中心

@@ -31,6 +31,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
     public RecognitionObject HangoutSelectedRo;
 
     public RecognitionObject HangoutUnselectedRo;
+    public RecognitionObject HangoutSkipRo;
 
     private AutoSkipAssets()
     {
@@ -172,6 +173,13 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_unselected.png"),
             DrawOnWindow = true
+        }.InitTemplate();
+        HangoutSkipRo = new RecognitionObject
+        {
+            Name = "HangoutSkip",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_skip.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8)
         }.InitTemplate();
     }
 }
