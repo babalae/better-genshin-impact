@@ -307,7 +307,7 @@ public partial class AutoWoodTask
             if (_firstWoodOcr)
             {
                 // 记录木材单次获取的值
-                _woodMetricsDict.Add(materialName, quantity);
+                _woodMetricsDict.TryAdd(materialName, quantity);
             }
         }
 
