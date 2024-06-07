@@ -569,6 +569,11 @@ public class AutoSkipTrigger : ITaskTrigger
 
     private void AutoHangoutSkipLog(string text)
     {
+        if (_config.AutoHangoutChooseOptionSleepDelay > 0)
+        {
+            Thread.Sleep(_config.AutoHangoutChooseOptionSleepDelay);
+        }
+
         if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
         {
             _logger.LogInformation("自动邀约：{Text}", text);

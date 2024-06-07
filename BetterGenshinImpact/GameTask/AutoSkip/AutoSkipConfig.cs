@@ -61,9 +61,14 @@ public partial class AutoSkipConfig : ObservableObject
     [ObservableProperty] private bool _autoHangoutEventEnabled = false;
 
     /// <summary>
-    /// 自动邀约启用
+    /// 自动邀约分支选择
     /// </summary>
     [ObservableProperty] private string _autoHangoutEndChoose = string.Empty;
+
+    /// <summary>
+    /// 自动邀约选择选项前的延迟（毫秒）
+    /// </summary>
+    [ObservableProperty] private int _autoHangoutChooseOptionSleepDelay = 0;
 
     public bool IsClickFirstChatOption()
     {
