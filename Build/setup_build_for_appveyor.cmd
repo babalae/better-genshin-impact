@@ -52,4 +52,3 @@ copy /y .\MicaSetup\bin\Release\net472\MicaSetup.exe .\
 rename MicaSetup.exe %setupFile%
 rd /s /q dist\BetterGI
 
-@pause
