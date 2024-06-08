@@ -105,7 +105,7 @@
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\**.png">
+		<None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoGeniusInvokation\Assets\tcg_character_card.json">

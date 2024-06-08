@@ -1,9 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
-using BetterGenshinImpact.Helpers;
 using System;
 using System.Diagnostics;
-using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
 
@@ -17,6 +15,8 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public bool IsExclusive => false;
 
+    public bool IsBackgroundRunning => true;
+
     private readonly GameLoadingAssets _assets;
 
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
@@ -26,10 +26,6 @@ public class GameLoadingTrigger : ITaskTrigger
     private int _noneClickCount, _wmNoneClickCount;
 
     private DateTime _prevExecuteTime = DateTime.MinValue;
-
-    // private ClickOffset? _clickOffset;
-
-    private PostMessageSimulator? _postMessageSimulator;
 
     public GameLoadingTrigger()
     {
@@ -47,11 +43,6 @@ public class GameLoadingTrigger : ITaskTrigger
         }
 
         _enterGameClickCount = 0;
-
-        // var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        // var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        // _clickOffset = new ClickOffset(captureArea.X, captureArea.Y, assetScale);
-        _postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
     }
 
     public void OnCapture(CaptureContent content)
@@ -73,9 +64,7 @@ public class GameLoadingTrigger : ITaskTrigger
         if (!ra.IsEmpty())
         {
             // 随便找个相对点击的位置
-            // _clickOffset?.Click(955, 666);
-            _postMessageSimulator?.LeftButtonClick();
-            Simulation.SendInput.Mouse.LeftButtonClick();
+            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             _enterGameClickCount++;
         }
         else
@@ -95,7 +84,7 @@ public class GameLoadingTrigger : ITaskTrigger
             var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
             if (!wmRa.IsEmpty())
             {
-                wmRa.Click();
+                wmRa.BackgroundClick();
                 _welkinMoonClickCount++;
                 Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
                 if (_welkinMoonClickCount > 2)
