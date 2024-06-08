@@ -50,7 +50,7 @@
                        Margin="0,8,0,8"
                        HorizontalAlignment="Center"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                       Text="🍨 BetterGI · 更好的原神" />
+                       Text="BetterGI · 更好的原神" />
             <Button Grid.Row="2"
                     Height="38"
                     MinWidth="170"

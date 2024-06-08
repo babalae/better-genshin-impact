@@ -46,7 +46,7 @@
                        Margin="0,8,0,8"
                        HorizontalAlignment="Center"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                       Text="🍨 BetterGI · 更好的原神" />
+                       Text="BetterGI · 更好的原神" />
             <TextBlock Grid.Row="2"
                        Margin="20,35"
                        FontSize="18"
