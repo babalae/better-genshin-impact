@@ -63,6 +63,9 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
             _modeNames = _modeNames.Where(x => x != CaptureModes.WindowsGraphicsCapture.ToString()).ToArray();
+            // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
+            // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
+            _inferenceDeviceTypes = _inferenceDeviceTypes.Where(x => x != "GPU_DirectML").ToArray();
         }
 
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
