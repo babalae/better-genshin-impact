@@ -50,9 +50,11 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 ## 下载
 
 > [!NOTE]
-> 下载地址：[⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases) | [☁️蓝奏云下载](https://wwmy.lanzouq.com/b00rs2msd)  密码:coco
+> 下载地址：[⚡Github 下载](https://github.com/babalae/better-genshin-impact/releases)
 > 
-> 第一次使用请看：[快速上手](https://bgi.huiyadan.com/quickstart.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
+> 不知道下载哪个？第一次使用？请看：[快速上手](https://bgi.huiyadan.com/quickstart.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
+
+最新编译版本可以从自动构建中获取： [![Build status](https://ci.appveyor.com/api/projects/status/cklcy1oj9u66ul4j)](https://ci.appveyor.com/project/huiyadanli/better-genshin-impact/build/artifacts)
 
 ## 使用方法
 由于图像识别比较吃性能，低配置电脑可能无法正常使用部分功能。
