@@ -3,6 +3,9 @@ using System;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
+/// <summary>
+/// 以左上角为原点的图像坐标系下的角度计算
+/// </summary>
 public class CharacterOrientation
 {
     public static int Compute(Mat mat)
@@ -112,5 +115,11 @@ public class CharacterOrientation
         var midX = (p1.X + p2.X) / 2;
         var midY = (p1.Y + p2.Y) / 2;
         return new Point(midX, midY);
+    }
+
+    public static int GameAngle2(string path)
+    {
+        var mat = Cv2.ImRead(path);
+        return Compute(mat);
     }
 }

@@ -20,6 +20,16 @@ public class GiPathPoint
 
     public DateTime Time { get; set; }
 
+    /// <summary>
+    /// 下个点位相对本点位的角度
+    /// </summary>
+    public int NextAngle { get; set; }
+
+    /// <summary>
+    /// 下个点位相对本点位的距离
+    /// </summary>
+    public int NextDistance { get; set; }
+
     public static GiPathPoint BuildFrom(Rect matchRect, int index)
     {
         var pt = MapCoordinate.Main2048ToGame(matchRect.GetCenterPoint());

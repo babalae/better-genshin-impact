@@ -63,6 +63,16 @@ public class MapCoordinate
     /// <summary>
     /// 原神游戏坐标系 -> 主地图2048区块坐标系
     /// </summary>
+    /// <param name="point">(c,a)</param>
+    /// <returns></returns>
+    public static Point GameToMain2048(Point point)
+    {
+        return new Point(((GameMapLeftCols + 1) * GameMapBlockWidth - point.X) * 2, ((GameMapUpRows + 1) * GameMapBlockWidth - point.Y) * 2);
+    }
+
+    /// <summary>
+    /// 原神游戏坐标系 -> 主地图2048区块坐标系
+    /// </summary>
     /// <returns></returns>
     public static (double x, double y) GameToMain2048(double c, double a)
     {

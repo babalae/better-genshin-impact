@@ -79,7 +79,7 @@ public class CameraOrientation
         return angle;
     }
 
-    public static void DrawDirection(ImageRegion region, int angle)
+    public static void DrawDirection(ImageRegion region, double angle, string name = "camera", Pen? pen = null)
     {
         // 绘图
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -94,7 +94,12 @@ public class CameraOrientation
         // };
         // VisionContext.Instance().DrawContent.PutLine("camera", line);
 
-        region.DrawLine(center.X, center.Y, (int)x1, (int)y1, "camera", new Pen(Color.Yellow, 1));
+        if (pen == null)
+        {
+            pen = new Pen(Color.Yellow, 1);
+        }
+
+        region.DrawLine(center.X, center.Y, (int)x1, (int)y1, name, pen);
     }
 
     static List<int> FindPeaks(float[] data)

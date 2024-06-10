@@ -375,7 +375,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
             ));
 
-            PostMessageSimulator? postMessageSimulator = null;
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -396,9 +395,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // DesktopRegion.DesktopRegionMove(p.X, p.Y);
 
                     // 大地图位置
-                    TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-                    Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-                    AutoTrackPathTask.GetPositionFromBigMap();
+                    // TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
+                    // Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+                    // AutoTrackPathTask.GetPositionFromBigMap();
+
+                    Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
+                        .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
                 }
             ));
         }

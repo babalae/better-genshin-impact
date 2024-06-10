@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -23,11 +15,25 @@ using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
+/// <summary>
+/// 坐标计算原则
+/// 1. 所有非矩形点位坐标，优先转换为游戏内原神坐标系
+/// 2. 所有涉及矩形运算的，优先转换为全地图坐标系
+/// 3. 所有涉及小地图视角角度运算的，优先转换为warpPolar所使用的度数标准
+/// </summary>
 public class AutoTrackPathTask
 {
     private readonly AutoTrackPathParam _taskParam;
@@ -47,7 +53,7 @@ public class AutoTrackPathTask
     private GiPath _way;
 
     // 视角偏移移动单位
-    private const int CharMovingUnit = 100;
+    private const int CharMovingUnit = 500;
 
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
@@ -73,7 +79,9 @@ public class AutoTrackPathTask
 
             Init();
 
-            Tp(_tpPositions[260].X, _tpPositions[260].Y);
+            // Tp(_tpPositions[260].X, _tpPositions[260].Y);
+
+            DoTask();
         }
         catch (NormalEndException)
         {
@@ -129,13 +137,21 @@ public class AutoTrackPathTask
             }
         }, TimeSpan.FromSeconds(1), 100);
         Logger.LogInformation("传送完成");
+        Sleep(1000);
 
         // 3. 横向移动偏移量校准，移动指定偏移、按下W后识别朝向
         var angleOffset = GetOffsetAngle();
+        if (angleOffset == 0)
+        {
+            throw new InvalidOperationException("横向移动偏移量校准失败");
+        }
 
         // 4. 针对点位进行直线追踪
 
         // 循环每个点位
+        Track(_way.WayPointList, angleOffset);
+
+        // 预处理点位数据，计算下个点位的角度和距离
 
         // 识别当前位置、人物朝向任务 偏差太大要修正
 
@@ -148,18 +164,74 @@ public class AutoTrackPathTask
         // 移动时循环识别当前位置、人物朝向任务
     }
 
-    public void Track(List<GiPathPoint> pList)
+    public void Track(List<GiPathPoint> pList, int angleOffsetUnit)
     {
+        MovementControl movementControl = new();
+        for (var i = 0; i < pList.Count - 1; i++)
+        {
+            var nextPoint = pList[i + 1];
+            var nextMapImagePos = nextPoint.MatchRect.GetCenterPoint();
+            Logger.LogInformation("下个点位：{NextPoint}", nextMapImagePos);
+
+            while (!_taskParam.Cts.IsCancellationRequested)
+            {
+                var ra = GetRectAreaFromDispatcher();
+                var miniMapMat = GetMiniMapMat(ra);
+                if (miniMapMat == null)
+                {
+                    throw new InvalidOperationException("当前不在主界面");
+                }
+                // 注意游戏坐标系的角度是顺时针的
+                var miniMapRect = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(miniMapMat);
+                if (miniMapRect == Rect.Empty)
+                {
+                    Debug.WriteLine("识别小地图位置失败");
+                    continue;
+                }
+                var currMapImageAvatarPos = miniMapRect.GetCenterPoint();
+
+                var angle = CharacterOrientation.Compute(miniMapMat);
+                CameraOrientation.DrawDirection(ra, angle, "avatar", new Pen(Color.Blue, 1));
+
+                Debug.WriteLine($"当前人物图像坐标系角度：{angle}，位置：{currMapImageAvatarPos}");
+
+                var nextAngle = Math.Round(Math.Atan2(nextMapImagePos.Y - currMapImageAvatarPos.Y, nextMapImagePos.X - currMapImageAvatarPos.X) * 180 / Math.PI);
+                var nextDistance = Math.Round(Math.Sqrt(Math.Pow(nextMapImagePos.X - currMapImageAvatarPos.X, 2) + Math.Pow(nextMapImagePos.Y - currMapImageAvatarPos.Y, 2)));
+                Debug.WriteLine($"当前目标点图像坐标系角度：{nextAngle}，距离：{nextDistance}");
+                CameraOrientation.DrawDirection(ra, nextAngle, "target", new Pen(Color.Red, 1));
+
+                if (nextDistance < 5)
+                {
+                    // movementControl.WUp();
+                    Debug.WriteLine("到达目标点位");
+                    movementControl.WUp();
+                    break;
+                }
+
+                // 转换为鼠标移动单位
+                var moveAngle = (int)(nextAngle - angle);
+                moveAngle = (int)(moveAngle * 1d / angleOffsetUnit * CharMovingUnit);
+                Debug.WriteLine($"旋转到目标角度：{nextAngle}，鼠标平移{moveAngle}单位");
+                Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
+                Sleep(200);
+                // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
+                movementControl.WDown();
+
+                Sleep(50);
+            }
+        }
     }
 
     public int GetOffsetAngle()
     {
         var angle1 = GetCharacterOrientationAngle();
-        Simulation.SendInput.Mouse.MoveMouseBy(CharMovingUnit, 0).Sleep(200)
-            .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
+        Simulation.SendInput.Mouse.MoveMouseBy(CharMovingUnit, 0);
+        Sleep(500);
+        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(100).KeyUp(User32.VK.VK_W);
+        Sleep(1000);
         var angle2 = GetCharacterOrientationAngle();
         var angleOffset = angle2 - angle1;
-        Logger.LogInformation("横向移动偏移量校准：鼠标平移100单位，角度转动{AngleOffset}", angleOffset);
+        Logger.LogInformation("横向移动偏移量校准：鼠标平移{CharMovingUnit}单位，角度转动{AngleOffset}", CharMovingUnit, angleOffset);
         return angleOffset;
     }
 
@@ -208,8 +280,8 @@ public class AutoTrackPathTask
         SwitchRecentlyCountryMap(x, y);
 
         // 移动地图到指定传送点位置
-        Debug.WriteLine("移动地图到指定传送点位置");
-        MoveMapTo(x, y);
+        // Debug.WriteLine("移动地图到指定传送点位置");
+        // MoveMapTo(x, y);
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
