@@ -12,7 +12,7 @@ public class MathHelper
     /// <param name="point1"></param>
     /// <param name="point2"></param>
     /// <returns></returns>
-    public static double CalculateDistance(Point point, Point point1, Point point2)
+    public static double Distance(Point point, Point point1, Point point2)
     {
         // 直线的方向向量
         double a = point2.Y - point1.Y;
@@ -25,5 +25,16 @@ public class MathHelper
         double distance = numerator / denominator;
 
         return distance;
+    }
+
+    /// <summary>
+    /// 两点之间的距离
+    /// </summary>
+    /// <param name="p1"></param>
+    /// <param name="p2"></param>
+    /// <returns></returns>
+    public static double Distance(Point p1, Point p2)
+    {
+        return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
     }
 }

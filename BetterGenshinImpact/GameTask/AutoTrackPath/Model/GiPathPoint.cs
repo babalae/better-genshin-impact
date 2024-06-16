@@ -20,15 +20,7 @@ public class GiPathPoint
 
     public DateTime Time { get; set; }
 
-    /// <summary>
-    /// 下个点位相对本点位的角度
-    /// </summary>
-    public int NextAngle { get; set; }
-
-    /// <summary>
-    /// 下个点位相对本点位的距离
-    /// </summary>
-    public int NextDistance { get; set; }
+    public string Type { get; set; } = GiPathPointType.Normal.ToString();
 
     public static GiPathPoint BuildFrom(Rect matchRect, int index)
     {
@@ -41,4 +33,23 @@ public class GiPathPoint
             Time = DateTime.Now
         };
     }
+
+    public static bool IsKeyPoint(GiPathPoint giPathPoint)
+    {
+        if (giPathPoint.Type == GiPathPointType.KeyPoint.ToString()
+            || giPathPoint.Type == GiPathPointType.Fighting.ToString()
+            || giPathPoint.Type == GiPathPointType.Collection.ToString())
+        {
+            return true;
+        }
+        return false;
+    }
+}
+
+public enum GiPathPointType
+{
+    Normal, // 普通点
+    KeyPoint, // 关键点
+    Fighting, // 战斗点
+    Collection, // 采集点
 }

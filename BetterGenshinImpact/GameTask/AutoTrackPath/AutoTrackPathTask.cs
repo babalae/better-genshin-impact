@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -61,7 +62,7 @@ public class AutoTrackPathTask
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
         _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
 
-        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way1.json"));
+        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way2.json"));
         _way = JsonSerializer.Deserialize<GiPath>(wayJson, ConfigService.JsonOptions) ?? throw new Exception("way json deserialize failed");
     }
 
@@ -167,59 +168,106 @@ public class AutoTrackPathTask
     public void Track(List<GiPathPoint> pList, int angleOffsetUnit)
     {
         MovementControl movementControl = new();
-        for (var i = 0; i < pList.Count - 1; i++)
+        var currIndex = 0;
+        while (!_taskParam.Cts.IsCancellationRequested)
+        {
+            var ra = GetRectAreaFromDispatcher();
+            var miniMapMat = GetMiniMapMat(ra);
+            if (miniMapMat == null)
+            {
+                throw new InvalidOperationException("当前不在主界面");
+            }
+
+            // 注意游戏坐标系的角度是顺时针的
+            var miniMapRect = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(miniMapMat);
+            if (miniMapRect == Rect.Empty)
+            {
+                Debug.WriteLine("识别小地图位置失败");
+                continue;
+            }
+
+            var currMapImageAvatarPos = miniMapRect.GetCenterPoint();
+            var (nextMapImagePathPoint, nextPointIndex) = GetNextPoint(currMapImageAvatarPos, pList, currIndex); // 动态计算下个点位
+            var nextMapImagePathPos = nextMapImagePathPoint.MatchRect.GetCenterPoint();
+            Logger.LogInformation("下个点位[{Index}]：{nextMapImagePathPos}", nextPointIndex, nextMapImagePathPos);
+
+            var angle = CharacterOrientation.Compute(miniMapMat);
+            CameraOrientation.DrawDirection(ra, angle, "avatar", new Pen(Color.Blue, 1));
+            Debug.WriteLine($"当前人物图像坐标系角度：{angle}，位置：{currMapImageAvatarPos}");
+
+            var nextAngle = Math.Round(Math.Atan2(nextMapImagePathPos.Y - currMapImageAvatarPos.Y, nextMapImagePathPos.X - currMapImageAvatarPos.X) * 180 / Math.PI);
+            var nextDistance = MathHelper.Distance(nextMapImagePathPos, currMapImageAvatarPos);
+            Debug.WriteLine($"当前目标点图像坐标系角度：{nextAngle}，距离：{nextDistance}");
+            CameraOrientation.DrawDirection(ra, nextAngle, "target", new Pen(Color.Red, 1));
+
+            if (nextDistance < 5)
+            {
+                Logger.LogInformation("到达目标点位");
+                currIndex = nextPointIndex;
+                movementControl.WUp();
+                if (currIndex == pList.Count - 1)
+                {
+                    Logger.LogInformation("到达终点");
+                    break;
+                }
+            }
+
+            // 转换为鼠标移动单位
+            var moveAngle = (int)(nextAngle - angle);
+            moveAngle = (int)(moveAngle * 1d / angleOffsetUnit * CharMovingUnit);
+            Debug.WriteLine($"旋转到目标角度：{nextAngle}，鼠标平移{moveAngle}单位");
+            Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
+            Sleep(200);
+            // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
+            movementControl.WDown();
+
+            Sleep(50);
+        }
+    }
+
+    /// <summary>
+    ///  地图图像点位
+    ///  寻找后面20个点位中，下一个最近点位，关键点必须走到
+    /// </summary>
+    /// <param name="currPoint"></param>
+    /// <param name="pList"></param>
+    /// <param name="currIndex"></param>
+    /// <returns></returns>
+    public (GiPathPoint, int) GetNextPoint(Point currPoint, List<GiPathPoint> pList, int currIndex)
+    {
+        var nextNum = Math.Min(currIndex + 20, pList.Count - 1); // 最多找最近20个点
+        var minDistance = double.MaxValue;
+        var minDistancePoint = pList[currIndex];
+        var minDistanceIndex = currIndex;
+        // var minDistanceButGt = double.MaxValue;
+        // var minDistancePointButGt = pList[currIndex];
+        // var minDistanceIndexButGt = currIndex;
+        for (var i = currIndex; i < nextNum; i++)
         {
             var nextPoint = pList[i + 1];
             var nextMapImagePos = nextPoint.MatchRect.GetCenterPoint();
-            Logger.LogInformation("下个点位：{NextPoint}", nextMapImagePos);
-
-            while (!_taskParam.Cts.IsCancellationRequested)
+            var distance = MathHelper.Distance(nextMapImagePos, currPoint);
+            if (distance < minDistance)
             {
-                var ra = GetRectAreaFromDispatcher();
-                var miniMapMat = GetMiniMapMat(ra);
-                if (miniMapMat == null)
-                {
-                    throw new InvalidOperationException("当前不在主界面");
-                }
-                // 注意游戏坐标系的角度是顺时针的
-                var miniMapRect = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(miniMapMat);
-                if (miniMapRect == Rect.Empty)
-                {
-                    Debug.WriteLine("识别小地图位置失败");
-                    continue;
-                }
-                var currMapImageAvatarPos = miniMapRect.GetCenterPoint();
+                minDistance = distance;
+                minDistancePoint = nextPoint;
+                minDistanceIndex = i + 1;
+                // if (distance > 5)
+                // {
+                //     minDistanceButGt = distance;
+                //     minDistancePointButGt = nextPoint;
+                //     minDistanceIndexButGt = i;
+                // }
+            }
 
-                var angle = CharacterOrientation.Compute(miniMapMat);
-                CameraOrientation.DrawDirection(ra, angle, "avatar", new Pen(Color.Blue, 1));
-
-                Debug.WriteLine($"当前人物图像坐标系角度：{angle}，位置：{currMapImageAvatarPos}");
-
-                var nextAngle = Math.Round(Math.Atan2(nextMapImagePos.Y - currMapImageAvatarPos.Y, nextMapImagePos.X - currMapImageAvatarPos.X) * 180 / Math.PI);
-                var nextDistance = Math.Round(Math.Sqrt(Math.Pow(nextMapImagePos.X - currMapImageAvatarPos.X, 2) + Math.Pow(nextMapImagePos.Y - currMapImageAvatarPos.Y, 2)));
-                Debug.WriteLine($"当前目标点图像坐标系角度：{nextAngle}，距离：{nextDistance}");
-                CameraOrientation.DrawDirection(ra, nextAngle, "target", new Pen(Color.Red, 1));
-
-                if (nextDistance < 5)
-                {
-                    // movementControl.WUp();
-                    Debug.WriteLine("到达目标点位");
-                    movementControl.WUp();
-                    break;
-                }
-
-                // 转换为鼠标移动单位
-                var moveAngle = (int)(nextAngle - angle);
-                moveAngle = (int)(moveAngle * 1d / angleOffsetUnit * CharMovingUnit);
-                Debug.WriteLine($"旋转到目标角度：{nextAngle}，鼠标平移{moveAngle}单位");
-                Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
-                Sleep(200);
-                // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
-                movementControl.WDown();
-
-                Sleep(50);
+            if (GiPathPoint.IsKeyPoint(nextPoint))
+            {
+                break;
             }
         }
+
+        // return minDistanceButGt >= double.MaxValue ? (minDistancePointButGt, minDistanceIndexButGt) : (minDistancePoint, minDistanceIndex);
+        return (minDistancePoint, minDistanceIndex);
     }
 
     public int GetOffsetAngle()
@@ -242,6 +290,7 @@ public class AutoTrackPathTask
         {
             return new Mat(ra.SrcMat, new Rect(paimon.X + 24, paimon.Y - 15, 210, 210));
         }
+
         return null;
     }
 
@@ -292,6 +341,7 @@ public class AutoTrackPathTask
             MoveMapTo(x, y);
             bigMapInAllMapRect = GetBigMapRect();
         }
+
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
         // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
         var (picX, picY) = MapCoordinate.GameToMain2048(x, y);
@@ -324,6 +374,7 @@ public class AutoTrackPathTask
         {
             diffMouseX = -diffMouseX;
         }
+
         var diffMouseY = 100; // 每次移动的距离
         if (yOffset < 0)
         {
@@ -367,6 +418,7 @@ public class AutoTrackPathTask
         {
             Simulation.SendInput.Mouse.MoveMouseBy(moveUnit, 0).Sleep(60); // 60 保证没有惯性
         }
+
         Simulation.SendInput.Mouse.LeftButtonUp().Sleep(200);
     }
 
@@ -380,6 +432,7 @@ public class AutoTrackPathTask
         {
             Simulation.SendInput.Mouse.MoveMouseBy(0, moveUnit).Sleep(60);
         }
+
         Simulation.SendInput.Mouse.LeftButtonUp().Sleep(200);
     }
 
@@ -450,6 +503,7 @@ public class AutoTrackPathTask
                 minCountry = country;
             }
         }
+
         Logger.LogInformation("离目标传送点最近的区域是：{Country}", minCountry);
         if (minCountry != "当前位置")
         {
