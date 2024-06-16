@@ -19,7 +19,7 @@ public partial class AutoWoodConfig : ObservableObject
     /// 木材数量OCR是否启用
     /// </summary>
     [ObservableProperty]
-    private bool _woodCountOcrEnabled = true;
+    private bool _woodCountOcrEnabled = false;
 
     // /// <summary>
     // /// 按下两次ESC键，原因见：
