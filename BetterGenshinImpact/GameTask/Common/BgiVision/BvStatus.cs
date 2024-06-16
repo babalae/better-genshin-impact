@@ -1,8 +1,7 @@
-﻿using System;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model;
+﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using System;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -49,4 +48,25 @@ public static partial class Bv
     {
         return captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo).IsExist();
     }
+
+    public static MotionStatus GetMotionStatus(ImageRegion captureRa)
+    {
+        var spaceExist = captureRa.Find(ElementAssets.Instance.SpaceKey).IsExist();
+        var xExist = captureRa.Find(ElementAssets.Instance.XKey).IsExist();
+        if (spaceExist)
+        {
+            return xExist ? MotionStatus.Climb : MotionStatus.Fly;
+        }
+        else
+        {
+            return MotionStatus.Normal;
+        }
+    }
+}
+
+public enum MotionStatus
+{
+    Normal, // 正常
+    Fly, // 飞行
+    Climb, // 攀爬
 }

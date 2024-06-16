@@ -18,6 +18,9 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject UiLeftTopCookIcon;
 
+    public RecognitionObject SpaceKey;
+    public RecognitionObject XKey;
+
     private ElementAssets()
     {
         // 按钮
@@ -93,6 +96,24 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ui_left_top_cook_icon.png"),
             RegionOfInterest = new Rect(0, 0, (int)(150 * AssetScale), (int)(120 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 右下角的按键提示
+        SpaceKey = new RecognitionObject
+        {
+            Name = "SpaceKey",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_space.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(130 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(130 * AssetScale), (int)(70 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        XKey = new RecognitionObject
+        {
+            Name = "XKey",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_x.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(210 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(60 * AssetScale), (int)(70 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
