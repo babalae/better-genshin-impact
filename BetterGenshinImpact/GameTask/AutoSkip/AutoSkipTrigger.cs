@@ -542,6 +542,11 @@ public class AutoSkipTrigger : ITaskTrigger
                 {
                     clickRegion = rs[0];
                 }
+                else if (_config.IsClickRandomChatOption())
+                {
+                    var random = new Random();
+                    clickRegion = rs[random.Next(0, rs.Count)];
+                }
 
                 ClickOcrRegion(clickRegion);
                 AutoSkipLog(clickRegion.Text);

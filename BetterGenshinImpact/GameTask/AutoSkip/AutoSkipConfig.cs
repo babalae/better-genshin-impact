@@ -80,6 +80,11 @@ public partial class AutoSkipConfig : ObservableObject
         return ClickChatOption == "优先选择第一个选项";
     }
 
+    public bool IsClickRandomChatOption()
+    {
+        return ClickChatOption == "随机选择选项";
+    }
+
     public bool IsClickNoneChatOption()
     {
         return ClickChatOption == "不选择选项";
