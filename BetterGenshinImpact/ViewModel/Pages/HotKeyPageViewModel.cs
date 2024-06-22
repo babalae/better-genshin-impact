@@ -24,6 +24,9 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using static Vanara.PInvoke.User32;
+using System.Runtime.InteropServices;
+using System;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -399,8 +402,25 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
                     // AutoTrackPathTask.GetPositionFromBigMap();
 
-                    Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
-                        .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
+                    // Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
+                    //     .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
+
+                    HWND hWnd = GetForegroundWindow();
+
+                    uint threadid = GetWindowThreadProcessId(hWnd, out var _);
+
+                    GUITHREADINFO lpgui = new GUITHREADINFO();
+                    lpgui.cbSize = (uint)Marshal.SizeOf(lpgui);
+
+                    if (GetGUIThreadInfo(threadid, ref lpgui))
+                    {
+                        if (lpgui.hwndCaret != 0)
+                        {
+                            _logger.LogInformation("输入状态");
+                            return;
+                        }
+                    }
+                    _logger.LogInformation("非输入状态");
                 }
             ));
         }
