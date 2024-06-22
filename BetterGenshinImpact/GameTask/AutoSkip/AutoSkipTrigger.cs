@@ -632,7 +632,7 @@ public class AutoSkipTrigger : ITaskTrigger
     {
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
-            pageCloseRoRa.Click();
+            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
 
             AutoSkipLog("关闭弹出页");
             pageCloseRoRa.Dispose();
