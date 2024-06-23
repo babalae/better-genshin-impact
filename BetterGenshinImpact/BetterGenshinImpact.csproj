@@ -144,7 +144,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Core\Recorder\" />
 	  <Folder Include="GameTask\Common\Element\Assets\MapPoint\" />
 	  <Folder Include="View\Controls\WpfUi\" />
 	</ItemGroup>

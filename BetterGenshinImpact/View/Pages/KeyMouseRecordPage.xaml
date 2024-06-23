@@ -21,9 +21,15 @@
             <ui:TextBlock Margin="0,0,0,8"
                           FontTypography="BodyStrong"
                           Text="键鼠录制回放功能" />
-            <ui:Button Content="开始录制" Icon="{ui:SymbolIcon Record20}" />
-            <ui:Button Content="停止录制" Icon="{ui:SymbolIcon Stop24}" />
-            <ui:Button Content="播放脚本" Icon="{ui:SymbolIcon Play24}" />
+            <ui:Button Command="{Binding StartRecordCommand}"
+                       Content="开始录制"
+                       Icon="{ui:SymbolIcon Record20}" />
+            <ui:Button Command="{Binding StopRecordCommand}"
+                       Content="停止录制"
+                       Icon="{ui:SymbolIcon Stop24}" />
+            <ui:Button Command="{Binding StartPlayCommand}"
+                       Content="播放脚本"
+                       Icon="{ui:SymbolIcon Play24}" />
         </StackPanel>
     </Grid>
 </Page>
