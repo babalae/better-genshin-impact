@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -20,6 +21,7 @@ public class KeyMouseMacroPlayer
 
     public static async Task PlayMacro(List<MacroEvent> macroEvents)
     {
+        WorkingArea = PrimaryScreen.WorkingArea;
         foreach (var e in macroEvents)
         {
             switch (e.Type)
@@ -107,13 +109,15 @@ public class KeyMouseMacroPlayer
         }
     }
 
+    public static Size WorkingArea;
+
     public static double ToVirtualDesktopX(int x)
     {
-        return x * 65535 * 1d / PrimaryScreen.WorkingArea.Width;
+        return x * 65535 * 1d / WorkingArea.Width;
     }
 
     public static double ToVirtualDesktopY(int y)
     {
-        return y * 65535 * 1d / PrimaryScreen.WorkingArea.Height;
+        return y * 65535 * 1d / WorkingArea.Height;
     }
 }

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using BetterGenshinImpact.Model;
+﻿using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System.Windows.Forms;
 
