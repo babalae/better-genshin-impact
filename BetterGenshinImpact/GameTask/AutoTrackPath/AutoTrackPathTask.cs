@@ -66,7 +66,7 @@ public class AutoTrackPathTask
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
         _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
 
-        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way2.json"));
+        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\yl3.json"));
         _way = JsonSerializer.Deserialize<GiPath>(wayJson, ConfigService.JsonOptions) ?? throw new Exception("way json deserialize failed");
     }
 

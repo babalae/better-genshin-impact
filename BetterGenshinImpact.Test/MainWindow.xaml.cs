@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Test.Dataset;
 using BetterGenshinImpact.Test.Simple;
 using BetterGenshinImpact.Test.Simple.AllMap;
+using BetterGenshinImpact.Test.Simple.Track;
 using BetterGenshinImpact.Test.View;
 
 namespace BetterGenshinImpact.Test;
@@ -64,5 +65,10 @@ public partial class MainWindow : Window
     private void AutoCookTestCase(object sender, RoutedEventArgs e)
     {
         AutoCookTest.Test();
+    }
+
+    private void MapPathView(object sender, RoutedEventArgs e)
+    {
+        MapPathTest.Test();
     }
 }
