@@ -1,15 +1,13 @@
-﻿using System.Collections.Generic;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoPick;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fischless.GameCapture;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Windows;
-using BetterGenshinImpact.GameTask.AutoPick;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 

@@ -94,4 +94,14 @@ public partial class AutoSkipConfig : ObservableObject
     /// 后台运行
     /// </summary>
     [ObservableProperty] private bool _runBackgroundEnabled = false;
+
+    /// <summary>
+    /// 提交物品
+    /// </summary>
+    [ObservableProperty] private bool _submitGoodsEnabled = true;
+
+    /// <summary>
+    /// 关闭弹出层
+    /// </summary>
+    [ObservableProperty] private bool _closePopupPagedEnabled = true;
 }
