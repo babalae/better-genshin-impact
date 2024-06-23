@@ -4,13 +4,13 @@ using System.Windows.Controls;
 namespace BetterGenshinImpact.View.Pages;
 
 /// <summary>
-/// TaskSettingsPage.xaml 的交互逻辑
+/// KeyMouseRecordPage.xaml 的交互逻辑
 /// </summary>
-public partial class HotKeyPage : Page
+public partial class KeyMouseRecordPage : Page
 {
-    private HotKeyPageViewModel ViewModel { get; }
+    private KeyMouseRecordPageViewModel ViewModel { get; }
 
-    public HotKeyPage(HotKeyPageViewModel viewModel)
+    public KeyMouseRecordPage(KeyMouseRecordPageViewModel viewModel)
     {
         DataContext = ViewModel = viewModel;
         InitializeComponent();

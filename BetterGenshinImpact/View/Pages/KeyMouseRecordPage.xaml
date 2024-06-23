@@ -1,0 +1,29 @@
+﻿<Page x:Class="BetterGenshinImpact.View.Pages.KeyMouseRecordPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="KeyMouseRecordPage"
+      d:DataContext="{d:DesignInstance Type=pages:KeyMouseRecordPageViewModel}"
+      d:DesignHeight="850"
+      d:DesignWidth="800"
+      ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+      ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      FontFamily="{StaticResource TextThemeFontFamily}"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+      mc:Ignorable="d">
+    <Grid>
+        <StackPanel Margin="42,16,42,12">
+            <ui:TextBlock Margin="0,0,0,8"
+                          FontTypography="BodyStrong"
+                          Text="键鼠录制回放功能" />
+            <ui:Button Content="开始录制" Icon="{ui:SymbolIcon Record20}" />
+            <ui:Button Content="停止录制" Icon="{ui:SymbolIcon Stop24}" />
+            <ui:Button Content="播放脚本" Icon="{ui:SymbolIcon Play24}" />
+        </StackPanel>
+    </Grid>
+</Page>

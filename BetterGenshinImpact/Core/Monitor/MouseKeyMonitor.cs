@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using Vanara.PInvoke;
 using Timer = System.Timers.Timer;
 
-namespace BetterGenshinImpact.Core;
+namespace BetterGenshinImpact.Core.Monitor;
 
 public class MouseKeyMonitor
 {
@@ -32,9 +32,9 @@ public class MouseKeyMonitor
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
     private IKeyboardMouseEvents? _globalHook;
-    private IntPtr _hWnd;
+    private nint _hWnd;
 
-    public void Subscribe(IntPtr gameHandle)
+    public void Subscribe(nint gameHandle)
     {
         _hWnd = gameHandle;
         // Note: for the application hook, use the Hook.AppEvents() instead
