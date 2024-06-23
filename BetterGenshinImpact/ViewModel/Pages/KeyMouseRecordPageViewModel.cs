@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Simulator;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui.Controls;
@@ -22,7 +24,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public void OnStartRecord()
     {
-        GlobalKeyMouseRecord.Instance.StartRecord();
+        // GlobalKeyMouseRecord.Instance.StartRecord();
+        new DirectInputMonitor().Start();
+        Simulation.SendInput.Mouse.MoveMouseBy(500, 0);
     }
 
     [RelayCommand]
