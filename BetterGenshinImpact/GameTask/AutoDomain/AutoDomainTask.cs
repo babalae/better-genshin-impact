@@ -25,6 +25,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -84,13 +85,16 @@ public class AutoDomainTask
                 // 队伍没初始化成功则重试
                 RetryTeamInit(combatScenes);
 
+                // 0. 切换到第一个角色
+                var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
+
                 // 1. 走到钥匙处启动
                 Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
                 await WalkToPressF();
 
                 // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
                 Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
-                await StartFight(combatScenes);
+                await StartFight(combatScenes, combatCommands);
                 EndFightWait();
 
                 // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
@@ -239,6 +243,15 @@ public class AutoDomainTask
         Sleep(1500, _taskParam.Cts);
     }
 
+    private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
+    {
+        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
+        var avatar = combatScenes.SelectAvatar(combatCommands[0].Name);
+        avatar?.SwitchWithoutCts();
+        Sleep(200);
+        return combatCommands;
+    }
+
     /// <summary>
     /// 走到钥匙处启动
     /// </summary>
@@ -288,10 +301,8 @@ public class AutoDomainTask
         });
     }
 
-    private Task StartFight(CombatScenes combatScenes)
+    private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
     {
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
-
         CancellationTokenSource cts = new CancellationTokenSource();
         _taskParam.Cts.Token.Register(cts.Cancel);
         combatScenes.BeforeTask(cts);
