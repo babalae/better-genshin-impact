@@ -24,9 +24,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public void OnStartRecord()
     {
-        // GlobalKeyMouseRecord.Instance.StartRecord();
-        new DirectInputMonitor().Start();
-        Simulation.SendInput.Mouse.MoveMouseBy(500, 0);
+        GlobalKeyMouseRecord.Instance.StartRecord();
+        // new DirectInputMonitor().Start();
+        // Simulation.SendInput.Mouse.MoveMouseBy(500, 0);
     }
 
     [RelayCommand]

@@ -24,6 +24,7 @@ public class KeyMouseMacroPlayer
         WorkingArea = PrimaryScreen.WorkingArea;
         foreach (var e in macroEvents)
         {
+            await Task.Delay((int)Math.Round(e.Time));
             switch (e.Type)
             {
                 case MacroEventType.KeyDown:
@@ -105,7 +106,6 @@ public class KeyMouseMacroPlayer
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            await Task.Delay((int)e.Time);
         }
     }
 

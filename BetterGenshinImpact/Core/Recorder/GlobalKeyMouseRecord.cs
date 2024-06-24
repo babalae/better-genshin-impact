@@ -1,4 +1,6 @@
-﻿using BetterGenshinImpact.Model;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
+using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System.Windows.Forms;
 
@@ -7,6 +9,8 @@ namespace BetterGenshinImpact.Core.Recorder;
 public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 {
     private KeyMouseRecorder? _recorder;
+
+    private Dictionary<Keys, bool> _keyDownState = new();
 
     public KeyMouseRecorder StartRecord()
     {
@@ -23,14 +27,33 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookKeyDown(KeyEventArgs e)
     {
-        // Debug.WriteLine($"KeyDown: {e.KeyCode}");
+        if (_keyDownState.TryGetValue(e.KeyCode, out var v))
+        {
+            if (v)
+            {
+                return; // 处于按下状态的不再记录
+            }
+            else
+            {
+                _keyDownState[e.KeyCode] = true;
+            }
+        }
+        else
+        {
+            _keyDownState.Add(e.KeyCode, true);
+        }
+        Debug.WriteLine($"KeyDown: {e.KeyCode}");
         _recorder?.KeyDown(e);
     }
 
     public void GlobalHookKeyUp(KeyEventArgs e)
     {
-        // Debug.WriteLine($"KeyUp: {e.KeyCode}");
-        _recorder?.KeyUp(e);
+        if (_keyDownState.ContainsKey(e.KeyCode) && _keyDownState[e.KeyCode])
+        {
+            Debug.WriteLine($"KeyUp: {e.KeyCode}");
+            _keyDownState[e.KeyCode] = false;
+            _recorder?.KeyUp(e);
+        }
     }
 
     public void GlobalHookMouseDown(MouseEventExtArgs e)
