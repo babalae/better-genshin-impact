@@ -30,6 +30,10 @@
             <ui:Button Command="{Binding StartPlayCommand}"
                        Content="播放脚本"
                        Icon="{ui:SymbolIcon Play24}" />
+
+            <ui:Button Command="{Binding StartCalibrationCommand}"
+                       Content="视角校准"
+                       Icon="{ui:SymbolIcon Play24}" />
         </StackPanel>
     </Grid>
 </Page>

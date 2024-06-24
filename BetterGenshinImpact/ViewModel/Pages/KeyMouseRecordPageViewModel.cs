@@ -42,4 +42,10 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         await KeyMouseMacroPlayer.PlayMacro(_macro);
         Debug.WriteLine("播放录制脚本结束");
     }
+
+    [RelayCommand]
+    public void OnStartCalibration()
+    {
+        new DirectInputCalibration().Start();
+    }
 }

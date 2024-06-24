@@ -10,7 +10,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 {
     private KeyMouseRecorder? _recorder;
 
-    private Dictionary<Keys, bool> _keyDownState = new();
+    private readonly Dictionary<Keys, bool> _keyDownState = new();
 
     public KeyMouseRecorder StartRecord()
     {
