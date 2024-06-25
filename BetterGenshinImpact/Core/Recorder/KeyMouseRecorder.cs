@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using SharpDX.DirectInput;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -77,13 +78,25 @@ public class KeyMouseRecorder
         CurrentTime = DateTime.Now;
     }
 
-    public void MouseMove(MouseEventExtArgs e)
+    public void MouseMoveTo(MouseEventExtArgs e)
     {
         MacroEvents.Add(new MacroEvent
         {
-            Type = MacroEventType.MouseMove,
+            Type = MacroEventType.MouseMoveTo,
             MouseX = e.X,
             MouseY = e.Y,
+            Time = (DateTime.Now - CurrentTime).TotalMilliseconds
+        });
+        CurrentTime = DateTime.Now;
+    }
+
+    public void MouseMoveBy(MouseState state)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.MouseMoveBy,
+            MouseX = state.X,
+            MouseY = state.Y,
             Time = (DateTime.Now - CurrentTime).TotalMilliseconds
         });
         CurrentTime = DateTime.Now;

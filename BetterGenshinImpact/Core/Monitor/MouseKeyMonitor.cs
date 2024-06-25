@@ -164,7 +164,7 @@ public class MouseKeyMonitor
     private void GlobalHookMouseMoveExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
-        GlobalKeyMouseRecord.Instance.GlobalHookMouseMove(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e);
     }
 
     public void Unsubscribe()

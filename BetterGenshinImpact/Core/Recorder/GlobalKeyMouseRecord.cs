@@ -3,6 +3,10 @@ using System.Diagnostics;
 using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Model.Area;
+using OpenCvSharp;
+using SharpDX.DirectInput;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -12,9 +16,15 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private readonly Dictionary<Keys, bool> _keyDownState = new();
 
+    // private Rect _captureAreaCenterRect;
+
     public KeyMouseRecorder StartRecord()
     {
         _recorder = new KeyMouseRecorder();
+
+        // var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        // var centerPoint = new Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+        // _captureAreaCenterRect = new Rect(centerPoint.X - 10, centerPoint.Y - 15, 20, 20);
         return _recorder;
     }
 
@@ -68,9 +78,23 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _recorder?.MouseUp(e);
     }
 
-    public void GlobalHookMouseMove(MouseEventExtArgs e)
+    public void GlobalHookMouseMoveTo(MouseEventExtArgs e)
     {
+        // if (_captureAreaCenterRect.Contains(e.X, e.Y))
+        // {
+        //     return;
+        // }
         // Debug.WriteLine($"MouseMove: {e.X}, {e.Y}");
-        _recorder?.MouseMove(e);
+        // _recorder?.MouseMoveTo(e);
+    }
+
+    public void GlobalHookMouseMoveBy(MouseState state)
+    {
+        // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
+        if (state is { X: 0, Y: 0 })
+        {
+            return;
+        }
+        _recorder?.MouseMoveBy(state);
     }
 }

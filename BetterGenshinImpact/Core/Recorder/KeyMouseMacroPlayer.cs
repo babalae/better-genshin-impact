@@ -99,8 +99,12 @@ public class KeyMouseMacroPlayer
                     }
                     break;
 
-                case MacroEventType.MouseMove:
+                case MacroEventType.MouseMoveTo:
                     Simulation.SendInput.Mouse.MoveMouseTo(ToVirtualDesktopX(e.MouseX), ToVirtualDesktopY(e.MouseY));
+                    break;
+
+                case MacroEventType.MouseMoveBy:
+                    Simulation.SendInput.Mouse.MoveMouseBy(e.MouseX, e.MouseY);
                     break;
 
                 default:

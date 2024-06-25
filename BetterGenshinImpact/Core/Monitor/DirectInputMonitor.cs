@@ -1,4 +1,5 @@
-﻿using SharpDX.DirectInput;
+﻿using BetterGenshinImpact.Core.Recorder;
+using SharpDX.DirectInput;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -33,8 +34,9 @@ public class DirectInputMonitor
             {
                 _mouse.Acquire();
                 MouseState state = _mouse.GetCurrentState();
-                Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
-                Thread.Sleep(1000); // 10ms, equivalent to CLOCKS_PER_SEC/100
+                // Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
+                GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveBy(state);
+                Thread.Sleep(10); // 10ms, equivalent to CLOCKS_PER_SEC/100
             }
         });
     }

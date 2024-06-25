@@ -14,7 +14,8 @@ public enum MacroEventType
 {
     KeyDown,
     KeyUp,
-    MouseMove,
+    MouseMoveTo,
+    MouseMoveBy,
     MouseDown,
     MouseUp
 }
