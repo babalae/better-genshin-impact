@@ -21,6 +21,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject SpaceKey;
     public RecognitionObject XKey;
 
+    public RecognitionObject FriendChat;
+
     private ElementAssets()
     {
         // 按钮
@@ -114,6 +116,16 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_x.png"),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(210 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(60 * AssetScale), (int)(70 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 左下角的好友聊天icon
+        FriendChat = new RecognitionObject
+        {
+            Name = "FriendChat",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "friend_chat.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(70 * AssetScale), (int)(83 * AssetScale), (int)(70 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }

@@ -419,26 +419,23 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     //
                     // if (GetGUIThreadInfo(threadid, ref lpgui))
                     // {
-                    //     if (lpgui.hwndCaret != 0)
-                    //     {
-                    //         _logger.LogInformation("输入状态");
-                    //         return;
-                    //     }
+                    // if (lpgui.hwndCaret != 0)
+                    // {
+                    //     _logger.LogInformation("输入状态");
+                    //     return;
+                    // }
                     // }
                     // _logger.LogInformation("非输入状态");
 
                     if (!flag)
                     {
                         GlobalKeyMouseRecord.Instance.StartRecord();
-                        new DirectInputMonitor().Start();
-                        _logger.LogInformation("开始录制脚本");
                         flag = true;
                     }
                     else
                     {
                         m = GlobalKeyMouseRecord.Instance.StopRecord();
                         Debug.WriteLine("录制脚本结束:" + m);
-                        _logger.LogInformation("录制脚本结束");
                         flag = false;
                     }
                 }
@@ -451,6 +448,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
+                    _logger.LogInformation("开始重放脚本");
                     Task.Run(async () =>
                     {
                         await KeyMouseMacroPlayer.PlayMacro(m);

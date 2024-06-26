@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Monitor;
 
-public class DirectInputMonitor
+public class DirectInputMonitor : IDisposable
 {
     private bool _isRunning = true;
 
@@ -36,7 +36,7 @@ public class DirectInputMonitor
                 MouseState state = _mouse.GetCurrentState();
                 // Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
                 GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveBy(state);
-                Thread.Sleep(10); // 10ms, equivalent to CLOCKS_PER_SEC/100
+                Thread.Sleep(5); // 10ms, equivalent to CLOCKS_PER_SEC/100
             }
         });
     }
@@ -44,5 +44,10 @@ public class DirectInputMonitor
     public void Stop()
     {
         _isRunning = false;
+    }
+
+    public void Dispose()
+    {
+        _mouse.Dispose();
     }
 }

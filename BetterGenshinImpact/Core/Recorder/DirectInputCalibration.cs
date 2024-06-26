@@ -21,6 +21,7 @@ namespace BetterGenshinImpact.Core.Recorder;
 /// <summary>
 /// DirectInput、鼠标移动距离、视角度数之间的校准
 /// </summary>
+[Obsolete]
 public class DirectInputCalibration
 {
     // 视角偏移移动单位
