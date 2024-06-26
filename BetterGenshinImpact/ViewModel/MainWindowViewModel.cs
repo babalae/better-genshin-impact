@@ -94,7 +94,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         try
         {
-            await Task.Run(GetNewestInfo);
+            await Task.Run(GetNewestInfoAsync);
         }
         catch (Exception e)
         {
@@ -103,11 +103,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
     }
 
-    private async void GetNewestInfo()
+    private async Task GetNewestInfoAsync()
     {
         try
         {
-            var httpClient = new HttpClient();
+            using var httpClient = new HttpClient();
             var notice = await httpClient.GetFromJsonAsync<Notice>(@"https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json");
             if (notice != null && !string.IsNullOrWhiteSpace(notice.Version))
             {

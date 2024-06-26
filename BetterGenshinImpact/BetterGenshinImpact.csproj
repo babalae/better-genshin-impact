@@ -19,6 +19,7 @@
 		<None Remove="Assets\*.ico" />
 		<None Remove="Assets\Fonts\*.ttf" />
 		<None Remove="Assets\Highlighting\*.xshd" />
+		<None Remove="Assets\Strings\*.html" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -27,6 +28,7 @@
 		<Resource Include="Assets\*.ico" />
 		<Resource Include="Assets\Fonts\*.ttf" />
 		<Resource Include="Assets\Highlighting\*.xshd" />
+		<Resource Include="Assets\Strings\*.html" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -37,6 +39,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.17.1" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.17.1" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.8.0.20230708" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />
