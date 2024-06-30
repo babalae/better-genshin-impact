@@ -46,14 +46,7 @@ public class AutoTrackPathTask
 
     private readonly List<GiWorldPosition> _tpPositions;
 
-    private readonly Dictionary<string, double[]> _countryPositions = new()
-    {
-        { "蒙德", [-876, 2278] },
-        { "璃月", [270, -666] },
-        { "稻妻", [-4400, -3050] },
-        { "须弥", [2877, -374] },
-        { "枫丹", [4515, 3631] },
-    };
+    private readonly Dictionary<string, double[]> _countryPositions = MapAssets.Instance.CountryPositions;
 
     private GiPath _way;
 
@@ -63,8 +56,7 @@ public class AutoTrackPathTask
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
         _taskParam = taskParam;
-        var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-        _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
+        _tpPositions = MapAssets.Instance.TpPositions;
 
         var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way2.json"));
         _way = JsonSerializer.Deserialize<GiPath>(wayJson, ConfigService.JsonOptions) ?? throw new Exception("way json deserialize failed");

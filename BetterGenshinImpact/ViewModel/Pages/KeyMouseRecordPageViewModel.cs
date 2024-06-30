@@ -1,8 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui.Controls;
@@ -12,6 +15,19 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private string _macro = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<KeyMouseScriptItem> _scriptItems;
+
+    public KeyMouseRecordPageViewModel()
+    {
+        _scriptItems =
+        [
+            new() { Name = "脚本1", CreateTime = "2021-10-01" },
+            new() { Name = "脚本2", CreateTime = "2021-10-02" },
+            new() { Name = "脚本3", CreateTime = "2021-10-03" },
+        ];
+    }
 
     public void OnNavigatedTo()
     {

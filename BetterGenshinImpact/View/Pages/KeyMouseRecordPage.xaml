@@ -16,6 +16,13 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
+    <Page.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Page.Resources>
     <Grid>
         <StackPanel Margin="42,16,42,12">
             <ui:TextBlock Margin="0,0,0,8"
@@ -31,9 +38,30 @@
                        Content="播放脚本"
                        Icon="{ui:SymbolIcon Play24}" />
 
-            <ui:Button Command="{Binding StartCalibrationCommand}"
+            <!--<ui:Button Command="{Binding StartCalibrationCommand}"
                        Content="视角校准"
-                       Icon="{ui:SymbolIcon Play24}" />
+                       Icon="{ui:SymbolIcon Play24}" />-->
+            <ListView ItemsSource="{Binding ScriptItems}" SelectionMode="Single">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Width="200"
+                                        DisplayMemberBinding="{Binding Name}"
+                                        Header="名称" />
+                        <GridViewColumn DisplayMemberBinding="{Binding CreateTime}" Header="创建时间" />
+                        <GridViewColumn Header="操作">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="打开目录" />
+                                        <Button Content="删除" />
+                                    </StackPanel>
+
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
         </StackPanel>
     </Grid>
 </Page>
