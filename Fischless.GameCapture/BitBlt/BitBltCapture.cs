@@ -36,7 +36,7 @@ public class BitBltCapture : IGameCapture
             Bitmap bitmap = new(width, height);
             using System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bitmap);
             var hdcDest = g.GetHdc();
-            Gdi32.SafeHDC hdcSrc = User32.GetDC(_hWnd == IntPtr.Zero ? User32.GetDesktopWindow() : _hWnd);
+            var hdcSrc = User32.GetDC(_hWnd == IntPtr.Zero ? User32.GetDesktopWindow() : _hWnd);
             Gdi32.StretchBlt(hdcDest, 0, 0, width, height, hdcSrc, x, y, width, height, Gdi32.RasterOperationMode.SRCCOPY);
             g.ReleaseHdc();
             Gdi32.DeleteDC(hdcDest);

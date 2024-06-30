@@ -34,35 +34,35 @@
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.17.1" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.17.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.18.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.18.1" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.8.0.20230708" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />
-		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
+		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
 		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.5.1" />
 		<PackageReference Include="Sdcb.PaddleOCR" Version="2.7.0" />
 		<PackageReference Include="Sdcb.PaddleOCR.Models.Online" Version="2.7.0.1" />
-		<PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
-		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
-		<PackageReference Include="Vanara.PInvoke.NtDll" Version="3.4.17" />
-		<PackageReference Include="Vanara.PInvoke.SHCore" Version="3.4.17" />
-		<PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
-		<PackageReference Include="WPF-UI" Version="3.0.0-preview.7" />
-		<PackageReference Include="WPF-UI.Tray" Version="3.0.0-preview.7" />
-		<PackageReference Include="YoloV8" Version="2.0.1" />
+		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.0.2" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.0.2" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.2" />
+		<PackageReference Include="WPF-UI" Version="3.0.4" />
+		<PackageReference Include="WPF-UI.Tray" Version="3.0.4" />
+		<PackageReference Include="YoloV8" Version="4.1.7" />
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.4" />
-		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.4" />
+		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
+		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 	</ItemGroup>
 
 	<ItemGroup>

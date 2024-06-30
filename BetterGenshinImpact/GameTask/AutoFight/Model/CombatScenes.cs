@@ -38,7 +38,11 @@ public class CombatScenes : IDisposable
 
     public int AvatarCount { get; set; }
 
-    private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Common\\avatar_side_classify_sim.onnx"), BgiSessionOption.Instance.Options);
+    private readonly YoloV8Predictor _predictor =
+        YoloV8Builder.CreateDefaultBuilder()
+            .UseOnnxModel(Global.Absolute("Assets\\Model\\Common\\avatar_side_classify_sim.onnx"))
+            .WithSessionOptions(BgiSessionOption.Instance.Options)
+            .Build();
 
     /// <summary>
     /// 通过YOLO分类器识别队伍内角色
@@ -117,13 +121,13 @@ public class CombatScenes : IDisposable
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
-        if (result.Confidence < 0.8)
+        if (result.TopClass.Confidence < 0.8)
         {
             Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-            throw new Exception($"无法识别第{index}位角色，置信度{result.Confidence}，结果：{result.Class.Name}");
+            throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
         }
 
-        return result.Class.Name;
+        return result.TopClass.Name.Name;
     }
 
     private void InitializeTeamFromConfig(string teamNames)
