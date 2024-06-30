@@ -1,10 +1,12 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace BetterGenshinImpact.Helpers;
 
 public class ObjectUtils
 {
+    [Obsolete("Obsolete")]
     public static byte[] Serialize(object obj)
     {
         var ms = new MemoryStream();
@@ -16,6 +18,7 @@ public class ObjectUtils
         return bytes;
     }
 
+    [Obsolete("Obsolete")]
     public static object Deserialize(byte[] bytes)
     {
         //利用传来的byte[]创建一个内存流
