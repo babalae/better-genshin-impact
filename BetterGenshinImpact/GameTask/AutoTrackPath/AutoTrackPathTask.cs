@@ -66,7 +66,7 @@ public class AutoTrackPathTask
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
         _tpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
 
-        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\yl3.json"));
+        var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way2.json"));
         _way = JsonSerializer.Deserialize<GiPath>(wayJson, ConfigService.JsonOptions) ?? throw new Exception("way json deserialize failed");
     }
 
@@ -526,9 +526,10 @@ public class AutoTrackPathTask
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
-            var rect = EntireMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
+            var rect = BigMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
             Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
-            return MapCoordinate.Main2048ToGame(rect);
+            const int s = 4 * 2; // 相对1024做4倍缩放
+            return MapCoordinate.Main2048ToGame(new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s));
         }
         else
         {

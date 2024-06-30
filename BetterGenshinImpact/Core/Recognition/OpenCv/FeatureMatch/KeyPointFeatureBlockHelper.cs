@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
 public class KeyPointFeatureBlockHelper
 {
-    public static KeyPointFeatureBlock[][] SplitFeatures(Mat originalImage, int rows, int cols, KeyPoint[] keyPoints, Mat matches)
+    public static KeyPointFeatureBlock[][] SplitFeatures(Size originalImage, int rows, int cols, KeyPoint[] keyPoints, Mat matches)
     {
         var matchesCols = matches.Cols; // SURF 64  SIFT 128
         // Calculate grid size
@@ -68,7 +68,7 @@ public class KeyPointFeatureBlockHelper
         return splitKeyPoints;
     }
 
-    public static (int, int) GetCellIndex(Mat originalImage, int rows, int cols, int x, int y)
+    public static (int, int) GetCellIndex(Size originalImage, int rows, int cols, int x, int y)
     {
         // Calculate grid size
         int cellWidth = originalImage.Width / cols;
