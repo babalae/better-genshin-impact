@@ -25,8 +25,7 @@ public class Fishpond
     /// </summary>
     public List<OneFish> Fishes { get; set; } = new();
 
-
-    public Fishpond(IDetectionResult result)
+    public Fishpond(DetectionResult result)
     {
         foreach (var box in result.Boxes)
         {

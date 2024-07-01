@@ -16,13 +16,13 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-    <Page.Resources>
+    <!--<Page.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Page.Resources>
+    </Page.Resources>-->
     <Grid>
         <StackPanel Margin="42,16,42,12">
             <ui:TextBlock Margin="0,0,0,8"
@@ -41,7 +41,7 @@
             <!--<ui:Button Command="{Binding StartCalibrationCommand}"
                        Content="视角校准"
                        Icon="{ui:SymbolIcon Play24}" />-->
-            <ListView ItemsSource="{Binding ScriptItems}" SelectionMode="Single">
+            <ui:ListView ItemsSource="{Binding ScriptItems}" SelectionMode="Single">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Width="200"
@@ -61,7 +61,7 @@
                         </GridViewColumn>
                     </GridView>
                 </ListView.View>
-            </ListView>
+            </ui:ListView>
         </StackPanel>
     </Grid>
 </Page>

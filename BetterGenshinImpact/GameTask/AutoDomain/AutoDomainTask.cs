@@ -37,7 +37,7 @@ public class AutoDomainTask
 
     private readonly PostMessageSimulator _simulator;
 
-    private readonly YoloV8 _predictor;
+    private readonly YoloV8Predictor _predictor;
 
     private readonly AutoDomainConfig _config;
 
@@ -48,7 +48,10 @@ public class AutoDomainTask
         _taskParam = taskParam;
         _simulator = AutoFightContext.Instance.Simulator;
 
-        _predictor = new YoloV8(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"), BgiSessionOption.Instance.Options);
+        _predictor = YoloV8Builder.CreateDefaultBuilder()
+            .UseOnnxModel(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"))
+            .WithSessionOptions(BgiSessionOption.Instance.Options)
+            .Build();
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
