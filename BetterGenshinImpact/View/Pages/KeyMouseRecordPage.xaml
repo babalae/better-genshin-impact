@@ -9,59 +9,133 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="KeyMouseRecordPage"
       d:DataContext="{d:DesignInstance Type=pages:KeyMouseRecordPageViewModel}"
-      d:DesignHeight="850"
+      d:DesignHeight="600"
       d:DesignWidth="800"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-    <!--<Page.Resources>
+    <Page.Resources>
+        <!--
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Page.Resources>-->
-    <Grid>
-        <StackPanel Margin="42,16,42,12">
-            <ui:TextBlock Margin="0,0,0,8"
-                          FontTypography="BodyStrong"
-                          Text="键鼠录制回放功能" />
+        -->
+
+        <Style x:Key="GridViewColumnHeaderDarkStyle" TargetType="{x:Type GridViewColumnHeader}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type GridViewColumnHeader}">
+                        <Grid Background="Transparent">
+                            <Border MaxHeight="{TemplateBinding Height}"
+                                    Padding="{TemplateBinding Padding}"
+                                    BorderBrush="#5aaa"
+                                    BorderThickness="0,1,0,1">
+                                <ContentPresenter Name="HeaderContent"
+                                                  Margin="5"
+                                                  Content="{TemplateBinding ContentControl.Content}"
+                                                  ContentStringFormat="{TemplateBinding ContentControl.ContentStringFormat}"
+                                                  ContentTemplate="{TemplateBinding ContentControl.ContentTemplate}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Foreground">
+                <Setter.Value>
+                    <SolidColorBrush Color="{DynamicResource TextFillColorPrimary}" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+    <Grid Margin="42,16,42,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="400" />
+        </Grid.RowDefinitions>
+
+        <ui:TextBlock Grid.Row="0"
+                      Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="键鼠录制回放功能" />
+        <ui:TextBlock Grid.Row="1"
+                      Margin="0,0,0,8"
+                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                      Text="建议在游戏内使用快捷键进行录制。脚本直接存储在User/KeyMouseScript目录下，可以在此处查看并修改录制的脚本"
+                      TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding StartRecordCommand}"
                        Content="开始录制"
                        Icon="{ui:SymbolIcon Record20}" />
+            <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding StopRecordCommand}"
                        Content="停止录制"
                        Icon="{ui:SymbolIcon Stop24}" />
-            <ui:Button Command="{Binding StartPlayCommand}"
-                       Content="播放脚本"
-                       Icon="{ui:SymbolIcon Play24}" />
-
-            <!--<ui:Button Command="{Binding StartCalibrationCommand}"
-                       Content="视角校准"
-                       Icon="{ui:SymbolIcon Play24}" />-->
-            <ui:ListView ItemsSource="{Binding ScriptItems}" SelectionMode="Single">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Width="200"
-                                        DisplayMemberBinding="{Binding Name}"
-                                        Header="名称" />
-                        <GridViewColumn DisplayMemberBinding="{Binding CreateTime}" Header="创建时间" />
-                        <GridViewColumn Header="操作">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="打开目录" />
-                                        <Button Content="删除" />
-                                    </StackPanel>
-
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                    </GridView>
-                </ListView.View>
-            </ui:ListView>
+            <Separator Width="10" Opacity="0" />
+            <ui:Button Command="{Binding OpenScriptFolderCommand}"
+                       Content="打开脚本目录"
+                       Icon="{ui:SymbolIcon FolderOpen24}" />
         </StackPanel>
+
+        <Separator Grid.Row="3"
+                   Height="10"
+                   Opacity="0" />
+
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="20" />
+            </Grid.ColumnDefinitions>
+            <Grid x:Name="Col1" Grid.Column="0" />
+            <Grid x:Name="Col2" Grid.Column="1" />
+            <Grid x:Name="Col3" Grid.Column="2" />
+        </Grid>
+        <ui:ListView Grid.Row="5"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"
+                     ItemsSource="{Binding ScriptItems}"
+                     SelectionMode="Single">
+            <ListView.View>
+                <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
+                    <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
+                                    DisplayMemberBinding="{Binding Name}"
+                                    Header="名称" />
+                    <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
+                                    DisplayMemberBinding="{Binding CreateTime}"
+                                    Header="创建时间" />
+                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Button Command="{Binding StartPlayCommand}"
+                                               Content="播放脚本"
+                                               Icon="{ui:SymbolIcon Play24}" />
+                                </StackPanel>
+
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+            <ListView.Style>
+                <Style TargetType="{x:Type ListView}">
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Background" Value="Transparent" />
+                </Style>
+            </ListView.Style>
+        </ui:ListView>
     </Grid>
 </Page>

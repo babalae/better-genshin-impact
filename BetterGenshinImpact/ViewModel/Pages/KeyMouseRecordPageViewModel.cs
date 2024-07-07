@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
@@ -15,22 +18,45 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private string _macro = string.Empty;
+    private readonly string scriptPath = Global.Absolute(@"User\KeyMouseScript");
 
     [ObservableProperty]
-    private ObservableCollection<KeyMouseScriptItem> _scriptItems;
+    private ObservableCollection<KeyMouseScriptItem> _scriptItems = [];
 
     public KeyMouseRecordPageViewModel()
     {
-        _scriptItems =
-        [
-            new() { Name = "脚本1", CreateTime = "2021-10-01" },
-            new() { Name = "脚本2", CreateTime = "2021-10-02" },
-            new() { Name = "脚本3", CreateTime = "2021-10-03" },
-        ];
+    }
+
+    private void InitScriptListViewData()
+    {
+        _scriptItems.Clear();
+        var fileInfos = LoadScriptFiles(scriptPath);
+        foreach (var f in fileInfos)
+        {
+            _scriptItems.Add(new KeyMouseScriptItem
+            {
+                Name = f.Name,
+                CreateTime = f.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+            });
+        }
+    }
+
+    private List<FileInfo> LoadScriptFiles(string folder)
+    {
+        if (!Directory.Exists(folder))
+        {
+            Directory.CreateDirectory(folder);
+        }
+
+        var files = Directory.GetFiles(folder, "*.*",
+            SearchOption.AllDirectories);
+
+        return files.Select(file => new FileInfo(file)).ToList();
     }
 
     public void OnNavigatedTo()
     {
+        InitScriptListViewData();
     }
 
     public void OnNavigatedFrom()
@@ -60,8 +86,8 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    public void OnStartCalibration()
+    public void OnOpenScriptFolder()
     {
-        new DirectInputCalibration().Start();
+        Process.Start("explorer.exe", scriptPath);
     }
 }
