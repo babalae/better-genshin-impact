@@ -14,11 +14,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact;
@@ -48,6 +50,9 @@ public partial class App : Application
                 var maskWindow = new MaskWindow();
                 services.AddSingleton(maskWindow);
 
+                var richTextBox = new RichTextBoxImpl();
+                services.AddSingleton<IRichTextBox>(richTextBox);
+
                 var loggerConfiguration = new LoggerConfiguration()
                     .WriteTo.File(path: logFile, outputTemplate: "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}", rollingInterval: RollingInterval.Day)
                     .MinimumLevel.Debug()
@@ -55,7 +60,7 @@ public partial class App : Application
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
                 if (all.MaskWindowConfig.MaskEnabled)
                 {
-                    loggerConfiguration.WriteTo.RichTextBox(maskWindow.LogBox, LogEventLevel.Information, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+                    loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();

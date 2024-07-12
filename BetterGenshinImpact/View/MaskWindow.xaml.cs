@@ -5,18 +5,18 @@ using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Drawable;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
 using System.Diagnostics;
+using PresentMonFps;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using PresentMonFps;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -33,6 +33,8 @@ public partial class MaskWindow : Window
     private static readonly Typeface _typeface;
 
     private nint _hWnd;
+
+    private IRichTextBox? _richTextBox;
 
     static MaskWindow()
     {
@@ -75,25 +77,30 @@ public partial class MaskWindow : Window
 
     public void RefreshPosition(RECT currentRect, double dpiScale)
     {
-        nint targetHWnd = TaskContext.Instance().GameHandle;
-        _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        float x = DpiHelper.GetScale(targetHWnd).X;
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
+        // TODO：如果窗口被关闭则需要调用
+        // _richTextBox.RichTextBox = null!;
 
-        Invoke(() =>
-        {
-            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
-            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
-        });
+        // TODO：重写下面代码适应BGI
+        //nint targetHWnd = TaskContext.Instance().GameHandle;
+        //_ = User32.GetClientRect(targetHWnd, out RECT targetRect);
+        //float x = DpiHelper.GetScale(targetHWnd).X;
+        //_ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
+
+        //Invoke(() =>
+        //{
+        //    Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+        //    Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+        //});
 
         // 重新计算控件位置
         // shit code 预定了
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+        //WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
     public MaskWindow()
     {
         _maskWindow = this;
+
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
         InitializeComponent();
         this.InitializeDpiAwareness();
@@ -105,6 +112,12 @@ public partial class MaskWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        _richTextBox = App.GetService<IRichTextBox>();
+        if (_richTextBox != null)
+        {
+            _richTextBox.RichTextBox = LogTextBox;
+        }
+
         _hWnd = new WindowInteropHelper(this).Handle;
         nint targetHWnd = TaskContext.Instance().GameHandle;
 
