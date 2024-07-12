@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
@@ -9,7 +10,10 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
+using PresentMonFps;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -29,6 +33,8 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private Point _southPoint = new(150, 233);
         [ObservableProperty] private Point _westPoint = new(32, 109);
         [ObservableProperty] private Point _northPoint = new(150, -9);
+
+        [ObservableProperty] private string _fps = "-1";
 
         public MaskWindowViewModel()
         {
@@ -86,6 +92,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             RefreshSettings();
             InitializeStatusList();
+            InitFps();
         }
 
         private void RefreshSettings()
@@ -128,6 +135,22 @@ namespace BetterGenshinImpact.ViewModel
                 {
                     Config = configService.Get();
                 }
+            }
+        }
+
+        private void InitFps()
+        {
+            if (Config!.MaskWindowConfig.ShowFps)
+            {
+                nint targetHWnd = TaskContext.Instance().GameHandle;
+                _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
+                Task.Run(async () =>
+                {
+                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), (result) =>
+                    {
+                        Fps = $"{result.Fps:0}";
+                    });
+                });
             }
         }
     }

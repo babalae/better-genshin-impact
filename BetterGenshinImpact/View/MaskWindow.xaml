@@ -203,6 +203,23 @@
                    FontWeight="DemiBold"
                    Foreground="White"
                    Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+            <!--  展示FPS  -->
+            <Border Width="45"
+                    Height="45"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Background="#00000000"
+                    CornerRadius="4"
+                    Opacity="0.5"
+                    Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="21"
+                           Foreground="White"
+                           Text="{Binding Fps}"
+                           Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Border>
         </Canvas>
     </AdornerDecorator>
 

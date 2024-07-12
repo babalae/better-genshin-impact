@@ -107,7 +107,6 @@ public partial class MaskWindow : Window
     {
         _hWnd = new WindowInteropHelper(this).Handle;
         nint targetHWnd = TaskContext.Instance().GameHandle;
-        _ = User32.GetWindowThreadProcessId(_hWnd, out var pid);
 
         _ = User32.GetClientRect(_hWnd, out RECT rect);
         _ = User32.SetParent(_hWnd, targetHWnd);
