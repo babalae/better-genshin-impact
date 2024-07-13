@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Model;
 
@@ -8,5 +9,7 @@ public partial class KeyMouseScriptItem : ObservableObject
     private string _name = string.Empty;
 
     [ObservableProperty]
-    private string _createTime = string.Empty;
+    private string _createTimeStr = string.Empty;
+
+    public DateTime CreateTime { get; set; }
 }

@@ -176,4 +176,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _logBoxDisplayHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 键鼠录制/停止
+    [ObservableProperty]
+    private string _keyMouseMacroRecordHotkey = "";
+
+    [ObservableProperty]
+    private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

@@ -347,16 +347,43 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
         });
 
+        var keyMouseRecordRunning = false;
         HotKeySettingModels.Add(new HotKeySettingModel(
-            "启动/停止自动活动音游",
-            nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
-            Config.HotKeyConfig.AutoMusicGameHotkey,
-            Config.HotKeyConfig.AutoMusicGameHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
+            "启动/停止键鼠录制",
+            nameof(Config.HotKeyConfig.KeyMouseMacroRecordHotkey),
+            Config.HotKeyConfig.KeyMouseMacroRecordHotkey,
+            Config.HotKeyConfig.KeyMouseMacroRecordHotkeyType,
+            (_, _) =>
+            {
+                var vm = App.GetService<KeyMouseRecordPageViewModel>();
+                if (vm == null)
+                {
+                    _logger.LogError("无法找到 KeyMouseRecordPageViewModel 单例对象！");
+                    return;
+                }
+                if (!keyMouseRecordRunning)
+                {
+                    keyMouseRecordRunning = true;
+                    Thread.Sleep(300); // 防止录进快捷键进去
+                    vm.OnStartRecord();
+                }
+                else
+                {
+                    keyMouseRecordRunning = false;
+                    vm.OnStopRecord();
+                }
+            }
         ));
 
         if (RuntimeHelper.IsDebug)
         {
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "启动/停止自动活动音游",
+                nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
+                Config.HotKeyConfig.AutoMusicGameHotkey,
+                Config.HotKeyConfig.AutoMusicGameHotkeyType,
+                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
+            ));
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）启动/停止自动追踪",
                 nameof(Config.HotKeyConfig.AutoTrackHotkey),
@@ -426,18 +453,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // }
                     // }
                     // _logger.LogInformation("非输入状态");
-
-                    if (!flag)
-                    {
-                        GlobalKeyMouseRecord.Instance.StartRecord();
-                        flag = true;
-                    }
-                    else
-                    {
-                        m = GlobalKeyMouseRecord.Instance.StopRecord();
-                        Debug.WriteLine("录制脚本结束:" + m);
-                        flag = false;
-                    }
                 }
             ));
 

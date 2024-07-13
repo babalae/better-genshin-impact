@@ -118,6 +118,12 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.FooterMenuItems>
+
+            <ui:NavigationView.ContentOverlay>
+                <Grid>
+                    <ui:SnackbarPresenter x:Name="SnackbarPresenter" />
+                </Grid>
+            </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
 
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">

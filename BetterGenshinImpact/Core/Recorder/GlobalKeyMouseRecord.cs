@@ -32,8 +32,14 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _timer.Interval = 50; // ms
     }
 
-    public KeyMouseRecorder StartRecord()
+    public void StartRecord()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            MessageBox.Show("请先在启动页，启动截图器再使用本功能");
+            return;
+        }
+
         TaskTriggerDispatcher.Instance().StopTimer();
         _timer.Start();
 
@@ -43,8 +49,6 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         _logger.LogInformation("录制：{Text}", "实时任务已暂停，录制已启动");
         _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
-
-        return _recorder;
     }
 
     public string StopRecord()
