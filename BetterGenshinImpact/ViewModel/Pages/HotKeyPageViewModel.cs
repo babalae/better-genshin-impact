@@ -24,6 +24,12 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using static Vanara.PInvoke.User32;
+using System.Runtime.InteropServices;
+using System;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Recorder;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -375,6 +381,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
             ));
 
+            var flag = false;
+            var m = "";
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -399,8 +407,53 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
                     // AutoTrackPathTask.GetPositionFromBigMap();
 
-                    Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
-                        .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
+                    // Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
+                    //     .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
+
+                    // HWND hWnd = GetForegroundWindow();
+                    //
+                    // uint threadid = GetWindowThreadProcessId(hWnd, out var _);
+                    //
+                    // GUITHREADINFO lpgui = new GUITHREADINFO();
+                    // lpgui.cbSize = (uint)Marshal.SizeOf(lpgui);
+                    //
+                    // if (GetGUIThreadInfo(threadid, ref lpgui))
+                    // {
+                    // if (lpgui.hwndCaret != 0)
+                    // {
+                    //     _logger.LogInformation("输入状态");
+                    //     return;
+                    // }
+                    // }
+                    // _logger.LogInformation("非输入状态");
+
+                    if (!flag)
+                    {
+                        GlobalKeyMouseRecord.Instance.StartRecord();
+                        flag = true;
+                    }
+                    else
+                    {
+                        m = GlobalKeyMouseRecord.Instance.StopRecord();
+                        Debug.WriteLine("录制脚本结束:" + m);
+                        flag = false;
+                    }
+                }
+            ));
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）测试2",
+                nameof(Config.HotKeyConfig.Test2Hotkey),
+                Config.HotKeyConfig.Test2Hotkey,
+                Config.HotKeyConfig.Test2HotkeyType,
+                (_, _) =>
+                {
+                    _logger.LogInformation("开始重放脚本");
+                    Task.Run(async () =>
+                    {
+                        await KeyMouseMacroPlayer.PlayMacro(m);
+                        _logger.LogInformation("播放脚本结束");
+                    });
                 }
             ));
         }

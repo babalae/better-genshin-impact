@@ -81,7 +81,17 @@
                                        Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
                                                                      Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="WebAsset16" />
+                        <ui:SymbolIcon Symbol="WebAsset24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <!--  Script16  -->
+                <ui:NavigationViewItem Content="录制回放"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:KeyMouseRecordPage}"
+                                       Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                                     Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Record24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="快捷键"
@@ -139,6 +149,10 @@
                     <ContextMenu.DataContext>
                         <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
                     </ContextMenu.DataContext>
+                    <ui:MenuItem Command="{Binding CheckUpdateCommand}"
+                                 Header="检查更新"
+                                 Icon="{ui:SymbolIcon ArrowAutofitUp24}" />
+                    <Separator />
                     <ui:MenuItem Command="{Binding ExitCommand}"
                                  Header="退出"
                                  Icon="{ui:SymbolIcon Dismiss24}" />

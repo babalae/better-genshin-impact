@@ -14,7 +14,10 @@ public class FeatureMatcher
 {
     private readonly double _threshold = 100; // SURF 100
     private readonly Feature2D _feature2D;
-    private readonly Mat _trainMat; // 大图本身
+
+    // private readonly Mat _trainMat; // 大图本身
+    private readonly Size _trainMatSize; // 大图大小
+
     private readonly Mat _trainRet = new(); // 大图特征描述子
     private readonly KeyPoint[] _trainKeyPoints;
 
@@ -23,10 +26,19 @@ public class FeatureMatcher
     private readonly int _splitCol = MapCoordinate.GameMapCols * 2; // 特征点拆分列数
     private KeyPointFeatureBlock? _lastMergedBlock; // 上次合并的特征块
 
+    /// <summary>
+    /// 从图像 or 特征点加载
+    /// 大图不建议使用此构造函数加载，速度很慢
+    /// </summary>
+    /// <param name="trainMat"></param>
+    /// <param name="featureStorage"></param>
+    /// <param name="type"></param>
+    /// <param name="threshold"></param>
+    /// <exception cref="Exception"></exception>
     public FeatureMatcher(Mat trainMat, FeatureStorage? featureStorage = null, Feature2DType type = Feature2DType.SIFT, double threshold = 100)
     {
         _threshold = threshold;
-        _trainMat = trainMat;
+        _trainMatSize = trainMat.Size();
         if (Feature2DType.SURF == type)
         {
             _feature2D = SURF.Create(_threshold, 4, 3, false, true);
@@ -54,11 +66,51 @@ public class FeatureMatcher
                 _trainRet = featureStorage.LoadDescMat() ?? throw new Exception("加载特征描述矩阵失败");
             }
         }
+        else
+        {
+            _feature2D.DetectAndCompute(trainMat, null, out _trainKeyPoints, _trainRet);
+        }
 
         Debug.WriteLine("被匹配的图像生成初始化KeyPoint完成");
         Stopwatch sw = new();
         sw.Start();
-        _blocks = KeyPointFeatureBlockHelper.SplitFeatures(_trainMat, _splitRow, _splitCol, _trainKeyPoints, _trainRet);
+        _blocks = KeyPointFeatureBlockHelper.SplitFeatures(_trainMatSize, _splitRow, _splitCol, _trainKeyPoints, _trainRet);
+        sw.Stop();
+        Debug.WriteLine($"切割特征点耗时: {sw.ElapsedMilliseconds}ms");
+    }
+
+    /// <summary>
+    /// 直接从特征点加载
+    /// </summary>
+    /// <param name="trainMatSize"></param>
+    /// <param name="featureStorage"></param>
+    /// <param name="type"></param>
+    /// <param name="threshold"></param>
+    /// <exception cref="Exception"></exception>
+    public FeatureMatcher(Size trainMatSize, FeatureStorage featureStorage, Feature2DType type = Feature2DType.SIFT, double threshold = 100)
+    {
+        _threshold = threshold;
+        _trainMatSize = trainMatSize;
+        if (Feature2DType.SURF == type)
+        {
+            _feature2D = SURF.Create(_threshold, 4, 3, false, true);
+        }
+        else
+        {
+            _feature2D = SIFT.Create();
+        }
+
+        featureStorage.TypeName = type.ToString();
+        Debug.WriteLine("尝试从磁盘加载特征点");
+        var kpFromDisk = featureStorage.LoadKeyPointArray();
+
+        _trainKeyPoints = kpFromDisk ?? throw new Exception("特征点不存在");
+        _trainRet = featureStorage.LoadDescMat() ?? throw new Exception("加载特征描述矩阵失败");
+
+        Debug.WriteLine("被匹配的图像生成初始化KeyPoint完成");
+        Stopwatch sw = new();
+        sw.Start();
+        _blocks = KeyPointFeatureBlockHelper.SplitFeatures(_trainMatSize, _splitRow, _splitCol, _trainKeyPoints, _trainRet);
         sw.Stop();
         Debug.WriteLine($"切割特征点耗时: {sw.ElapsedMilliseconds}ms");
     }
@@ -83,7 +135,7 @@ public class FeatureMatcher
     /// <returns></returns>
     public Point2f[]? Match(Mat queryMat, int prevX, int prevY, Mat? queryMatMask = null)
     {
-        var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(_trainMat, _splitRow, _splitCol, prevX, prevY);
+        var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(_trainMatSize, _splitRow, _splitCol, prevX, prevY);
         Debug.WriteLine($"当前坐标({prevX},{prevY})在特征块({cellRow},{cellCol})中");
         if (_lastMergedBlock == null || _lastMergedBlock.MergedCenterCellRow != cellRow || _lastMergedBlock.MergedCenterCellCol != cellCol)
         {

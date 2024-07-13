@@ -56,5 +56,11 @@
                 Height="23"
                 Click="AutoCookTestCase"
                 Content="自动烹饪图像测试" />
+        <Button Canvas.Left="10"
+                Canvas.Top="250"
+                Width="100"
+                Height="23"
+                Click="MapPathView"
+                Content="路线地图查看" />
     </Canvas>
 </Window>

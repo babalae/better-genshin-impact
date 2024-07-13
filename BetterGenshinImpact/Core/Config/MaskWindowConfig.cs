@@ -78,4 +78,10 @@ public partial class MaskWindowConfig : ObservableObject
     public Point SouthPoint { get; set; } = new(150, 233);
     public Point WestPoint { get; set; } = new(32, 109);
     public Point NorthPoint { get; set; } = new(150, -9);
+
+    /// <summary>
+    /// 显示FPS
+    /// </summary>
+    [ObservableProperty]
+    private bool _showFps = false;
 }

@@ -27,9 +27,9 @@ public class GiPath
         {
             var lastPoint = WayPointList[^1];
             var distance = MathHelper.Distance(giPathPoint.Pt, lastPoint.Pt);
-            if (distance < 10)
+            if (distance == 0 || distance > 50)
             {
-                Debug.WriteLine($"距离上个点太近: {distance}，舍弃");
+                Debug.WriteLine($"距离上个点太近或者太远: {distance}，舍弃");
                 return;
             }
         }

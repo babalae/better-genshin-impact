@@ -1,15 +1,13 @@
-﻿using System.Collections.Generic;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoPick;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Fischless.GameCapture;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Windows;
-using BetterGenshinImpact.GameTask.AutoPick;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -18,7 +16,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     [ObservableProperty]
-    private string[] _clickChatOptionNames = ["优先选择第一个选项", "优先选择最后一个选项", "不选择选项"];
+    private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
 
     [ObservableProperty]
     private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];

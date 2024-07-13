@@ -542,6 +542,11 @@ public class AutoSkipTrigger : ITaskTrigger
                 {
                     clickRegion = rs[0];
                 }
+                else if (_config.IsClickRandomChatOption())
+                {
+                    var random = new Random();
+                    clickRegion = rs[random.Next(0, rs.Count)];
+                }
 
                 ClickOcrRegion(clickRegion);
                 AutoSkipLog(clickRegion.Text);
@@ -632,7 +637,7 @@ public class AutoSkipTrigger : ITaskTrigger
     {
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
-            pageCloseRoRa.Click();
+            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
 
             AutoSkipLog("关闭弹出页");
             pageCloseRoRa.Dispose();

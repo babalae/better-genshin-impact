@@ -80,6 +80,11 @@ public partial class AutoSkipConfig : ObservableObject
         return ClickChatOption == "优先选择第一个选项";
     }
 
+    public bool IsClickRandomChatOption()
+    {
+        return ClickChatOption == "随机选择选项";
+    }
+
     public bool IsClickNoneChatOption()
     {
         return ClickChatOption == "不选择选项";
@@ -89,4 +94,14 @@ public partial class AutoSkipConfig : ObservableObject
     /// 后台运行
     /// </summary>
     [ObservableProperty] private bool _runBackgroundEnabled = false;
+
+    /// <summary>
+    /// 提交物品
+    /// </summary>
+    [ObservableProperty] private bool _submitGoodsEnabled = true;
+
+    /// <summary>
+    /// 关闭弹出层
+    /// </summary>
+    [ObservableProperty] private bool _closePopupPagedEnabled = true;
 }

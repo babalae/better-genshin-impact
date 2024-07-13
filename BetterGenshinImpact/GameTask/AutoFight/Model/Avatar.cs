@@ -145,6 +145,28 @@ public class Avatar
     }
 
     /// <summary>
+    /// 切换到本角色
+    /// 切换cd是1秒，如果切换失败，会尝试再次切换，最多尝试5次
+    /// </summary>
+    public void SwitchWithoutCts()
+    {
+        for (var i = 0; i < 10; i++)
+        {
+            var region = GetRectAreaFromDispatcher();
+            ThrowWhenDefeated(region);
+
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            if (IsActive(region) && notActiveCount == 3)
+            {
+                return;
+            }
+
+            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            Sleep(250);
+        }
+    }
+
+    /// <summary>
     /// 是否出战状态
     /// </summary>
     /// <returns></returns>

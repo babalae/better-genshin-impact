@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         Title="MaskWindow"
         Width="500"
@@ -82,7 +83,7 @@
                             Width="477"
                             Height="24"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
-                <ListView ItemsSource="{Binding StatusList}" Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ui:ListView ItemsSource="{Binding StatusList}" Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="Focusable" Value="False" />
@@ -119,7 +120,7 @@
                             </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
-                </ListView>
+                </ui:ListView>
             </ContentControl>
 
             <!--<ContentControl Width="230"
@@ -202,6 +203,23 @@
                    FontWeight="DemiBold"
                    Foreground="White"
                    Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+            <!--  展示FPS  -->
+            <Border Width="45"
+                    Height="45"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Background="#00000000"
+                    CornerRadius="4"
+                    Opacity="0.5"
+                    Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="21"
+                           Foreground="White"
+                           Text="{Binding Fps}"
+                           Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Border>
         </Canvas>
     </AdornerDecorator>
 

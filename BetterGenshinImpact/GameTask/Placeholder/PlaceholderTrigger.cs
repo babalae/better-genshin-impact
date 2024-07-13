@@ -9,6 +9,8 @@ using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
@@ -96,25 +98,29 @@ public class TestTrigger : ITaskTrigger
         //}
 
         // 小地图匹配测试
-        var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;
-        var p = MatchTemplateHelper.MatchTemplate(content.CaptureRectArea.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
-        if (p.X == 0 || p.Y == 0)
-        {
-            return;
-        }
-
-        var miniMapMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210));
-        var mask = new Mat(new Size(miniMapMat.Width, miniMapMat.Height), MatType.CV_8UC1, Scalar.Black);
-        Cv2.Circle(mask, new Point(miniMapMat.Width / 2, miniMapMat.Height / 2), 90, Scalar.White, -1);
-        var res = new Mat();
-        Cv2.BitwiseAnd(miniMapMat, miniMapMat, res, mask);
-        EntireMap.Instance.GetMapPositionAndDrawByFeatureMatch(res);
-        Cv2.ImWrite(Global.Absolute(@"log\minimap.png"), res);
+        // var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;
+        // var p = MatchTemplateHelper.MatchTemplate(content.CaptureRectArea.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
+        // if (p.X == 0 || p.Y == 0)
+        // {
+        //     return;
+        // }
+        //
+        // var miniMapMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210));
+        // var mask = new Mat(new Size(miniMapMat.Width, miniMapMat.Height), MatType.CV_8UC1, Scalar.Black);
+        // Cv2.Circle(mask, new Point(miniMapMat.Width / 2, miniMapMat.Height / 2), 90, Scalar.White, -1);
+        // var res = new Mat();
+        // Cv2.BitwiseAnd(miniMapMat, miniMapMat, res, mask);
+        // EntireMap.Instance.GetMapPositionAndDrawByFeatureMatch(res);
+        // Cv2.ImWrite(Global.Absolute(@"log\minimap.png"), res);
 
         // 大地图测试
-        // var mat = content.CaptureRectArea.SrcGreyMat;
-        // // mat = mat.Resize(new Size(240, 135));
-        // EntireMap.Instance.GetMapPositionAndDrawByFeatureMatch(mat);
+        var mat = content.CaptureRectArea.SrcGreyMat;
+        // mat = mat.Resize(new Size(240, 135));
+        Rect rect = BigMap.Instance.GetBigMapPositionByFeatureMatch(mat);
+
+        var s = 2.56;
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+            new System.Windows.Rect(rect.X / s, rect.Y / s, rect.Width / s, rect.Height / s)));
 
         // Bv.BigMapIsUnderground(content.CaptureRectArea);
     }

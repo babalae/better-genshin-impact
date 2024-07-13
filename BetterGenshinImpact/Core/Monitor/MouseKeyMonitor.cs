@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
@@ -8,7 +9,7 @@ using System.Windows.Forms;
 using Vanara.PInvoke;
 using Timer = System.Timers.Timer;
 
-namespace BetterGenshinImpact.Core;
+namespace BetterGenshinImpact.Core.Monitor;
 
 public class MouseKeyMonitor
 {
@@ -32,9 +33,9 @@ public class MouseKeyMonitor
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
     private IKeyboardMouseEvents? _globalHook;
-    private IntPtr _hWnd;
+    private nint _hWnd;
 
-    public void Subscribe(IntPtr gameHandle)
+    public void Subscribe(nint gameHandle)
     {
         _hWnd = gameHandle;
         // Note: for the application hook, use the Hook.AppEvents() instead
@@ -44,6 +45,7 @@ public class MouseKeyMonitor
         _globalHook.KeyUp += GlobalHookKeyUp;
         _globalHook.MouseDownExt += GlobalHookMouseDownExt;
         _globalHook.MouseUpExt += GlobalHookMouseUpExt;
+        _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _firstSpaceKeyDownTime = DateTime.MaxValue;
@@ -59,6 +61,7 @@ public class MouseKeyMonitor
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e);
 
         // 热键按下事件
         HotKeyDown(sender, e);
@@ -96,6 +99,7 @@ public class MouseKeyMonitor
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e);
 
         // 热键松开事件
         HotKeyUp(sender, e);
@@ -140,6 +144,7 @@ public class MouseKeyMonitor
     private void GlobalHookMouseDownExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseDown: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseDown(e);
 
         if (e.Button != MouseButtons.Left)
             if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
@@ -149,10 +154,17 @@ public class MouseKeyMonitor
     private void GlobalHookMouseUpExt(object? sender, MouseEventExtArgs e)
     {
         // Debug.WriteLine("MouseUp: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseUp(e);
 
         if (e.Button != MouseButtons.Left)
             if (MouseHook.AllMouseHooks.TryGetValue(e.Button, out var hook))
                 hook.MouseUp(sender, e);
+    }
+
+    private void GlobalHookMouseMoveExt(object? sender, MouseEventExtArgs e)
+    {
+        // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e);
     }
 
     public void Unsubscribe()
@@ -163,6 +175,7 @@ public class MouseKeyMonitor
             _globalHook.KeyUp -= GlobalHookKeyUp;
             _globalHook.MouseDownExt -= GlobalHookMouseDownExt;
             _globalHook.MouseUpExt -= GlobalHookMouseUpExt;
+            _globalHook.MouseMoveExt -= GlobalHookMouseMoveExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
         }

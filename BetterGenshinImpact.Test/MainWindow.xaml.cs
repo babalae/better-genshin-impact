@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Test.Dataset;
 using BetterGenshinImpact.Test.Simple;
 using BetterGenshinImpact.Test.Simple.AllMap;
+using BetterGenshinImpact.Test.Simple.Track;
 using BetterGenshinImpact.Test.View;
 
 namespace BetterGenshinImpact.Test;
@@ -16,7 +17,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Global.StartUpPath = @"D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\bin\x64\Debug\net7.0-windows10.0.22621.0";
+        Global.StartUpPath = @"D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\bin\x64\Debug\net8.0-windows10.0.22621.0";
     }
 
     private void ShowCameraRecWindow(object sender, System.Windows.RoutedEventArgs e)
@@ -48,7 +49,8 @@ public partial class MainWindow : Window
     {
         // KeyPointMatchTest.Test();
         // EntireMapTest.Test();
-        EntireMapTest.Storage();
+        // EntireMapTest.Storage();
+        BigMapMatchTest.Test();
     }
 
     private void MapDrawTeleportPoint(object sender, RoutedEventArgs e)
@@ -64,5 +66,10 @@ public partial class MainWindow : Window
     private void AutoCookTestCase(object sender, RoutedEventArgs e)
     {
         AutoCookTest.Test();
+    }
+
+    private void MapPathView(object sender, RoutedEventArgs e)
+    {
+        MapPathTest.Test();
     }
 }

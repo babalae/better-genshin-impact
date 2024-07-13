@@ -1,5 +1,5 @@
-﻿using BetterGenshinImpact.Core;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
@@ -202,8 +202,8 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
             _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
             _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
             _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
-            _maskWindow = MaskWindow.Instance();
-            _maskWindow.RefreshPosition(hWnd);
+            _maskWindow ??= new MaskWindow();
+            _maskWindow.Show();
             _mouseKeyMonitor.Subscribe(hWnd);
             TaskDispatcherEnabled = true;
         }
@@ -222,7 +222,15 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         if (TaskDispatcherEnabled)
         {
             _taskDispatcher.Stop();
-            _maskWindow?.Hide();
+            if (_maskWindow != null && _maskWindow.IsExist())
+            {
+                _maskWindow?.Hide();
+            }
+            else
+            {
+                _maskWindow?.Close();
+                _maskWindow = null;
+            }
             TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
         }
