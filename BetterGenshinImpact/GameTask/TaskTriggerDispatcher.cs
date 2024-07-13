@@ -105,7 +105,6 @@ namespace BetterGenshinImpact.GameTask
 
             // 初始化任务上下文(一定要在初始化触发器前完成)
             TaskContext.Instance().Init(hWnd);
-            PrintSystemInfo();
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadTriggers();
@@ -151,21 +150,6 @@ namespace BetterGenshinImpact.GameTask
             catch (Exception e)
             {
                 _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-            }
-        }
-
-        private void PrintSystemInfo()
-        {
-            var systemInfo = TaskContext.Instance().SystemInfo;
-            var width = systemInfo.GameScreenSize.Width;
-            var height = systemInfo.GameScreenSize.Height;
-            var dpiScale = TaskContext.Instance().DpiScale;
-            _logger.LogInformation("截图器已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
-                width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
-
-            if (width * 9 != height * 16)
-            {
-                _logger.LogWarning("当前游戏分辨率不是16:9，部分功能可能无法正常使用");
             }
         }
 
@@ -285,11 +269,11 @@ namespace BetterGenshinImpact.GameTask
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
                     }
 
-                    var pName = SystemControl.GetActiveProcessName();
-                    if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
-                    {
-                        maskWindow.Invoke(() => { maskWindow.Hide(); });
-                    }
+                    // var pName = SystemControl.GetActiveProcessName();
+                    // if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                    // {
+                    //     maskWindow.Invoke(() => { maskWindow.Hide(); });
+                    // }
 
                     _prevGameActive = active;
 
@@ -313,16 +297,16 @@ namespace BetterGenshinImpact.GameTask
                 }
                 else
                 {
-                    if (!_prevGameActive)
-                    {
-                        maskWindow.Invoke(() =>
-                        {
-                            if (!maskWindow.IsClosed)
-                            {
-                                maskWindow.Show();
-                            }
-                        });
-                    }
+                    // if (!_prevGameActive)
+                    // {
+                    //     maskWindow.Invoke(() =>
+                    //     {
+                    //         if (maskWindow.IsExist())
+                    //         {
+                    //             maskWindow.Show();
+                    //         }
+                    //     });
+                    // }
 
                     _prevGameActive = active;
                     // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
@@ -426,7 +410,7 @@ namespace BetterGenshinImpact.GameTask
                 _gameRect = new RECT(currentRect);
                 double scale = TaskContext.Instance().DpiScale;
                 TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
-                MaskWindow.Instance().RefreshPosition(currentRect, scale);
+                MaskWindow.Instance().RefreshPosition();
                 return true;
             }
 

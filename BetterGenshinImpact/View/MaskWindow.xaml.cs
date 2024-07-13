@@ -19,6 +19,8 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
+using BetterGenshinImpact.ViewModel;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.View;
 
@@ -35,6 +37,8 @@ public partial class MaskWindow : Window
     private nint _hWnd;
 
     private IRichTextBox? _richTextBox;
+
+    private readonly ILogger<MaskWindow> _logger = App.GetLogger<MaskWindow>();
 
     static MaskWindow()
     {
@@ -60,41 +64,27 @@ public partial class MaskWindow : Window
         return _maskWindow;
     }
 
-    public bool IsClosed { get; private set; }
-
-    protected override void OnClosed(EventArgs e)
+    public bool IsExist()
     {
-        base.OnClosed(e);
-        IsClosed = true;
+        return _maskWindow != null && PresentationSource.FromVisual(_maskWindow) != null;
     }
 
-    public void RefreshPosition(IntPtr hWnd)
+    public void RefreshPosition()
     {
-        var currentRect = SystemControl.GetCaptureRect(hWnd);
-        double dpiScale = DpiHelper.ScaleY;
-        RefreshPosition(currentRect, dpiScale);
-    }
+        nint targetHWnd = TaskContext.Instance().GameHandle;
+        _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
+        float x = DpiHelper.GetScale(targetHWnd).X;
+        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
 
-    public void RefreshPosition(RECT currentRect, double dpiScale)
-    {
-        // TODO：如果窗口被关闭则需要调用
-        // _richTextBox.RichTextBox = null!;
-
-        // TODO：重写下面代码适应BGI
-        //nint targetHWnd = TaskContext.Instance().GameHandle;
-        //_ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        //float x = DpiHelper.GetScale(targetHWnd).X;
-        //_ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
-
-        //Invoke(() =>
-        //{
-        //    Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
-        //    Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
-        //});
+        Invoke(() =>
+        {
+            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+        });
 
         // 重新计算控件位置
         // shit code 预定了
-        //WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
     public MaskWindow()
@@ -120,13 +110,25 @@ public partial class MaskWindow : Window
 
         _hWnd = new WindowInteropHelper(this).Handle;
         nint targetHWnd = TaskContext.Instance().GameHandle;
-
-        _ = User32.GetClientRect(_hWnd, out RECT rect);
         _ = User32.SetParent(_hWnd, targetHWnd);
-        _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
 
-        float x = DpiHelper.GetScale(targetHWnd).X;
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
+        RefreshPosition();
+        PrintSystemInfo();
+    }
+
+    private void PrintSystemInfo()
+    {
+        var systemInfo = TaskContext.Instance().SystemInfo;
+        var width = systemInfo.GameScreenSize.Width;
+        var height = systemInfo.GameScreenSize.Height;
+        var dpiScale = TaskContext.Instance().DpiScale;
+        _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
+            width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
+
+        if (width * 9 != height * 16)
+        {
+            _logger.LogWarning("当前游戏分辨率不是16:9，部分功能可能无法正常使用");
+        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)

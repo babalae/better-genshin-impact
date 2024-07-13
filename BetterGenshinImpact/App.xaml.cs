@@ -47,9 +47,6 @@ public partial class App : Application
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
 
-                var maskWindow = new MaskWindow();
-                services.AddSingleton(maskWindow);
-
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
