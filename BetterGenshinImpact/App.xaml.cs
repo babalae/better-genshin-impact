@@ -87,6 +87,7 @@ public partial class App : Application
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
                 services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
+                // services.AddView<DispatcherPage, DispatcherPageViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
