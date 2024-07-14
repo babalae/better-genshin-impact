@@ -16,49 +16,141 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-    <Grid>
-        <StackPanel Margin="42,16,42,12">
-            <ui:TextBlock Margin="0,0,0,8"
-                          FontTypography="BodyStrong"
-                          Text="脚本控制设置" />
-            <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             Icon="{ui:SymbolIcon CodeJsRectangle16}">
-                <ui:CardExpander.Header>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="执行脚本"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            <ui:TextBlock.Inlines>
-                                <Run Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" Text="实验性功能，仅支持JS、TS脚本。" />
-                                <Hyperlink Command="{Binding GoToAutoScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                                    <Run Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" Text="点击查看使用教程" />
-                                </Hyperlink>
-                            </ui:TextBlock.Inlines>
-                        </ui:TextBlock>
-                        <ui:Button Grid.Row="0"
-                                   Grid.RowSpan="2"
-                                   Grid.Column="1"
-                                   Margin="0,0,24,0"
-                                   Command="{Binding SwitchAutoScriptCommand}"
-                                   Content="启动" />
-                    </Grid>
-                </ui:CardExpander.Header>
-            </ui:CardExpander>
-        </StackPanel>
+    <Page.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Page.Resources>
+    <Grid Margin="8,8,8,8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="7" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!--  左侧栏  -->
+        <Grid Grid.Column="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0"
+                        BorderBrush="{DynamicResource ControlStrongFillColorDisabledBrush}"
+                        BorderThickness="0,0,0,1">
+                    <ui:TextBlock Margin="4,4,8,4"
+                                  FontTypography="BodyStrong"
+                                  Text="脚本组"
+                                  TextAlignment="Center" />
+                </Border>
+                <ui:ListView Grid.Row="1"
+                             ItemsSource="{Binding ScriptGroups, Mode=TwoWay}"
+                             SelectionMode="Single">
+                    <ui:ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Margin="8,4" Text="{Binding GroupName, Mode=OneWay}" />
+                        </DataTemplate>
+                    </ui:ListView.ItemTemplate>
+                </ui:ListView>
+            </Grid>
+        </Grid>
+
+        <!--  分割  -->
+        <GridSplitter Grid.Column="1"
+                      Width="2"
+                      HorizontalAlignment="Stretch"
+                      Background="{DynamicResource ControlStrongFillColorDisabledBrush}" />
+        <!--  右侧栏  -->
+        <Border Grid.Column="2"
+                Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1,1,1,1"
+                CornerRadius="8">
+            <Grid Margin="8,8,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <ui:TextBlock Grid.Row="0"
+                              Margin="0,0,0,8"
+                              FontTypography="BodyStrong"
+                              Text="XXX组 配置" />
+                <ui:TextBlock Grid.Row="1"
+                              Margin="0,0,0,8"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        点击查看使用教程
+                    </Hyperlink>
+                </ui:TextBlock>
+
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <ui:Button Command="{Binding StartRecordCommand}"
+                               Content="运行此组配置"
+                               Icon="{ui:SymbolIcon Play24}"
+                               IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}" />
+                    <Separator Width="10" Opacity="0" />
+                    <ui:Button Command="{Binding StopRecordCommand}"
+                               Content="停止运行"
+                               Icon="{ui:SymbolIcon Stop24}"
+                               IsEnabled="{Binding IsRecording}" />
+                    <Separator Width="10" Opacity="0" />
+                    <ui:Button Command="{Binding OpenScriptFolderCommand}"
+                               Content="打开脚本目录"
+                               Icon="{ui:SymbolIcon FolderOpen24}" />
+                </StackPanel>
+
+                <Separator Grid.Row="3"
+                           Height="8"
+                           Opacity="0" />
+
+                <Grid Grid.Row="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="20" />
+                    </Grid.ColumnDefinitions>
+                    <Grid x:Name="Col1" Grid.Column="0" />
+                    <Grid x:Name="Col2" Grid.Column="1" />
+                    <Grid x:Name="Col3" Grid.Column="2" />
+                </Grid>
+                <ui:ListView Grid.Row="5"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Stretch"
+                             ItemsSource="{Binding ScriptItems}"
+                             SelectionMode="Single">
+                    <ListView.View>
+                        <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
+                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="执行优先级" />
+                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="脚本名称" />
+                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="执行周期" />
+                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="启用状态" />
+                        </GridView>
+                    </ListView.View>
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="{Binding DeleteScriptCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="删除" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListView.Style>
+                        <Style TargetType="{x:Type ListView}">
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+                    </ListView.Style>
+                </ui:ListView>
+            </Grid>
+        </Border>
     </Grid>
 </Page>

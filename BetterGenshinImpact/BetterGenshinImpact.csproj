@@ -44,6 +44,8 @@
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.8.0.20230708" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.8.0.20230708" />
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
+		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
+		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="PresentMonFps" Version="2.0.1" />
 		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
@@ -62,8 +64,7 @@
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
-		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
-		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
+
 	</ItemGroup>
 
 	<ItemGroup>
