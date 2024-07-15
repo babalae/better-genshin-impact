@@ -40,7 +40,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
             }
             else
             {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
+                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
 
                 _recordTaskCts?.Cancel();
                 _recordTask = null;

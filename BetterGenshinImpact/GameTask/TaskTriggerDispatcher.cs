@@ -56,7 +56,7 @@ namespace BetterGenshinImpact.GameTask
         /// <summary>
         /// 仅捕获模式
         /// </summary>
-        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.OnlyTrigger;
+        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.NormalTrigger;
 
         private static readonly object _bitmapLocker = new();
 
@@ -319,7 +319,7 @@ namespace BetterGenshinImpact.GameTask
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
 
-                if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.OnlyTrigger
+                if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.NormalTrigger
                     && (_triggers == null || !_triggers.Exists(t => t.IsEnabled)))
                 {
                     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
@@ -446,7 +446,18 @@ namespace BetterGenshinImpact.GameTask
 
         public void SetCacheCaptureMode(DispatcherCaptureModeEnum mode)
         {
-            _dispatcherCacheCaptureMode = mode;
+            if (mode is DispatcherCaptureModeEnum.Start)
+            {
+                this.StartTimer();
+            }
+            else if (mode is DispatcherCaptureModeEnum.Stop)
+            {
+                this.StopTimer();
+            }
+            else
+            {
+                _dispatcherCacheCaptureMode = mode;
+            }
         }
 
         public DispatcherCaptureModeEnum GetCacheCaptureMode()

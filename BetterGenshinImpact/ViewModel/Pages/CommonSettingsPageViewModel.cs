@@ -53,7 +53,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     {
         if (Config.CommonConfig.ScreenshotEnabled)
         {
-            if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.OnlyTrigger)
+            if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.NormalTrigger)
             {
                 TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
             }

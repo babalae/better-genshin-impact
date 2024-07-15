@@ -140,7 +140,7 @@ public class AutoDomainTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
             Logger.LogInformation("→ {Text}", "自动秘境结束");
 

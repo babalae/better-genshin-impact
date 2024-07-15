@@ -84,7 +84,7 @@ public class AutoFightTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动战斗结束");
 

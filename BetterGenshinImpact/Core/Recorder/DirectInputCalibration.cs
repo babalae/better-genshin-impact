@@ -54,7 +54,7 @@ public class DirectInputCalibration
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "视角校准结束");
 
