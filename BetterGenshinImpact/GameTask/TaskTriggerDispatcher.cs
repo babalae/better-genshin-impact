@@ -123,33 +123,12 @@ namespace BetterGenshinImpact.GameTask
                 _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
             }
 
-            // 读取游戏注册表配置
-            ReadGameSettings();
-
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
             if (!_timer.Enabled)
             {
                 _timer.Start();
-            }
-        }
-
-        private void ReadGameSettings()
-        {
-            try
-            {
-                SettingsContainer settings = new();
-                TaskContext.Instance().GameSettings = settings;
-                var lang = settings.Language?.TextLang;
-                if (lang != null && lang != TextLanguage.SimplifiedChinese)
-                {
-                    _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             }
         }
 

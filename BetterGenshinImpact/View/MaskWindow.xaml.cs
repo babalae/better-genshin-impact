@@ -21,6 +21,7 @@ using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Genshin.Settings;
 
 namespace BetterGenshinImpact.View;
 
@@ -128,6 +129,27 @@ public partial class MaskWindow : Window
         if (width * 9 != height * 16)
         {
             _logger.LogWarning("当前游戏分辨率不是16:9，部分功能可能无法正常使用");
+        }
+
+        // 读取游戏注册表配置
+        ReadGameSettings();
+    }
+
+    private void ReadGameSettings()
+    {
+        try
+        {
+            SettingsContainer settings = new();
+            TaskContext.Instance().GameSettings = settings;
+            var lang = settings.Language?.TextLang;
+            if (lang != null && lang != TextLanguage.SimplifiedChinese)
+            {
+                _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
     }
 

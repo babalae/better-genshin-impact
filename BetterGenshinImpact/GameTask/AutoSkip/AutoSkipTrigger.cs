@@ -140,47 +140,24 @@ public class AutoSkipTrigger : ITaskTrigger
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
-        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
+        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.ChatReviewButtonRo);
 
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
-        // 播放中图标消失3s内OCR判断文字
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
-            // 找播放中的文字
-            content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
-            if (!isPlaying)
+            // 关闭弹出页
+            ClosePopupPage(content);
+
+            // 自动剧情点击3s内判断
+            if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
             {
-                using var textRa = content.CaptureRectArea.DeriveCrop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
-                // 过滤出白色
-                var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(textRa.SrcMat, new Scalar(0, 0, 170), new Scalar(255, 80, 245));
-                var result = OcrFactory.Paddle.Ocr(hsvFilterMat);
-                if (result.Contains("播") || result.Contains("番") || result.Contains("放") || result.Contains("中") || result.Contains("潘") || result.Contains("故"))
+                // 提交物品
+                if (SubmitGoods(content))
                 {
-                    textRa.DrawSelf("PlayingText");
-                    isPlaying = true;
+                    return;
                 }
             }
-
-            if (!isPlaying)
-            {
-                // 关闭弹出页
-                ClosePopupPage(content);
-
-                // 自动剧情点击3s内判断
-                if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
-                {
-                    // 提交物品
-                    if (SubmitGoods(content))
-                    {
-                        return;
-                    }
-                }
-            }
-        }
-        else
-        {
-            VisionContext.Instance().DrawContent.RemoveRect("PlayingText");
         }
 
         if (isPlaying)
