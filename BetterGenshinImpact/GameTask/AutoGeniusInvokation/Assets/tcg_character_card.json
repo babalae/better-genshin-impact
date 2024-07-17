@@ -2416,6 +2416,83 @@
         ]
     },
     {
+        "id": 1313,
+        "nameEn": "chevreuse",
+        "type": "character",
+        "name": "夏沃蕾",
+        "hp": 10,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "line_bayonet_thrust_ex",
+                "name": "线列枪刺·改",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "shortrange_rapid_interdiction_fire",
+                "name": "近迫式急促拦射",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "ring_of_bursting_grenades",
+                "name": "圆阵掷弹爆轰术",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "vertical_force_coordination",
+                "name": "纵阵武力统筹",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1401,
         "nameEn": "fischl",
         "type": "character",
@@ -4310,6 +4387,83 @@
         ]
     },
     {
+        "id": 1608,
+        "nameEn": "navia",
+        "type": "character",
+        "name": "娜维娅",
+        "hp": 10,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "blunt_refusal",
+                "name": "直率的辞绝",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ceremonial_crystalshot",
+                "name": "典仪式晶火",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "as_the_sunlit_skys_singing_salute",
+                "name": "如霰澄天的鸣礼",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "mutual_assistance_network",
+                "name": "互助关系网",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1701,
         "nameEn": "collei",
         "type": "character",
@@ -5092,6 +5246,83 @@
             {
                 "nameEn": "cryo_crystal_core",
                 "name": "冰晶核心",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2104,
+        "nameEn": "frost_operative",
+        "type": "character",
+        "name": "愚人众·霜役人",
+        "hp": 10,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "swift_point",
+                "name": "迅捷剑锋",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "frosty_interjection",
+                "name": "霜刃截击",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "thorny_onslaught",
+                "name": "掠袭之刺",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "bloodbonded_shadow",
+                "name": "血契掠影",
                 "skillTag": [
                     "被动技能"
                 ],
