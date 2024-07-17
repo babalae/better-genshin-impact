@@ -7,7 +7,10 @@ namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
 public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 {
     public RecognitionObject StopAutoButtonRo;
-    public RecognitionObject ChatReviewButtonRo;
+
+    // public RecognitionObject ChatReviewButtonRo;
+    public RecognitionObject DisabledUiButtonRo;
+
     public RecognitionObject PlayingTextRo;
 
     public Rect OptionRoi;
@@ -45,12 +48,20 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             DrawOnWindow = true
         }.InitTemplate();
 
-        ChatReviewButtonRo = new RecognitionObject
+        // ChatReviewButtonRo = new RecognitionObject
+        // {
+        //     Name = "ChatReviewButton",
+        //     RecognitionType = RecognitionTypes.TemplateMatch,
+        //     TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "chat_review.png"),
+        //     RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 8),
+        //     DrawOnWindow = true
+        // }.InitTemplate();
+        DisabledUiButtonRo = new RecognitionObject
         {
-            Name = "ChatReviewButton",
+            Name = "DisabledUiButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "chat_review.png"),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 8),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "disabled_ui.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 3, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
 

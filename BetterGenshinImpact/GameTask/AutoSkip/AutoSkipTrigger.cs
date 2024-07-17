@@ -140,7 +140,7 @@ public class AutoSkipTrigger : ITaskTrigger
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
-        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.ChatReviewButtonRo);
+        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.DisabledUiButtonRo);
 
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
