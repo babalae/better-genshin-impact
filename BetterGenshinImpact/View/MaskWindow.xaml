@@ -215,6 +215,7 @@
                     Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
+                           FontFamily="{StaticResource DigitalThemeFontFamily}"
                            FontSize="21"
                            Foreground="White"
                            Text="{Binding Fps}"
