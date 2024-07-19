@@ -59,8 +59,8 @@
                       VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />-->
 
             <ContentControl x:Name="LogTextBoxWrapper"
-                            Canvas.Left="20"
-                            Canvas.Top="500"
+                            Canvas.Left="-500"
+                            Canvas.Top="-500"
                             Width="477"
                             Height="188"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
@@ -78,8 +78,8 @@
 
 
             <ContentControl x:Name="StatusWrapper"
-                            Canvas.Left="20"
-                            Canvas.Top="476"
+                            Canvas.Left="-476"
+                            Canvas.Top="-476"
                             Width="477"
                             Height="24"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">

@@ -80,7 +80,9 @@ public partial class MaskWindow : Window
         Invoke(() =>
         {
             Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+            Canvas.SetLeft(LogTextBoxWrapper, 20);
             Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+            Canvas.SetLeft(StatusWrapper, 20);
         });
 
         // 重新计算控件位置
