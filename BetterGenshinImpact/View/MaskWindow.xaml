@@ -205,8 +205,7 @@
                        Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!--  展示FPS  -->
-            <Border Width="45"
-                    Height="45"
+            <Border Margin="4,4,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     Background="#00000000"
@@ -216,10 +215,9 @@
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource DigitalThemeFontFamily}"
-                           FontSize="21"
+                           FontSize="16"
                            Foreground="White"
-                           Text="{Binding Fps}"
-                           Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                           Text="{Binding Fps}" />
             </Border>
         </Canvas>
     </AdornerDecorator>
