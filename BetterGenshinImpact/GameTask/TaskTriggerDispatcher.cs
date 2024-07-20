@@ -166,9 +166,9 @@ namespace BetterGenshinImpact.GameTask
                 throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
             }
 
-            var maskWindow = MaskWindow.Instance();
-            maskWindow.LogBox.IsHitTestVisible = false;
-            maskWindow.Invoke(() => { maskWindow.Show(); });
+            // var maskWindow = MaskWindow.Instance();
+            // maskWindow.LogBox.IsHitTestVisible = false;
+            // maskWindow.Invoke(() => { maskWindow.Show(); });
             if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
             {
                 AutoGeniusInvokationTask.Start((GeniusInvokationTaskParam)param);

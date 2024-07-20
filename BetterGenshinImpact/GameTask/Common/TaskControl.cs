@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -65,6 +66,38 @@ public class TaskControl
             }
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
+        if (cts is { IsCancellationRequested: true })
+        {
+            throw new NormalEndException("取消自动任务");
+        }
+    }
+
+    public static async Task Delay(int millisecondsTimeout, CancellationTokenSource cts)
+    {
+        if (cts is { IsCancellationRequested: true })
+        {
+            throw new NormalEndException("取消自动任务");
+        }
+
+        if (millisecondsTimeout <= 0)
+        {
+            return;
+        }
+
+        NewRetry.Do(() =>
+        {
+            if (cts is { IsCancellationRequested: true })
+            {
+                throw new NormalEndException("取消自动任务");
+            }
+
+            if (!SystemControl.IsGenshinImpactActiveByProcess())
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+                throw new RetryException("当前获取焦点的窗口不是原神");
+            }
+        }, TimeSpan.FromSeconds(1), 100);
+        await Task.Delay(millisecondsTimeout, cts.Token);
         if (cts is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
