@@ -1,12 +1,13 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.Common;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using System.Threading;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -15,7 +16,7 @@ namespace BetterGenshinImpact.GameTask;
 /// </summary>
 public class TaskRunner
 {
-    private readonly ILogger<BaseTaskThread> _logger = App.GetLogger<BaseTaskThread>();
+    private readonly ILogger<TaskRunner> _logger = App.GetLogger<TaskRunner>();
 
     private readonly DispatcherTimerOperationEnum _timerOperation = DispatcherTimerOperationEnum.None;
 
@@ -49,11 +50,16 @@ public class TaskRunner
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
 
+            // 激活原神窗口
+            SystemControl.ActivateWindow();
+
             // 初始化
             Init();
 
             // 发送运行任务通知
             SendNotification();
+
+            CancellationContext.Instance.Set();
 
             await action();
         }
@@ -74,12 +80,19 @@ public class TaskRunner
             _logger.LogInformation("→ {Text}", _name + "任务结束");
             SendNotification();
 
+            CancellationContext.Instance.Clear();
+
             // 释放锁
             if (hasLock)
             {
                 TaskSemaphore.Release();
             }
         }
+    }
+
+    public void FireAndForget(Func<Task> action)
+    {
+        Task.Run(() => RunAsync(action));
     }
 
     public void Init()
@@ -91,6 +104,7 @@ public class TaskRunner
         else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
+            Sleep(TaskContext.Instance().Config.TriggerInterval * 5, CancellationContext.Instance.Cts); // 等待缓存图像
         }
     }
 

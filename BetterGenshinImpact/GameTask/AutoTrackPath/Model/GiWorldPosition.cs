@@ -28,6 +28,6 @@ public class GiWorldPosition
     /// </summary>
     public decimal[] Position { get; set; } = new decimal[3];
 
-    public double X => (double)Position[2]; // a
-    public double Y => (double)Position[0]; // c
+    public double X => (double)Position[2]; // c
+    public double Y => (double)Position[0]; // a
 }

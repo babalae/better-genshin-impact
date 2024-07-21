@@ -28,7 +28,7 @@ public class WebpagePanel : UserControl
             {
                 CreationProperties = new CoreWebView2CreationProperties
                 {
-                    UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2_Data\\")
+                    UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\")
                 }
             };
             _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;

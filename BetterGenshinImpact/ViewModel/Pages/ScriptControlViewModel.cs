@@ -1,17 +1,17 @@
-﻿using BetterGenshinImpact.Model;
+﻿using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using BetterGenshinImpact.Script.Dependence;
-using Vanara.PInvoke;
-using Wpf.Ui.Controls;
-using static System.Net.Mime.MediaTypeNames;
-using Microsoft.ClearScript.JavaScript;
+using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using Wpf.Ui.Controls;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using System;
-using BetterGenshinImpact.Script;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -49,12 +49,22 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         EngineExtend.InitHost(engine);
 
         // 执行脚本
-        engine.Execute(@"
-(async function() {
-    log.info('等待 {m} s', 3);
-    await sleep(3000);
-    log.info('test {name}', '你好');
-})();
-");
+        // new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage).FireAndForget(async () =>
+        //    await new TpTask(CancellationContext.Instance.Cts)
+        //        .Tp(3452.310059, 2290.465088));
+
+        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage).FireAndForget(async () =>
+        {
+            await (Task)engine.Evaluate(@"
+            (async function() {
+                log.info('等待 {m} s', 1);
+                await sleep(1000);
+                log.info('测试 {name}', 'TP方法');
+                await genshin.tp(3452.310059,2290.465088);
+                log.warn('TP完成');
+                await sleep(1000);
+            })();
+            ");
+        });
     }
 }

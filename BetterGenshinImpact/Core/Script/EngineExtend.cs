@@ -1,8 +1,8 @@
-﻿using BetterGenshinImpact.Script.Dependence;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.ClearScript;
+using BetterGenshinImpact.Core.Script.Dependence;
 
-namespace BetterGenshinImpact.Script;
+namespace BetterGenshinImpact.Core.Script;
 
 public class EngineExtend
 {
@@ -11,7 +11,7 @@ public class EngineExtend
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
         // 添加我的自定义实例化对象
-        engine.AddHostObject("gi", new Script.Dependence.Genshin());
+        engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
 
         // 添加方法

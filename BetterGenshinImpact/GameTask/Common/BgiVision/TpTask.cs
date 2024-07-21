@@ -45,7 +45,7 @@ public class TpTask(CancellationTokenSource cts)
         // M 打开地图识别当前位置，中心点为当前位置
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
 
-        Sleep(1000);
+        await Delay(1000, cts);
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
         await SwitchRecentlyCountryMap(x, y);
@@ -179,6 +179,10 @@ public class TpTask(CancellationTokenSource cts)
         if (mapScaleButtonRa.IsExist())
         {
             var rect = BigMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
+            if (rect == Rect.Empty)
+            {
+                throw new InvalidOperationException("识别大地图位置失败");
+            }
             Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
             const int s = 4 * 2; // 相对1024做4倍缩放
             return MapCoordinate.Main2048ToGame(new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s));
@@ -235,14 +239,14 @@ public class TpTask(CancellationTokenSource cts)
         if (minCountry != "当前位置")
         {
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-            await Delay(200, cts);
+            await Delay(300, cts);
             var ra = GetRectAreaFromDispatcher();
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,
                 RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
             });
-            list.FirstOrDefault(r => r.Text.Contains(minCountry))?.Click();
+            list.FirstOrDefault(r => r.Text.Length == minCountry.Length && !r.Text.Contains("委托") && r.Text.Contains(minCountry))?.Click();
             Logger.LogInformation("切换到区域：{Country}", minCountry);
             await Delay(500, cts);
         }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace BetterGenshinImpact.Script.Dependence;
+namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Log
 {
