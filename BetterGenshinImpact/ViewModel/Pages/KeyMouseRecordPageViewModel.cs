@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -110,7 +111,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         try
         {
             var s = await File.ReadAllTextAsync(Path.Combine(scriptPath, name));
-            await KeyMouseMacroPlayer.PlayMacro(s);
+            await KeyMouseMacroPlayer.PlayMacro(s, new CancellationToken());
         }
         catch (Exception e)
         {

@@ -463,12 +463,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    _logger.LogInformation("开始重放脚本");
-                    Task.Run(async () =>
-                    {
-                        await KeyMouseMacroPlayer.PlayMacro(m);
-                        _logger.LogInformation("播放脚本结束");
-                    });
+                    // _logger.LogInformation("开始重放脚本");
+                    // Task.Run(async () =>
+                    // {
+                    //     await KeyMouseMacroPlayer.PlayMacro(m);
+                    //     _logger.LogInformation("播放脚本结束");
+                    // });
                 }
             ));
         }

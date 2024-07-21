@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Vanara.PInvoke;
@@ -13,18 +14,18 @@ namespace BetterGenshinImpact.Core.Recorder;
 
 public class KeyMouseMacroPlayer
 {
-    public static async Task PlayMacro(string macro)
+    public static async Task PlayMacro(string macro, CancellationToken ct)
     {
         var macroEvents = JsonSerializer.Deserialize<List<MacroEvent>>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
-        await PlayMacro(macroEvents);
+        await PlayMacro(macroEvents, ct);
     }
 
-    public static async Task PlayMacro(List<MacroEvent> macroEvents)
+    public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)
     {
         WorkingArea = PrimaryScreen.WorkingArea;
         foreach (var e in macroEvents)
         {
-            await Task.Delay((int)Math.Round(e.Time));
+            await Task.Delay((int)Math.Round(e.Time), ct);
             switch (e.Type)
             {
                 case MacroEventType.KeyDown:
