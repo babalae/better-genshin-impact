@@ -439,7 +439,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                     // HWND hWnd = GetForegroundWindow();
                     //
-                    // uint threadid = GetWindowThreadProcessId(hWnd, out var _);
+                    // uint threadid = GetWindowThreadProcessId(hWnd, out var _z`);
                     //
                     // GUITHREADINFO lpgui = new GUITHREADINFO();
                     // lpgui.cbSize = (uint)Marshal.SizeOf(lpgui);
@@ -464,11 +464,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) =>
                 {
                     // _logger.LogInformation("开始重放脚本");
-                    // Task.Run(async () =>
-                    // {
-                    //     await KeyMouseMacroPlayer.PlayMacro(m);
-                    //     _logger.LogInformation("播放脚本结束");
-                    // });
+                    User32.SetWindowPos(TaskContext.Instance().GameHandle, new HWND(), 0, 0, 1920, 1080, SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_NOZORDER);
                 }
             ));
         }

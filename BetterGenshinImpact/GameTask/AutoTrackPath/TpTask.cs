@@ -12,10 +12,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
-namespace BetterGenshinImpact.GameTask.Common.BgiVision;
+namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
 /// <summary>
 /// 传送任务
@@ -43,20 +44,19 @@ public class TpTask(CancellationTokenSource cts)
         Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", tpX, tpY, x, y);
 
         // M 打开地图识别当前位置，中心点为当前位置
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
-
-        await Delay(1000, cts);
+        using var ra1 = GetRectAreaFromDispatcher();
+        if (!Bv.IsInBigMapUi(ra1))
+        {
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
+            await Delay(1000, cts);
+        }
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
         await SwitchRecentlyCountryMap(x, y);
 
-        // 移动地图到指定传送点位置
-        // Debug.WriteLine("移动地图到指定传送点位置");
-        // MoveMapTo(x, y);
-
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
-        while (!bigMapInAllMapRect.Contains((int)x, (int)y))
+        while (!bigMapInAllMapRect.Contains(x, y))
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");

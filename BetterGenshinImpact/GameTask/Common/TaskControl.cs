@@ -104,17 +104,6 @@ public class TaskControl
         }
     }
 
-    public static void SleepWithoutThrow(int millisecondsTimeout, CancellationTokenSource cts)
-    {
-        try
-        {
-            Sleep(millisecondsTimeout, cts);
-        }
-        catch
-        {
-        }
-    }
-
     private static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
     {
         var bitmap = gameCapture?.Capture();

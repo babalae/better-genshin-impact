@@ -97,7 +97,7 @@ public class TaskRunner
 
     public void Init()
     {
-        if (_timerOperation == DispatcherTimerOperationEnum.StopTimer)
+        if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Stop);
         }
@@ -111,7 +111,7 @@ public class TaskRunner
     public void End()
     {
         VisionContext.Instance().DrawContent.ClearAll();
-        if (_timerOperation == DispatcherTimerOperationEnum.StopTimer)
+        if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Start);
         }

@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
