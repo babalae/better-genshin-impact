@@ -128,7 +128,7 @@ public class Avatar
                 return;
             }
 
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
@@ -152,7 +152,7 @@ public class Avatar
     {
         for (var i = 0; i < 10; i++)
         {
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
@@ -301,7 +301,7 @@ public class Avatar
 
             Sleep(200, Cts);
 
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
             var cd = GetSkillCurrentCd(region);
             if (cd > 0)
@@ -342,7 +342,7 @@ public class Avatar
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
             Sleep(200, Cts);
 
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (notActiveCount == 0)

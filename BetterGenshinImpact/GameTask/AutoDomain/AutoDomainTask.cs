@@ -74,7 +74,7 @@ public class AutoDomainTask
             Init();
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
 
-            var combatScenes = new CombatScenes().InitializeTeam(GetRectAreaFromDispatcher());
+            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
 
             // 前置进入秘境
             EnterDomain();
@@ -185,7 +185,7 @@ public class AutoDomainTask
     {
         if (!combatScenes.CheckTeamInitialized())
         {
-            combatScenes.InitializeTeam(GetRectAreaFromDispatcher());
+            combatScenes.InitializeTeam(CaptureToRectArea());
             if (!combatScenes.CheckTeamInitialized())
             {
                 throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。或者直接使用强制指定当前队伍角色的功能。");
@@ -197,7 +197,7 @@ public class AutoDomainTask
     {
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
-        using var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
+        using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
             Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
@@ -210,7 +210,7 @@ public class AutoDomainTask
         while (retryTimes < 20 && clickCount < 2)
         {
             retryTimes++;
-            using var confirmRectArea = GetRectAreaFromDispatcher().Find(fightAssets.ConfirmRa);
+            using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 confirmRectArea.Click();
@@ -231,7 +231,7 @@ public class AutoDomainTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            using var cactRectArea = GetRectAreaFromDispatcher().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
+            using var cactRectArea = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
                 Sleep(1000, _taskParam.Cts);
@@ -265,7 +265,7 @@ public class AutoDomainTask
             return;
         }
 
-        await Task.Run(() =>
+        await Task.Run((Action)(() =>
         {
             _simulator.KeyDown(VK.VK_W);
             Sleep(20);
@@ -279,7 +279,7 @@ public class AutoDomainTask
             {
                 while (!_taskParam.Cts.Token.IsCancellationRequested)
                 {
-                    using var fRectArea = GetRectAreaFromDispatcher().Find(AutoPickAssets.Instance.FRo);
+                    using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _taskParam.Cts);
@@ -301,7 +301,7 @@ public class AutoDomainTask
                     Simulation.SendInput.Keyboard.KeyUp(VK.VK_SHIFT);
                 }
             }
-        });
+        }));
     }
 
     private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
@@ -386,7 +386,7 @@ public class AutoDomainTask
 
     private bool IsDomainEnd()
     {
-        using var ra = GetRectAreaFromDispatcher();
+        using var ra = CaptureToRectArea();
 
         var endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
@@ -440,7 +440,7 @@ public class AutoDomainTask
             var backwardsAndForwardsCount = 0;
             while (!_taskParam.Cts.Token.IsCancellationRequested)
             {
-                var treeRect = DetectTree(GetRectAreaFromDispatcher());
+                var treeRect = DetectTree(CaptureToRectArea());
                 if (treeRect != Rect.Empty)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
@@ -610,7 +610,7 @@ public class AutoDomainTask
             var started = false;
             while (!cts.Token.IsCancellationRequested)
             {
-                using var captureRegion = GetRectAreaFromDispatcher();
+                using var captureRegion = CaptureToRectArea();
                 var angle = CameraOrientation.Compute(captureRegion.SrcGreyMat);
                 CameraOrientation.DrawDirection(captureRegion, angle);
                 if (angle is >= 356 or <= 4)
@@ -685,7 +685,7 @@ public class AutoDomainTask
                 break;
             }
 
-            var useCondensedResinRa = GetRectAreaFromDispatcher().Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
+            var useCondensedResinRa = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
             if (!useCondensedResinRa.IsEmpty())
             {
                 useCondensedResinRa.Click();
@@ -710,7 +710,7 @@ public class AutoDomainTask
             GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
 
             // 优先点击继续
-            var ra = GetRectAreaFromDispatcher();
+            var ra = CaptureToRectArea();
             var confirmRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
@@ -764,7 +764,7 @@ public class AutoDomainTask
         var condensedResinCount = 0;
         var fragileResinCount = 0;
 
-        var ra = GetRectAreaFromDispatcher();
+        var ra = CaptureToRectArea();
         // 浓缩树脂
         var condensedResinCountRa = ra.Find(AutoFightContext.Instance.FightAssets.CondensedResinCountRa);
         if (!condensedResinCountRa.IsEmpty())

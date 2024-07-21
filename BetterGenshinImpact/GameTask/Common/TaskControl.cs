@@ -104,7 +104,7 @@ public class TaskControl
         }
     }
 
-    private static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+    public static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
     {
         var bitmap = gameCapture?.Capture();
         // wgc 缓冲区设置的2 所以至少截图3次
@@ -140,12 +140,6 @@ public class TaskControl
         }
     }
 
-    [Obsolete]
-    public static Bitmap CaptureGameBitmap()
-    {
-        return CaptureGameBitmap(TaskTriggerDispatcher.GlobalGameCapture);
-    }
-
     private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
     {
         var bitmap = CaptureGameBitmap(gameCapture);
@@ -158,10 +152,10 @@ public class TaskControl
     //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
     // }
 
-    public static ImageRegion CaptureToRectArea()
-    {
-        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture).CaptureRectArea;
-    }
+    // public static ImageRegion CaptureToRectArea()
+    // {
+    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture).CaptureRectArea;
+    // }
 
     // /// <summary>
     // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
@@ -173,12 +167,21 @@ public class TaskControl
     //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
     // }
 
+    // /// <summary>
+    // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    // /// </summary>
+    // /// <returns></returns>
+    // public static ImageRegion GetRectAreaFromDispatcher()
+    // {
+    //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent().CaptureRectArea;
+    // }
+
     /// <summary>
-    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    /// 自动判断当前运行上下文中截图方式，并选择合适的截图方式返回
     /// </summary>
     /// <returns></returns>
-    public static ImageRegion GetRectAreaFromDispatcher()
+    public static ImageRegion CaptureToRectArea()
     {
-        return TaskTriggerDispatcher.Instance().GetLastCaptureContent().CaptureRectArea;
+        return TaskTriggerDispatcher.Instance().CaptureToRectArea();
     }
 }
