@@ -23,13 +23,13 @@ set "setupFile=BetterGI_Setup_v%b%.exe"
 
 echo [build app using vs2022]
 cd /d %~dp0
-rd /s /q ..\BetterGenshinImpact\bin\x64\Release\net7.0-windows10.0.22621.0\publish\win-x64\
+rd /s /q ..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\
 cd ..\
 dotnet publish -c Release -p:PublishProfile=FolderProfile
 
 echo [pack app using 7z]
 cd /d %~dp0
-cd /d ..\BetterGenshinImpact\bin\x64\Release\net7.0-windows10.0.22621.0\publish\win-x64\
+cd /d ..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\
 xcopy * "%tmpfolder%" /E /C /I /Y
 cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
