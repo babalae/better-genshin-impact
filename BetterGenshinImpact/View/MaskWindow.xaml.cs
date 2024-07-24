@@ -22,6 +22,7 @@ using FontFamily = System.Windows.Media.FontFamily;
 using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Genshin.Settings;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.View;
 
@@ -121,6 +122,7 @@ public partial class MaskWindow : Window
 
     private void PrintSystemInfo()
     {
+        _logger.LogInformation("更好的原神 {Version}", Global.Version);
         var systemInfo = TaskContext.Instance().SystemInfo;
         var width = systemInfo.GameScreenSize.Width;
         var height = systemInfo.GameScreenSize.Height;

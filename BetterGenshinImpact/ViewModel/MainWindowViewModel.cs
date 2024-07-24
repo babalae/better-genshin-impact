@@ -60,7 +60,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [SuppressMessage("CommunityToolkit.Mvvm.SourceGenerators.RelayCommandGenerator", "MVVMTK0039:Async void returning method annotated with RelayCommand")]
     private async void OnLoaded()
     {
-        _logger.LogInformation("更好的原神 {Version}", Global.Version);
         try
         {
             await Task.Run(() =>
