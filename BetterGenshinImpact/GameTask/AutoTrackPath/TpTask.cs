@@ -44,7 +44,7 @@ public class TpTask(CancellationTokenSource cts)
         Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", tpX, tpY, x, y);
 
         // M 打开地图识别当前位置，中心点为当前位置
-        using var ra1 = GetRectAreaFromDispatcher();
+        using var ra1 = CaptureToRectArea();
         if (!Bv.IsInBigMapUi(ra1))
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
@@ -73,7 +73,7 @@ public class TpTask(CancellationTokenSource cts)
         var clickX = (int)((picX - picRect.X) / picRect.Width * captureRect.Width);
         var clickY = (int)((picY - picRect.Y) / picRect.Height * captureRect.Height);
         Logger.LogInformation("点击传送点：({X},{Y})", clickX, clickY);
-        using var ra = GetRectAreaFromDispatcher();
+        using var ra = CaptureToRectArea();
         ra.ClickTo(clickX, clickY);
 
         // 触发一次快速传送功能
@@ -174,7 +174,7 @@ public class TpTask(CancellationTokenSource cts)
     public Rect GetBigMapRect()
     {
         // 判断是否在地图界面
-        using var ra = GetRectAreaFromDispatcher();
+        using var ra = CaptureToRectArea();
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
@@ -240,7 +240,7 @@ public class TpTask(CancellationTokenSource cts)
         {
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
             await Delay(300, cts);
-            var ra = GetRectAreaFromDispatcher();
+            var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,

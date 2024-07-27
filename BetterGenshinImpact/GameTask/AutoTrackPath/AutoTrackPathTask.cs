@@ -124,15 +124,15 @@ public class AutoTrackPathTask
 
         // 2. 等待传送完成
         Sleep(1000);
-        NewRetry.Do(() =>
+        NewRetry.Do((Action)(() =>
         {
-            var ra = GetRectAreaFromDispatcher();
+            var ra = TaskControl.CaptureToRectArea();
             var miniMapMat = GetMiniMapMat(ra);
             if (miniMapMat == null)
             {
                 throw new RetryException("等待传送完成");
             }
-        }, TimeSpan.FromSeconds(1), 100);
+        }), TimeSpan.FromSeconds(1), 100);
         Logger.LogInformation("传送完成");
         Sleep(1000);
 
@@ -194,7 +194,7 @@ public class AutoTrackPathTask
         {
             while (!_taskParam.Cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
             {
-                using var ra = GetRectAreaFromDispatcher();
+                using var ra = CaptureToRectArea();
                 _motionStatus = Bv.GetMotionStatus(ra);
 
                 // var miniMapMat = GetMiniMapMat(ra);
@@ -222,7 +222,7 @@ public class AutoTrackPathTask
             var currIndex = 0;
             while (!_taskParam.Cts.IsCancellationRequested)
             {
-                var ra = GetRectAreaFromDispatcher();
+                var ra = CaptureToRectArea();
                 var miniMapMat = GetMiniMapMat(ra);
                 if (miniMapMat == null)
                 {
@@ -362,7 +362,7 @@ public class AutoTrackPathTask
 
     public int GetCharacterOrientationAngle()
     {
-        var ra = GetRectAreaFromDispatcher();
+        var ra = CaptureToRectArea();
         var miniMapMat = GetMiniMapMat(ra);
         if (miniMapMat == null)
         {
@@ -417,7 +417,7 @@ public class AutoTrackPathTask
         var clickX = (int)((picX - picRect.X) / picRect.Width * captureRect.Width);
         var clickY = (int)((picY - picRect.Y) / picRect.Height * captureRect.Height);
         Logger.LogInformation("点击传送点：({X},{Y})", clickX, clickY);
-        using var ra = GetRectAreaFromDispatcher();
+        using var ra = CaptureToRectArea();
         ra.ClickTo(clickX, clickY);
 
         // 触发一次快速传送功能
@@ -514,7 +514,7 @@ public class AutoTrackPathTask
     public static Rect GetBigMapRect()
     {
         // 判断是否在地图界面
-        using var ra = GetRectAreaFromDispatcher();
+        using var ra = CaptureToRectArea();
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
@@ -576,7 +576,7 @@ public class AutoTrackPathTask
         {
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
             Sleep(200, _taskParam.Cts);
-            var ra = GetRectAreaFromDispatcher();
+            var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,

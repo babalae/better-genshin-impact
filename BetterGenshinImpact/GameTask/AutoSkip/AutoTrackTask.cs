@@ -83,7 +83,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     private void TrackMission()
     {
         // 确认在主界面才会执行跟随任务
-        var ra = GetRectAreaFromDispatcher();
+        var ra = CaptureToRectArea();
         var paimonMenuRa = ra.Find(ElementAssets.Instance.PaimonMenuRo);
         if (!paimonMenuRa.IsExist())
         {
@@ -122,7 +122,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             Sleep(1500, param.Cts);
 
             // 寻找所有传送点
-            ra = GetRectAreaFromDispatcher();
+            ra = CaptureToRectArea();
             var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(ra.SrcGreyMat, QuickTeleportAssets.Instance.MapChooseIconGreyMatList);
             if (tpPointList.Count > 0)
             {
@@ -145,7 +145,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 // 等待自动传送完成
                 Sleep(2000, param.Cts);
 
-                if (Bv.IsInBigMapUi(GetRectAreaFromDispatcher()))
+                if (Bv.IsInBigMapUi(CaptureToRectArea()))
                 {
                     Logger.LogWarning("仍旧在大地图界面，传送失败");
                 }
@@ -154,7 +154,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     Sleep(500, param.Cts);
                     NewRetry.Do(() =>
                     {
-                        if (!Bv.IsInMainUi(GetRectAreaFromDispatcher()))
+                        if (!Bv.IsInMainUi(CaptureToRectArea()))
                         {
                             Logger.LogInformation("未进入到主界面，继续等待");
                             throw new RetryException("未进入到主界面");
@@ -180,7 +180,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_V);
         Sleep(3000, param.Cts);
 
-        var ra = GetRectAreaFromDispatcher();
+        var ra = CaptureToRectArea();
         var blueTrackPointRa = ra.Find(ElementAssets.Instance.BlueTrackPoint);
         if (blueTrackPointRa.IsExist())
         {
@@ -203,7 +203,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         bool wDown = false;
         while (!param.Cts.Token.IsCancellationRequested)
         {
-            var ra = GetRectAreaFromDispatcher();
+            var ra = CaptureToRectArea();
             var blueTrackPointRa = ra.Find(ElementAssets.Instance.BlueTrackPoint);
             if (blueTrackPointRa.IsExist())
             {
@@ -297,7 +297,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
     private List<Region> OcrMissionTextRaList(Region paimonMenuRa)
     {
-        return GetRectAreaFromDispatcher().FindMulti(new RecognitionObject
+        return CaptureToRectArea().FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(paimonMenuRa.X, paimonMenuRa.Y - 15 + 210,

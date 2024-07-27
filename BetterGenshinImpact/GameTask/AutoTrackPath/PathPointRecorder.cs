@@ -67,7 +67,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                 try
                 {
                     Sleep(10, cts);
-                    var ra = GetRectAreaFromDispatcher();
+                    var ra = CaptureToRectArea();
 
                     // 小地图匹配
                     var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;

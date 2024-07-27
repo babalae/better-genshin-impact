@@ -26,6 +26,8 @@ using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -331,7 +333,7 @@ namespace BetterGenshinImpact.GameTask
                 }
                 else
                 {
-                    var runningTriggers = _triggers.Where(t => t.IsEnabled);
+                    var runningTriggers = _triggers!.Where(t => t.IsEnabled);
                     if (hasBackgroundTriggerToRun)
                     {
                         runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
@@ -456,6 +458,21 @@ namespace BetterGenshinImpact.GameTask
         {
             var bitmap = GetLastCaptureBitmap();
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+        }
+
+        public ImageRegion CaptureToRectArea()
+        {
+            // 触发器启动的情况下优先使用触发器的截图
+            if (_timer.Enabled && _dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+            {
+                return GetLastCaptureContent().CaptureRectArea;
+            }
+            else
+            {
+                var bitmap = TaskControl.CaptureGameBitmap(GameCapture);
+                var content = new CaptureContent(bitmap, 0, 0);
+                return content.CaptureRectArea;
+            }
         }
 
         public void TakeScreenshot()
