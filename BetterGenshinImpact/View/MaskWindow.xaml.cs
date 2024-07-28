@@ -80,9 +80,9 @@ public partial class MaskWindow : Window
 
         Invoke(() =>
         {
-            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+            Canvas.SetTop(LogTextBoxWrapper, Height * 1d / DpiHelper.ScaleY - LogTextBoxWrapper.Height * 1d / DpiHelper.ScaleY - 65);
             Canvas.SetLeft(LogTextBoxWrapper, 20);
-            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+            Canvas.SetTop(StatusWrapper, Height * 1d / DpiHelper.ScaleY - LogTextBoxWrapper.Height * 1d / DpiHelper.ScaleY - 90);
             Canvas.SetLeft(StatusWrapper, 20);
         });
 

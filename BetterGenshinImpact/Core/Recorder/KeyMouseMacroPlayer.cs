@@ -24,16 +24,27 @@ public class KeyMouseMacroPlayer
             MessageBox.Show("请先在启动页，启动截图器再使用本功能");
             return;
         }
-        var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
-        script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
-        SystemControl.ActivateWindow();
-        for (var i = 3; i >= 1; i--)
+
+        try
         {
-            TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
-            await Task.Delay(1000, ct);
+            TaskTriggerDispatcher.Instance().StopTimer();
+
+            var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
+            script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+            SystemControl.ActivateWindow();
+            for (var i = 3; i >= 1; i--)
+            {
+                TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
+                await Task.Delay(1000, ct);
+            }
+
+            TaskControl.Logger.LogInformation("开始重放");
+            await PlayMacro(script.MacroEvents, ct);
         }
-        TaskControl.Logger.LogInformation("开始重放");
-        await PlayMacro(script.MacroEvents, ct);
+        finally
+        {
+            TaskTriggerDispatcher.Instance().StartTimer();
+        }
     }
 
     public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)
@@ -82,6 +93,7 @@ public class KeyMouseMacroPlayer
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+
                     break;
 
                 case MacroEventType.MouseUp:
@@ -114,6 +126,7 @@ public class KeyMouseMacroPlayer
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+
                     break;
 
                 case MacroEventType.MouseMoveTo:
