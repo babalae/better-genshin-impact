@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
 using SharpDX.DirectInput;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -27,7 +28,19 @@ public class KeyMouseRecorder
 
     public string ToJsonMacro()
     {
-        return JsonSerializer.Serialize(MacroEvents, JsonOptions);
+        var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        KeyMouseScript keyMouseScript = new()
+        {
+            MacroEvents = MacroEvents,
+            Info = new KeyMouseScriptInfo
+            {
+                X = rect.X,
+                Y = rect.Y,
+                Width = rect.Width,
+                Height = rect.Height
+            }
+        };
+        return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
     }
 
     public void KeyDown(KeyEventArgs e)

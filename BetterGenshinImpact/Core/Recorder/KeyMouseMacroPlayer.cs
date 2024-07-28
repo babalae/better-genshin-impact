@@ -8,6 +8,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;
@@ -16,8 +19,21 @@ public class KeyMouseMacroPlayer
 {
     public static async Task PlayMacro(string macro, CancellationToken ct)
     {
-        var macroEvents = JsonSerializer.Deserialize<List<MacroEvent>>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
-        await PlayMacro(macroEvents, ct);
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            MessageBox.Show("请先在启动页，启动截图器再使用本功能");
+            return;
+        }
+        var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
+        script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+        SystemControl.ActivateWindow();
+        for (var i = 3; i >= 1; i--)
+        {
+            TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
+            await Task.Delay(1000, ct);
+        }
+        TaskControl.Logger.LogInformation("开始重放");
+        await PlayMacro(script.MacroEvents, ct);
     }
 
     public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)

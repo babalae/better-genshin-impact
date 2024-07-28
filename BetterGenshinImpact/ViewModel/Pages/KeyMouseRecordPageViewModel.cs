@@ -76,7 +76,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    public void OnStartRecord()
+    public async Task OnStartRecord()
     {
         if (!TaskContext.Instance().IsInitialized)
         {
@@ -86,7 +86,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         if (!IsRecording)
         {
             IsRecording = true;
-            GlobalKeyMouseRecord.Instance.StartRecord();
+            await GlobalKeyMouseRecord.Instance.StartRecord();
         }
     }
 

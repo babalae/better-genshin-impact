@@ -354,8 +354,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             "启动/停止键鼠录制",
             nameof(Config.HotKeyConfig.KeyMouseMacroRecordHotkey),
             Config.HotKeyConfig.KeyMouseMacroRecordHotkey,
-            Config.HotKeyConfig.KeyMouseMacroRecordHotkeyType,
-            (_, _) =>
+            Config.HotKeyConfig.KeyMouseMacroRecordHotkeyType, async (_, _) =>
             {
                 var vm = App.GetService<KeyMouseRecordPageViewModel>();
                 if (vm == null)
@@ -367,7 +366,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     keyMouseRecordRunning = true;
                     Thread.Sleep(300); // 防止录进快捷键进去
-                    vm.OnStartRecord();
+                    await vm.OnStartRecord();
                 }
                 else
                 {

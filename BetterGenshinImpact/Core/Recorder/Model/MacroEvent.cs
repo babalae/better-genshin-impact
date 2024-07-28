@@ -1,5 +1,8 @@
-﻿namespace BetterGenshinImpact.Core.Recorder.Model;
+﻿using System;
 
+namespace BetterGenshinImpact.Core.Recorder.Model;
+
+[Serializable]
 public class MacroEvent
 {
     public MacroEventType Type { get; set; }
