@@ -314,7 +314,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "确认");
                 }
-            }
+            },
+            true
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -332,7 +333,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "取消");
                 }
-            }
+            },
+            true
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
