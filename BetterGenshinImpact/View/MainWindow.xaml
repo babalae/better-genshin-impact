@@ -87,7 +87,9 @@
                 <!--  WebAsset24 | DocumentJs16  -->
                 <ui:NavigationViewItem Content="脚本管理"
                                        NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:ScriptControlPage}">
+                                       TargetPageType="{x:Type pages:ScriptControlPage}"
+                                       Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                                     Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Script16" />
                     </ui:NavigationViewItem.Icon>

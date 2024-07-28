@@ -45,26 +45,26 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     public void RunMulti()
     {
-        IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
-        EngineExtend.InitHost(engine);
+        // IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
+        // EngineExtend.InitHost(engine);
 
         // 执行脚本
         // new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage).FireAndForget(async () =>
         //    await new TpTask(CancellationContext.Instance.Cts)
         //        .Tp(3452.310059, 2290.465088));
 
-        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage).FireAndForget(async () =>
-        {
-            await (Task)engine.Evaluate(@"
-            (async function() {
-                log.info('等待 {m} s', 1);
-                await sleep(1000);
-                log.info('测试 {name}', 'TP方法');
-                await genshin.tp(3452.310059,2290.465088);
-                log.warn('TP完成');
-                await sleep(1000);
-            })();
-            ");
-        });
+        // new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage).FireAndForget(async () =>
+        // {
+        //     await (Task)engine.Evaluate(@"
+        //     (async function() {
+        //         log.info('等待 {m} s', 1);
+        //         await sleep(1000);
+        //         log.info('测试 {name}', 'TP方法');
+        //         await genshin.tp(3452.310059,2290.465088);
+        //         log.warn('TP完成');
+        //         await sleep(1000);
+        //     })();
+        //     ");
+        // });
     }
 }

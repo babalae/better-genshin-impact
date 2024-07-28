@@ -36,7 +36,7 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="键鼠录制回放功能" />
+                      Text="键鼠录制回放功能（实验性功能）" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
