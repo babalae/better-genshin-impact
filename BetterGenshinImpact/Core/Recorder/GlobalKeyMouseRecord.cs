@@ -27,7 +27,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private bool _isInMainUi = false; // 是否在主界面
 
-    private KeyMouseRecorderStatus status = KeyMouseRecorderStatus.Stop;
+    public KeyMouseRecorderStatus Status { get; set; } = KeyMouseRecorderStatus.Stop;
 
     public GlobalKeyMouseRecord()
     {
@@ -43,18 +43,26 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             return;
         }
 
-        status = KeyMouseRecorderStatus.Start;
-        TaskTriggerDispatcher.Instance().StopTimer();
+        if (Status != KeyMouseRecorderStatus.Stop)
+        {
+            MessageBox.Show("已经在录制状态，请不要重复启动录制功能");
+            return;
+        }
+
+        Status = KeyMouseRecorderStatus.Start;
+
+        SystemControl.ActivateWindow();
 
         _logger.LogInformation("录制：{Text}", "实时任务已暂停");
         _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
 
-        SystemControl.ActivateWindow();
         for (var i = 3; i >= 1; i--)
         {
             _logger.LogInformation("{Sec}秒后启动录制...", i);
             await Task.Delay(1000);
         }
+
+        TaskTriggerDispatcher.Instance().StopTimer();
 
         _timer.Start();
 
@@ -62,14 +70,14 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _directInputMonitor = new DirectInputMonitor();
         _directInputMonitor.Start();
 
-        status = KeyMouseRecorderStatus.Recording;
+        Status = KeyMouseRecorderStatus.Recording;
 
         _logger.LogInformation("录制：{Text}", "已启动");
     }
 
     public string StopRecord()
     {
-        if (status != KeyMouseRecorderStatus.Recording)
+        if (Status != KeyMouseRecorderStatus.Recording)
         {
             throw new InvalidOperationException("未处于录制中状态，无法停止");
         }
@@ -85,6 +93,9 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _logger.LogInformation("录制：{Text}", "结束录制");
 
         TaskTriggerDispatcher.Instance().StartTimer();
+
+        Status = KeyMouseRecorderStatus.Stop;
+
         return macro;
     }
 

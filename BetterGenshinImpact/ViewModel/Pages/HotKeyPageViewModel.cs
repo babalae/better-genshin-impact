@@ -353,7 +353,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
         });
 
-        var keyMouseRecordRunning = false;
         HotKeySettingModels.Add(new HotKeySettingModel(
             "启动/停止键鼠录制",
             nameof(Config.HotKeyConfig.KeyMouseMacroRecordHotkey),
@@ -366,15 +365,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     _logger.LogError("无法找到 KeyMouseRecordPageViewModel 单例对象！");
                     return;
                 }
-                if (!keyMouseRecordRunning)
+                if (GlobalKeyMouseRecord.Instance.Status == KeyMouseRecorderStatus.Stop)
                 {
-                    keyMouseRecordRunning = true;
                     Thread.Sleep(300); // 防止录进快捷键进去
                     await vm.OnStartRecord();
                 }
                 else
                 {
-                    keyMouseRecordRunning = false;
                     vm.OnStopRecord();
                 }
             }
