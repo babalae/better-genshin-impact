@@ -183,4 +183,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 停止任意独立任务
+    [ObservableProperty]
+    private string _cancelTaskHotkey = "";
+
+    [ObservableProperty]
+    private string _cancelTaskHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

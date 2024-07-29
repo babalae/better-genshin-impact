@@ -32,6 +32,7 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script;
 using Cursors = System.Windows.Input.Cursors;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -376,6 +377,16 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     keyMouseRecordRunning = false;
                     vm.OnStopRecord();
                 }
+            }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "停止当前脚本任务",
+            nameof(Config.HotKeyConfig.CancelTaskHotkey),
+            Config.HotKeyConfig.CancelTaskHotkey,
+            Config.HotKeyConfig.CancelTaskHotkeyType, async (_, _) =>
+            {
+                CancellationContext.Instance.Cancel();
             }
         ));
 

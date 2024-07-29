@@ -25,13 +25,6 @@ public class TpTask(CancellationTokenSource cts)
 {
     private static readonly Random _rd = new Random();
 
-    public static async void Test()
-    {
-        await new TaskRunner().RunAsync(async () =>
-            await new TpTask(new CancellationTokenSource())
-                .Tp(1, 1));
-    }
-
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>
