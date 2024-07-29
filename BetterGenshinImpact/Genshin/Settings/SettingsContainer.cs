@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
@@ -17,7 +19,14 @@ public class SettingsContainer
 
     public SettingsContainer()
     {
-        FromReg();
+        try
+        {
+            FromReg();
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "读取原神注册表信息出错");
+        }
     }
 
     public void FromReg()

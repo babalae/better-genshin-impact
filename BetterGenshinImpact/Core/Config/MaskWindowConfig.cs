@@ -84,4 +84,11 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _showFps = false;
+
+    /// <summary>
+    /// 作为原神子窗体
+    /// 有些bug没解决
+    /// </summary>
+    [ObservableProperty]
+    private bool _useSubform = false;
 }

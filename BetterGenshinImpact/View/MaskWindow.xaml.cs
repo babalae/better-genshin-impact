@@ -73,6 +73,41 @@ public partial class MaskWindow : Window
 
     public void RefreshPosition()
     {
+        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+        {
+            RefreshPositionForSubform();
+        }
+        else
+        {
+            RefreshPositionForNormal();
+        }
+    }
+
+    public void RefreshPositionForNormal()
+    {
+        var currentRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
+
+        Invoke(() =>
+        {
+            double dpiScale = DpiHelper.ScaleY;
+
+            Left = currentRect.Left / dpiScale;
+            Top = currentRect.Top / dpiScale;
+            Width = currentRect.Width / dpiScale;
+            Height = currentRect.Height / dpiScale;
+
+            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+            Canvas.SetLeft(LogTextBoxWrapper, 20);
+            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+            Canvas.SetLeft(StatusWrapper, 20);
+        });
+        // 重新计算控件位置
+        // shit code 预定了
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+    }
+
+    public void RefreshPositionForSubform()
+    {
         nint targetHWnd = TaskContext.Instance().GameHandle;
         _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
         float x = DpiHelper.GetScale(targetHWnd).X;
@@ -112,9 +147,12 @@ public partial class MaskWindow : Window
             _richTextBox.RichTextBox = LogTextBox;
         }
 
-        _hWnd = new WindowInteropHelper(this).Handle;
-        nint targetHWnd = TaskContext.Instance().GameHandle;
-        _ = User32.SetParent(_hWnd, targetHWnd);
+        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+        {
+            _hWnd = new WindowInteropHelper(this).Handle;
+            nint targetHWnd = TaskContext.Instance().GameHandle;
+            _ = User32.SetParent(_hWnd, targetHWnd);
+        }
 
         RefreshPosition();
         PrintSystemInfo();

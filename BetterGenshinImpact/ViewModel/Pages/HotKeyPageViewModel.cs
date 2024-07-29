@@ -28,8 +28,11 @@ using static Vanara.PInvoke.User32;
 using System.Runtime.InteropServices;
 using System;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Windows.Input;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recorder;
+using Cursors = System.Windows.Input.Cursors;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -454,6 +457,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // }
                     // }
                     // _logger.LogInformation("非输入状态");
+
+                    UIDispatcherHelper.BeginInvoke(() =>
+                    {
+                        Mouse.OverrideCursor = Cursors.Pen;
+                    });
                 }
             ));
 
