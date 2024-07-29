@@ -25,26 +25,17 @@ public class KeyMouseMacroPlayer
             return;
         }
 
-        try
+        var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
+        script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+        SystemControl.ActivateWindow();
+        for (var i = 3; i >= 1; i--)
         {
-            TaskTriggerDispatcher.Instance().StopTimer();
-
-            var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
-            script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
-            SystemControl.ActivateWindow();
-            for (var i = 3; i >= 1; i--)
-            {
-                TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
-                await Task.Delay(1000, ct);
-            }
-
-            TaskControl.Logger.LogInformation("开始重放");
-            await PlayMacro(script.MacroEvents, ct);
+            TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
+            await Task.Delay(1000, ct);
         }
-        finally
-        {
-            TaskTriggerDispatcher.Instance().StartTimer();
-        }
+
+        TaskControl.Logger.LogInformation("开始重放");
+        await PlayMacro(script.MacroEvents, ct);
     }
 
     public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)

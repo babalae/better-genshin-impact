@@ -1,6 +1,8 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -95,12 +97,20 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     {
         if (IsRecording)
         {
-            IsRecording = false;
-            var macro = GlobalKeyMouseRecord.Instance.StopRecord();
-            // Genshin Copilot Macro
-            File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{DateTime.Now:yyyyMMddHHmmssffff}.json"), macro);
-            // 刷新ListView
-            InitScriptListViewData();
+            try
+            {
+                var macro = GlobalKeyMouseRecord.Instance.StopRecord();
+                // Genshin Copilot Macro
+                File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{DateTime.Now:yyyyMMddHHmmssffff}.json"), macro);
+                // 刷新ListView
+                InitScriptListViewData();
+                IsRecording = false;
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug(e, "停止录制时发生异常");
+                _logger.LogWarning(e.Message);
+            }
         }
     }
 
@@ -111,7 +121,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         try
         {
             var s = await File.ReadAllTextAsync(Path.Combine(scriptPath, name));
-            await KeyMouseMacroPlayer.PlayMacro(s, new CancellationToken());
+
+            await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+                .RunAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)
         {

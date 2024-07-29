@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -28,6 +27,8 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private bool _isInMainUi = false; // 是否在主界面
 
+    private KeyMouseRecorderStatus status = KeyMouseRecorderStatus.Stop;
+
     public GlobalKeyMouseRecord()
     {
         _timer.Elapsed += Tick;
@@ -42,6 +43,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             return;
         }
 
+        status = KeyMouseRecorderStatus.Start;
         TaskTriggerDispatcher.Instance().StopTimer();
 
         _logger.LogInformation("录制：{Text}", "实时任务已暂停");
@@ -60,11 +62,18 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _directInputMonitor = new DirectInputMonitor();
         _directInputMonitor.Start();
 
+        status = KeyMouseRecorderStatus.Recording;
+
         _logger.LogInformation("录制：{Text}", "已启动");
     }
 
     public string StopRecord()
     {
+        if (status != KeyMouseRecorderStatus.Recording)
+        {
+            throw new InvalidOperationException("未处于录制中状态，无法停止");
+        }
+
         var macro = _recorder?.ToJsonMacro() ?? string.Empty;
         _recorder = null;
         _directInputMonitor?.Stop();
@@ -166,4 +175,11 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
         _recorder?.MouseMoveBy(state);
     }
+}
+
+public enum KeyMouseRecorderStatus
+{
+    Start,
+    Recording,
+    Stop
 }
