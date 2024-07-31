@@ -122,7 +122,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             var s = await File.ReadAllTextAsync(Path.Combine(scriptPath, name));
 
-            await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
+            await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
                 .RunAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)

@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -12,7 +13,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -24,6 +24,8 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 public class TpTask(CancellationTokenSource cts)
 {
     private static readonly Random _rd = new Random();
+
+    private readonly QuickTeleportAssets _assets = QuickTeleportAssets.Instance;
 
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
@@ -70,6 +72,8 @@ public class TpTask(CancellationTokenSource cts)
         ra.ClickTo(clickX, clickY);
 
         // 触发一次快速传送功能
+        await Delay(500, cts);
+        await ClickTpPoint(CaptureToRectArea());
     }
 
     /// <summary>
@@ -253,5 +257,94 @@ public class TpTask(CancellationTokenSource cts)
     public async Task TpByF1(string name)
     {
         // 传送到指定传送点
+    }
+
+    public async Task ClickTpPoint(ImageRegion imageRegion)
+    {
+        // 1.判断是否在地图界面
+        if (Bv.IsInBigMapUi(imageRegion))
+        {
+            // 2. 判断是否有传送按钮
+            var hasTeleportButton = CheckTeleportButton(imageRegion);
+
+            if (!hasTeleportButton)
+            {
+                // 存在地图关闭按钮，说明未选中传送点，直接返回
+                var mapCloseRa = imageRegion.Find(_assets.MapCloseButtonRo);
+                if (!mapCloseRa.IsEmpty())
+                {
+                    return;
+                }
+
+                // 存在地图选择按钮，说明未选中传送点，直接返回
+                var mapChooseRa = imageRegion.Find(_assets.MapChooseRo);
+                if (!mapChooseRa.IsEmpty())
+                {
+                    return;
+                }
+
+                // 3. 循环判断选项列表是否有传送点
+                var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
+                if (hasMapChooseIcon)
+                {
+                    await Delay(TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay, cts);
+                    CheckTeleportButton(CaptureToRectArea());
+                }
+            }
+        }
+    }
+
+    private bool CheckTeleportButton(ImageRegion imageRegion)
+    {
+        var hasTeleportButton = false;
+        imageRegion.Find(_assets.TeleportButtonRo, ra =>
+        {
+            ra.Click();
+            hasTeleportButton = true;
+        });
+        return hasTeleportButton;
+    }
+
+    /// <summary>
+    /// 全匹配一遍并进行文字识别
+    /// 60ms ~200ms
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    /// <returns></returns>
+    private bool CheckMapChooseIcon(ImageRegion imageRegion)
+    {
+        var hasMapChooseIcon = false;
+
+        // 全匹配一遍
+        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(imageRegion.SrcGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
+        // 按高度排序
+        if (rResultList.Count > 0)
+        {
+            rResultList = rResultList.OrderBy(x => x.Y).ToList();
+            // 点击最高的
+            foreach (var iconRect in rResultList)
+            {
+                // 200宽度的文字区域
+                using var ra = imageRegion.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y, 200, iconRect.Height);
+                using var textRegion = ra.Find(new RecognitionObject
+                {
+                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
+                    LowerColor = new Scalar(249, 249, 249),  // 只取白色文字
+                    UpperColor = new Scalar(255, 255, 255),
+                });
+                if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)
+                {
+                    continue;
+                }
+
+                Logger.LogInformation("传送：点击 {Option}", textRegion.Text);
+                Thread.Sleep(TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay);
+                ra.Click();
+                hasMapChooseIcon = true;
+                break;
+            }
+        }
+
+        return hasMapChooseIcon;
     }
 }

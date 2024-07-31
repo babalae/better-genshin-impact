@@ -4,9 +4,11 @@ using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.View;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask;
@@ -49,9 +51,6 @@ public class TaskRunner
         try
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
-
-            // 激活原神窗口
-            SystemControl.ActivateWindow();
 
             // 初始化
             Init();
@@ -97,6 +96,10 @@ public class TaskRunner
 
     public void Init()
     {
+        // 激活原神窗口
+        var maskWindow = MaskWindow.Instance();
+        SystemControl.ActivateWindow();
+        maskWindow.Invoke(maskWindow.Show);
         if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Stop);
@@ -104,8 +107,9 @@ public class TaskRunner
         else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-            Sleep(TaskContext.Instance().Config.TriggerInterval * 5, CancellationContext.Instance.Cts); // 等待缓存图像
         }
+        Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+        maskWindow.Invoke(maskWindow.Show);
     }
 
     public void End()

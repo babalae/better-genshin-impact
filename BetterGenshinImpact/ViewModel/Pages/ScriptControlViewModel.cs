@@ -48,7 +48,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
         EngineExtend.InitHost(engine);
 
-        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage).FireAndForget(async () =>
+        new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage).FireAndForget(async () =>
         {
             await (Task)engine.Evaluate(@"
             (async function() {
@@ -57,8 +57,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 log.info('测试 {name}', 'TP方法');
                 await genshin.tp(3452.310059,2290.465088);
                 log.warn('TP完成');
-                await sleep(1000);
-                await runKeyMouseScript('操作1.json');
+                //await sleep(1000);
+                //await runKeyMouseScript('操作1.json');
             })();
             ");
         });
