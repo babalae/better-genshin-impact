@@ -102,9 +102,7 @@ public class FeatureMatcher
 
         featureStorage.TypeName = type.ToString();
         Debug.WriteLine("尝试从磁盘加载特征点");
-        var kpFromDisk = featureStorage.LoadKeyPointArray();
-
-        _trainKeyPoints = kpFromDisk ?? throw new Exception("特征点不存在");
+        _trainKeyPoints = featureStorage.LoadKeyPointArray() ?? throw new Exception("特征点不存在");
         _trainRet = featureStorage.LoadDescMat() ?? throw new Exception("加载特征描述矩阵失败");
 
         Debug.WriteLine("被匹配的图像生成初始化KeyPoint完成");
