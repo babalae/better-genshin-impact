@@ -121,10 +121,23 @@ public class CombatScenes : IDisposable
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
-        if (result.TopClass.Confidence < 0.8)
+
+        if (result.TopClass.Name.Name.StartsWith("Qin") || result.TopClass.Name.Name.Contains("Costume"))
         {
-            Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-            throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+            // 降低琴和衣装角色的识别率要求
+            if (result.TopClass.Confidence < 0.6)
+            {
+                Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+            }
+        }
+        else
+        {
+            if (result.TopClass.Confidence < 0.8)
+            {
+                Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+            }
         }
 
         return result.TopClass.Name.Name;
