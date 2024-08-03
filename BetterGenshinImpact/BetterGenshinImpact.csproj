@@ -146,10 +146,14 @@
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="Script\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="GameTask\Common\Element\Assets\MapPoint\" />
+	  <Folder Include="Script\AutoCrystalfly\" />
 	  <Folder Include="View\Controls\WpfUi\" />
 	</ItemGroup>
 

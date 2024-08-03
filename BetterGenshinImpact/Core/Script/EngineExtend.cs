@@ -1,25 +1,36 @@
-﻿using System.Threading.Tasks;
+﻿using BetterGenshinImpact.Core.Script.Dependence;
 using Microsoft.ClearScript;
-using BetterGenshinImpact.Core.Script.Dependence;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script;
 
 public class EngineExtend
 {
-    public static void InitHost(IScriptEngine engine)
+    public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths = null)
     {
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
         // 添加我的自定义实例化对象
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
+        engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
 
-        // 添加方法
+        // 直接添加方法
 #pragma warning disable CS8974 // Converting method group to non-delegate type
         engine.AddHostObject("sleep", GlobalMethod.Sleep);
 #pragma warning restore CS8974 // Converting method group to non-delegate type
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
+
+        // 导入 CommonJS 模块
+        // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
+        // https://github.com/microsoft/ClearScript/blob/master/ClearScriptTest/V8ModuleTest.cs
+        engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading | DocumentAccessFlags.AllowCategoryMismatch;
+        if (searchPaths != null)
+        {
+            engine.DocumentSettings.SearchPath = string.Join(';', searchPaths);
+        }
     }
 }
