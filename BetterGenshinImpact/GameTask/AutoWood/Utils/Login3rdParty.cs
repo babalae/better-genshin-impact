@@ -54,7 +54,7 @@ internal sealed class Login3rdParty
                                 foreach (string line in lines)
                                 {
                                     string kv = line.Trim();
-                                    if (kv.StartsWith("cps=") && kv.EndsWith("bilibili"))
+                                    if (kv.StartsWith("channel=") && kv.EndsWith("14"))
                                     {
                                         Type = The3rdPartyType.Bilibili;
                                         break;
