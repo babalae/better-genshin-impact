@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Utils;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -11,18 +12,7 @@ public class LimitedFile(string rootPath)
     /// </summary>
     private string NormalizePath(string path)
     {
-        // convert to full path relative to root
-        path = path.Replace('\\', '/');
-        var fullPath = Path.GetFullPath(Path.Combine(rootPath, path));
-
-        // if root is locked, make sure didn't attempt to exit it
-        if (!fullPath.StartsWith(rootPath))
-        {
-            throw new ArgumentException($"Path '{path}' is not allowed, because its outside the caged root folder!");
-        }
-
-        // return full path
-        return fullPath;
+        return ScriptUtils.NormalizePath(rootPath, path);
     }
 
     /// <summary>

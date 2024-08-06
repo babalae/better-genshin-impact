@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Script.Dependence;
 using Microsoft.ClearScript;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script;
@@ -12,6 +11,7 @@ public class EngineExtend
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
         // 添加我的自定义实例化对象
+        engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir));
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问

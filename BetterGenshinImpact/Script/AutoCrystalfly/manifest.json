@@ -1,9 +1,9 @@
 {
   "manifest_version": 1,
   "id": "bgi_crystalfly",
-  "name": "×Ô¶¯²É¼¯¾§µû",
+  "name": "è‡ªåŠ¨é‡‡é›†æ™¶è¶",
   "version": "1.0",
-  "description": "BetterGI×Ô´ø½Å±¾£¬×Ô¶¯²É¼¯Àë´«ËÍµã½Ï½üµÄ¾§µû¡£",
+  "description": "BetterGIè‡ªå¸¦è„šæœ¬ï¼Œè‡ªåŠ¨é‡‡é›†ç¦»ä¼ é€ç‚¹è¾ƒè¿‘çš„æ™¶è¶ã€‚",
   "authors": [
     {
         "name": "huiyadanli",

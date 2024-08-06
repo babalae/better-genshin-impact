@@ -1,7 +1,6 @@
-﻿using BetterGenshinImpact.Model;
+﻿using BetterGenshinImpact.Core.Script.Group;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
-using BetterGenshinImpact.Core.Script.Group;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
