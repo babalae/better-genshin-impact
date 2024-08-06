@@ -41,9 +41,18 @@ public class KeyMouseMacroPlayer
     public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)
     {
         WorkingArea = PrimaryScreen.WorkingArea;
+        var startTime = DateTime.UtcNow;
         foreach (var e in macroEvents)
         {
-            await Task.Delay((int)Math.Round(e.Time), ct);
+            var timeToWait = (int)(e.Time - (DateTime.UtcNow - startTime).TotalMilliseconds);
+            if (timeToWait < 0)
+            {
+                TaskControl.Logger.LogWarning("无法原速重放事件{Event}，落后{TimeToWait}ms", e.Type.ToString(), -timeToWait);
+            }
+            else
+            {
+                await Task.Delay(timeToWait, ct);
+            }
             switch (e.Type)
             {
                 case MacroEventType.KeyDown:
