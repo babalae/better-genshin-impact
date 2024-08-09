@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 using System.Windows.Forms;
 using SharpDX.DirectInput;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Common;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -15,6 +17,8 @@ public class KeyMouseRecorder
     public List<MacroEvent> MacroEvents { get; } = [];
 
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
+
+    public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
     public double MergedEventTimeMax { get; set; } = 20.0;
 
@@ -151,12 +155,20 @@ public class KeyMouseRecorder
 
     public void MouseMoveBy(MouseState state)
     {
+        var now = DateTime.UtcNow;
+        int? cao = null;
+        if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
+        {
+            LastOrientationDetection = now;
+            cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
+        }
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = (now - StartTime).TotalMilliseconds,
+            CameraOrientation = cao,
         });
     }
 }
