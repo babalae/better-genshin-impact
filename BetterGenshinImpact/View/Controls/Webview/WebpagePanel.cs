@@ -28,7 +28,8 @@ public class WebpagePanel : UserControl
             {
                 CreationProperties = new CoreWebView2CreationProperties
                 {
-                    UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\")
+                    UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
+                    AdditionalBrowserArguments = "--enable-features=WebContentsForceDark"
                 }
             };
             _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
