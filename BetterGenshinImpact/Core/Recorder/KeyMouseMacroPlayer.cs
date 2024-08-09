@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Map;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
@@ -134,6 +135,18 @@ public class KeyMouseMacroPlayer
                     break;
 
                 case MacroEventType.MouseMoveBy:
+                    if (e.CameraOrientation != null)
+                    {
+                        var cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
+                        var diff = (cao - (int)e.CameraOrientation + 180) % 360 - 180;
+                        diff += diff < -180 ? 360 : 0;
+                        //过滤一下特别大的角度偏差
+                        if (diff != 0 && diff < 8 && diff > -8)
+                        {
+                            TaskControl.Logger.LogWarning("视角重放偏差{diff}°，尝试修正", diff);
+                            e.MouseX -= diff;
+                        }
+                    }
                     Simulation.SendInput.Mouse.MoveMouseBy(e.MouseX, e.MouseY);
                     break;
 
