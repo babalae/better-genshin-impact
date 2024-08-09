@@ -75,6 +75,10 @@ public class KeyMouseRecorder
                     // 相对位移量相加
                     currentMerge.MouseX += macroEvent.MouseX;
                     currentMerge.MouseY += macroEvent.MouseY;
+                    if (macroEvent.CameraOrientation != null)
+                    {
+                        currentMerge.CameraOrientation = macroEvent.CameraOrientation;
+                    }
                     break;
                 default:
                     mergedMacroEvents.Add(currentMerge);
