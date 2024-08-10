@@ -1,9 +1,9 @@
 (async function() {
-    log.info('等待 {m} s', 1);
+    log.info('绛夊緟 {m} s', 1);
     await sleep(1000);
-    log.info('测试 {name}', 'TP方法');
+    log.info('娴嬭瘯 {name}', 'TP鏂规硶');
     await genshin.tp(3452.310059,2290.465088);
-    log.warn('TP完成');
+    log.warn('TP瀹屾垚');
     await sleep(1000);
-    await keyMouseScript.runFile('操作1.json');
+    //await keyMouseScript.runFile('鎿嶄綔1.json');
 })();

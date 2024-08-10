@@ -1,14 +1,12 @@
 ﻿using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.View;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask;
@@ -102,14 +100,14 @@ public class TaskRunner
         maskWindow.Invoke(maskWindow.Show);
         if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
         {
+            Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待日志窗口被激活
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Stop);
         }
         else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
+            Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
         }
-        Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-        maskWindow.Invoke(maskWindow.Show);
     }
 
     public void End()

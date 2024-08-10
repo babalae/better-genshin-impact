@@ -47,17 +47,7 @@ public class TpTask(CancellationTokenSource cts)
         }
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
-        var switched = await SwitchRecentlyCountryMap(x, y);
-        if (!switched)
-        {
-            // 可能是地下地图，切换到地上地图
-            using var ra2 = CaptureToRectArea();
-            if (Bv.BigMapIsUnderground(ra2))
-            {
-                ra2.Find(_assets.MapUndergroundToGroundButtonRo).Click();
-                await Delay(200, cts);
-            }
-        }
+        await SwitchRecentlyCountryMap(x, y);
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
@@ -228,6 +218,14 @@ public class TpTask(CancellationTokenSource cts)
 
     public async Task<bool> SwitchRecentlyCountryMap(double x, double y)
     {
+        // 可能是地下地图，切换到地上地图
+        using var ra2 = CaptureToRectArea();
+        if (Bv.BigMapIsUnderground(ra2))
+        {
+            ra2.Find(_assets.MapUndergroundToGroundButtonRo).Click();
+            await Delay(200, cts);
+        }
+        // 识别当前位置
         var bigMapCenterPoint = GetPositionFromBigMap();
         Logger.LogInformation("识别当前位置：{Pos}", bigMapCenterPoint);
 

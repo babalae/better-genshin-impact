@@ -168,7 +168,7 @@
 
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal">
-                    <ui:Button Command="{Binding StartRecordCommand}"
+                    <ui:Button Command="{Binding StartScriptGroupCommand}"
                                Content="运行此组配置"
                                Icon="{ui:SymbolIcon Play24}"
                                IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}" />

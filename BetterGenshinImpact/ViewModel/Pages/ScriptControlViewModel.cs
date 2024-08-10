@@ -12,7 +12,12 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Controls;
+using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -321,5 +326,53 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
 
         ScriptGroups.Add(group);
+    }
+
+    [RelayCommand]
+    public async Task OnStartScriptGroupAsync()
+    {
+        if (SelectedScriptGroup == null)
+        {
+            _snackbarService.Show(
+                "未选择脚本组",
+                "请先选择一个脚本组",
+                ControlAppearance.Caution,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        // 重新加载脚本项目
+        var projects = SelectedScriptGroup.Projects.Select(project => new ScriptProject(project.FolderName)).ToList();
+
+        _logger.LogInformation("脚本组 {Name} 加载完成，共{Cnt}个脚本，开始执行", SelectedScriptGroup.Name, projects.Count);
+
+        // 循环执行所有脚本
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunAsync(async () =>
+            {
+                foreach (var project in projects)
+                {
+                    try
+                    {
+                        _logger.LogInformation("------------------------------");
+                        _logger.LogInformation("→ 开始执行脚本: {Name}", project.Manifest.Name);
+                        await project.ExecuteAsync();
+                        await Task.Delay(1000);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogDebug(e, "执行脚本时发生异常");
+                        _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                    }
+                    finally
+                    {
+                        _logger.LogInformation("→ 脚本执行结束: {Name}", project.Manifest.Name);
+                        _logger.LogInformation("------------------------------");
+                    }
+                }
+            });
+        _logger.LogInformation("脚本组 {Name} 执行结束", SelectedScriptGroup.Name);
     }
 }
