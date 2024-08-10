@@ -14,13 +14,13 @@ public partial class ScriptGroup : ObservableObject
     [ObservableProperty]
     private ObservableCollection<ScriptGroupProject> _projects = [];
 
-    // public ScriptGroup()
-    // {
-    //     Projects.CollectionChanged += ProjectsCollectionChanged;
-    // }
-    //
-    // private void ProjectsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    // {
-    //     OnPropertyChanged(nameof(Projects));
-    // }
+    public ScriptGroup()
+    {
+        Projects.CollectionChanged += ProjectsCollectionChanged;
+    }
+
+    private void ProjectsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(Projects));
+    }
 }

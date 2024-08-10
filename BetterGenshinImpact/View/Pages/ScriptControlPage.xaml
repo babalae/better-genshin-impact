@@ -3,11 +3,10 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:linq="clr-namespace:System.Linq;assembly=System.Linq"
+      xmlns:dd="urn:gong-wpf-dragdrop"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
-      xmlns:sys="clr-namespace:System;assembly=mscorlib"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="HomePage"
       d:DataContext="{d:DesignInstance Type=pages:ScriptControlViewModel}"
@@ -48,6 +47,8 @@
                                   TextAlignment="Center" />
                 </Border>
                 <ui:ListView Grid.Row="1"
+                             dd:DragDrop.IsDragSource="True"
+                             dd:DragDrop.IsDropTarget="True"
                              ItemsSource="{Binding ScriptGroups, Mode=TwoWay}"
                              SelectedItem="{Binding SelectedScriptGroup, Mode=TwoWay}"
                              SelectionMode="Single">
@@ -85,9 +86,11 @@
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Visible" />
+                        <Setter Property="IsHitTestVisible" Value="True" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed" />
+                                <Setter Property="IsHitTestVisible" Value="False" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -99,10 +102,25 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                        脚本组可以导入并配置软件内的脚本，并进行连续执行。当前脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看脚本组使用教程
                         </Hyperlink>
                     </ui:TextBlock>
+                    <!--  示例脚本组  -->
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  FontTypography="BodyStrong"
+                                  Text="也可以直接点击导入下面的示例脚本组" />
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        <Hyperlink Command="{Binding ImportScriptGroupCommand}"
+                                   CommandParameter="AutoCrystalflyExampleGroup"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            自动晶蝶脚本组
+                        </Hyperlink>
+                    </ui:TextBlock>
+
+                    <ui:Button Content="111" />
 
                 </StackPanel>
             </Grid>
@@ -118,9 +136,11 @@
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Visible" />
+                        <Setter Property="IsHitTestVisible" Value="True" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedScriptGroup}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed" />
+                                <Setter Property="IsHitTestVisible" Value="False" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -142,7 +162,7 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                         点击查看使用教程
                     </Hyperlink>
                 </ui:TextBlock>
@@ -182,11 +202,13 @@
                 <ui:ListView Grid.Row="5"
                              HorizontalAlignment="Stretch"
                              VerticalAlignment="Stretch"
-                             ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=OneWay}"
+                             dd:DragDrop.IsDragSource="True"
+                             dd:DragDrop.IsDropTarget="True"
+                             ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=TwoWay}"
                              SelectionMode="Single">
                     <ListView.View>
                         <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
-                            <GridViewColumn DisplayMemberBinding="{Binding Order}" Header="执行优先级" />
+                            <GridViewColumn DisplayMemberBinding="{Binding Order}" Header="#" />
                             <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="脚本名称" />
                             <GridViewColumn DisplayMemberBinding="{Binding ScheduleDesc}" Header="执行周期" />
                             <GridViewColumn DisplayMemberBinding="{Binding StatusDesc}" Header="启用状态" />
@@ -194,10 +216,10 @@
                     </ListView.View>
                     <ListBox.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddScriptCommand}" Header="新增配置" />
+                            <MenuItem Command="{Binding AddScriptCommand}" Header="添加配置" />
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="删除配置" />
+                                      Header="移除配置" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListView.Style>

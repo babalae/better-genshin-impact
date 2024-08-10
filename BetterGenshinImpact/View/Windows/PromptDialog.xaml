@@ -4,7 +4,6 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="配置"
                  Width="500"
                  Height="210"
                  MinWidth="400"
@@ -25,7 +24,8 @@
 
         <StackPanel Grid.Row="1" Margin="12">
             <ui:TextBlock Name="TxtQuestion" Margin="5" />
-            <ui:TextBox Name="TxtResponse" Margin="5" />
+            <!-- <ui:TextBox Name="TxtResponse" Margin="5" /> -->
+            <ContentControl Name="DynamicContent" Margin="5" />
             <StackPanel Margin="5"
                         HorizontalAlignment="Right"
                         Orientation="Horizontal">
@@ -43,7 +43,7 @@
             </StackPanel>
         </StackPanel>
 
-        <ui:TitleBar Title="配置" Grid.Row="0">
+        <ui:TitleBar Name="MyTitleBar" Grid.Row="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
             </ui:TitleBar.Icon>

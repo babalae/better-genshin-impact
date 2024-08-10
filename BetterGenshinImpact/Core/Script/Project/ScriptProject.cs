@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using BetterGenshinImpact.Core.Config;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -16,8 +15,11 @@ public class ScriptProject
 
     public Manifest Manifest { get; set; }
 
+    public string FolderName { get; set; }
+
     public ScriptProject(string folderName)
     {
+        FolderName = folderName;
         ProjectPath = Path.Combine(Global.ScriptPath(), folderName);
         ManifestFile = Path.GetFullPath(Path.Combine(ProjectPath, "manifest.json"));
         if (!File.Exists(ManifestFile))

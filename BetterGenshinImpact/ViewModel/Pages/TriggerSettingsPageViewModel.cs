@@ -58,13 +58,13 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
         JsonMonoDialog.Show(@"User\pick_white_lists.json");
     }
 
-    [RelayCommand]
-    private void OnOpenReExploreCharacterBox(object sender)
-    {
-        var str = PromptDialog.Prompt("请使用派遣界面展示的角色名，英文逗号分割，从左往右优先级依次降低。\n示例：菲谢尔,班尼特,夜兰,申鹤,久岐忍",
-            "派遣角色优先级配置", Config.AutoSkipConfig.AutoReExploreCharacter);
-        Config.AutoSkipConfig.AutoReExploreCharacter = str.Replace("，", ",").Replace(" ", "");
-    }
+    // [RelayCommand]
+    // private void OnOpenReExploreCharacterBox(object sender)
+    // {
+    //     var str = PromptDialog.Prompt("请使用派遣界面展示的角色名，英文逗号分割，从左往右优先级依次降低。\n示例：菲谢尔,班尼特,夜兰,申鹤,久岐忍",
+    //         "派遣角色优先级配置", Config.AutoSkipConfig.AutoReExploreCharacter);
+    //     Config.AutoSkipConfig.AutoReExploreCharacter = str.Replace("，", ",").Replace(" ", "");
+    // }
 
     [RelayCommand]
     public void OnGoToQGroupUrl()

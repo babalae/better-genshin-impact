@@ -1,22 +1,26 @@
 ﻿using BetterGenshinImpact.Core.Script.Project;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
-public class ScriptGroupProject : ObservableObject
+public partial class ScriptGroupProject : ObservableObject
 {
-    public int Order { get; set; }
+    [ObservableProperty]
+    private int _order;
 
     public string Id { get; set; }
 
     public string Name { get; set; }
 
-    public string Status { get; set; }
+    [ObservableProperty]
+    private string _status;
 
     [JsonIgnore]
-    public string StatusDesc { get; set; }
+    [ObservableProperty]
+    private string _statusDesc;
 
     /// <summary>
     /// 执行周期
@@ -30,9 +34,8 @@ public class ScriptGroupProject : ObservableObject
     [JsonIgnore]
     public ScriptProject Project { get; set; }
 
-    public ScriptGroupProject(int order, ScriptProject project)
+    public ScriptGroupProject(ScriptProject project)
     {
-        Order = order;
         Id = project.Manifest.Id;
         Name = project.Manifest.Name;
         Status = "Enabled";
