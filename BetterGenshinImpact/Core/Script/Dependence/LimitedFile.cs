@@ -33,16 +33,9 @@ public class LimitedFile(string rootPath)
     /// <returns>Text read from file.</returns>
     public async Task<string> ReadText(string path)
     {
-        try
-        {
-            path = NormalizePath(path);
-            var ret = await File.ReadAllTextAsync(path);
-            return ret;
-        }
-        catch (Exception ex)
-        {
-            return string.Empty;
-        }
+        path = NormalizePath(path);
+        var ret = await File.ReadAllTextAsync(path);
+        return ret;
     }
 
     /// <summary>

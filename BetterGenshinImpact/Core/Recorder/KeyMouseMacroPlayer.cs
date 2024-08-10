@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.Core.Recorder;
 
 public class KeyMouseMacroPlayer
 {
-    public static async Task PlayMacro(string macro, CancellationToken ct)
+    public static async Task PlayMacro(string macro, CancellationToken ct, bool withDelay = true)
     {
         if (!TaskContext.Instance().IsInitialized)
         {
@@ -29,13 +29,18 @@ public class KeyMouseMacroPlayer
         var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
         script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
         SystemControl.ActivateWindow();
-        for (var i = 3; i >= 1; i--)
+
+        if (withDelay)
         {
-            TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
-            await Task.Delay(1000, ct);
+            for (var i = 3; i >= 1; i--)
+            {
+                TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
+                await Task.Delay(1000, ct);
+            }
+
+            TaskControl.Logger.LogInformation("开始重放");
         }
 
-        TaskControl.Logger.LogInformation("开始重放");
         await PlayMacro(script.MacroEvents, ct);
     }
 

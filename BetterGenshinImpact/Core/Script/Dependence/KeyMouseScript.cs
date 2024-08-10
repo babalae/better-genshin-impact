@@ -7,7 +7,7 @@ public class KeyMouseScript(string rootPath)
 {
     public async Task Run(string json)
     {
-        await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token);
+        await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
     }
 
     public async Task RunFile(string path)

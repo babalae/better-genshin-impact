@@ -112,7 +112,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
                 (int)(250 * AssetScale),
                 (int)(90 * AssetScale),
                 (int)(570 * AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
         MapUndergroundToGroundButtonRo = new RecognitionObject
         {
@@ -123,7 +123,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
                 (int)(250 * AssetScale),
                 (int)(90 * AssetScale),
                 (int)(570 * AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
         }.InitTemplate();
     }
 

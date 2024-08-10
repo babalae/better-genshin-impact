@@ -74,6 +74,18 @@ public class TpTask(CancellationTokenSource cts)
         // 触发一次快速传送功能
         await Delay(500, cts);
         await ClickTpPoint(CaptureToRectArea());
+
+        // 等待传送完成
+        for (var i = 0; i < 20; i++)
+        {
+            await Delay(1200, cts);
+            using var ra3 = CaptureToRectArea();
+            if (Bv.IsInMainUi(ra3))
+            {
+                break;
+            }
+        }
+        Logger.LogInformation("传送完成");
     }
 
     /// <summary>
