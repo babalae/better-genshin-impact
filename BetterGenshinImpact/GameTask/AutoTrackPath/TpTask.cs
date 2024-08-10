@@ -47,7 +47,17 @@ public class TpTask(CancellationTokenSource cts)
         }
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
-        await SwitchRecentlyCountryMap(x, y);
+        var switched = await SwitchRecentlyCountryMap(x, y);
+        if (!switched)
+        {
+            // 可能是地下地图，切换到地上地图
+            using var ra2 = CaptureToRectArea();
+            if (Bv.BigMapIsUnderground(ra2))
+            {
+                ra2.Find(_assets.MapUndergroundToGroundButtonRo).Click();
+                await Delay(200, cts);
+            }
+        }
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
@@ -180,6 +190,7 @@ public class TpTask(CancellationTokenSource cts)
             {
                 throw new InvalidOperationException("识别大地图位置失败");
             }
+
             Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
             const int s = 4 * 2; // 相对1024做4倍缩放
             return MapCoordinate.Main2048ToGame(new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s));
@@ -215,7 +226,7 @@ public class TpTask(CancellationTokenSource cts)
         return (recentX, recentY);
     }
 
-    public async Task SwitchRecentlyCountryMap(double x, double y)
+    public async Task<bool> SwitchRecentlyCountryMap(double x, double y)
     {
         var bigMapCenterPoint = GetPositionFromBigMap();
         Logger.LogInformation("识别当前位置：{Pos}", bigMapCenterPoint);
@@ -246,7 +257,10 @@ public class TpTask(CancellationTokenSource cts)
             list.FirstOrDefault(r => r.Text.Length == minCountry.Length && !r.Text.Contains("委托") && r.Text.Contains(minCountry))?.Click();
             Logger.LogInformation("切换到区域：{Country}", minCountry);
             await Delay(500, cts);
+            return true;
         }
+
+        return false;
     }
 
     public async Task Tp(string name)
@@ -329,7 +343,7 @@ public class TpTask(CancellationTokenSource cts)
                 using var textRegion = ra.Find(new RecognitionObject
                 {
                     RecognitionType = RecognitionTypes.ColorRangeAndOcr,
-                    LowerColor = new Scalar(249, 249, 249),  // 只取白色文字
+                    LowerColor = new Scalar(249, 249, 249), // 只取白色文字
                     UpperColor = new Scalar(255, 255, 255),
                 });
                 if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)

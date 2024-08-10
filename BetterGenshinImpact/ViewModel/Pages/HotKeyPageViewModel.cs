@@ -420,8 +420,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
             ));
 
-            var flag = false;
-            var m = "";
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -429,47 +427,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    // if (postMessageSimulator == null)
-                    // {
-                    //     postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
-                    // }
-                    // User32.GetCursorPos(out var p);
-                    // Debug.WriteLine($"鼠标位置：{p.X},{p.Y}");
-                    // // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
-                    // GameCaptureRegion.GameRegion1080PPosMove(1340, 655);
-                    // postMessageSimulator.LeftButtonClickBackground(1340, 655);
-                    // Thread.Sleep(5);
-                    // DesktopRegion.DesktopRegionMove(p.X, p.Y);
-
-                    // 大地图位置
-                    // TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-                    // Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-                    // AutoTrackPathTask.GetPositionFromBigMap();
-
-                    // Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
-                    //     .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
-
-                    // HWND hWnd = GetForegroundWindow();
-                    //
-                    // uint threadid = GetWindowThreadProcessId(hWnd, out var _z`);
-                    //
-                    // GUITHREADINFO lpgui = new GUITHREADINFO();
-                    // lpgui.cbSize = (uint)Marshal.SizeOf(lpgui);
-                    //
-                    // if (GetGUIThreadInfo(threadid, ref lpgui))
-                    // {
-                    // if (lpgui.hwndCaret != 0)
-                    // {
-                    //     _logger.LogInformation("输入状态");
-                    //     return;
-                    // }
-                    // }
-                    // _logger.LogInformation("非输入状态");
-
-                    UIDispatcherHelper.BeginInvoke(() =>
-                    {
-                        Mouse.OverrideCursor = Cursors.Pen;
-                    });
+                    var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
+                    _logger.LogInformation("大地图位置：{Position}", p);
                 }
             ));
 

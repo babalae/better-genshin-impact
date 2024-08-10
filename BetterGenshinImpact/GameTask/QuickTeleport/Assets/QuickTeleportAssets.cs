@@ -17,6 +17,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
     public RecognitionObject MapChooseRo;
 
     public RecognitionObject MapUndergroundSwitchButtonRo;
+    public RecognitionObject MapUndergroundToGroundButtonRo;
 
     private QuickTeleportAssets()
     {
@@ -107,6 +108,17 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             Use3Channels = true,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapUndergroundSwitchButton.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(120 * AssetScale),
+                (int)(250 * AssetScale),
+                (int)(90 * AssetScale),
+                (int)(570 * AssetScale)),
+            DrawOnWindow = true
+        }.InitTemplate();
+        MapUndergroundToGroundButtonRo = new RecognitionObject
+        {
+            Name = "MapUndergroundToGroundButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapUndergroundToGroundButton.png"),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(120 * AssetScale),
                 (int)(250 * AssetScale),
                 (int)(90 * AssetScale),
