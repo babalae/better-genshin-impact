@@ -9,41 +9,56 @@ namespace BetterGenshinImpact.Core.Script.Group;
 public partial class ScriptGroupProject : ObservableObject
 {
     [ObservableProperty]
-    private int _order;
+    private int _index;
 
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
+
+    public string FolderName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _status;
+    private string _status = string.Empty;
 
     [JsonIgnore]
-    [ObservableProperty]
-    private string _statusDesc;
+    public string StatusDesc => ScriptGroupProjectExtensions.StatusDescriptions[Status];
 
     /// <summary>
     /// 执行周期
     /// 不在 ScheduleDescriptions 中则会被视为自定义Cron表达式
     /// </summary>
-    public string Schedule { get; set; }
+    public string Schedule { get; set; } = string.Empty;
 
     [JsonIgnore]
-    public string ScheduleDesc { get; set; }
+    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
     [JsonIgnore]
-    public ScriptProject Project { get; set; }
+    public ScriptProject? Project { get; set; }
+
+    public ScriptGroupProject()
+    {
+    }
 
     public ScriptGroupProject(ScriptProject project)
     {
         Id = project.Manifest.Id;
         Name = project.Manifest.Name;
+        FolderName = project.FolderName;
         Status = "Enabled";
-        StatusDesc = ScriptGroupProjectExtensions.StatusDescriptions[Status];
         Schedule = "Daily";
-        ScheduleDesc = ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
-
         Project = project;
+    }
+
+    /// <summary>
+    /// 通过 FolderName 查找 ScriptProject
+    /// </summary>
+    public void BuildScriptProjectRelation()
+    {
+        if (string.IsNullOrEmpty(FolderName))
+        {
+            throw new Exception("FolderName 为空");
+        }
+        Project = new ScriptProject(FolderName);
     }
 }
 

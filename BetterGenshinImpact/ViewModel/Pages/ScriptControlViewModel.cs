@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,7 +20,9 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class ScriptControlViewModel : ObservableObject, INavigationAware, IViewModel
 {
-    private ISnackbarService _snackbarService;
+    private readonly ISnackbarService _snackbarService;
+
+    private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
 
     /// <summary>
     /// 脚本组配置
@@ -33,12 +36,15 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [ObservableProperty]
     private ScriptGroup? _selectedScriptGroup;
 
+    public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
+
     public void OnNavigatedFrom()
     {
     }
 
     public void OnNavigatedTo()
     {
+        ReadScriptGroup();
     }
 
     public ScriptControlViewModel(ISnackbarService snackbarService)
@@ -53,7 +59,21 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var str = PromptDialog.Prompt("请输入脚本组名称", "新增脚本组");
         if (!string.IsNullOrEmpty(str))
         {
-            ScriptGroups.Add(new ScriptGroup { Name = str });
+            // 检查是否已存在
+            if (ScriptGroups.Any(x => x.Name == str))
+            {
+                _snackbarService.Show(
+                    "脚本组已存在",
+                    $"脚本组 {str} 已经存在，请勿重复添加",
+                    ControlAppearance.Caution,
+                    null,
+                    TimeSpan.FromSeconds(2)
+                );
+            }
+            else
+            {
+                ScriptGroups.Add(new ScriptGroup { Name = str });
+            }
         }
     }
 
@@ -65,14 +85,29 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        ScriptGroups.Remove(item);
-        _snackbarService.Show(
-            "脚本组删除成功",
-            $"{item.Name} 已经被删除",
-            ControlAppearance.Success,
-            null,
-            TimeSpan.FromSeconds(2)
-        );
+        try
+        {
+            ScriptGroups.Remove(item);
+            File.Delete(Path.Combine(ScriptGroupPath, $"{item.Name}.json"));
+            _snackbarService.Show(
+                "脚本组删除成功",
+                $"脚本组 {item.Name} 已经被删除",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "删除脚本组配置时失败");
+            _snackbarService.Show(
+                "删除脚本组配置失败",
+                $"脚本组 {item.Name} 删除失败！",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
     }
 
     [RelayCommand]
@@ -139,7 +174,19 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 oldItem.Projects.CollectionChanged -= ScriptProjectsCollectionChanged;
             }
         }
-        Debug.WriteLine("ScriptGroupsCollectionChanged");
+
+        // 补充排序字段
+        var i = 1;
+        foreach (var group in ScriptGroups)
+        {
+            group.Index = i++;
+        }
+
+        // 保存脚本组配置
+        foreach (var group in ScriptGroups)
+        {
+            WriteScriptGroup(group);
+        }
     }
 
     private void ScriptProjectsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -150,10 +197,93 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             var i = 1;
             foreach (var project in SelectedScriptGroup.Projects)
             {
-                project.Order = i++;
+                project.Index = i++;
             }
         }
-        Debug.WriteLine("---ScriptProjectsCollectionChanged");
+
+        // 保存脚本组配置
+        if (SelectedScriptGroup != null)
+        {
+            WriteScriptGroup(SelectedScriptGroup);
+        }
+    }
+
+    private void WriteScriptGroup(ScriptGroup scriptGroup)
+    {
+        try
+        {
+            if (!Directory.Exists(ScriptGroupPath))
+            {
+                Directory.CreateDirectory(ScriptGroupPath);
+            }
+
+            var file = Path.Combine(ScriptGroupPath, $"{scriptGroup.Name}.json");
+            File.WriteAllText(file, scriptGroup.ToJson());
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "保存脚本组配置时失败");
+            _snackbarService.Show(
+                "保存脚本组配置失败",
+                $"{scriptGroup.Name} 保存失败！",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    private void ReadScriptGroup()
+    {
+        try
+        {
+            if (!Directory.Exists(ScriptGroupPath))
+            {
+                Directory.CreateDirectory(ScriptGroupPath);
+            }
+
+            ScriptGroups.Clear();
+            var files = Directory.GetFiles(ScriptGroupPath, "*.json");
+            List<ScriptGroup> groups = new();
+            foreach (var file in files)
+            {
+                try
+                {
+                    var json = File.ReadAllText(file);
+                    var group = ScriptGroup.FromJson(json);
+                    groups.Add(group);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug(e, "读取单个脚本组配置时失败");
+                    _snackbarService.Show(
+                        "读取脚本组配置失败",
+                        "读取脚本组配置失败:" + e.Message,
+                        ControlAppearance.Danger,
+                        null,
+                        TimeSpan.FromSeconds(3)
+                    );
+                }
+            }
+
+            // 按index排序
+            groups.Sort((a, b) => a.Index.CompareTo(b.Index));
+            foreach (var group in groups)
+            {
+                ScriptGroups.Add(group);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "读取脚本组配置时失败");
+            _snackbarService.Show(
+                "读取脚本组配置失败",
+                "读取脚本组配置失败！",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
     }
 
     [RelayCommand]
@@ -171,6 +301,25 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     public void OnImportScriptGroup(string scriptGroupExample)
     {
-        Debug.WriteLine(scriptGroupExample);
+        ScriptGroup group = new();
+        if ("AutoCrystalflyExampleGroup" == scriptGroupExample)
+        {
+            group.Name = "晶蝶示例组";
+            group.Projects.Add(new ScriptGroupProject(new ScriptProject("AutoCrystalfly")));
+        }
+
+        if (ScriptGroups.Any(x => x.Name == group.Name))
+        {
+            _snackbarService.Show(
+                "脚本组已存在",
+                $"脚本组 {group.Name} 已经存在，请勿重复添加",
+                ControlAppearance.Caution,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        ScriptGroups.Add(group);
     }
 }

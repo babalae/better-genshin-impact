@@ -81,20 +81,18 @@
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
                 CornerRadius="8">
-            <!--  无选中组  -->
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid Margin="8,8,0,0">
-                <Grid.Style>
-                    <Style TargetType="Grid">
-                        <Setter Property="Visibility" Value="Visible" />
-                        <Setter Property="IsHitTestVisible" Value="True" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Setter Property="IsHitTestVisible" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
+
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
@@ -102,7 +100,7 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        脚本组可以导入并配置软件内的脚本，并进行连续执行。当前脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        左侧脚本组栏目右键可以新增脚本组，然后可以添加并配置软件内的脚本，并进行连续执行。脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看脚本组使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -116,12 +114,9 @@
                         <Hyperlink Command="{Binding ImportScriptGroupCommand}"
                                    CommandParameter="AutoCrystalflyExampleGroup"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            自动晶蝶脚本组
+                            导入自动晶蝶示例脚本组
                         </Hyperlink>
                     </ui:TextBlock>
-
-                    <ui:Button Content="111" />
-
                 </StackPanel>
             </Grid>
         </Border>
@@ -132,19 +127,18 @@
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
                 CornerRadius="8">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedScriptGroup}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid Margin="8,8,0,0">
-                <Grid.Style>
-                    <Style TargetType="Grid">
-                        <Setter Property="Visibility" Value="Visible" />
-                        <Setter Property="IsHitTestVisible" Value="True" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedScriptGroup}" Value="{x:Null}">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Setter Property="IsHitTestVisible" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
+
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -190,14 +184,16 @@
 
                 <Grid Grid.Row="4">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="180" />
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="20" />
                     </Grid.ColumnDefinitions>
                     <Grid x:Name="Col1" Grid.Column="0" />
                     <Grid x:Name="Col2" Grid.Column="1" />
                     <Grid x:Name="Col3" Grid.Column="2" />
+                    <Grid x:Name="Col4" Grid.Column="3" />
                 </Grid>
                 <ui:ListView Grid.Row="5"
                              HorizontalAlignment="Stretch"
@@ -208,10 +204,18 @@
                              SelectionMode="Single">
                     <ListView.View>
                         <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
-                            <GridViewColumn DisplayMemberBinding="{Binding Order}" Header="#" />
-                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="脚本名称" />
-                            <GridViewColumn DisplayMemberBinding="{Binding ScheduleDesc}" Header="执行周期" />
-                            <GridViewColumn DisplayMemberBinding="{Binding StatusDesc}" Header="启用状态" />
+                            <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
+                                            DisplayMemberBinding="{Binding Index}"
+                                            Header="#" />
+                            <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
+                                            DisplayMemberBinding="{Binding Name}"
+                                            Header="脚本名称" />
+                            <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
+                                            DisplayMemberBinding="{Binding ScheduleDesc}"
+                                            Header="执行周期" />
+                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
+                                            DisplayMemberBinding="{Binding StatusDesc}"
+                                            Header="启用状态" />
                         </GridView>
                     </ListView.View>
                     <ListBox.ContextMenu>
