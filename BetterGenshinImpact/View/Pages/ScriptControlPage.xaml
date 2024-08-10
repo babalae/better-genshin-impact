@@ -96,7 +96,7 @@
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="请在左侧栏选择或新增脚本组" />
+                                  Text="（实验中功能）请在左侧栏选择或新增脚本组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
@@ -148,15 +148,20 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <ui:TextBlock Grid.Row="0"
-                              Margin="0,0,0,8"
-                              FontTypography="BodyStrong"
-                              Text="{Binding SelectedScriptGroup.Name}" />
+                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  FontTypography="BodyStrong"
+                                  Text="（实验中功能）脚本配置组 - " />
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  FontTypography="BodyStrong"
+                                  Text="{Binding SelectedScriptGroup.Name}" />
+                </StackPanel>
+
                 <ui:TextBlock Grid.Row="1"
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    在下方列表中右键可以添加脚本配置，拖拽可以调整执行顺序，支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                         点击查看使用教程
                     </Hyperlink>
                 </ui:TextBlock>

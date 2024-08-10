@@ -65,6 +65,7 @@ public class KeyMouseRecorder
                     currentMerge.MouseX = macroEvent.MouseX;
                     currentMerge.MouseY = macroEvent.MouseY;
                     break;
+
                 case MacroEventType.MouseMoveBy:
                     if (macroEvent.Time - currentMerge.Time > MergedEventTimeMax)
                     {
@@ -80,13 +81,13 @@ public class KeyMouseRecorder
                         currentMerge.CameraOrientation = macroEvent.CameraOrientation;
                     }
                     break;
+
                 default:
                     mergedMacroEvents.Add(currentMerge);
                     mergedMacroEvents.Add(macroEvent);
                     currentMerge = null;
                     break;
             }
-
         }
         KeyMouseScript keyMouseScript = new()
         {
@@ -161,10 +162,13 @@ public class KeyMouseRecorder
     {
         var now = DateTime.UtcNow;
         int? cao = null;
-        if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
+        if (TaskContext.Instance().Config.RecordConfig.IsRecordCameraOrientation)
         {
-            LastOrientationDetection = now;
-            cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
+            if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
+            {
+                LastOrientationDetection = now;
+                cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
+            }
         }
         MacroEvents.Add(new MacroEvent
         {

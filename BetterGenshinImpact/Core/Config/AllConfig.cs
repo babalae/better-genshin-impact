@@ -126,6 +126,8 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
 
+    public RecordConfig RecordConfig { get; set; } = new();
+
     /// <summary>
     ///     快捷键配置
     /// </summary>
