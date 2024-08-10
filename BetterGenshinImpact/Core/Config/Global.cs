@@ -14,6 +14,16 @@ public class Global
         return Path.Combine(StartUpPath, relativePath);
     }
 
+    public static string ScriptPath()
+    {
+        return Absolute("Script");
+    }
+
+    public static string ScriptPath(string folderName)
+    {
+        return Path.Combine(Absolute("Script"), folderName);
+    }
+
     public static string? ReadAllTextIfExist(string relativePath)
     {
         var path = Absolute(relativePath);

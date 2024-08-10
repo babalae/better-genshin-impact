@@ -142,8 +142,12 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    public void OnDeleteScript(KeyMouseScriptItem item)
+    public void OnDeleteScript(KeyMouseScriptItem? item)
     {
+        if (item == null)
+        {
+            return;
+        }
         try
         {
             File.Delete(Path.Combine(scriptPath, item.Name));

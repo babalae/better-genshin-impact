@@ -15,6 +15,7 @@
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+            <bgivc:NotNullConverter x:Key="NotNullConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

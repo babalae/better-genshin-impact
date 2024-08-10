@@ -3,9 +3,11 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:linq="clr-namespace:System.Linq;assembly=System.Linq"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:sys="clr-namespace:System;assembly=mscorlib"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="HomePage"
       d:DataContext="{d:DesignInstance Type=pages:ScriptControlViewModel}"
@@ -47,12 +49,21 @@
                 </Border>
                 <ui:ListView Grid.Row="1"
                              ItemsSource="{Binding ScriptGroups, Mode=TwoWay}"
+                             SelectedItem="{Binding SelectedScriptGroup, Mode=TwoWay}"
                              SelectionMode="Single">
                     <ui:ListView.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Margin="8,4" Text="{Binding GroupName, Mode=OneWay}" />
+                            <TextBlock Margin="8,4" Text="{Binding Name, Mode=OneWay}" />
                         </DataTemplate>
                     </ui:ListView.ItemTemplate>
+                    <ui:ListView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="{Binding AddScriptGroupCommand}" Header="新增组" />
+                            <MenuItem Command="{Binding DeleteScriptGroupCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="删除组" />
+                        </ContextMenu>
+                    </ui:ListView.ContextMenu>
                 </ui:ListView>
             </Grid>
         </Grid>
@@ -62,13 +73,58 @@
                       Width="2"
                       HorizontalAlignment="Stretch"
                       Background="{DynamicResource ControlStrongFillColorDisabledBrush}" />
-        <!--  右侧栏  -->
+
+        <!--  右侧栏:无选中组  -->
+        <Border Grid.Column="2"
+                Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1,1,1,1"
+                CornerRadius="8">
+            <!--  无选中组  -->
+            <Grid Margin="8,8,0,0">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <StackPanel>
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  FontTypography="BodyStrong"
+                                  Text="请在左侧栏选择或新增脚本组" />
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
+                    </ui:TextBlock>
+
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  右侧栏:选中组  -->
         <Border Grid.Column="2"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
                 CornerRadius="8">
             <Grid Margin="8,8,0,0">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedScriptGroup}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -81,12 +137,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Margin="0,0,0,8"
                               FontTypography="BodyStrong"
-                              Text="XXX组 配置" />
+                              Text="{Binding SelectedScriptGroup.Name}" />
                 <ui:TextBlock Grid.Row="1"
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                         点击查看使用教程
                     </Hyperlink>
                 </ui:TextBlock>
@@ -126,21 +182,22 @@
                 <ui:ListView Grid.Row="5"
                              HorizontalAlignment="Stretch"
                              VerticalAlignment="Stretch"
-                             ItemsSource="{Binding ScriptItems}"
+                             ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=OneWay}"
                              SelectionMode="Single">
                     <ListView.View>
                         <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
-                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="执行优先级" />
+                            <GridViewColumn DisplayMemberBinding="{Binding Order}" Header="执行优先级" />
                             <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="脚本名称" />
-                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="执行周期" />
-                            <GridViewColumn DisplayMemberBinding="{Binding Name}" Header="启用状态" />
+                            <GridViewColumn DisplayMemberBinding="{Binding ScheduleDesc}" Header="执行周期" />
+                            <GridViewColumn DisplayMemberBinding="{Binding StatusDesc}" Header="启用状态" />
                         </GridView>
                     </ListView.View>
                     <ListBox.ContextMenu>
                         <ContextMenu>
+                            <MenuItem Command="{Binding AddScriptCommand}" Header="新增配置" />
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="删除" />
+                                      Header="删除配置" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListView.Style>

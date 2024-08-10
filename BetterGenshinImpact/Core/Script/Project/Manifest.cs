@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Windows.Documents;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -22,14 +23,13 @@ public class Manifest
 
     public static Manifest FromJson(string json)
     {
-        var manifest = JsonSerializer.Deserialize<Manifest>(json) ?? throw new Exception("Failed to deserialize JSON.");
-        manifest.Validate();
+        var manifest = JsonSerializer.Deserialize<Manifest>(json, ConfigService.JsonOptions) ?? throw new Exception("Failed to deserialize JSON.");
         return manifest;
     }
 
-    public void Validate()
+    public void Validate(string path)
     {
-        if (Id != string.Empty)
+        if (string.IsNullOrWhiteSpace(Id))
         {
             throw new Exception("manifest.json: id is not supported.");
         }
@@ -49,7 +49,7 @@ public class Manifest
             throw new Exception("manifest.json: main script is required.");
         }
 
-        if (!File.Exists(Main))
+        if (!File.Exists(Path.Combine(path, Main)))
         {
             throw new FileNotFoundException("main js file not found.");
         }

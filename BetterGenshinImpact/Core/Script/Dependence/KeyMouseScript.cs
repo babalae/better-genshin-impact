@@ -13,6 +13,6 @@ public class KeyMouseScript(string rootPath)
     public async Task RunFile(string path)
     {
         var json = await new LimitedFile(rootPath).ReadText(path);
-        await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token);
+        await Run(json);
     }
 }
