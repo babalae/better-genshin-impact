@@ -48,7 +48,7 @@ internal class GameTaskManager
         return ConvertToTriggerList();
     }
 
-    public static List<ITaskTrigger> ConvertToTriggerList()
+    public static List<ITaskTrigger> ConvertToTriggerList(bool allEnabled = false)
     {
         if (TriggerDictionary is null)
         {
@@ -58,6 +58,10 @@ internal class GameTaskManager
         var loadedTriggers = TriggerDictionary.Values.ToList();
 
         loadedTriggers.ForEach(i => i.Init());
+        if (allEnabled)
+        {
+            loadedTriggers.ForEach(i => i.IsEnabled = true);
+        }
 
         loadedTriggers = loadedTriggers.OrderByDescending(i => i.Priority).ToList();
         return loadedTriggers;

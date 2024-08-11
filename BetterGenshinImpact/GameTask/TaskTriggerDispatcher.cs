@@ -123,7 +123,7 @@ namespace BetterGenshinImpact.GameTask
             lock (_triggerListLocker)
             {
                 GameTaskManager.AddTrigger(name, externalConfig);
-                SetTriggers(GameTaskManager.ConvertToTriggerList());
+                SetTriggers(GameTaskManager.ConvertToTriggerList(true));
             }
         }
 
