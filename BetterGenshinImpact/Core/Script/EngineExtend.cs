@@ -15,6 +15,7 @@ public class EngineExtend
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
+        engine.AddHostObject("dispatcher", new Dispatcher());
 
         // 直接添加方法
 #pragma warning disable CS8974 // Converting method group to non-delegate type

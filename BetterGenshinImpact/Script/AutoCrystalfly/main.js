@@ -1,4 +1,8 @@
 (async function () {
+
+    // 启用自动拾取的实时任务
+    dispatcher.addTimer('AutoPick');
+
     log.info('开始捕捉晶蝶，请在队伍中务必携带{zy}，使用成男/成女角色', '早柚');
 
     log.info('前往 {name}', '枫丹-塔拉塔海谷');

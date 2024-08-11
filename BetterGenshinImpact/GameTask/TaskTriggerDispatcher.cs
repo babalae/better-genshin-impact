@@ -56,7 +56,9 @@ namespace BetterGenshinImpact.GameTask
         private Bitmap _bitmap = new(10, 10);
 
         /// <summary>
-        /// 仅捕获模式
+        /// 调度器捕获模式, 影响以下内容：
+        /// 1. 是否缓存图像
+        /// 2. 是否执行触发器
         /// </summary>
         private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.NormalTrigger;
 
@@ -98,6 +100,23 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        public void ClearTriggers()
+        {
+            GameTaskManager.ClearTriggers();
+            _triggers?.Clear();
+        }
+
+        public void SetTriggers(List<ITaskTrigger> list)
+        {
+            _triggers = list;
+        }
+
+        public void AddTrigger(string name, object? externalConfig)
+        {
+            GameTaskManager.AddTrigger(name, externalConfig);
+            SetTriggers(GameTaskManager.ConvertToTriggerList());
+        }
+
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
@@ -109,7 +128,7 @@ namespace BetterGenshinImpact.GameTask
             TaskContext.Instance().Init(hWnd);
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadTriggers();
+            _triggers = GameTaskManager.LoadInitialTriggers();
 
             // 启动截图
             GameCapture.Start(hWnd,

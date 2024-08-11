@@ -6,6 +6,7 @@ using OpenCvSharp;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
@@ -30,7 +31,7 @@ internal class GameTaskManager
     /// 一定要在任务上下文初始化完毕后使用
     /// </summary>
     /// <returns></returns>
-    public static List<ITaskTrigger> LoadTriggers()
+    public static List<ITaskTrigger> LoadInitialTriggers()
     {
         ReloadAssets();
         TriggerDictionary = new Dictionary<string, ITaskTrigger>()
@@ -40,9 +41,19 @@ internal class GameTaskManager
             { "AutoPick", new AutoPick.AutoPickTrigger() },
             { "QuickTeleport", new QuickTeleport.QuickTeleportTrigger() },
             { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
-            { "AutoFishing", new AutoFishing.AutoFishingTrigger() },
+            { "AutoFish", new AutoFishing.AutoFishingTrigger() },
             { "AutoCook", new AutoCook.AutoCookTrigger() }
         };
+
+        return ConvertToTriggerList();
+    }
+
+    public static List<ITaskTrigger> ConvertToTriggerList()
+    {
+        if (TriggerDictionary is null)
+        {
+            return [];
+        }
 
         var loadedTriggers = TriggerDictionary.Values.ToList();
 
@@ -52,16 +63,45 @@ internal class GameTaskManager
         return loadedTriggers;
     }
 
+    public static void ClearTriggers()
+    {
+        TriggerDictionary?.Clear();
+    }
+
+    /// <summary>
+    /// 通过名称添加触发器
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="externalConfig"></param>
+    public static void AddTrigger(string name, object? externalConfig)
+    {
+        TriggerDictionary ??= new Dictionary<string, ITaskTrigger>();
+        TriggerDictionary.Clear();
+
+        if (name == "AutoPick")
+        {
+            TriggerDictionary.Add("AutoPick", new AutoPick.AutoPickTrigger(externalConfig as AutoPickExternalConfig));
+        }
+        // else if (name == "AutoSkip")
+        // {
+        //     TriggerDictionary.Add("AutoSkip", new AutoSkip.AutoSkipTrigger());
+        // }
+        // else if (name == "AutoFish")
+        // {
+        //     TriggerDictionary.Add("AutoFish", new AutoFishing.AutoFishingTrigger());
+        // }
+    }
+
     public static void RefreshTriggerConfigs()
     {
         if (TriggerDictionary is { Count: > 0 })
         {
-            TriggerDictionary["AutoPick"].Init();
-            TriggerDictionary["AutoSkip"].Init();
-            TriggerDictionary["AutoFishing"].Init();
-            TriggerDictionary["QuickTeleport"].Init();
-            TriggerDictionary["GameLoading"].Init();
-            TriggerDictionary["AutoCook"].Init();
+            TriggerDictionary.GetValueOrDefault("AutoPick")?.Init();
+            TriggerDictionary.GetValueOrDefault("AutoSkip")?.Init();
+            TriggerDictionary.GetValueOrDefault("AutoFish")?.Init();
+            TriggerDictionary.GetValueOrDefault("QuickTeleport")?.Init();
+            TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
+            TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             // 清理画布
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
             VisionContext.Instance().DrawContent.ClearAll();

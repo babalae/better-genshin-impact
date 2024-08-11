@@ -57,7 +57,7 @@ public class ScriptProject
         }
     }
 
-    private async Task<string> LoadCode()
+    public async Task<string> LoadCode()
     {
         var code = await File.ReadAllTextAsync(Path.Combine(ProjectPath, Manifest.Main));
         if (string.IsNullOrEmpty(code))

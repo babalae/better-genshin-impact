@@ -1,5 +1,10 @@
 ﻿namespace BetterGenshinImpact.GameTask.Model.Enum;
 
+/// <summary>
+/// 调度器捕获模式, 影响以下内容：
+/// 1. 是否缓存图像
+/// 2. 是否执行触发器
+/// </summary>
 public enum DispatcherCaptureModeEnum
 {
     // 正常运行调度器

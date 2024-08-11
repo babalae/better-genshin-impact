@@ -108,9 +108,15 @@ public class TaskRunner
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
             Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
         }
-        else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
+        else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+            Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+        }
+        else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
+        {
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+            TaskTriggerDispatcher.Instance().ClearTriggers();
             Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
         }
     }
@@ -122,10 +128,22 @@ public class TaskRunner
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Start);
         }
-        else if (_timerOperation is DispatcherTimerOperationEnum.UseCacheImage or DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
+        else if (_timerOperation is DispatcherTimerOperationEnum.UseCacheImage or DispatcherTimerOperationEnum.UseCacheImageWithTrigger or DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
         {
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
-            Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+            // 还原到原来的模式
+            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
+            {
+                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+            }
+            else
+            {
+                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
+            }
+
+            if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
+            {
+                TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
+            }
         }
     }
 

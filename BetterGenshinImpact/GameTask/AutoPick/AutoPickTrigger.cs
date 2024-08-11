@@ -17,6 +17,7 @@ using System.Windows.Forms;
 using BetterGenshinImpact.Core.Recognition;
 using Vanara.PInvoke;
 using System.Windows.Input;
+using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -48,14 +49,22 @@ public class AutoPickTrigger : ITaskTrigger
     private User32.VK _pickVk = User32.VK.VK_F;
     private RecognitionObject _pickRo;
 
+    // 外部配置
+    private AutoPickExternalConfig? _externalConfig;
+
     public AutoPickTrigger()
     {
         _autoPickAssets = AutoPickAssets.Instance;
+        _pickRo = _autoPickAssets.FRo;
+    }
+
+    public AutoPickTrigger(AutoPickExternalConfig? config) : this()
+    {
+        _externalConfig = config;
     }
 
     public void Init()
     {
-        _pickRo = _autoPickAssets.FRo;
         var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
         if (!string.IsNullOrEmpty(keyName))
         {

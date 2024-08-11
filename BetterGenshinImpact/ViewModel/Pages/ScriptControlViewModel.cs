@@ -20,6 +20,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -346,16 +347,29 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         // 重新加载脚本项目
         var projects = SelectedScriptGroup.Projects.Select(project => new ScriptProject(project.FolderName)).ToList();
 
+        var codeList = await ReadCodeList(projects);
+        var hasTimer = HasTimerOperation(codeList);
+        if (hasTimer)
+        {
+            _logger.LogInformation("脚本组 {Name} 包含实时任务操作调用", SelectedScriptGroup.Name);
+        }
+
         _logger.LogInformation("脚本组 {Name} 加载完成，共{Cnt}个脚本，开始执行", SelectedScriptGroup.Name, projects.Count);
 
         // 循环执行所有脚本
-        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
+        var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
+        await new TaskRunner(timerOperation)
             .RunAsync(async () =>
             {
                 foreach (var project in projects)
                 {
                     try
                     {
+                        if (hasTimer)
+                        {
+                            TaskTriggerDispatcher.Instance().ClearTriggers();
+                        }
+
                         _logger.LogInformation("------------------------------");
                         _logger.LogInformation("→ 开始执行脚本: {Name}", project.Manifest.Name);
                         await project.ExecuteAsync();
@@ -374,5 +388,23 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 }
             });
         _logger.LogInformation("脚本组 {Name} 执行结束", SelectedScriptGroup.Name);
+    }
+
+    private async Task<List<string>> ReadCodeList(List<ScriptProject> list)
+    {
+        var codeList = new List<string>();
+        foreach (var project in list)
+        {
+            var code = await project.LoadCode();
+            codeList.Add(code);
+        }
+
+        return codeList;
+    }
+
+    private bool HasTimerOperation(IEnumerable<string> codeList)
+    {
+        var regex = new Regex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer");
+        return codeList.Any(code => regex.IsMatch(code));
     }
 }
