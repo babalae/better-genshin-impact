@@ -108,6 +108,11 @@ public class TaskRunner
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
             Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
         }
+        else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
+        {
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+            Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+        }
     }
 
     public void End()
@@ -117,9 +122,10 @@ public class TaskRunner
         {
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Start);
         }
-        else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
+        else if (_timerOperation is DispatcherTimerOperationEnum.UseCacheImage or DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
         {
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
+            Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
         }
     }
 

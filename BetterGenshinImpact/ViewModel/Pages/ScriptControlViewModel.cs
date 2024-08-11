@@ -349,7 +349,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         _logger.LogInformation("脚本组 {Name} 加载完成，共{Cnt}个脚本，开始执行", SelectedScriptGroup.Name, projects.Count);
 
         // 循环执行所有脚本
-        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
+        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
             .RunAsync(async () =>
             {
                 foreach (var project in projects)
