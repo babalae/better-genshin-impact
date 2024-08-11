@@ -20,12 +20,13 @@ using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
+using System.Collections.Concurrent;
 
 namespace BetterGenshinImpact.GameTask;
 
 internal class GameTaskManager
 {
-    public static Dictionary<string, ITaskTrigger>? TriggerDictionary { get; set; }
+    public static ConcurrentDictionary<string, ITaskTrigger>? TriggerDictionary { get; set; }
 
     /// <summary>
     /// 一定要在任务上下文初始化完毕后使用
@@ -34,16 +35,15 @@ internal class GameTaskManager
     public static List<ITaskTrigger> LoadInitialTriggers()
     {
         ReloadAssets();
-        TriggerDictionary = new Dictionary<string, ITaskTrigger>()
-        {
-            { "RecognitionTest", new TestTrigger() },
-            { "GameLoading", new GameLoadingTrigger() },
-            { "AutoPick", new AutoPick.AutoPickTrigger() },
-            { "QuickTeleport", new QuickTeleport.QuickTeleportTrigger() },
-            { "AutoSkip", new AutoSkip.AutoSkipTrigger() },
-            { "AutoFish", new AutoFishing.AutoFishingTrigger() },
-            { "AutoCook", new AutoCook.AutoCookTrigger() }
-        };
+        TriggerDictionary = new ConcurrentDictionary<string, ITaskTrigger>();
+
+        TriggerDictionary.TryAdd("RecognitionTest", new TestTrigger());
+        TriggerDictionary.TryAdd("GameLoading", new GameLoadingTrigger());
+        TriggerDictionary.TryAdd("AutoPick", new AutoPick.AutoPickTrigger());
+        TriggerDictionary.TryAdd("QuickTeleport", new QuickTeleport.QuickTeleportTrigger());
+        TriggerDictionary.TryAdd("AutoSkip", new AutoSkip.AutoSkipTrigger());
+        TriggerDictionary.TryAdd("AutoFish", new AutoFishing.AutoFishingTrigger());
+        TriggerDictionary.TryAdd("AutoCook", new AutoCook.AutoCookTrigger());
 
         return ConvertToTriggerList();
     }
@@ -75,12 +75,12 @@ internal class GameTaskManager
     /// <param name="externalConfig"></param>
     public static void AddTrigger(string name, object? externalConfig)
     {
-        TriggerDictionary ??= new Dictionary<string, ITaskTrigger>();
+        TriggerDictionary ??= new ConcurrentDictionary<string, ITaskTrigger>();
         TriggerDictionary.Clear();
 
         if (name == "AutoPick")
         {
-            TriggerDictionary.Add("AutoPick", new AutoPick.AutoPickTrigger(externalConfig as AutoPickExternalConfig));
+            TriggerDictionary.TryAdd("AutoPick", new AutoPick.AutoPickTrigger(externalConfig as AutoPickExternalConfig));
         }
         // else if (name == "AutoSkip")
         // {

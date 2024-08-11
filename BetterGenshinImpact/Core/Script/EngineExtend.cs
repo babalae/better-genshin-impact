@@ -1,5 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
+using System;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script;
@@ -15,7 +17,10 @@ public class EngineExtend
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
+
+        // 实时任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher());
+        engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
 
         // 直接添加方法
 #pragma warning disable CS8974 // Converting method group to non-delegate type

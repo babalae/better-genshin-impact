@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
+using Microsoft.ClearScript;
+using Microsoft.ClearScript.V8;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -10,13 +13,18 @@ public class Dispatcher
     {
     }
 
-    public void AddTimer(RealTimeTimer timer)
+    public void AddTimer(RealtimeTimer timer)
     {
-        if (string.IsNullOrEmpty(timer.Name))
+        var realtimeTimer = timer;
+        if (realtimeTimer == null)
         {
-            throw new ArgumentNullException(nameof(timer.Name), "实时任务名称不能为空");
+            throw new ArgumentNullException(nameof(RealtimeTimer), "实时任务对象不能为空");
+        }
+        if (string.IsNullOrEmpty(realtimeTimer.Name))
+        {
+            throw new ArgumentNullException(nameof(realtimeTimer.Name), "实时任务名称不能为空");
         }
 
-        TaskTriggerDispatcher.Instance().AddTrigger(timer.Name, timer.Config);
+        TaskTriggerDispatcher.Instance().AddTrigger(realtimeTimer.Name, realtimeTimer.Config);
     }
 }

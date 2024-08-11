@@ -3,7 +3,7 @@
 /// <summary>
 /// 实时任务计时器
 /// </summary>
-public class RealTimeTimer
+public class RealtimeTimer
 {
     /// <summary>
     /// 实时任务触发器名称
@@ -20,4 +20,13 @@ public class RealTimeTimer
     /// 实时任务配置
     /// </summary>
     public object? Config;
+
+    public RealtimeTimer()
+    {
+    }
+
+    public RealtimeTimer(string name)
+    {
+        Name = name;
+    }
 }

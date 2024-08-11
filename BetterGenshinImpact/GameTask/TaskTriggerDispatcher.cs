@@ -63,6 +63,7 @@ namespace BetterGenshinImpact.GameTask
         private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.NormalTrigger;
 
         private static readonly object _bitmapLocker = new();
+        private static readonly object _triggerListLocker = new();
 
         public event EventHandler UiTaskStopTickEvent;
 
@@ -102,19 +103,28 @@ namespace BetterGenshinImpact.GameTask
 
         public void ClearTriggers()
         {
-            GameTaskManager.ClearTriggers();
-            _triggers?.Clear();
+            lock (_triggerListLocker)
+            {
+                GameTaskManager.ClearTriggers();
+                _triggers?.Clear();
+            }
         }
 
         public void SetTriggers(List<ITaskTrigger> list)
         {
-            _triggers = list;
+            lock (_triggerListLocker)
+            {
+                _triggers = list;
+            }
         }
 
         public void AddTrigger(string name, object? externalConfig)
         {
-            GameTaskManager.AddTrigger(name, externalConfig);
-            SetTriggers(GameTaskManager.ConvertToTriggerList());
+            lock (_triggerListLocker)
+            {
+                GameTaskManager.AddTrigger(name, externalConfig);
+                SetTriggers(GameTaskManager.ConvertToTriggerList());
+            }
         }
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
@@ -245,6 +255,7 @@ namespace BetterGenshinImpact.GameTask
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                     }
+
                     UiTaskStopTickEvent.Invoke(sender, e);
                     maskWindow.Invoke(maskWindow.Hide);
                     return;
@@ -281,16 +292,20 @@ namespace BetterGenshinImpact.GameTask
 
                     if (_triggers != null)
                     {
-                        var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                        if (exclusive != null)
+                        lock (_triggerListLocker)
                         {
-                            hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
-                        }
-                        else
-                        {
-                            hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                            var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                            if (exclusive != null)
+                            {
+                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                            }
+                            else
+                            {
+                                hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                            }
                         }
                     }
+
                     if (!hasBackgroundTriggerToRun)
                     {
                         // 没有后台运行的触发器，这次不再进行截图
@@ -349,24 +364,28 @@ namespace BetterGenshinImpact.GameTask
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
                 var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
-                var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                if (exclusiveTrigger != null)
-                {
-                    exclusiveTrigger.OnCapture(content);
-                    speedTimer.Record(exclusiveTrigger.Name);
-                }
-                else
-                {
-                    var runningTriggers = _triggers!.Where(t => t.IsEnabled);
-                    if (hasBackgroundTriggerToRun)
-                    {
-                        runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
-                    }
 
-                    foreach (var trigger in runningTriggers)
+                lock (_triggerListLocker)
+                {
+                    var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                    if (exclusiveTrigger != null)
                     {
-                        trigger.OnCapture(content);
-                        speedTimer.Record(trigger.Name);
+                        exclusiveTrigger.OnCapture(content);
+                        speedTimer.Record(exclusiveTrigger.Name);
+                    }
+                    else
+                    {
+                        var runningTriggers = _triggers!.Where(t => t.IsEnabled);
+                        if (hasBackgroundTriggerToRun)
+                        {
+                            runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
+                        }
+
+                        foreach (var trigger in runningTriggers)
+                        {
+                            trigger.OnCapture(content);
+                            speedTimer.Record(trigger.Name);
+                        }
                     }
                 }
 

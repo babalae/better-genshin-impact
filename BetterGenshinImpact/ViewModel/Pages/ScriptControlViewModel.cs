@@ -30,6 +30,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
 
+    private readonly HomePageViewModel _homePageViewModel;
+
     /// <summary>
     /// 脚本组配置
     /// </summary>
@@ -53,9 +55,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService)
+    public ScriptControlViewModel(ISnackbarService snackbarService, HomePageViewModel homePageViewModel)
     {
         _snackbarService = snackbarService;
+        _homePageViewModel = homePageViewModel;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
 
@@ -344,6 +347,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             return;
         }
 
+        // 没启动时候，启动截图器
+        await _homePageViewModel.OnStartTriggerAsync();
+
         // 重新加载脚本项目
         var projects = SelectedScriptGroup.Projects.Select(project => new ScriptProject(project.FolderName)).ToList();
 
@@ -404,7 +410,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     private bool HasTimerOperation(IEnumerable<string> codeList)
     {
-        var regex = new Regex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer");
+        var regex = new Regex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline);
         return codeList.Any(code => regex.IsMatch(code));
     }
 }
