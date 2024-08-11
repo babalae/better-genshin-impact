@@ -151,7 +151,11 @@ public partial class MaskWindow : Window
         {
             _hWnd = new WindowInteropHelper(this).Handle;
             nint targetHWnd = TaskContext.Instance().GameHandle;
-            _ = User32.SetParent(_hWnd, targetHWnd);
+
+            if (User32.GetParent(_hWnd) != targetHWnd)
+            {
+                _ = User32.SetParent(_hWnd, targetHWnd);
+            }
         }
 
         RefreshPosition();
