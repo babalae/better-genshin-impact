@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common.Map;
 using OpenCvSharp.Features2D;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
@@ -249,7 +250,7 @@ public class FeatureMatcher
 
         using var flnMatcher = new FlannBasedMatcher();
         var knnMatches = flnMatcher.KnnMatch(matSrcRet, _trainRet, 2);
-        var minRatio = 0.66;
+        const float minRatio = 0.75f;
 
         var pointsSrc = new List<Point2f>();
         var pointsDst = new List<Point2f>();
@@ -265,6 +266,12 @@ public class FeatureMatcher
                 pointsSrc.Add(keyPointsSrc[best.QueryIdx].Pt);
                 pointsDst.Add(_trainKeyPoints[best.TrainIdx].Pt);
             }
+        }
+
+        if (pointsSrc.Count < 7)
+        {
+            Debug.WriteLine("匹配点过少");
+            return null;
         }
 
         speedTimer.Record("FlannMatch.KnnMatch");
@@ -295,5 +302,67 @@ public class FeatureMatcher
 
         speedTimer.DebugPrint();
         return null;
+    }
+
+    /// <summary>
+    /// https://github.com/tignioj/minimap/blob/main/matchmap/sifttest/sifttest5.py
+    /// Copilot 生成
+    /// </summary>
+    /// <param name="smallImage"></param>
+    /// <param name="keypointsSmall"></param>
+    /// <param name="descriptorsSmall"></param>
+    /// <param name="keypointsLarge"></param>
+    /// <param name="descriptorsLarge"></param>
+    /// <param name="matcher"></param>
+    /// <returns></returns>
+    private Point2f? MatchPosition(Mat smallImage, KeyPoint[] keypointsSmall, Mat descriptorsSmall, KeyPoint[] keypointsLarge, Mat descriptorsLarge, DescriptorMatcher matcher)
+    {
+        DMatch[][] matches;
+        try
+        {
+            matches = matcher.KnnMatch(descriptorsSmall, descriptorsLarge, k: 2);
+        }
+        catch (Exception e)
+        {
+            string msg = $"进行匹配的时候出错了，报错信息{e}";
+            throw;
+        }
+
+        // 应用比例测试来过滤匹配点
+        List<DMatch> goodMatches = new List<DMatch>();
+        foreach (var match in matches)
+        {
+            if (match.Length == 2 && match[0].Distance < 0.75 * match[1].Distance)
+            {
+                goodMatches.Add(match[0]);
+            }
+        }
+
+        if (goodMatches.Count < 7)
+        {
+            return null;
+        }
+
+        // 获取匹配点的坐标
+        Point2f[] srcPts = goodMatches.Select(m => keypointsSmall[m.QueryIdx].Pt).ToArray();
+        Point2f[] dstPts = goodMatches.Select(m => keypointsLarge[m.TrainIdx].Pt).ToArray();
+
+        // 使用RANSAC找到变换矩阵
+        Mat mask = new Mat();
+        Mat M = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
+        if (M.Empty())
+        {
+            return null;
+        }
+
+        // 计算小地图的中心点
+        int h = smallImage.Rows;
+        int w = smallImage.Cols;
+        Point2f centerPoint = new Point2f(w / 2f, h / 2f);
+        Point2f[] centerPoints = [centerPoint];
+        Point2f[] transformedCenter = Cv2.PerspectiveTransform(centerPoints, M);
+
+        // 返回小地图在大地图中的中心坐标
+        return transformedCenter[0];
     }
 }
