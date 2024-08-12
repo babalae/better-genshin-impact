@@ -23,7 +23,7 @@ public class EntireMap : Singleton<EntireMap>
     /// <summary>
     /// 主要地图缩小1024的模板
     /// </summary>
-    private readonly Mat _mainMap100BlockMat;
+    // private readonly Mat _mainMap100BlockMat;
 
     // /// <summary>
     // /// 1024区块拼接的主要地图
@@ -43,7 +43,7 @@ public class EntireMap : Singleton<EntireMap>
     public EntireMap()
     {
         // 大地图模板匹配使用的模板
-        _mainMap100BlockMat = MapAssets.Instance.MainMap100BlockMat.Value;
+        // _mainMap100BlockMat = MapAssets.Instance.MainMap100BlockMat.Value;
         // _mainMap1024BlockMat = MapAssets.Instance.MainMap1024BlockMat.Value;
         // _cityMap2048BlockMat = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\cityMap2048Block.png", ImreadModes.Grayscale);
         // Mat grey = new();
@@ -53,27 +53,27 @@ public class EntireMap : Singleton<EntireMap>
         _featureMatcher = new FeatureMatcher(new Size(28672, 26624), new FeatureStorage("mainMap2048Block"));
     }
 
-    /// <summary>
-    /// 基于模板匹配获取地图位置(100区块，缩小了10.24倍)
-    /// 当前只支持大地图
-    /// </summary>
-    /// <param name="captureMat">彩色图像</param>
-    /// <returns></returns>
-    public Point GetMapPositionByMatchTemplate(Mat captureMat)
-    {
-        Cv2.CvtColor(captureMat, captureMat, ColorConversionCodes.BGRA2BGR);
-        using var tar = new Mat(captureMat.Resize(TemplateSize, 0, 0, InterpolationFlags.Cubic), TemplateSizeRoi);
-        var p = MatchTemplateHelper.MatchTemplate(_mainMap100BlockMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.2);
-        Debug.WriteLine($"BigMap Match Template: {p}");
-        return p;
-    }
-
-    public void GetMapPositionAndDrawByMatchTemplate(Mat captureMat)
-    {
-        var p = GetMapPositionByMatchTemplate(captureMat);
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
-            new System.Windows.Rect(p.X, p.Y, TemplateSizeRoi.Width, TemplateSizeRoi.Height)));
-    }
+    // /// <summary>
+    // /// 基于模板匹配获取地图位置(100区块，缩小了10.24倍)
+    // /// 当前只支持大地图
+    // /// </summary>
+    // /// <param name="captureMat">彩色图像</param>
+    // /// <returns></returns>
+    // public Point GetMapPositionByMatchTemplate(Mat captureMat)
+    // {
+    //     Cv2.CvtColor(captureMat, captureMat, ColorConversionCodes.BGRA2BGR);
+    //     using var tar = new Mat(captureMat.Resize(TemplateSize, 0, 0, InterpolationFlags.Cubic), TemplateSizeRoi);
+    //     var p = MatchTemplateHelper.MatchTemplate(_mainMap100BlockMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.2);
+    //     Debug.WriteLine($"BigMap Match Template: {p}");
+    //     return p;
+    // }
+    //
+    // public void GetMapPositionAndDrawByMatchTemplate(Mat captureMat)
+    // {
+    //     var p = GetMapPositionByMatchTemplate(captureMat);
+    //     WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+    //         new System.Windows.Rect(p.X, p.Y, TemplateSizeRoi.Width, TemplateSizeRoi.Height)));
+    // }
 
     private int _failCnt = 0;
 
