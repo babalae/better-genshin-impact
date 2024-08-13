@@ -23,10 +23,10 @@ public class CameraOrientation
     }
 
     /// <summary>
-    /// 小地图
+    /// 计算当前小地图摄像机朝向的角度
     /// </summary>
-    /// <param name="mat"></param>
-    /// <returns></returns>
+    /// <param name="mat">小地图灰度图</param>
+    /// <returns>角度</returns>
     public static int ComputeMiniMap(Mat mat)
     {
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
