@@ -78,6 +78,62 @@ public class PathExecutor
 
     internal static async Task MoveTo(Waypoint waypoint)
     {
+        var position = await Task.Run(GetPosition);
+        var targetOrientation = GetTargetOrientation(waypoint, GetPosition());
+        TaskControl.Logger.LogInformation("粗略接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
+        await WaitUntilRotatedTo(targetOrientation, 10);
+        var startTime = DateTime.UtcNow;
+        // 按下w，一直走
+        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+        var fastMode = false;
+        while (true)
+        {
+            if ((DateTime.UtcNow - startTime).TotalSeconds > 30)
+            {
+                TaskControl.Logger.LogWarning("执行超时，跳过路径点");
+                break;
+            }
+            position = await Task.Run(GetPosition);
+            var distance = GetDistance(waypoint, position);
+            if (distance < 2)
+            {
+                TaskControl.Logger.LogInformation("到达路径点附近");
+                break;
+            }
+            if (distance > 500)
+            {
+                TaskControl.Logger.LogWarning("距离过远，跳过路径点");
+                break;
+            }
+            // 旋转视角
+            targetOrientation = GetTargetOrientation(waypoint, position);
+            RotateTo(targetOrientation);
+            // 根据指定方式进行移动
+            if (waypoint.MoveType == MoveType.Fly)
+            {
+                // TODO:一直起跳直到打开风之翼
+                continue;
+            }
+            if (waypoint.MoveType == MoveType.Jump)
+            {
+                // TODO:一直按空格
+                continue;
+            }
+            // 跑步或者游泳
+            if (distance > 20 != fastMode)// 距离大于20时可以使用疾跑/自由泳
+            {
+                if (fastMode)
+                {
+                    Simulation.SendInput.Mouse.RightButtonUp();
+                }
+                else
+                {
+                    Simulation.SendInput.Mouse.RightButtonDown();
+                }
+                fastMode = !fastMode;
+            }
+            await Task.Delay(50);
+        }
 
     }
 
@@ -98,23 +154,27 @@ public class PathExecutor
         return diff;
     }
 
-    internal static async Task WaitUntilRotatedTo(int targetOrientation)
+    internal static async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
     {
         int count = 0;
-        while (RotateTo(targetOrientation) != 0 && count<50)
+        while (Math.Abs(RotateTo(targetOrientation)) > maxDiff && count < 50)
         {
             await Task.Delay(50);
             count++;
         }
     }
 
-    internal static int GetTargetOrientation(Waypoint waypoint)
+    internal static Point2f GetPosition()
     {
         var greyMat = TaskControl.CaptureToRectArea().SrcGreyMat;
         greyMat = new Mat(greyMat, new Rect(62, 19, 212, 212));
-        var position = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
-        var target = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+        return EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
+    }
 
+    internal static int GetTargetOrientation(Waypoint waypoint, Point2f position)
+    {
+
+        var target = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
         double deltaX = target.x - position.X;
         double deltaY = target.y - position.Y;
         double vectorLength = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -132,6 +192,15 @@ public class PathExecutor
         // 将角度转换为顺时针方向
         angle = 2 * Math.PI - angle;
         return (int)(angle * (180.0 / Math.PI));
+    }
+
+    internal static double GetDistance(Waypoint waypoint, Point2f position)
+    {
+        var x1 = waypoint.X;
+        var y1 = waypoint.Y;
+        var x2 = position.X;
+        var y2 = position.Y;
+        return Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     }
 }
 
