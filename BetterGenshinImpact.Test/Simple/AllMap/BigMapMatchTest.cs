@@ -6,6 +6,7 @@ using OpenCvSharp.Detail;
 using System.Diagnostics;
 using System.Windows.Forms;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Helpers.Extensions;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 
@@ -28,14 +29,14 @@ public class BigMapMatchTest
         queryMat = ResizeHelper.Resize(queryMat, 1d / 4);
         Cv2.ImShow("queryMat", queryMat);
 
-        var pArray = surfMatcher.Match(queryMat);
+        var p = surfMatcher.Match(queryMat);
         speedTimer.Record("匹配1");
-        if (pArray != null)
+        if (p.IsEmpty())
         {
-            var rect = Cv2.BoundingRect(pArray);
-            Debug.WriteLine($"Matched rect 1: {rect}");
-            Cv2.Rectangle(mainMap100BlockMat, rect, Scalar.Red, 2);
-            Cv2.ImShow(@"b1", mainMap100BlockMat);
+            // var rect = Cv2.BoundingRect(pArray);
+            Debug.WriteLine($"Matched rect 1: {p}");
+            // Cv2.Rectangle(mainMap100BlockMat, rect, Scalar.Red, 2);
+            // Cv2.ImShow(@"b1", mainMap100BlockMat);
         }
         else
         {

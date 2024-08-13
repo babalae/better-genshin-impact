@@ -68,15 +68,15 @@ public class KeyPointFeatureBlockHelper
         return splitKeyPoints;
     }
 
-    public static (int, int) GetCellIndex(Size originalImage, int rows, int cols, int x, int y)
+    public static (int, int) GetCellIndex(Size originalImage, int rows, int cols, float x, float y)
     {
         // Calculate grid size
         int cellWidth = originalImage.Width / cols;
         int cellHeight = originalImage.Height / rows;
 
         // Calculate cell index for the given point
-        int cellRow = y / cellHeight;
-        int cellCol = x / cellWidth;
+        var cellRow = (int)Math.Round(y / cellHeight, 0);
+        var cellCol = (int)Math.Round(x / cellWidth, 0);
 
         return (cellRow, cellCol);
     }

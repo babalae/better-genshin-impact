@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
+using BetterGenshinImpact.Helpers.Extensions;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
@@ -37,8 +38,8 @@ public class EntireMap : Singleton<EntireMap>
 
     private readonly FeatureMatcher _featureMatcher;
 
-    private int _prevX = -1;
-    private int _prevY = -1;
+    private float _prevX = -1;
+    private float _prevY = -1;
 
     public EntireMap()
     {
@@ -84,29 +85,28 @@ public class EntireMap : Singleton<EntireMap>
     /// <param name="greyMat">灰度图</param>
     /// <param name="mask">遮罩</param>
     /// <returns></returns>
-    public Rect GetMiniMapPositionByFeatureMatch(Mat greyMat, Mat? mask = null)
+    public Point2f GetMiniMapPositionByFeatureMatch(Mat greyMat, Mat? mask = null)
     {
         try
         {
-            Point2f[]? pArray;
-            if (_prevX != -1 && _prevY != -1)
+            Point2f p;
+            if (_prevX <= 0 && _prevY <= 0)
             {
-                pArray = _featureMatcher.Match(greyMat, _prevX, _prevY, mask);
+                p = _featureMatcher.Match(greyMat, _prevX, _prevY, mask);
             }
             else
             {
-                pArray = _featureMatcher.Match(greyMat, mask);
+                p = _featureMatcher.Match(greyMat, mask);
             }
 
-            if (pArray == null || pArray.Length < 4)
+            if (p.IsEmpty())
             {
                 throw new InvalidOperationException();
             }
-            var rect = Cv2.BoundingRect(pArray);
-            _prevX = rect.X + rect.Width / 2;
-            _prevY = rect.Y + rect.Height / 2;
+            _prevX = p.X;
+            _prevY = p.Y;
             _failCnt = 0;
-            return rect;
+            return p;
         }
         catch
         {
@@ -118,7 +118,7 @@ public class EntireMap : Singleton<EntireMap>
                 _failCnt = 0;
                 (_prevX, _prevY) = (-1, -1);
             }
-            return Rect.Empty;
+            return new Point2f();
         }
     }
 
@@ -127,21 +127,21 @@ public class EntireMap : Singleton<EntireMap>
     /// </summary>
     /// <param name="greyMat"></param>
     /// <returns></returns>
-    public Rect GetBigMapPositionByFeatureMatch(Mat greyMat)
+    public Point2f GetBigMapPositionByFeatureMatch(Mat greyMat)
     {
         try
         {
-            var pArray = _featureMatcher.Match(greyMat);
-            if (pArray == null || pArray.Length < 4)
+            var p = _featureMatcher.Match(greyMat);
+            if (p.IsEmpty())
             {
                 throw new InvalidOperationException();
             }
-            return Cv2.BoundingRect(pArray);
+            return p;
         }
         catch
         {
             Debug.WriteLine("Feature Match Failed");
-            return Rect.Empty;
+            return new Point2f();
         }
     }
 
@@ -164,15 +164,15 @@ public class EntireMap : Singleton<EntireMap>
     //     return new Point((int)x, (int)y);
     // }
 
-    public void GetMapPositionAndDrawByFeatureMatch(Mat captureGreyMat)
-    {
-        var rect = GetMiniMapPositionByFeatureMatch(captureGreyMat);
-        if (rect != Rect.Empty)
-        {
-            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
-                new System.Windows.Rect(rect.X / 20.48, rect.Y / 20.48, rect.Width / 20.48, rect.Height / 20.48)));
-            // WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
-            //     new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
-        }
-    }
+    // public void GetMapPositionAndDrawByFeatureMatch(Mat captureGreyMat)
+    // {
+    //     var rect = GetMiniMapPositionByFeatureMatch(captureGreyMat);
+    //     if (rect != Rect.Empty)
+    //     {
+    //         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+    //             new System.Windows.Rect(rect.X / 20.48, rect.Y / 20.48, rect.Width / 20.48, rect.Height / 20.48)));
+    //         // WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+    //         //     new System.Windows.Rect(rect.X / 10.24, rect.Y / 10.24, rect.Width / 10.24, rect.Height / 10.24)));
+    //     }
+    // }
 }

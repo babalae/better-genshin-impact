@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -85,6 +86,7 @@ public class TpTask(CancellationTokenSource cts)
                 break;
             }
         }
+
         Logger.LogInformation("传送完成");
     }
 
@@ -171,13 +173,9 @@ public class TpTask(CancellationTokenSource cts)
         await Delay(200, cts);
     }
 
-    public Point GetPositionFromBigMap()
+    public Point2f GetPositionFromBigMap()
     {
-        var bigMapRect = GetBigMapRect();
-        Debug.WriteLine("地图位置转换到游戏坐标：" + bigMapRect);
-        var bigMapCenterPoint = bigMapRect.GetCenterPoint();
-        Debug.WriteLine("地图中心坐标：" + bigMapCenterPoint);
-        return bigMapCenterPoint;
+        return GetBigMapCenterPoint();
     }
 
     public Rect GetBigMapRect()
@@ -187,15 +185,37 @@ public class TpTask(CancellationTokenSource cts)
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
-            var rect = BigMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
+            var rect = BigMap.Instance.GetBigMapRectByFeatureMatch(ra.SrcGreyMat);
             if (rect == Rect.Empty)
             {
                 throw new InvalidOperationException("识别大地图位置失败");
             }
 
             Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
-            const int s = 4 * 2; // 相对1024做4倍缩放
+            const int s = BigMap.ScaleTo2048; // 相对1024做4倍缩放
             return MapCoordinate.Main2048ToGame(new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s));
+        }
+        else
+        {
+            throw new InvalidOperationException("当前不在地图界面");
+        }
+    }
+
+    public Point2f GetBigMapCenterPoint()
+    {
+        // 判断是否在地图界面
+        using var ra = CaptureToRectArea();
+        using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        if (mapScaleButtonRa.IsExist())
+        {
+            var p = BigMap.Instance.GetBigMapPositionByFeatureMatch(ra.SrcGreyMat);
+            if (p.IsEmpty())
+            {
+                throw new InvalidOperationException("识别大地图位置失败");
+            }
+
+            Debug.WriteLine("识别大地图在全地图位置：" + p);
+            return MapCoordinate.Main2048ToGame(new Point2f(BigMap.ScaleTo2048 * p.X, BigMap.ScaleTo2048 * p.Y));
         }
         else
         {
@@ -209,10 +229,10 @@ public class TpTask(CancellationTokenSource cts)
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
-    public (int x, int y) GetRecentlyTpPoint(double x, double y)
+    public (double x, double y) GetRecentlyTpPoint(double x, double y)
     {
-        var recentX = 0;
-        var recentY = 0;
+        double recentX = 0;
+        double recentY = 0;
         var minDistance = double.MaxValue;
         foreach (var tpPosition in MapAssets.Instance.TpPositions)
         {
@@ -220,8 +240,8 @@ public class TpTask(CancellationTokenSource cts)
             if (distance < minDistance)
             {
                 minDistance = distance;
-                recentX = (int)Math.Round(tpPosition.X);
-                recentY = (int)Math.Round(tpPosition.Y);
+                recentX = tpPosition.X;
+                recentY = tpPosition.Y;
             }
         }
 
@@ -237,6 +257,7 @@ public class TpTask(CancellationTokenSource cts)
             ra2.Find(_assets.MapUndergroundToGroundButtonRo).Click();
             await Delay(200, cts);
         }
+
         // 识别当前位置
         var bigMapCenterPoint = GetPositionFromBigMap();
         Logger.LogInformation("识别当前位置：{Pos}", bigMapCenterPoint);

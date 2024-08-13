@@ -114,13 +114,13 @@ public class TestTrigger : ITaskTrigger
         // Cv2.ImWrite(Global.Absolute(@"log\minimap.png"), res);
 
         // 大地图测试
-        var mat = content.CaptureRectArea.SrcGreyMat;
-        // mat = mat.Resize(new Size(240, 135));
-        Rect rect = BigMap.Instance.GetBigMapPositionByFeatureMatch(mat);
-
-        var s = 2.56;
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
-            new System.Windows.Rect(rect.X / s, rect.Y / s, rect.Width / s, rect.Height / s)));
+        // var mat = content.CaptureRectArea.SrcGreyMat;
+        // // mat = mat.Resize(new Size(240, 135));
+        // var p = BigMap.Instance.GetBigMapPositionByFeatureMatch(mat);
+        //
+        // var s = 2.56;
+        // WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateBigMapRect", new object(),
+        //     new System.Windows.Rect(rect.X / s, rect.Y / s, rect.Width / s, rect.Height / s)));
 
         // Bv.BigMapIsUnderground(content.CaptureRectArea);
     }

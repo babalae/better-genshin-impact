@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
@@ -78,11 +79,11 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                         continue;
                     }
 
-                    var rect = _bigMap.GetMiniMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
-                    if (rect != Rect.Empty)
+                    var p2 = _bigMap.GetMiniMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    if (!p2.IsEmpty())
                     {
-                        way.AddPoint(rect);
-                        Debug.WriteLine($"AddPoint: {rect}");
+                        way.AddPoint(p2);
+                        Debug.WriteLine($"AddPoint: {p2}");
                     }
                     else
                     {
