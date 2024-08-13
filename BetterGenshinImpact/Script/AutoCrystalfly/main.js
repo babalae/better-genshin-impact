@@ -20,7 +20,7 @@
     }
 
     await captureCrystalfly('枫丹-塔拉塔海谷', 4328, 3960, 4);
-    await captureCrystalfly('枫丹-枫丹廷区2', 4822, 3628, 3);
+    await captureCrystalfly('枫丹-枫丹廷区', 4822, 3628, 3);
     await captureCrystalfly('枫丹-苍白的遗荣', 4188, 2992, 2);
     await captureCrystalfly('枫丹-幽林雾道', 3376, 3290, 2);
     await captureCrystalfly('枫丹-莫尔泰区', 3810, 2334, 2);
