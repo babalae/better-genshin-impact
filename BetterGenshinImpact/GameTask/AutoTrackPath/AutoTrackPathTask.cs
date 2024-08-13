@@ -43,11 +43,6 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 public class AutoTrackPathTask
 {
     private readonly AutoTrackPathParam _taskParam;
-    private readonly Random _rd = new Random();
-
-    private readonly List<GiWorldPosition> _tpPositions;
-
-    private readonly Dictionary<string, double[]> _countryPositions = MapAssets.Instance.CountryPositions;
 
     private GiPath _way;
 
@@ -57,7 +52,6 @@ public class AutoTrackPathTask
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
         _taskParam = taskParam;
-        _tpPositions = MapAssets.Instance.TpPositions;
 
         var wayJson = File.ReadAllText(Global.Absolute(@"log\way\way2.json"));
         _way = JsonSerializer.Deserialize<GiPath>(wayJson, ConfigService.JsonOptions) ?? throw new Exception("way json deserialize failed");
