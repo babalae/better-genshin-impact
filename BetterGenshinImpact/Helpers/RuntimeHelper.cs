@@ -115,8 +115,8 @@ internal static class RuntimeHelper
             callback?.Invoke(true);
             handle = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName);
         }
-        GC.KeepAlive(handle);
-        GC.KeepAlive(Task.Factory.StartNew(() =>
+
+        Task.Factory.StartNew(() =>
         {
             while (handle.WaitOne())
             {
@@ -128,7 +128,7 @@ internal static class RuntimeHelper
                 });
 #endif
             }
-        }, TaskCreationOptions.LongRunning));
+        }, TaskCreationOptions.LongRunning);
     }
 }
 
