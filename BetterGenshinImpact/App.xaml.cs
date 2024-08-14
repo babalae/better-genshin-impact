@@ -33,6 +33,7 @@ public partial class App : Application
     // https://docs.microsoft.com/dotnet/core/extensions/configuration
     // https://docs.microsoft.com/dotnet/core/extensions/logging
     private static readonly IHost _host = Host.CreateDefaultBuilder()
+        .CheckIntegration()
         .UseElevated()
         .UseSingleInstance("BetterGI")
         .ConfigureServices(
