@@ -1,10 +1,7 @@
-﻿using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Script.Dependence;
-using BetterGenshinImpact.Core.Script;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using System.Text.Json;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 
 namespace BetterGenshinImpact.Core.Script.Dependence
 {
@@ -12,13 +9,18 @@ namespace BetterGenshinImpact.Core.Script.Dependence
     {
         public async Task Run(string json)
         {
-            //await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
+            var task = JsonSerializer.Deserialize<PathingTask>(json);
+            if (task == null)
+            {
+                return;
+            }
+            await PathExecutor.Pathing(task, CancellationContext.Instance.Cts);
         }
 
         public async Task RunFile(string path)
         {
-            //var json = await new LimitedFile(rootPath).ReadText(path);
-            //await Run(json);
+            var json = await new LimitedFile(rootPath).ReadText(path);
+            await Run(json);
         }
     }
 }
