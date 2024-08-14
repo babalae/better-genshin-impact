@@ -10,6 +10,7 @@ using System.Threading;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -441,6 +442,57 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     // _logger.LogInformation("开始重放脚本");
                     User32.SetWindowPos(TaskContext.Instance().GameHandle, new HWND(), 0, 0, 1920, 1080, SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_NOZORDER);
+                }
+            ));
+
+            var _pathRecorder = new PathRecorder();
+            var _pathRecording = false;
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）路径记录器",
+                nameof(Config.HotKeyConfig.PathRecorderHotkey),
+                Config.HotKeyConfig.PathRecorderHotkey,
+                Config.HotKeyConfig.PathRecorderHotkeyType,
+                (_, _) =>
+                {
+                    if (_pathRecording)
+                    {
+                        _pathRecorder.Save();
+                    }
+                    else
+                    {
+                        _pathRecorder.Clear();
+                        _pathRecorder.Start();
+                    }
+                    _pathRecording = !_pathRecording;
+                }
+            ));
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）添加记录点",
+                nameof(Config.HotKeyConfig.AddWaypointHotkey),
+                Config.HotKeyConfig.AddWaypointHotkey,
+                Config.HotKeyConfig.AddWaypointHotkeyType,
+                (_, _) =>
+                {
+                    if (_pathRecording)
+                    {
+                        _pathRecorder.AddWaypoint();
+                    }
+                }
+            ));
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）播放内存中的路径",
+                nameof(Config.HotKeyConfig.ExecutePathHotkey),
+                Config.HotKeyConfig.ExecutePathHotkey,
+                Config.HotKeyConfig.ExecutePathHotkeyType,
+                (_, _) =>
+                {
+                    if (_pathRecording)
+                    {
+                        PathExecutor.Pathing(_pathRecorder.PathingTask,new CancellationTokenSource());
+                    }
                 }
             ));
         }
