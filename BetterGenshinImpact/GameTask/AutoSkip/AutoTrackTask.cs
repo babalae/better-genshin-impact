@@ -4,25 +4,23 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.ViewModel.Pages;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using WinRT;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
 
@@ -285,7 +283,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
         foreach (var textRa in textRaList)
         {
-            if (textRa.Text.Length < 8 && (textRa.Text.Contains("m") || textRa.Text.Contains("M")))
+            if (textRa.Text.Length < 8 && textRa.Text.Contains('m', StringComparison.OrdinalIgnoreCase))
             {
                 _missionDistanceRect = textRa.ConvertSelfPositionToGameCaptureRegion();
                 return StringUtils.TryExtractPositiveInt(textRa.Text);

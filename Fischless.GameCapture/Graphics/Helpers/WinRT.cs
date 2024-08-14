@@ -43,7 +43,7 @@ internal class Platform
 /// </summary>
 internal static class WinrtModule
 {
-    private static readonly Dictionary<string, ObjectReference<IActivationFactoryVftbl>> Cache = new();
+    private static readonly Dictionary<string, ObjectReference<IActivationFactoryVftbl>> Cache = [];
 
     public static ObjectReference<IActivationFactoryVftbl> GetActivationFactory(string runtimeClassId)
     {

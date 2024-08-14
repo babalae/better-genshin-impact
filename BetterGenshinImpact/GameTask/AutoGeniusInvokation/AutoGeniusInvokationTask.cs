@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
-using static Vanara.PInvoke.Gdi32;
+﻿using BetterGenshinImpact.Helpers.Extensions;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -16,6 +10,6 @@ public class AutoGeniusInvokationTask
         // 读取策略信息
         var duel = ScriptParser.Parse(taskParam.StrategyContent);
         SystemControl.ActivateWindow();
-        duel.RunAsync(taskParam);
+        duel.RunAsync(taskParam).SafeForget();
     }
 }

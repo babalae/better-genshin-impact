@@ -1,26 +1,29 @@
-﻿using System;
+﻿using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
+using System;
+using System.Collections.Frozen;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using BetterGenshinImpact.GameTask.Common;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Genshin.Paths;
 
-internal class GameExePath
+internal partial class GameExePath
 {
+    public static readonly FrozenSet<string> GameRegistryPaths = FrozenSet.ToFrozenSet(
+    [
+        @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\原神",
+        @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Genshin Impact",
+        // @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\云·原神",
+    ]);
+
     /// <summary>
     /// 游戏路径（云原神除外）
     /// </summary>
     public static string? GetWithoutCloud()
     {
-        return new[]
-        {
-            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\原神",
-            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Genshin Impact",
-            // @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\云·原神",
-        }.Select(regKey => GetGameExePathFromRegistry(regKey, false)).FirstOrDefault(exePath => !string.IsNullOrEmpty(exePath));
+        return GameRegistryPaths.Select(regKey => GetGameExePathFromRegistry(regKey, false)).FirstOrDefault(exePath => !string.IsNullOrEmpty(exePath));
     }
 
     /// <summary>
@@ -49,8 +52,8 @@ internal class GameExePath
                 if (File.Exists(configPath))
                 {
                     var str = File.ReadAllText(configPath);
-                    var installPath = Regex.Match(str, @"game_install_path=(.+)").Groups[1].Value.Trim();
-                    var exeName = Regex.Match(str, @"game_start_name=(.+)").Groups[1].Value.Trim();
+                    var installPath = GameInstallPathRegex().Match(str).Groups[1].Value.Trim();
+                    var exeName = GameStartNameRegex().Match(str).Groups[1].Value.Trim();
                     var exePath = Path.GetFullPath(exeName, installPath);
                     if (File.Exists(exePath))
                     {
@@ -66,4 +69,10 @@ internal class GameExePath
 
         return null;
     }
+
+    [GeneratedRegex(@"game_install_path=(.+)")]
+    private static partial Regex GameInstallPathRegex();
+
+    [GeneratedRegex(@"game_start_name=(.+)")]
+    private static partial Regex GameStartNameRegex();
 }

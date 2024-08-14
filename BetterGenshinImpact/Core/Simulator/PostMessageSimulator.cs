@@ -125,7 +125,7 @@ public class PostMessageSimulator
         //User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
-        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 
@@ -134,7 +134,7 @@ public class PostMessageSimulator
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         Thread.Sleep(ms);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
-        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 
@@ -143,7 +143,7 @@ public class PostMessageSimulator
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         Thread.Sleep(1000);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
-        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 
@@ -155,7 +155,7 @@ public class PostMessageSimulator
 
     public PostMessageSimulator KeyUp(User32.VK vk)
     {
-        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 
@@ -164,7 +164,7 @@ public class PostMessageSimulator
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYDOWN, (nint)vk, 0x1e0001);
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_CHAR, (nint)vk, 0x1e0001);
-        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 
@@ -178,7 +178,7 @@ public class PostMessageSimulator
     public PostMessageSimulator KeyUpBackground(User32.VK vk)
     {
         User32.PostMessage(_hWnd, User32.WindowMessage.WM_ACTIVATE, 1, 0);
-        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, (nint)0xc01e0001);
+        User32.PostMessage(_hWnd, User32.WindowMessage.WM_KEYUP, (nint)vk, unchecked((nint)0xc01e0001));
         return this;
     }
 

@@ -1,5 +1,4 @@
-﻿using System.Windows.Media.Media3D;
-using OpenCvSharp;
+﻿using OpenCvSharp;
 
 namespace BetterGenshinImpact.Helpers.Extensions;
 

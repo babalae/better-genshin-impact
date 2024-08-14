@@ -1,18 +1,17 @@
-﻿using System.Diagnostics;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Service.Interface;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using CommunityToolkit.Mvvm.Messaging;
-using Wpf.Ui.Controls;
-using BetterGenshinImpact.View.Pages;
-using Wpf.Ui;
-using System;
-using System.IO;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using System.Diagnostics;
+using System.IO;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 

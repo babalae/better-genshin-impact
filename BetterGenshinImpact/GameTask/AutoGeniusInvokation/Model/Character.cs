@@ -1,9 +1,9 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Helpers.Extensions;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
 {
@@ -16,9 +16,9 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// </summary>
         public int Index { get; set; }
 
-        public string Name { get; set; }
+        public string Name { get; set; } = default!;
         public ElementalType Element { get; set; }
-        public Skill[] Skills { get; set; }
+        public Skill[] Skills { get; set; } = default!;
 
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// <summary>
         /// 角色身上的负面状态
         /// </summary>
-        public List<CharacterStatusEnum> StatusList { get; set; } = new List<CharacterStatusEnum>();
+        public List<CharacterStatusEnum> StatusList { get; set; } = [];
 
         /// <summary>
         /// 角色区域
@@ -60,7 +60,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
 
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append($"角色{Index}，");
             if (Hp != -2)
             {

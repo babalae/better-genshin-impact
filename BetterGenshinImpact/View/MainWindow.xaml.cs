@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Windows;

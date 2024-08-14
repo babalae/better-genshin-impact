@@ -10,14 +10,11 @@ public class WindowCaptureFactory
 
     public static IWindowCapture Create(CaptureModeEnum mode)
     {
-        switch (mode)
+        return mode switch
         {
-            case CaptureModeEnum.BitBlt:
-                return new BitBlt.BitBltCapture();
-            case CaptureModeEnum.WindowsGraphicsCapture:
-                return new GraphicsCapture.GraphicsCapture();
-            default:
-                throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
-        }
+            CaptureModeEnum.BitBlt => new BitBlt.BitBltCapture(),
+            CaptureModeEnum.WindowsGraphicsCapture => new GraphicsCapture.GraphicsCapture(),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
+        };
     }
 }

@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
+﻿using BetterGenshinImpact.GameTask.AutoTrackPath;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 

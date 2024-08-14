@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using BetterGenshinImpact.Core.Recognition;
+﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 

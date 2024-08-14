@@ -1,6 +1,8 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,15 +14,11 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
-using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -253,7 +251,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
             ScriptGroups.Clear();
             var files = Directory.GetFiles(ScriptGroupPath, "*.json");
-            List<ScriptGroup> groups = new();
+            List<ScriptGroup> groups = [];
             foreach (var file in files)
             {
                 try
@@ -410,7 +408,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     private bool HasTimerOperation(IEnumerable<string> codeList)
     {
-        var regex = new Regex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline);
-        return codeList.Any(code => regex.IsMatch(code));
+        return codeList.Any(code => DispatcherAddTimerRegex().IsMatch(code));
     }
+
+    [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
+    private static partial Regex DispatcherAddTimerRegex();
 }

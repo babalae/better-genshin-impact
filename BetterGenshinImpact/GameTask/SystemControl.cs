@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 
@@ -62,7 +61,7 @@ public class SystemControl
         foreach (var name in names)
         {
             var pros = Process.GetProcessesByName(name);
-            if (pros.Any())
+            if (pros.Length is not 0)
             {
                 return pros[0].MainWindowHandle;
             }

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Helpers;
 
-internal static class UrlProtocolHelper
+internal static partial class UrlProtocolHelper
 {
     public const string ProtocolRootKey = @"HKEY_CLASSES_ROOT\";
     public const string ProtocolUserKey = @"HKEY_CURRENT_USER\" + ProtocolUserSubKey;
@@ -110,8 +110,7 @@ internal static class UrlProtocolHelper
 
             if (keyCommand?.GetValue(string.Empty) is string pathRegistered)
             {
-                Regex regex = new("\"(?<exe>[\\s\\S]*?)\" \"%1\"");
-                Match match = regex.Match(pathRegistered);
+                Match match = ExecutableRegex().Match(pathRegistered);
 
                 if (match.Success && match.Groups["exe"]?.Value is string exe)
                 {
@@ -193,4 +192,7 @@ internal static class UrlProtocolHelper
             Launch(param);
         });
     }
+
+    [GeneratedRegex("\"(?<exe>[\\s\\S]*?)\" \"%1\"")]
+    private static partial Regex ExecutableRegex();
 }

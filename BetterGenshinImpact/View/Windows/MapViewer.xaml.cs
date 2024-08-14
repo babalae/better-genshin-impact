@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.ViewModel.Windows;
-using System.Windows;
 
 namespace BetterGenshinImpact.View.Windows;
 

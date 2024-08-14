@@ -1,6 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,10 +12,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.Map;
-using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;

@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,13 +21,13 @@ public class Duel
 {
     private readonly ILogger<Duel> _logger = App.GetLogger<Duel>();
 
-    public Character CurrentCharacter { get; set; }
+    public Character CurrentCharacter { get; set; } = default!;
     public Character[] Characters { get; set; } = new Character[4];
 
     /// <summary>
     /// 行动指令队列
     /// </summary>
-    public List<ActionCommand> ActionCommandQueue { get; set; } = new List<ActionCommand>();
+    public List<ActionCommand> ActionCommandQueue { get; set; } = [];
 
     /// <summary>
     /// 当前回合数
@@ -38,7 +37,7 @@ public class Duel
     /// <summary>
     /// 角色牌位置
     /// </summary>
-    public List<Rect> CharacterCardRects { get; set; }
+    public List<Rect> CharacterCardRects { get; set; } = default!;
 
     /// <summary>
     /// 手牌数量
@@ -50,7 +49,7 @@ public class Duel
     /// </summary>
     public int CurrentDiceCount { get; set; } = 0;
 
-    public CancellationTokenSource Cts { get; set; }
+    public CancellationTokenSource Cts { get; set; } = default!;
 
     private int _keqingECount = 0;
 
@@ -95,7 +94,7 @@ public class Duel
 
             if (CharacterCardRects is not { Count: 3 })
             {
-                CharacterCardRects = new List<Rect>();
+                CharacterCardRects = [];
                 var defaultCharacterCardRects = TaskContext.Instance().Config.AutoGeniusInvokationConfig.DefaultCharacterCardRects;
                 var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
                 for (var i = 0; i < defaultCharacterCardRects.Count; i++)
@@ -135,7 +134,7 @@ public class Duel
                 var elementSet = PredictionDiceType();
 
                 // 0 投骰子
-                GeniusInvokationControl.GetInstance().ReRollDice(elementSet.ToArray());
+                GeniusInvokationControl.GetInstance().ReRollDice([.. elementSet]);
 
                 // 等待到我的回合 // 投骰子动画时间是不确定的  // 可能是对方先手
                 GeniusInvokationControl.GetInstance().WaitForMyTurn(this, 1000);
@@ -429,7 +428,7 @@ public class Duel
     /// <returns></returns>
     public List<int> GetCharacterSwitchOrder()
     {
-        List<int> orderList = new List<int>();
+        List<int> orderList = [];
         for (var i = 0; i < ActionCommandQueue.Count; i++)
         {
             if (!orderList.Contains(ActionCommandQueue[i].Character.Index))

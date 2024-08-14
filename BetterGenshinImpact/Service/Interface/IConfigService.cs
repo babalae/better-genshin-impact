@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Service.Interface
 {

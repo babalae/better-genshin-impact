@@ -13,7 +13,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -42,8 +41,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     private void InitScriptListViewData()
     {
         _scriptItems.Clear();
-        var fileInfos = LoadScriptFiles(scriptPath);
-        fileInfos = fileInfos.OrderByDescending(f => f.CreationTime).ToList();
+        var fileInfos = LoadScriptFiles(scriptPath)
+            .OrderByDescending(f => f.CreationTime)
+            .ToList();
         foreach (var f in fileInfos)
         {
             _scriptItems.Add(new KeyMouseScriptItem
@@ -159,7 +159,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 TimeSpan.FromSeconds(2)
             );
         }
-        catch (Exception e)
+        catch (Exception)
         {
             _snackbarService.Show(
                 "删除失败",

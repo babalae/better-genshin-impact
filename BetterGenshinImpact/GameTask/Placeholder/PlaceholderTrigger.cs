@@ -1,16 +1,8 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.View.Drawable;
-using OpenCvSharp;
+﻿using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
@@ -313,7 +305,7 @@ public class TestTrigger : ITaskTrigger
 
     static List<int> FindPeaks(float[] data)
     {
-        List<int> peakIndices = new List<int>();
+        List<int> peakIndices = [];
 
         for (int i = 1; i < data.Length - 1; i++)
         {

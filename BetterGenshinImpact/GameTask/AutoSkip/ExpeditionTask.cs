@@ -4,7 +4,6 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
@@ -23,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 [Obsolete]
 public class ExpeditionTask
 {
-    private static readonly List<string> ExpeditionCharacterList = new();
+    private static readonly List<string> ExpeditionCharacterList = [];
 
     private int _expeditionCount = 0;
 
@@ -129,12 +128,7 @@ public class ExpeditionTask
             var cards = GetCharacterCards(result);
             if (cards.Count > 0)
             {
-                var card = cards.FirstOrDefault(c => c.Idle && c.Name != null && ExpeditionCharacterList.Contains(c.Name));
-                if (card == null)
-                {
-                    card = cards.First(c => c.Idle);
-                }
-
+                var card = cards.FirstOrDefault(c => c.Idle && c.Name != null && ExpeditionCharacterList.Contains(c.Name)) ?? cards.First(c => c.Idle);
                 var rect = card.Rects.First();
 
                 using var ra = content.CaptureRectArea.Derive(rect);
@@ -158,9 +152,12 @@ public class ExpeditionTask
         var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
-        var ocrResultRects = result.Regions.Select(x => x.ToOcrResultRect()).ToList();
-        ocrResultRects = ocrResultRects.Where(r => r.Rect.X + r.Rect.Width < captureRect.Width / 2)
-            .OrderBy(r => r.Rect.Y).ThenBy(r => r.Rect.X).ToList();
+        var ocrResultRects = result.Regions
+            .Select(x => x.ToOcrResultRect())
+            .Where(r => r.Rect.X + r.Rect.Width < captureRect.Width / 2)
+            .OrderBy(r => r.Rect.Y)
+            .ThenBy(r => r.Rect.X)
+            .ToList();
 
         var cards = new List<ExpeditionCharacterCard>();
         foreach (var ocrResultRect in ocrResultRects)

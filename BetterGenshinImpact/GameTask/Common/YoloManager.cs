@@ -1,9 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Model;
-using Compunet.YoloV8;
-using System;
-
-namespace BetterGenshinImpact.GameTask.Common;
+﻿namespace BetterGenshinImpact.GameTask.Common;
 
 // [Obsolete]
 // public class YoloManager : Singleton<YoloManager>, IDisposable

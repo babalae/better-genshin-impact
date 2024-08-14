@@ -4,10 +4,8 @@ using Sdcb.PaddleInference;
 using Sdcb.PaddleOCR;
 using Sdcb.PaddleOCR.Models;
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 

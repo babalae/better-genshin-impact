@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
+﻿using BetterGenshinImpact.GameTask;
 using CommunityToolkit.Mvvm.Input;
 using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.Model
 {

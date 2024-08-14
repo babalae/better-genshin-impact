@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -13,7 +14,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -24,8 +24,6 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// </summary>
 public class TpTask(CancellationTokenSource cts)
 {
-    private static readonly Random _rd = new Random();
-
     private readonly QuickTeleportAssets _assets = QuickTeleportAssets.Instance;
 
     /// <summary>
@@ -145,7 +143,7 @@ public class TpTask(CancellationTokenSource cts)
     public async Task MouseMoveMapX(int dx)
     {
         var moveUnit = dx > 0 ? 20 : -20;
-        GameCaptureRegion.GameRegionMove((rect, _) => (rect.Width / 2d + _rd.Next(-rect.Width / 6, rect.Width / 6), rect.Height / 2d + _rd.Next(-rect.Height / 6, rect.Height / 6)));
+        GameCaptureRegion.GameRegionMove((rect, _) => (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6), rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Delay(200, cts);
         for (var i = 0; i < dx / moveUnit; i++)
@@ -160,7 +158,7 @@ public class TpTask(CancellationTokenSource cts)
     public async Task MouseMoveMapY(int dy)
     {
         var moveUnit = dy > 0 ? 20 : -20;
-        GameCaptureRegion.GameRegionMove((rect, _) => (rect.Width / 2d + _rd.Next(-rect.Width / 6, rect.Width / 6), rect.Height / 2d + _rd.Next(-rect.Height / 6, rect.Height / 6)));
+        GameCaptureRegion.GameRegionMove((rect, _) => (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6), rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Delay(200, cts);
         // 原神地图在小范围内移动是无效的，所以先随便移动一下，所以肯定少移动一次
@@ -365,7 +363,7 @@ public class TpTask(CancellationTokenSource cts)
         // 按高度排序
         if (rResultList.Count > 0)
         {
-            rResultList = rResultList.OrderBy(x => x.Y).ToList();
+            rResultList = [.. rResultList.OrderBy(x => x.Y)];
             // 点击最高的
             foreach (var iconRect in rResultList)
             {

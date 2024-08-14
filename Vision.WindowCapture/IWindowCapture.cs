@@ -6,7 +6,7 @@ namespace Vision.WindowCapture;
 public interface IWindowCapture
 {
     bool IsCapturing { get; }
-    
+
     Task StartAsync(HWND hWnd);
 
     Bitmap? Capture();

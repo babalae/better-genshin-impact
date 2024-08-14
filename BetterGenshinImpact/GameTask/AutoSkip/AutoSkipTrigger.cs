@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 /// <summary>
 /// 自动剧情有选项点击
 /// </summary>
-public class AutoSkipTrigger : ITaskTrigger
+public partial class AutoSkipTrigger : ITaskTrigger
 {
     private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
 
@@ -47,17 +47,17 @@ public class AutoSkipTrigger : ITaskTrigger
     /// <summary>
     /// 不自动点击的选项，优先级低于橙色文字点击
     /// </summary>
-    private List<string> _defaultPauseList = new();
+    private List<string> _defaultPauseList = [];
 
     /// <summary>
     /// 不自动点击的选项
     /// </summary>
-    private List<string> _pauseList = new();
+    private List<string> _pauseList = [];
 
     /// <summary>
     /// 优先自动点击的选项
     /// </summary>
-    private List<string> _selectList = new();
+    private List<string> _selectList = [];
 
     private PostMessageSimulator? _postMessageSimulator;
 
@@ -78,7 +78,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var defaultPauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\default_pause_options.json");
             if (!string.IsNullOrEmpty(defaultPauseListJson))
             {
-                _defaultPauseList = JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _defaultPauseList = JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -92,7 +92,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var pauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\pause_options.json");
             if (!string.IsNullOrEmpty(pauseListJson))
             {
-                _pauseList = JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _pauseList = JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -106,7 +106,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var selectListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\select_options.json");
             if (!string.IsNullOrEmpty(selectListJson))
             {
-                _selectList = JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _selectList = JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -390,7 +390,8 @@ public class AutoSkipTrigger : ITaskTrigger
         });
     }
 
-    private readonly Regex _enOrNumRegex = new(@"^[a-zA-Z0-9]+$");
+    [GeneratedRegex(@"^[a-zA-Z0-9]+$")]
+    private static partial Regex EnOrNumRegex();
 
     /// <summary>
     /// 新的对话选项选择
@@ -420,7 +421,7 @@ public class AutoSkipTrigger : ITaskTrigger
         if (chatOptionResultList.Count > 0)
         {
             // 第一个元素就是最下面的
-            chatOptionResultList = chatOptionResultList.OrderByDescending(r => r.Y).ToList();
+            chatOptionResultList = [.. chatOptionResultList.OrderByDescending(r => r.Y)];
 
             // 通过最下面的气泡框来文字识别
             var lowest = chatOptionResultList[0];
@@ -438,11 +439,11 @@ public class AutoSkipTrigger : ITaskTrigger
             // 删除为空的结果 和 纯英文的结果
             var rs = new List<Region>();
             // 按照y坐标排序
-            ocrResList = ocrResList.OrderBy(r => r.Y).ToList();
+            ocrResList = [.. ocrResList.OrderBy(r => r.Y)];
             for (var i = 0; i < ocrResList.Count; i++)
             {
                 var item = ocrResList[i];
-                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && _enOrNumRegex.IsMatch(item.Text)))
+                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && EnOrNumRegex().IsMatch(item.Text)))
                 {
                     continue;
                 }

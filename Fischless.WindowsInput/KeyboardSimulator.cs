@@ -120,31 +120,31 @@ public class KeyboardSimulator : IKeyboardSimulator
 
     public IKeyboardSimulator ModifiedKeyStroke(User32.VK modifierKeyCode, User32.VK keyCode)
     {
-        ModifiedKeyStroke(new User32.VK[]
-        {
+        ModifiedKeyStroke(
+        [
             modifierKeyCode,
-        }, new User32.VK[]
-        {
+        ],
+        [
             keyCode,
-        });
+        ]);
         return this;
     }
 
     public IKeyboardSimulator ModifiedKeyStroke(IEnumerable<User32.VK> modifierKeyCodes, User32.VK keyCode)
     {
-        ModifiedKeyStroke(modifierKeyCodes, new User32.VK[]
-        {
+        ModifiedKeyStroke(modifierKeyCodes,
+        [
             keyCode
-        });
+        ]);
         return this;
     }
 
     public IKeyboardSimulator ModifiedKeyStroke(User32.VK modifierKey, IEnumerable<User32.VK> keyCodes)
     {
-        ModifiedKeyStroke(new User32.VK[]
-        {
+        ModifiedKeyStroke(
+        [
             modifierKey
-        }, keyCodes);
+        ], keyCodes);
         return this;
     }
 

@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Windows;

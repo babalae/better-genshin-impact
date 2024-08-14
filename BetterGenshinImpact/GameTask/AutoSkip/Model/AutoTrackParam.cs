@@ -1,5 +1,5 @@
-﻿using System.Threading;
-using BetterGenshinImpact.GameTask.Model;
+﻿using BetterGenshinImpact.GameTask.Model;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Model;
 

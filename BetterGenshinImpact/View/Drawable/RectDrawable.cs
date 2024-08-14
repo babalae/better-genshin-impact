@@ -1,9 +1,8 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask;
+using System;
 using System.Drawing;
 using System.Windows;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Drawable
 {

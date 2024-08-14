@@ -1,10 +1,10 @@
-﻿using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 

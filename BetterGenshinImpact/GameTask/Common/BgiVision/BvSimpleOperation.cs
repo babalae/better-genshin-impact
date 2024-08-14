@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;

@@ -10,7 +10,7 @@ namespace BetterGenshinImpact.Model;
 
 public class KeyboardHook
 {
-    public static Dictionary<Keys, KeyboardHook> AllKeyboardHooks = new();
+    public static Dictionary<Keys, KeyboardHook> AllKeyboardHooks = [];
 
     public event EventHandler<KeyPressedEventArgs>? KeyPressedEvent = null;
 

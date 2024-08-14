@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Config;
 
@@ -47,12 +47,12 @@ public class SkillsItem
     /// <summary>
     /// 
     /// </summary>
-    public List<string> SkillTag { get; set; } = new();
+    public List<string> SkillTag { get; set; } = [];
 
     /// <summary>
     /// 
     /// </summary>
-    public List<CostItem> Cost { get; set; } = new();
+    public List<CostItem> Cost { get; set; } = [];
 }
 
 [Serializable]
@@ -101,7 +101,7 @@ public class CharacterCard
     /// <summary>
     /// 
     /// </summary>
-    public List<SkillsItem> Skills { get; set; } = new();
+    public List<SkillsItem> Skills { get; set; } = [];
 
     public static void CopyCardProperty(Character source, CharacterCard characterCard)
     {

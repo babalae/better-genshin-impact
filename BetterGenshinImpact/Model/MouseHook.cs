@@ -1,17 +1,17 @@
-﻿using Fischless.HotkeyCapture;
+﻿using BetterGenshinImpact.GameTask;
+using Fischless.HotkeyCapture;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Model;
 
 public class MouseHook
 {
-    public static Dictionary<MouseButtons, MouseHook> AllMouseHooks = new();
+    public static Dictionary<MouseButtons, MouseHook> AllMouseHooks = [];
 
     public event EventHandler<KeyPressedEventArgs>? MousePressed = null;
 

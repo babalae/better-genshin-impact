@@ -1,11 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using OpenCvSharp;
-using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -19,12 +15,12 @@ public partial class AutoGeniusInvokationConfig : ObservableObject
 
     [ObservableProperty] private int _sleepDelay = 0;
 
-    public List<Rect> DefaultCharacterCardRects { get; set; } = new()
-    {
+    public List<Rect> DefaultCharacterCardRects { get; set; } =
+    [
         new(667, 632, 165, 282),
         new(877, 632, 165, 282),
         new(1088, 632, 165, 282)
-    };
+    ];
 
 
     /// <summary>

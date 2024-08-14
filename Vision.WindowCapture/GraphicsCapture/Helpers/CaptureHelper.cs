@@ -37,7 +37,7 @@ public static class CaptureHelper
         InitializeWithWindow.Initialize(picker, hwnd);
     }
 
-    [return:MaybeNull]
+    [return: MaybeNull]
     public static unsafe GraphicsCaptureItem CreateItemForWindow(HWND hwnd)
     {
         return GraphicsCaptureItem.TryCreateFromWindowId(*(WindowId*)&hwnd);

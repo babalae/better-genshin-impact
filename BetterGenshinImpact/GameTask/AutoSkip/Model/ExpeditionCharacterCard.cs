@@ -12,7 +12,7 @@ public class ExpeditionCharacterCard
     public string? Addition { get; set; }
 
 
-    public List<Rect> Rects { get; set; } = new();
+    public List<Rect> Rects { get; set; } = [];
 
     //public ExpeditionCharacterCard(string name,string addition, bool idle)
     //{

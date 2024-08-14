@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// 元素类型
         /// </summary>
         public ElementalType Type { get; set; }
-        
+
         /// <summary>
         /// 中心点位置
         /// </summary>

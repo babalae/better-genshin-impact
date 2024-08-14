@@ -1,7 +1,7 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Script.Utils;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Script.Utils;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 

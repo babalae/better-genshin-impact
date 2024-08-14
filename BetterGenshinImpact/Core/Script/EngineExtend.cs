@@ -1,7 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
-using System;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script;

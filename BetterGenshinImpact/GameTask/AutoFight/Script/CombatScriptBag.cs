@@ -1,7 +1,7 @@
-﻿using System;
-using BetterGenshinImpact.GameTask.AutoFight.Model;
-using System.Collections.Generic;
+﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;

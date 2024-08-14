@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
-using static Vanara.PInvoke.Gdi32;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.Helpers
 {

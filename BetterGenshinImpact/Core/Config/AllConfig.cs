@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
@@ -13,7 +14,6 @@ using Fischless.GameCapture;
 using System;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
-using BetterGenshinImpact.GameTask.AutoCook;
 
 namespace BetterGenshinImpact.Core.Config;
 

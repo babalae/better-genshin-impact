@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.Service;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -83,7 +82,7 @@ public class JsonCrudHelper<T> : ICrudHelper<T> where T : class
     {
         if (!File.Exists(_filePath))
         {
-            return new ObservableCollection<T>();
+            return [];
         }
 
         var json = File.ReadAllText(_filePath);

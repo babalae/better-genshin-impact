@@ -1,24 +1,24 @@
-﻿using System;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
-using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -69,7 +69,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             if (files[i].EndsWith(".txt"))
             {
                 var strategyName = files[i].Replace(folder, "").Replace(".txt", "");
-                if (strategyName.StartsWith(@"\"))
+                if (strategyName.StartsWith('\\'))
                 {
                     strategyName = strategyName[1..];
                 }

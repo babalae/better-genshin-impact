@@ -44,7 +44,7 @@ public class FishType
     public static readonly FishType MaintenanceMekPlatinumCollection = new("maintenance mek- platinum collection", "flashing maintenance mek bait", "维护机关·白金典藏型");
     public static readonly FishType MaintenanceMekSituationController = new("maintenance mek- situation controller", "flashing maintenance mek bait", "维护机关·态势控制者");
     public static readonly FishType MaintenanceMekWaterBodyCleaner = new("maintenance mek- water body cleaner", "flashing maintenance mek bait", "维护机关·水域清理者");
-    public static readonly FishType MaintenanceMekWaterGoldLeader = new ("maintenance mek- gold leader", "flashing maintenance mek bait", "维护机关·澄金领队型");
+    public static readonly FishType MaintenanceMekWaterGoldLeader = new("maintenance mek- gold leader", "flashing maintenance mek bait", "维护机关·澄金领队型");
 
 
     public static IEnumerable<FishType> Values
