@@ -401,12 +401,30 @@ public class FeatureMatcher
     //     return null;
     // }
 
+    public Point2f KnnMatch(Mat queryMat, Mat? queryMatMask = null)
+    {
+        return KnnMatch(_trainKeyPoints, _trainDescriptors, queryMat, queryMatMask);
+    }
+
+    public Point2f KnnMatch(Mat queryMat, float prevX, float prevY, Mat? queryMatMask = null)
+    {
+        var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(_trainMatSize, _splitRow, _splitCol, prevX, prevY);
+        Debug.WriteLine($"当前坐标({prevX},{prevY})在特征块({cellRow},{cellCol})中");
+        if (_lastMergedBlock == null || _lastMergedBlock.MergedCenterCellRow != cellRow || _lastMergedBlock.MergedCenterCellCol != cellCol)
+        {
+            Debug.WriteLine($"---------切换到新的特征块({cellRow},{cellCol})，合并特征点--------");
+            _lastMergedBlock = KeyPointFeatureBlockHelper.MergeNeighboringFeatures(_blocks, _trainDescriptors, cellRow, cellCol);
+        }
+
+        return KnnMatch(_lastMergedBlock.KeyPointArray, _lastMergedBlock.Descriptor!, queryMat, queryMatMask);
+    }
+
     /// <summary>
     /// https://github.com/tignioj/minimap/blob/main/matchmap/sifttest/sifttest5.py
     /// Copilot 生成
     /// </summary>
     /// <returns></returns>
-    private Point2f? KnnMatch(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat, Mat? queryMatMask = null)
+    private Point2f KnnMatch(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat, Mat? queryMatMask = null)
     {
         using var queryDescriptors = new Mat();
 #pragma warning disable CS8604 // 引用类型参数可能为 null。
@@ -426,7 +444,7 @@ public class FeatureMatcher
 
         if (goodMatches.Count < 7)
         {
-            return null;
+            return new Point2f();
         }
 
         // 获取匹配点的坐标
@@ -438,7 +456,7 @@ public class FeatureMatcher
         var M = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
         if (M.Empty())
         {
-            return null;
+            return new Point2f();
         }
 
         // 计算小地图的中心点
