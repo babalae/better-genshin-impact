@@ -21,11 +21,10 @@ public static class UIDispatcherHelper
         _ = Application.Current?.Dispatcher.Invoke(callback, MainWindow);
     }
 
-    public static T Invoke<T>(Func<T> action)
+    public static T? Invoke<T>(Func<T> func)
+        where T : class
     {
-        T t = default;
-        Application.Current?.Dispatcher.Invoke(() => t = action());
-        return t;
+        return Application.Current?.Dispatcher.Invoke(func);
     }
 
     public static void BeginInvoke(Action callback, params object[] args)
