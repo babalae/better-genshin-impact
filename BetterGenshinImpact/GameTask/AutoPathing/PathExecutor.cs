@@ -76,8 +76,8 @@ public class PathExecutor
 
     internal static async Task MoveTo(Waypoint waypoint)
     {
-        var position = await Task.Run(GetPosition);
-        var targetOrientation = GetTargetOrientation(waypoint, GetPosition());
+        var position = await Task.Run(Navigation.GetPosition);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, Navigation.GetPosition());
         TaskControl.Logger.LogInformation("粗略接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
         await WaitUntilRotatedTo(targetOrientation, 10);
         var startTime = DateTime.UtcNow;
@@ -94,8 +94,8 @@ public class PathExecutor
                 TaskControl.Logger.LogWarning("执行超时，跳过路径点");
                 break;
             }
-            position = await Task.Run(GetPosition);
-            var distance = GetDistance(waypoint, position);
+            position = await Task.Run(Navigation.GetPosition);
+            var distance = Navigation.GetDistance(waypoint, position);
             if (distance < 4)
             {
                 TaskControl.Logger.LogInformation("到达路径点附近");
@@ -129,7 +129,7 @@ public class PathExecutor
                 }
             }
             // 旋转视角
-            targetOrientation = GetTargetOrientation(waypoint, position);
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             RotateTo(targetOrientation);
             // 根据指定方式进行移动
             if (waypoint.MoveType == MoveType.Fly)
@@ -175,8 +175,8 @@ public class PathExecutor
 
     internal static async Task MoveCloseTo(Waypoint waypoint)
     {
-        var position = await Task.Run(GetPosition);
-        var targetOrientation = GetTargetOrientation(waypoint, GetPosition());
+        var position = await Task.Run(Navigation.GetPosition);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, Navigation.GetPosition());
         TaskControl.Logger.LogInformation("精确接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
         if (waypoint.MoveType == MoveType.Fly && IsFlying())
         {
@@ -195,8 +195,8 @@ public class PathExecutor
                 TaskControl.Logger.LogWarning("精确接近超时");
                 break;
             }
-            position = await Task.Run(GetPosition);
-            if (GetDistance(waypoint, position) < 2)
+            position = await Task.Run(Navigation.GetPosition);
+            if (Navigation.GetDistance(waypoint, position) < 2)
             {
                 TaskControl.Logger.LogInformation("已到达路径点");
                 break;
@@ -243,51 +243,12 @@ public class PathExecutor
         }
     }
 
-    internal static Point2f GetPosition()
-    {
-        var greyMat = TaskControl.CaptureToRectArea().SrcGreyMat;
-        greyMat = new Mat(greyMat, new Rect(62, 19, 212, 212));
-        return EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
-    }
-
-    internal static int GetTargetOrientation(Waypoint waypoint, Point2f position)
-    {
-
-        var target = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
-        double deltaX = target.x - position.X;
-        double deltaY = target.y - position.Y;
-        double vectorLength = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (vectorLength == 0)
-        {
-            return 0;
-        }
-        // 计算向量与x轴之间的夹角（逆时针方向）
-        double angle = Math.Acos(deltaX / vectorLength);
-        // 如果向量在x轴下方，角度需要调整
-        if (deltaY < 0)
-        {
-            angle = 2 * Math.PI - angle;
-        }
-        // 将角度转换为顺时针方向
-        angle = 2 * Math.PI - angle;
-        return (int)(angle * (180.0 / Math.PI));
-    }
-
-    internal static double GetDistance(Waypoint waypoint, Point2f position)
-    {
-        var x1 = waypoint.X;
-        var y1 = waypoint.Y;
-        var x2 = position.X;
-        var y2 = position.Y;
-        return Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-    }
-
     internal static bool IsFlying()
     {
         var greyMat = TaskControl.CaptureToRectArea().SrcGreyMat;
         greyMat = new Mat(greyMat, new Rect(1809, 1025, 61, 28));
         var text = OcrFactory.Paddle.OcrWithoutDetector(greyMat);
-        return text.ToLower()=="space";
+        return text.ToLower() == "space";
     }
 
 }
