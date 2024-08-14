@@ -16,6 +16,7 @@ using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
+
 public class PathExecutor
 {
     public static async Task Pathing(PathingTask task, CancellationTokenSource cts, bool withDelay = true)
@@ -52,6 +53,16 @@ public class PathExecutor
 
         // 这里应该判断一下自动拾取是否处于工作状态，但好像没有什么方便的读取办法
 
+        // TODO:大地图传送的时候使用游戏坐标，追踪的时候应该使用2048地图图像坐标，这里临时做转换，后续改进
+        foreach (var waypoint in task.Waypoints)
+        {
+            if (waypoint.WaypointType == WaypointType.Teleport)
+            {
+                continue;
+            }
+            (waypoint.X, waypoint.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+        }
+
         foreach (var waypoint in task.Waypoints)
         {
             if (waypoint.WaypointType == WaypointType.Teleport)
@@ -70,7 +81,6 @@ public class PathExecutor
             {
                 await MoveCloseTo(waypoint);
             }
-
         }
     }
 
@@ -250,6 +260,4 @@ public class PathExecutor
         var text = OcrFactory.Paddle.OcrWithoutDetector(greyMat);
         return text.ToLower() == "space";
     }
-
 }
-
