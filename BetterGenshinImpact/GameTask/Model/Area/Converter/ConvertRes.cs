@@ -1,5 +1,5 @@
-﻿using System;
-using OpenCvSharp;
+﻿using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask.Model.Area.Converter;
 

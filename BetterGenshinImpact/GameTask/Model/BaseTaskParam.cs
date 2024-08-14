@@ -1,5 +1,5 @@
-﻿using System.Threading;
-using BetterGenshinImpact.GameTask.Model.Enum;
+﻿using BetterGenshinImpact.GameTask.Model.Enum;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Model;
 

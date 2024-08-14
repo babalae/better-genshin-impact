@@ -1,11 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using CommunityToolkit.Mvvm.Messaging;
-using OpenCvSharp;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
@@ -20,7 +14,13 @@ using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using OpenCvSharp;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -63,7 +63,7 @@ internal class GameTaskManager
             loadedTriggers.ForEach(i => i.IsEnabled = true);
         }
 
-        loadedTriggers = loadedTriggers.OrderByDescending(i => i.Priority).ToList();
+        loadedTriggers = [.. loadedTriggers.OrderByDescending(i => i.Priority)];
         return loadedTriggers;
     }
 

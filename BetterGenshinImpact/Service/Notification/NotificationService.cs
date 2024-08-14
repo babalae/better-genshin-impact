@@ -1,16 +1,16 @@
-﻿using System;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
-using System.Text.Json;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -49,7 +49,7 @@ public class NotificationService : IHostedService
         return Task.CompletedTask;
     }
 
-    private HttpContent TransformData(INotificationData notificationData)
+    private StringContent TransformData(INotificationData notificationData)
     {
         // using object type here so it serializes the interface correctly
         var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions

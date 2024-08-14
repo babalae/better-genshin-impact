@@ -27,12 +27,7 @@ public class DefaultAutoFightConfig
 
     public static string AvatarAliasToStandardName(string alias)
     {
-        var avatar = CombatAvatars.Find(x => x.Alias.Contains(alias));
-        if (avatar == null)
-        {
-            throw new Exception($"角色名称校验失败：{alias}");
-        }
-
+        var avatar = CombatAvatars.Find(x => x.Alias.Contains(alias)) ?? throw new Exception($"角色名称校验失败：{alias}");
         return avatar.Name;
     }
 }

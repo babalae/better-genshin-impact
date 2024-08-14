@@ -1,8 +1,8 @@
-﻿using System.IO;
-using System.Xml;
-using BetterGenshinImpact.Helpers;
+﻿using BetterGenshinImpact.Helpers;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
+using System.IO;
+using System.Xml;
 
 namespace BetterGenshinImpact.View.Controls.CodeEditor;
 
@@ -20,7 +20,7 @@ public class JsonCodeBox : CodeBox
         using XmlReader reader = new XmlTextReader(s);
         luaHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
 
-        HighlightingManager.Instance.RegisterHighlighting("Json", new string[] { ".json" }, luaHighlighting);
+        HighlightingManager.Instance.RegisterHighlighting("Json", [".json"], luaHighlighting);
         SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("Json");
     }
 }

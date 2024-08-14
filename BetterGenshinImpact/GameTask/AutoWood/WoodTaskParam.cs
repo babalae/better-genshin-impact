@@ -1,6 +1,5 @@
-﻿using System;
+﻿using BetterGenshinImpact.GameTask.Model;
 using System.Threading;
-using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoWood;
 

@@ -1,11 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
 using System.Threading;
-using BetterGenshinImpact.Core.Simulator;
 
 namespace BetterGenshinImpact.GameTask
 {

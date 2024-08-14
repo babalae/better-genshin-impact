@@ -1,25 +1,18 @@
 ﻿using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Webview;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Web.WebView2.Core;
 using Newtonsoft.Json;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Interop;
 using Vanara.PInvoke;
-using Windows.Media.Protection.PlayReady;
 
 namespace BetterGenshinImpact.ViewModel;
 

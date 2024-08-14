@@ -1,6 +1,6 @@
-﻿using System.Drawing;
-using BetterGenshinImpact.Service.Notification.Model;
+﻿using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using System.Drawing;
 
 namespace BetterGenshinImpact.Service.Notification.Builder;
 

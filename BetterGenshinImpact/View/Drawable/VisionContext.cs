@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace BetterGenshinImpact.View.Drawable
+﻿namespace BetterGenshinImpact.View.Drawable
 {
     /// <summary>
     /// Vision 上下文

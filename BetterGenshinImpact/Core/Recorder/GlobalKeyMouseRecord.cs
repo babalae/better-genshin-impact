@@ -19,7 +19,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private KeyMouseRecorder? _recorder;
 
-    private readonly Dictionary<Keys, bool> _keyDownState = new();
+    private readonly Dictionary<Keys, bool> _keyDownState = [];
 
     private DirectInputMonitor? _directInputMonitor;
 
@@ -147,7 +147,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             return;
         }
 
-        if (_keyDownState.ContainsKey(e.KeyCode) && _keyDownState[e.KeyCode])
+        if (_keyDownState.TryGetValue(e.KeyCode, out bool state) && state)
         {
             // Debug.WriteLine($"KeyUp: {e.KeyCode}");
             _keyDownState[e.KeyCode] = false;

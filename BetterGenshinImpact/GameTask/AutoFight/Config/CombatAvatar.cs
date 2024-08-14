@@ -44,6 +44,6 @@ public class CombatAvatar
     /// <summary>
     /// 别名
     /// </summary>
-    public List<string> Alias { get; set; } = new();
+    public List<string> Alias { get; set; } = [];
 
 }

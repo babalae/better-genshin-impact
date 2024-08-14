@@ -1,14 +1,16 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Drawable;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
 using System.Diagnostics;
-using PresentMonFps;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -19,10 +21,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
-using BetterGenshinImpact.ViewModel;
-using Microsoft.Extensions.Logging;
-using BetterGenshinImpact.Genshin.Settings;
-using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.View;
 

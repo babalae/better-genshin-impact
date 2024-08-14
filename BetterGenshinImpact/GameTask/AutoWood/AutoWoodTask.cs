@@ -151,8 +151,8 @@ public partial class AutoWoodTask
 
         private bool _firstWoodOcr = true;
         private string _firstWoodOcrText = "";
-        private readonly Dictionary<string, int> _woodMetricsDict = new();
-        private readonly Dictionary<string, bool> _woodNotPrintDict = new();
+        private readonly Dictionary<string, int> _woodMetricsDict = [];
+        private readonly Dictionary<string, bool> _woodNotPrintDict = [];
 
         // from:https://api-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=13
         private static readonly List<string> ExistWoods =

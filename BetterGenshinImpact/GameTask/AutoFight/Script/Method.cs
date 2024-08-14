@@ -1,36 +1,36 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
 public class Method
 {
-    public static readonly Method Skill = new(new() { "skill", "e" });
-    public static readonly Method Burst = new(new() { "burst", "q" });
-    public static readonly Method Attack = new(new() { "attack", "普攻", "普通攻击" });
-    public static readonly Method Charge = new(new() { "charge", "重击" });
-    public static readonly Method Wait = new(new() { "wait", "after", "等待" });
+    public static readonly Method Skill = new(["skill", "e"]);
+    public static readonly Method Burst = new(["burst", "q"]);
+    public static readonly Method Attack = new(["attack", "普攻", "普通攻击"]);
+    public static readonly Method Charge = new(["charge", "重击"]);
+    public static readonly Method Wait = new(["wait", "after", "等待"]);
 
-    public static readonly Method Walk = new(new() { "walk", "行走" });
-    public static readonly Method W = new(new() { "w" });
-    public static readonly Method A = new(new() { "a" });
-    public static readonly Method S = new(new() { "s" });
-    public static readonly Method D = new(new() { "d" });
+    public static readonly Method Walk = new(["walk", "行走"]);
+    public static readonly Method W = new(["w"]);
+    public static readonly Method A = new(["a"]);
+    public static readonly Method S = new(["s"]);
+    public static readonly Method D = new(["d"]);
 
-    public static readonly Method Aim = new(new() { "aim", "r", "瞄准" });
-    public static readonly Method Dash = new(new() { "dash", "冲刺" });
-    public static readonly Method Jump = new(new() { "jump", "j", "跳跃" });
+    public static readonly Method Aim = new(["aim", "r", "瞄准"]);
+    public static readonly Method Dash = new(["dash", "冲刺"]);
+    public static readonly Method Jump = new(["jump", "j", "跳跃"]);
 
     // 宏
-    public static readonly Method MouseDown = new(new() { "mousedown" });
-    public static readonly Method MouseUp = new(new() { "mouseup" });
-    public static readonly Method Click = new(new() { "click" });
-    public static readonly Method MoveBy = new(new() { "moveby" });
-    public static readonly Method KeyDown = new(new() { "keydown" });
-    public static readonly Method KeyUp = new(new() { "keyup" });
-    public static readonly Method KeyPress = new(new() { "keypress" });
+    public static readonly Method MouseDown = new(["mousedown"]);
+    public static readonly Method MouseUp = new(["mouseup"]);
+    public static readonly Method Click = new(["click"]);
+    public static readonly Method MoveBy = new(["moveby"]);
+    public static readonly Method KeyDown = new(["keydown"]);
+    public static readonly Method KeyUp = new(["keyup"]);
+    public static readonly Method KeyPress = new(["keypress"]);
 
     public static IEnumerable<Method> Values
     {

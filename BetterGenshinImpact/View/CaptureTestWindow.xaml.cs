@@ -1,11 +1,11 @@
-﻿using BetterGenshinImpact.Helpers.Extensions;
+﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.GameCapture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
-using BetterGenshinImpact.GameTask;
-using Fischless.GameCapture;
 
 namespace BetterGenshinImpact.View
 {

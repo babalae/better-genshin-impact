@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Helpers;
 using System.Threading;
 using System.Windows;
 

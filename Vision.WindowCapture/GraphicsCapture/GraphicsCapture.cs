@@ -49,7 +49,7 @@ public class GraphicsCapture : IWindowCapture
             _captureSession.IsBorderRequired = false;
             _captureSession.IsCursorCaptureEnabled = false;
         }
-        
+
         _captureSession.StartCapture();
         IsCapturing = true;
     }

@@ -1,11 +1,11 @@
 ﻿using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Pages;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.View.Pages;
-using Microsoft.Extensions.Hosting;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;

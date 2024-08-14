@@ -1,9 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using BetterGenshinImpact.Service;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Text.Json;
-using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 

@@ -1,14 +1,9 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
-using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
-using BetterGenshinImpact.Helpers.Extensions;
-using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
@@ -19,7 +14,7 @@ public class EntireMap : Singleton<EntireMap>
     public static readonly Size TemplateSize = new(240, 135);
 
     // 对无用部分进行裁剪（左160，上80，下96）
-    public static readonly Rect TemplateSizeRoi = new Rect(20, 10, TemplateSize.Width - 20, TemplateSize.Height - 22);
+    public static readonly Rect TemplateSizeRoi = new(20, 10, TemplateSize.Width - 20, TemplateSize.Height - 22);
 
     /// <summary>
     /// 主要地图缩小1024的模板

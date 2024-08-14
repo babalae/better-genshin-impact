@@ -4,7 +4,7 @@ using System.Windows.Data;
 
 namespace BetterGenshinImpact.View.Converters;
 
-[ValueConversion(typeof(bool),typeof(Visibility))]
+[ValueConversion(typeof(bool), typeof(Visibility))]
 public sealed class BooleanToVisibilityRevertConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)

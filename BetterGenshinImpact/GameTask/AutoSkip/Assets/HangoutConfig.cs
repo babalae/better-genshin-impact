@@ -1,10 +1,10 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
 

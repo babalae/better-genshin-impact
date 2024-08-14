@@ -25,8 +25,8 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             (int)(100 * AssetScale),
             (int)(50 * AssetScale),
             CaptureRect.Height - (int)(200 * AssetScale));
-        MapChooseIconRoList = new List<RecognitionObject>
-        {
+        MapChooseIconRoList =
+        [
             BuildMapChooseIconRo("TeleportWaypoint.png"),
             BuildMapChooseIconRo("StatueOfTheSeven.png"),
             BuildMapChooseIconRo("Domain.png"),
@@ -34,7 +34,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             BuildMapChooseIconRo("PortableWaypoint.png"),
             BuildMapChooseIconRo("Mansion.png"),
             BuildMapChooseIconRo("SubSpaceWaypoint.png"),
-        };
+        ];
         MapChooseIconGreyMatList = MapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat());
 
         // 传送按钮宽泛的识别区域

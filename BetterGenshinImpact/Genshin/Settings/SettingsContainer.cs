@@ -1,11 +1,11 @@
-﻿using Microsoft.Win32;
+﻿using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BetterGenshinImpact.GameTask.Common;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 

@@ -1,6 +1,5 @@
-﻿using OpenCvSharp;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing;
 

@@ -1,5 +1,5 @@
-﻿using System;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 
 namespace BetterGenshinImpact.Service.Notification;
 

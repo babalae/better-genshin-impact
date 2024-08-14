@@ -1,12 +1,12 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
+using OpenCvSharp.Features2D;
 using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using BetterGenshinImpact.GameTask.Common.Map;
-using OpenCvSharp.Features2D;
 using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
@@ -415,7 +415,7 @@ public class FeatureMatcher
         var matches = flnMatcher.KnnMatch(queryDescriptors, _trainDescriptors, k: 2);
 
         // 应用比例测试来过滤匹配点
-        List<DMatch> goodMatches = new List<DMatch>();
+        List<DMatch> goodMatches = [];
         foreach (var match in matches)
         {
             if (match.Length == 2 && match[0].Distance < 0.75 * match[1].Distance)

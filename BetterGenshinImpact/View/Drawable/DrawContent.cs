@@ -30,7 +30,7 @@ public class DrawContent
             }
         }
 
-        RectList[key] = new List<RectDrawable> { newRect };
+        RectList[key] = [newRect];
         MaskWindow.Instance().Refresh();
     }
 
@@ -91,7 +91,7 @@ public class DrawContent
             }
         }
 
-        LineList[key] = new List<LineDrawable> { newLine };
+        LineList[key] = [newLine];
         MaskWindow.Instance().Refresh();
     }
 

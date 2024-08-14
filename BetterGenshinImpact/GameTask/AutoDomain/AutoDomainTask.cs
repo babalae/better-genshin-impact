@@ -25,7 +25,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -306,7 +305,7 @@ public class AutoDomainTask
 
     private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
     {
-        CancellationTokenSource cts = new CancellationTokenSource();
+        CancellationTokenSource cts = new();
         _taskParam.Cts.Token.Register(cts.Cancel);
         combatScenes.BeforeTask(cts);
         // 战斗操作
@@ -412,7 +411,7 @@ public class AutoDomainTask
     /// </summary>
     private Task FindPetrifiedTree()
     {
-        CancellationTokenSource treeCts = new CancellationTokenSource();
+        CancellationTokenSource treeCts = new();
         _taskParam.Cts.Token.Register(treeCts.Cancel);
         // 中键回正视角
         Simulation.SendInput.Mouse.MiddleButtonClick();

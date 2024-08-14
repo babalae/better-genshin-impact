@@ -14,7 +14,7 @@ public class ServiceLocatorExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        _ = Type ?? throw new ArgumentNullException(nameof(Type));
+        ArgumentNullException.ThrowIfNull(Type);
         return App.GetService(Type)!;
     }
 }

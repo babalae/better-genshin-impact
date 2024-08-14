@@ -155,7 +155,7 @@ public class MatchTemplateHelper
     /// <returns></returns>
     public static List<Rect> MatchMultiPicForOnePic(Mat srcMat, List<Mat> imgSubList, double threshold = 0.8)
     {
-        List<Rect> list = new();
+        List<Rect> list = [];
         foreach (var sub in imgSubList)
             while (true)
             {
@@ -185,7 +185,7 @@ public class MatchTemplateHelper
     /// <returns></returns>
     public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, Mat? maskMat = null, double threshold = 0.8)
     {
-        List<Rect> list = new();
+        List<Rect> list = [];
 
         while (true)
         {
@@ -217,7 +217,7 @@ public class MatchTemplateHelper
     /// <returns></returns>
     public static List<Rect> MatchOnePicForOnePic(Mat srcMat, Mat dstMat, TemplateMatchModes matchMode, Mat? maskMat, double threshold, int maxCount = -1)
     {
-        List<Rect> list = new();
+        List<Rect> list = [];
 
         if (maxCount < 0)
         {

@@ -1,7 +1,7 @@
-﻿using System.Net.Http;
-using System.Threading.Tasks;
+﻿using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
-using BetterGenshinImpact.Service.Notifier.Exception;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Service.Notifier;
 

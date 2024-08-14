@@ -1,7 +1,6 @@
-﻿using System;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.Common.Map;
+﻿using BetterGenshinImpact.GameTask.Common.Map;
 using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 

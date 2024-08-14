@@ -1,10 +1,9 @@
-﻿using System.Diagnostics;
-using System.Drawing.Imaging;
-using Windows.Graphics.Capture;
-using SharpDX;
+﻿using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
-using Windows.Devices.HumanInterfaceDevice;
+using System.Diagnostics;
+using System.Drawing.Imaging;
+using Windows.Graphics.Capture;
 
 namespace Fischless.GameCapture.Graphics.Helpers;
 

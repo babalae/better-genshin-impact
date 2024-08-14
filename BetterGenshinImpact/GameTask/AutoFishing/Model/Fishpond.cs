@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using Compunet.YoloV8.Data;
 using OpenCvSharp;
-using static OpenCvSharp.Cv2;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
 
@@ -23,7 +22,7 @@ public class Fishpond
     /// <summary>
     /// 鱼池中的鱼
     /// </summary>
-    public List<OneFish> Fishes { get; set; } = new();
+    public List<OneFish> Fishes { get; set; } = [];
 
     public Fishpond(DetectionResult result)
     {
@@ -45,7 +44,7 @@ public class Fishpond
         }
 
         // 可信度最高的鱼放在最前面
-        Fishes = Fishes.OrderByDescending(fish => fish.Confidence).ToList();
+        Fishes = [.. Fishes.OrderByDescending(fish => fish.Confidence)];
 
         FishpondRect = CalculateFishpondRect();
     }
@@ -98,7 +97,7 @@ public class Fishpond
     /// <returns></returns>
     public List<OneFish> FilterByBaitName(string baitName)
     {
-        return Fishes.Where(fish => fish.FishType.BaitName == baitName).OrderByDescending(fish => fish.Confidence).ToList();
+        return [.. Fishes.Where(fish => fish.FishType.BaitName == baitName).OrderByDescending(fish => fish.Confidence)];
     }
 
     public OneFish? FilterByBaitNameAndRecently(string baitName, Rect prevTargetFishRect)
@@ -132,10 +131,10 @@ public class Fishpond
     /// <returns></returns>
     public string MostMatchBait()
     {
-        Dictionary<string, int> dict = new();
+        Dictionary<string, int> dict = [];
         foreach (var fish in Fishes)
         {
-            if (dict.ContainsKey(fish.FishType.BaitName))
+            if (dict.TryGetValue(fish.FishType.BaitName, out _))
             {
                 dict[fish.FishType.BaitName]++;
             }
