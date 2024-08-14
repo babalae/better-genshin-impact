@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -16,7 +17,7 @@ public class StringUtils
             return str;
         }
 
-        return str.Replace(" ", "").Replace("\t", "");
+        return new StringBuilder(str).Replace(" ", "").Replace("\t", "").ToString();
     }
 
     /// <summary>
@@ -31,7 +32,7 @@ public class StringUtils
             return str;
         }
 
-        return str.Replace("\n", "").Replace("\r", "");
+        return new StringBuilder(str).Replace("\n", "").Replace("\r", "").ToString();
     }
 
     /// <summary>
@@ -44,7 +45,7 @@ public class StringUtils
             return false;
         }
 
-        return System.Text.RegularExpressions.Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
+        return Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
     }
 
     /// <summary>
@@ -72,36 +73,14 @@ public class StringUtils
 
     public static double TryParseDouble(string text)
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return 0;
-        }
-
-        try
-        {
-            return double.Parse(text);
-        }
-        catch
-        {
-            return 0;
-        }
+        _ = double.TryParse(text, out double result);
+        return result;
     }
 
     public static int TryParseInt(string text)
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return 0;
-        }
-
-        try
-        {
-            return int.Parse(text);
-        }
-        catch
-        {
-            return 0;
-        }
+        _ = int.TryParse(text, out int result);
+        return result;
     }
 
     public static int TryExtractPositiveInt(string text)
