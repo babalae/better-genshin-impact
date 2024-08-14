@@ -1,7 +1,7 @@
-﻿using System.Windows;
+﻿using BetterGenshinImpact.View.Controls.Adorners;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using BetterGenshinImpact.View.Controls.Adorners;
 
 namespace BetterGenshinImpact.View.Controls;
 

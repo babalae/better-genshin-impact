@@ -13,7 +13,7 @@ public class AutoPickBlackListViewModel : FormViewModel<string>
         var blackListJson = Global.ReadAllTextIfExist(@"User\pick_black_lists.json");
         if (!string.IsNullOrEmpty(blackListJson))
         {
-            var blackList = JsonSerializer.Deserialize<List<string>>(blackListJson) ?? new List<string>();
+            var blackList = JsonSerializer.Deserialize<List<string>>(blackListJson) ?? [];
             AddRange(blackList);
         }
     }

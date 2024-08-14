@@ -1,7 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
-using OpenCvSharp;
-using System;
 using Fischless.WindowsInput;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Helpers.Extensions;
 

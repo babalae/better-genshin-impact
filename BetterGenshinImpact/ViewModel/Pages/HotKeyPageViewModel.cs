@@ -1,40 +1,30 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Macro;
-using BetterGenshinImpact.Service.Interface;
-using CommunityToolkit.Mvvm.ComponentModel;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Logging;
-using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using CommunityToolkit.Mvvm.Messaging;
+using BetterGenshinImpact.GameTask.Macro;
 using BetterGenshinImpact.GameTask.QucikBuy;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Reflection;
+using System.Threading;
 using Vanara.PInvoke;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using static Vanara.PInvoke.User32;
-using System.Runtime.InteropServices;
-using System;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Windows.Input;
-using BetterGenshinImpact.Core.Monitor;
-using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Script;
-using Cursors = System.Windows.Input.Cursors;
+using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -45,7 +35,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     public AllConfig Config { get; set; }
 
     [ObservableProperty]
-    private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
+    private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
     public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
     {
@@ -382,7 +372,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             "停止当前脚本任务",
             nameof(Config.HotKeyConfig.CancelTaskHotkey),
             Config.HotKeyConfig.CancelTaskHotkey,
-            Config.HotKeyConfig.CancelTaskHotkeyType, async (_, _) =>
+            Config.HotKeyConfig.CancelTaskHotkeyType,
+            (_, _) =>
             {
                 CancellationContext.Instance.Cancel();
             }

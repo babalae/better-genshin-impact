@@ -165,7 +165,7 @@ internal static class RuntimeExtension
 
     public static IHostBuilder CheckIntegration(this IHostBuilder app)
     {
-        RuntimeHelper.CheckIntegration(); 
+        RuntimeHelper.CheckIntegration();
         return app;
     }
 }

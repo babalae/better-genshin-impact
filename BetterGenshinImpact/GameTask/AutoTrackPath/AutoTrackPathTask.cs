@@ -1,16 +1,15 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -21,16 +20,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.Helpers.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Gdi32;
-using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
@@ -122,11 +116,7 @@ public class AutoTrackPathTask
         NewRetry.Do((Action)(() =>
         {
             var ra = TaskControl.CaptureToRectArea();
-            var miniMapMat = GetMiniMapMat(ra);
-            if (miniMapMat == null)
-            {
-                throw new RetryException("等待传送完成");
-            }
+            var miniMapMat = GetMiniMapMat(ra) ?? throw new RetryException("等待传送完成");
         }), TimeSpan.FromSeconds(1), 100);
         Logger.LogInformation("传送完成");
         Sleep(1000);
@@ -218,11 +208,7 @@ public class AutoTrackPathTask
             while (!_taskParam.Cts.IsCancellationRequested)
             {
                 var ra = CaptureToRectArea();
-                var miniMapMat = GetMiniMapMat(ra);
-                if (miniMapMat == null)
-                {
-                    throw new InvalidOperationException("当前不在主界面");
-                }
+                var miniMapMat = GetMiniMapMat(ra) ?? throw new InvalidOperationException("当前不在主界面");
 
                 // 注意游戏坐标系的角度是顺时针的
                 var currMapImageAvatarPos = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(miniMapMat);
@@ -356,12 +342,7 @@ public class AutoTrackPathTask
     public int GetCharacterOrientationAngle()
     {
         var ra = CaptureToRectArea();
-        var miniMapMat = GetMiniMapMat(ra);
-        if (miniMapMat == null)
-        {
-            throw new InvalidOperationException("当前不在主界面");
-        }
-
+        var miniMapMat = GetMiniMapMat(ra) ?? throw new InvalidOperationException("当前不在主界面");
         var angle = CharacterOrientation.Compute(miniMapMat);
         Logger.LogInformation("当前角度：{Angle}", angle);
         // CameraOrientation.DrawDirection(ra, angle);

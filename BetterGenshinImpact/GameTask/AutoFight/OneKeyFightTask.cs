@@ -1,18 +1,18 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using BetterGenshinImpact.GameTask.AutoFight.Model;
-using BetterGenshinImpact.Model;
-using System.Threading.Tasks;
 using System.Threading;
-using BetterGenshinImpact.Core.Config;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using BetterGenshinImpact.GameTask.AutoFight.Script;
-using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.Service;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -193,7 +193,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         var avatarMacros = JsonSerializer.Deserialize<List<AvatarMacro>>(json, ConfigService.JsonOptions);
         if (avatarMacros == null)
         {
-            return new Dictionary<string, List<CombatCommand>>();
+            return [];
         }
         var result = new Dictionary<string, List<CombatCommand>>();
         foreach (var avatarMacro in avatarMacros)

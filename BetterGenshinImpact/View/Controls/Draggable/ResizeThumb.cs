@@ -1,10 +1,10 @@
-﻿using System;
+﻿using BetterGenshinImpact.View.Controls.Adorners;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
-using BetterGenshinImpact.View.Controls.Adorners;
 
 namespace BetterGenshinImpact.View.Controls;
 

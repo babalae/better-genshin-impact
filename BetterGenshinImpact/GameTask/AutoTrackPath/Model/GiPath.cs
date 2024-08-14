@@ -1,15 +1,15 @@
-﻿using System;
+﻿using BetterGenshinImpact.Helpers;
+using OpenCvSharp;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using BetterGenshinImpact.Helpers;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 
 [Serializable]
 public class GiPath
 {
-    public List<GiPathPoint> WayPointList { get; set; } = new();
+    public List<GiPathPoint> WayPointList { get; set; } = [];
 
     public void AddPoint(Point2f point)
     {

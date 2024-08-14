@@ -39,8 +39,8 @@ namespace Vision.WindowCapture.BitBlt
                 Windows.Win32.PInvoke.BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, ROP_CODE.SRCCOPY);
                 SelectObject(hdcDest, hOld);
                 DeleteDC(hdcDest);
-                ReleaseDC(_hWnd, hdcSrc);
-                
+                _ = ReleaseDC(_hWnd, hdcSrc);
+
                 var bitmap = Image.FromHbitmap(hBitmap);
                 DeleteObject(hBitmap);
                 return bitmap;

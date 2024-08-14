@@ -1,11 +1,9 @@
-﻿using System;
-using System.Diagnostics;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using OpenCvSharp;
+using System.Diagnostics;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 

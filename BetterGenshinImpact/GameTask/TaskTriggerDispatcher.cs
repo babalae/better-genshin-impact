@@ -2,10 +2,15 @@
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
@@ -21,13 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoSkip;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
-using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -65,9 +64,9 @@ namespace BetterGenshinImpact.GameTask
         private static readonly object _bitmapLocker = new();
         private static readonly object _triggerListLocker = new();
 
-        public event EventHandler UiTaskStopTickEvent;
+        public event EventHandler? UiTaskStopTickEvent;
 
-        public event EventHandler UiTaskStartTickEvent;
+        public event EventHandler? UiTaskStartTickEvent;
 
         public TaskTriggerDispatcher()
         {
@@ -229,7 +228,10 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        public void Dispose() => Stop();
+        public void Dispose()
+        {
+            Stop();
+        }
 
         public void Tick(object? sender, EventArgs e)
         {
@@ -256,7 +258,7 @@ namespace BetterGenshinImpact.GameTask
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                     }
 
-                    UiTaskStopTickEvent.Invoke(sender, e);
+                    UiTaskStopTickEvent?.Invoke(sender, e);
                     maskWindow.Invoke(maskWindow.Hide);
                     return;
                 }
@@ -270,7 +272,7 @@ namespace BetterGenshinImpact.GameTask
                     if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
-                        UiTaskStopTickEvent.Invoke(sender, e);
+                        UiTaskStopTickEvent?.Invoke(sender, e);
                         return;
                     }
 
@@ -426,8 +428,8 @@ namespace BetterGenshinImpact.GameTask
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
                     _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
-                    UiTaskStopTickEvent.Invoke(null, EventArgs.Empty);
-                    UiTaskStartTickEvent.Invoke(null, EventArgs.Empty);
+                    UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
+                    UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
                     _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
                 }
 

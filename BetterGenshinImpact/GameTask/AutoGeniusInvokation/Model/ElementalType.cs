@@ -19,83 +19,56 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         public static ElementalType ToElementalType(this string type)
         {
             type = type.ToLower();
-            switch (type)
+            return type switch
             {
-                case "omni":
-                    return ElementalType.Omni;
-                case "cryo":
-                    return ElementalType.Cryo;
-                case "hydro":
-                    return ElementalType.Hydro;
-                case "pyro":
-                    return ElementalType.Pyro;
-                case "electro":
-                    return ElementalType.Electro;
-                case "dendro":
-                    return ElementalType.Dendro;
-                case "anemo":
-                    return ElementalType.Anemo;
-                case "geo":
-                    return ElementalType.Geo;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
+                "omni" => ElementalType.Omni,
+                "cryo" => ElementalType.Cryo,
+                "hydro" => ElementalType.Hydro,
+                "pyro" => ElementalType.Pyro,
+                "electro" => ElementalType.Electro,
+                "dendro" => ElementalType.Dendro,
+                "anemo" => ElementalType.Anemo,
+                "geo" => ElementalType.Geo,
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+            };
         }
 
         public static ElementalType ChineseToElementalType(this string type)
         {
             type = type.ToLower();
-            switch (type)
+            return type switch
             {
-                case "全":
-                    return ElementalType.Omni;
-                case "冰":
-                    return ElementalType.Cryo;
-                case "水":
-                    return ElementalType.Hydro;
-                case "火":
-                    return ElementalType.Pyro;
-                case "雷":
-                    return ElementalType.Electro;
-                case "草":
-                    return ElementalType.Dendro;
-                case "风":
-                    return ElementalType.Anemo;
-                case "岩":
-                    return ElementalType.Geo;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }   
+                "全" => ElementalType.Omni,
+                "冰" => ElementalType.Cryo,
+                "水" => ElementalType.Hydro,
+                "火" => ElementalType.Pyro,
+                "雷" => ElementalType.Electro,
+                "草" => ElementalType.Dendro,
+                "风" => ElementalType.Anemo,
+                "岩" => ElementalType.Geo,
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+            };
         }
 
         public static string ToChinese(this ElementalType type)
         {
-            switch (type)
+            return type switch
             {
-                case ElementalType.Omni:
-                    return "全";
-                case ElementalType.Cryo:
-                    return "冰";
-                case ElementalType.Hydro:
-                    return "水";
-                case ElementalType.Pyro:
-                    return "火";
-                case ElementalType.Electro:
-                    return "雷";
-                case ElementalType.Dendro:
-                    return "草";
-                case ElementalType.Anemo:
-                    return "风";
-                case ElementalType.Geo:
-                    return "岩";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
+                ElementalType.Omni => "全",
+                ElementalType.Cryo => "冰",
+                ElementalType.Hydro => "水",
+                ElementalType.Pyro => "火",
+                ElementalType.Electro => "雷",
+                ElementalType.Dendro => "草",
+                ElementalType.Anemo => "风",
+                ElementalType.Geo => "岩",
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+            };
         }
 
         public static string ToLowerString(this ElementalType type)
         {
             return type.ToString().ToLower();
         }
-    }   
+    }
 }

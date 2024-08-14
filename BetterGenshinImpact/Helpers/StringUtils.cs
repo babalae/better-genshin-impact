@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.Helpers;
 
-public class StringUtils
+public partial class StringUtils
 {
     /// <summary>
     ///  删除所有空字符串
@@ -45,7 +45,7 @@ public class StringUtils
             return false;
         }
 
-        return Regex.IsMatch(str, @"[\u4e00-\u9fa5]");
+        return ChineseRegex().IsMatch(str);
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ public class StringUtils
 
         try
         {
-            text = Regex.Replace(text, @"[^0-9]+", "");
+            text = RegexHelper.ExcludeNumberRegex().Replace(text, "");
             return int.Parse(text);
         }
         catch
@@ -100,4 +100,7 @@ public class StringUtils
             return -1;
         }
     }
+
+    [GeneratedRegex(@"[\u4e00-\u9fa5]")]
+    private static partial Regex ChineseRegex();
 }

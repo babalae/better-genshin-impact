@@ -11,7 +11,7 @@ public abstract partial class FormViewModel<T> : ObservableObject
 
     protected FormViewModel()
     {
-        _list = new();
+        _list = [];
     }
 
     public void AddRange(List<T> itemList)

@@ -127,7 +127,7 @@ public class WebpagePanel : UserControl
         _webView = null!;
     }
 
-    private object CreateDownloadButton()
+    private Button CreateDownloadButton()
     {
         var button = new Button
         {

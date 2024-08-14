@@ -1,9 +1,8 @@
-﻿using System;
+﻿using BetterGenshinImpact.Service;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Windows.Documents;
-using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 

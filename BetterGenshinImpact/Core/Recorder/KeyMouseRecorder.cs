@@ -1,14 +1,14 @@
 ﻿using BetterGenshinImpact.Core.Recorder.Model;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Map;
 using Gma.System.MouseKeyHook;
+using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
-using SharpDX.DirectInput;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.GameTask.Common;
 
 namespace BetterGenshinImpact.Core.Recorder;
 

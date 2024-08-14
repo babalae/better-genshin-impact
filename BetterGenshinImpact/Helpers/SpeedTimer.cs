@@ -8,7 +8,7 @@ public class SpeedTimer
 {
     private readonly Stopwatch _stopwatch;
 
-    private readonly Dictionary<string, TimeSpan> _timeRecordDic = new();
+    private readonly Dictionary<string, TimeSpan> _timeRecordDic = [];
 
 
     public SpeedTimer()
@@ -30,7 +30,7 @@ public class SpeedTimer
         {
             // if (pair.Value.TotalMilliseconds > 0.1)
             // {
-                msg += $"{pair.Key}:{pair.Value.TotalMilliseconds}ms,";
+            msg += $"{pair.Key}:{pair.Value.TotalMilliseconds}ms,";
             // }
 
         }

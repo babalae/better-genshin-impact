@@ -50,7 +50,7 @@ public class CombatScriptParser
     public static CombatScript Parse(string path)
     {
         var script = File.ReadAllText(path);
-        var lines = script.Split(new[] { "\r\n", "\r", "\n", ";" }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = script.Split(["\r\n", "\r", "\n", ";"], StringSplitOptions.RemoveEmptyEntries);
         var result = new List<string>();
         foreach (var line in lines)
         {
@@ -58,7 +58,7 @@ public class CombatScriptParser
                 .Replace("（", "(")
                 .Replace(")", ")")
                 .Replace("，", ",");
-            if (l.StartsWith("//") || l.StartsWith("#") || string.IsNullOrEmpty(l))
+            if (l.StartsWith("//") || l.StartsWith('#') || string.IsNullOrEmpty(l))
             {
                 continue;
             }
@@ -74,8 +74,8 @@ public class CombatScriptParser
 
     public static CombatScript Parse(List<string> lines)
     {
-        List<CombatCommand> combatCommands = new();
-        HashSet<string> combatAvatarNames = new();
+        List<CombatCommand> combatCommands = [];
+        HashSet<string> combatAvatarNames = [];
         foreach (var line in lines)
         {
             var oneLineCombatCommands = ParseLine(line, combatAvatarNames);
@@ -120,7 +120,7 @@ public class CombatScriptParser
                 continue;
             }
 
-            if (command.Contains("(") && !command.Contains(")"))
+            if (command.Contains('(') && !command.Contains(')'))
             {
                 var j = i + 1;
                 // 括号被逗号分隔，需要合并
@@ -133,7 +133,7 @@ public class CombatScriptParser
                         throw new Exception("战斗脚本格式错误，指令括号无法配对");
                     }
 
-                    if (command.Contains(")"))
+                    if (command.Contains(')'))
                     {
                         i = j;
                         break;
@@ -142,7 +142,7 @@ public class CombatScriptParser
                     j++;
                 }
 
-                if (!(command.Contains("(") && command.Contains(")")))
+                if (!(command.Contains('(') && command.Contains(')')))
                 {
                     Logger.LogError("战斗脚本格式错误，指令 {Cmd} 括号不完整", command);
                     throw new Exception("战斗脚本格式错误，指令括号不完整");

@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using OpenCvSharp;
+﻿using OpenCvSharp;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.Model;
 
@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv.Model;
 /// </summary>
 public class KeyPointFeatureBlock
 {
-    public List<KeyPoint> KeyPointList { get; set; } = new();
+    public List<KeyPoint> KeyPointList { get; set; } = [];
 
     private KeyPoint[]? keyPointArray;
 
@@ -25,7 +25,7 @@ public class KeyPointFeatureBlock
     /// <summary>
     /// 在完整 KeyPoint[] 中的下标
     /// </summary>
-    public List<int> KeyPointIndexList { get; set; } = new();
+    public List<int> KeyPointIndexList { get; set; } = [];
 
     public Mat? Descriptor;
 

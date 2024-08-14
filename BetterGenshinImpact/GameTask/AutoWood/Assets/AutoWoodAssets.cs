@@ -16,7 +16,7 @@ public class AutoWoodAssets : BaseAssets<AutoWoodAssets>
 
     // 木头数量
     public Rect WoodCountUpperRect;
-    
+
     private AutoWoodAssets()
     {
 

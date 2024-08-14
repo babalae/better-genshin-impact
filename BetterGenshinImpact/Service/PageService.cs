@@ -1,5 +1,5 @@
-﻿using System.Windows;
-using System;
+﻿using System;
+using System.Windows;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;

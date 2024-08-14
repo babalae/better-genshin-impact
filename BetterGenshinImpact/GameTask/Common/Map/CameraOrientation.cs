@@ -104,17 +104,14 @@ public class CameraOrientation
         // };
         // VisionContext.Instance().DrawContent.PutLine("camera", line);
 
-        if (pen == null)
-        {
-            pen = new Pen(Color.Yellow, 1);
-        }
+        pen ??= new Pen(Color.Yellow, 1);
 
         region.DrawLine(center.X, center.Y, (int)x1, (int)y1, name, pen);
     }
 
     static List<int> FindPeaks(float[] data)
     {
-        List<int> peakIndices = new List<int>();
+        List<int> peakIndices = [];
 
         for (int i = 1; i < data.Length - 1; i++)
         {

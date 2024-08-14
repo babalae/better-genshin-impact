@@ -30,7 +30,7 @@ public sealed class KeyboardHook : IDisposable
         if (hook.IsNull)
         {
             hookProc = KeyboardHookProc;
-            hook = User32.SetWindowsHookEx(User32.HookType.WH_KEYBOARD_LL, hookProc, Kernel32.GetModuleHandle(Process.GetCurrentProcess().MainModule.ModuleName), 0);
+            hook = User32.SetWindowsHookEx(User32.HookType.WH_KEYBOARD_LL, hookProc, Kernel32.GetModuleHandle(Process.GetCurrentProcess().MainModule!.ModuleName), 0);
 
             User32.SetWindowsHookEx(User32.HookType.WH_KEYBOARD_LL, hookProc, IntPtr.Zero, (int)Kernel32.GetCurrentThreadId());
 

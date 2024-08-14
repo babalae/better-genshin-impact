@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Model;
 using OpenCvSharp;
-using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Model;
 

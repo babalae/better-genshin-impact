@@ -1,6 +1,6 @@
-﻿using System.Windows;
+﻿using BetterGenshinImpact.Model;
+using System.Windows;
 using System.Windows.Input;
-using BetterGenshinImpact.Model;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using TextBox = Wpf.Ui.Controls.TextBox;
 

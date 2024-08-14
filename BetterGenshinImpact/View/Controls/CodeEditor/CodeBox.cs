@@ -1,7 +1,7 @@
-﻿using System.Windows;
+﻿using ICSharpCode.AvalonEdit;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using ICSharpCode.AvalonEdit;
 
 namespace BetterGenshinImpact.View.Controls.CodeEditor;
 
