@@ -87,11 +87,11 @@ public class EntireMap : Singleton<EntireMap>
             Point2f p;
             if (_prevX <= 0 && _prevY <= 0)
             {
-                p = _featureMatcher.Match(greyMat, mask);
+                p = _featureMatcher.KnnMatch(greyMat, mask);
             }
             else
             {
-                p = _featureMatcher.Match(greyMat, _prevX, _prevY, mask);
+                p = _featureMatcher.KnnMatch(greyMat, _prevX, _prevY, mask, DescriptorMatcherType.BruteForce);
             }
 
             if (p.IsEmpty())

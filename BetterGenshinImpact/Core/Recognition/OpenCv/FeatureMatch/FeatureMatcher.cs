@@ -7,15 +7,21 @@ using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
 public class FeatureMatcher
 {
-    private readonly double _threshold; // SURF 100
+    private readonly double _threshold = 100; // SURF 100
     private readonly Feature2D _feature2D;
-    private readonly FlannBasedMatcher flnMatcher = new();
+
+    private readonly Dictionary<DescriptorMatcherType, DescriptorMatcher> _matcherFactory = new()
+    {
+        { DescriptorMatcherType.BruteForce, DescriptorMatcher.Create(DescriptorMatcherType.BruteForce.ToString()) },
+        { DescriptorMatcherType.FlannBased, DescriptorMatcher.Create(DescriptorMatcherType.FlannBased.ToString()) }
+    };
 
     private readonly Size _trainMatSize; // 大图大小
 
@@ -34,11 +40,9 @@ public class FeatureMatcher
     /// <param name="trainMat"></param>
     /// <param name="featureStorage"></param>
     /// <param name="type"></param>
-    /// <param name="threshold"></param>
     /// <exception cref="Exception"></exception>
-    public FeatureMatcher(Mat trainMat, FeatureStorage? featureStorage = null, Feature2DType type = Feature2DType.SIFT, double threshold = 100)
+    public FeatureMatcher(Mat trainMat, FeatureStorage? featureStorage = null, Feature2DType type = Feature2DType.SIFT)
     {
-        _threshold = threshold;
         _trainMatSize = trainMat.Size();
         if (Feature2DType.SURF == type)
         {
@@ -86,11 +90,9 @@ public class FeatureMatcher
     /// <param name="trainMatSize"></param>
     /// <param name="featureStorage"></param>
     /// <param name="type"></param>
-    /// <param name="threshold"></param>
     /// <exception cref="Exception"></exception>
-    public FeatureMatcher(Size trainMatSize, FeatureStorage featureStorage, Feature2DType type = Feature2DType.SIFT, double threshold = 100)
+    public FeatureMatcher(Size trainMatSize, FeatureStorage featureStorage, Feature2DType type = Feature2DType.SIFT)
     {
-        _threshold = threshold;
         _trainMatSize = trainMatSize;
         if (Feature2DType.SURF == type)
         {
@@ -113,6 +115,13 @@ public class FeatureMatcher
         sw.Stop();
         Debug.WriteLine($"切割特征点耗时: {sw.ElapsedMilliseconds}ms");
     }
+
+    public DescriptorMatcher GetMatcher(DescriptorMatcherType type)
+    {
+        return _matcherFactory[type];
+    }
+
+    #region 普通匹配
 
     /// <summary>
     /// 普通匹配（全图特征）
@@ -150,11 +159,13 @@ public class FeatureMatcher
     /// 普通匹配
     /// </summary>
     /// <param name="trainKeyPoints"></param>
-    /// <param name="trainRet"></param>
+    /// <param name="trainDescriptors"></param>
     /// <param name="queryMat"></param>
     /// <param name="queryMatMask"></param>
+    /// <param name="matcherType"></param>
     /// <returns></returns>
-    public Point2f Match(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat, Mat? queryMatMask = null)
+    public Point2f Match(KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
         SpeedTimer speedTimer = new();
 
@@ -164,7 +175,7 @@ public class FeatureMatcher
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
         speedTimer.Record("模板生成KeyPoint");
 
-        var matches = flnMatcher.Match(queryDescriptors, trainRet);
+        var matches = GetMatcher(matcherType).Match(queryDescriptors, trainDescriptors);
         //Finding the Minimum and Maximum Distance
         double minDistance = 1000; //Backward approximation
         double maxDistance = 0;
@@ -237,11 +248,13 @@ public class FeatureMatcher
     /// 普通匹配
     /// </summary>
     /// <param name="trainKeyPoints"></param>
-    /// <param name="trainRet"></param>
+    /// <param name="trainDescriptors"></param>
     /// <param name="queryMat"></param>
     /// <param name="queryMatMask"></param>
+    /// <param name="matcherType"></param>
     /// <returns></returns>
-    public Point2f[] MatchCorners(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat, Mat? queryMatMask = null)
+    public Point2f[] MatchCorners(KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
         SpeedTimer speedTimer = new();
 
@@ -251,7 +264,7 @@ public class FeatureMatcher
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
         speedTimer.Record("模板生成KeyPoint");
 
-        var matches = flnMatcher.Match(queryDescriptors, trainRet);
+        var matches = GetMatcher(matcherType).Match(queryDescriptors, trainDescriptors);
         //Finding the Minimum and Maximum Distance
         double minDistance = 1000; //Backward approximation
         double maxDistance = 0;
@@ -328,85 +341,18 @@ public class FeatureMatcher
         return Cv2.BoundingRect(corners);
     }
 
-    // /// <summary>
-    // /// knn的方式匹配
-    // /// </summary>
-    // /// <param name="matSrc"></param>
-    // /// <returns></returns>
-    // [Obsolete]
-    // public Point2f[]? KnnMatch(Mat matSrc)
-    // {
-    //     SpeedTimer speedTimer = new();
-    //
-    //     using var matSrcRet = new Mat();
-    //     KeyPoint[] keyPointsSrc;
-    //     using (var surf = SURF.Create(_threshold, 4, 3, false, true))
-    //     {
-    //         surf.DetectAndCompute(matSrc, null, out keyPointsSrc, matSrcRet);
-    //         speedTimer.Record("模板生成KeyPoint");
-    //     }
-    //
-    //     var knnMatches = flnMatcher.KnnMatch(matSrcRet, _trainDescriptors, 2);
-    //     const float minRatio = 0.75f;
-    //
-    //     var pointsSrc = new List<Point2f>();
-    //     var pointsDst = new List<Point2f>();
-    //     //Screening better matching points
-    //     // var goodMatches = new List<DMatch>();
-    //     for (int i = 0; i < knnMatches.Length; i++)
-    //     {
-    //         var best = knnMatches[i][0];
-    //         var better = knnMatches[i][1];
-    //         var r = best.Distance / better.Distance;
-    //         if (r > minRatio)
-    //         {
-    //             pointsSrc.Add(keyPointsSrc[best.QueryIdx].Pt);
-    //             pointsDst.Add(_trainKeyPoints[best.TrainIdx].Pt);
-    //         }
-    //     }
-    //
-    //     if (pointsSrc.Count < 7)
-    //     {
-    //         Debug.WriteLine("匹配点过少");
-    //         return null;
-    //     }
-    //
-    //     speedTimer.Record("FlannMatch.KnnMatch");
-    //
-    //     // var outMat = new Mat();
-    //
-    //     // algorithm RANSAC Filter the matched results
-    //     var pSrc = pointsSrc.ToPoint2d();
-    //     var pDst = pointsDst.ToPoint2d();
-    //     var outMask = new Mat();
-    //     // If the original matching result is null, Skip the filtering step
-    //     if (pSrc.Count > 0 && pDst.Count > 0)
-    //     {
-    //         var hMat = Cv2.FindHomography(pSrc, pDst, HomographyMethods.Ransac, mask: outMask);
-    //         speedTimer.Record("FindHomography");
-    //
-    //         var objCorners = new Point2f[4];
-    //         objCorners[0] = new Point2f(0, 0);
-    //         objCorners[1] = new Point2f(0, matSrc.Rows);
-    //         objCorners[2] = new Point2f(matSrc.Cols, matSrc.Rows);
-    //         objCorners[3] = new Point2f(matSrc.Cols, 0);
-    //
-    //         var sceneCorners = Cv2.PerspectiveTransform(objCorners, hMat);
-    //         speedTimer.Record("PerspectiveTransform");
-    //         speedTimer.DebugPrint();
-    //         return sceneCorners;
-    //     }
-    //
-    //     speedTimer.DebugPrint();
-    //     return null;
-    // }
+    #endregion 普通匹配
 
-    public Point2f KnnMatch(Mat queryMat, Mat? queryMatMask = null)
+    #region Knn匹配
+
+    public Point2f KnnMatch(Mat queryMat, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
-        return KnnMatch(_trainKeyPoints, _trainDescriptors, queryMat, queryMatMask);
+        return KnnMatch(_trainKeyPoints, _trainDescriptors, queryMat, queryMatMask, matcherType);
     }
 
-    public Point2f KnnMatch(Mat queryMat, float prevX, float prevY, Mat? queryMatMask = null)
+    public Point2f KnnMatch(Mat queryMat, float prevX, float prevY, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
         var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(_trainMatSize, _splitRow, _splitCol, prevX, prevY);
         Debug.WriteLine($"当前坐标({prevX},{prevY})在特征块({cellRow},{cellCol})中");
@@ -416,7 +362,7 @@ public class FeatureMatcher
             _lastMergedBlock = KeyPointFeatureBlockHelper.MergeNeighboringFeatures(_blocks, _trainDescriptors, cellRow, cellCol);
         }
 
-        return KnnMatch(_lastMergedBlock.KeyPointArray, _lastMergedBlock.Descriptor!, queryMat, queryMatMask);
+        return KnnMatch(_lastMergedBlock.KeyPointArray, _lastMergedBlock.Descriptor!, queryMat, queryMatMask, matcherType);
     }
 
     /// <summary>
@@ -424,13 +370,17 @@ public class FeatureMatcher
     /// Copilot 生成
     /// </summary>
     /// <returns></returns>
-    private Point2f KnnMatch(KeyPoint[] trainKeyPoints, Mat trainRet, Mat queryMat, Mat? queryMatMask = null)
+    private Point2f KnnMatch(KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
+        SpeedTimer speedTimer = new();
         using var queryDescriptors = new Mat();
 #pragma warning disable CS8604 // 引用类型参数可能为 null。
         _feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
-        var matches = flnMatcher.KnnMatch(queryDescriptors, _trainDescriptors, k: 2);
+        speedTimer.Record("模板生成KeyPoint");
+        var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
+        speedTimer.Record("FlannMatch");
 
         // 应用比例测试来过滤匹配点
         List<DMatch> goodMatches = [];
@@ -449,24 +399,96 @@ public class FeatureMatcher
 
         // 获取匹配点的坐标
         var srcPts = goodMatches.Select(m => queryKeyPoints[m.QueryIdx].Pt).ToArray();
-        var dstPts = goodMatches.Select(m => _trainKeyPoints[m.TrainIdx].Pt).ToArray();
+        var dstPts = goodMatches.Select(m => trainKeyPoints[m.TrainIdx].Pt).ToArray();
+
+        speedTimer.Record("GetGoodMatchPoints");
 
         // 使用RANSAC找到变换矩阵
         var mask = new Mat();
-        var M = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
-        if (M.Empty())
+        var hMat = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
+        if (hMat.Empty())
         {
             return new Point2f();
         }
+        speedTimer.Record("FindHomography");
 
         // 计算小地图的中心点
         var h = queryMat.Rows;
         var w = queryMat.Cols;
         var centerPoint = new Point2f(w / 2f, h / 2f);
         Point2f[] centerPoints = [centerPoint];
-        Point2f[] transformedCenter = Cv2.PerspectiveTransform(centerPoints, M);
+        Point2f[] transformedCenter = Cv2.PerspectiveTransform(centerPoints, hMat);
 
+        speedTimer.Record("PerspectiveTransform");
+        speedTimer.DebugPrint();
         // 返回小地图在大地图中的中心坐标
         return transformedCenter[0];
     }
+
+    public Point2f[] KnnMatchCorners(KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
+    {
+        SpeedTimer speedTimer = new();
+        using var queryDescriptors = new Mat();
+#pragma warning disable CS8604 // 引用类型参数可能为 null。
+        _feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
+#pragma warning restore CS8604 // 引用类型参数可能为 null。
+        speedTimer.Record("模板生成KeyPoint");
+        var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
+        speedTimer.Record("FlannMatch");
+
+        // 应用比例测试来过滤匹配点
+        List<DMatch> goodMatches = [];
+        foreach (var match in matches)
+        {
+            if (match.Length == 2 && match[0].Distance < 0.75 * match[1].Distance)
+            {
+                goodMatches.Add(match[0]);
+            }
+        }
+
+        if (goodMatches.Count < 7)
+        {
+            return [];
+        }
+
+        // 获取匹配点的坐标
+        var srcPts = goodMatches.Select(m => queryKeyPoints[m.QueryIdx].Pt).ToArray();
+        var dstPts = goodMatches.Select(m => trainKeyPoints[m.TrainIdx].Pt).ToArray();
+
+        speedTimer.Record("GetGoodMatchPoints");
+
+        // 使用RANSAC找到变换矩阵
+        var mask = new Mat();
+        var hMat = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
+        if (hMat.Empty())
+        {
+            return [];
+        }
+        speedTimer.Record("FindHomography");
+
+        // 返回四个角点
+        var objCorners = new Point2f[4];
+        objCorners[0] = new Point2f(0, 0);
+        objCorners[1] = new Point2f(0, queryMat.Rows);
+        objCorners[2] = new Point2f(queryMat.Cols, queryMat.Rows);
+        objCorners[3] = new Point2f(queryMat.Cols, 0);
+
+        var sceneCorners = Cv2.PerspectiveTransform(objCorners, hMat);
+        speedTimer.Record("PerspectiveTransform");
+        speedTimer.DebugPrint();
+        return sceneCorners;
+    }
+
+    public Rect KnnMatchRect(Mat queryMat, Mat? queryMatMask = null)
+    {
+        var corners = KnnMatchCorners(_trainKeyPoints, _trainDescriptors, queryMat, queryMatMask);
+        if (corners.Length == 0)
+        {
+            return Rect.Empty;
+        }
+        return Cv2.BoundingRect(corners);
+    }
+
+    #endregion Knn匹配
 }

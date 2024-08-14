@@ -48,7 +48,7 @@ public class BigMap : Singleton<BigMap>
         {
             greyMat = ResizeHelper.Resize(greyMat, 1d / 4);
 
-            return _featureMatcher.MatchRect(greyMat);
+            return _featureMatcher.KnnMatchRect(greyMat);
         }
         catch
         {
