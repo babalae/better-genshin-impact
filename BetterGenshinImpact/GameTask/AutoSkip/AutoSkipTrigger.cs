@@ -323,38 +323,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
     }
 
-    /// <summary>
-    /// 获取橙色选项的文字
-    /// </summary>
-    /// <param name="captureMat"></param>
-    /// <param name="foundIconRectArea"></param>
-    /// <param name="chatOptionTextWidth"></param>
-    /// <returns></returns>
-    [Obsolete]
-    private string GetOrangeOptionText(Mat captureMat, ImageRegion foundIconRectArea, int chatOptionTextWidth)
-    {
-        var textRect = new Rect(foundIconRectArea.X + foundIconRectArea.Width, foundIconRectArea.Y, chatOptionTextWidth, foundIconRectArea.Height);
-        using var mat = new Mat(captureMat, textRect);
-        // 只提取橙色
-        using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
-        // Cv2.ImWrite("log/每日委托.png", bMat);
-        var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
-        var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
-        if (rate < 0.06)
-        {
-            Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
-            return string.Empty;
-        }
-
-        var text = OcrFactory.Paddle.Ocr(bMat);
-        return text;
-    }
-
     private bool IsOrangeOption(Mat textMat)
     {
         // 只提取橙色
         // Cv2.ImWrite($"log/text{DateTime.Now:yyyyMMddHHmmssffff}.png", textMat);
-        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
+        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(243, 195, 48), new Scalar(255, 205, 55));
         var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
         var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
         Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
