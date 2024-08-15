@@ -43,7 +43,7 @@
                         BorderThickness="0,0,0,1">
                     <ui:TextBlock Margin="4,4,8,4"
                                   FontTypography="BodyStrong"
-                                  Text="脚本组"
+                                  Text="配置组"
                                   TextAlignment="Center" />
                 </Border>
                 <ui:ListView Grid.Row="1"
@@ -96,25 +96,25 @@
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验中功能）请在左侧栏选择或新增脚本组" />
+                                  Text="（实验中功能）请在左侧栏选择或新增配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        左侧脚本组栏目右键可以新增脚本组，然后可以添加并配置软件内的脚本，并进行连续执行。脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看脚本组使用教程
+                        左侧配置组栏目右键可以新增配置组，然后可以添加并配置软件内的脚本，并进行连续执行。脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看配置组使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <!--  示例脚本组  -->
+                    <!--  示例配置组  -->
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="也可以直接点击导入下面的示例脚本组" />
+                                  Text="也可以直接点击导入下面的示例配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
                         <Hyperlink Command="{Binding ImportScriptGroupCommand}"
                                    CommandParameter="AutoCrystalflyExampleGroup"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            导入自动晶蝶示例脚本组
+                            导入自动晶蝶示例配置组
                         </Hyperlink>
                     </ui:TextBlock>
                 </StackPanel>
@@ -151,7 +151,7 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal">
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验中功能）脚本配置组 - " />
+                                  Text="（实验中功能）配置组 - " />
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="{Binding SelectedScriptGroup.Name}" />
@@ -161,7 +161,7 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在下方列表中右键可以添加脚本配置，拖拽可以调整执行顺序，支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序，支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                         点击查看使用教程
                     </Hyperlink>
                 </ui:TextBlock>
@@ -191,7 +191,9 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="40" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="20" />
                     </Grid.ColumnDefinitions>
@@ -199,6 +201,8 @@
                     <Grid x:Name="Col2" Grid.Column="1" />
                     <Grid x:Name="Col3" Grid.Column="2" />
                     <Grid x:Name="Col4" Grid.Column="3" />
+                    <Grid x:Name="Col5" Grid.Column="4" />
+                    <Grid x:Name="Col6" Grid.Column="5" />
                 </Grid>
                 <ui:ListView Grid.Row="5"
                              HorizontalAlignment="Stretch"
@@ -214,11 +218,17 @@
                                             Header="#" />
                             <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding Name}"
-                                            Header="脚本名称" />
+                                            Header="名称" />
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
+                                            DisplayMemberBinding="{Binding Type}"
+                                            Header="类型" />
+                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding ScheduleDesc}"
                                             Header="执行周期" />
-                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
+                            <GridViewColumn Width="{Binding ElementName=Col5, Path=ActualWidth}"
+                                            DisplayMemberBinding="{Binding RunNum}"
+                                            Header="执行次数" />
+                            <GridViewColumn Width="{Binding ElementName=Col6, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding StatusDesc}"
                                             Header="启用状态" />
                         </GridView>

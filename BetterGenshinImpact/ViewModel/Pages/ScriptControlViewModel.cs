@@ -31,13 +31,13 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     private readonly HomePageViewModel _homePageViewModel;
 
     /// <summary>
-    /// 脚本组配置
+    /// 配置组配置
     /// </summary>
     [ObservableProperty]
     private ObservableCollection<ScriptGroup> _scriptGroups = [];
 
     /// <summary>
-    /// 当前选中的脚本组
+    /// 当前选中的配置组
     /// </summary>
     [ObservableProperty]
     private ScriptGroup? _selectedScriptGroup;
@@ -63,15 +63,15 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnAddScriptGroup()
     {
-        var str = PromptDialog.Prompt("请输入脚本组名称", "新增脚本组");
+        var str = PromptDialog.Prompt("请输入配置组名称", "新增配置组");
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
             if (ScriptGroups.Any(x => x.Name == str))
             {
                 _snackbarService.Show(
-                    "脚本组已存在",
-                    $"脚本组 {str} 已经存在，请勿重复添加",
+                    "配置组已存在",
+                    $"配置组 {str} 已经存在，请勿重复添加",
                     ControlAppearance.Caution,
                     null,
                     TimeSpan.FromSeconds(2)
@@ -97,8 +97,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             ScriptGroups.Remove(item);
             File.Delete(Path.Combine(ScriptGroupPath, $"{item.Name}.json"));
             _snackbarService.Show(
-                "脚本组删除成功",
-                $"脚本组 {item.Name} 已经被删除",
+                "配置组删除成功",
+                $"配置组 {item.Name} 已经被删除",
                 ControlAppearance.Success,
                 null,
                 TimeSpan.FromSeconds(2)
@@ -106,10 +106,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "删除脚本组配置时失败");
+            _logger.LogDebug(e, "删除配置组配置时失败");
             _snackbarService.Show(
-                "删除脚本组配置失败",
-                $"脚本组 {item.Name} 删除失败！",
+                "删除配置组配置失败",
+                $"配置组 {item.Name} 删除失败！",
                 ControlAppearance.Danger,
                 null,
                 TimeSpan.FromSeconds(3)
@@ -189,7 +189,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             group.Index = i++;
         }
 
-        // 保存脚本组配置
+        // 保存配置组配置
         foreach (var group in ScriptGroups)
         {
             WriteScriptGroup(group);
@@ -208,7 +208,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
         }
 
-        // 保存脚本组配置
+        // 保存配置组配置
         if (SelectedScriptGroup != null)
         {
             WriteScriptGroup(SelectedScriptGroup);
@@ -229,9 +229,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "保存脚本组配置时失败");
+            _logger.LogDebug(e, "保存配置组配置时失败");
             _snackbarService.Show(
-                "保存脚本组配置失败",
+                "保存配置组配置失败",
                 $"{scriptGroup.Name} 保存失败！",
                 ControlAppearance.Danger,
                 null,
@@ -262,10 +262,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 }
                 catch (Exception e)
                 {
-                    _logger.LogDebug(e, "读取单个脚本组配置时失败");
+                    _logger.LogDebug(e, "读取单个配置组配置时失败");
                     _snackbarService.Show(
-                        "读取脚本组配置失败",
-                        "读取脚本组配置失败:" + e.Message,
+                        "读取配置组配置失败",
+                        "读取配置组配置失败:" + e.Message,
                         ControlAppearance.Danger,
                         null,
                         TimeSpan.FromSeconds(3)
@@ -282,10 +282,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "读取脚本组配置时失败");
+            _logger.LogDebug(e, "读取配置组配置时失败");
             _snackbarService.Show(
-                "读取脚本组配置失败",
-                "读取脚本组配置失败！",
+                "读取配置组配置失败",
+                "读取配置组配置失败！",
                 ControlAppearance.Danger,
                 null,
                 TimeSpan.FromSeconds(3)
@@ -318,8 +318,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         if (ScriptGroups.Any(x => x.Name == group.Name))
         {
             _snackbarService.Show(
-                "脚本组已存在",
-                $"脚本组 {group.Name} 已经存在，请勿重复添加",
+                "配置组已存在",
+                $"配置组 {group.Name} 已经存在，请勿重复添加",
                 ControlAppearance.Caution,
                 null,
                 TimeSpan.FromSeconds(2)
@@ -336,8 +336,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         if (SelectedScriptGroup == null)
         {
             _snackbarService.Show(
-                "未选择脚本组",
-                "请先选择一个脚本组",
+                "未选择配置组",
+                "请先选择一个配置组",
                 ControlAppearance.Caution,
                 null,
                 TimeSpan.FromSeconds(2)
@@ -355,10 +355,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var hasTimer = HasTimerOperation(codeList);
         if (hasTimer)
         {
-            _logger.LogInformation("脚本组 {Name} 包含实时任务操作调用", SelectedScriptGroup.Name);
+            _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", SelectedScriptGroup.Name);
         }
 
-        _logger.LogInformation("脚本组 {Name} 加载完成，共{Cnt}个脚本，开始执行", SelectedScriptGroup.Name, projects.Count);
+        _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", SelectedScriptGroup.Name, projects.Count);
 
         // 循环执行所有脚本
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
@@ -391,7 +391,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     }
                 }
             });
-        _logger.LogInformation("脚本组 {Name} 执行结束", SelectedScriptGroup.Name);
+        _logger.LogInformation("配置组 {Name} 执行结束", SelectedScriptGroup.Name);
     }
 
     private async Task<List<string>> ReadCodeList(List<ScriptProject> list)

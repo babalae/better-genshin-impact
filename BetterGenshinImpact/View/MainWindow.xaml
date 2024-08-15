@@ -84,12 +84,12 @@
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>-->
-                <!--  WebAsset24 | DocumentJs16  -->
-                <ui:NavigationViewItem Content="脚本管理"
+                <!--  WebAsset24 | DocumentJs16 | Script16  -->
+                <ui:NavigationViewItem Content="调度器"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:ScriptControlPage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Script16" />
+                        <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <!--  Script16  -->
