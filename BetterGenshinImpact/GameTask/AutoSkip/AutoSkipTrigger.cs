@@ -613,6 +613,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// <param name="content"></param>
     private void ClosePopupPage(CaptureContent content)
     {
+        if (!_config.ClosePopupPagedEnabled)
+        {
+            return;
+        }
+
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
             TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
