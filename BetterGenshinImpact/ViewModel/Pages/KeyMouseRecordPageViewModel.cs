@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -139,6 +141,50 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     public void OnOpenScriptFolder()
     {
         Process.Start("explorer.exe", scriptPath);
+    }
+
+    [RelayCommand]
+    public void OnEditScript(KeyMouseScriptItem? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+        try
+        {
+            var str = PromptDialog.Prompt("请输入要修改为的名称（实际就是文件名）", "修改名称");
+            if (!string.IsNullOrEmpty(str))
+            {
+                // 检查原始文件是否存在
+                var originalFilePath = Path.Combine(scriptPath, item.Name);
+                if (File.Exists(originalFilePath))
+                {
+                    // 重命名文件
+                    File.Move(originalFilePath, Path.Combine(scriptPath, str));
+                    _snackbarService.Show(
+                        "修改名称成功",
+                        $"脚本名称 {item.Name} 修改为 {str}",
+                        ControlAppearance.Success,
+                        null,
+                        TimeSpan.FromSeconds(2)
+                    );
+                }
+            }
+        }
+        catch (Exception)
+        {
+            _snackbarService.Show(
+                "修改失败",
+                $"{item.Name} 修改失败",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+        finally
+        {
+            InitScriptListViewData();
+        }
     }
 
     [RelayCommand]
