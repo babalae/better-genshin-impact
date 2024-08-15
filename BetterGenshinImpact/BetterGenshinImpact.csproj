@@ -5,7 +5,7 @@
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
-		<UseWindowsForms>True</UseWindowsForms>
+		<UseWindowsForms>true</UseWindowsForms>
 		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
@@ -47,7 +47,7 @@
 		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
-		<PackageReference Include="PresentMonFps" Version="2.0.1" />
+		<PackageReference Include="PresentMonFps" Version="2.0.5" />
 		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
 		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.5.1" />
 		<PackageReference Include="Sdcb.PaddleOCR" Version="2.7.0" />
@@ -65,34 +65,12 @@
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
-
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
 		<ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
 		<ProjectReference Include="..\Fischless.WindowsInput\Fischless.WindowsInput.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Update="GameTask\TaskContext.cs">
-		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-		</Compile>
-		<Compile Update="View\MaskWindow.xaml.cs">
-			<SubType>Code</SubType>
-		</Compile>
-		<Compile Update="View\Pages\HotkeyPage.xaml.cs">
-			<SubType>Code</SubType>
-		</Compile>
-		<Compile Update="View\Pages\TriggerSettingsPage.xaml.cs">
-			<SubType>Code</SubType>
-		</Compile>
-		<Compile Update="View\PickerWindow.xaml.cs">
-			<SubType>Code</SubType>
-		</Compile>
-		<Compile Update="View\Windows\MapViewer.xaml.cs">
-		  <SubType>Code</SubType>
-		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -150,12 +128,6 @@
 		<None Update="Script\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="GameTask\Common\Element\Assets\MapPoint\" />
-	  <Folder Include="Script\AutoCrystalfly\" />
-	  <Folder Include="View\Controls\WpfUi\" />
 	</ItemGroup>
 
 </Project>
