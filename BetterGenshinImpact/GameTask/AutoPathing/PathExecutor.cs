@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Core.Simulator;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -23,7 +24,7 @@ public class PathExecutor
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            MessageBox.Show("请先在启动页，启动截图器再使用本功能");
+            Toast.Warning("请先在启动页，启动截图器再使用本功能");
             return;
         }
 

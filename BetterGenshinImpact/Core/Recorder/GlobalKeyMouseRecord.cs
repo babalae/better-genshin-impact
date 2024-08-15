@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -39,13 +40,13 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            MessageBox.Show("请先在启动页，启动截图器再使用本功能");
+            Toast.Warning("请先在启动页，启动截图器再使用本功能");
             return;
         }
 
         if (Status != KeyMouseRecorderStatus.Stop)
         {
-            MessageBox.Show("已经在录制状态，请不要重复启动录制功能");
+            Toast.Warning("已经在录制状态，请不要重复启动录制功能");
             return;
         }
 
