@@ -1,8 +1,8 @@
-﻿using System;
+﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 
 namespace BetterGenshinImpact.GameTask.Common;
 

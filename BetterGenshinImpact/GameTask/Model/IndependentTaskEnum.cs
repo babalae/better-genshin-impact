@@ -9,4 +9,5 @@ public enum IndependentTaskEnum
     AutoTrack,
     AutoTrackPath,
     AutoMusicGame,
+    AutoPathing,
 }

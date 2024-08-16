@@ -170,10 +170,45 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _test2HotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
+    // 路径记录开始
+    [ObservableProperty]
+    private string _pathRecorderHotkey = "";
+
+    [ObservableProperty]
+    private string _pathRecorderHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 添加路径记录点
+    [ObservableProperty]
+    private string _addWaypointHotkey = "";
+
+    [ObservableProperty]
+    private string _addWaypointHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 路径执行
+    [ObservableProperty]
+    private string _executePathHotkey = "";
+
+    [ObservableProperty]
+    private string _executePathHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
     // 日志与状态窗口展示
     [ObservableProperty]
     private string _logBoxDisplayHotkey = "";
 
     [ObservableProperty]
     private string _logBoxDisplayHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 键鼠录制/停止
+    [ObservableProperty]
+    private string _keyMouseMacroRecordHotkey = "";
+
+    [ObservableProperty]
+    private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 停止任意独立任务
+    [ObservableProperty]
+    private string _cancelTaskHotkey = "";
+
+    [ObservableProperty]
+    private string _cancelTaskHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }

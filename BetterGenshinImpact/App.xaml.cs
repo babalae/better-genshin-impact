@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact;
@@ -33,6 +32,7 @@ public partial class App : Application
     // https://docs.microsoft.com/dotnet/core/extensions/configuration
     // https://docs.microsoft.com/dotnet/core/extensions/logging
     private static readonly IHost _host = Host.CreateDefaultBuilder()
+        .CheckIntegration()
         .UseElevated()
         .UseSingleInstance("BetterGI")
         .ConfigureServices(
@@ -71,6 +71,7 @@ public partial class App : Application
 
                 // Service containing navigation, same as INavigationWindow... but without window
                 services.AddSingleton<INavigationService, NavigationService>();
+                services.AddSingleton<ISnackbarService, SnackbarService>();
 
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
@@ -86,6 +87,7 @@ public partial class App : Application
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
                 services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
+                // services.AddView<DispatcherPage, DispatcherPageViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();

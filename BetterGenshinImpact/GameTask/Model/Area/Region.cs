@@ -2,7 +2,6 @@
 using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading;

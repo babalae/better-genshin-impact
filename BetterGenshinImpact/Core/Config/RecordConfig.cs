@@ -18,4 +18,10 @@ public partial class RecordConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private double _angle2DirectInputX = 1.0;
+
+    /// <summary>
+    /// 图像识别记录相机视角朝向
+    /// </summary>
+    [ObservableProperty]
+    private bool _isRecordCameraOrientation = false;
 }

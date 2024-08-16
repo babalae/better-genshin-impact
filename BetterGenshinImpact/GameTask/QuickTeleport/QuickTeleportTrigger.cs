@@ -1,16 +1,15 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Linq;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Model;
 using System.Windows.Forms;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -129,7 +128,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
         // 按高度排序
         if (rResultList.Count > 0)
         {
-            rResultList = rResultList.OrderBy(x => x.Y).ToList();
+            rResultList = [.. rResultList.OrderBy(x => x.Y)];
             // 点击最高的
             foreach (var iconRect in rResultList)
             {

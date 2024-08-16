@@ -1,4 +1,6 @@
-﻿using Microsoft.Win32;
+﻿using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -17,7 +19,14 @@ public class SettingsContainer
 
     public SettingsContainer()
     {
-        FromReg();
+        try
+        {
+            FromReg();
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "读取原神注册表信息出错");
+        }
     }
 
     public void FromReg()

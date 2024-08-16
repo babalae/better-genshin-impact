@@ -2,10 +2,15 @@
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
@@ -21,11 +26,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoSkip;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Vanara.PInvoke;
-using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -54,15 +55,18 @@ namespace BetterGenshinImpact.GameTask
         private Bitmap _bitmap = new(10, 10);
 
         /// <summary>
-        /// 仅捕获模式
+        /// 调度器捕获模式, 影响以下内容：
+        /// 1. 是否缓存图像
+        /// 2. 是否执行触发器
         /// </summary>
-        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.OnlyTrigger;
+        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.NormalTrigger;
 
         private static readonly object _bitmapLocker = new();
+        private static readonly object _triggerListLocker = new();
 
-        public event EventHandler UiTaskStopTickEvent;
+        public event EventHandler? UiTaskStopTickEvent;
 
-        public event EventHandler UiTaskStartTickEvent;
+        public event EventHandler? UiTaskStartTickEvent;
 
         public TaskTriggerDispatcher()
         {
@@ -96,6 +100,32 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        public void ClearTriggers()
+        {
+            lock (_triggerListLocker)
+            {
+                GameTaskManager.ClearTriggers();
+                _triggers?.Clear();
+            }
+        }
+
+        public void SetTriggers(List<ITaskTrigger> list)
+        {
+            lock (_triggerListLocker)
+            {
+                _triggers = list;
+            }
+        }
+
+        public void AddTrigger(string name, object? externalConfig)
+        {
+            lock (_triggerListLocker)
+            {
+                GameTaskManager.AddTrigger(name, externalConfig);
+                SetTriggers(GameTaskManager.ConvertToTriggerList(true));
+            }
+        }
+
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
@@ -107,7 +137,7 @@ namespace BetterGenshinImpact.GameTask
             TaskContext.Instance().Init(hWnd);
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadTriggers();
+            _triggers = GameTaskManager.LoadInitialTriggers();
 
             // 启动截图
             GameCapture.Start(hWnd,
@@ -123,33 +153,12 @@ namespace BetterGenshinImpact.GameTask
                 _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
             }
 
-            // 读取游戏注册表配置
-            ReadGameSettings();
-
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
             if (!_timer.Enabled)
             {
                 _timer.Start();
-            }
-        }
-
-        private void ReadGameSettings()
-        {
-            try
-            {
-                SettingsContainer settings = new();
-                TaskContext.Instance().GameSettings = settings;
-                var lang = settings.Language?.TextLang;
-                if (lang != null && lang != TextLanguage.SimplifiedChinese)
-                {
-                    _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             }
         }
 
@@ -188,7 +197,6 @@ namespace BetterGenshinImpact.GameTask
             }
 
             var maskWindow = MaskWindow.Instance();
-            maskWindow.LogBox.IsHitTestVisible = false;
             maskWindow.Invoke(() => { maskWindow.Show(); });
             if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
             {
@@ -220,7 +228,10 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        public void Dispose() => Stop();
+        public void Dispose()
+        {
+            Stop();
+        }
 
         public void Tick(object? sender, EventArgs e)
         {
@@ -246,7 +257,8 @@ namespace BetterGenshinImpact.GameTask
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                     }
-                    UiTaskStopTickEvent.Invoke(sender, e);
+
+                    UiTaskStopTickEvent?.Invoke(sender, e);
                     maskWindow.Invoke(maskWindow.Hide);
                     return;
                 }
@@ -260,7 +272,7 @@ namespace BetterGenshinImpact.GameTask
                     if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
-                        UiTaskStopTickEvent.Invoke(sender, e);
+                        UiTaskStopTickEvent?.Invoke(sender, e);
                         return;
                     }
 
@@ -269,26 +281,33 @@ namespace BetterGenshinImpact.GameTask
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
                     }
 
-                    // var pName = SystemControl.GetActiveProcessName();
-                    // if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
-                    // {
-                    //     maskWindow.Invoke(() => { maskWindow.Hide(); });
-                    // }
+                    if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+                    {
+                        var pName = SystemControl.GetActiveProcessName();
+                        if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                        {
+                            maskWindow.Invoke(() => { maskWindow.Hide(); });
+                        }
+                    }
 
                     _prevGameActive = active;
 
                     if (_triggers != null)
                     {
-                        var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                        if (exclusive != null)
+                        lock (_triggerListLocker)
                         {
-                            hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
-                        }
-                        else
-                        {
-                            hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                            var exclusive = _triggers.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                            if (exclusive != null)
+                            {
+                                hasBackgroundTriggerToRun = exclusive.IsBackgroundRunning;
+                            }
+                            else
+                            {
+                                hasBackgroundTriggerToRun = _triggers.Any(t => t is { IsEnabled: true, IsBackgroundRunning: true });
+                            }
                         }
                     }
+
                     if (!hasBackgroundTriggerToRun)
                     {
                         // 没有后台运行的触发器，这次不再进行截图
@@ -297,16 +316,19 @@ namespace BetterGenshinImpact.GameTask
                 }
                 else
                 {
-                    // if (!_prevGameActive)
-                    // {
-                    //     maskWindow.Invoke(() =>
-                    //     {
-                    //         if (maskWindow.IsExist())
-                    //         {
-                    //             maskWindow.Show();
-                    //         }
-                    //     });
-                    // }
+                    if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+                    {
+                        if (!_prevGameActive)
+                        {
+                            maskWindow.Invoke(() =>
+                            {
+                                if (maskWindow.IsExist())
+                                {
+                                    maskWindow.Show();
+                                }
+                            });
+                        }
+                    }
 
                     _prevGameActive = active;
                     // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
@@ -319,7 +341,7 @@ namespace BetterGenshinImpact.GameTask
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
 
-                if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.OnlyTrigger
+                if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.NormalTrigger
                     && (_triggers == null || !_triggers.Exists(t => t.IsEnabled)))
                 {
                     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
@@ -344,24 +366,28 @@ namespace BetterGenshinImpact.GameTask
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
                 var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
-                var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                if (exclusiveTrigger != null)
-                {
-                    exclusiveTrigger.OnCapture(content);
-                    speedTimer.Record(exclusiveTrigger.Name);
-                }
-                else
-                {
-                    var runningTriggers = _triggers.Where(t => t.IsEnabled);
-                    if (hasBackgroundTriggerToRun)
-                    {
-                        runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
-                    }
 
-                    foreach (var trigger in runningTriggers)
+                lock (_triggerListLocker)
+                {
+                    var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                    if (exclusiveTrigger != null)
                     {
-                        trigger.OnCapture(content);
-                        speedTimer.Record(trigger.Name);
+                        exclusiveTrigger.OnCapture(content);
+                        speedTimer.Record(exclusiveTrigger.Name);
+                    }
+                    else
+                    {
+                        var runningTriggers = _triggers!.Where(t => t.IsEnabled);
+                        if (hasBackgroundTriggerToRun)
+                        {
+                            runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
+                        }
+
+                        foreach (var trigger in runningTriggers)
+                        {
+                            trigger.OnCapture(content);
+                            speedTimer.Record(trigger.Name);
+                        }
                     }
                 }
 
@@ -402,13 +428,12 @@ namespace BetterGenshinImpact.GameTask
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
                     _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
-                    UiTaskStopTickEvent.Invoke(null, EventArgs.Empty);
-                    UiTaskStartTickEvent.Invoke(null, EventArgs.Empty);
+                    UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
+                    UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
                     _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
                 }
 
                 _gameRect = new RECT(currentRect);
-                double scale = TaskContext.Instance().DpiScale;
                 TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
                 MaskWindow.Instance().RefreshPosition();
                 return true;
@@ -446,7 +471,18 @@ namespace BetterGenshinImpact.GameTask
 
         public void SetCacheCaptureMode(DispatcherCaptureModeEnum mode)
         {
-            _dispatcherCacheCaptureMode = mode;
+            if (mode is DispatcherCaptureModeEnum.Start)
+            {
+                this.StartTimer();
+            }
+            else if (mode is DispatcherCaptureModeEnum.Stop)
+            {
+                this.StopTimer();
+            }
+            else
+            {
+                _dispatcherCacheCaptureMode = mode;
+            }
         }
 
         public DispatcherCaptureModeEnum GetCacheCaptureMode()
@@ -466,6 +502,21 @@ namespace BetterGenshinImpact.GameTask
         {
             var bitmap = GetLastCaptureBitmap();
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+        }
+
+        public ImageRegion CaptureToRectArea()
+        {
+            // 触发器启动的情况下优先使用触发器的截图
+            if (_timer.Enabled && _dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+            {
+                return GetLastCaptureContent().CaptureRectArea;
+            }
+            else
+            {
+                var bitmap = TaskControl.CaptureGameBitmap(GameCapture);
+                var content = new CaptureContent(bitmap, 0, 0);
+                return content.CaptureRectArea;
+            }
         }
 
         public void TakeScreenshot()

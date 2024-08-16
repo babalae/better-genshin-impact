@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Helpers;
-using Vanara.PInvoke;
+﻿using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Model;
 

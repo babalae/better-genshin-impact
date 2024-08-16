@@ -1,9 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
-using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
@@ -18,8 +19,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -34,7 +33,7 @@ public class CombatScenes : IDisposable
     /// </summary>
     public Avatar[] Avatars { get; set; } = new Avatar[1];
 
-    public Dictionary<string, Avatar> AvatarMap { get; set; } = new();
+    public Dictionary<string, Avatar> AvatarMap { get; set; } = [];
 
     public int AvatarCount { get; set; }
 
@@ -70,9 +69,9 @@ public class CombatScenes : IDisposable
                 if (!string.IsNullOrEmpty(pair.Item2))
                 {
                     var costumeName = pair.Item2;
-                    if (AutoFightAssets.Instance.AvatarCostumeMap.ContainsKey(costumeName))
+                    if (AutoFightAssets.Instance.AvatarCostumeMap.TryGetValue(costumeName, out string? name))
                     {
-                        costumeName = AutoFightAssets.Instance.AvatarCostumeMap[costumeName];
+                        costumeName = name;
                     }
 
                     displayNames[i] = $"{pair.Item1}({costumeName})";
@@ -83,7 +82,7 @@ public class CombatScenes : IDisposable
                 }
             }
             Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
-            Avatars = BuildAvatars(names.ToList());
+            Avatars = BuildAvatars([.. names]);
             AvatarMap = Avatars.ToDictionary(x => x.Name);
         }
         catch (Exception e)
@@ -121,10 +120,23 @@ public class CombatScenes : IDisposable
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
-        if (result.TopClass.Confidence < 0.8)
+
+        if (result.TopClass.Name.Name.StartsWith("Qin") || result.TopClass.Name.Name.Contains("Costume"))
         {
-            Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-            throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+            // 降低琴和衣装角色的识别率要求
+            if (result.TopClass.Confidence < 0.6)
+            {
+                Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+            }
+        }
+        else
+        {
+            if (result.TopClass.Confidence < 0.8)
+            {
+                Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+            }
         }
 
         return result.TopClass.Name.Name;
@@ -132,7 +144,7 @@ public class CombatScenes : IDisposable
 
     private void InitializeTeamFromConfig(string teamNames)
     {
-        var names = teamNames.Split(new[] { "，", "," }, StringSplitOptions.TrimEntries);
+        var names = teamNames.Split(["，", ","], StringSplitOptions.TrimEntries);
         if (names.Length != 4)
         {
             throw new Exception($"强制指定队伍角色数量不正确，必须是4个，当前{names.Length}个");
@@ -146,7 +158,7 @@ public class CombatScenes : IDisposable
 
         Logger.LogInformation("强制指定队伍角色:{Text}", string.Join(",", names));
         TaskContext.Instance().Config.AutoFightConfig.TeamNames = string.Join(",", names);
-        Avatars = BuildAvatars(names.ToList());
+        Avatars = BuildAvatars([.. names]);
         AvatarMap = Avatars.ToDictionary(x => x.Name);
     }
 
@@ -219,8 +231,8 @@ public class CombatScenes : IDisposable
     [Obsolete]
     private void ParseTeamOcrResult(PaddleOcrResult result, ImageRegion rectArea)
     {
-        List<string> names = new();
-        List<Rect> nameRects = new();
+        List<string> names = [];
+        List<Rect> nameRects = [];
         foreach (var item in result.Regions)
         {
             var name = StringUtils.ExtractChinese(item.Text);

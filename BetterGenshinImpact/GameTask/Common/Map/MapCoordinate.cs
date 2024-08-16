@@ -102,6 +102,11 @@ public class MapCoordinate
         return new Point((GameMapLeftCols + 1) * GameMapBlockWidth - point.X / 2, (GameMapUpRows + 1) * GameMapBlockWidth - point.Y / 2);
     }
 
+    public static Point2f Main2048ToGame(Point2f point)
+    {
+        return new Point2f((GameMapLeftCols + 1) * GameMapBlockWidth - point.X / 2f, (GameMapUpRows + 1) * GameMapBlockWidth - point.Y / 2f);
+    }
+
     /// <summary>
     /// 主地图2048区块坐标系 -> 原神游戏坐标系
     /// </summary>

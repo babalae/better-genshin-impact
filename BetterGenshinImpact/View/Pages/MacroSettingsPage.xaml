@@ -189,7 +189,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可以为负数，绝对值越大移动越快，和鼠标DPI有一定关系，请不要配置太大"
+                                  Text="可以为负数，绝对值越大移动越快，请不要配置太大"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -215,7 +215,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可以设置为0，配置完毕后请切换tab页生效（其他配置也一样）"
+                                  Text="尽量设置大于0的数字，配置完毕后请切换页签生效（其他配置也一样）"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"

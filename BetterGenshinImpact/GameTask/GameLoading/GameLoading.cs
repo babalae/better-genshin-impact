@@ -84,7 +84,8 @@ public class GameLoadingTrigger : ITaskTrigger
             var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
             if (!wmRa.IsEmpty())
             {
-                wmRa.BackgroundClick();
+                // wmRa.BackgroundClick();
+                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                 _welkinMoonClickCount++;
                 Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
                 if (_welkinMoonClickCount > 2)

@@ -6,7 +6,6 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Diagnostics;
-using System.Windows.Input;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 

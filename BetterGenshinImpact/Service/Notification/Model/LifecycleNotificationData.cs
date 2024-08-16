@@ -1,5 +1,5 @@
-﻿using System.Text.Json.Serialization;
-using BetterGenshinImpact.Service.Notification.Model.Enum;
+﻿using BetterGenshinImpact.Service.Notification.Model.Enum;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 

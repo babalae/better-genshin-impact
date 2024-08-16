@@ -779,5 +779,15 @@
     "nameEn": "Clorinde",
     "skillCD": 16.0,
     "weapon": "1"
+  },
+  {
+    "alias": [ "艾梅莉埃", "Emilie", "调香师", "艾梅" ],
+    "burstCD": 13.5,
+    "id": "10000099",
+    "name": "艾梅莉埃",
+    "nameEn": "Emilie",
+    "skillCD": 10.0,
+    "skillHoldCD": 14.0,
+    "weapon": "13"
   }
 ]

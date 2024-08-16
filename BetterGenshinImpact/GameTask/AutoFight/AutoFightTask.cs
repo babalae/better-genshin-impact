@@ -38,7 +38,7 @@ public class AutoFightTask
             }
 
             Init();
-            var combatScenes = new CombatScenes().InitializeTeam(GetRectAreaFromDispatcher());
+            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
             if (!combatScenes.CheckTeamInitialized())
             {
                 throw new Exception("识别队伍角色失败");
@@ -84,7 +84,7 @@ public class AutoFightTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyTrigger);
+            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
             TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动战斗结束");
 

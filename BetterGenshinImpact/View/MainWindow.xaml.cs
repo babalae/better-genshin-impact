@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Windows;
@@ -17,7 +16,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     public MainWindowViewModel ViewModel { get; }
 
-    public MainWindow(MainWindowViewModel viewModel, IPageService pageService, INavigationService navigationService)
+    public MainWindow(MainWindowViewModel viewModel, IPageService pageService, INavigationService navigationService, ISnackbarService snackbarService)
     {
         _logger.LogDebug("主窗体实例化");
         DataContext = ViewModel = viewModel;
@@ -26,6 +25,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         this.InitializeDpiAwareness();
 
         SetPageService(pageService);
+        snackbarService.SetSnackbarPresenter(SnackbarPresenter);
         navigationService.SetNavigationControl(RootNavigation);
 
         Application.Current.MainWindow = this;

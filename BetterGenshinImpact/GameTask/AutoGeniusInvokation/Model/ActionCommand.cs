@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// <summary>
         ///  角色
         /// </summary>
-        public Character Character { get; set; }
+        public Character Character { get; set; } = default!;
 
         public ActionEnum Action { get; set; }
 
@@ -16,7 +16,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// </summary>
         public int TargetIndex { get; set; }
 
-        public override string ToString()
+        public override string? ToString()
         {
             if (Action == ActionEnum.UseSkill)
             {

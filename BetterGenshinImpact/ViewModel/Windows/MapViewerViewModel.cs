@@ -1,9 +1,8 @@
-﻿using System;
-using System.Windows;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using System.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 

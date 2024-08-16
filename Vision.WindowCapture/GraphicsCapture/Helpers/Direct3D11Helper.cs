@@ -44,8 +44,6 @@ public static class Direct3D11Helper
 
     public static unsafe IDirect3DDevice? CreateDirect3DDevice()
     {
-        ID3D11Device? d3d11Device;
-
         HRESULT hr = D3D11CreateDevice(
             default,
             D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_HARDWARE,
@@ -54,7 +52,7 @@ public static class Direct3D11Helper
             default,
             0,
             D3D11_SDK_VERSION,
-            out d3d11Device,
+            out ID3D11Device? d3d11Device,
             default,
             out _);
 

@@ -30,7 +30,7 @@ public partial class MacroConfig : ObservableObject
     ///     转圈圈时间间隔
     /// </summary>
     [ObservableProperty]
-    private int _runaroundInterval;
+    private int _runaroundInterval = 10;
 
     /// <summary>
     ///     转圈圈鼠标右移长度

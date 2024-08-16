@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
+using System.ComponentModel;
 
 namespace BetterGenshinImpact.Model
 {
@@ -23,7 +24,11 @@ namespace BetterGenshinImpact.Model
 
         private bool GetSourceValue()
         {
-            return (bool)_sourceObject.GetType().GetProperty(_propertyName).GetValue(_sourceObject);
+            var property = _sourceObject.GetType().GetProperty(_propertyName);
+            ArgumentNullException.ThrowIfNull(property);
+            var value = property.GetValue(_sourceObject);
+            ArgumentNullException.ThrowIfNull(value);
+            return (bool)value;
         }
 
 

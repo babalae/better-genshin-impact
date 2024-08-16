@@ -123,26 +123,26 @@ public class RecognitionObject
     /// <summary>
     ///     部分文字识别结果不准确，进行替换。可选。
     /// </summary>
-    public Dictionary<string, string[]> ReplaceDictionary { get; set; } = new();
+    public Dictionary<string, string[]> ReplaceDictionary { get; set; } = [];
 
     /// <summary>
     ///     包含匹配
     ///     多个值全匹配的情况下才算成功
     ///     复杂情况请用下面的正则匹配
     /// </summary>
-    public List<string> AllContainMatchText { get; set; } = new();
+    public List<string> AllContainMatchText { get; set; } = [];
 
     /// <summary>
     ///     包含匹配
     ///     一个值匹配就算成功
     /// </summary>
-    public List<string> OneContainMatchText { get; set; } = new();
+    public List<string> OneContainMatchText { get; set; } = [];
 
     /// <summary>
     ///     正则匹配
     ///     多个值全匹配的情况下才算成功
     /// </summary>
-    public List<string> RegexMatchText { get; set; } = new();
+    public List<string> RegexMatchText { get; set; } = [];
 
     #endregion OCR文字识别
 }

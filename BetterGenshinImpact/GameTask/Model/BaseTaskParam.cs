@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using BetterGenshinImpact.GameTask.Model.Enum;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
@@ -7,10 +8,17 @@ namespace BetterGenshinImpact.GameTask.Model;
 /// </summary>
 public class BaseTaskParam
 {
+    public string Name { get; set; } = string.Empty;
 
     public CancellationTokenSource Cts { get; set; }
 
-    public BaseTaskParam(CancellationTokenSource cts)  {
-        Cts = cts;
+    /// <summary>
+    /// 针对实时触发器的操作
+    /// </summary>
+    public DispatcherTimerOperationEnum TriggerOperation { get; set; } = DispatcherTimerOperationEnum.None;
+
+    protected BaseTaskParam(CancellationTokenSource cts)
+    {
+        this.Cts = cts;
     }
 }

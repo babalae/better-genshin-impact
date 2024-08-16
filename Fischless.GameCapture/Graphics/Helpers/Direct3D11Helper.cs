@@ -1,11 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Windows.Graphics.DirectX.Direct3D11;
 using WinRT;
 
 namespace Fischless.GameCapture.Graphics.Helpers;
 
-[SuppressMessage("CodeQuality", "IDE0052:")]
 public static class Direct3D11Helper
 {
     internal static Guid IInspectable = new("AF86E2E0-B12D-4c6a-9C5A-D7AA65101E90");
@@ -59,7 +57,7 @@ public static class Direct3D11Helper
 
     public static IDirect3DDevice CreateDirect3DDeviceFromSharpDXDevice(SharpDX.Direct3D11.Device d3dDevice)
     {
-        IDirect3DDevice device = null;
+        IDirect3DDevice device = default!;
 
         // Acquire the DXGI interface for the Direct3D device.
         using (var dxgiDevice = d3dDevice.QueryInterface<SharpDX.DXGI.Device3>())
@@ -79,7 +77,7 @@ public static class Direct3D11Helper
 
     public static IDirect3DSurface CreateDirect3DSurfaceFromSharpDXTexture(SharpDX.Direct3D11.Texture2D texture)
     {
-        IDirect3DSurface surface = null;
+        IDirect3DSurface surface = default!;
 
         // Acquire the DXGI interface for the Direct3D surface.
         using (var dxgiSurface = texture.QueryInterface<SharpDX.DXGI.Surface>())

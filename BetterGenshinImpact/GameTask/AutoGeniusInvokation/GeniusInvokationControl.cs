@@ -5,6 +5,8 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -12,12 +14,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Model.Area;
-using Point = OpenCvSharp.Point;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
@@ -703,6 +703,13 @@ public class GeniusInvokationControl
                     Sleep(500);
                 }
             }
+
+            // 存在吞星之鲸的情况下，烧牌后等待加血动画
+            if (duel.Characters.Any(c => c is { Name: "吞星之鲸" }))
+            {
+                Debug.WriteLine("存在吞星之鲸的情况下，烧牌后等待动画");
+                Sleep(5000);
+            }
         }
 
         return ActionPhaseUseSkill(skillIndex);
@@ -1034,7 +1041,7 @@ public class GeniusInvokationControl
         var srcMat = CaptureGameMat();
 
         int halfHeight = srcMat.Height / 2;
-        Mat bottomMat = new Mat(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
+        Mat bottomMat = new(srcMat, new Rect(0, halfHeight, srcMat.Width, srcMat.Height - halfHeight));
 
         var lowPurple = new Scalar(239, 239, 239);
         var highPurple = new Scalar(255, 255, 255);
@@ -1049,10 +1056,11 @@ public class GeniusInvokationControl
         if (contours.Length > 0)
         {
             // .Where(w => w.Width > 1 && w.Height >= 5)
-            var rects = contours.Select(Cv2.BoundingRect).ToList();
-
-            // 按照Y轴高度排序
-            rects = rects.OrderBy(r => r.Y).ToList();
+            var rects = contours
+                .Select(Cv2.BoundingRect)
+                // 按照Y轴高度排序
+                .OrderBy(r => r.Y)
+                .ToList();
 
             // 第一个和角色卡重叠的矩形
             foreach (var rect in rects)
@@ -1135,7 +1143,7 @@ public class GeniusInvokationControl
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     var hp = -2;
-                    if (Regex.IsMatch(text, @"^[0-9]+$"))
+                    if (RegexHelper.FullNumberRegex().IsMatch(text))
                     {
                         hp = int.Parse(text);
                     }
@@ -1216,7 +1224,7 @@ public class GeniusInvokationControl
 #endif
             return -10;
         }
-        else if (Regex.IsMatch(text, @"^[0-9]+$"))
+        else if (RegexHelper.FullNumberRegex().IsMatch(text))
         {
             _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
             return int.Parse(text);

@@ -1,7 +1,6 @@
-﻿using System;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.Common.Map;
+﻿using BetterGenshinImpact.GameTask.Common.Map;
 using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 
@@ -12,9 +11,9 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 [Serializable]
 public class GiPathPoint
 {
-    public Point Pt { get; set; }
+    public Point2f Pt { get; set; }
 
-    public Rect MatchRect { get; set; }
+    public Point2f MatchPt { get; set; }
 
     public int Index { get; set; }
 
@@ -22,13 +21,13 @@ public class GiPathPoint
 
     public string Type { get; set; } = GiPathPointType.Normal.ToString();
 
-    public static GiPathPoint BuildFrom(Rect matchRect, int index)
+    public static GiPathPoint BuildFrom(Point2f point, int index)
     {
-        var pt = MapCoordinate.Main2048ToGame(matchRect.GetCenterPoint());
+        var pt = MapCoordinate.Main2048ToGame(point);
         return new GiPathPoint
         {
             Pt = pt,
-            MatchRect = matchRect,
+            MatchPt = point,
             Index = index,
             Time = DateTime.Now
         };

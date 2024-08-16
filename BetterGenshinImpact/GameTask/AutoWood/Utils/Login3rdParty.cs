@@ -54,7 +54,7 @@ internal sealed class Login3rdParty
                                 foreach (string line in lines)
                                 {
                                     string kv = line.Trim();
-                                    if (kv.StartsWith("cps=") && kv.EndsWith("bilibili"))
+                                    if (kv.StartsWith("channel=") && kv.EndsWith("14"))
                                     {
                                         Type = The3rdPartyType.Bilibili;
                                         break;
@@ -101,40 +101,6 @@ internal sealed class Login3rdParty
         {
             if (Process.GetProcessesByName("YuanShen").FirstOrDefault() is Process process)
             {
-                static nint GetBHWnd(Process process)
-                {
-                    nint bHWnd = IntPtr.Zero;
-
-                    _ = User32.EnumWindows((HWND hWnd, nint lParam) =>
-                    {
-                        try
-                        {
-                            _ = User32.GetWindowThreadProcessId(hWnd, out uint pid);
-
-                            if (pid == process.Id)
-                            {
-                                int capacity = User32.GetWindowTextLength(hWnd);
-                                StringBuilder title = new(capacity + 1);
-                                _ = User32.GetWindowText(hWnd, title, title.Capacity);
-
-                                Debug.WriteLine($"[AutoWood] Enum Windows result is {title}");
-                                if (title.ToString().Contains("bilibili", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    bHWnd = (nint)hWnd;
-                                    return false;
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            ///
-                        }
-                        return true;
-                    }, IntPtr.Zero);
-
-                    return bHWnd;
-                }
-
                 if (GetBHWnd(process) != IntPtr.Zero)
                 {
                     // Just for login WebUI fadein chattering
@@ -142,7 +108,7 @@ internal sealed class Login3rdParty
 
                     var p = TaskContext.Instance()
                         .SystemInfo.CaptureAreaRect.GetCenterPoint()
-                        .Add(new(0, 125));
+                        .Add(new(0, 85));
 
                     p.Click();
                     Debug.WriteLine("[AutoWood] Click login button for the B one");
@@ -167,5 +133,39 @@ internal sealed class Login3rdParty
             // Ignore and exit with OK
             return true;
         }
+    }
+
+    static nint GetBHWnd(Process process)
+    {
+        nint bHWnd = IntPtr.Zero;
+
+        _ = User32.EnumWindows((HWND hWnd, nint lParam) =>
+        {
+            try
+            {
+                _ = User32.GetWindowThreadProcessId(hWnd, out uint pid);
+
+                if (pid == process.Id)
+                {
+                    int capacity = User32.GetWindowTextLength(hWnd);
+                    StringBuilder title = new(capacity + 1);
+                    _ = User32.GetWindowText(hWnd, title, title.Capacity);
+
+                    Debug.WriteLine($"[AutoWood] Enum Windows result is {title}");
+                    if (title.ToString().Contains("bilibili", StringComparison.OrdinalIgnoreCase))
+                    {
+                        bHWnd = (nint)hWnd;
+                        return false;
+                    }
+                }
+            }
+            catch
+            {
+                ///
+            }
+            return true;
+        }, IntPtr.Zero);
+
+        return bHWnd;
     }
 }

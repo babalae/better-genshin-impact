@@ -5,13 +5,23 @@ namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = "0.31.3";
+    public static string Version { get; } = "0.32.6";
 
     public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
 
     public static string Absolute(string relativePath)
     {
         return Path.Combine(StartUpPath, relativePath);
+    }
+
+    public static string ScriptPath()
+    {
+        return Absolute("Script");
+    }
+
+    public static string ScriptPath(string folderName)
+    {
+        return Path.Combine(Absolute("Script"), folderName);
     }
 
     public static string? ReadAllTextIfExist(string relativePath)

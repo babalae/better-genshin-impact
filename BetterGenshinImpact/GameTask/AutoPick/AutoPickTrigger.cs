@@ -1,7 +1,9 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
@@ -14,13 +16,11 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using BetterGenshinImpact.Core.Recognition;
 using Vanara.PInvoke;
-using System.Windows.Input;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
-public class AutoPickTrigger : ITaskTrigger
+public partial class AutoPickTrigger : ITaskTrigger
 {
     private readonly ILogger<AutoPickTrigger> _logger = App.GetLogger<AutoPickTrigger>();
     private readonly ITextInference _pickTextInference = TextInferenceFactory.Pick;
@@ -35,12 +35,12 @@ public class AutoPickTrigger : ITaskTrigger
     /// <summary>
     /// 拾取黑名单
     /// </summary>
-    private List<string> _blackList = new();
+    private List<string> _blackList = [];
 
     /// <summary>
     /// 拾取白名单
     /// </summary>
-    private List<string> _whiteList = new();
+    private List<string> _whiteList = [];
 
     // 自定义拾取按键
     private string _pickKeyName = "F";
@@ -48,14 +48,22 @@ public class AutoPickTrigger : ITaskTrigger
     private User32.VK _pickVk = User32.VK.VK_F;
     private RecognitionObject _pickRo;
 
+    // 外部配置
+    private AutoPickExternalConfig? _externalConfig;
+
     public AutoPickTrigger()
     {
         _autoPickAssets = AutoPickAssets.Instance;
+        _pickRo = _autoPickAssets.FRo;
+    }
+
+    public AutoPickTrigger(AutoPickExternalConfig? config) : this()
+    {
+        _externalConfig = config;
     }
 
     public void Init()
     {
-        _pickRo = _autoPickAssets.FRo;
         var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
         if (!string.IsNullOrEmpty(keyName))
         {
@@ -191,7 +199,7 @@ public class AutoPickTrigger : ITaskTrigger
             speedTimer.Record("文字识别");
             if (!string.IsNullOrEmpty(text))
             {
-                text = Regex.Replace(text, @"^[\p{P} ]+|[\p{P} ]+$", "");
+                text = PunctuationAndSpacesRegex().Replace(text, "");
                 // 唯一一个动态拾取项，特殊处理，不拾取
                 if (text.Contains("生长时间"))
                 {
@@ -264,4 +272,7 @@ public class AutoPickTrigger : ITaskTrigger
         _lastText = text;
         _prevClickFrameIndex = content.FrameIndex;
     }
+
+    [GeneratedRegex(@"^[\p{P} ]+|[\p{P} ]+$")]
+    private static partial Regex PunctuationAndSpacesRegex();
 }

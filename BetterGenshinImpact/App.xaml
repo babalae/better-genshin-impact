@@ -2,18 +2,22 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:bgivc="clr-namespace:BetterGenshinImpact.View.Converters"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <vio:ControlsDictionary />
                 <ResourceDictionary Source="/View/Controls/WpfUi/FaFontIconStyle.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <FontFamily x:Key="TextThemeFontFamily">/Assets/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
+            <FontFamily x:Key="DigitalThemeFontFamily">/Assets/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+            <bgivc:NotNullConverter x:Key="NotNullConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -168,7 +168,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private bool CanStartTrigger() => StartButtonEnabled;
 
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
-    private async Task OnStartTriggerAsync()
+    public async Task OnStartTriggerAsync()
     {
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)

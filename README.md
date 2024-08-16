@@ -63,7 +63,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 你的系统需要满足以下条件：
   * Windows 10 或更高版本的64位系统
-  * [.NET 7 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
+  * [.NET 8 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
 
 **⚠️注意：**
 1. 窗口大小变化、切换游戏分辨率、切换显示器的时候请重启本软件。
@@ -107,4 +107,4 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[644939404](https://qm.qq.com/q/1H8dSqlNUA2)
+提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[644939404](https://qm.qq.com/q/eG3QIodqiA)

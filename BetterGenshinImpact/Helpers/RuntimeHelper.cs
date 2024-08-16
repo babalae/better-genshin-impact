@@ -3,8 +3,10 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -115,8 +117,8 @@ internal static class RuntimeHelper
             callback?.Invoke(true);
             handle = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName);
         }
-        GC.KeepAlive(handle);
-        GC.KeepAlive(Task.Factory.StartNew(() =>
+
+        Task.Factory.StartNew(() =>
         {
             while (handle.WaitOne())
             {
@@ -128,7 +130,22 @@ internal static class RuntimeHelper
                 });
 #endif
             }
-        }, TaskCreationOptions.LongRunning));
+        }, TaskCreationOptions.LongRunning);
+    }
+
+    public static void CheckIntegration()
+    {
+        if (!Directory.Exists("Assets") || !Directory.Exists("GameTask") || !Directory.Exists("User"))
+        {
+            StringBuilder stringBuilder = new("发现有关键文件缺失，");
+            stringBuilder.Append(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) == Global.StartUpPath
+                ? "请不要把主程序exe文件剪切到桌面"
+                : "请重新安装软件");
+
+            MessageBox.Show(stringBuilder.ToString(),
+                    "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Environment.Exit(0xFFFF);
+        }
     }
 }
 
@@ -144,5 +161,11 @@ internal static class RuntimeExtension
     {
         RuntimeHelper.CheckSingleInstance(instanceName, callback);
         return self;
+    }
+
+    public static IHostBuilder CheckIntegration(this IHostBuilder app)
+    {
+        RuntimeHelper.CheckIntegration();
+        return app;
     }
 }

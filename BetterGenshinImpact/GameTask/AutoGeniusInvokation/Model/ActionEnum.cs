@@ -12,34 +12,24 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         public static ActionEnum ChineseToActionEnum(this string type)
         {
             type = type.ToLower();
-            switch (type)
+            return type switch
             {
-                case "出战":
-                    //return ActionEnum.ChooseFirst;
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-                case "切换":
-                    //return ActionEnum.SwitchLater;
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-                case "使用":
-                    return ActionEnum.UseSkill;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
+                "出战" => /* ActionEnum.ChooseFirst, */ throw new ArgumentOutOfRangeException(nameof(type), type, null),
+                "切换" => /* ActionEnum.SwitchLater, */ throw new ArgumentOutOfRangeException(nameof(type), type, null),
+                "使用" => ActionEnum.UseSkill,
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+            };
         }
 
         public static string ToChinese(this ActionEnum type)
         {
-            switch (type)
+            return type switch
             {
-                case ActionEnum.ChooseFirst:
-                    return "出战";
-                case ActionEnum.SwitchLater:
-                    return "切换";
-                case ActionEnum.UseSkill:
-                    return "使用";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
+                ActionEnum.ChooseFirst => "出战",
+                ActionEnum.SwitchLater => "切换",
+                ActionEnum.UseSkill => "使用",
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+            };
         }
     }
 }

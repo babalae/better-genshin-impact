@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Windows.Input;
 using TimeSpan = System.TimeSpan;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;

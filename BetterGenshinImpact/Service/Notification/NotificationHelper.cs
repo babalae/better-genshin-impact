@@ -1,8 +1,8 @@
-﻿using System;
-using System.Drawing;
-using BetterGenshinImpact.GameTask.Common;
+﻿using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Builder;
 using BetterGenshinImpact.Service.Notification.Model;
+using System;
+using System.Drawing;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -22,7 +22,7 @@ public class NotificationHelper
     public static void SendTaskNotificationWithScreenshotUsing(Func<TaskNotificationBuilder, INotificationData> builderFunc)
     {
         var builder = new TaskNotificationBuilder();
-        var screenShot = (Bitmap)TaskControl.GetRectAreaFromDispatcher().SrcBitmap.Clone();
+        var screenShot = (Bitmap)TaskControl.CaptureToRectArea().SrcBitmap.Clone();
         Notify(builderFunc(builder.WithScreenshot(screenShot)));
     }
 }

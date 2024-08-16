@@ -1,8 +1,8 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
+using OpenCvSharp;
 using System;
 using System.Diagnostics;
-using OpenCvSharp;
 using Vanara.PInvoke;
 using Size = System.Drawing.Size;
 

@@ -151,8 +151,8 @@ public partial class AutoWoodTask
 
         private bool _firstWoodOcr = true;
         private string _firstWoodOcrText = "";
-        private readonly Dictionary<string, int> _woodMetricsDict = new();
-        private readonly Dictionary<string, bool> _woodNotPrintDict = new();
+        private readonly Dictionary<string, int> _woodMetricsDict = [];
+        private readonly Dictionary<string, bool> _woodNotPrintDict = [];
 
         // from:https://api-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=13
         private static readonly List<string> ExistWoods =
@@ -433,8 +433,8 @@ public partial class AutoWoodTask
 #if !TEST_WITHOUT_Z_ITEM
                 throw new NormalEndException("请先装备小道具「王树瑞佑」！");
 #else
-                Thread.Sleep(2000);
-                Simulation.SendInputEx.Keyboard.KeyPress(_zKey);
+                System.Threading.Thread.Sleep(2000);
+                Simulation.SendInput.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
 #endif
@@ -458,7 +458,7 @@ public partial class AutoWoodTask
 #if !TEST_WITHOUT_Z_ITEM
                     throw new RetryException("未找到「王树瑞佑」");
 #else
-                    Thread.Sleep(15000);
+                    System.Threading.Thread.Sleep(15000);
 #endif
                 }
 

@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.View
     /// </summary>
     public partial class PickerWindow : Window
     {
-        private readonly string[] _ignoreProcesses = { "applicationframehost", "shellexperiencehost", "systemsettings", "winstore.app", "searchui" };
+        private static readonly string[] _ignoreProcesses = ["applicationframehost", "shellexperiencehost", "systemsettings", "winstore.app", "searchui"];
 
         public PickerWindow()
         {
@@ -48,7 +48,7 @@ namespace BetterGenshinImpact.View
 
                 // ignore untitled windows
                 var title = new StringBuilder(1024);
-                User32.GetWindowText(hWnd, title, title.Capacity);
+                _ = User32.GetWindowText(hWnd, title, title.Capacity);
                 if (string.IsNullOrWhiteSpace(title.ToString()))
                     return true;
 
@@ -56,7 +56,7 @@ namespace BetterGenshinImpact.View
                 if (wih.Handle == hWnd)
                     return true;
 
-                User32.GetWindowThreadProcessId(hWnd, out var processId);
+                _ = User32.GetWindowThreadProcessId(hWnd, out var processId);
 
                 // ignore by process name
                 var process = Process.GetProcessById((int)processId);

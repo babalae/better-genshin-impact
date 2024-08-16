@@ -1,35 +1,30 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Macro;
+using BetterGenshinImpact.GameTask.QucikBuy;
+using BetterGenshinImpact.GameTask.QuickSereniteaPot;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Logging;
-using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using CommunityToolkit.Mvvm.Messaging;
-using BetterGenshinImpact.GameTask.QucikBuy;
-using BetterGenshinImpact.GameTask.QuickSereniteaPot;
-using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using static Vanara.PInvoke.User32;
-using System.Runtime.InteropServices;
-using System;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Monitor;
-using BetterGenshinImpact.Core.Recorder;
+using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -40,7 +35,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     public AllConfig Config { get; set; }
 
     [ObservableProperty]
-    private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = new();
+    private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
     public HotKeyPageViewModel(IConfigService configService, ILogger<HotKeyPageViewModel> logger, TaskSettingsPageViewModel taskSettingsPageViewModel)
     {
@@ -314,7 +309,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "确认");
                 }
-            }
+            },
+            true
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -332,7 +328,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：未找到按钮图片", "取消");
                 }
-            }
+            },
+            true
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -348,15 +345,49 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         });
 
         HotKeySettingModels.Add(new HotKeySettingModel(
-            "启动/停止自动活动音游",
-            nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
-            Config.HotKeyConfig.AutoMusicGameHotkey,
-            Config.HotKeyConfig.AutoMusicGameHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
+            "启动/停止键鼠录制",
+            nameof(Config.HotKeyConfig.KeyMouseMacroRecordHotkey),
+            Config.HotKeyConfig.KeyMouseMacroRecordHotkey,
+            Config.HotKeyConfig.KeyMouseMacroRecordHotkeyType, async (_, _) =>
+            {
+                var vm = App.GetService<KeyMouseRecordPageViewModel>();
+                if (vm == null)
+                {
+                    _logger.LogError("无法找到 KeyMouseRecordPageViewModel 单例对象！");
+                    return;
+                }
+                if (GlobalKeyMouseRecord.Instance.Status == KeyMouseRecorderStatus.Stop)
+                {
+                    Thread.Sleep(300); // 防止录进快捷键进去
+                    await vm.OnStartRecord();
+                }
+                else
+                {
+                    vm.OnStopRecord();
+                }
+            }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "停止当前脚本任务",
+            nameof(Config.HotKeyConfig.CancelTaskHotkey),
+            Config.HotKeyConfig.CancelTaskHotkey,
+            Config.HotKeyConfig.CancelTaskHotkeyType,
+            (_, _) =>
+            {
+                CancellationContext.Instance.Cancel();
+            }
         ));
 
         if (RuntimeHelper.IsDebug)
         {
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "启动/停止自动活动音游",
+                nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
+                Config.HotKeyConfig.AutoMusicGameHotkey,
+                Config.HotKeyConfig.AutoMusicGameHotkeyType,
+                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
+            ));
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）启动/停止自动追踪",
                 nameof(Config.HotKeyConfig.AutoTrackHotkey),
@@ -381,8 +412,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
             ));
 
-            var flag = false;
-            var m = "";
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -390,54 +419,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    // if (postMessageSimulator == null)
-                    // {
-                    //     postMessageSimulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
-                    // }
-                    // User32.GetCursorPos(out var p);
-                    // Debug.WriteLine($"鼠标位置：{p.X},{p.Y}");
-                    // // postMessageSimulator.KeyPressBackground(User32.VK.VK_W);
-                    // GameCaptureRegion.GameRegion1080PPosMove(1340, 655);
-                    // postMessageSimulator.LeftButtonClickBackground(1340, 655);
-                    // Thread.Sleep(5);
-                    // DesktopRegion.DesktopRegionMove(p.X, p.Y);
-
-                    // 大地图位置
-                    // TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-                    // Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-                    // AutoTrackPathTask.GetPositionFromBigMap();
-
-                    // Simulation.SendInput.Mouse.MoveMouseBy(400, 0).Sleep(200)
-                    //     .Keyboard.KeyPress(User32.VK.VK_W).Sleep(500);
-
-                    // HWND hWnd = GetForegroundWindow();
-                    //
-                    // uint threadid = GetWindowThreadProcessId(hWnd, out var _);
-                    //
-                    // GUITHREADINFO lpgui = new GUITHREADINFO();
-                    // lpgui.cbSize = (uint)Marshal.SizeOf(lpgui);
-                    //
-                    // if (GetGUIThreadInfo(threadid, ref lpgui))
-                    // {
-                    // if (lpgui.hwndCaret != 0)
-                    // {
-                    //     _logger.LogInformation("输入状态");
-                    //     return;
-                    // }
-                    // }
-                    // _logger.LogInformation("非输入状态");
-
-                    if (!flag)
-                    {
-                        GlobalKeyMouseRecord.Instance.StartRecord();
-                        flag = true;
-                    }
-                    else
-                    {
-                        m = GlobalKeyMouseRecord.Instance.StopRecord();
-                        Debug.WriteLine("录制脚本结束:" + m);
-                        flag = false;
-                    }
+                    var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
+                    _logger.LogInformation("大地图位置：{Position}", p);
                 }
             ));
 
@@ -448,12 +431,59 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    _logger.LogInformation("开始重放脚本");
-                    Task.Run(async () =>
+                    // _logger.LogInformation("开始重放脚本");
+                    User32.SetWindowPos(TaskContext.Instance().GameHandle, new HWND(), 0, 0, 1920, 1080, SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_NOZORDER);
+                }
+            ));
+
+            var _pathRecorder = new PathRecorder();
+            var _pathRecording = false;
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）路径记录器",
+                nameof(Config.HotKeyConfig.PathRecorderHotkey),
+                Config.HotKeyConfig.PathRecorderHotkey,
+                Config.HotKeyConfig.PathRecorderHotkeyType,
+                (_, _) =>
+                {
+                    if (_pathRecording)
                     {
-                        await KeyMouseMacroPlayer.PlayMacro(m);
-                        _logger.LogInformation("播放脚本结束");
-                    });
+                        _pathRecorder.Save();
+                    }
+                    else
+                    {
+                        _pathRecorder.Clear();
+                        _pathRecorder.Start();
+                    }
+                    _pathRecording = !_pathRecording;
+                }
+            ));
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）添加记录点",
+                nameof(Config.HotKeyConfig.AddWaypointHotkey),
+                Config.HotKeyConfig.AddWaypointHotkey,
+                Config.HotKeyConfig.AddWaypointHotkeyType,
+                (_, _) =>
+                {
+                    if (_pathRecording)
+                    {
+                        _pathRecorder.AddWaypoint();
+                    }
+                }
+            ));
+
+            HotKeySettingModels.Add(new HotKeySettingModel(
+                "（测试）播放内存中的路径",
+                nameof(Config.HotKeyConfig.ExecutePathHotkey),
+                Config.HotKeyConfig.ExecutePathHotkey,
+                Config.HotKeyConfig.ExecutePathHotkeyType,
+                (_, _) =>
+                {
+                    if (_pathRecording)
+                    {
+                        PathExecutor.Pathing(_pathRecorder.PathingTask,new CancellationTokenSource());
+                    }
                 }
             ));
         }

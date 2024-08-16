@@ -1,0 +1,14 @@
+{
+  "manifest_version": 1,
+  "id": "bgi_crystalfly",
+  "name": "自动采集晶蝶",
+  "version": "1.0",
+  "description": "BetterGI自带脚本，自动采集离传送点较近的晶蝶。",
+  "authors": [
+    {
+        "name": "huiyadanli",
+        "link": "https://github.com/huiyadanli"
+    }
+  ],
+  "main": "main.js"
+}

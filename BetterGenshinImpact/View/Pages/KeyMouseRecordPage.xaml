@@ -17,42 +17,11 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
     <Page.Resources>
-        <!--
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-        -->
-
-        <Style x:Key="GridViewColumnHeaderDarkStyle" TargetType="{x:Type GridViewColumnHeader}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type GridViewColumnHeader}">
-                        <Grid Background="Transparent">
-                            <Border MaxHeight="{TemplateBinding Height}"
-                                    Padding="{TemplateBinding Padding}"
-                                    BorderBrush="#5aaa"
-                                    BorderThickness="0,1,0,1">
-                                <ContentPresenter Name="HeaderContent"
-                                                  Margin="5"
-                                                  Content="{TemplateBinding ContentControl.Content}"
-                                                  ContentStringFormat="{TemplateBinding ContentControl.ContentStringFormat}"
-                                                  ContentTemplate="{TemplateBinding ContentControl.ContentTemplate}"
-                                                  RecognizesAccessKey="True"
-                                                  SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
-                            </Border>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Foreground">
-                <Setter.Value>
-                    <SolidColorBrush Color="{DynamicResource TextFillColorPrimary}" />
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Page.Resources>
     <Grid Margin="42,16,42,12">
         <Grid.RowDefinitions>
@@ -67,21 +36,23 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="键鼠录制回放功能" />
+                      Text="键鼠录制回放功能（实验性功能）" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="建议在游戏内使用快捷键进行录制。脚本直接存储在User/KeyMouseScript目录下，可以在此处查看并修改录制的脚本"
+                      Text="建议在游戏内使用快捷键进行录制。&#x0a;1. 录制时遇到主界面和其他界面的切换时，不要操作，需要等待程序识别这个切换过程&#x0a;2. 尽量走平坦的路，每次碰撞都会出现不一样的结果&#x0a;3. 录制的距离越长，误差会更大"
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding StartRecordCommand}"
                        Content="开始录制"
-                       Icon="{ui:SymbolIcon Record20}" />
+                       Icon="{ui:SymbolIcon Record20}"
+                       IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}" />
             <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding StopRecordCommand}"
                        Content="停止录制"
-                       Icon="{ui:SymbolIcon Stop24}" />
+                       Icon="{ui:SymbolIcon Stop24}"
+                       IsEnabled="{Binding IsRecording}" />
             <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding OpenScriptFolderCommand}"
                        Content="打开脚本目录"
@@ -114,13 +85,14 @@
                                     DisplayMemberBinding="{Binding Name}"
                                     Header="名称" />
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding CreateTime}"
+                                    DisplayMemberBinding="{Binding CreateTimeStr}"
                                     Header="创建时间" />
                     <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:Button Command="{Binding StartPlayCommand}"
+                                    <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.StartPlayCommand}"
+                                               CommandParameter="{Binding Name}"
                                                Content="播放脚本"
                                                Icon="{ui:SymbolIcon Play24}" />
                                 </StackPanel>
@@ -130,6 +102,16 @@
                     </GridViewColumn>
                 </GridView>
             </ListView.View>
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Command="{Binding EditScriptCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="修改名称" />
+                    <MenuItem Command="{Binding DeleteScriptCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="删除" />
+                </ContextMenu>
+            </ListBox.ContextMenu>
             <ListView.Style>
                 <Style TargetType="{x:Type ListView}">
                     <Setter Property="BorderThickness" Value="0" />

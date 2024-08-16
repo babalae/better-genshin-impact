@@ -1,5 +1,4 @@
-﻿using System;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
@@ -8,11 +7,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using PresentMonFps;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using PresentMonFps;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel
@@ -21,9 +20,9 @@ namespace BetterGenshinImpact.ViewModel
     {
         [ObservableProperty] private Rect _windowRect;
 
-        [ObservableProperty] private ObservableCollection<MaskButton> _maskButtons = new();
+        [ObservableProperty] private ObservableCollection<MaskButton> _maskButtons = [];
 
-        [ObservableProperty] private ObservableCollection<StatusItem> _statusList = new();
+        [ObservableProperty] private ObservableCollection<StatusItem> _statusList = [];
 
         public AllConfig? Config { get; set; }
 
@@ -34,7 +33,7 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private Point _westPoint = new(32, 109);
         [ObservableProperty] private Point _northPoint = new(150, -9);
 
-        [ObservableProperty] private string _fps = "-1";
+        [ObservableProperty] private string _fps = "0";
 
         public MaskWindowViewModel()
         {

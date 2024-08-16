@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
 using OpenCvSharp.Detail;
 using System.Diagnostics;
@@ -19,22 +20,21 @@ public class EntireMapTest
 
         speedTimer.Record("初始化特征");
 
-        var pArray = surfMatcher.Match(queryMat);
+        var p = surfMatcher.Match(queryMat);
         speedTimer.Record("匹配1");
-        if (pArray != null)
+        if (!p.IsEmpty())
         {
-            var rect = Cv2.BoundingRect(pArray);
-            Debug.WriteLine($"Matched rect 1: {rect}");
-            Cv2.Rectangle(mainMap1024BlockMat, rect, Scalar.Red, 2);
+            Debug.WriteLine($"Matched rect 1: {p}");
+            Cv2.Circle(mainMap1024BlockMat, p.ToPoint(), 10, Scalar.Red);
             // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\b1.png", mainMap1024BlockMat);
 
-            var pArray2 = surfMatcher.Match(queryMat, rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+            var p2 = surfMatcher.Match(queryMat, p.X, p.Y);
             speedTimer.Record("匹配2");
-            if (pArray2 != null)
+            if (!p2.IsEmpty())
             {
-                var rect2 = Cv2.BoundingRect(pArray2);
-                Debug.WriteLine($"Matched rect 2: {rect2}");
-                Cv2.Rectangle(mainMap1024BlockMat, rect2, Scalar.Yellow, 1);
+                // var rect2 = Cv2.BoundingRect(pArray2);
+                Debug.WriteLine($"Matched rect 2: {p2}");
+                // Cv2.Rectangle(mainMap1024BlockMat, rect2, Scalar.Yellow, 1);
                 // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\b2.png", mainMap1024BlockMat);
             }
             else

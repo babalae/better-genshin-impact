@@ -17,6 +17,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
     public RecognitionObject MapChooseRo;
 
     public RecognitionObject MapUndergroundSwitchButtonRo;
+    public RecognitionObject MapUndergroundToGroundButtonRo;
 
     private QuickTeleportAssets()
     {
@@ -24,8 +25,8 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             (int)(100 * AssetScale),
             (int)(50 * AssetScale),
             CaptureRect.Height - (int)(200 * AssetScale));
-        MapChooseIconRoList = new List<RecognitionObject>
-        {
+        MapChooseIconRoList =
+        [
             BuildMapChooseIconRo("TeleportWaypoint.png"),
             BuildMapChooseIconRo("StatueOfTheSeven.png"),
             BuildMapChooseIconRo("Domain.png"),
@@ -33,7 +34,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             BuildMapChooseIconRo("PortableWaypoint.png"),
             BuildMapChooseIconRo("Mansion.png"),
             BuildMapChooseIconRo("SubSpaceWaypoint.png"),
-        };
+        ];
         MapChooseIconGreyMatList = MapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat());
 
         // 传送按钮宽泛的识别区域
@@ -111,7 +112,18 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
                 (int)(250 * AssetScale),
                 (int)(90 * AssetScale),
                 (int)(570 * AssetScale)),
-            DrawOnWindow = true
+            DrawOnWindow = false
+        }.InitTemplate();
+        MapUndergroundToGroundButtonRo = new RecognitionObject
+        {
+            Name = "MapUndergroundToGroundButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "MapUndergroundToGroundButton.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(120 * AssetScale),
+                (int)(250 * AssetScale),
+                (int)(90 * AssetScale),
+                (int)(570 * AssetScale)),
+            DrawOnWindow = false
         }.InitTemplate();
     }
 

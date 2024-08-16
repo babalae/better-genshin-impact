@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 /// <summary>
 /// 自动剧情有选项点击
 /// </summary>
-public class AutoSkipTrigger : ITaskTrigger
+public partial class AutoSkipTrigger : ITaskTrigger
 {
     private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
 
@@ -47,17 +47,17 @@ public class AutoSkipTrigger : ITaskTrigger
     /// <summary>
     /// 不自动点击的选项，优先级低于橙色文字点击
     /// </summary>
-    private List<string> _defaultPauseList = new();
+    private List<string> _defaultPauseList = [];
 
     /// <summary>
     /// 不自动点击的选项
     /// </summary>
-    private List<string> _pauseList = new();
+    private List<string> _pauseList = [];
 
     /// <summary>
     /// 优先自动点击的选项
     /// </summary>
-    private List<string> _selectList = new();
+    private List<string> _selectList = [];
 
     private PostMessageSimulator? _postMessageSimulator;
 
@@ -78,7 +78,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var defaultPauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\default_pause_options.json");
             if (!string.IsNullOrEmpty(defaultPauseListJson))
             {
-                _defaultPauseList = JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _defaultPauseList = JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -92,7 +92,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var pauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\pause_options.json");
             if (!string.IsNullOrEmpty(pauseListJson))
             {
-                _pauseList = JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _pauseList = JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -106,7 +106,7 @@ public class AutoSkipTrigger : ITaskTrigger
             var selectListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\select_options.json");
             if (!string.IsNullOrEmpty(selectListJson))
             {
-                _selectList = JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions) ?? new List<string>();
+                _selectList = JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -140,47 +140,24 @@ public class AutoSkipTrigger : ITaskTrigger
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
-        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.StopAutoButtonRo);
+        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.DisabledUiButtonRo);
 
         var isPlaying = !foundRectArea.IsEmpty(); // 播放中
 
-        // 播放中图标消失3s内OCR判断文字
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
-            // 找播放中的文字
-            content.CaptureRectArea.Find(_autoSkipAssets.PlayingTextRo, _ => { isPlaying = true; });
-            if (!isPlaying)
+            // 关闭弹出页
+            ClosePopupPage(content);
+
+            // 自动剧情点击3s内判断
+            if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
             {
-                using var textRa = content.CaptureRectArea.DeriveCrop(_autoSkipAssets.PlayingTextRo.RegionOfInterest);
-                // 过滤出白色
-                var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(textRa.SrcMat, new Scalar(0, 0, 170), new Scalar(255, 80, 245));
-                var result = OcrFactory.Paddle.Ocr(hsvFilterMat);
-                if (result.Contains("播") || result.Contains("番") || result.Contains("放") || result.Contains("中") || result.Contains("潘") || result.Contains("故"))
+                // 提交物品
+                if (SubmitGoods(content))
                 {
-                    textRa.DrawSelf("PlayingText");
-                    isPlaying = true;
+                    return;
                 }
             }
-
-            if (!isPlaying)
-            {
-                // 关闭弹出页
-                ClosePopupPage(content);
-
-                // 自动剧情点击3s内判断
-                if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
-                {
-                    // 提交物品
-                    if (SubmitGoods(content))
-                    {
-                        return;
-                    }
-                }
-            }
-        }
-        else
-        {
-            VisionContext.Instance().DrawContent.RemoveRect("PlayingText");
         }
 
         if (isPlaying)
@@ -346,38 +323,11 @@ public class AutoSkipTrigger : ITaskTrigger
         }
     }
 
-    /// <summary>
-    /// 获取橙色选项的文字
-    /// </summary>
-    /// <param name="captureMat"></param>
-    /// <param name="foundIconRectArea"></param>
-    /// <param name="chatOptionTextWidth"></param>
-    /// <returns></returns>
-    [Obsolete]
-    private string GetOrangeOptionText(Mat captureMat, ImageRegion foundIconRectArea, int chatOptionTextWidth)
-    {
-        var textRect = new Rect(foundIconRectArea.X + foundIconRectArea.Width, foundIconRectArea.Y, chatOptionTextWidth, foundIconRectArea.Height);
-        using var mat = new Mat(captureMat, textRect);
-        // 只提取橙色
-        using var bMat = OpenCvCommonHelper.Threshold(mat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
-        // Cv2.ImWrite("log/每日委托.png", bMat);
-        var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
-        var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
-        if (rate < 0.06)
-        {
-            Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
-            return string.Empty;
-        }
-
-        var text = OcrFactory.Paddle.Ocr(bMat);
-        return text;
-    }
-
     private bool IsOrangeOption(Mat textMat)
     {
         // 只提取橙色
         // Cv2.ImWrite($"log/text{DateTime.Now:yyyyMMddHHmmssffff}.png", textMat);
-        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(247, 198, 50), new Scalar(255, 204, 54));
+        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(243, 195, 48), new Scalar(255, 205, 55));
         var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
         var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
         Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
@@ -413,7 +363,8 @@ public class AutoSkipTrigger : ITaskTrigger
         });
     }
 
-    private readonly Regex _enOrNumRegex = new(@"^[a-zA-Z0-9]+$");
+    [GeneratedRegex(@"^[a-zA-Z0-9]+$")]
+    private static partial Regex EnOrNumRegex();
 
     /// <summary>
     /// 新的对话选项选择
@@ -443,7 +394,7 @@ public class AutoSkipTrigger : ITaskTrigger
         if (chatOptionResultList.Count > 0)
         {
             // 第一个元素就是最下面的
-            chatOptionResultList = chatOptionResultList.OrderByDescending(r => r.Y).ToList();
+            chatOptionResultList = [.. chatOptionResultList.OrderByDescending(r => r.Y)];
 
             // 通过最下面的气泡框来文字识别
             var lowest = chatOptionResultList[0];
@@ -461,11 +412,11 @@ public class AutoSkipTrigger : ITaskTrigger
             // 删除为空的结果 和 纯英文的结果
             var rs = new List<Region>();
             // 按照y坐标排序
-            ocrResList = ocrResList.OrderBy(r => r.Y).ToList();
+            ocrResList = [.. ocrResList.OrderBy(r => r.Y)];
             for (var i = 0; i < ocrResList.Count; i++)
             {
                 var item = ocrResList[i];
-                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && _enOrNumRegex.IsMatch(item.Text)))
+                if (string.IsNullOrEmpty(item.Text) || (item.Text.Length < 5 && EnOrNumRegex().IsMatch(item.Text)))
                 {
                     continue;
                 }
@@ -635,6 +586,11 @@ public class AutoSkipTrigger : ITaskTrigger
     /// <param name="content"></param>
     private void ClosePopupPage(CaptureContent content)
     {
+        if (!_config.ClosePopupPagedEnabled)
+        {
+            return;
+        }
+
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
             TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);

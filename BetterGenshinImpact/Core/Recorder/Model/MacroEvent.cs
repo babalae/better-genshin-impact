@@ -1,5 +1,8 @@
-﻿namespace BetterGenshinImpact.Core.Recorder.Model;
+﻿using System;
 
+namespace BetterGenshinImpact.Core.Recorder.Model;
+
+[Serializable]
 public class MacroEvent
 {
     public MacroEventType Type { get; set; }
@@ -8,6 +11,8 @@ public class MacroEvent
     public int MouseY { get; set; }
     public string? MouseButton { get; set; }
     public double Time { get; set; }
+
+    public int? CameraOrientation { get; set; }
 }
 
 public enum MacroEventType

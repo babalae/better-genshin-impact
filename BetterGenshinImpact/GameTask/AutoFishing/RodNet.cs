@@ -1,6 +1,6 @@
-﻿using System;
+﻿using OpenCvSharp;
+using System;
 using System.Linq;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing;
 
@@ -11,10 +11,10 @@ public class RodNet
 {
     const double alpha = 1734.34 / 2.5;
 
-    static readonly double[] dz = { 0.561117562965, 0.637026851288, 0.705579317577,
+    static readonly double[] dz = [ 0.561117562965, 0.637026851288, 0.705579317577,
                                      1.062734463845, 0.949307580751, 1.015620474332,
                                      1.797904203405, 1.513476738412, 1.013873007495,
-                                     1.159949954831, 1.353650974146, 1.302893195071 };
+                                     1.159949954831, 1.353650974146, 1.302893195071 ];
 
     static readonly double[,] theta = {
                                         {-0.262674397633, 0.317025388945, -0.457150765450, 0.174522158281,
@@ -31,10 +31,10 @@ public class RodNet
                                           -1.285988918494}
                                        };
 
-    static readonly double[] B = { 1.241950004386, 3.051113640564, -3.848898190087 };
+    static readonly double[] B = [1.241950004386, 3.051113640564, -3.848898190087];
 
-    static readonly double[] offset = { 0.4, 0.2, 0.4, 0, 0.3, 0.3,
-        0.3, 0.15, 0.5, 0.5, 0.5, 0.5 };
+    static readonly double[] offset = [ 0.4, 0.2, 0.4, 0, 0.3, 0.3,
+        0.3, 0.15, 0.5, 0.5, 0.5, 0.5 ];
 
     static void F(double[] dst, double[] x, double[] y)
     {
@@ -124,9 +124,7 @@ public class RodNet
 
         if (a < b)
         {
-            double temp = a;
-            a = b;
-            b = temp;
+            (b, a) = (a, b);
         }
 
         v0 = (288 - (input.rod_y1 + input.rod_y2) / 2) / alpha;
@@ -135,8 +133,8 @@ public class RodNet
         v = (288 - (input.fish_y1 + input.fish_y2) / 2) / alpha;
 
         double[] y0z0t = new double[3];
-        double[] abv0 = { a, b, v0 };
-        double[] init = { 30, 15, 1 };
+        double[] abv0 = [a, b, v0];
+        double[] init = [30, 15, 1];
 
         bool solveSuccess = NewtonRaphson(F, DfInv, y0z0t, abv0, init, 3, 1000, 1e-6);
 
@@ -166,7 +164,7 @@ public class RodNet
 
     public static int GetRodState(Rect rod, Rect fish, int fishTypeIndex)
     {
-        RodInput input = new RodInput
+        RodInput input = new()
         {
             rod_x1 = rod.Left,
             rod_x2 = rod.Right,

@@ -33,11 +33,7 @@ internal static class ResourceHelper
     public static string GetString(string uriString, Encoding encoding = null!)
     {
         Uri uri = new(uriString);
-        StreamResourceInfo? info = Application.GetResourceStream(uri);
-        if (info == null)
-        {
-            throw new FileNotFoundException($"Resource not found: {uriString}");
-        }
+        StreamResourceInfo? info = Application.GetResourceStream(uri) ?? throw new FileNotFoundException($"Resource not found: {uriString}");
         using StreamReader stream = new(info.Stream, encoding ?? Encoding.UTF8);
         return stream.ReadToEnd();
     }

@@ -1,8 +1,7 @@
-﻿using System.Drawing;
-using System.Drawing.Imaging;
+﻿using OpenCvSharp;
+using System.Drawing;
 using System.IO;
 using System.Windows.Media.Imaging;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.Helpers.Extensions
 {

@@ -60,7 +60,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [SuppressMessage("CommunityToolkit.Mvvm.SourceGenerators.RelayCommandGenerator", "MVVMTK0039:Async void returning method annotated with RelayCommand")]
     private async void OnLoaded()
     {
-        _logger.LogInformation("更好的原神 {Version}", Global.Version);
         try
         {
             await Task.Run(() =>
@@ -128,6 +127,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                             PrimaryButtonText = "确定",
                             SecondaryButtonText = "不再提示",
                             CloseButtonText = "取消",
+                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                            Owner = Application.Current.MainWindow,
                         };
 
                         var result = await uiMessageBox.ShowDialogAsync();

@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
@@ -13,7 +14,6 @@ using Fischless.GameCapture;
 using System;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
-using BetterGenshinImpact.GameTask.AutoCook;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -125,6 +125,8 @@ public partial class AllConfig : ObservableObject
     ///     脚本类配置
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
+
+    public RecordConfig RecordConfig { get; set; } = new();
 
     /// <summary>
     ///     快捷键配置

@@ -2,7 +2,7 @@
 {
     public enum CharacterStatusEnum
     {
-        Frozen, 
+        Frozen,
         Dizziness
     }
 }

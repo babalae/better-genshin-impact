@@ -71,5 +71,5 @@ public sealed class KeyboardResult
         return Key;
     }
 
-    public static implicit operator string(KeyboardResult result) => result?.ToString();
+    public static implicit operator string(KeyboardResult result) => result.ToString();
 }

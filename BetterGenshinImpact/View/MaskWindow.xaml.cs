@@ -1,14 +1,16 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Drawable;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
 using System.Diagnostics;
-using PresentMonFps;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -19,8 +21,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
-using BetterGenshinImpact.ViewModel;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.View;
 
@@ -71,6 +71,41 @@ public partial class MaskWindow : Window
 
     public void RefreshPosition()
     {
+        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+        {
+            RefreshPositionForSubform();
+        }
+        else
+        {
+            RefreshPositionForNormal();
+        }
+    }
+
+    public void RefreshPositionForNormal()
+    {
+        var currentRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
+
+        Invoke(() =>
+        {
+            double dpiScale = DpiHelper.ScaleY;
+
+            Left = currentRect.Left / dpiScale;
+            Top = currentRect.Top / dpiScale;
+            Width = currentRect.Width / dpiScale;
+            Height = currentRect.Height / dpiScale;
+
+            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
+            Canvas.SetLeft(LogTextBoxWrapper, 20);
+            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+            Canvas.SetLeft(StatusWrapper, 20);
+        });
+        // 重新计算控件位置
+        // shit code 预定了
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+    }
+
+    public void RefreshPositionForSubform()
+    {
         nint targetHWnd = TaskContext.Instance().GameHandle;
         _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
         float x = DpiHelper.GetScale(targetHWnd).X;
@@ -78,8 +113,10 @@ public partial class MaskWindow : Window
 
         Invoke(() =>
         {
-            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
-            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
+            Canvas.SetTop(LogTextBoxWrapper, Height * 1d / DpiHelper.ScaleY - LogTextBoxWrapper.Height * 1d / DpiHelper.ScaleY - 65);
+            Canvas.SetLeft(LogTextBoxWrapper, 20);
+            Canvas.SetTop(StatusWrapper, Height * 1d / DpiHelper.ScaleY - LogTextBoxWrapper.Height * 1d / DpiHelper.ScaleY - 90);
+            Canvas.SetLeft(StatusWrapper, 20);
         });
 
         // 重新计算控件位置
@@ -108,9 +145,16 @@ public partial class MaskWindow : Window
             _richTextBox.RichTextBox = LogTextBox;
         }
 
-        _hWnd = new WindowInteropHelper(this).Handle;
-        nint targetHWnd = TaskContext.Instance().GameHandle;
-        _ = User32.SetParent(_hWnd, targetHWnd);
+        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+        {
+            _hWnd = new WindowInteropHelper(this).Handle;
+            nint targetHWnd = TaskContext.Instance().GameHandle;
+
+            if (User32.GetParent(_hWnd) != targetHWnd)
+            {
+                _ = User32.SetParent(_hWnd, targetHWnd);
+            }
+        }
 
         RefreshPosition();
         PrintSystemInfo();
@@ -118,6 +162,7 @@ public partial class MaskWindow : Window
 
     private void PrintSystemInfo()
     {
+        _logger.LogInformation("更好的原神 {Version}", Global.Version);
         var systemInfo = TaskContext.Instance().SystemInfo;
         var width = systemInfo.GameScreenSize.Width;
         var height = systemInfo.GameScreenSize.Height;
@@ -128,6 +173,27 @@ public partial class MaskWindow : Window
         if (width * 9 != height * 16)
         {
             _logger.LogWarning("当前游戏分辨率不是16:9，部分功能可能无法正常使用");
+        }
+
+        // 读取游戏注册表配置
+        ReadGameSettings();
+    }
+
+    private void ReadGameSettings()
+    {
+        try
+        {
+            SettingsContainer settings = new();
+            TaskContext.Instance().GameSettings = settings;
+            var lang = settings.Language?.TextLang;
+            if (lang != null && lang != TextLanguage.SimplifiedChinese)
+            {
+                _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
     }
 

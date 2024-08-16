@@ -1,14 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
-using OpenCvSharp;
-using System;
 using Fischless.WindowsInput;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Helpers.Extensions;
 
 public static class ClickExtension
 {
-    public static Random Rd = new Random();
-
     public static void Click(this Point point)
     {
         Simulation.SendInput.Mouse.MoveMouseTo(point.X * 65535 * 1d / PrimaryScreen.WorkingArea.Width,

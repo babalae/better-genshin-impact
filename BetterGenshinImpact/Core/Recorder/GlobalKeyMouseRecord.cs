@@ -8,7 +8,9 @@ using Microsoft.Extensions.Logging;
 using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -18,7 +20,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private KeyMouseRecorder? _recorder;
 
-    private readonly Dictionary<Keys, bool> _keyDownState = new();
+    private readonly Dictionary<Keys, bool> _keyDownState = [];
 
     private DirectInputMonitor? _directInputMonitor;
 
@@ -26,29 +28,61 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private bool _isInMainUi = false; // 是否在主界面
 
+    public KeyMouseRecorderStatus Status { get; set; } = KeyMouseRecorderStatus.Stop;
+
     public GlobalKeyMouseRecord()
     {
         _timer.Elapsed += Tick;
         _timer.Interval = 50; // ms
     }
 
-    public KeyMouseRecorder StartRecord()
+    public async Task StartRecord()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            Toast.Warning("请先在启动页，启动截图器再使用本功能");
+            return;
+        }
+
+        if (Status != KeyMouseRecorderStatus.Stop)
+        {
+            Toast.Warning("已经在录制状态，请不要重复启动录制功能");
+            return;
+        }
+
+        Status = KeyMouseRecorderStatus.Start;
+
+        SystemControl.ActivateWindow();
+
+        _logger.LogInformation("录制：{Text}", "实时任务已暂停");
+        _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
+
+        for (var i = 3; i >= 1; i--)
+        {
+            _logger.LogInformation("{Sec}秒后启动录制...", i);
+            await Task.Delay(1000);
+        }
+
         TaskTriggerDispatcher.Instance().StopTimer();
+
         _timer.Start();
 
         _recorder = new KeyMouseRecorder();
         _directInputMonitor = new DirectInputMonitor();
         _directInputMonitor.Start();
 
-        _logger.LogInformation("录制：{Text}", "实时任务已暂停，录制已启动");
-        _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
+        Status = KeyMouseRecorderStatus.Recording;
 
-        return _recorder;
+        _logger.LogInformation("录制：{Text}", "已启动");
     }
 
     public string StopRecord()
     {
+        if (Status != KeyMouseRecorderStatus.Recording)
+        {
+            throw new InvalidOperationException("未处于录制中状态，无法停止");
+        }
+
         var macro = _recorder?.ToJsonMacro() ?? string.Empty;
         _recorder = null;
         _directInputMonitor?.Stop();
@@ -60,6 +94,9 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _logger.LogInformation("录制：{Text}", "结束录制");
 
         TaskTriggerDispatcher.Instance().StartTimer();
+
+        Status = KeyMouseRecorderStatus.Stop;
+
         return macro;
     }
 
@@ -79,7 +116,8 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookKeyDown(KeyEventArgs e)
     {
-        if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.Test1Hotkey)
+        // 排除热键
+        if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey)
         {
             return;
         }
@@ -110,7 +148,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             return;
         }
 
-        if (_keyDownState.ContainsKey(e.KeyCode) && _keyDownState[e.KeyCode])
+        if (_keyDownState.TryGetValue(e.KeyCode, out bool state) && state)
         {
             // Debug.WriteLine($"KeyUp: {e.KeyCode}");
             _keyDownState[e.KeyCode] = false;
@@ -149,4 +187,11 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
         _recorder?.MouseMoveBy(state);
     }
+}
+
+public enum KeyMouseRecorderStatus
+{
+    Start,
+    Recording,
+    Stop
 }

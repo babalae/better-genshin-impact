@@ -19,6 +19,16 @@ public class CameraOrientation
     public static int Compute(Mat greyMat)
     {
         var mat = new Mat(greyMat, new Rect(62, 19, 212, 212));
+        return ComputeMiniMap(mat);
+    }
+
+    /// <summary>
+    /// 计算当前小地图摄像机朝向的角度
+    /// </summary>
+    /// <param name="mat">小地图灰度图</param>
+    /// <returns>角度</returns>
+    public static int ComputeMiniMap(Mat mat)
+    {
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         // 极坐标展开
         var centerPoint = new Point2f(mat.Width / 2f, mat.Height / 2f);
@@ -94,17 +104,14 @@ public class CameraOrientation
         // };
         // VisionContext.Instance().DrawContent.PutLine("camera", line);
 
-        if (pen == null)
-        {
-            pen = new Pen(Color.Yellow, 1);
-        }
+        pen ??= new Pen(Color.Yellow, 1);
 
         region.DrawLine(center.X, center.Y, (int)x1, (int)y1, name, pen);
     }
 
     static List<int> FindPeaks(float[] data)
     {
-        List<int> peakIndices = new List<int>();
+        List<int> peakIndices = [];
 
         for (int i = 1; i < data.Length - 1; i++)
         {

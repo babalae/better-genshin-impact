@@ -1,11 +1,11 @@
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Threading;
-using BetterGenshinImpact.GameTask.Model.Area;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -71,18 +71,39 @@ public class TaskControl
         }
     }
 
-    public static void SleepWithoutThrow(int millisecondsTimeout, CancellationTokenSource cts)
+    public static async Task Delay(int millisecondsTimeout, CancellationTokenSource cts)
     {
-        try
+        if (cts is { IsCancellationRequested: true })
         {
-            Sleep(millisecondsTimeout, cts);
+            throw new NormalEndException("取消自动任务");
         }
-        catch
+
+        if (millisecondsTimeout <= 0)
         {
+            return;
+        }
+
+        NewRetry.Do(() =>
+        {
+            if (cts is { IsCancellationRequested: true })
+            {
+                throw new NormalEndException("取消自动任务");
+            }
+
+            if (!SystemControl.IsGenshinImpactActiveByProcess())
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+                throw new RetryException("当前获取焦点的窗口不是原神");
+            }
+        }, TimeSpan.FromSeconds(1), 100);
+        await Task.Delay(millisecondsTimeout, cts.Token);
+        if (cts is { IsCancellationRequested: true })
+        {
+            throw new NormalEndException("取消自动任务");
         }
     }
 
-    private static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+    public static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
     {
         var bitmap = gameCapture?.Capture();
         // wgc 缓冲区设置的2 所以至少截图3次
@@ -118,12 +139,6 @@ public class TaskControl
         }
     }
 
-    [Obsolete]
-    public static Bitmap CaptureGameBitmap()
-    {
-        return CaptureGameBitmap(TaskTriggerDispatcher.GlobalGameCapture);
-    }
-
     private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
     {
         var bitmap = CaptureGameBitmap(gameCapture);
@@ -136,10 +151,10 @@ public class TaskControl
     //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
     // }
 
-    public static ImageRegion CaptureToRectArea()
-    {
-        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture).CaptureRectArea;
-    }
+    // public static ImageRegion CaptureToRectArea()
+    // {
+    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture).CaptureRectArea;
+    // }
 
     // /// <summary>
     // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
@@ -151,12 +166,21 @@ public class TaskControl
     //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
     // }
 
+    // /// <summary>
+    // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    // /// </summary>
+    // /// <returns></returns>
+    // public static ImageRegion GetRectAreaFromDispatcher()
+    // {
+    //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent().CaptureRectArea;
+    // }
+
     /// <summary>
-    /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
+    /// 自动判断当前运行上下文中截图方式，并选择合适的截图方式返回
     /// </summary>
     /// <returns></returns>
-    public static ImageRegion GetRectAreaFromDispatcher()
+    public static ImageRegion CaptureToRectArea()
     {
-        return TaskTriggerDispatcher.Instance().GetLastCaptureContent().CaptureRectArea;
+        return TaskTriggerDispatcher.Instance().CaptureToRectArea();
     }
 }

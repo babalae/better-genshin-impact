@@ -1,19 +1,16 @@
-﻿using System;
-using System.Diagnostics;
-using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using System;
 using System.Linq;
 using System.Threading;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -128,7 +125,7 @@ public class Avatar
                 return;
             }
 
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
@@ -152,7 +149,7 @@ public class Avatar
     {
         for (var i = 0; i < 10; i++)
         {
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
@@ -218,7 +215,7 @@ public class Avatar
             if (contours.Length > 0)
             {
                 var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale).OrderByDescending(w => w.Width).ToList();
-                if (boxes.Any())
+                if (boxes.Count is not 0)
                 {
                     IndexRect = boxes.First();
                     return false;
@@ -301,7 +298,7 @@ public class Avatar
 
             Sleep(200, Cts);
 
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
             var cd = GetSkillCurrentCd(region);
             if (cd > 0)
@@ -342,7 +339,7 @@ public class Avatar
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
             Sleep(200, Cts);
 
-            var region = GetRectAreaFromDispatcher();
+            var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (notActiveCount == 0)
