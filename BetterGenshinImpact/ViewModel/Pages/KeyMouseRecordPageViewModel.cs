@@ -1,7 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
@@ -19,7 +18,6 @@ using System.Threading.Tasks;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
-using MessageBox = System.Windows.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 

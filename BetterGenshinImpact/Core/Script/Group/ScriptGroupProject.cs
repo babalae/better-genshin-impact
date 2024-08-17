@@ -11,8 +11,6 @@ public partial class ScriptGroupProject : ObservableObject
     [ObservableProperty]
     private int _index;
 
-    public string Id { get; set; } = string.Empty;
-
     public string Name { get; set; } = string.Empty;
 
     public string FolderName { get; set; } = string.Empty;
@@ -48,7 +46,6 @@ public partial class ScriptGroupProject : ObservableObject
 
     public ScriptGroupProject(ScriptProject project)
     {
-        Id = project.Manifest.Id;
         Name = project.Manifest.Name;
         FolderName = project.FolderName;
         Status = "Enabled";

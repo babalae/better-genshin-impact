@@ -10,8 +10,6 @@ namespace BetterGenshinImpact.Core.Script.Project;
 public class Manifest
 {
     public int ManifestVersion { get; set; } = 1;
-
-    public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -28,11 +26,6 @@ public class Manifest
 
     public void Validate(string path)
     {
-        if (string.IsNullOrWhiteSpace(Id))
-        {
-            throw new Exception("manifest.json: id is not supported.");
-        }
-
         if (string.IsNullOrWhiteSpace(Name))
         {
             throw new Exception("manifest.json: name is required.");
