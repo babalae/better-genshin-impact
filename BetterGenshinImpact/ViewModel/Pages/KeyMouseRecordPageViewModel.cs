@@ -159,7 +159,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 if (File.Exists(originalFilePath))
                 {
                     // 重命名文件
-                    File.Move(originalFilePath, Path.Combine(scriptPath, str));
+                    File.Move(originalFilePath, Path.Combine(scriptPath, str + ".json"));
                     _snackbarService.Show(
                         "修改名称成功",
                         $"脚本名称 {item.Name} 修改为 {str}",

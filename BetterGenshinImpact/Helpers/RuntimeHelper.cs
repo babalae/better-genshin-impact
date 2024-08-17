@@ -135,11 +135,11 @@ internal static class RuntimeHelper
 
     public static void CheckIntegration()
     {
-        if (!Directory.Exists("Assets") || !Directory.Exists("GameTask") || !Directory.Exists("User"))
+        if (!Directory.Exists("Assets") || !Directory.Exists("GameTask"))
         {
             StringBuilder stringBuilder = new("发现有关键文件缺失，");
             stringBuilder.Append(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) == Global.StartUpPath
-                ? "请不要把主程序exe文件剪切到桌面"
+                ? "请不要把主程序exe文件剪切到桌面。正确的做法：请右键点击主程序，在弹出的菜单中选择“发送到”选项，然后选择“桌面创建快捷方式”。"
                 : "请重新安装软件");
 
             MessageBox.Show(stringBuilder.ToString(),

@@ -1,8 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,7 +13,6 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Wpf.Ui;
@@ -29,6 +27,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
 
     private readonly HomePageViewModel _homePageViewModel;
+
+    private readonly IScriptService _scriptService;
 
     /// <summary>
     /// 配置组配置
@@ -344,73 +344,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             );
             return;
         }
+        var projects = SelectedScriptGroup.Projects.Select(project => project.FolderName).ToList();
 
-        // 没启动时候，启动截图器
-        await _homePageViewModel.OnStartTriggerAsync();
-
-        // 重新加载脚本项目
-        var projects = SelectedScriptGroup.Projects.Select(project => new ScriptProject(project.FolderName)).ToList();
-
-        var codeList = await ReadCodeList(projects);
-        var hasTimer = HasTimerOperation(codeList);
-        if (hasTimer)
-        {
-            _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", SelectedScriptGroup.Name);
-        }
-
-        _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", SelectedScriptGroup.Name, projects.Count);
-
-        // 循环执行所有脚本
-        var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-        await new TaskRunner(timerOperation)
-            .RunAsync(async () =>
-            {
-                foreach (var project in projects)
-                {
-                    try
-                    {
-                        if (hasTimer)
-                        {
-                            TaskTriggerDispatcher.Instance().ClearTriggers();
-                        }
-
-                        _logger.LogInformation("------------------------------");
-                        _logger.LogInformation("→ 开始执行脚本: {Name}", project.Manifest.Name);
-                        await project.ExecuteAsync();
-                        await Task.Delay(1000);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug(e, "执行脚本时发生异常");
-                        _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
-                    }
-                    finally
-                    {
-                        _logger.LogInformation("→ 脚本执行结束: {Name}", project.Manifest.Name);
-                        _logger.LogInformation("------------------------------");
-                    }
-                }
-            });
-        _logger.LogInformation("配置组 {Name} 执行结束", SelectedScriptGroup.Name);
+        await _scriptService.RunMulti(projects, SelectedScriptGroup.Name);
     }
-
-    private async Task<List<string>> ReadCodeList(List<ScriptProject> list)
-    {
-        var codeList = new List<string>();
-        foreach (var project in list)
-        {
-            var code = await project.LoadCode();
-            codeList.Add(code);
-        }
-
-        return codeList;
-    }
-
-    private bool HasTimerOperation(IEnumerable<string> codeList)
-    {
-        return codeList.Any(code => DispatcherAddTimerRegex().IsMatch(code));
-    }
-
-    [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
-    private static partial Regex DispatcherAddTimerRegex();
 }

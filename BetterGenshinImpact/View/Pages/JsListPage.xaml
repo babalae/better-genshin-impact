@@ -58,14 +58,14 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="80" />
-                <ColumnDefinition Width="120" />
+                <!-- <ColumnDefinition Width="120" /> -->
                 <ColumnDefinition Width="20" />
             </Grid.ColumnDefinitions>
             <Grid x:Name="Col1" Grid.Column="0" />
             <Grid x:Name="Col2" Grid.Column="1" />
             <Grid x:Name="Col3" Grid.Column="2" />
             <Grid x:Name="Col4" Grid.Column="3" />
-            <Grid x:Name="Col5" Grid.Column="4" />
+            <!-- <Grid x:Name="Col5" Grid.Column="4" /> -->
         </Grid>
         <ui:ListView Grid.Row="5"
                      HorizontalAlignment="Stretch"
@@ -83,7 +83,7 @@
                     <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding Manifest.Version}"
                                     Header="版本" />
-                    <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="操作">
+                    <!--<GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -95,7 +95,7 @@
 
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
+                    </GridViewColumn>-->
                 </GridView>
             </ListView.View>
             <ListBox.ContextMenu>
@@ -103,6 +103,9 @@
                     <MenuItem Command="{Binding OpenScriptProjectFolderCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                               Header="打开目录" />
+                    <MenuItem Command="{Binding StartRunCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="执行脚本" />
                 </ContextMenu>
             </ListBox.ContextMenu>
             <ListView.Style>

@@ -17,6 +17,8 @@ using CommunityToolkit.Mvvm.Input;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -29,10 +31,12 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     private ObservableCollection<ScriptProject> _scriptItems = [];
 
     private ISnackbarService _snackbarService;
+    private IScriptService _scriptService;
 
-    public JsListViewModel(ISnackbarService snackbarService)
+    public JsListViewModel(ISnackbarService snackbarService, IScriptService scriptService)
     {
         _snackbarService = snackbarService;
+        _scriptService = scriptService;
     }
 
     private void InitScriptListViewData()
@@ -90,23 +94,12 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     }
 
     [RelayCommand]
-    public async Task OnStartRun(string name)
+    public async Task OnStartRun(ScriptProject? item)
     {
-        _logger.LogInformation("重放开始：{Name}", name);
-        try
+        if (item == null)
         {
-            // var s = await File.ReadAllTextAsync(Path.Combine(scriptPath, name));
-            //
-            // await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-            //     .RunAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
+            return;
         }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "重放脚本时发生异常");
-        }
-        finally
-        {
-            _logger.LogInformation("重放结束：{Name}", name);
-        }
+        await _scriptService.RunMulti([item.FolderName]);
     }
 }
