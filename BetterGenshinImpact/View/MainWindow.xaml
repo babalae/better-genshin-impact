@@ -45,7 +45,7 @@
                            Grid.Row="1"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
-                           OpenPaneLength="150">
+                           OpenPaneLength="160">
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"
@@ -77,28 +77,49 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <!--<ui:NavigationViewItemSeparator />-->
-                <ui:NavigationViewItem Content="调度器"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:ScriptControlPage}">
+
+                <ui:NavigationViewItem Content="全自动">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <!--  WebAsset24 | DocumentJs16 | Script16  -->
-                <ui:NavigationViewItem Content="脚本编写"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:ScriptControlPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="DocumentJs16" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <!--  Script16  -->
-                <ui:NavigationViewItem Content="录制回放"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:KeyMouseRecordPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Record24" />
-                    </ui:NavigationViewItem.Icon>
+                    <ui:NavigationViewItem.MenuItems>
+
+                        <!--<ui:NavigationViewItemSeparator />-->
+                        <!--  ConvertRange20  -->
+                        <ui:NavigationViewItem Content="调度器"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:ScriptControlPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="DeveloperBoard24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  WebAsset24 | DocumentJs16 | Script16  -->
+                        <ui:NavigationViewItem Content="脚本"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:ScriptControlPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="DocumentJs16" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  Map24  -->
+                        <ui:NavigationViewItem Content="地图追踪"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:ScriptControlPage}"
+                                               Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                                             Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Map24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  Script16  -->
+                        <ui:NavigationViewItem Content="录制回放"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:KeyMouseRecordPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Record24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                    </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
 
                 <ui:NavigationViewItem Content="快捷键"
