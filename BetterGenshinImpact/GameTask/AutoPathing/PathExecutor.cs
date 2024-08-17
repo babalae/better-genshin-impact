@@ -107,6 +107,7 @@ public class PathExecutor
             }
             position = await Task.Run(Navigation.GetPosition);
             var distance = Navigation.GetDistance(waypoint, position);
+            TaskControl.Logger.LogInformation("接近目标点中，距离为{distance}", distance);
             if (distance < 4)
             {
                 TaskControl.Logger.LogInformation("到达路径点附近");
@@ -123,7 +124,7 @@ public class PathExecutor
                 prevPositions.Add(position);
                 if (prevPositions.Count > 8)
                 {
-                    var delta = prevPositions[-1] - prevPositions[-8];
+                    var delta = prevPositions[prevPositions.Count - 1] - prevPositions[prevPositions.Count - 8];
                     if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
                     {
                         TaskControl.Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
@@ -141,7 +142,7 @@ public class PathExecutor
             }
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            RotateTo(targetOrientation);
+            await WaitUntilRotatedTo(targetOrientation, 2);
             // 根据指定方式进行移动
             if (waypoint.MoveType == MoveType.Fly)
             {
@@ -236,11 +237,12 @@ public class PathExecutor
     {
         var cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
         var diff = (cao - targetOrientation + 180) % 360 - 180;
+        diff += diff < -180 ? 360 : 0;
         if (diff == 0)
         {
             return diff;
         }
-        Simulation.SendInput.Mouse.MoveMouseBy(30 * diff + 10 * diff > 0 ? 1 : -1, 0);
+        Simulation.SendInput.Mouse.MoveMouseBy(-6 * diff - 6 * (diff > 0 ? 1 : -1), 0);
         return diff;
     }
 

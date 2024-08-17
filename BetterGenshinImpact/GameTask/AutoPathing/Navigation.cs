@@ -20,10 +20,8 @@ internal class Navigation
 
     internal static int GetTargetOrientation(Waypoint waypoint, Point2f position)
     {
-
-        var target = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
-        double deltaX = target.x - position.X;
-        double deltaY = target.y - position.Y;
+        double deltaX = waypoint.X - position.X;
+        double deltaY = waypoint.Y - position.Y;
         double vectorLength = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
         if (vectorLength == 0)
         {
@@ -36,8 +34,6 @@ internal class Navigation
         {
             angle = 2 * Math.PI - angle;
         }
-        // 将角度转换为顺时针方向
-        angle = 2 * Math.PI - angle;
         return (int)(angle * (180.0 / Math.PI));
     }
 
