@@ -87,7 +87,7 @@ public class PathExecutor
 
     internal static async Task MoveTo(Waypoint waypoint)
     {
-        var position = await Task.Run(Navigation.GetPosition);
+        var position = Navigation.GetPosition();
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, Navigation.GetPosition());
         TaskControl.Logger.LogInformation("粗略接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
         await WaitUntilRotatedTo(targetOrientation, 10);
@@ -105,7 +105,7 @@ public class PathExecutor
                 TaskControl.Logger.LogWarning("执行超时，跳过路径点");
                 break;
             }
-            position = await Task.Run(Navigation.GetPosition);
+            position = Navigation.GetPosition();
             var distance = Navigation.GetDistance(waypoint, position);
             TaskControl.Logger.LogInformation("接近目标点中，距离为{distance}", distance);
             if (distance < 4)
@@ -187,7 +187,7 @@ public class PathExecutor
 
     internal static async Task MoveCloseTo(Waypoint waypoint)
     {
-        var position = await Task.Run(Navigation.GetPosition);
+        var position = Navigation.GetPosition();
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, Navigation.GetPosition());
         TaskControl.Logger.LogInformation("精确接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
         if (waypoint.MoveType == MoveType.Fly && IsFlying())
@@ -207,7 +207,7 @@ public class PathExecutor
                 TaskControl.Logger.LogWarning("精确接近超时");
                 break;
             }
-            position = await Task.Run(Navigation.GetPosition);
+            position = Navigation.GetPosition();
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
                 TaskControl.Logger.LogInformation("已到达路径点");
