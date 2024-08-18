@@ -18,7 +18,8 @@ public class PathRecorder
     {
         TaskControl.Logger.LogInformation("开始路径点记录");
         var waypoint = new Model.Waypoint();
-        var position = Navigation.GetPosition();
+        var screen = TaskControl.CaptureToRectArea();
+        var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
@@ -31,7 +32,8 @@ public class PathRecorder
     public void AddWaypoint()
     {
         var waypoint = new Model.Waypoint();
-        var position = Navigation.GetPosition();
+        var screen = TaskControl.CaptureToRectArea();
+        var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;

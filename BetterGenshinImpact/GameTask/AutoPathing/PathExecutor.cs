@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -13,8 +14,8 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Core.Simulator;
 using OpenCvSharp;
-using BetterGenshinImpact.Core.Recognition.OCR;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -96,8 +97,9 @@ public class PathExecutor
 
     internal static async Task MoveTo(Waypoint waypoint)
     {
-        var position = Navigation.GetPosition();
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, Navigation.GetPosition());
+        var screen = TaskControl.CaptureToRectArea();
+        var position = Navigation.GetPosition(screen);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         TaskControl.Logger.LogInformation("粗略接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
         await WaitUntilRotatedTo(targetOrientation, 10);
         var startTime = DateTime.UtcNow;
@@ -114,7 +116,8 @@ public class PathExecutor
                 TaskControl.Logger.LogWarning("执行超时，跳过路径点");
                 break;
             }
-            position = Navigation.GetPosition();
+            screen = TaskControl.CaptureToRectArea();
+            position = Navigation.GetPosition(screen);
             var distance = Navigation.GetDistance(waypoint, position);
             TaskControl.Logger.LogInformation("接近目标点中，距离为{distance}", distance);
             if (distance < 4)
@@ -151,19 +154,20 @@ public class PathExecutor
             }
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            RotateTo(targetOrientation);
+            RotateTo(targetOrientation, screen);
             // 根据指定方式进行移动
+            var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             if (waypoint.MoveType == MoveType.Fly)
             {
                 // TODO:一直起跳直到打开风之翼
-                if (!IsFlying())
+                if (!isFlying)
                 {
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                     await Task.Delay(1000);
                 }
                 continue;
             }
-            if (IsFlying())
+            if (isFlying)
             {
                 Simulation.SendInput.Mouse.LeftButtonClick();
                 await Task.Delay(1000);
@@ -196,10 +200,12 @@ public class PathExecutor
 
     internal static async Task MoveCloseTo(Waypoint waypoint)
     {
-        var position = Navigation.GetPosition();
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, Navigation.GetPosition());
+        var screen = TaskControl.CaptureToRectArea();
+        var position = Navigation.GetPosition(screen);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         TaskControl.Logger.LogInformation("精确接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
-        if (waypoint.MoveType == MoveType.Fly && IsFlying())
+        var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
+        if (waypoint.MoveType == MoveType.Fly && waypoint.ActionType == ActionType.StopFlying && isFlying)
         {
             //下落攻击接近目的地
             Simulation.SendInput.Mouse.LeftButtonClick();
@@ -216,13 +222,14 @@ public class PathExecutor
                 TaskControl.Logger.LogWarning("精确接近超时");
                 break;
             }
-            position = Navigation.GetPosition();
+            screen = TaskControl.CaptureToRectArea();
+            position = Navigation.GetPosition(screen);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
                 TaskControl.Logger.LogInformation("已到达路径点");
                 break;
             }
-            RotateTo(targetOrientation); //不再改变视角
+            RotateTo(targetOrientation, screen); //不再改变视角
             if (waypoint.MoveType == MoveType.Walk)
             {
                 // 小碎步接近
@@ -242,9 +249,9 @@ public class PathExecutor
         }
     }
 
-    internal static int RotateTo(int targetOrientation)
+    internal static int RotateTo(int targetOrientation, ImageRegion imageRegion)
     {
-        var cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
+        var cao = CameraOrientation.Compute(imageRegion.SrcGreyMat);
         var diff = (cao - targetOrientation + 180) % 360 - 180;
         diff += diff < -180 ? 360 : 0;
         if (diff == 0)
@@ -258,18 +265,19 @@ public class PathExecutor
     internal static async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
     {
         int count = 0;
-        while (Math.Abs(RotateTo(targetOrientation)) > maxDiff && count < 50)
+        while (true)
         {
+            var screen = TaskControl.CaptureToRectArea();
+            if (Math.Abs(RotateTo(targetOrientation, screen)) < maxDiff)
+            {
+                break;
+            }
+            if (count > 50)
+            {
+                break;
+            }
             await Task.Delay(50);
             count++;
         }
-    }
-
-    internal static bool IsFlying()
-    {
-        var greyMat = TaskControl.CaptureToRectArea().SrcGreyMat;
-        greyMat = new Mat(greyMat, new Rect(1809, 1025, 61, 28));
-        var text = OcrFactory.Paddle.OcrWithoutDetector(greyMat);
-        return text.ToLower() == "space";
     }
 }

@@ -5,16 +5,16 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 internal class Navigation
 {
 
-    internal static Point2f GetPosition()
+    internal static Point2f GetPosition(ImageRegion imageRegion)
     {
-        var greyMat = TaskControl.CaptureToRectArea().SrcGreyMat;
-        greyMat = new Mat(greyMat, new Rect(62, 19, 212, 212));
+        var greyMat = new Mat(imageRegion.SrcGreyMat, new Rect(62, 19, 212, 212));
         return EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
     }
 
