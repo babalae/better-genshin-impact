@@ -55,16 +55,25 @@ public class PathExecutor
         // 这里应该判断一下自动拾取是否处于工作状态，但好像没有什么方便的读取办法
 
         // TODO:大地图传送的时候使用游戏坐标，追踪的时候应该使用2048地图图像坐标，这里临时做转换，后续改进
+        var waypoints = new List<Waypoint>();
         foreach (var waypoint in task.Waypoints)
         {
             if (waypoint.WaypointType == WaypointType.Teleport)
             {
+                waypoints.Add(waypoint);
                 continue;
             }
-            (waypoint.X, waypoint.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+            var waypointCopy = new Waypoint
+            {
+                ActionType = waypoint.ActionType,
+                WaypointType = waypoint.WaypointType,
+                MoveType = waypoint.MoveType
+            };
+            (waypointCopy.X, waypointCopy.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+            waypoints.Add(waypointCopy);
         }
 
-        foreach (var waypoint in task.Waypoints)
+        foreach (var waypoint in waypoints)
         {
             if (waypoint.WaypointType == WaypointType.Teleport)
             {
@@ -142,7 +151,7 @@ public class PathExecutor
             }
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await WaitUntilRotatedTo(targetOrientation, 2);
+            RotateTo(targetOrientation);
             // 根据指定方式进行移动
             if (waypoint.MoveType == MoveType.Fly)
             {
