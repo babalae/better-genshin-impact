@@ -135,7 +135,7 @@ internal static class RuntimeHelper
 
     public static void CheckIntegration()
     {
-        if (!Directory.Exists("Assets") || !Directory.Exists("GameTask"))
+        if (!Directory.Exists(Global.Absolute("Assets")) || !Directory.Exists(Global.Absolute("GameTask")))
         {
             StringBuilder stringBuilder = new("发现有关键文件缺失，");
             stringBuilder.Append(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) == Global.StartUpPath
