@@ -3,9 +3,11 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.View.Windows.Editable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -53,9 +55,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService, HomePageViewModel homePageViewModel)
+    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService, HomePageViewModel homePageViewModel)
     {
         _snackbarService = snackbarService;
+        _scriptService = scriptService;
         _homePageViewModel = homePageViewModel;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
@@ -118,9 +121,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    private void OnAddScript()
+    private void OnAddJsScript()
     {
-        var list = LoadAllScriptProjects();
+        var list = LoadAllJsScriptProjects();
         var combobox = new ComboBox();
 
         foreach (var scriptProject in list)
@@ -128,7 +131,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             combobox.Items.Add(scriptProject.FolderName + " - " + scriptProject.Manifest.Name);
         }
 
-        var str = PromptDialog.Prompt("请选择需要添加的脚本", "请选择需要添加的脚本", combobox);
+        var str = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", combobox);
         if (!string.IsNullOrEmpty(str))
         {
             var folderName = str.Split(" - ")[0];
@@ -136,7 +139,25 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
     }
 
-    private List<ScriptProject> LoadAllScriptProjects()
+    [RelayCommand]
+    private void OnAddKmScript()
+    {
+        var list = LoadAllKmScripts();
+        var combobox = new ComboBox();
+
+        foreach (var fileInfo in list)
+        {
+            combobox.Items.Add(fileInfo.Name);
+        }
+
+        var str = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
+        if (!string.IsNullOrEmpty(str))
+        {
+            SelectedScriptGroup?.Projects.Add(new ScriptGroupProject(str));
+        }
+    }
+
+    private List<ScriptProject> LoadAllJsScriptProjects()
     {
         var path = Global.ScriptPath();
         // 获取所有脚本项目
@@ -144,6 +165,43 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             .Select(x => new ScriptProject(Path.GetFileName(x)))
             .ToList();
         return projects;
+    }
+
+    private List<FileInfo> LoadAllKmScripts()
+    {
+        var folder = Global.Absolute(@"User\KeyMouseScript");
+        // 获取所有脚本项目
+        var files = Directory.GetFiles(folder, "*.*",
+            SearchOption.AllDirectories);
+
+        return files.Select(file => new FileInfo(file)).ToList();
+    }
+
+    [RelayCommand]
+    public void OnEditScriptCommon(ScriptGroupProject? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        ShowEditWindow(item);
+
+        foreach (var group in ScriptGroups)
+        {
+            WriteScriptGroup(group);
+        }
+    }
+
+    public static void ShowEditWindow(object viewModel)
+    {
+        var uiMessageBox = new MessageBox
+        {
+            Title = "修改通用设置",
+            Content = new ScriptGroupProjectEditor { DataContext = viewModel },
+            CloseButtonText = "确定",
+        };
+        uiMessageBox.ShowDialogAsync();
     }
 
     [RelayCommand]
@@ -344,8 +402,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             );
             return;
         }
-        var projects = SelectedScriptGroup.Projects.Select(project => project.FolderName).ToList();
 
-        await _scriptService.RunMulti(projects, SelectedScriptGroup.Name);
+        await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
     }
 }

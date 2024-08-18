@@ -161,7 +161,7 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序，支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序，支持 BetterGI 内的 Javascript 脚本、键鼠录制脚本等<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                         点击查看使用教程
                     </Hyperlink>
                 </ui:TextBlock>
@@ -218,7 +218,7 @@
                                             DisplayMemberBinding="{Binding Name}"
                                             Header="名称" />
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding Type}"
+                                            DisplayMemberBinding="{Binding TypeDesc}"
                                             Header="类型" />
                             <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding ScheduleDesc}"
@@ -233,10 +233,14 @@
                     </ListView.View>
                     <ListBox.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddScriptCommand}" Header="添加配置" />
+                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
+                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
+                            <MenuItem Command="{Binding EditScriptCommonCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="修改通用配置" />
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="移除配置" />
+                                      Header="移除" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListView.Style>
