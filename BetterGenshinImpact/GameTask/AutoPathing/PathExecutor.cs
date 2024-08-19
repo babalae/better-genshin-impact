@@ -142,6 +142,8 @@ public class PathExecutor
                         TaskControl.Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
                         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         await Task.Delay(500);
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                        await Task.Delay(500);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
                         await Task.Delay(500);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_A);
@@ -153,17 +155,17 @@ public class PathExecutor
                 }
             }
             // 旋转视角
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            RotateTo(targetOrientation, screen);
-            // 根据指定方式进行移动
             var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            RotateTo(targetOrientation, screen, isFlying ? 2 : 6);
+            // 根据指定方式进行移动
             if (waypoint.MoveType == MoveType.Fly)
             {
                 // TODO:一直起跳直到打开风之翼
                 if (!isFlying)
                 {
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                    await Task.Delay(1000);
+                    await Task.Delay(300);
                 }
                 continue;
             }
@@ -249,7 +251,7 @@ public class PathExecutor
         }
     }
 
-    internal static int RotateTo(int targetOrientation, ImageRegion imageRegion)
+    internal static int RotateTo(int targetOrientation, ImageRegion imageRegion, int controlRatio = 6)
     {
         var cao = CameraOrientation.Compute(imageRegion.SrcGreyMat);
         var diff = (cao - targetOrientation + 180) % 360 - 180;
@@ -258,7 +260,7 @@ public class PathExecutor
         {
             return diff;
         }
-        Simulation.SendInput.Mouse.MoveMouseBy(-6 * diff - 6 * (diff > 0 ? 1 : -1), 0);
+        Simulation.SendInput.Mouse.MoveMouseBy(-controlRatio * (diff + (diff > 0 ? 1 : -1)), 0);
         return diff;
     }
 
