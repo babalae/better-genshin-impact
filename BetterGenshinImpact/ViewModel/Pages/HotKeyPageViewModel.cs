@@ -22,6 +22,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
@@ -482,7 +483,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     if (_pathRecording)
                     {
-                        PathExecutor.Pathing(_pathRecorder.PathingTask,new CancellationTokenSource());
+                        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
+                           .FireAndForget(async () => await PathExecutor.Pathing(_pathRecorder.PathingTask, CancellationContext.Instance.Cts));
                     }
                 }
             ));
