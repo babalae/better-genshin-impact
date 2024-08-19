@@ -5,25 +5,23 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 internal class Navigation
 {
 
-    internal static Point2f GetPosition()
+    internal static Point2f GetPosition(ImageRegion imageRegion)
     {
-        var greyMat = TaskControl.CaptureToRectArea().SrcGreyMat;
-        greyMat = new Mat(greyMat, new Rect(62, 19, 212, 212));
+        var greyMat = new Mat(imageRegion.SrcGreyMat, new Rect(62, 19, 212, 212));
         return EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
     }
 
     internal static int GetTargetOrientation(Waypoint waypoint, Point2f position)
     {
-
-        var target = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
-        double deltaX = target.x - position.X;
-        double deltaY = target.y - position.Y;
+        double deltaX = waypoint.X - position.X;
+        double deltaY = waypoint.Y - position.Y;
         double vectorLength = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
         if (vectorLength == 0)
         {
@@ -36,8 +34,6 @@ internal class Navigation
         {
             angle = 2 * Math.PI - angle;
         }
-        // 将角度转换为顺时针方向
-        angle = 2 * Math.PI - angle;
         return (int)(angle * (180.0 / Math.PI));
     }
 

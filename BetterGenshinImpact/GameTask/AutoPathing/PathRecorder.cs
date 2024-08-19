@@ -8,6 +8,7 @@ using System.Text.Json;
 using BetterGenshinImpact.Core.Config;
 using System.IO;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -18,7 +19,8 @@ public class PathRecorder
     {
         TaskControl.Logger.LogInformation("开始路径点记录");
         var waypoint = new Model.Waypoint();
-        var position = Navigation.GetPosition();
+        var screen = TaskControl.CaptureToRectArea();
+        var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
@@ -28,15 +30,28 @@ public class PathRecorder
         TaskControl.Logger.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
     }
 
-    public void AddWaypoint()
+    public void AddWaypoint(WaypointType waypointType = WaypointType.Transit)
     {
         var waypoint = new Model.Waypoint();
-        var position = Navigation.GetPosition();
+        var screen = TaskControl.CaptureToRectArea();
+        var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
-        waypoint.WaypointType = Model.WaypointType.Transit;
-        waypoint.MoveType = Model.MoveType.Walk;
+        waypoint.WaypointType = waypointType;
+        var motionStatus = Bv.GetMotionStatus(screen);
+        switch (motionStatus)
+        {
+            case MotionStatus.Fly:
+                waypoint.MoveType = MoveType.Fly;
+                break;
+            case MotionStatus.Climb:
+                waypoint.MoveType = MoveType.Jump;
+                break;
+            default:
+                waypoint.MoveType = MoveType.Walk;
+                break;
+        }
         PathingTask.Waypoints.Add(waypoint);
         TaskControl.Logger.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
     }
