@@ -30,7 +30,7 @@ public class PathRecorder
         TaskControl.Logger.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
     }
 
-    public void AddWaypoint()
+    public void AddWaypoint(WaypointType waypointType = WaypointType.Transit)
     {
         var waypoint = new Model.Waypoint();
         var screen = TaskControl.CaptureToRectArea();
@@ -38,7 +38,7 @@ public class PathRecorder
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
-        waypoint.WaypointType = Model.WaypointType.Transit;
+        waypoint.WaypointType = waypointType;
         var motionStatus = Bv.GetMotionStatus(screen);
         switch (motionStatus)
         {
