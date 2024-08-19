@@ -358,12 +358,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    public void OnGoToScriptProjectUrl()
-    {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/") { UseShellExecute = true });
-    }
-
-    [RelayCommand]
     public void OnImportScriptGroup(string scriptGroupExample)
     {
         ScriptGroup group = new();
