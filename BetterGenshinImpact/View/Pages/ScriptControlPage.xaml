@@ -96,12 +96,12 @@
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验中功能）请在左侧栏选择或新增配置组" />
+                                  Text="（实验功能）请在左侧栏选择或新增配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        左侧配置组栏目右键可以新增配置组，然后可以添加并配置软件内的脚本，并进行连续执行。脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看配置组使用教程
+                        左侧配置组栏目右键可以新增配置组，然后可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看调度器使用教程
                         </Hyperlink>
                     </ui:TextBlock>
                     <!--  示例配置组  -->
@@ -151,7 +151,7 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal">
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验中功能）配置组 - " />
+                                  Text="（实验功能）配置组 - " />
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="{Binding SelectedScriptGroup.Name}" />
@@ -161,26 +161,22 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序，支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
-                    </Hyperlink>
+                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序。支持 BetterGI 内的 Javascript 脚本、键鼠录制脚本等，通过调度器可以设置脚本执行次数、顺序等。
                 </ui:TextBlock>
 
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal">
                     <ui:Button Command="{Binding StartScriptGroupCommand}"
                                Content="运行此组配置"
-                               Icon="{ui:SymbolIcon Play24}"
-                               IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}" />
+                               Icon="{ui:SymbolIcon Play24}" />
                     <Separator Width="10" Opacity="0" />
-                    <ui:Button Command="{Binding StopRecordCommand}"
-                               Content="停止运行"
-                               Icon="{ui:SymbolIcon Stop24}"
-                               IsEnabled="{Binding IsRecording}" />
-                    <Separator Width="10" Opacity="0" />
-                    <ui:Button Command="{Binding OpenScriptFolderCommand}"
-                               Content="打开脚本目录"
-                               Icon="{ui:SymbolIcon FolderOpen24}" />
+
+                    <ui:TextBlock VerticalAlignment="Center"
+                                  FontSize="16"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        停止运行请配置并使用快捷键！
+                    </ui:TextBlock>
                 </StackPanel>
 
                 <Separator Grid.Row="3"
@@ -220,7 +216,7 @@
                                             DisplayMemberBinding="{Binding Name}"
                                             Header="名称" />
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding Type}"
+                                            DisplayMemberBinding="{Binding TypeDesc}"
                                             Header="类型" />
                             <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding ScheduleDesc}"
@@ -235,10 +231,14 @@
                     </ListView.View>
                     <ListBox.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddScriptCommand}" Header="添加配置" />
+                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
+                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
+                            <MenuItem Command="{Binding EditScriptCommonCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="修改通用配置" />
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="移除配置" />
+                                      Header="移除" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
                     <ListView.Style>

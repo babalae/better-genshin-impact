@@ -130,6 +130,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         );
         HotKeySettingModels.Add(bgiEnabledHotKeySettingModel);
 
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "停止当前脚本任务",
+            nameof(Config.HotKeyConfig.CancelTaskHotkey),
+            Config.HotKeyConfig.CancelTaskHotkey,
+            Config.HotKeyConfig.CancelTaskHotkeyType,
+            (_, _) =>
+            {
+                CancellationContext.Instance.Cancel();
+            }
+        ));
+
         var takeScreenshotHotKeySettingModel = new HotKeySettingModel(
             "游戏截图（开发者）",
             nameof(Config.HotKeyConfig.TakeScreenshotHotkey),
@@ -366,17 +377,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     vm.OnStopRecord();
                 }
-            }
-        ));
-
-        HotKeySettingModels.Add(new HotKeySettingModel(
-            "停止当前脚本任务",
-            nameof(Config.HotKeyConfig.CancelTaskHotkey),
-            Config.HotKeyConfig.CancelTaskHotkey,
-            Config.HotKeyConfig.CancelTaskHotkeyType,
-            (_, _) =>
-            {
-                CancellationContext.Instance.Cancel();
             }
         ));
 

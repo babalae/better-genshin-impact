@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "name": "自动采集晶蝶",
+  "name": "自动采集晶蝶(枫丹)",
   "version": "1.0",
   "description": "BetterGI自带脚本，自动采集离传送点较近的晶蝶。",
   "authors": [

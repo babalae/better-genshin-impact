@@ -1,0 +1,40 @@
+﻿<UserControl x:Class="BetterGenshinImpact.View.Windows.Editable.ScriptGroupProjectEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Core.Script.Group"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             Width="200"
+             Height="300"
+             d:DesignHeight="200"
+             d:DesignWidth="300"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ObjectDataProvider x:Key="StatusDescriptionsProvider"
+                            MethodName="GetStatusDescriptions"
+                            ObjectType="{x:Type local:ScriptGroupProjectExtensions}" />
+        <ObjectDataProvider x:Key="ScheduleDescriptionsProvider"
+                            MethodName="GetScheduleDescriptions"
+                            ObjectType="{x:Type local:ScriptGroupProjectExtensions}" />
+    </UserControl.Resources>
+    <Grid>
+        <StackPanel>
+
+            <TextBlock Margin="0,0,0,10" Text="执行周期" />
+            <ComboBox Margin="0,0,0,20"
+                      DisplayMemberPath="Value"
+                      ItemsSource="{Binding Source={StaticResource ScheduleDescriptionsProvider}}"
+                      SelectedValue="{Binding Schedule, Mode=TwoWay}"
+                      SelectedValuePath="Key" />
+
+            <TextBlock Margin="0,0,0,10" Text="执行次数" />
+            <TextBox Margin="0,0,0,20" Text="{Binding RunNum, Mode=TwoWay}" />
+
+            <TextBlock Margin="0,0,0,10" Text="状态" />
+            <ComboBox DisplayMemberPath="Value"
+                      ItemsSource="{Binding Source={StaticResource StatusDescriptionsProvider}}"
+                      SelectedValue="{Binding Status, Mode=TwoWay}"
+                      SelectedValuePath="Key" />
+        </StackPanel>
+    </Grid>
+</UserControl>
