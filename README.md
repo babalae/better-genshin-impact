@@ -94,6 +94,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 * [cvAutoTrack](https://github.com/GengGode/cvAutoTrack)
 * [genshin_impact_assistant](https://github.com/infstellar/genshin_impact_assistant)
 * [HutaoFisher](https://github.com/myHuTao-qwq/HutaoFisher)
+* [minimap](https://github.com/tignioj/minimap)
 
 另外特别感谢 [@Lightczx](https://github.com/Lightczx) 和 [@emako](https://github.com/emako) 对本项目的指导与贡献
 
