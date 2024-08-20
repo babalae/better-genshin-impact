@@ -102,7 +102,7 @@ public partial class ScriptGroupProject : ObservableObject
         }
         else
         {
-            throw new Exception("不支持的脚本类型");
+            //throw new Exception("不支持的脚本类型");
         }
     }
 
