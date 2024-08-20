@@ -14,8 +14,7 @@ public class KeyMouseScript
     /// <summary>
     /// 转换原始脚本为适应当前分辨率的脚本
     /// </summary>
-    /// <param name="captureRect"></param>
-    public void Adapt(RECT captureRect)
+    public void Adapt(RECT captureRect, double dpiScale)
     {
         foreach (var macroEvent in MacroEvents)
         {
@@ -31,6 +30,11 @@ public class KeyMouseScript
 
                 macroEvent.MouseX = (int)(captureRect.X + (macroEvent.MouseX - Info.X) * captureRect.Width * 1d / Info.Width);
                 macroEvent.MouseY = (int)(captureRect.Y + (macroEvent.MouseY - Info.Y) * captureRect.Height * 1d / Info.Height);
+            }
+            else if (macroEvent.Type == MacroEventType.MouseMoveBy)
+            {
+                macroEvent.MouseX = (int)Math.Round(macroEvent.MouseX * dpiScale, 0);
+                macroEvent.MouseY = (int)Math.Round(macroEvent.MouseY * dpiScale, 0);
             }
         }
     }

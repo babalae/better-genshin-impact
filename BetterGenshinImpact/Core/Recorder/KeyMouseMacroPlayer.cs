@@ -28,7 +28,7 @@ public class KeyMouseMacroPlayer
         }
 
         var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
-        script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+        script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect, TaskContext.Instance().DpiScale);
         SystemControl.ActivateWindow();
 
         if (withDelay)
