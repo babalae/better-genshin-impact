@@ -18,23 +18,23 @@ public class KeyMouseScript
     {
         foreach (var macroEvent in MacroEvents)
         {
+            if (Info == null || Info.Width == 0 || Info.Height == 0)
+            {
+                Debug.WriteLine("错误的脚本数据 Info.Width == 0 || Info.Height == 0");
+                break;
+            }
+
             if (macroEvent.Type == MacroEventType.MouseMoveTo
                 || macroEvent.Type == MacroEventType.MouseDown
                 || macroEvent.Type == MacroEventType.MouseUp)
             {
-                if (Info == null || Info.Width == 0 || Info.Height == 0)
-                {
-                    Debug.WriteLine("错误的脚本数据 Info.Width == 0 || Info.Height == 0");
-                    break;
-                }
-
                 macroEvent.MouseX = (int)(captureRect.X + (macroEvent.MouseX - Info.X) * captureRect.Width * 1d / Info.Width);
                 macroEvent.MouseY = (int)(captureRect.Y + (macroEvent.MouseY - Info.Y) * captureRect.Height * 1d / Info.Height);
             }
             else if (macroEvent.Type == MacroEventType.MouseMoveBy)
             {
-                macroEvent.MouseX = (int)Math.Round(macroEvent.MouseX * dpiScale, 0);
-                macroEvent.MouseY = (int)Math.Round(macroEvent.MouseY * dpiScale, 0);
+                macroEvent.MouseX = (int)Math.Round(macroEvent.MouseX / Info.RecordDpi * dpiScale, 0);
+                macroEvent.MouseY = (int)Math.Round(macroEvent.MouseY / Info.RecordDpi * dpiScale, 0);
             }
         }
     }

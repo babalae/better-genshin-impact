@@ -97,7 +97,8 @@ public class KeyMouseRecorder
                 X = rect.X,
                 Y = rect.Y,
                 Width = rect.Width,
-                Height = rect.Height
+                Height = rect.Height,
+                RecordDpi = TaskContext.Instance().DpiScale
             }
         };
         return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
