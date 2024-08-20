@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View
 {
@@ -42,7 +43,7 @@ namespace BetterGenshinImpact.View
         {
             if (hWnd == IntPtr.Zero)
             {
-                MessageBox.Show("请选择窗口");
+                Toast.Warning("请选择窗口");
                 return;
             }
 

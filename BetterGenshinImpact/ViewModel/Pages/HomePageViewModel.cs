@@ -152,7 +152,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         }
         else
         {
-            System.Windows.MessageBox.Show("选择的窗体句柄为空！");
+            MessageBox.Error("选择的窗体句柄为空！");
         }
     }
 
@@ -184,7 +184,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
             if (hWnd == IntPtr.Zero)
             {
-                System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
+                MessageBox.Error("未找到原神窗口，请先启动原神！");
                 return;
             }
         }

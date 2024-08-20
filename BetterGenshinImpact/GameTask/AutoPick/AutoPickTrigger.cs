@@ -15,7 +15,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
@@ -98,7 +97,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑名单失败");
-            MessageBox.Show("读取拾取黑名单失败，请确认修改后的拾取黑名单内容格式是否正确！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Error("读取拾取黑名单失败，请确认修改后的拾取黑名单内容格式是否正确！");
         }
 
         try
@@ -112,7 +111,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取白名单失败");
-            MessageBox.Show("读取拾取白名单失败，请确认修改后的拾取白名单内容格式是否正确！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Error("读取拾取白名单失败，请确认修改后的拾取白名单内容格式是否正确！");
         }
     }
 

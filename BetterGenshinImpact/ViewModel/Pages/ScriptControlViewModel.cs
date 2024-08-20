@@ -7,7 +7,6 @@ using BetterGenshinImpact.View.Windows.Editable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +15,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -195,11 +195,12 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     public static void ShowEditWindow(object viewModel)
     {
-        var uiMessageBox = new MessageBox
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = "修改通用设置",
             Content = new ScriptGroupProjectEditor { DataContext = viewModel },
             CloseButtonText = "确定",
+            Owner = Application.Current.MainWindow,
         };
         uiMessageBox.ShowDialogAsync();
     }

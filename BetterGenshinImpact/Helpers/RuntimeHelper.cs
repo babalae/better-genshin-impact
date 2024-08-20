@@ -9,7 +9,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -85,8 +84,7 @@ internal static class RuntimeHelper
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
-                MessageBox.Show("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI",
-                    "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Error("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI");
                 return;
             }
         }
@@ -142,8 +140,7 @@ internal static class RuntimeHelper
                 ? "请不要把主程序exe文件剪切到桌面。正确的做法：请右键点击主程序，在弹出的菜单中选择“发送到”选项，然后选择“桌面创建快捷方式”。"
                 : "请重新安装软件");
 
-            MessageBox.Show(stringBuilder.ToString(),
-                    "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Warning(stringBuilder.ToString());
             Environment.Exit(0xFFFF);
         }
     }

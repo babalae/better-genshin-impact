@@ -13,12 +13,13 @@ using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+using Windows.System;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
-using MessageBox = System.Windows.MessageBox;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -120,7 +121,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 {
                     if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
                     {
-                        MessageBox.Show("请先选择策略");
+                        Toast.Warning("请先选择策略");
                         return;
                     }
 
@@ -128,7 +129,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
                     if (!File.Exists(path))
                     {
-                        MessageBox.Show("策略文件不存在");
+                        Toast.Error("策略文件不存在");
                         return;
                     }
 
@@ -146,16 +147,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
     [RelayCommand]
-    public void OnGoToAutoGeniusInvokationUrl()
+    public async Task OnGoToAutoGeniusInvokationUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4"));
     }
 
     [RelayCommand]
@@ -180,16 +181,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
     [RelayCommand]
-    public void OnGoToAutoWoodUrl()
+    public async Task OnGoToAutoWoodUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/felling.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/felling.html"));
     }
 
     [RelayCommand]
@@ -208,7 +209,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                     }
                     if (!File.Exists(path) && !Directory.Exists(path))
                     {
-                        MessageBox.Show("战斗策略文件不存在");
+                        Toast.Error("战斗策略文件不存在");
                         return;
                     }
 
@@ -225,9 +226,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
@@ -236,7 +237,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         if (string.IsNullOrEmpty(strategyName))
         {
-            MessageBox.Show("请先选择战斗策略");
+            Toast.Warning("请先选择战斗策略");
             return null;
         }
 
@@ -244,7 +245,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         if (!File.Exists(path))
         {
-            MessageBox.Show("战斗策略文件不存在");
+            Toast.Error("战斗策略文件不存在");
             return null;
         }
 
@@ -253,9 +254,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public void OnGoToAutoFightUrl()
+    public async Task OnGoToAutoFightUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/domain.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/domain.html"));
     }
 
     [RelayCommand]
@@ -274,7 +275,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                     }
                     if (!File.Exists(path) && !Directory.Exists(path))
                     {
-                        MessageBox.Show("战斗策略文件不存在");
+                        Toast.Error("战斗策略文件不存在");
                         return;
                     }
 
@@ -291,16 +292,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
     [RelayCommand]
-    public void OnGoToAutoDomainUrl()
+    public async Task OnGoToAutoDomainUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/domain.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/domain.html"));
     }
 
     [RelayCommand]
@@ -325,16 +326,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
     [RelayCommand]
-    public void OnGoToAutoTrackUrl()
+    public async Task OnGoToAutoTrackUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/track.html"));
     }
 
     [RelayCommand]
@@ -361,14 +362,14 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
     [RelayCommand]
-    public void OnGoToAutoTrackPathUrl()
+    public async Task OnGoToAutoTrackPathUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/track.html"));
     }
 
     [RelayCommand]
@@ -393,16 +394,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 }
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            MessageBox.Show(ex.Message);
+            MessageBox.Error(ex.Message);
         }
     }
 
     [RelayCommand]
-    public void OnGoToAutoMusicGameUrl()
+    public async Task OnGoToAutoMusicGameUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/music.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/music.html"));
     }
 
     public static void SetSwitchAutoTrackButtonText(bool running)

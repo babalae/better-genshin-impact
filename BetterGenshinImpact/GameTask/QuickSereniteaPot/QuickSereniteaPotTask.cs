@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
+using Wpf.Ui.Violeta.Controls;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
@@ -46,7 +47,7 @@ public class QuickSereniteaPotTask
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            System.Windows.MessageBox.Show("请先启动");
+            Toast.Warning("请先启动");
             return;
         }
 
