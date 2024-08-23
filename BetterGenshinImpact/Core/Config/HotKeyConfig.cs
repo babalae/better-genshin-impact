@@ -172,6 +172,13 @@ public partial class HotKeyConfig : ObservableObject
 
     // 路径记录开始
     [ObservableProperty]
+    private string _getBigMapPosHotkey = "";
+
+    [ObservableProperty]
+    private string _getBigMapPosHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 路径记录开始
+    [ObservableProperty]
     private string _pathRecorderHotkey = "";
 
     [ObservableProperty]
