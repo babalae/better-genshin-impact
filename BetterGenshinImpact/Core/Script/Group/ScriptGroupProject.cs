@@ -70,7 +70,7 @@ public partial class ScriptGroupProject : ObservableObject
         FolderName = kmName;
         Status = "Enabled";
         Schedule = "Daily";
-        Project = null; // 不是Js脚本
+        Project = null; // 不是JS脚本
         Type = "KeyMouse";
     }
 

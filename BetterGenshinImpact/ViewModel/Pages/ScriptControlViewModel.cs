@@ -231,7 +231,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
             var uiMessageBox = new Wpf.Ui.Controls.MessageBox
             {
-                Title = "修改Js脚本自定义设置",
+                Title = "修改JS脚本自定义设置",
                 Content = item.Project.LoadSettingUi(item.JsScriptSettingsObject),
                 CloseButtonText = "确定",
                 Owner = Application.Current.MainWindow,
@@ -245,7 +245,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
         else
         {
-            Toast.Warning("只有Js脚本才有自定义配置");
+            Toast.Warning("只有JS脚本才有自定义配置");
         }
     }
 

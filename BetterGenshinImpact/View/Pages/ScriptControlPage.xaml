@@ -231,14 +231,14 @@
                     </ListView.View>
                     <ListBox.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加Js脚本" />
+                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
                             <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="修改通用配置" />
                             <MenuItem Command="{Binding EditJsScriptSettingsCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="修改Js脚本自定义配置" />
+                                      Header="修改JS脚本自定义配置" />
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="移除" />
