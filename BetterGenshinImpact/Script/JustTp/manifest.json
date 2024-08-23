@@ -1,0 +1,14 @@
+{
+  "manifest_version": 1,
+  "name": "只是传送一下",
+  "version": "1.0",
+  "description": "BetterGI自带脚本，只用于传送。方便在调度器配合键鼠脚本使用",
+  "authors": [
+    {
+      "name": "huiyadanli",
+      "link": "https://github.com/huiyadanli"
+    }
+  ],
+  "settings_ui": "settings.json",
+  "main": "main.js"
+}

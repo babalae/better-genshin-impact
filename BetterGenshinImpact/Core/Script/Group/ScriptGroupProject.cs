@@ -1,13 +1,13 @@
-﻿using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Script.Dependence;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script.Project;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
@@ -47,6 +47,8 @@ public partial class ScriptGroupProject : ObservableObject
 
     [JsonIgnore]
     public ScriptProject? Project { get; set; }
+
+    public ExpandoObject? JsScriptSettingsObject { get; set; }
 
     public ScriptGroupProject()
     {
@@ -92,7 +94,7 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 throw new Exception("JS脚本未初始化");
             }
-            await Project.ExecuteAsync();
+            await Project.ExecuteAsync(JsScriptSettingsObject);
         }
         if (Type == "KeyMouse")
         {

@@ -90,6 +90,7 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
                 newProject.Status = project.Status;
                 newProject.Schedule = project.Schedule;
                 newProject.RunNum = project.RunNum;
+                newProject.JsScriptSettingsObject = project.JsScriptSettingsObject;
                 list.Add(newProject);
             }
             else

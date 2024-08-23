@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -203,6 +205,48 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Owner = Application.Current.MainWindow,
         };
         uiMessageBox.ShowDialogAsync();
+    }
+
+    [RelayCommand]
+    public void OnEditJsScriptSettings(ScriptGroupProject? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+        if (item.Project == null)
+        {
+            item.BuildScriptProjectRelation();
+        }
+        if (item.Project == null)
+        {
+            return;
+        }
+
+        if (item.Type == "Javascript")
+        {
+            if (item.JsScriptSettingsObject == null)
+            {
+                item.JsScriptSettingsObject = new ExpandoObject();
+            }
+            var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+            {
+                Title = "修改Js脚本自定义设置",
+                Content = item.Project.LoadSettingUi(item.JsScriptSettingsObject),
+                CloseButtonText = "确定",
+                Owner = Application.Current.MainWindow,
+            };
+            uiMessageBox.ShowDialogAsync();
+
+            foreach (var group in ScriptGroups)
+            {
+                WriteScriptGroup(group);
+            }
+        }
+        else
+        {
+            Toast.Warning("只有Js脚本才有自定义配置");
+        }
     }
 
     [RelayCommand]

@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "name": "自动采集晶蝶(枫丹)",
   "version": "1.0",
-  "description": "BetterGI自带脚本，自动采集离传送点较近的晶蝶。",
+  "description": "BetterGI自带脚本，自动采集离传送点较近的晶蝶。请在队伍中务必携带早柚，使用成男/成女角色。并保证所有传送点都已经激活！",
   "authors": [
     {
         "name": "huiyadanli",

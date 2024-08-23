@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -31,6 +32,26 @@ public class ScriptProject
         Manifest.Validate(ProjectPath);
     }
 
+    public StackPanel? LoadSettingUi(dynamic context)
+    {
+        var settingItems = Manifest.LoadSettingItems(ProjectPath);
+        if (settingItems.Count == 0)
+        {
+            return null;
+        }
+        var stackPanel = new StackPanel();
+        foreach (var item in settingItems)
+        {
+            var controls = item.ToControl(context);
+            foreach (var control in controls)
+            {
+                stackPanel.Children.Add(control);
+            }
+        }
+
+        return stackPanel;
+    }
+
     public IScriptEngine BuildScriptEngine()
     {
         IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
@@ -38,10 +59,15 @@ public class ScriptProject
         return engine;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(dynamic? context = null)
     {
         var code = await LoadCode();
         var engine = BuildScriptEngine();
+        if (context != null)
+        {
+            // 写入配置的内容
+            engine.AddHostObject("settings", context);
+        }
         try
         {
             await (Task)engine.Evaluate(code);

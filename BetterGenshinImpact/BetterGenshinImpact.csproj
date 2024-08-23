@@ -131,4 +131,8 @@
 		</None>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Script\JustTp\" />
+	</ItemGroup>
+
 </Project>

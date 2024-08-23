@@ -1,13 +1,26 @@
-﻿using System;
+﻿using BetterGenshinImpact.Service;
+using System;
 using System.IO;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = "0.33.2";
+    public static string Version { get; } = "0.33.3";
 
     public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
+
+    public static readonly JsonSerializerOptions ManifestJsonOptions = new()
+    {
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        WriteIndented = true,
+        AllowTrailingCommas = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+    };
 
     public static string Absolute(string relativePath)
     {

@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -15,12 +17,13 @@ public class Manifest
     public string Description { get; set; } = string.Empty;
     public List<Author> Authors { get; set; } = [];
     public string Main { get; set; } = string.Empty;
+    public string SettingsUi { get; set; } = string.Empty;
     public string[] Scripts { get; set; } = [];
     public string[] Library { get; set; } = [];
 
     public static Manifest FromJson(string json)
     {
-        var manifest = JsonSerializer.Deserialize<Manifest>(json, ConfigService.JsonOptions) ?? throw new Exception("Failed to deserialize JSON.");
+        var manifest = JsonSerializer.Deserialize<Manifest>(json, Global.ManifestJsonOptions) ?? throw new Exception("Failed to deserialize JSON.");
         return manifest;
     }
 
@@ -45,5 +48,22 @@ public class Manifest
         {
             throw new FileNotFoundException("main js file not found.");
         }
+    }
+
+    public List<SettingItem> LoadSettingItems(string path)
+    {
+        if (string.IsNullOrWhiteSpace(SettingsUi))
+        {
+            return [];
+        }
+
+        var settingItems = new List<SettingItem>();
+        var settingFile = Path.Combine(path, SettingsUi);
+        if (File.Exists(settingFile))
+        {
+            var json = File.ReadAllText(settingFile);
+            settingItems = JsonSerializer.Deserialize<List<SettingItem>>(json, ConfigService.JsonOptions) ?? [];
+        }
+        return settingItems;
     }
 }

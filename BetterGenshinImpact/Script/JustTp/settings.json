@@ -1,0 +1,12 @@
+[
+    {
+        "name": "x",
+        "type": "input-text",
+        "label": "X"
+    },
+    {
+        "name": "y",
+        "type": "input-text",
+        "label": "Y"
+    }
+]
