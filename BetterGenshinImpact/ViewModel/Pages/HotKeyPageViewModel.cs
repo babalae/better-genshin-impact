@@ -380,6 +380,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "（开发）获取当前大地图中心点位置",
+            nameof(Config.HotKeyConfig.Test1Hotkey),
+            Config.HotKeyConfig.GetBigMapPosHotkey,
+            Config.HotKeyConfig.GetBigMapPosHotkeyType,
+            (_, _) =>
+            {
+                var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
+                _logger.LogInformation("大地图位置：{Position}", p);
+            }
+        ));
+
         if (RuntimeHelper.IsDebug)
         {
             HotKeySettingModels.Add(new HotKeySettingModel(
@@ -457,18 +469,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                         _pathRecorder.Start();
                     }
                     _pathRecording = !_pathRecording;
-                }
-            ));
-
-            HotKeySettingModels.Add(new HotKeySettingModel(
-                "（开发）获取当前大地图中心点位置",
-                nameof(Config.HotKeyConfig.Test1Hotkey),
-                Config.HotKeyConfig.GetBigMapPosHotkey,
-                Config.HotKeyConfig.GetBigMapPosHotkeyType,
-                (_, _) =>
-                {
-                    var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
-                    _logger.LogInformation("大地图位置：{Position}", p);
                 }
             ));
 
