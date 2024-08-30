@@ -782,6 +782,75 @@
         ]
     },
     {
+        "id": 1112,
+        "nameEn": "freminet",
+        "type": "character",
+        "name": "菲米尼",
+        "hp": 10,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "flowing_eddies",
+                "name": "洑流剑",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "pressurized_floe",
+                "name": "浮冰增压",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "shadowhunters_ambush",
+                "name": "猎影潜袭",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1201,
         "nameEn": "barbara",
         "type": "character",
@@ -3889,6 +3958,75 @@
         ]
     },
     {
+        "id": 1510,
+        "nameEn": "xianyun",
+        "type": "character",
+        "name": "闲云",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "word_of_wind_and_flower",
+                "name": "清风散花词",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "white_clouds_at_dawn",
+                "name": "朝起鹤云",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "stars_gather_at_dusk",
+                "name": "暮集竹星",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1601,
         "nameEn": "ningguang",
         "type": "character",
@@ -5634,6 +5772,75 @@
                     "被动技能"
                 ],
                 "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2205,
+        "nameEn": "hydro_hilichurl_rogue",
+        "type": "character",
+        "name": "丘丘水行游侠",
+        "hp": 10,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "whirling_scythe",
+                "name": "镰刀旋斩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "slash_of_surging_tides",
+                "name": "狂澜镰击",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "bubblefloat_blitz",
+                "name": "浮泡攻势",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
             }
         ]
     },
