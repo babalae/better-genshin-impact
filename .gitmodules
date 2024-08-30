@@ -1,0 +1,3 @@
+[submodule "BetterGenshinImpact/Script"]
+	path = BetterGenshinImpact/Script
+	url = https://github.com/babalae/bettergi-scripts.git
