@@ -11,10 +11,15 @@ namespace BetterGenshinImpact.GameTask.Common.Map;
 /// </summary>
 public class MapCoordinate
 {
+    #region 每次地图扩大都要更新的参数
+
     public static readonly int GameMapRows = 13; // 游戏坐标下地图块的行数
-    public static readonly int GameMapCols = 14; // 游戏坐标下地图块的列数
+    public static readonly int GameMapCols = 16; // 游戏坐标下地图块的列数
     public static readonly int GameMapUpRows = 5; // 游戏坐标下 左上角离地图原点的行数
-    public static readonly int GameMapLeftCols = 7; // 游戏坐标下 左上角离地图原点的列数
+    public static readonly int GameMapLeftCols = 9; // 游戏坐标下 左上角离地图原点的列数
+
+    #endregion 每次地图扩大都要更新的参数
+
     public static readonly int GameMapBlockWidth = 1024; // 游戏地图块的长宽
 
     /// <summary>

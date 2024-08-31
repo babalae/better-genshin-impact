@@ -48,8 +48,8 @@ public partial class MainWindow : Window
     private void DoMatchTest(object sender, System.Windows.RoutedEventArgs e)
     {
         // KeyPointMatchTest.Test();
-        EntireMapTest.Test();
-        // EntireMapTest.Storage();
+        // EntireMapTest.Test();
+        EntireMapTest.Storage();
         // BigMapMatchTest.Test();
 
         // FeatureTransfer.Transfer();
@@ -73,5 +73,10 @@ public partial class MainWindow : Window
     private void MapPathView(object sender, RoutedEventArgs e)
     {
         MapPathTest.Test();
+    }
+
+    private void ZoomOut(object sender, RoutedEventArgs e)
+    {
+        ScaleTest.ZoomOutTest();
     }
 }

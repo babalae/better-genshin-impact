@@ -28,7 +28,7 @@ public class MapPuzzle
 
     public static void Put()
     {
-        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map"; // 图片文件夹路径
+        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_5.0"; // 图片文件夹路径
         string pattern = @"UI_MapBack_([-+]?\d+)_([-+]?\d+)(.*)";
         var images = Directory.GetFiles(folderPath, "*.png", SearchOption.TopDirectoryOnly); // 获取所有图片文件路径
 
@@ -158,7 +158,7 @@ public class MapPuzzle
         }
 
         // 保存大图
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_46_2048.png", largeImage);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_50_2048.png", largeImage);
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
