@@ -19,9 +19,9 @@ using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class PathExecutor
+public class PathExecutor(CancellationTokenSource cts)
 {
-    public static async Task Pathing(PathingTask task, CancellationTokenSource cts, bool withDelay = true)
+    public async Task Pathing(PathingTask task)
     {
         if (!TaskContext.Instance().IsInitialized)
         {
@@ -30,17 +30,6 @@ public class PathExecutor
         }
 
         SystemControl.ActivateWindow();
-
-        if (withDelay)
-        {
-            for (var i = 3; i >= 1; i--)
-            {
-                TaskControl.Logger.LogInformation("{Sec}秒后开始寻路...", i);
-                await Task.Delay(1000, cts.Token);
-            }
-
-            TaskControl.Logger.LogInformation("开始寻路");
-        }
 
         if (task.Waypoints.Count == 0)
         {
@@ -95,7 +84,7 @@ public class PathExecutor
         }
     }
 
-    internal static async Task MoveTo(Waypoint waypoint)
+    private async Task MoveTo(Waypoint waypoint)
     {
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
@@ -200,7 +189,7 @@ public class PathExecutor
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
 
-    internal static async Task MoveCloseTo(Waypoint waypoint)
+    private async Task MoveCloseTo(Waypoint waypoint)
     {
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
@@ -251,7 +240,7 @@ public class PathExecutor
         }
     }
 
-    internal static int RotateTo(int targetOrientation, ImageRegion imageRegion, int controlRatio = 6)
+    private int RotateTo(int targetOrientation, ImageRegion imageRegion, int controlRatio = 6)
     {
         var cao = CameraOrientation.Compute(imageRegion.SrcGreyMat);
         var diff = (cao - targetOrientation + 180) % 360 - 180;
@@ -264,7 +253,7 @@ public class PathExecutor
         return diff;
     }
 
-    internal static async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
+    private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
     {
         int count = 0;
         while (true)

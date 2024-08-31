@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -9,34 +8,23 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
-using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class JsListViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<JsListViewModel> _logger = App.GetLogger<JsListViewModel>();
-    private readonly string scriptPath = Global.Absolute("Script");
+    private readonly string jsonPath = Global.Absolute("AutoPathing");
 
     [ObservableProperty]
     private ObservableCollection<ScriptProject> _scriptItems = [];
 
-    private ISnackbarService _snackbarService;
-    private IScriptService _scriptService;
-
-    public JsListViewModel(ISnackbarService snackbarService, IScriptService scriptService)
-    {
-        _snackbarService = snackbarService;
-        _scriptService = scriptService;
-    }
-
     private void InitScriptListViewData()
     {
         _scriptItems.Clear();
-        var directoryInfos = LoadScriptFolder(scriptPath);
+        var directoryInfos = LoadScriptFolder(jsonPath);
         foreach (var f in directoryInfos)
         {
             try
@@ -74,7 +62,11 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     [RelayCommand]
     public void OnOpenScriptsFolder()
     {
-        Process.Start("explorer.exe", scriptPath);
+        if (!Directory.Exists(jsonPath))
+        {
+            Directory.CreateDirectory(jsonPath);
+        }
+        Process.Start("explorer.exe", jsonPath);
     }
 
     [RelayCommand]
@@ -87,13 +79,13 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
         Process.Start("explorer.exe", item.ProjectPath);
     }
 
-    [RelayCommand]
-    public async Task OnStartRun(ScriptProject? item)
-    {
-        if (item == null)
-        {
-            return;
-        }
-        await _scriptService.RunMulti([item.FolderName]);
-    }
+    // [RelayCommand]
+    // public async Task OnStartRun(ScriptProject? item)
+    // {
+    //     if (item == null)
+    //     {
+    //         return;
+    //     }
+    //     await _scriptService.RunMulti([item.FolderName]);
+    // }
 }

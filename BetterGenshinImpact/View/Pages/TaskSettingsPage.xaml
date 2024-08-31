@@ -255,12 +255,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用伐木数量限制（建议1080P以上分辨率）"
+                                  Text="启用OCR伐木数量限制（需1080P以上分辨率）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="伐木后识别并累计木材数，达到上限后自动停止伐木"
+                                  Text="伐木后OCR识别并累计木材数，达到上限后自动停止伐木"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"

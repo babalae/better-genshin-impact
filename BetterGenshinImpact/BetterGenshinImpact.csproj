@@ -135,4 +135,10 @@
 	  <Folder Include="Script\JustTp\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Update="View\Pages\MapPathingPage.xaml.cs">
+	    <SubType>Code</SubType>
+	  </Compile>
+	</ItemGroup>
+
 </Project>
