@@ -176,6 +176,11 @@ public partial class AutoWoodTask
             {
                 NothingCount++;
                 Logger.LogWarning("未能识别到伐木的统计数据");
+                if (_woodMetricsDict.Count == 0)
+                {
+                    TaskContext.Instance().Config.AutoWoodConfig.WoodCountOcrEnabled = false;
+                    throw new NormalEndException("首次伐木就未识别到木材数据，已经自动关闭【OCR识别并累计木材数】的功能，请重新启动【自动伐木】功能！");
+                }
                 return;
             }
 
