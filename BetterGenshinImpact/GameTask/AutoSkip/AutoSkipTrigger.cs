@@ -147,11 +147,19 @@ public partial class AutoSkipTrigger : ITaskTrigger
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
             // 关闭弹出页
-            ClosePopupPage(content);
+            if (_config.ClosePopupPagedEnabled)
+            {
+                ClosePopupPage(content);
+            }
 
             // 自动剧情点击3s内判断
             if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds < 3000)
             {
+                if (!TaskContext.Instance().Config.AutoSkipConfig.SubmitGoodsEnabled)
+                {
+                    return;
+                }
+
                 // 提交物品
                 if (SubmitGoods(content))
                 {
