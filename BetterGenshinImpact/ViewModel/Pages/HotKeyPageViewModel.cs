@@ -496,7 +496,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     if (_pathRecording)
                     {
                         new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
-                           .FireAndForget(async () => await PathExecutor.Pathing(_pathRecorder.PathingTask, CancellationContext.Instance.Cts));
+                           .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(_pathRecorder.PathingTask));
                     }
                 }
             ));

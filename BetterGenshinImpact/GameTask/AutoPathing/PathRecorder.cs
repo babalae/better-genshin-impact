@@ -14,25 +14,26 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class PathRecorder
 {
-    public Model.PathingTask PathingTask { get; set; } = new Model.PathingTask();
+    public PathingTask PathingTask { get; set; } = new();
+
     public void Start()
     {
         TaskControl.Logger.LogInformation("开始路径点记录");
-        var waypoint = new Model.Waypoint();
+        var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
-        waypoint.WaypointType = Model.WaypointType.Teleport;
-        waypoint.MoveType = Model.MoveType.Walk;
+        waypoint.WaypointType = WaypointType.Teleport;
+        waypoint.MoveType = MoveType.Walk;
         PathingTask.Waypoints.Add(waypoint);
         TaskControl.Logger.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
     }
 
     public void AddWaypoint(WaypointType waypointType = WaypointType.Transit)
     {
-        var waypoint = new Model.Waypoint();
+        var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
@@ -45,9 +46,11 @@ public class PathRecorder
             case MotionStatus.Fly:
                 waypoint.MoveType = MoveType.Fly;
                 break;
+
             case MotionStatus.Climb:
                 waypoint.MoveType = MoveType.Jump;
                 break;
+
             default:
                 waypoint.MoveType = MoveType.Walk;
                 break;
@@ -62,7 +65,8 @@ public class PathRecorder
         File.WriteAllText(Global.Absolute($@"log\way\{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.json"), json);
     }
 
-    public void Clear() {
-        PathingTask = new Model.PathingTask();
+    public void Clear()
+    {
+        PathingTask = new PathingTask();
     }
 }

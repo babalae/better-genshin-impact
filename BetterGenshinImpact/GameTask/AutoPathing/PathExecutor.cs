@@ -1,21 +1,19 @@
-﻿using BetterGenshinImpact.GameTask.AutoPathing.Model;
+﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask;
-using System.Windows.Forms;
 using Vanara.PInvoke;
-using Microsoft.Extensions.Logging;
-using System.Linq;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.Core.Simulator;
-using OpenCvSharp;
 using Wpf.Ui.Violeta.Controls;
-using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 

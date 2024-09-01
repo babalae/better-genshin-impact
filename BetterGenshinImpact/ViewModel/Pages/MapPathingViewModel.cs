@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 
@@ -15,39 +17,40 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
 {
-    private readonly ILogger<JsListViewModel> _logger = App.GetLogger<JsListViewModel>();
+    private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
     private readonly string jsonPath = Global.Absolute("AutoPathing");
 
     [ObservableProperty]
-    private ObservableCollection<ScriptProject> _scriptItems = [];
+    private ObservableCollection<PathingTask> _pathItems = [];
 
     private void InitScriptListViewData()
     {
-        _scriptItems.Clear();
-        var directoryInfos = LoadScriptFolder(jsonPath);
-        foreach (var f in directoryInfos)
+        _pathItems.Clear();
+        var fileInfos = LoadScriptFolder(jsonPath);
+        foreach (var f in fileInfos)
         {
             try
             {
-                _scriptItems.Add(new ScriptProject(f.Name));
+                _pathItems.Add(PathingTask.BuildFromFilePath(f.FullName));
             }
             catch (Exception e)
             {
-                Toast.Warning($"脚本 {f.Name} 载入失败：{e.Message}");
+                Toast.Warning($"地图追踪任务 {f.Name} 载入失败：{e.Message}");
             }
         }
     }
 
-    private IEnumerable<DirectoryInfo> LoadScriptFolder(string folder)
+    private IEnumerable<FileInfo> LoadScriptFolder(string folder)
     {
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
         }
 
-        var di = new DirectoryInfo(folder);
+        var files = Directory.GetFiles(folder, "*.*",
+            SearchOption.AllDirectories);
 
-        return di.GetDirectories();
+        return files.Select(file => new FileInfo(file)).ToList();
     }
 
     public void OnNavigatedTo()

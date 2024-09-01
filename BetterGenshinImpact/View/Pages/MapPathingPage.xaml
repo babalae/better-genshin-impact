@@ -8,7 +8,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="JsListPage"
-      d:DataContext="{d:DesignInstance Type=pages:JsListViewModel}"
+      d:DataContext="{d:DesignInstance Type=pages:MapPathingViewModel}"
       d:DesignHeight="600"
       d:DesignWidth="800"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -45,7 +45,7 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                       Content="打开脚本目录"
+                       Content="打开任务目录"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
         </StackPanel>
 
@@ -56,33 +56,40 @@
         <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="80" />
-                <!-- <ColumnDefinition Width="120" /> -->
+                <ColumnDefinition Width="100" />
                 <ColumnDefinition Width="20" />
             </Grid.ColumnDefinitions>
             <Grid x:Name="Col1" Grid.Column="0" />
             <Grid x:Name="Col2" Grid.Column="1" />
             <Grid x:Name="Col3" Grid.Column="2" />
             <Grid x:Name="Col4" Grid.Column="3" />
-            <!-- <Grid x:Name="Col5" Grid.Column="4" /> -->
         </Grid>
         <ui:ListView Grid.Row="5"
                      HorizontalAlignment="Stretch"
                      VerticalAlignment="Stretch"
-                     ItemsSource="{Binding ScriptItems}"
+                     ItemsSource="{Binding PathItems}"
                      SelectionMode="Single">
             <ListView.View>
                 <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                     <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding FolderName}"
-                                    Header="目录" />
-                    <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding Manifest.Name}"
+                                    DisplayMemberBinding="{Binding Info.Name}"
                                     Header="名称" />
-                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding Manifest.Version}"
-                                    Header="版本" />
+                    <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
+                                    DisplayMemberBinding="{Binding Info.TypeDesc}"
+                                    Header="类型" />
+                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:JsListPage}}, Path=DataContext.StartRunCommand}"
+                                               CommandParameter="{Binding ProjectPath}"
+                                               Content="查看" />
+                                </StackPanel>
+
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
                 </GridView>
             </ListView.View>
             <ListBox.ContextMenu>
