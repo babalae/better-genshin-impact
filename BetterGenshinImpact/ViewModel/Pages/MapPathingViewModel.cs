@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
-    private readonly string jsonPath = Global.Absolute("AutoPathing");
+    private readonly string jsonPath = Global.Absolute(@"User\AutoPathing");
 
     [ObservableProperty]
     private ObservableCollection<PathingTask> _pathItems = [];

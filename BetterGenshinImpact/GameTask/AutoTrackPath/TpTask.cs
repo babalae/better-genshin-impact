@@ -1,6 +1,8 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
@@ -178,25 +180,37 @@ public class TpTask(CancellationTokenSource cts)
 
     public Rect GetBigMapRect()
     {
-        // 判断是否在地图界面
-        using var ra = CaptureToRectArea();
-        using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
-        if (mapScaleButtonRa.IsExist())
+        var rect = new Rect();
+        NewRetry.Do(() =>
         {
-            var rect = BigMap.Instance.GetBigMapRectByFeatureMatch(ra.SrcGreyMat);
-            if (rect == Rect.Empty)
+            // 判断是否在地图界面
+            using var ra = CaptureToRectArea();
+            using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+            if (mapScaleButtonRa.IsExist())
             {
-                throw new InvalidOperationException("识别大地图位置失败");
+                rect = BigMap.Instance.GetBigMapRectByFeatureMatch(ra.SrcGreyMat);
+                if (rect == Rect.Empty)
+                {
+                    // 滚轮调整后再次识别
+                    Simulation.SendInput.Mouse.VerticalScroll(2);
+                    Sleep(500);
+                    throw new RetryException("识别大地图位置失败");
+                }
             }
+            else
+            {
+                throw new RetryException("当前不在地图界面");
+            }
+        }, TimeSpan.FromMilliseconds(500), 5);
 
-            Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
-            const int s = BigMap.ScaleTo2048; // 相对1024做4倍缩放
-            return MapCoordinate.Main2048ToGame(new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s));
-        }
-        else
+        if (rect == Rect.Empty)
         {
-            throw new InvalidOperationException("当前不在地图界面");
+            throw new InvalidOperationException("多次重试后，识别大地图位置失败");
         }
+
+        Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
+        const int s = BigMap.ScaleTo2048; // 相对1024做4倍缩放
+        return MapCoordinate.Main2048ToGame(new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s));
     }
 
     public Point2f GetBigMapCenterPoint()
