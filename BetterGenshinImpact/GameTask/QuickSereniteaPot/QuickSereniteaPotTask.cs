@@ -18,12 +18,12 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea().Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
+            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("背包未打开");
             }
-        }, TimeSpan.FromMilliseconds(500), 3);
+        }, TimeSpan.FromMilliseconds(500), 5);
     }
 
     private static void FindPotIcon()
@@ -31,7 +31,7 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea().Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
+            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("未检测到壶");
