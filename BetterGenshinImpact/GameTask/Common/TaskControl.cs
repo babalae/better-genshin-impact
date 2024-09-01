@@ -179,8 +179,8 @@ public class TaskControl
     /// 自动判断当前运行上下文中截图方式，并选择合适的截图方式返回
     /// </summary>
     /// <returns></returns>
-    public static ImageRegion CaptureToRectArea()
+    public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        return TaskTriggerDispatcher.Instance().CaptureToRectArea();
+        return TaskTriggerDispatcher.Instance().CaptureToRectArea(forceNew);
     }
 }

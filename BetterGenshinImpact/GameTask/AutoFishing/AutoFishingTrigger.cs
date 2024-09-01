@@ -382,7 +382,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }.InitTemplate();
 
             // 截图
-            using var captureRegion = TaskControl.CaptureToRectArea();
+            using var captureRegion = TaskControl.CaptureToRectArea(forceNew: true);
             using var resRa = captureRegion.Find(ro);
             if (resRa.IsEmpty())
             {
@@ -425,7 +425,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             while (IsEnabled)
             {
                 // 截图
-                var ra = TaskControl.CaptureToRectArea();
+                var ra = TaskControl.CaptureToRectArea(forceNew: true);
 
                 // 找 鱼饵落点
                 using var memoryStream = new MemoryStream();

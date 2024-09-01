@@ -626,7 +626,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
                 TaskControl.Sleep(800);
 
-                var btnBlackConfirmRa = TaskControl.CaptureToRectArea().Find(ElementAssets.Instance.BtnBlackConfirm);
+                var btnBlackConfirmRa = TaskControl.CaptureToRectArea(forceNew: true).Find(ElementAssets.Instance.BtnBlackConfirm);
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
                     btnBlackConfirmRa.Click();
@@ -637,7 +637,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
             TaskControl.Sleep(500);
 
-            using var ra = TaskControl.CaptureToRectArea();
+            using var ra = TaskControl.CaptureToRectArea(forceNew: true);
             using var btnWhiteConfirmRa = ra.Find(ElementAssets.Instance.BtnWhiteConfirm);
             if (!btnWhiteConfirmRa.IsEmpty())
             {

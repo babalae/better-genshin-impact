@@ -504,10 +504,10 @@ namespace BetterGenshinImpact.GameTask
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
         }
 
-        public ImageRegion CaptureToRectArea()
+        public ImageRegion CaptureToRectArea(bool forceNew = false)
         {
             // 触发器启动的情况下优先使用触发器的截图
-            if (_timer.Enabled && _dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+            if (!forceNew && _timer.Enabled && _dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
             {
                 return GetLastCaptureContent().CaptureRectArea;
             }

@@ -91,7 +91,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 if (hasMapChooseIcon)
                 {
                     TaskControl.Sleep(_config.WaitTeleportPanelDelay);
-                    CheckTeleportButton(TaskControl.CaptureToRectArea());
+                    CheckTeleportButton(TaskControl.CaptureToRectArea(forceNew: true));
                 }
             }
         });
