@@ -204,6 +204,11 @@ public partial class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
+                // 纳塔部落中文名特殊处理，不拾取
+                if (text.Contains("声望") && text.Contains("我在"))
+                {
+                    return;
+                }
 
                 // 单个字符不拾取
                 if (text.Length <= 1)
