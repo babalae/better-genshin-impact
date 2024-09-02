@@ -43,7 +43,7 @@
                 Width="100"
                 Height="23"
                 Click="MapDrawTeleportPoint"
-                Content="超大地图标点" />
+                Content="画传送点" />
         <Button Canvas.Left="10"
                 Canvas.Top="190"
                 Width="100"
@@ -63,10 +63,12 @@
                 Click="MapPathView"
                 Content="路线地图查看" />
         <Button Canvas.Left="120"
-            Canvas.Top="10"
-            Width="100"
-            Height="23"
-            Click="ZoomOut"
-            Content="缩小地图到256" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                Canvas.Top="10"
+                Width="100"
+                Height="23"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="ZoomOut"
+                Content="缩小地图到256" />
     </Canvas>
 </Window>
