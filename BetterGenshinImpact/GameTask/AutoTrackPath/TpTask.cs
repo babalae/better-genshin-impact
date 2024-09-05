@@ -102,13 +102,13 @@ public class TpTask(CancellationTokenSource cts)
         // 移动部分内容测试移动偏移
         var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);
 
-        var diffMouseX = 100; // 每次移动的距离
+        var diffMouseX = 200; // 每次移动的距离
         if (xOffset < 0)
         {
             diffMouseX = -diffMouseX;
         }
 
-        var diffMouseY = 100; // 每次移动的距离
+        var diffMouseY = 200; // 每次移动的距离
         if (yOffset < 0)
         {
             diffMouseY = -diffMouseY;
@@ -120,7 +120,7 @@ public class TpTask(CancellationTokenSource cts)
         var newBigMapCenterPoint = GetPositionFromBigMap();
         var diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
         var diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
-        Debug.WriteLine($"每100移动的地图距离：({diffMapX},{diffMapY})");
+        Debug.WriteLine($"每单位移动的地图距离：({diffMapX},{diffMapY})");
 
         // 快速移动到目标传送点所在的区域
         if (diffMapX > 10 && diffMapY > 10)
