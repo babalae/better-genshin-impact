@@ -13,6 +13,7 @@ using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -302,6 +303,12 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     public async Task OnGoToAutoDomainUrlAsync()
     {
         await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/domain.html"));
+    }
+
+    [RelayCommand]
+    public void OnOpenFightFolder()
+    {
+        Process.Start("explorer.exe", Global.Absolute(@"User\AutoFight\"));
     }
 
     [RelayCommand]
