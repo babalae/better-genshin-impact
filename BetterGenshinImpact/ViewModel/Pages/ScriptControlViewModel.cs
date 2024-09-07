@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
@@ -189,10 +190,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
         ShowEditWindow(item);
 
-        foreach (var group in ScriptGroups)
-        {
-            WriteScriptGroup(group);
-        }
+        // foreach (var group in ScriptGroups)
+        // {
+        //     WriteScriptGroup(group);
+        // }
     }
 
     public static void ShowEditWindow(object viewModel)
@@ -201,7 +202,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         {
             Title = "修改通用设置",
             Content = new ScriptGroupProjectEditor { DataContext = viewModel },
-            CloseButtonText = "确定",
+            CloseButtonText = "关闭",
             Owner = Application.Current.MainWindow,
         };
         uiMessageBox.ShowDialogAsync();
@@ -229,19 +230,25 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 item.JsScriptSettingsObject = new ExpandoObject();
             }
+            var ui = item.Project.LoadSettingUi(item.JsScriptSettingsObject);
+            if (ui == null)
+            {
+                Toast.Warning("此脚本未提供自定义配置");
+                return;
+            }
             var uiMessageBox = new Wpf.Ui.Controls.MessageBox
             {
-                Title = "修改JS脚本自定义设置",
-                Content = item.Project.LoadSettingUi(item.JsScriptSettingsObject),
-                CloseButtonText = "确定",
+                Title = "修改JS脚本自定义设置    ",
+                Content = ui,
+                CloseButtonText = "关闭",
                 Owner = Application.Current.MainWindow,
             };
             uiMessageBox.ShowDialogAsync();
 
-            foreach (var group in ScriptGroups)
-            {
-                WriteScriptGroup(group);
-            }
+            // foreach (var group in ScriptGroups)
+            // {
+            //     WriteScriptGroup(group);
+            // }
         }
         else
         {
@@ -274,6 +281,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             foreach (ScriptGroup newItem in e.NewItems)
             {
                 newItem.Projects.CollectionChanged += ScriptProjectsCollectionChanged;
+                foreach (var project in newItem.Projects)
+                {
+                    project.PropertyChanged += ScriptProjectsPChanged;
+                }
             }
         }
 
@@ -281,6 +292,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         {
             foreach (ScriptGroup oldItem in e.OldItems)
             {
+                foreach (var project in oldItem.Projects)
+                {
+                    project.PropertyChanged -= ScriptProjectsPChanged;
+                }
                 oldItem.Projects.CollectionChanged -= ScriptProjectsCollectionChanged;
             }
         }
@@ -293,6 +308,14 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
 
         // 保存配置组配置
+        foreach (var group in ScriptGroups)
+        {
+            WriteScriptGroup(group);
+        }
+    }
+
+    private void ScriptProjectsPChanged(object? sender, PropertyChangedEventArgs e)
+    {
         foreach (var group in ScriptGroups)
         {
             WriteScriptGroup(group);
@@ -399,7 +422,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     public void OnGoToScriptGroupUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/dispatcher.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

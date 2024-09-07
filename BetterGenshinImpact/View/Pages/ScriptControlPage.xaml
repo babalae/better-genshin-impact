@@ -100,10 +100,16 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        左侧配置组栏目右键可以新增配置组，然后可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        在左侧栏目右键可以新增/修改配置组，拖拽进行配置组排序。配置组内可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看调度器使用教程
                         </Hyperlink>
                     </ui:TextBlock>
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  FontTypography="BodyStrong"
+                                  Text="在左侧栏目右键可以新增配置组，或者直接点击下面按钮新增配置组" />
+                    <ui:Button Margin="0,0,0,12"
+                               Command="{Binding AddScriptGroupCommand}"
+                               Content="新增配置组" />
                     <!--  示例配置组  -->
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
@@ -224,12 +230,16 @@
                             <GridViewColumn Width="{Binding ElementName=Col5, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding RunNum}"
                                             Header="执行次数" />
-                            <GridViewColumn Width="{Binding ElementName=Col6, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding StatusDesc}"
-                                            Header="启用状态" />
+                            <GridViewColumn Width="{Binding ElementName=Col6, Path=ActualWidth}" Header="启用状态">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:ToggleSwitch IsChecked="{Binding Status, Converter={StaticResource BooleanToEnableTextConverter}, Mode=TwoWay}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                         </GridView>
                     </ListView.View>
-                    <ListBox.ContextMenu>
+                    <ListView.ContextMenu>
                         <ContextMenu>
                             <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
                             <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
@@ -238,12 +248,23 @@
                                       Header="修改通用配置" />
                             <MenuItem Command="{Binding EditJsScriptSettingsCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="修改JS脚本自定义配置" />
+                                      Header="修改JS脚本自定义配置">
+                                <MenuItem.Style>
+                                    <Style TargetType="MenuItem">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}" Value="Javascript">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </MenuItem.Style>
+                            </MenuItem>
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="移除" />
                         </ContextMenu>
-                    </ListBox.ContextMenu>
+                    </ListView.ContextMenu>
                     <ListView.Style>
                         <Style TargetType="{x:Type ListView}">
                             <Setter Property="BorderThickness" Value="0" />
