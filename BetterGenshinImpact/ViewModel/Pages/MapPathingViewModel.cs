@@ -10,6 +10,11 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 
@@ -18,7 +23,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
-    private readonly string jsonPath = Global.Absolute(@"User\AutoPathing");
+    public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
 
     [ObservableProperty]
     private ObservableCollection<PathingTask> _pathItems = [];
@@ -26,7 +31,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     private void InitScriptListViewData()
     {
         _pathItems.Clear();
-        var fileInfos = LoadScriptFolder(jsonPath);
+        var fileInfos = LoadScriptFolder(PathJsonPath);
         foreach (var f in fileInfos)
         {
             try
@@ -65,11 +70,11 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [RelayCommand]
     public void OnOpenScriptsFolder()
     {
-        if (!Directory.Exists(jsonPath))
+        if (!Directory.Exists(PathJsonPath))
         {
-            Directory.CreateDirectory(jsonPath);
+            Directory.CreateDirectory(PathJsonPath);
         }
-        Process.Start("explorer.exe", jsonPath);
+        Process.Start("explorer.exe", PathJsonPath);
     }
 
     [RelayCommand]
@@ -82,13 +87,14 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         Process.Start("explorer.exe", item.ProjectPath);
     }
 
-    // [RelayCommand]
-    // public async Task OnStartRun(ScriptProject? item)
-    // {
-    //     if (item == null)
-    //     {
-    //         return;
-    //     }
-    //     await _scriptService.RunMulti([item.FolderName]);
-    // }
+    [RelayCommand]
+    public async Task OnStart(PathingTask? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunAsync(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item));
+    }
 }

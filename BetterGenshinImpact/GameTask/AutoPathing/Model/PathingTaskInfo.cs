@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;

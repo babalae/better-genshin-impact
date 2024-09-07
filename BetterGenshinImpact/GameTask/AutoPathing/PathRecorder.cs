@@ -1,24 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.Map;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using BetterGenshinImpact.Core.Config;
-using System.IO;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class PathRecorder
 {
-    public PathingTask PathingTask { get; set; } = new();
+    public static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, // 下划线
+        AllowTrailingCommas = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    private PathingTask _pathingTask = new();
 
     public void Start()
     {
+        _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
@@ -28,7 +38,7 @@ public class PathRecorder
         waypoint.Y = position.Y;
         waypoint.Type = WaypointType.Teleport.Code;
         waypoint.MoveMode = MoveModeEnum.Walk.Code;
-        PathingTask.Waypoints.Add(waypoint);
+        _pathingTask.Positions.Add(waypoint);
         TaskControl.Logger.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
     }
 
@@ -56,18 +66,12 @@ public class PathRecorder
         //         waypoint.MoveStatus = MoveStatusType.Walk.Code;
         //         break;
         // }
-        PathingTask.Waypoints.Add(waypoint);
+        _pathingTask.Positions.Add(waypoint);
         TaskControl.Logger.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
     }
 
     public void Save()
     {
-        var json = JsonSerializer.Serialize(PathingTask);
-        File.WriteAllText(Global.Absolute($@"log\way\{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.json"), json);
-    }
-
-    public void Clear()
-    {
-        PathingTask = new PathingTask();
+        _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, $@"{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.json"));
     }
 }

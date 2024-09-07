@@ -453,7 +453,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             var pathRecording = false;
 
             HotKeySettingModels.Add(new HotKeySettingModel(
-                "（测试）路径记录器",
+                "启动/停止路径记录器",
                 nameof(Config.HotKeyConfig.PathRecorderHotkey),
                 Config.HotKeyConfig.PathRecorderHotkey,
                 Config.HotKeyConfig.PathRecorderHotkeyType,
@@ -465,7 +465,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     }
                     else
                     {
-                        pathRecorder.Clear();
                         pathRecorder.Start();
                     }
                     pathRecording = !pathRecording;
@@ -473,7 +472,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             ));
 
             HotKeySettingModels.Add(new HotKeySettingModel(
-                "（测试）添加记录点",
+                "添加记录点",
                 nameof(Config.HotKeyConfig.AddWaypointHotkey),
                 Config.HotKeyConfig.AddWaypointHotkey,
                 Config.HotKeyConfig.AddWaypointHotkeyType,
@@ -493,11 +492,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.ExecutePathHotkeyType,
                 (_, _) =>
                 {
-                    if (pathRecording)
-                    {
-                        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
-                           .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(pathRecorder.PathingTask));
-                    }
+                    // if (pathRecording)
+                    // {
+                    //     new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
+                    //        .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(pathRecorder._pathingTask));
+                    // }
                 }
             ));
         }
