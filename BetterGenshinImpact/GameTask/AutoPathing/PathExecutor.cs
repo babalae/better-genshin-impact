@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
@@ -35,7 +36,7 @@ public class PathExecutor(CancellationTokenSource cts)
             return;
         }
 
-        if (task.Waypoints.First().WaypointType != WaypointType.Teleport)
+        if (task.Waypoints.First().Type != WaypointType.Teleport.Code)
         {
             TaskControl.Logger.LogWarning("第一个路径点不是传送点，将不会进行传送");
         }
@@ -46,16 +47,16 @@ public class PathExecutor(CancellationTokenSource cts)
         var waypoints = new List<Waypoint>();
         foreach (var waypoint in task.Waypoints)
         {
-            if (waypoint.WaypointType == WaypointType.Teleport)
+            if (waypoint.Type == WaypointType.Teleport.Code)
             {
                 waypoints.Add(waypoint);
                 continue;
             }
             var waypointCopy = new Waypoint
             {
-                ActionType = waypoint.ActionType,
-                WaypointType = waypoint.WaypointType,
-                MoveType = waypoint.MoveType
+                Action = waypoint.Action,
+                Type = waypoint.Type,
+                MoveMode = waypoint.MoveMode
             };
             (waypointCopy.X, waypointCopy.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
             waypoints.Add(waypointCopy);
@@ -63,7 +64,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
         foreach (var waypoint in waypoints)
         {
-            if (waypoint.WaypointType == WaypointType.Teleport)
+            if (waypoint.Type == WaypointType.Teleport.Code)
             {
                 TaskControl.Logger.LogInformation("正在传送到{x},{y}", waypoint.X, waypoint.Y);
                 await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
@@ -75,7 +76,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
             await MoveTo(waypoint);
 
-            if (waypoint.WaypointType == WaypointType.Target)
+            if (waypoint.Type == WaypointType.Target.Code)
             {
                 await MoveCloseTo(waypoint);
             }
@@ -123,7 +124,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 prevPositions.Add(position);
                 if (prevPositions.Count > 8)
                 {
-                    var delta = prevPositions[prevPositions.Count - 1] - prevPositions[prevPositions.Count - 8];
+                    var delta = prevPositions[^1] - prevPositions[^8];
                     if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
                     {
                         TaskControl.Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
@@ -146,7 +147,7 @@ public class PathExecutor(CancellationTokenSource cts)
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             RotateTo(targetOrientation, screen, isFlying ? 2 : 6);
             // 根据指定方式进行移动
-            if (waypoint.MoveType == MoveType.Fly)
+            if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
             {
                 // TODO:一直起跳直到打开风之翼
                 if (!isFlying)
@@ -162,7 +163,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 await Task.Delay(1000);
                 continue;
             }
-            if (waypoint.MoveType == MoveType.Jump)
+            if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                 await Task.Delay(1000);
@@ -194,7 +195,7 @@ public class PathExecutor(CancellationTokenSource cts)
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         TaskControl.Logger.LogInformation("精确接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
         var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
-        if (waypoint.MoveType == MoveType.Fly && waypoint.ActionType == ActionType.StopFlying && isFlying)
+        if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code && isFlying)
         {
             //下落攻击接近目的地
             Simulation.SendInput.Mouse.LeftButtonClick();
@@ -219,7 +220,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 break;
             }
             RotateTo(targetOrientation, screen); //不再改变视角
-            if (waypoint.MoveType == MoveType.Walk)
+            if (waypoint.MoveMode == MoveModeEnum.Walk.Code)
             {
                 // 小碎步接近
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);

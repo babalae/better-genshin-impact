@@ -8,6 +8,7 @@ using System.Text.Json;
 using BetterGenshinImpact.Core.Config;
 using System.IO;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
@@ -25,36 +26,36 @@ public class PathRecorder
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
-        waypoint.WaypointType = WaypointType.Teleport;
-        waypoint.MoveType = MoveType.Walk;
+        waypoint.Type = WaypointType.Teleport.Code;
+        waypoint.MoveMode = MoveModeEnum.Walk.Code;
         PathingTask.Waypoints.Add(waypoint);
         TaskControl.Logger.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
     }
 
-    public void AddWaypoint(WaypointType waypointType = WaypointType.Transit)
+    public void AddWaypoint(string waypointType = "")
     {
-        var waypoint = new Waypoint();
+        Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         position = MapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
-        waypoint.WaypointType = waypointType;
-        var motionStatus = Bv.GetMotionStatus(screen);
-        switch (motionStatus)
-        {
-            case MotionStatus.Fly:
-                waypoint.MoveType = MoveType.Fly;
-                break;
-
-            case MotionStatus.Climb:
-                waypoint.MoveType = MoveType.Jump;
-                break;
-
-            default:
-                waypoint.MoveType = MoveType.Walk;
-                break;
-        }
+        waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;
+        // var motionStatus = Bv.GetMotionStatus(screen);
+        // switch (motionStatus)
+        // {
+        //     case MotionStatus.Fly:
+        //         waypoint.MoveStatus = MoveStatusType.Fly.Code;
+        //         break;
+        //
+        //     case MotionStatus.Climb:
+        //         waypoint.MoveStatus = MoveStatusType.Jump.Code;
+        //         break;
+        //
+        //     default:
+        //         waypoint.MoveStatus = MoveStatusType.Walk.Code;
+        //         break;
+        // }
         PathingTask.Waypoints.Add(waypoint);
         TaskControl.Logger.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
     }

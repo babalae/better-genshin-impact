@@ -449,8 +449,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
             ));
 
-            var _pathRecorder = new PathRecorder();
-            var _pathRecording = false;
+            var pathRecorder = new PathRecorder();
+            var pathRecording = false;
 
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）路径记录器",
@@ -459,16 +459,16 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.PathRecorderHotkeyType,
                 (_, _) =>
                 {
-                    if (_pathRecording)
+                    if (pathRecording)
                     {
-                        _pathRecorder.Save();
+                        pathRecorder.Save();
                     }
                     else
                     {
-                        _pathRecorder.Clear();
-                        _pathRecorder.Start();
+                        pathRecorder.Clear();
+                        pathRecorder.Start();
                     }
-                    _pathRecording = !_pathRecording;
+                    pathRecording = !pathRecording;
                 }
             ));
 
@@ -479,9 +479,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.AddWaypointHotkeyType,
                 (_, _) =>
                 {
-                    if (_pathRecording)
+                    if (pathRecording)
                     {
-                        _pathRecorder.AddWaypoint();
+                        pathRecorder.AddWaypoint();
                     }
                 }
             ));
@@ -493,10 +493,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.ExecutePathHotkeyType,
                 (_, _) =>
                 {
-                    if (_pathRecording)
+                    if (pathRecording)
                     {
                         new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
-                           .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(_pathRecorder.PathingTask));
+                           .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(pathRecorder.PathingTask));
                     }
                 }
             ));
