@@ -1,16 +1,21 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using BetterGenshinImpact.GameTask.Model.Area;
-
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
+
 internal class Navigation
 {
+    public static void WarmUp()
+    {
+        TaskControl.Logger.LogInformation("地图特征点加载中，由于体积较大，可能加载速度较慢或引发卡顿，请耐心等待...");
+        EntireMap.Instance.GetFeatureMatcher();
+        TaskControl.Logger.LogInformation("地图特征点完成！");
+    }
 
     internal static Point2f GetPosition(ImageRegion imageRegion)
     {

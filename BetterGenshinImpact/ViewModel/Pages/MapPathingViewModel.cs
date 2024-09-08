@@ -94,7 +94,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         {
             return;
         }
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-            .RunAsync(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item));
+        new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+           .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item));
     }
 }

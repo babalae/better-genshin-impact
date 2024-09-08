@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
+using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask;
@@ -94,6 +96,12 @@ public class TaskRunner
 
     public void Init()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在启动页，启动截图器再使用本功能"); });
+            throw new NormalEndException("请先在启动页，启动截图器再使用本功能");
+        }
+
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();
         SystemControl.ActivateWindow();
@@ -123,6 +131,11 @@ public class TaskRunner
 
     public void End()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            return;
+        }
+
         VisionContext.Instance().DrawContent.ClearAll();
         if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
         {

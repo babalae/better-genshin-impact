@@ -24,17 +24,6 @@ public class PathExecutor(CancellationTokenSource cts)
 {
     public async Task Pathing(PathingTask task)
     {
-        if (!TaskContext.Instance().IsInitialized)
-        {
-            UIDispatcherHelper.Invoke(()=>
-                {
-                    Toast.Warning("请先在启动页，启动截图器再使用本功能");
-                });
-            return;
-        }
-
-        SystemControl.ActivateWindow();
-
         if (task.Positions.Count == 0)
         {
             Logger.LogWarning("没有路径点，寻路结束");
@@ -63,6 +52,9 @@ public class PathExecutor(CancellationTokenSource cts)
             (waypointCopy.X, waypointCopy.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
             waypoints.Add(waypointCopy);
         }
+
+        await Delay(100, cts);
+        Navigation.WarmUp(); // 提前加载地图特征点
 
         foreach (var waypoint in waypoints)
         {

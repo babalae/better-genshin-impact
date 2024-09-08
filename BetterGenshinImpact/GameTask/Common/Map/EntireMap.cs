@@ -26,6 +26,11 @@ public class EntireMap : Singleton<EntireMap>
         _featureMatcher = new FeatureMatcher(new Size(28672, 26624), new FeatureStorage("mainMap2048Block"));
     }
 
+    public FeatureMatcher GetFeatureMatcher()
+    {
+        return _featureMatcher;
+    }
+
     private int _failCnt = 0;
 
     /// <summary>
