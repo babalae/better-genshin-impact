@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Documents;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service;
 
@@ -142,8 +143,9 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
 
         // 循环执行所有脚本
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
+
         await new TaskRunner(timerOperation)
-            .RunAsync(async () =>
+            .FireAndForgetAsync(async () =>
             {
                 foreach (var project in list)
                 {

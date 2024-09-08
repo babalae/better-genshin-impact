@@ -94,6 +94,11 @@ public class TaskRunner
         Task.Run(() => RunAsync(action));
     }
 
+    public async Task FireAndForgetAsync(Func<Task> action)
+    {
+        await Task.Run(() => RunAsync(action));
+    }
+
     public void Init()
     {
         if (!TaskContext.Instance().IsInitialized)

@@ -561,9 +561,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        await Task.Run(async () =>
-        {
-            await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
-        });
+        await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
     }
 }

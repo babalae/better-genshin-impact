@@ -1,14 +1,13 @@
-﻿using BetterGenshinImpact.Service;
-using System;
+﻿using System;
 using System.IO;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = "0.34.0";
+    public static string Version { get; } = "0.34.1";
 
     public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
 

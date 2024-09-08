@@ -16,6 +16,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -23,8 +24,11 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class PathExecutor(CancellationTokenSource cts)
 {
+    private double _dpi = 1;
+
     public async Task Pathing(PathingTask task)
     {
+        _dpi = DpiHelper.ScaleY;
         if (task.Positions.Count == 0)
         {
             Logger.LogWarning("没有路径点，寻路结束");
@@ -239,7 +243,7 @@ public class PathExecutor(CancellationTokenSource cts)
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
 
-    private int RotateTo(int targetOrientation, ImageRegion imageRegion, int controlRatio = 1)
+    private int RotateTo(int targetOrientation, ImageRegion imageRegion, double controlRatio = 1)
     {
         var cao = CameraOrientation.Compute(imageRegion.SrcGreyMat);
         var diff = (cao - targetOrientation + 180) % 360 - 180;
@@ -261,7 +265,7 @@ public class PathExecutor(CancellationTokenSource cts)
         {
             controlRatio = 2;
         }
-        Simulation.SendInput.Mouse.MoveMouseBy(-controlRatio * diff, 0);
+        Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(-controlRatio * diff * _dpi), 0);
         return diff;
     }
 
