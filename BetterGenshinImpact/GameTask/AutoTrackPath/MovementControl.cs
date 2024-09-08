@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Model;
+using System;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
+[Obsolete]
 public class MovementControl : Singleton<MovementControl>
 {
     private bool _wDown = false;

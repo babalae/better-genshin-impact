@@ -107,7 +107,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "SpaceKey",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_space.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(130 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(130 * AssetScale), (int)(70 * AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(350 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(200 * AssetScale), (int)(70 * AssetScale)),
+
             DrawOnWindow = false
         }.InitTemplate();
         XKey = new RecognitionObject
@@ -115,7 +116,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "XKey",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_x.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(210 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(60 * AssetScale), (int)(70 * AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(350 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(200 * AssetScale), (int)(70 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 

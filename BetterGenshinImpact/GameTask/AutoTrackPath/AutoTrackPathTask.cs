@@ -34,6 +34,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// 2. 所有涉及矩形运算的，优先转换为全地图坐标系
 /// 3. 所有涉及小地图视角角度运算的，优先转换为warpPolar所使用的度数标准
 /// </summary>
+[Obsolete]
 public class AutoTrackPathTask
 {
     private readonly AutoTrackPathParam _taskParam;

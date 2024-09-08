@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -25,7 +26,10 @@ public class PathExecutor(CancellationTokenSource cts)
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
+            UIDispatcherHelper.Invoke(()=>
+                {
+                    Toast.Warning("请先在启动页，启动截图器再使用本功能");
+                });
             return;
         }
 
@@ -69,12 +73,11 @@ public class PathExecutor(CancellationTokenSource cts)
                 continue;
             }
 
-            // waypoint.WaypointType == WaypointType.Path 或者 WaypointType.Target
             // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
 
             await MoveTo(waypoint);
 
-            if (waypoint.Type == WaypointType.Target.Code)
+            if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
             {
                 await MoveCloseTo(waypoint);
             }
@@ -141,30 +144,30 @@ public class PathExecutor(CancellationTokenSource cts)
                 }
             }
             // 旋转视角
-            var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             RotateTo(targetOrientation, screen);
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
             {
-                // TODO:一直起跳直到打开风之翼
+                var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
                 if (!isFlying)
                 {
+                    Logger.LogWarning("未进入飞行状态，按下空格");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                    await Task.Delay(300);
+                    await Delay(200, cts);
                 }
                 continue;
             }
-            if (isFlying)
-            {
-                Simulation.SendInput.Mouse.LeftButtonClick();
-                await Delay(1000, cts);
-                continue;
-            }
+            // if (isFlying)
+            // {
+            //     Simulation.SendInput.Mouse.LeftButtonClick();
+            //     await Delay(1000, cts);
+            //     continue;
+            // }
             if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Delay(1000, cts);
+                await Delay(200, cts);
                 continue;
             }
             // 跑步或者游泳
@@ -192,12 +195,12 @@ public class PathExecutor(CancellationTokenSource cts)
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("精确接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
-        var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
-        if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code && isFlying)
+        if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
             //下落攻击接近目的地
+            Logger.LogInformation("下落攻击接近目的地");
             Simulation.SendInput.Mouse.LeftButtonClick();
-            await Task.Delay(1000);
+            await Delay(1000, cts);
         }
         await WaitUntilRotatedTo(targetOrientation, 2);
         var wPressed = false;
@@ -221,8 +224,8 @@ public class PathExecutor(CancellationTokenSource cts)
             if (waypoint.MoveMode == MoveModeEnum.Walk.Code)
             {
                 // 小碎步接近
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
-                await Task.Delay(500);
+                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
+                await Delay(200, cts);
                 continue;
             }
             if (!wPressed)

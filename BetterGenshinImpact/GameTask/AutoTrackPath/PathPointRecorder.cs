@@ -20,6 +20,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
+[Obsolete]
 public class PathPointRecorder : Singleton<PathPointRecorder>
 {
     private readonly EntireMap _bigMap = EntireMap.Instance;
