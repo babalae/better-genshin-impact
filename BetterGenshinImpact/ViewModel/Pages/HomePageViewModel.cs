@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
@@ -221,6 +222,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     {
         if (TaskDispatcherEnabled)
         {
+            CancellationContext.Instance.Cancel(); // 取消独立任务的运行
             _taskDispatcher.Stop();
             if (_maskWindow != null && _maskWindow.IsExist())
             {

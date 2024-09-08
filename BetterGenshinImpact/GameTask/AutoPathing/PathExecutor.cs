@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,7 +37,7 @@ public class PathExecutor(CancellationTokenSource cts)
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
 
-        // TODO:大地图传送的时候使用游戏坐标，追踪的时候应该使用2048地图图像坐标，这里临时做转换，后续改进
+        // 大地图传送的时候使用游戏坐标，追踪的时候应该使用2048地图图像坐标，这里临时做转换，后续改进
         var waypoints = new List<Waypoint>();
         foreach (var waypoint in task.Positions)
         {
@@ -62,7 +63,7 @@ public class PathExecutor(CancellationTokenSource cts)
         {
             if (waypoint.Type == WaypointType.Teleport.Code)
             {
-                Logger.LogInformation("正在传送到{x},{y}", waypoint.X, waypoint.Y);
+                // Logger.LogInformation("正在传送到{x},{y}", waypoint.X, waypoint.Y);
                 var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
                 var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
                 EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
@@ -85,7 +86,7 @@ public class PathExecutor(CancellationTokenSource cts)
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("粗略接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
+        Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", waypoint.X, waypoint.Y);
         await WaitUntilRotatedTo(targetOrientation, 5);
         var startTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
@@ -93,10 +94,10 @@ public class PathExecutor(CancellationTokenSource cts)
         var prevPositions = new List<Point2f>();
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
-        while (true)
+        while (!cts.IsCancellationRequested)
         {
             var now = DateTime.UtcNow;
-            if ((now - startTime).TotalSeconds > 30)
+            if ((now - startTime).TotalSeconds > 60)
             {
                 Logger.LogWarning("执行超时，跳过路径点");
                 break;
@@ -104,7 +105,7 @@ public class PathExecutor(CancellationTokenSource cts)
             screen = CaptureToRectArea();
             position = Navigation.GetPosition(screen);
             var distance = Navigation.GetDistance(waypoint, position);
-            Logger.LogInformation("接近目标点中，距离为{distance}", distance);
+            Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
             {
                 Logger.LogInformation("到达路径点附近");
@@ -124,7 +125,7 @@ public class PathExecutor(CancellationTokenSource cts)
                     var delta = prevPositions[^1] - prevPositions[^8];
                     if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
                     {
-                        TaskControl.Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
+                        Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
                         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         await Delay(500, cts);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
@@ -148,7 +149,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
                 if (!isFlying)
                 {
-                    Logger.LogWarning("未进入飞行状态，按下空格");
+                    Debug.WriteLine("未进入飞行状态，按下空格");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                     await Delay(200, cts);
                 }
@@ -190,18 +191,18 @@ public class PathExecutor(CancellationTokenSource cts)
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("精确接近路径点，当前位置({x1},{y1})，目标位置({x2},{y2})", position.X, position.Y, waypoint.X, waypoint.Y);
+        Logger.LogInformation("精确接近目标点，位置({x2},{y2})", waypoint.X, waypoint.Y);
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
             //下落攻击接近目的地
-            Logger.LogInformation("下落攻击接近目的地");
+            Logger.LogInformation("动作：下落攻击");
             Simulation.SendInput.Mouse.LeftButtonClick();
             await Delay(1000, cts);
         }
         await WaitUntilRotatedTo(targetOrientation, 2);
         var wPressed = false;
         var stepsTaken = 0;
-        while (true)
+        while (!cts.IsCancellationRequested)
         {
             stepsTaken++;
             if (stepsTaken > 8)
@@ -267,7 +268,7 @@ public class PathExecutor(CancellationTokenSource cts)
     private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
     {
         int count = 0;
-        while (true)
+        while (!cts.IsCancellationRequested)
         {
             var screen = CaptureToRectArea();
             if (Math.Abs(RotateTo(targetOrientation, screen)) < maxDiff)

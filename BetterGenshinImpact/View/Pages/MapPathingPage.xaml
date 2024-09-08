@@ -99,7 +99,7 @@
                 <ContextMenu>
                     <MenuItem Command="{Binding StartCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                              Header="执行脚本" />
+                              Header="执行任务" />
                 </ContextMenu>
             </ListBox.ContextMenu>
             <ListView.Style>

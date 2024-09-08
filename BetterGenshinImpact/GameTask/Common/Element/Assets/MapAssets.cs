@@ -30,6 +30,7 @@ public class MapAssets : BaseAssets<MapAssets>
         { "稻妻", [-4400, -3050] },
         { "须弥", [2877, -374] },
         { "枫丹", [4515, 3631] },
+        { "纳塔", [8973.5, -1879.1] },
     };
 
     public MapAssets()

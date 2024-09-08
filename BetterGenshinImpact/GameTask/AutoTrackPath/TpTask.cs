@@ -345,7 +345,9 @@ public class TpTask(CancellationTokenSource cts)
                 var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
                 if (hasMapChooseIcon)
                 {
-                    await Delay(TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay, cts);
+                    var time = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
+                    time = time < 100 ? 100 : time;
+                    await Delay(time, cts);
                     CheckTeleportButton(CaptureToRectArea());
                 }
             }
@@ -396,7 +398,9 @@ public class TpTask(CancellationTokenSource cts)
                 }
 
                 Logger.LogInformation("传送：点击 {Option}", textRegion.Text);
-                Thread.Sleep(TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay);
+                var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
+                time = time < 200 ? 200 : time;
+                Thread.Sleep(time);
                 ra.Click();
                 hasMapChooseIcon = true;
                 break;
