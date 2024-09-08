@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.View.Windows;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Core.Script.Dependence.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -95,8 +96,13 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         {
             return;
         }
-        new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-           .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item));
+
+        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
+        .FireAndForget(async () =>
+        {
+            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+            await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item);
+        });
     }
 
     [RelayCommand]

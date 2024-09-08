@@ -40,7 +40,7 @@
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="可以实现自动采集、自动挖矿（开发中）、自动锄地（开发中）等功能"
+                      Text="可以实现自动采集（尝鲜）、自动挖矿（开发中）、自动锄地（开发中）等功能"
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
@@ -49,7 +49,7 @@
                        Icon="{ui:SymbolIcon FolderOpen24}" />
             <ui:Button Margin="10,0,0,0"
                        Command="{Binding OpenMapViewerCommand}"
-                       Content="查看地图" />
+                       Content="查看实时追踪地图" />
         </StackPanel>
 
         <Separator Grid.Row="3"
@@ -81,7 +81,7 @@
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding Info.TypeDesc}"
                                     Header="类型" />
-                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                    <!--<GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -92,7 +92,7 @@
 
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
+                    </GridViewColumn>-->
                 </GridView>
             </ListView.View>
             <ListBox.ContextMenu>

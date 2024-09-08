@@ -14,9 +14,9 @@ internal class Navigation
 {
     public static void WarmUp()
     {
-        TaskControl.Logger.LogInformation("地图特征点加载中，由于体积较大，可能加载速度较慢或引发卡顿，请耐心等待...");
+        TaskControl.Logger.LogInformation("地图特征点加载中，由于体积较大，首次加载速度较慢，请耐心等待...");
         EntireMap.Instance.GetFeatureMatcher();
-        TaskControl.Logger.LogInformation("地图特征点完成！");
+        TaskControl.Logger.LogInformation("地图特征点加载完成！");
     }
 
     internal static Point2f GetPosition(ImageRegion imageRegion)
