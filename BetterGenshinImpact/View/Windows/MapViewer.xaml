@@ -6,16 +6,15 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  Title="地图"
-                 Width="1400"
-                 Height="1330"
-                 MinWidth="700"
-                 MinHeight="650"
+                 Width="512"
+                 Height="512"
                  d:DataContext="{d:DesignInstance Type=windows:MapViewerViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="CanMinimize"
+                 Topmost="True"
                  WindowStartupLocation="CenterScreen"
                  WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">
@@ -26,12 +25,7 @@
         </Grid.RowDefinitions>
 
         <Canvas Grid.Row="1">
-            <ui:Image Source="{Binding MapPath, Mode=OneWay}" Stretch="Uniform" />
-            <Rectangle Canvas.Left="{Binding BigMapRect.Left}"
-                       Canvas.Top="{Binding BigMapRect.Top}"
-                       Width="{Binding BigMapRect.Width}"
-                       Height="{Binding BigMapRect.Height}"
-                       Stroke="Red" />
+            <ui:Image Source="{Binding MapBitmap, Mode=OneWay}" Stretch="Uniform" />
         </Canvas>
 
 

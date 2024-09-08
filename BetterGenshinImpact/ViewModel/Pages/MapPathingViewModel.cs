@@ -15,6 +15,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.View.Windows;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 
@@ -88,7 +89,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     }
 
     [RelayCommand]
-    public async Task OnStart(PathingTask? item)
+    public void OnStart(PathingTask? item)
     {
         if (item == null)
         {
@@ -96,5 +97,11 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         }
         new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
            .FireAndForget(async () => await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item));
+    }
+
+    [RelayCommand]
+    public void OnOpenMapViewer()
+    {
+        new MapViewer().Show();
     }
 }

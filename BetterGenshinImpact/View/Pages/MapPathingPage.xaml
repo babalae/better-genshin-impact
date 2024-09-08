@@ -47,6 +47,9 @@
             <ui:Button Command="{Binding OpenScriptsFolderCommand}"
                        Content="打开任务目录"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
+            <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenMapViewerCommand}"
+                       Content="查看地图" />
         </StackPanel>
 
         <Separator Grid.Row="3"

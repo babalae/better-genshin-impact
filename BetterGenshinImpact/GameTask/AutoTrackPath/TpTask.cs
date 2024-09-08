@@ -33,7 +33,7 @@ public class TpTask(CancellationTokenSource cts)
     /// </summary>
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
-    public async Task Tp(double tpX, double tpY)
+    public async Task<(double, double)> Tp(double tpX, double tpY)
     {
         // 获取最近的传送点位置
         var (x, y) = GetRecentlyTpPoint(tpX, tpY);
@@ -88,6 +88,7 @@ public class TpTask(CancellationTokenSource cts)
         }
 
         Logger.LogInformation("传送完成");
+        return (x, y);
     }
 
     /// <summary>
@@ -201,7 +202,7 @@ public class TpTask(CancellationTokenSource cts)
             {
                 throw new RetryException("当前不在地图界面");
             }
-        }, TimeSpan.FromMilliseconds(500), 5);
+        }, TimeSpan.FromMilliseconds(500), 10);
 
         if (rect == Rect.Empty)
         {

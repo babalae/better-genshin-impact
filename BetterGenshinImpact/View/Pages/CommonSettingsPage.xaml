@@ -422,7 +422,7 @@
         </ui:CardControl>
 
         <!--  地图  -->
-        <ui:CardControl Margin="0,0,0,12"
+        <!--<ui:CardControl Margin="0,0,0,12"
                         Icon="{ui:SymbolIcon Cursor24}"
                         Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
                                                       Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -447,7 +447,7 @@
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看地图" />
-        </ui:CardControl>
+        </ui:CardControl>-->
 
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>

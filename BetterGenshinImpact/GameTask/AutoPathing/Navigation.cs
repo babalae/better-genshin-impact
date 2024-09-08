@@ -4,6 +4,8 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
 using BetterGenshinImpact.GameTask.Common;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
@@ -20,7 +22,11 @@ internal class Navigation
     internal static Point2f GetPosition(ImageRegion imageRegion)
     {
         var greyMat = new Mat(imageRegion.SrcGreyMat, new Rect(62, 19, 212, 212));
-        return EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
+        var p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
+
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
+            "SendCurrentPosition", new object(), p));
+        return p;
     }
 
     internal static int GetTargetOrientation(Waypoint waypoint, Point2f position)

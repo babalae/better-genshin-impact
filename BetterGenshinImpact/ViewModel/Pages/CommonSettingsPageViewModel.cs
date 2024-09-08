@@ -70,10 +70,4 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
 
         Process.Start("explorer.exe", path);
     }
-
-    [RelayCommand]
-    public void OnOpenMapViewer()
-    {
-        new MapViewer().Show();
-    }
 }

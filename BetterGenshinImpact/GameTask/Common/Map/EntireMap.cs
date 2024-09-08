@@ -33,6 +33,11 @@ public class EntireMap : Singleton<EntireMap>
 
     private int _failCnt = 0;
 
+    public void SetPrevPosition(float x, float y)
+    {
+        (_prevX, _prevY) = (x, y);
+    }
+
     /// <summary>
     /// 基于特征匹配获取地图位置
     /// 移动匹配

@@ -1,10 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -12,10 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
-using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
@@ -32,7 +32,9 @@ public class PathExecutor(CancellationTokenSource cts)
 
         task.Positions.First().Type = WaypointType.Teleport.Code;
 
-        // 这里应该判断一下自动拾取是否处于工作状态，但好像没有什么方便的读取办法
+        // 初始化查看地图
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
+            "UpdateCurrentPathing", new object(), task));
 
         // TODO:大地图传送的时候使用游戏坐标，追踪的时候应该使用2048地图图像坐标，这里临时做转换，后续改进
         var waypoints = new List<Waypoint>();
@@ -61,7 +63,9 @@ public class PathExecutor(CancellationTokenSource cts)
             if (waypoint.Type == WaypointType.Teleport.Code)
             {
                 Logger.LogInformation("正在传送到{x},{y}", waypoint.X, waypoint.Y);
-                await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
+                var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
+                var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
+                EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
                 continue;
             }
 
@@ -230,6 +234,8 @@ public class PathExecutor(CancellationTokenSource cts)
         {
             Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         }
+        // 不管咋样，抬起w键
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
 
     private int RotateTo(int targetOrientation, ImageRegion imageRegion, int controlRatio = 1)
@@ -241,6 +247,7 @@ public class PathExecutor(CancellationTokenSource cts)
         {
             return diff;
         }
+        // 平滑的旋转视角
         if (Math.Abs(diff) > 90)
         {
             controlRatio = 5;
