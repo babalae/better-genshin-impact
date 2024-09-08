@@ -80,7 +80,7 @@ internal class GameTaskManager
     public static void AddTrigger(string name, object? externalConfig)
     {
         TriggerDictionary ??= new ConcurrentDictionary<string, ITaskTrigger>();
-        TriggerDictionary.Clear();
+        TriggerDictionary.Clear(); //TODO 有问题，不应该清理
 
         if (name == "AutoPick")
         {

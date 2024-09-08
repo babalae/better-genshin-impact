@@ -10,16 +10,22 @@ using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-internal class Navigation
+public class Navigation
 {
+    private static bool _isWarmUp = false;
+
     public static void WarmUp()
     {
-        TaskControl.Logger.LogInformation("地图特征点加载中，由于体积较大，首次加载速度较慢，请耐心等待...");
-        EntireMap.Instance.GetFeatureMatcher();
-        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+        if (!_isWarmUp)
+        {
+            TaskControl.Logger.LogInformation("地图特征点加载中，由于体积较大，首次加载速度较慢，请耐心等待...");
+            EntireMap.Instance.GetFeatureMatcher();
+            TaskControl.Logger.LogInformation("地图特征点加载完成！");
+        }
+        _isWarmUp = true;
     }
 
-    internal static Point2f GetPosition(ImageRegion imageRegion)
+    public static Point2f GetPosition(ImageRegion imageRegion)
     {
         var greyMat = new Mat(imageRegion.SrcGreyMat, new Rect(62, 19, 212, 212));
         var p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
@@ -29,7 +35,7 @@ internal class Navigation
         return p;
     }
 
-    internal static int GetTargetOrientation(Waypoint waypoint, Point2f position)
+    public static int GetTargetOrientation(Waypoint waypoint, Point2f position)
     {
         double deltaX = waypoint.X - position.X;
         double deltaY = waypoint.Y - position.Y;
@@ -48,7 +54,7 @@ internal class Navigation
         return (int)(angle * (180.0 / Math.PI));
     }
 
-    internal static double GetDistance(Waypoint waypoint, Point2f position)
+    public static double GetDistance(Waypoint waypoint, Point2f position)
     {
         var x1 = waypoint.X;
         var y1 = waypoint.Y;

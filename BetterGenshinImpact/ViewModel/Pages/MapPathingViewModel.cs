@@ -1,6 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -10,15 +15,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.View.Windows;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
-using BetterGenshinImpact.Core.Script.Dependence.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 

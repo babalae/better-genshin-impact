@@ -60,13 +60,13 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="80" />
-                <ColumnDefinition Width="100" />
+                <!-- <ColumnDefinition Width="100" /> -->
                 <ColumnDefinition Width="20" />
             </Grid.ColumnDefinitions>
             <Grid x:Name="Col1" Grid.Column="0" />
             <Grid x:Name="Col2" Grid.Column="1" />
             <Grid x:Name="Col3" Grid.Column="2" />
-            <Grid x:Name="Col4" Grid.Column="3" />
+            <!-- <Grid x:Name="Col4" Grid.Column="3" /> -->
         </Grid>
         <ui:ListView Grid.Row="5"
                      HorizontalAlignment="Stretch"
@@ -76,7 +76,7 @@
             <ListView.View>
                 <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                     <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding Info.Name}"
+                                    DisplayMemberBinding="{Binding FileName}"
                                     Header="名称" />
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding Info.TypeDesc}"

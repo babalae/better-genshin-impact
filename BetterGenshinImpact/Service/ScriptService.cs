@@ -80,6 +80,8 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
 
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string groupName)
     {
+        var hasTimer = false;
+
         // 重新加载脚本项目 并放入一个新的列表
         var list = new List<ScriptGroupProject>();
         foreach (var project in projectList)
@@ -93,13 +95,22 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
                 newProject.JsScriptSettingsObject = project.JsScriptSettingsObject;
                 list.Add(newProject);
             }
-            else
+            else if (project.Type == "KeyMouse")
             {
-                var newProject = new ScriptGroupProject(project.FolderName);
+                var newProject = ScriptGroupProject.BuildKeyMouseProject(project.FolderName);
                 newProject.Status = project.Status;
                 newProject.Schedule = project.Schedule;
                 newProject.RunNum = project.RunNum;
                 list.Add(newProject);
+            }
+            else if (project.Type == "Pathing")
+            {
+                var newProject = ScriptGroupProject.BuildPathingProject(project.Name, project.FolderName);
+                newProject.Status = project.Status;
+                newProject.Schedule = project.Schedule;
+                newProject.RunNum = project.RunNum;
+                list.Add(newProject);
+                hasTimer = true; // 路径追踪任务一定有实时任务操作
             }
         }
 
@@ -112,9 +123,8 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
                 jsProjects.Add(project.Project);
             }
         }
-        var hasTimer = false;
 
-        if (jsProjects.Count > 0)
+        if (!hasTimer && jsProjects.Count > 0)
         {
             var codeList = await ReadCodeList(jsProjects);
             hasTimer = HasTimerOperation(codeList);
@@ -169,9 +179,14 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
                                 _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);
                                 await project.Run();
                             }
-                            else
+                            else if (project.Type == "KeyMouse")
                             {
                                 _logger.LogInformation("→ 开始执行键鼠脚本: {Name}", project.Name);
+                                await project.Run();
+                            }
+                            else if (project.Type == "Pathing")
+                            {
+                                _logger.LogInformation("→ 开始执行路径追踪任务: {Name}", project.Name);
                                 await project.Run();
                             }
 

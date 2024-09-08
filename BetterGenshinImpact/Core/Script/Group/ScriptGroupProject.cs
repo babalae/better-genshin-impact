@@ -1,6 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
@@ -64,14 +68,30 @@ public partial class ScriptGroupProject : ObservableObject
         Type = "Javascript";
     }
 
-    public ScriptGroupProject(string kmName)
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="folder"></param>
+    /// <param name="type">KeyMouse|Pathing</param>
+    public ScriptGroupProject(string name, string folder, string type)
     {
-        Name = kmName;
-        FolderName = kmName;
+        Name = name;
+        FolderName = folder;
         Status = "Enabled";
         Schedule = "Daily";
         Project = null; // 不是JS脚本
-        Type = "KeyMouse";
+        Type = type;
+    }
+
+    public static ScriptGroupProject BuildKeyMouseProject(string name)
+    {
+        return new ScriptGroupProject(name, name, "KeyMouse");
+    }
+
+    public static ScriptGroupProject BuildPathingProject(string name, string folder)
+    {
+        return new ScriptGroupProject(name, folder, "Pathing");
     }
 
     /// <summary>
@@ -102,6 +122,13 @@ public partial class ScriptGroupProject : ObservableObject
             var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
             await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
         }
+        if (Type == "Pathing")
+        {
+            // 加载并执行
+            var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
+            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+            await new PathExecutor(CancellationContext.Instance.Cts).Pathing(task);
+        }
         else
         {
             //throw new Exception("不支持的脚本类型");
@@ -129,7 +156,8 @@ public class ScriptGroupProjectExtensions
     public static readonly Dictionary<string, string> TypeDescriptions = new()
     {
         { "Javascript", "JS脚本" },
-        { "KeyMouse", "键鼠脚本" }
+        { "KeyMouse", "键鼠脚本" },
+        { "Pathing", "路径追踪" }
     };
 
     public static readonly Dictionary<string, string> StatusDescriptions = new()

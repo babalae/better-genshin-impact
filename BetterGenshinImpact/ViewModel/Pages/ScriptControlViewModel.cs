@@ -156,8 +156,104 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var str = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
         if (!string.IsNullOrEmpty(str))
         {
-            SelectedScriptGroup?.Projects.Add(new ScriptGroupProject(str));
+            SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildKeyMouseProject(str));
         }
+    }
+
+    [RelayCommand]
+    private void OnAddPathing()
+    {
+        var directories = LoadAllPathingScripts();
+        var stackPanel = CreatePathingScriptSelectionPanel(directories);
+
+        var result = PromptDialog.Prompt("请选择需要添加的路径追踪任务", "请选择需要添加的路径追踪任务", stackPanel, new Size(500, 600));
+        if (!string.IsNullOrEmpty(result))
+        {
+            AddSelectedPathingScripts((StackPanel)stackPanel.Content);
+        }
+    }
+
+    private ScrollViewer CreatePathingScriptSelectionPanel(Dictionary<string, List<FileInfo>> directories)
+    {
+        var stackPanel = new StackPanel();
+
+        foreach (var directory in directories)
+        {
+            var parentCheckBox = new CheckBox
+            {
+                Content = directory.Key,
+                Tag = directory.Value
+            };
+
+            var childStackPanel = new StackPanel();
+            foreach (var fileInfo in directory.Value)
+            {
+                var childCheckBox = new CheckBox
+                {
+                    Content = fileInfo.Name,
+                    Tag = fileInfo,
+                    Margin = new Thickness(30, 0, 0, 0)
+                };
+                childStackPanel.Children.Add(childCheckBox);
+            }
+
+            parentCheckBox.Checked += (s, e) => SetChildCheckBoxesState(childStackPanel, true);
+            parentCheckBox.Unchecked += (s, e) => SetChildCheckBoxesState(childStackPanel, false);
+
+            stackPanel.Children.Add(parentCheckBox);
+            stackPanel.Children.Add(childStackPanel);
+        }
+
+        var scrollViewer = new ScrollViewer
+        {
+            Content = stackPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Height = 435 // 固定高度
+        };
+
+        return scrollViewer;
+    }
+
+    private void SetChildCheckBoxesState(StackPanel childStackPanel, bool state)
+    {
+        foreach (CheckBox child in childStackPanel.Children)
+        {
+            child.IsChecked = state;
+        }
+    }
+
+    private void AddSelectedPathingScripts(StackPanel stackPanel)
+    {
+        foreach (var child in stackPanel.Children)
+        {
+            if (child is StackPanel childStackPanel)
+            {
+                foreach (var grandChild in childStackPanel.Children)
+                {
+                    if (grandChild is CheckBox checkBox && checkBox.IsChecked == true)
+                    {
+                        var fileInfo = (FileInfo)checkBox.Tag;
+                        SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName));
+                    }
+                }
+            }
+        }
+    }
+
+    private Dictionary<string, List<FileInfo>> LoadAllPathingScripts()
+    {
+        var folder = Global.Absolute(@"User\AutoPathing");
+        var directories = Directory.GetDirectories(folder);
+        var result = new Dictionary<string, List<FileInfo>>();
+
+        foreach (var directory in directories)
+        {
+            var dirInfo = new DirectoryInfo(directory);
+            var files = dirInfo.GetFiles("*.*", SearchOption.TopDirectoryOnly).ToList();
+            result.Add(dirInfo.Name, files);
+        }
+
+        return result;
     }
 
     private List<ScriptProject> LoadAllJsScriptProjects()
@@ -465,6 +561,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             return;
         }
 
-        await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
+        await Task.Run(async () =>
+        {
+            await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
+        });
     }
 }

@@ -243,6 +243,7 @@
                         <ContextMenu>
                             <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
                             <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
+                            <MenuItem Command="{Binding AddPathingCommand}" Header="添加路径追踪任务" />
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="修改通用配置" />
