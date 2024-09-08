@@ -392,6 +392,42 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        var pathRecorder = new PathRecorder();
+        var pathRecording = false;
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "启动/停止路径记录器",
+            nameof(Config.HotKeyConfig.PathRecorderHotkey),
+            Config.HotKeyConfig.PathRecorderHotkey,
+            Config.HotKeyConfig.PathRecorderHotkeyType,
+            (_, _) =>
+            {
+                if (pathRecording)
+                {
+                    pathRecorder.Save();
+                }
+                else
+                {
+                    pathRecorder.Start();
+                }
+                pathRecording = !pathRecording;
+            }
+        ));
+
+        HotKeySettingModels.Add(new HotKeySettingModel(
+            "添加记录点",
+            nameof(Config.HotKeyConfig.AddWaypointHotkey),
+            Config.HotKeyConfig.AddWaypointHotkey,
+            Config.HotKeyConfig.AddWaypointHotkeyType,
+            (_, _) =>
+            {
+                if (pathRecording)
+                {
+                    pathRecorder.AddWaypoint();
+                }
+            }
+        ));
+
         if (RuntimeHelper.IsDebug)
         {
             HotKeySettingModels.Add(new HotKeySettingModel(
@@ -446,42 +482,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     // _logger.LogInformation("开始重放脚本");
                     User32.SetWindowPos(TaskContext.Instance().GameHandle, new HWND(), 0, 0, 1920, 1080, SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_NOZORDER);
-                }
-            ));
-
-            var pathRecorder = new PathRecorder();
-            var pathRecording = false;
-
-            HotKeySettingModels.Add(new HotKeySettingModel(
-                "启动/停止路径记录器",
-                nameof(Config.HotKeyConfig.PathRecorderHotkey),
-                Config.HotKeyConfig.PathRecorderHotkey,
-                Config.HotKeyConfig.PathRecorderHotkeyType,
-                (_, _) =>
-                {
-                    if (pathRecording)
-                    {
-                        pathRecorder.Save();
-                    }
-                    else
-                    {
-                        pathRecorder.Start();
-                    }
-                    pathRecording = !pathRecording;
-                }
-            ));
-
-            HotKeySettingModels.Add(new HotKeySettingModel(
-                "添加记录点",
-                nameof(Config.HotKeyConfig.AddWaypointHotkey),
-                Config.HotKeyConfig.AddWaypointHotkey,
-                Config.HotKeyConfig.AddWaypointHotkeyType,
-                (_, _) =>
-                {
-                    if (pathRecording)
-                    {
-                        pathRecorder.AddWaypoint();
-                    }
                 }
             ));
 

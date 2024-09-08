@@ -34,6 +34,13 @@ xcopy * "%tmpfolder%" /E /C /I /Y
 cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
 del /f /q %tmpfolder%\*ffmpeg*.dll
+
+:: 添加一些配置文件开始（大文件不适合放在Github）
+if exist "E:\HuiTask\BetterGIBuild\BetterGI" (
+    xcopy "E:\HuiTask\BetterGIBuild\BetterGI\*" "%tmpfolder%" /E /C /I /Y
+)
+:: 添加一些配置文件结束
+
 MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\ -t7z -mx=5 -mf=BCJ2 -r -y
 copy /y publish.7z .\MicaSetup\Resources\Setups\publish.7z
 if exist "%zipFile%" ( del /f /q "%zipfile%" )

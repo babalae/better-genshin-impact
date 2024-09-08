@@ -104,9 +104,7 @@
                         <!--  Map24  -->
                         <ui:NavigationViewItem Content="地图追踪"
                                                NavigationCacheMode="Enabled"
-                                               TargetPageType="{x:Type pages:MapPathingPage}"
-                                               Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
-                                                                             Converter={StaticResource BooleanToVisibilityConverter}}">
+                                               TargetPageType="{x:Type pages:MapPathingPage}">
                             <ui:NavigationViewItem.Icon>
                                 <ui:SymbolIcon Symbol="Map24" />
                             </ui:NavigationViewItem.Icon>
