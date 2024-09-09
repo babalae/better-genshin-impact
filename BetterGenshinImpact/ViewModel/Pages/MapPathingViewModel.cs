@@ -114,8 +114,16 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     [RelayCommand]
     public void OnOpenMapViewer()
     {
-        _mapViewer ??= new MapViewer();
-        _mapViewer.Show();
+        if (_mapViewer == null || !_mapViewer.IsVisible)
+        {
+            _mapViewer = new MapViewer();
+            _mapViewer.Closed += (s, e) => _mapViewer = null;
+            _mapViewer.Show();
+        }
+        else
+        {
+            _mapViewer.Activate();
+        }
     }
 
     [RelayCommand]
