@@ -18,6 +18,12 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
 
+    /// <summary>
+    /// TODO 合并到 RunMulti
+    /// </summary>
+    /// <param name="folderNameList"></param>
+    /// <param name="groupName"></param>
+    /// <returns></returns>
     public async Task RunMultiJs(List<string> folderNameList, string? groupName = null)
     {
         // 重新加载脚本项目
@@ -79,6 +85,8 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
 
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
+        groupName ??= "默认";
+
         var hasTimer = false;
         var list = ReloadScriptProjects(projectList, ref hasTimer);
 
@@ -93,11 +101,14 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
         // 没启动时候，启动截图器
         await homePageViewModel.OnStartTriggerAsync();
 
-        if (hasTimer)
+        if (!string.IsNullOrEmpty(groupName))
         {
-            _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName ?? "默认");
+            if (hasTimer)
+            {
+                _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
+            }
+            _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
         }
-        _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName ?? "默认", list.Count);
 
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
 
@@ -146,7 +157,10 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
                }
            });
 
-        _logger.LogInformation("配置组 {Name} 执行结束", groupName);
+        if (!string.IsNullOrEmpty(groupName))
+        {
+            _logger.LogInformation("配置组 {Name} 执行结束", groupName);
+        }
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList, ref bool hasTimer)
@@ -162,7 +176,7 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
             }
             else if (project.Type == "KeyMouse")
             {
-                var newProject = ScriptGroupProject.BuildKeyMouseProject(project.FolderName);
+                var newProject = ScriptGroupProject.BuildKeyMouseProject(project.Name);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
             }
