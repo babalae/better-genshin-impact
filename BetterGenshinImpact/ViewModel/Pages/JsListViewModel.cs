@@ -94,6 +94,6 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
         {
             return;
         }
-        await _scriptService.RunMulti([item.FolderName]);
+        await _scriptService.RunMultiJs([item.FolderName]);
     }
 }

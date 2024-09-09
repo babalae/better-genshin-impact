@@ -1,10 +1,12 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,7 +22,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class MapPathingViewModel(IScriptService scriptService) : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
@@ -90,19 +92,23 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     }
 
     [RelayCommand]
-    public void OnStart(PathingTask? item)
+    public async void OnStart(PathingTask? item)
     {
         if (item == null)
         {
             return;
         }
 
-        new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
-        .FireAndForget(async () =>
-        {
-            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
-            await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item);
-        });
+        // new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
+        // .FireAndForget(async () =>
+        // {
+        //     TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+        //     await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item);
+        // });
+
+        var fileInfo = new FileInfo(item.FullPath);
+        var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
+        await scriptService.RunMulti([project]);
     }
 
     [RelayCommand]

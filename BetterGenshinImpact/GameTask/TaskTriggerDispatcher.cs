@@ -186,6 +186,11 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
+        public System.Timers.Timer GetTimer()
+        {
+            return _timer;
+        }
+
         /// <summary>
         /// 启动独立任务
         /// </summary>

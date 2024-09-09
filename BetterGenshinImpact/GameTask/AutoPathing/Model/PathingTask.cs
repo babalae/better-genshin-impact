@@ -16,6 +16,12 @@ public class PathingTask
     [JsonIgnore]
     public string FileName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 实际存储的文件路径
+    /// </summary>
+    [JsonIgnore]
+    public string FullPath { get; set; } = string.Empty;
+
     public PathingTaskInfo Info { get; set; } = new();
     public List<Waypoint> Positions { get; set; } = [];
 
@@ -24,6 +30,7 @@ public class PathingTask
         var json = File.ReadAllText(filePath);
         var task = JsonSerializer.Deserialize<PathingTask>(json, PathRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize PathingTask");
         task.FileName = Path.GetFileName(filePath);
+        task.FullPath = filePath;
         return task;
     }
 
