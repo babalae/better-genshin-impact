@@ -44,7 +44,7 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
         // 循环执行所有脚本
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
         await new TaskRunner(timerOperation)
-            .RunAsync(async () =>
+            .RunThreadAsync(async () =>
             {
                 foreach (var project in projects)
                 {
@@ -145,7 +145,7 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
 
         await new TaskRunner(timerOperation)
-            .FireAndForgetAsync(async () =>
+            .RunThreadAsync(async () =>
             {
                 foreach (var project in list)
                 {

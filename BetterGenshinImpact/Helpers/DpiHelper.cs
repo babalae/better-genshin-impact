@@ -8,6 +8,9 @@ namespace BetterGenshinImpact.Helpers;
 
 public class DpiHelper
 {
+    /// <summary>
+    /// 只能主线程调用
+    /// </summary>
     public static float ScaleY => GetScaleY();
 
     private static float GetScaleY()

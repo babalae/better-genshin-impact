@@ -37,7 +37,7 @@ public class TpTask(CancellationTokenSource cts)
     {
         // 获取最近的传送点位置
         var (x, y) = GetRecentlyTpPoint(tpX, tpY);
-        Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", tpX, tpY, x, y);
+        Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
 
         // M 打开地图识别当前位置，中心点为当前位置
         using var ra1 = CaptureToRectArea();

@@ -2,7 +2,6 @@
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -16,7 +15,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -28,22 +26,59 @@ public class PathExecutor(CancellationTokenSource cts)
 
     public async Task Pathing(PathingTask task)
     {
-        _dpi = DpiHelper.ScaleY;
-        if (task.Positions.Count == 0)
+        _dpi = TaskContext.Instance().DpiScale;
+        if (!task.Positions.Any())
         {
             Logger.LogWarning("没有路径点，寻路结束");
             return;
         }
 
-        task.Positions.First().Type = WaypointType.Teleport.Code;
+        InitializePathing(task);
 
-        // 初始化查看地图
+        var waypoints = ConvertWaypoints(task.Positions);
+
+        await Delay(100, cts);
+        Navigation.WarmUp(); // 提前加载地图特征点
+
+        try
+        {
+            foreach (var waypoint in waypoints)
+            {
+                if (waypoint.Type == WaypointType.Teleport.Code)
+                {
+                    await HandleTeleportWaypoint(waypoint);
+                }
+                else
+                {
+                    // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
+                    await MoveTo(waypoint);
+
+                    if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
+                    {
+                        await MoveCloseTo(waypoint);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            // 不管咋样，松开所有按键
+            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+            Simulation.SendInput.Mouse.RightButtonUp();
+        }
+    }
+
+    private void InitializePathing(PathingTask task)
+    {
+        task.Positions.First().Type = WaypointType.Teleport.Code;
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
+    }
 
-        // 大地图传送的时候使用游戏坐标，追踪的时候应该使用2048地图图像坐标，这里临时做转换，后续改进
+    private List<Waypoint> ConvertWaypoints(List<Waypoint> positions)
+    {
         var waypoints = new List<Waypoint>();
-        foreach (var waypoint in task.Positions)
+        foreach (var waypoint in positions)
         {
             if (waypoint.Type == WaypointType.Teleport.Code)
             {
@@ -59,30 +94,14 @@ public class PathExecutor(CancellationTokenSource cts)
             (waypointCopy.X, waypointCopy.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
             waypoints.Add(waypointCopy);
         }
+        return waypoints;
+    }
 
-        await Delay(100, cts);
-        Navigation.WarmUp(); // 提前加载地图特征点
-
-        foreach (var waypoint in waypoints)
-        {
-            if (waypoint.Type == WaypointType.Teleport.Code)
-            {
-                // Logger.LogInformation("正在传送到{x},{y}", waypoint.X, waypoint.Y);
-                var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
-                var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
-                EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
-                continue;
-            }
-
-            // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
-
-            await MoveTo(waypoint);
-
-            if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
-            {
-                await MoveCloseTo(waypoint);
-            }
-        }
+    private async Task HandleTeleportWaypoint(Waypoint waypoint)
+    {
+        var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
+        var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
+        EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
     }
 
     private async Task MoveTo(Waypoint waypoint)
@@ -90,7 +109,7 @@ public class PathExecutor(CancellationTokenSource cts)
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", waypoint.X, waypoint.Y);
+        Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.X:F1}", $"{waypoint.Y:F1}");
         await WaitUntilRotatedTo(targetOrientation, 5);
         var startTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
@@ -195,7 +214,7 @@ public class PathExecutor(CancellationTokenSource cts)
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("精确接近目标点，位置({x2},{y2})", waypoint.X, waypoint.Y);
+        Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.X:F1}", $"{waypoint.Y:F1}");
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
             //下落攻击接近目的地
@@ -239,8 +258,6 @@ public class PathExecutor(CancellationTokenSource cts)
         {
             Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         }
-        // 不管咋样，抬起w键
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
 
     private int RotateTo(int targetOrientation, ImageRegion imageRegion, double controlRatio = 1)

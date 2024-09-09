@@ -28,6 +28,8 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [ObservableProperty]
     private ObservableCollection<PathingTask> _pathItems = [];
 
+    private MapViewer? _mapViewer;
+
     private void InitScriptListViewData()
     {
         _pathItems.Clear();
@@ -106,6 +108,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [RelayCommand]
     public void OnOpenMapViewer()
     {
-        new MapViewer().Show();
+        _mapViewer ??= new MapViewer();
+        _mapViewer.Show();
     }
 }
