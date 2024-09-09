@@ -382,9 +382,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
         HotKeySettingModels.Add(new HotKeySettingModel(
             "（开发）获取当前大地图中心点位置",
-            nameof(Config.HotKeyConfig.Test1Hotkey),
-            Config.HotKeyConfig.GetBigMapPosHotkey,
-            Config.HotKeyConfig.GetBigMapPosHotkeyType,
+            nameof(Config.HotKeyConfig.RecBigMapPosHotkey),
+            Config.HotKeyConfig.RecBigMapPosHotkey,
+            Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
                 var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
