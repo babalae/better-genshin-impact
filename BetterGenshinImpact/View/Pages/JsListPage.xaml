@@ -40,7 +40,7 @@
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="可以通过 Javascript 调用 BetterGI 在原神中的各项能力，右键可以直接执行脚本"
+                      Text="可以通过 Javascript 调用 BetterGI 在原神中的各项能力，右键可以直接执行脚本。建议在调度器中使用！"
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">

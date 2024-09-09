@@ -415,7 +415,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
-            "添加记录点",
+            "添加路径点",
             nameof(Config.HotKeyConfig.AddWaypointHotkey),
             Config.HotKeyConfig.AddWaypointHotkey,
             Config.HotKeyConfig.AddWaypointHotkeyType,

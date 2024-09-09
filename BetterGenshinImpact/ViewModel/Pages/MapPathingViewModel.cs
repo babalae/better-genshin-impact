@@ -117,4 +117,10 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
         _mapViewer ??= new MapViewer();
         _mapViewer.Show();
     }
+
+    [RelayCommand]
+    public void OnGoToPathingUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/pathing.html") { UseShellExecute = true });
+    }
 }
