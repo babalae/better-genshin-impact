@@ -240,7 +240,7 @@ public partial class App : Application
             e = e.InnerException;
         }
 
-        MessageBox.Error("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        System.Windows.Forms.MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
 
         // log
         GetLogger<App>().LogDebug(e, "UnHandle Exception");
