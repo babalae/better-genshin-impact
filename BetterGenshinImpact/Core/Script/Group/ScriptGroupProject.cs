@@ -20,8 +20,18 @@ public partial class ScriptGroupProject : ObservableObject
     [ObservableProperty]
     private int _index;
 
+    /// <summary>
+    /// 理论上是文件名
+    /// </summary>
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 理论上是当前类型脚本根目录到脚本文件所在目录的相对路径
+    /// 但是：
+    /// 1. JS 脚本的文件名是内部的名称，文件夹名脚本所在文件夹，这个也是唯一标识
+    /// 2. KeyMouse 脚本的文件名和文件夹名相同，文件夹名暂时无意义
+    /// 3. Pathing 文件名就是实际脚本的文件名，文件夹名是脚本所在的相对目录
+    /// </summary>
     public string FolderName { get; set; } = string.Empty;
 
     [ObservableProperty]

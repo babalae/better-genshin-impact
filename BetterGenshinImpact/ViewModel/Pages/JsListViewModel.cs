@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Group;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -94,6 +95,6 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
         {
             return;
         }
-        await _scriptService.RunMultiJs([item.FolderName]);
+        await _scriptService.RunMulti([new ScriptGroupProject(item)]);
     }
 }

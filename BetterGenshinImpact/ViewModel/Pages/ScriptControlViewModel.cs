@@ -22,6 +22,7 @@ using System.Windows.Controls;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using StackPanel = Wpf.Ui.Controls.StackPanel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
