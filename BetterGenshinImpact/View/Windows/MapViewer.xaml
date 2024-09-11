@@ -15,6 +15,7 @@
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="CanMinimize"
                  Topmost="True"
+                 WindowBackdropType="Mica"
                  WindowStartupLocation="CenterScreen"
                  WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">

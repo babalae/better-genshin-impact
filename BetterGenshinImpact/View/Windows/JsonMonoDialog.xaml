@@ -14,6 +14,7 @@
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  Tag="JsonMonoDialog"
+                 WindowBackdropType="Mica"
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Window.Resources>
