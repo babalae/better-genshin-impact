@@ -72,6 +72,6 @@ public class PathRecorder
 
     public void Save()
     {
-        _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, $@"{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.json"));
+        _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, $@"{DateTime.Now:yyyyMMdd_HHmmss}.json"));
     }
 }
