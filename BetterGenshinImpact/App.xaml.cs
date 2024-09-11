@@ -21,6 +21,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact;
 
@@ -240,7 +241,23 @@ public partial class App : Application
             e = e.InnerException;
         }
 
-        System.Windows.Forms.MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        try
+        {
+            ExceptionReport.Show(e);
+        }
+        catch
+        {
+            // Fallback.
+            System.Windows.Forms.MessageBox.Show(
+                $"""
+                程序异常：{e.Source}
+                --
+                {e.StackTrace}
+                --
+                {e.Message}
+                """
+            );
+        }
 
         // log
         GetLogger<App>().LogDebug(e, "UnHandle Exception");
