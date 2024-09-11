@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -7,7 +8,7 @@ namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = "0.34.1";
+    public static string Version { get; } = Assembly.GetExecutingAssembly().GetName().Version!.ToString(3);
 
     public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
 
