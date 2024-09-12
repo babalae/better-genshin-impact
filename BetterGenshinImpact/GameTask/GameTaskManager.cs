@@ -44,6 +44,7 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoSkip", new AutoSkip.AutoSkipTrigger());
         TriggerDictionary.TryAdd("AutoFish", new AutoFishing.AutoFishingTrigger());
         TriggerDictionary.TryAdd("AutoCook", new AutoCook.AutoCookTrigger());
+        TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
 
         return ConvertToTriggerList();
     }
@@ -106,6 +107,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("QuickTeleport")?.Init();
             TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
+            TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             // 清理画布
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
             VisionContext.Instance().DrawContent.ClearAll();
