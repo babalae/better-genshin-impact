@@ -179,6 +179,18 @@ public class TpTask(CancellationTokenSource cts)
         return GetBigMapCenterPoint();
     }
 
+    public Point2f? GetPositionFromBigMapNullable()
+    {
+        try
+        {
+            return GetBigMapCenterPoint();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public Rect GetBigMapRect()
     {
         var rect = new Rect();
@@ -272,10 +284,16 @@ public class TpTask(CancellationTokenSource cts)
         }
 
         // 识别当前位置
-        var bigMapCenterPoint = GetPositionFromBigMap();
-        Logger.LogInformation("识别当前位置：{Pos}", bigMapCenterPoint);
+        var minDistance = double.MaxValue;
+        var bigMapCenterPointNullable = GetPositionFromBigMapNullable();
 
-        var minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
+        if (bigMapCenterPointNullable != null)
+        {
+            var bigMapCenterPoint = bigMapCenterPointNullable.Value;
+            Logger.LogInformation("识别当前大地图位置：{Pos}", bigMapCenterPoint);
+            minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
+        }
+
         var minCountry = "当前位置";
         foreach (var (country, position) in MapAssets.Instance.CountryPositions)
         {
