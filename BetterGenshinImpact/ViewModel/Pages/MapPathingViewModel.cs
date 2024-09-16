@@ -1,24 +1,16 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using Wpf.Ui.Controls;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -28,43 +20,56 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
 
     [ObservableProperty]
-    private ObservableCollection<PathingTask> _pathItems = [];
+    private TreeCollection<PathingTaskTreeObject> _pathItems = Load();
+
+    [ObservableProperty]
+    private FileTreeModel<PathingTask> _fileItems = new(PathJsonPath);
 
     private MapViewer? _mapViewer;
 
     private void InitScriptListViewData()
     {
         _pathItems.Clear();
-        var fileInfos = LoadScriptFolder(PathJsonPath);
-        foreach (var f in fileInfos)
-        {
-            try
-            {
-                _pathItems.Add(PathingTask.BuildFromFilePath(f.FullName));
-            }
-            catch (Exception e)
-            {
-                Toast.Warning($"地图追踪任务 {f.Name} 载入失败：{e.Message}");
-            }
-        }
+
+        _pathItems.Root.Name = PathJsonPath;
+        _pathItems.Root.IsFolder = true;
+        LoadFolderRecursive(PathJsonPath, _pathItems.Root);
     }
 
-    private IEnumerable<FileInfo> LoadScriptFolder(string folder)
+    private static TreeCollection<PathingTaskTreeObject> Load()
     {
-        if (!Directory.Exists(folder))
+        TreeCollection<PathingTaskTreeObject> tree = [];
+        tree.Root.Name = PathJsonPath;
+        tree.Root.IsFolder = true;
+        LoadFolderRecursive(PathJsonPath, tree.Root);
+        return tree;
+    }
+
+    private static void LoadFolderRecursive(string folder, PathingTaskTreeObject parent)
+    {
+        var directoryInfo = new DirectoryInfo(folder);
+        foreach (var dir in directoryInfo.GetDirectories())
         {
-            Directory.CreateDirectory(folder);
+            var dirNode = new PathingTaskTreeObject { Name = dir.Name, IsFolder = true };
+            parent.Children.Add(dirNode);
+            LoadFolderRecursive(dir.FullName, dirNode);
         }
 
-        var files = Directory.GetFiles(folder, "*.*",
-            SearchOption.AllDirectories);
-
-        return files.Select(file => new FileInfo(file)).ToList();
+        foreach (var file in directoryInfo.GetFiles())
+        {
+            var fileNode = new PathingTaskTreeObject
+            {
+                Name = file.Name,
+                IsFolder = false,
+                Task = PathingTask.BuildFromFilePath(file.FullName)
+            };
+            parent.Children.Add(fileNode);
+        }
     }
 
     public void OnNavigatedTo()
     {
-        InitScriptListViewData();
+        // InitScriptListViewData();
     }
 
     public void OnNavigatedFrom()
@@ -99,13 +104,6 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
             return;
         }
 
-        // new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
-        // .FireAndForget(async () =>
-        // {
-        //     TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
-        //     await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item);
-        // });
-
         var fileInfo = new FileInfo(item.FullPath);
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
         await scriptService.RunMulti([project]);
@@ -133,8 +131,8 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     }
 
     [RelayCommand]
-    public void OnRefresh(PathingTask? item)
+    public void OnRefresh(object? item)
     {
-        InitScriptListViewData();
+        _fileItems = new(PathJsonPath);
     }
 }

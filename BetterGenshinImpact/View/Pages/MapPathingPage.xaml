@@ -64,14 +64,40 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="80" />
                 <!-- <ColumnDefinition Width="100" /> -->
-                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="30" />
             </Grid.ColumnDefinitions>
             <Grid x:Name="Col1" Grid.Column="0" />
             <Grid x:Name="Col2" Grid.Column="1" />
             <Grid x:Name="Col3" Grid.Column="2" />
             <!-- <Grid x:Name="Col4" Grid.Column="3" /> -->
         </Grid>
-        <ui:ListView Grid.Row="5"
+        <ui:TreeListView Grid.Row="5" Model="{Binding FileItems}">
+            <ui:GridView>
+                <ui:GridView.Columns>
+                    <ui:GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}" Header="名称">
+                        <ui:GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <ui:TreeRowExpander Content="{Binding Name}" />
+                            </DataTemplate>
+                        </ui:GridViewColumn.CellTemplate>
+                    </ui:GridViewColumn>
+                    <ui:GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
+                                       DisplayMemberBinding="{Binding Data.Info.TypeDesc}"
+                                       Header="类型" />
+                </ui:GridView.Columns>
+            </ui:GridView>
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <!--  <MenuItem Command="{Binding StartCommand}"  -->
+                    <!--  CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"  -->
+                    <!--  Header="执行任务" />  -->
+                    <MenuItem Command="{Binding RefreshCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="刷新" />
+                </ContextMenu>
+            </ListBox.ContextMenu>
+        </ui:TreeListView>
+        <!--<ui:ListView Grid.Row="5"
                      HorizontalAlignment="Stretch"
                      VerticalAlignment="Stretch"
                      ItemsSource="{Binding PathItems}"
@@ -84,7 +110,7 @@
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding Info.TypeDesc}"
                                     Header="类型" />
-                    <!--<GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                    ~1~<GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -95,7 +121,7 @@
 
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
-                    </GridViewColumn>-->
+                    </GridViewColumn>@1@
                 </GridView>
             </ListView.View>
             <ListBox.ContextMenu>
@@ -114,6 +140,6 @@
                     <Setter Property="Background" Value="Transparent" />
                 </Style>
             </ListView.Style>
-        </ui:ListView>
+        </ui:ListView>-->
     </Grid>
 </Page>
