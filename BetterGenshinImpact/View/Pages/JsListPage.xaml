@@ -106,6 +106,9 @@
                     <MenuItem Command="{Binding StartRunCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                               Header="执行脚本" />
+                    <MenuItem Command="{Binding RefreshCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="刷新" />
                 </ContextMenu>
             </ListBox.ContextMenu>
             <ListView.Style>

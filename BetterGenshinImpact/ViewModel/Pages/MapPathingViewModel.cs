@@ -131,4 +131,10 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/pathing.html") { UseShellExecute = true });
     }
+
+    [RelayCommand]
+    public void OnRefresh(PathingTask? item)
+    {
+        InitScriptListViewData();
+    }
 }
