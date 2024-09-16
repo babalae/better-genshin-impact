@@ -23,6 +23,7 @@ public class Navigation
             TaskControl.Logger.LogInformation("地图特征点加载完成！");
         }
         _isWarmUp = true;
+        Reset();
     }
 
     public static void Reset()

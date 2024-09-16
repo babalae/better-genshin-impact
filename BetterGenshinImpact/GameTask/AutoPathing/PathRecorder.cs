@@ -28,6 +28,7 @@ public class PathRecorder
 
     public void Start()
     {
+        Navigation.WarmUp();
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
         var waypoint = new Waypoint();
