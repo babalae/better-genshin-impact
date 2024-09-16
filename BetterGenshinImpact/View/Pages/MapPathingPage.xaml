@@ -42,7 +42,7 @@
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       TextWrapping="Wrap">
             可以实现自动采集（尝鲜）、自动挖矿（开发中）、自动锄地（开发中）等功能。建议在调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                点击查看地图追踪使用教程
+                点击查看地图追踪与录制使用教程
             </Hyperlink>
         </ui:TextBlock>
 
@@ -53,6 +53,9 @@
             <ui:Button Margin="10,0,0,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看实时追踪地图" />
+            <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenMapEditorCommand}"
+                       Content="打开录制编辑器" />
         </StackPanel>
 
         <Separator Grid.Row="3"

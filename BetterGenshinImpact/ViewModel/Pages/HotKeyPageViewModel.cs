@@ -392,7 +392,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
-        var pathRecorder = new PathRecorder();
+        var pathRecorder = PathRecorder.Instance;
         var pathRecording = false;
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -460,7 +460,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.AutoTrackPathHotkeyType,
                 (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
             ));
-
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -468,11 +467,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
-                    _logger.LogInformation("大地图位置：{Position}", p);
+                    // pathRecorder.OpenEditorInWebView();
                 }
             ));
-
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试2",
                 nameof(Config.HotKeyConfig.Test2Hotkey),

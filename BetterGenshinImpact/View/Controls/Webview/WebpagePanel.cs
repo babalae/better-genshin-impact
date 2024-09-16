@@ -1,4 +1,5 @@
-﻿using Microsoft.Web.WebView2.Core;
+﻿using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Diagnostics;
@@ -15,6 +16,10 @@ public class WebpagePanel : UserControl
     private Uri _currentUri = null!;
     private WebView2 _webView = null!;
     private bool _initialized = false;
+
+    public WebView2 WebView => _webView;
+
+    public string? DownloadFolderPath { get; set; }
 
     public WebpagePanel()
     {
@@ -43,6 +48,10 @@ public class WebpagePanel : UserControl
         if (e.IsSuccess)
         {
             _initialized = true;
+            if (!string.IsNullOrEmpty(DownloadFolderPath))
+            {
+                WebView.CoreWebView2.Profile.DefaultDownloadFolderPath = DownloadFolderPath;
+            }
         }
         else
         {
