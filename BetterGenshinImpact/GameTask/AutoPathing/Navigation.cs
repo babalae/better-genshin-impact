@@ -25,6 +25,11 @@ public class Navigation
         _isWarmUp = true;
     }
 
+    public static void Reset()
+    {
+        EntireMap.Instance.SetPrevPosition(-1, -1);
+    }
+
     public static Point2f GetPosition(ImageRegion imageRegion)
     {
         var greyMat = new Mat(imageRegion.SrcGreyMat, new Rect(62, 19, 212, 212));

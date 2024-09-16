@@ -39,6 +39,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
         await Delay(100, cts);
         Navigation.WarmUp(); // 提前加载地图特征点
+        Navigation.Reset();
 
         try
         {
