@@ -72,6 +72,8 @@ public class PathRecorder
 
     public void Save()
     {
-        _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, $@"{DateTime.Now:yyyyMMdd_HHmmss}.json"));
+        var name = $@"{DateTime.Now:yyyyMMdd_HHmmss}.json";
+        _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, name));
+        TaskControl.Logger.LogInformation("已保存路径点记录:{Name}", name);
     }
 }
