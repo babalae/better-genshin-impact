@@ -33,11 +33,17 @@ public class TpTask(CancellationTokenSource cts)
     /// </summary>
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
-    public async Task<(double, double)> TpOnce(double tpX, double tpY)
+    /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
+    public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
     {
-        // 获取最近的传送点位置
-        var (x, y) = GetRecentlyTpPoint(tpX, tpY);
-        Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
+        var (x, y) = (tpX, tpY);
+
+        if (!force)
+        {
+            // 获取最近的传送点位置
+            (x, y) = GetRecentlyTpPoint(tpX, tpY);
+            Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
+        }
 
         // M 打开地图识别当前位置，中心点为当前位置
         using var ra1 = CaptureToRectArea();
@@ -91,14 +97,14 @@ public class TpTask(CancellationTokenSource cts)
         return (x, y);
     }
 
-    public async Task<(double, double)> Tp(double tpX, double tpY)
+    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
     {
         // 重试3次
         for (var i = 0; i < 3; i++)
         {
             try
             {
-                return await TpOnce(tpX, tpY);
+                return await TpOnce(tpX, tpY, force);
             }
             catch (Exception e)
             {
