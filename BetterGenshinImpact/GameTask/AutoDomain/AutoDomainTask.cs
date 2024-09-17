@@ -341,11 +341,21 @@ public class AutoDomainTask
 
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
-
+        // TODO 自动吃药
+        var autoEatTrigger = new AutoEat.AutoEatTrigger();
+        var autoEatTask = new Task(() => {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                autoEatTrigger.start();
+                // 适当的延迟，防止高 CPU 占用
+                Task.Delay(1000).Wait();
+            }
+        });
         combatTask.Start();
         domainEndTask.Start();
-
-        return Task.WhenAll(combatTask, domainEndTask);
+        autoEatTask.Start();
+        
+        return Task.WhenAll(combatTask, domainEndTask, autoEatTask);
     }
 
     private void EndFightWait()
