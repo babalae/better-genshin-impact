@@ -11,19 +11,11 @@ public static class RectExtension
 
     public static Rect Shrink(this Rect rect, int shrinkAmount)
     {
-        rect.X += shrinkAmount;
-        rect.Y += shrinkAmount;
-        rect.Width -= 2 * shrinkAmount;
-        rect.Height -= 2 * shrinkAmount;
-        return rect;
+        return new Rect(rect.X + shrinkAmount, rect.Y + shrinkAmount, rect.Width - 2 * shrinkAmount, rect.Height - 2 * shrinkAmount);
     }
 
     public static Rect Shrink(this Rect rect, int shrinkWidth, int shrinkHeight)
     {
-        rect.X += shrinkWidth;
-        rect.Y += shrinkHeight;
-        rect.Width -= 2 * shrinkWidth;
-        rect.Height -= 2 * shrinkHeight;
-        return rect;
+        return new Rect(rect.X + shrinkWidth, rect.Y + shrinkHeight, rect.Width - 2 * shrinkWidth, rect.Height - 2 * shrinkHeight);
     }
 }
