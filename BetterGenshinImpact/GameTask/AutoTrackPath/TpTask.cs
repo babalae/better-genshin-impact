@@ -58,12 +58,14 @@ public class TpTask(CancellationTokenSource cts)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
+        bigMapInAllMapRect = bigMapInAllMapRect.Shrink(115);
         while (!bigMapInAllMapRect.Contains(x, y))
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
             await MoveMapTo(x, y);
             bigMapInAllMapRect = GetBigMapRect();
+            bigMapInAllMapRect = bigMapInAllMapRect.Shrink(115);
         }
 
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
