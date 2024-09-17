@@ -628,7 +628,7 @@ public class AutoDomainTask
                     continuousCount++;
                 }
 
-                if (angle < 180)
+                if (angle <= 180)
                 {
                     // 左移视角
                     var moveAngle = angle;

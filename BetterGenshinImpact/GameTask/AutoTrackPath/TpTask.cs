@@ -33,11 +33,17 @@ public class TpTask(CancellationTokenSource cts)
     /// </summary>
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
-    public async Task<(double, double)> Tp(double tpX, double tpY)
+    /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
+    public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
     {
-        // 获取最近的传送点位置
-        var (x, y) = GetRecentlyTpPoint(tpX, tpY);
-        Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
+        var (x, y) = (tpX, tpY);
+
+        if (!force)
+        {
+            // 获取最近的传送点位置
+            (x, y) = GetRecentlyTpPoint(tpX, tpY);
+            Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
+        }
 
         // M 打开地图识别当前位置，中心点为当前位置
         using var ra1 = CaptureToRectArea();
@@ -52,12 +58,14 @@ public class TpTask(CancellationTokenSource cts)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
+        bigMapInAllMapRect = bigMapInAllMapRect.Shrink(115);
         while (!bigMapInAllMapRect.Contains(x, y))
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
             await MoveMapTo(x, y);
             bigMapInAllMapRect = GetBigMapRect();
+            bigMapInAllMapRect = bigMapInAllMapRect.Shrink(115);
         }
 
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
@@ -89,6 +97,23 @@ public class TpTask(CancellationTokenSource cts)
 
         Logger.LogInformation("传送完成");
         return (x, y);
+    }
+
+    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
+    {
+        // 重试3次
+        for (var i = 0; i < 3; i++)
+        {
+            try
+            {
+                return await TpOnce(tpX, tpY, force);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "传送失败，重试 {I} 次", i + 1);
+            }
+        }
+        throw new InvalidOperationException("传送失败");
     }
 
     /// <summary>
@@ -179,6 +204,18 @@ public class TpTask(CancellationTokenSource cts)
         return GetBigMapCenterPoint();
     }
 
+    public Point2f? GetPositionFromBigMapNullable()
+    {
+        try
+        {
+            return GetBigMapCenterPoint();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public Rect GetBigMapRect()
     {
         var rect = new Rect();
@@ -202,7 +239,7 @@ public class TpTask(CancellationTokenSource cts)
             {
                 throw new RetryException("当前不在地图界面");
             }
-        }, TimeSpan.FromMilliseconds(500), 10);
+        }, TimeSpan.FromMilliseconds(500), 5);
 
         if (rect == Rect.Empty)
         {
@@ -272,10 +309,16 @@ public class TpTask(CancellationTokenSource cts)
         }
 
         // 识别当前位置
-        var bigMapCenterPoint = GetPositionFromBigMap();
-        Logger.LogInformation("识别当前位置：{Pos}", bigMapCenterPoint);
+        var minDistance = double.MaxValue;
+        var bigMapCenterPointNullable = GetPositionFromBigMapNullable();
 
-        var minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
+        if (bigMapCenterPointNullable != null)
+        {
+            var bigMapCenterPoint = bigMapCenterPointNullable.Value;
+            Logger.LogInformation("识别当前大地图位置：{Pos}", bigMapCenterPoint);
+            minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
+        }
+
         var minCountry = "当前位置";
         foreach (var (country, position) in MapAssets.Instance.CountryPositions)
         {

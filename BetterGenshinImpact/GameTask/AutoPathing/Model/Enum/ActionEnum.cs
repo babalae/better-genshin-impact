@@ -5,6 +5,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 public class ActionEnum(string code, string msg)
 {
     public static readonly ActionEnum StopFlying = new("stop_flying", "下落攻击");
+    public static readonly ActionEnum ForceTp = new("force_tp", "当前点传送");
+
     // 还有要加入的其他动作
     // 滚轮F
     // 触发自动战斗任务

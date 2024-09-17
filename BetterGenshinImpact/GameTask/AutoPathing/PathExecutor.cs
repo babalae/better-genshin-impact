@@ -99,7 +99,8 @@ public class PathExecutor(CancellationTokenSource cts)
 
     private async Task HandleTeleportWaypoint(Waypoint waypoint)
     {
-        var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y);
+        var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
+        var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y, forceTp);
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
     }

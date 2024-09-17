@@ -70,4 +70,16 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
 
         Process.Start("explorer.exe", path);
     }
+
+    [RelayCommand]
+    public void OnGoToLogFolder()
+    {
+        var path = Global.Absolute(@"log");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
+    }
 }

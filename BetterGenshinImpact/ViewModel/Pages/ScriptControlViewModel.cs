@@ -234,7 +234,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     if (grandChild is CheckBox checkBox && checkBox.IsChecked == true)
                     {
                         var fileInfo = (FileInfo)checkBox.Tag;
-                        SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName));
+                        SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
                     }
                 }
             }

@@ -157,8 +157,11 @@ public class MapPuzzle
             Debug.WriteLine("");
         }
 
+        // 地图图片块
+        SaveImagesAs1024X1024(arr, imageLocations, @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\地图块", minRow, minCol);
+
         // 保存大图
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_50_2048.png", largeImage);
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_50_2048.png", largeImage);
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
@@ -167,6 +170,36 @@ public class MapPuzzle
         foreach (var img in imageLocations.Values)
         {
             img.Img.Dispose();
+        }
+    }
+
+    public static void SaveImagesAs1024X1024(int[,] arr, Dictionary<(int row, int col), ImgInfo> imageLocations, string outputFolder, int minRow, int minCol)
+    {
+        if (!Directory.Exists(outputFolder))
+        {
+            Directory.CreateDirectory(outputFolder);
+        }
+
+        for (int row = 0; row < arr.GetLength(0); row++)
+        {
+            for (int col = 0; col < arr.GetLength(1); col++)
+            {
+                if (arr[row, col] == 1)
+                {
+                    var key = (row + minRow, col + minCol);
+                    if (imageLocations.TryGetValue(key, out var imgInfo))
+                    {
+                        var img = imgInfo.Img;
+                        if (img.Width != 1204 || img.Height != 1204)
+                        {
+                            img = imgInfo.Img.Resize(new Size(1024, 1024), 0, 0, InterpolationFlags.Nearest);
+                        }
+                        var outputPath = Path.Combine(outputFolder, $"{row}_{col}.png");
+                        Cv2.ImWrite(outputPath, img);
+                        img.Dispose();
+                    }
+                }
+            }
         }
     }
 

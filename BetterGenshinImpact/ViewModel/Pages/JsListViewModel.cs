@@ -14,6 +14,7 @@ using BetterGenshinImpact.Core.Script.Group;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -81,11 +82,7 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     [RelayCommand]
     public void OnOpenScriptProjectFolder(ScriptProject? item)
     {
-        if (item == null)
-        {
-            return;
-        }
-        Process.Start("explorer.exe", item.ProjectPath);
+        Process.Start("explorer.exe", item == null ? scriptPath : item.ProjectPath);
     }
 
     [RelayCommand]
@@ -96,5 +93,11 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
             return;
         }
         await _scriptService.RunMulti([new ScriptGroupProject(item)]);
+    }
+
+    [RelayCommand]
+    public void OnRefresh(ScriptProject? item)
+    {
+        InitScriptListViewData();
     }
 }
