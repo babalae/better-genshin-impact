@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -342,20 +343,26 @@ public class AutoDomainTask
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
         // TODO 自动吃药
-        var autoEatTrigger = new AutoEat.AutoEatTrigger();
-        var autoEatTask = new Task(() => {
-            while (!cts.Token.IsCancellationRequested)
+        if (GameTaskManager.TriggerDictionary != null && GameTaskManager.TriggerDictionary.TryGetValue("autoEat", out var trigger))
+        {
+            var autoEatTrigger = trigger as AutoEatTrigger;
+            if (autoEatTrigger != null && autoEatTrigger.IsEnabled == true)
             {
-                autoEatTrigger.start();
-                // 适当的延迟，防止高 CPU 占用
-                Task.Delay(1000).Wait();
+                var autoEatTask = new Task(() =>
+                {
+                    while (!cts.Token.IsCancellationRequested)
+                    {
+                        autoEatTrigger.start();
+                        // 适当的延迟，防止高 CPU 占用
+                        Task.Delay(autoEatTrigger.IntervalMs).Wait();
+                    }
+                });
+                autoEatTask.Start();
             }
-        });
+        }
         combatTask.Start();
         domainEndTask.Start();
-        autoEatTask.Start();
-        
-        return Task.WhenAll(combatTask, domainEndTask, autoEatTask);
+        return Task.WhenAll(combatTask, domainEndTask);
     }
 
     private void EndFightWait()

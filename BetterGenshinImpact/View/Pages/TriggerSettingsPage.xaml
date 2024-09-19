@@ -804,7 +804,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        血红时自动吃药(不用时请关闭)
+                        血红时自动吃药。开启后自动秘境中也会生效。(使用时请保证z键带的是回血药，且数量足够)
                     </ui:TextBlock>
                     <ui:ToggleSwitch 
                         Grid.Row="0"
