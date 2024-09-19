@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -56,6 +57,8 @@ public class PathExecutor(CancellationTokenSource cts)
                     if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
                     {
                         await MoveCloseTo(waypoint);
+                        // 到达点位后执行 action
+                        await AfterMoveToTarget(waypoint);
                     }
                 }
             }
@@ -151,13 +154,13 @@ public class PathExecutor(CancellationTokenSource cts)
                     {
                         Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
                         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-                        await Delay(500, cts);
+                        await Delay(1500, cts);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
                         await Delay(500, cts);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
-                        await Delay(500, cts);
+                        await Delay(1500, cts);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_A);
-                        await Delay(500, cts);
+                        await Delay(1500, cts);
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_D);
                         await Delay(500, cts);
                         return;
@@ -303,6 +306,16 @@ public class PathExecutor(CancellationTokenSource cts)
             }
             await Delay(50, cts);
             count++;
+        }
+    }
+
+    private async Task AfterMoveToTarget(Waypoint waypoint)
+    {
+        if (waypoint.Action == ActionEnum.NahidaCollect.Code
+            || waypoint.Action == ActionEnum.PickAround.Code)
+        {
+            var handler = ActionFactory.GetHandler(waypoint.Action);
+            await handler.RunAsync(cts);
         }
     }
 }
