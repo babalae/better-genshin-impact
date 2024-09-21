@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -26,6 +25,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -338,31 +338,14 @@ public class AutoDomainTask
             }
         }, cts.Token);
 
-        // 视角操作
-
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
-        // TODO 自动吃药
-        if (GameTaskManager.TriggerDictionary != null && GameTaskManager.TriggerDictionary.TryGetValue("autoEat", out var trigger))
-        {
-            var autoEatTrigger = trigger as AutoEatTrigger;
-            if (autoEatTrigger != null && autoEatTrigger.IsEnabled == true)
-            {
-                var autoEatTask = new Task(() =>
-                {
-                    while (!cts.Token.IsCancellationRequested)
-                    {
-                        autoEatTrigger.start();
-                        // 适当的延迟，防止高 CPU 占用
-                        Task.Delay(autoEatTrigger.IntervalMs).Wait();
-                    }
-                });
-                autoEatTask.Start();
-            }
-        }
+        // 自动吃药
+        var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts);
         combatTask.Start();
         domainEndTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask);
+        autoEatRecoveryHpTask.Start();
+        return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
     }
 
     private void EndFightWait()
@@ -385,19 +368,25 @@ public class AutoDomainTask
     /// </summary>
     private Task DomainEndDetectionTask(CancellationTokenSource cts)
     {
-        return new Task(() =>
+        return new Task(async () =>
         {
-            while (!_taskParam.Cts.Token.IsCancellationRequested)
+            try
             {
-                if (IsDomainEnd())
+                while (!_taskParam.Cts.Token.IsCancellationRequested)
                 {
-                    cts.Cancel();
-                    break;
-                }
+                    if (IsDomainEnd())
+                    {
+                        await cts.CancelAsync();
+                        break;
+                    }
 
-                Sleep(1000);
+                    await Delay(1000, cts);
+                }
             }
-        });
+            catch
+            {
+            }
+        }, cts.Token);
     }
 
     private bool IsDomainEnd()
@@ -421,6 +410,48 @@ public class AutoDomainTask
         }
 
         return false;
+    }
+
+    private Task AutoEatRecoveryHpTask(CancellationTokenSource cts)
+    {
+        return new Task(async () =>
+        {
+            if (!_config.AutoEat)
+            {
+                return;
+            }
+
+            try
+            {
+                while (!_taskParam.Cts.Token.IsCancellationRequested)
+                {
+                    if (IsLowHealth())
+                    {
+                        // 模拟按键 "Z"
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Z);
+                        Logger.LogInformation("检测到红血，按Z吃药");
+                        // TODO 吃饱了会一直吃
+                    }
+
+                    await Delay(500, cts);
+                }
+            }
+            catch
+            {
+            }
+        }, cts.Token);
+    }
+
+    private bool IsLowHealth()
+    {
+        // 获取图像
+        using var ra = CaptureToRectArea();
+
+        // 获取 (808, 1010) 位置的像素颜色
+        var pixelColor = ra.SrcMat.At<Vec3b>(1010, 808);
+
+        // 判断颜色是否是 (255, 90, 90)
+        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
     }
 
     /// <summary>

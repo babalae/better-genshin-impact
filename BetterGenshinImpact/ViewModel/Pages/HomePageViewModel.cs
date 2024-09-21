@@ -79,7 +79,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
             {
                 if (_taskDispatcherEnabled)
                 {
-                    // OnStopTrigger();
+                    OnStopTrigger();
                 }
                 else
                 {
