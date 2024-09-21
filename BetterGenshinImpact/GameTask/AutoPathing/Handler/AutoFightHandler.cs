@@ -21,30 +21,32 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 internal class AutoFightHandler : IActionHandler
 {
     private readonly CombatScriptBag _combatScriptBag;
-    
+
     // 780,50  778,50
 
     public AutoFightHandler()
     {
         _combatScriptBag = CombatScriptParser.ReadAndParse(Global.Absolute(@"User\AutoFight\"));
     }
-    public Task RunAsync(CancellationTokenSource cts)
+
+    public async Task RunAsync(CancellationTokenSource cts)
     {
-        return StartFight(cts);
+        await StartFight(cts);
     }
-    private Task StartFight(CancellationTokenSource _cts)
+
+    private Task StartFight(CancellationTokenSource cts)
     {
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
-        CancellationTokenSource cts = new();
-        _cts.Token.Register(cts.Cancel);
-        combatScenes.BeforeTask(cts);
+        CancellationTokenSource cts2 = new();
+        cts.Token.Register(cts2.Cancel);
+        combatScenes.BeforeTask(cts2);
         // 战斗操作
         var combatTask = new Task(() =>
         {
             try
             {
-                while (!cts.Token.IsCancellationRequested)
+                while (!cts2.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
                     foreach (var command in combatCommands)
@@ -66,23 +68,23 @@ internal class AutoFightHandler : IActionHandler
             {
                 Logger.LogInformation("自动战斗线程结束");
             }
-        }, cts.Token);
+        }, cts2.Token);
 
         // 视角操作
 
         // 战斗结束检测
-        var domainEndTask = new Task(() => {
-            // TODO 
-            while (!_cts.Token.IsCancellationRequested)
+        var domainEndTask = new Task(() =>
+        {
+            // TODO
+            while (!cts.Token.IsCancellationRequested)
             {
                 if (checkFightFinish())
                 {
-                    cts.Cancel();
+                    cts2.Cancel();
                     break;
                 }
                 Sleep(500);
             }
-
         });
         combatTask.Start();
         domainEndTask.Start();
@@ -107,10 +109,7 @@ internal class AutoFightHandler : IActionHandler
         if (pixelColor.R == 255 && pixelColor.G == 90 && pixelColor.B == 90)
         {
             return true;
-        }   
+        }
         return false;
     }
-
-
-
 }
