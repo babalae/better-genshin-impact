@@ -312,7 +312,8 @@ public class PathExecutor(CancellationTokenSource cts)
     private async Task AfterMoveToTarget(Waypoint waypoint)
     {
         if (waypoint.Action == ActionEnum.NahidaCollect.Code
-            || waypoint.Action == ActionEnum.PickAround.Code)
+            || waypoint.Action == ActionEnum.PickAround.Code
+            || waypoint.Action == ActionEnum.Fight.Code)
         {
             var handler = ActionFactory.GetHandler(waypoint.Action);
             await handler.RunAsync(cts);
