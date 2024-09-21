@@ -26,6 +26,7 @@ using BetterGenshinImpact.GameTask.Model.Enum;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -467,7 +468,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    // pathRecorder.OpenEditorInWebView();
+                    NahidaCollectHandler handler = new NahidaCollectHandler();
+                    handler.RunAsync(new CancellationTokenSource());
                 }
             ));
             HotKeySettingModels.Add(new HotKeySettingModel(
