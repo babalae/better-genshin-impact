@@ -1,7 +1,5 @@
-﻿using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
+﻿using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -14,7 +12,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
-public class AutoMusicGameTask(AutoMusicGameParam taskParam)
+public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 {
     private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     {
@@ -30,57 +28,28 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam)
 
     private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
 
-    public async void Start()
+    public Task Start()
     {
-        var hasLock = false;
-        try
+        var cts = CancellationContext.Instance.Cts;
+
+        Init();
+
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var taskFactory = new TaskFactory();
+        var taskList = new List<Task>();
+
+        // 计算按键位置
+        var gameCaptureRegion = CaptureToRectArea();
+
+        foreach (var keyValuePair in _keyX)
         {
-            hasLock = await TaskSemaphore.WaitAsync(0);
-            if (!hasLock)
-            {
-                Logger.LogError("启动自动战斗功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-                return;
-            }
-
-            Init();
-
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-            var taskFactory = new TaskFactory();
-            var taskList = new List<Task>();
-
-            // 计算按键位置
-            var gameCaptureRegion = CaptureToRectArea();
-
-            foreach (var keyValuePair in _keyX)
-            {
-                var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
-                // 添加任务
-                taskList.Add(taskFactory.StartNew(() => DoWhitePressWin32(taskParam.Cts, keyValuePair.Key, new Point(x, y))));
-            }
-
-            Task.WaitAll([.. taskList]);
+            var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
+            // 添加任务
+            taskList.Add(taskFactory.StartNew(() => DoWhitePressWin32(cts, keyValuePair.Key, new Point(x, y))));
         }
-        catch (NormalEndException)
-        {
-            Logger.LogInformation("手动中断自动活动音游");
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e.Message);
-            Logger.LogDebug(e.StackTrace);
-        }
-        finally
-        {
-            VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().StartTimer();
-            TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
-            Logger.LogInformation("→ {Text}", "自动活动音游结束");
 
-            if (hasLock)
-            {
-                TaskSemaphore.Release();
-            }
-        }
+        Task.WaitAll([.. taskList]);
+        return Task.CompletedTask;
     }
 
     private void DoWhitePressWin32(CancellationTokenSource cts, User32.VK key, Point point)
@@ -129,10 +98,6 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam)
     private void Init()
     {
         LogScreenResolution();
-        Logger.LogInformation("→ {Text}", "活动音游，启动！");
-        SystemControl.ActivateWindow();
-        TaskTriggerDispatcher.Instance().StopTimer();
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, taskParam.Cts); // 等待缓存图像
     }
 
     private void LogScreenResolution()

@@ -19,68 +19,41 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
-    <!--<Grid Margin="42,16,42,12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <ui:TextBlock
-            Grid.Row="0"
-            Margin="0,0,0,10"
-            FontTypography="BodyStrong"
-            Text="独立自动化任务设置与启动" />
-        <Grid Grid.Row="1">
-            <ui:Button
-                Margin="0,0,8,0"
-                Width="120"
-                Height="32"
-                Content="启动当前任务"
-                Appearance="Primary"
-                Command="{Binding AddTaskCommand}" />
-        </Grid>
-        <TabControl Margin="0,8,0,0" Grid.Row="2">
-            <TabItem>
-                <TabItem.Header>
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,6,0" Symbol="PlayingCards20" />
-                        <TextBlock Text="自动七圣召唤" />
-                    </StackPanel>
-                </TabItem.Header>
-                <Grid>
-                    <TextBlock Margin="12" Text="World" />
-                </Grid>
-            </TabItem>
-            <TabItem IsSelected="True">
-                <TabItem.Header>
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,6,0" Symbol="StoreMicrosoft16" />
-                        <TextBlock Text="自动伐木" />
-                    </StackPanel>
-                </TabItem.Header>
-                <Grid>
-                    <TextBlock Margin="12" Text="Is a lie." />
-                </Grid>
-            </TabItem>
-            <TabItem IsSelected="True">
-                <TabItem.Header>
-                    <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,6,0" Symbol="StoreMicrosoft16" />
-                        <TextBlock Text="自动前进" />
-                    </StackPanel>
-                </TabItem.Header>
-                <Grid>
-                    <TextBlock Margin="12" Text="Is a lie." />
-                </Grid>
-            </TabItem>
-        </TabControl>
-    </Grid>-->
-
-
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="独立任务设置" />
+        <!--  停止任务  -->
+        <ui:CardControl Margin="0,0,0,12"
+                        Icon="{ui:SymbolIcon DismissCircle24}"
+                        Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                      Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="停止任务"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        停止下方独立任务的运行
+                    </ui:TextBlock>
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+                       Command="{Binding StopSoloTaskCommand}"
+                       Content="停止任务"
+                       Icon="{ui:SymbolIcon Dismiss24}" />
+        </ui:CardControl>
+
+
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf6d2;" Style="{StaticResource FaFontIconStyle}" />

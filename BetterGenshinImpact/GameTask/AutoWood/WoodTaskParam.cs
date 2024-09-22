@@ -8,7 +8,7 @@ public class WoodTaskParam : BaseTaskParam
     public int WoodRoundNum { get; set; }
     public int WoodDailyMaxCount { get; set; }
 
-    public WoodTaskParam(CancellationTokenSource cts, int woodRoundNum, int woodDailyMaxCount) : base(cts)
+    public WoodTaskParam(int woodRoundNum, int woodDailyMaxCount)
     {
         WoodRoundNum = woodRoundNum;
         if (woodRoundNum == 0)

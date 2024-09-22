@@ -3,4 +3,4 @@ using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
-public class AutoMusicGameParam(CancellationTokenSource cts) : BaseTaskParam(cts);
+public class AutoMusicGameParam : BaseTaskParam;

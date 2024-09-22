@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Recorder;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -97,6 +98,11 @@ public class TaskRunner
     public async Task RunThreadAsync(Func<Task> action)
     {
         await Task.Run(() => RunAsync(action));
+    }
+
+    public async Task RunSoloTaskAsync(ISoloTask soloTask)
+    {
+        await Task.Run(() => RunAsync(async () => await soloTask.Start()));
     }
 
     public void Init()
