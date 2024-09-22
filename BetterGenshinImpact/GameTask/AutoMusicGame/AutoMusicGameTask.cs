@@ -28,10 +28,8 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
 
-    public Task Start()
+    public Task Start(CancellationTokenSource cts)
     {
-        var cts = CancellationContext.Instance.Cts;
-
         Init();
 
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;

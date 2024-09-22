@@ -53,10 +53,10 @@ public partial class AutoWoodTask : ISoloTask
         _printer = new WoodStatisticsPrinter(_assets);
     }
 
-    public Task Start()
+    public Task Start(CancellationTokenSource cts)
     {
         var runTimeWatch = new Stopwatch();
-        _cts = CancellationContext.Instance.Cts;
+        _cts = cts;
         _printer.Cts = _cts;
 
         try

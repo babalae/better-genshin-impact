@@ -24,9 +24,9 @@ public class AutoFightTask : ISoloTask
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
-    public Task Start()
+    public Task Start(CancellationTokenSource cts)
     {
-        _cts = CancellationContext.Instance.Cts;
+        _cts = cts;
 
         LogScreenResolution();
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());

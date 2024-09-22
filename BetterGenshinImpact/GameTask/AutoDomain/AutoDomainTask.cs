@@ -60,9 +60,9 @@ public class AutoDomainTask : ISoloTask
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
-    public async Task Start()
+    public async Task Start(CancellationTokenSource cts)
     {
-        _cts = CancellationContext.Instance.Cts;
+        _cts = cts;
 
         AutoFightAssets.DestroyInstance();
         Init();

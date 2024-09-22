@@ -54,14 +54,14 @@ public class Duel
 
     private int _keqingECount = 0;
 
-    public async Task RunAsync(GeniusInvokationTaskParam taskParam)
+    public async Task RunAsync(CancellationTokenSource cts)
     {
-        await Task.Run(() => { Run(taskParam); });
+        await Task.Run(() => { Run(cts); });
     }
 
-    public void Run(GeniusInvokationTaskParam taskParam)
+    public void Run(CancellationTokenSource cts)
     {
-        Cts = CancellationContext.Instance.Cts; ;
+        Cts = cts;
         try
         {
             AutoGeniusInvokationAssets.DestroyInstance();
