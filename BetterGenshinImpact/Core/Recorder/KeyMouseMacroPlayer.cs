@@ -51,6 +51,11 @@ public class KeyMouseMacroPlayer
         var startTime = DateTime.UtcNow;
         foreach (var e in macroEvents)
         {
+            if (ct.IsCancellationRequested)
+            {
+                return;
+            }
+
             var timeToWait = (int)(e.Time - (DateTime.UtcNow - startTime).TotalMilliseconds);
             if (timeToWait < 0)
             {

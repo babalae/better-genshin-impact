@@ -1,15 +1,15 @@
-﻿using BetterGenshinImpact.Helpers.Extensions;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
-public class AutoGeniusInvokationTask
+public class AutoGeniusInvokationTask(GeniusInvokationTaskParam taskParam) : ISoloTask
 {
-    public static void Start(GeniusInvokationTaskParam taskParam)
+    public Task Start(CancellationTokenSource cts)
     {
-        TaskTriggerDispatcher.Instance().StopTimer();
         // 读取策略信息
         var duel = ScriptParser.Parse(taskParam.StrategyContent);
-        SystemControl.ActivateWindow();
-        duel.RunAsync(taskParam).SafeForget();
+        duel.Run(cts);
+        return Task.CompletedTask;
     }
 }

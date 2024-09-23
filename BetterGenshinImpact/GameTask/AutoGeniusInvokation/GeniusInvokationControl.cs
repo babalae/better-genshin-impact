@@ -67,9 +67,9 @@ public class GeniusInvokationControl
 
     // private IGameCapture? _gameCapture;
 
-    public void Init(GeniusInvokationTaskParam taskParam)
+    public void Init(CancellationTokenSource cts)
     {
-        _cts = taskParam.Cts;
+        _cts = cts;
         // _gameCapture = taskParam.Dispatcher.GameCapture;
     }
 

@@ -1,7 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -103,11 +102,6 @@ public partial class AllConfig : ObservableObject
     public AutoCookConfig AutoCookConfig { get; set; } = new();
 
     /// <summary>
-    ///     自动吃药配置
-    /// </summary>
-    public AutoEatConfig AutoEatConfig{ get; set; } = new();
-
-    /// <summary>
     ///     自动打牌配置
     /// </summary>
     public AutoGeniusInvokationConfig AutoGeniusInvokationConfig { get; set; } = new();
@@ -166,7 +160,6 @@ public partial class AllConfig : ObservableObject
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
