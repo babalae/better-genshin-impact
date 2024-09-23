@@ -391,7 +391,7 @@ public class AutoDomainTask : ISoloTask
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    if (IsLowHealth())
+                    if (IsLowHealth() && IsTakeFood())
                     {
                         // 模拟按键 "Z"
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Z);
@@ -418,6 +418,16 @@ public class AutoDomainTask : ISoloTask
 
         // 判断颜色是否是 (255, 90, 90)
         return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+    }
+
+    private bool IsTakeFood()
+    {
+        // 获取图像
+        using var ra = CaptureToRectArea();
+        // 识别道具图标下是否是数字
+        var countArea = ra.DeriveCrop(1800, 845, 40, 20);
+        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+        return StringUtils.TryParseInt(count) != 0;
     }
 
     /// <summary>
