@@ -430,7 +430,8 @@ public class AutoDomainTask : ISoloTask
         // 获取图像
         using var ra = CaptureToRectArea();
         // 识别道具图标下是否是数字
-        var countArea = ra.DeriveCrop(1800, 845, 40, 20);
+        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        var countArea = ra.DeriveCrop(1800 * s, 845 * s, 40 * s, 20 * s);
         var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
         return int.TryParse(count, out _);
     }

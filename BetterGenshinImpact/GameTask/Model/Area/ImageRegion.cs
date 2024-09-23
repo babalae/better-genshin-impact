@@ -99,6 +99,15 @@ public class ImageRegion : Region
         return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(x, y));
     }
 
+    public ImageRegion DeriveCrop(double dx, double dy, double dw, double dh)
+    {
+        var x = (int)Math.Round(dx);
+        var y = (int)Math.Round(dy);
+        var w = (int)Math.Round(dw);
+        var h = (int)Math.Round(dh);
+        return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(x, y));
+    }
+
     public ImageRegion DeriveCrop(Rect rect)
     {
         return DeriveCrop(rect.X, rect.Y, rect.Width, rect.Height);
