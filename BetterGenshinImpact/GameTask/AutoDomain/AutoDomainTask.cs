@@ -386,12 +386,17 @@ public class AutoDomainTask : ISoloTask
             {
                 return;
             }
+            if (!IsTakeFood())
+            {
+                Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
+                return;
+            }
 
             try
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    if (IsLowHealth() && IsTakeFood())
+                    if (IsLowHealth())
                     {
                         // 模拟按键 "Z"
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Z);
@@ -427,7 +432,7 @@ public class AutoDomainTask : ISoloTask
         // 识别道具图标下是否是数字
         var countArea = ra.DeriveCrop(1800, 845, 40, 20);
         var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
-        return StringUtils.TryParseInt(count) != 0;
+        return int.TryParse(count, out _);
     }
 
     /// <summary>
