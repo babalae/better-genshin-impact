@@ -26,6 +26,8 @@ using BetterGenshinImpact.GameTask.Model.Enum;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler;
+using CommunityToolkit.Mvvm.Input;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -279,7 +281,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoGeniusInvokationHotkey),
             Config.HotKeyConfig.AutoGeniusInvokationHotkey,
             Config.HotKeyConfig.AutoGeniusInvokationHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoGeniusInvokation(); }
+            (_, _) =>
+            {
+                SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoGeniusInvokationCommand);
+            }
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -287,7 +292,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoWoodHotkey),
             Config.HotKeyConfig.AutoWoodHotkey,
             Config.HotKeyConfig.AutoWoodHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoWood(); }
+            (_, _) =>
+            {
+                SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoWoodCommand);
+            }
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -295,7 +303,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoFightHotkey),
             Config.HotKeyConfig.AutoFightHotkey,
             Config.HotKeyConfig.AutoFightHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoFight(); }
+            (_, _) =>
+            {
+                SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoFightCommand);
+            }
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -303,7 +314,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoDomainHotkey),
             Config.HotKeyConfig.AutoDomainHotkey,
             Config.HotKeyConfig.AutoDomainHotkeyType,
-            (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoDomain(); }
+            (_, _) =>
+            {
+                SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoDomainCommand);
+            }
         ));
 
         HotKeySettingModels.Add(new HotKeySettingModel(
@@ -435,31 +449,40 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
                 Config.HotKeyConfig.AutoMusicGameHotkey,
                 Config.HotKeyConfig.AutoMusicGameHotkeyType,
-                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoMusicGame(); }
-            ));
-            HotKeySettingModels.Add(new HotKeySettingModel(
-                "（测试）启动/停止自动追踪",
-                nameof(Config.HotKeyConfig.AutoTrackHotkey),
-                Config.HotKeyConfig.AutoTrackHotkey,
-                Config.HotKeyConfig.AutoTrackHotkeyType,
-                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrack(); }
-            ));
-            HotKeySettingModels.Add(new HotKeySettingModel(
-                "（测试）地图路线录制",
-                nameof(Config.HotKeyConfig.MapPosRecordHotkey),
-                Config.HotKeyConfig.MapPosRecordHotkey,
-                Config.HotKeyConfig.MapPosRecordHotkeyType,
                 (_, _) =>
                 {
-                    PathPointRecorder.Instance.Switch();
-                }));
-            HotKeySettingModels.Add(new HotKeySettingModel(
-                "（测试）自动寻路",
-                nameof(Config.HotKeyConfig.AutoTrackPathHotkey),
-                Config.HotKeyConfig.AutoTrackPathHotkey,
-                Config.HotKeyConfig.AutoTrackPathHotkeyType,
-                (_, _) => { _taskSettingsPageViewModel.OnSwitchAutoTrackPath(); }
+                    SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand);
+                }
             ));
+            // HotKeySettingModels.Add(new HotKeySettingModel(
+            //     "（测试）启动/停止自动追踪",
+            //     nameof(Config.HotKeyConfig.AutoTrackHotkey),
+            //     Config.HotKeyConfig.AutoTrackHotkey,
+            //     Config.HotKeyConfig.AutoTrackHotkeyType,
+            //     (_, _) =>
+            //     {
+            //         // _taskSettingsPageViewModel.OnSwitchAutoTrack();
+            //     }
+            // ));
+            // HotKeySettingModels.Add(new HotKeySettingModel(
+            //     "（测试）地图路线录制",
+            //     nameof(Config.HotKeyConfig.MapPosRecordHotkey),
+            //     Config.HotKeyConfig.MapPosRecordHotkey,
+            //     Config.HotKeyConfig.MapPosRecordHotkeyType,
+            //     (_, _) =>
+            //     {
+            //         PathPointRecorder.Instance.Switch();
+            //     }));
+            // HotKeySettingModels.Add(new HotKeySettingModel(
+            //     "（测试）自动寻路",
+            //     nameof(Config.HotKeyConfig.AutoTrackPathHotkey),
+            //     Config.HotKeyConfig.AutoTrackPathHotkey,
+            //     Config.HotKeyConfig.AutoTrackPathHotkeyType,
+            //     (_, _) =>
+            //     {
+            //         // _taskSettingsPageViewModel.OnSwitchAutoTrackPath();
+            //     }
+            // ));
             HotKeySettingModels.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -467,7 +490,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    // pathRecorder.OpenEditorInWebView();
+                    NahidaCollectHandler handler = new NahidaCollectHandler();
+                    handler.RunAsync(new CancellationTokenSource());
                 }
             ));
             HotKeySettingModels.Add(new HotKeySettingModel(
@@ -496,6 +520,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // }
                 }
             ));
+        }
+    }
+
+    private void SwitchSoloTask(IAsyncRelayCommand asyncRelayCommand)
+    {
+        if (asyncRelayCommand.IsRunning)
+        {
+            CancellationContext.Instance.Cancel();
+        }
+        else
+        {
+            asyncRelayCommand.Execute(null);
         }
     }
 

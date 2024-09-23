@@ -1,7 +1,7 @@
 ﻿namespace BetterGenshinImpact.Core.Script.Dependence.Model;
 
 /// <summary>
-/// 实时任务计时器
+/// 实时任务触发器
 /// </summary>
 public class RealtimeTimer
 {

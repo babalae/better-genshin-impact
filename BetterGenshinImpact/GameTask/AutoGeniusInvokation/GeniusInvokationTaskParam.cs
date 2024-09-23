@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
-public class GeniusInvokationTaskParam(CancellationTokenSource cts, string strategyContent) : BaseTaskParam(cts)
+public class GeniusInvokationTaskParam(string strategyContent) : BaseTaskParam
 {
     public string StrategyContent { get; set; } = strategyContent;
 }
