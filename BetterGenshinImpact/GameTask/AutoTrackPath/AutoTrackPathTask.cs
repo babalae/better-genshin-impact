@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
@@ -44,6 +45,8 @@ public class AutoTrackPathTask
     // 视角偏移移动单位
     private const int CharMovingUnit = 500;
 
+    private CancellationTokenSource? _cts;
+
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
         _taskParam = taskParam;
@@ -64,6 +67,8 @@ public class AutoTrackPathTask
                 return;
             }
 
+            _cts = CancellationContext.Instance.Cts;
+
             Init();
 
             // Tp(_tpPositions[260].X, _tpPositions[260].Y);
@@ -83,7 +88,6 @@ public class AutoTrackPathTask
         {
             VisionContext.Instance().DrawContent.ClearAll();
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
-            TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动路线结束");
 
             if (hasLock)
@@ -98,19 +102,19 @@ public class AutoTrackPathTask
         SystemControl.ActivateWindow();
         Logger.LogInformation("→ {Text}", "自动路线，启动！");
         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _taskParam.Cts); // 等待缓存图像
+        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _cts); // 等待缓存图像
     }
 
     public void Stop()
     {
-        _taskParam.Cts.Cancel();
+        _cts.Cancel();
     }
 
     public async Task DoTask()
     {
         // 1. 传送到最近的传送点
         var first = _way.WayPointList[0]; // 解析路线，第一个点为起点
-        await new TpTask(_taskParam.Cts).Tp(first.Pt.X, first.Pt.Y);
+        await new TpTask(_cts).Tp(first.Pt.X, first.Pt.Y);
 
         // 2. 等待传送完成
         Sleep(1000);
@@ -132,7 +136,7 @@ public class AutoTrackPathTask
         // 4. 针对点位进行直线追踪
 
         var trackCts = new CancellationTokenSource();
-        _taskParam.Cts.Token.Register(trackCts.Cancel);
+        _cts.Token.Register(trackCts.Cancel);
         var trackTask = Track(_way.WayPointList, angleOffset, trackCts);
         trackTask.Start();
         var refreshStatusTask = RefreshStatus(trackCts);
@@ -148,7 +152,7 @@ public class AutoTrackPathTask
     {
         return new Task(() =>
         {
-            while (!_taskParam.Cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
+            while (!_cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
             {
                 if (_motionStatus == MotionStatus.Normal)
                 {
@@ -178,7 +182,7 @@ public class AutoTrackPathTask
     {
         return new Task(() =>
         {
-            while (!_taskParam.Cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
+            while (!_cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
             {
                 using var ra = CaptureToRectArea();
                 _motionStatus = Bv.GetMotionStatus(ra);
@@ -206,7 +210,7 @@ public class AutoTrackPathTask
         return new Task(() =>
         {
             var currIndex = 0;
-            while (!_taskParam.Cts.IsCancellationRequested)
+            while (!_cts.IsCancellationRequested)
             {
                 var ra = CaptureToRectArea();
                 var miniMapMat = GetMiniMapMat(ra) ?? throw new InvalidOperationException("当前不在主界面");

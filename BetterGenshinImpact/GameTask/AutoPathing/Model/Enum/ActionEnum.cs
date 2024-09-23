@@ -5,6 +5,10 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 public class ActionEnum(string code, string msg)
 {
     public static readonly ActionEnum StopFlying = new("stop_flying", "下落攻击");
+    public static readonly ActionEnum ForceTp = new("force_tp", "当前点传送");
+    public static readonly ActionEnum NahidaCollect = new("nahida_collect", "纳西妲长按E收集");
+    public static readonly ActionEnum PickAround = new("pick_around", "尝试在周围拾取");
+
     // 还有要加入的其他动作
     // 滚轮F
     // 触发自动战斗任务

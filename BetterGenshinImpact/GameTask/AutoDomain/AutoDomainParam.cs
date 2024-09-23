@@ -9,7 +9,7 @@ public class AutoDomainParam : BaseTaskParam
 
     public string CombatStrategyPath { get; set; }
 
-    public AutoDomainParam(CancellationTokenSource cts, int domainRoundNum, string path) : base(cts)
+    public AutoDomainParam(int domainRoundNum, string path)
     {
         DomainRoundNum = domainRoundNum;
         if (domainRoundNum == 0)

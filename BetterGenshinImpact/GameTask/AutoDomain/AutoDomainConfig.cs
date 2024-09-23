@@ -6,7 +6,6 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 [Serializable]
 public partial class AutoDomainConfig : ObservableObject
 {
-
     /// <summary>
     /// 战斗结束后延迟几秒再开始寻找石化古树，秒
     /// </summary>
@@ -26,4 +25,10 @@ public partial class AutoDomainConfig : ObservableObject
     /// 寻找古树时，短距离移动的次数
     /// </summary>
     [ObservableProperty] private int _leftRightMoveTimes = 3;
+
+    /// <summary>
+    /// 自动吃药
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoEat = false;
 }

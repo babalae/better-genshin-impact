@@ -125,6 +125,12 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     }
 
     [RelayCommand]
+    public void OnOpenMapEditor()
+    {
+        PathRecorder.Instance.OpenEditorInWebView();
+    }
+
+    [RelayCommand]
     public void OnGoToPathingUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/pathing.html") { UseShellExecute = true });

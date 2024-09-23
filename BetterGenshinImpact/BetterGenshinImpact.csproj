@@ -10,7 +10,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
-		<AssemblyVersion>0.34.1</AssemblyVersion>
+		<AssemblyVersion>0.34.4</AssemblyVersion>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
 
@@ -21,6 +21,7 @@
 		<None Remove="Assets\Fonts\*.ttf" />
 		<None Remove="Assets\Highlighting\*.xshd" />
 		<None Remove="Assets\Strings\*.html" />
+		<None Remove="Assets\Audios\*.mp3" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -30,6 +31,7 @@
 		<Resource Include="Assets\Fonts\*.ttf" />
 		<Resource Include="Assets\Highlighting\*.xshd" />
 		<Resource Include="Assets\Strings\*.html" />
+		<Resource Include="Assets\Audios\*.mp3" />
 	</ItemGroup>
 
 	<ItemGroup>

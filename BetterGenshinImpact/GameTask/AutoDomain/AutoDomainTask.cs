@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -10,11 +11,9 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -25,12 +24,14 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using static Vanara.PInvoke.Gdi32;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainTask
+public class AutoDomainTask : ISoloTask
 {
     private readonly AutoDomainParam _taskParam;
 
@@ -41,6 +42,8 @@ public class AutoDomainTask
     private readonly AutoDomainConfig _config;
 
     private readonly CombatScriptBag _combatScriptBag;
+
+    private CancellationTokenSource? _cts;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -57,96 +60,64 @@ public class AutoDomainTask
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
-    public async void Start()
+    public async Task Start(CancellationTokenSource cts)
     {
-        var hasLock = false;
-        try
+        _cts = cts;
+
+        AutoFightAssets.DestroyInstance();
+        Init();
+        NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
+
+        var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+
+        // 前置进入秘境
+        EnterDomain();
+
+        for (var i = 0; i < _taskParam.DomainRoundNum; i++)
         {
-            AutoFightAssets.DestroyInstance();
-            hasLock = await TaskSemaphore.WaitAsync(0);
-            if (!hasLock)
+            // 0. 关闭秘境提示
+            Logger.LogDebug("0. 关闭秘境提示");
+            CloseDomainTip();
+
+            // 队伍没初始化成功则重试
+            RetryTeamInit(combatScenes);
+
+            // 0. 切换到第一个角色
+            var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
+
+            // 1. 走到钥匙处启动
+            Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+            await WalkToPressF();
+
+            // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
+            Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
+            await StartFight(combatScenes, combatCommands);
+            EndFightWait();
+
+            // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
+            Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
+            await FindPetrifiedTree();
+
+            // 4. 走到石化古树处
+            Logger.LogInformation("自动秘境：{Text}", "4. 走到石化古树处");
+            await WalkToPressF();
+
+            // 5. 快速领取奖励并判断是否有下一轮
+            Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
+            if (!GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
             {
-                Logger.LogError("启动自动秘境功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-                return;
-            }
-
-            Init();
-            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build());
-
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-
-            // 前置进入秘境
-            EnterDomain();
-
-            for (var i = 0; i < _taskParam.DomainRoundNum; i++)
-            {
-                // 0. 关闭秘境提示
-                Logger.LogDebug("0. 关闭秘境提示");
-                CloseDomainTip();
-
-                // 队伍没初始化成功则重试
-                RetryTeamInit(combatScenes);
-
-                // 0. 切换到第一个角色
-                var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
-
-                // 1. 走到钥匙处启动
-                Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
-                await WalkToPressF();
-
-                // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
-                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
-                await StartFight(combatScenes, combatCommands);
-                EndFightWait();
-
-                // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
-                Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
-                await FindPetrifiedTree();
-
-                // 4. 走到石化古树处
-                Logger.LogInformation("自动秘境：{Text}", "4. 走到石化古树处");
-                await WalkToPressF();
-
-                // 5. 快速领取奖励并判断是否有下一轮
-                Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-                if (!GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
+                if (i == _taskParam.DomainRoundNum - 1)
                 {
-                    if (i == _taskParam.DomainRoundNum - 1)
-                    {
-                        Logger.LogInformation("配置的{Cnt}轮秘境已经完成，结束自动秘境", _taskParam.DomainRoundNum);
-                    }
-                    else
-                    {
-                        Logger.LogInformation("体力已经耗尽，结束自动秘境");
-                    }
-                    NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
-                    break;
+                    Logger.LogInformation("配置的{Cnt}轮秘境已经完成，结束自动秘境", _taskParam.DomainRoundNum);
                 }
-                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
+                else
+                {
+                    Logger.LogInformation("体力已经耗尽，结束自动秘境");
+                }
+                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
+                break;
             }
-        }
-        catch (NormalEndException e)
-        {
-            Logger.LogInformation("自动秘境中断:" + e.Message);
-            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Cancelled().Build());
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e.Message);
-            Logger.LogDebug(e.StackTrace);
-            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Failure().Build());
-        }
-        finally
-        {
-            VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
-            TaskSettingsPageViewModel.SetSwitchAutoDomainButtonText(false);
-            Logger.LogInformation("→ {Text}", "自动秘境结束");
-
-            if (hasLock)
-            {
-                TaskSemaphore.Release();
-            }
+            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
         }
     }
 
@@ -155,16 +126,12 @@ public class AutoDomainTask
         LogScreenResolution();
         if (_taskParam.DomainRoundNum == 9999)
         {
-            Logger.LogInformation("→ {Text} 用尽所有体力后结束", "自动秘境，启动！");
+            Logger.LogInformation("→ {Text} 用尽所有体力后结束", "自动秘境，");
         }
         else
         {
-            Logger.LogInformation("→ {Text} 设置总次数：{Cnt}", "自动秘境，启动！", _taskParam.DomainRoundNum);
+            Logger.LogInformation("→ {Text} 设置总次数：{Cnt}", "自动秘境，", _taskParam.DomainRoundNum);
         }
-
-        SystemControl.ActivateWindow();
-        TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _taskParam.Cts); // 等待缓存图像
     }
 
     private void LogScreenResolution()
@@ -202,7 +169,7 @@ public class AutoDomainTask
             Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
             Logger.LogInformation("自动秘境：{Text}", "进入秘境");
             // 秘境开门动画 5s
-            Sleep(5000, _taskParam.Cts);
+            Sleep(5000, _cts);
         }
 
         int retryTimes = 0, clickCount = 0;
@@ -216,11 +183,11 @@ public class AutoDomainTask
                 clickCount++;
             }
 
-            Sleep(1500, _taskParam.Cts);
+            Sleep(1500, _cts);
         }
 
         // 载入动画
-        Sleep(3000, _taskParam.Cts);
+        Sleep(3000, _cts);
     }
 
     private void CloseDomainTip()
@@ -233,16 +200,16 @@ public class AutoDomainTask
             using var cactRectArea = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
-                Sleep(1000, _taskParam.Cts);
+                Sleep(1000, _cts);
                 cactRectArea.Click();
                 break;
             }
 
             // todo 添加小地图角标位置检测 防止有人手点了
-            Sleep(1000, _taskParam.Cts);
+            Sleep(1000, _cts);
         }
 
-        Sleep(1500, _taskParam.Cts);
+        Sleep(1500, _cts);
     }
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
@@ -259,7 +226,7 @@ public class AutoDomainTask
     /// </summary>
     private async Task WalkToPressF()
     {
-        if (_taskParam.Cts.Token.IsCancellationRequested)
+        if (_cts.Token.IsCancellationRequested)
         {
             return;
         }
@@ -276,12 +243,12 @@ public class AutoDomainTask
 
             try
             {
-                while (!_taskParam.Cts.Token.IsCancellationRequested)
+                while (!_cts.Token.IsCancellationRequested)
                 {
                     using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
-                        Sleep(100, _taskParam.Cts);
+                        Sleep(100, _cts);
                     }
                     else
                     {
@@ -306,7 +273,7 @@ public class AutoDomainTask
     private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
     {
         CancellationTokenSource cts = new();
-        _taskParam.Cts.Token.Register(cts.Cancel);
+        _cts.Token.Register(cts.Cancel);
         combatScenes.BeforeTask(cts);
         // 战斗操作
         var combatTask = new Task(() =>
@@ -337,20 +304,19 @@ public class AutoDomainTask
             }
         }, cts.Token);
 
-        // 视角操作
-
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
-
+        // 自动吃药
+        var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts);
         combatTask.Start();
         domainEndTask.Start();
-
-        return Task.WhenAll(combatTask, domainEndTask);
+        autoEatRecoveryHpTask.Start();
+        return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
     }
 
     private void EndFightWait()
     {
-        if (_taskParam.Cts.Token.IsCancellationRequested)
+        if (_cts.Token.IsCancellationRequested)
         {
             return;
         }
@@ -359,7 +325,7 @@ public class AutoDomainTask
         if (s > 0)
         {
             Logger.LogInformation("战斗结束后等待 {Second} 秒", s);
-            Sleep((int)(s * 1000), _taskParam.Cts);
+            Sleep((int)(s * 1000), _cts);
         }
     }
 
@@ -368,19 +334,25 @@ public class AutoDomainTask
     /// </summary>
     private Task DomainEndDetectionTask(CancellationTokenSource cts)
     {
-        return new Task(() =>
+        return new Task(async () =>
         {
-            while (!_taskParam.Cts.Token.IsCancellationRequested)
+            try
             {
-                if (IsDomainEnd())
+                while (!_cts.Token.IsCancellationRequested)
                 {
-                    cts.Cancel();
-                    break;
-                }
+                    if (IsDomainEnd())
+                    {
+                        await cts.CancelAsync();
+                        break;
+                    }
 
-                Sleep(1000);
+                    await Delay(1000, cts);
+                }
             }
-        });
+            catch
+            {
+            }
+        }, cts.Token);
     }
 
     private bool IsDomainEnd()
@@ -406,16 +378,58 @@ public class AutoDomainTask
         return false;
     }
 
+    private Task AutoEatRecoveryHpTask(CancellationTokenSource cts)
+    {
+        return new Task(async () =>
+        {
+            if (!_config.AutoEat)
+            {
+                return;
+            }
+
+            try
+            {
+                while (!_cts.Token.IsCancellationRequested)
+                {
+                    if (IsLowHealth())
+                    {
+                        // 模拟按键 "Z"
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Z);
+                        Logger.LogInformation("检测到红血，按Z吃药");
+                        // TODO 吃饱了会一直吃
+                    }
+
+                    await Delay(500, cts);
+                }
+            }
+            catch
+            {
+            }
+        }, cts.Token);
+    }
+
+    private bool IsLowHealth()
+    {
+        // 获取图像
+        using var ra = CaptureToRectArea();
+
+        // 获取 (808, 1010) 位置的像素颜色
+        var pixelColor = ra.SrcMat.At<Vec3b>(1010, 808);
+
+        // 判断颜色是否是 (255, 90, 90)
+        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+    }
+
     /// <summary>
     /// 旋转视角后寻找石化古树
     /// </summary>
     private Task FindPetrifiedTree()
     {
         CancellationTokenSource treeCts = new();
-        _taskParam.Cts.Token.Register(treeCts.Cancel);
+        _cts.Token.Register(treeCts.Cancel);
         // 中键回正视角
         Simulation.SendInput.Mouse.MiddleButtonClick();
-        Sleep(900, _taskParam.Cts);
+        Sleep(900, _cts);
 
         // 左右移动直到石化古树位于屏幕中心任务
         var moveAvatarTask = MoveAvatarHorizontallyTask(treeCts);
@@ -437,7 +451,7 @@ public class AutoDomainTask
             var noDetectCount = 0;
             var prevKey = VK.VK_A;
             var backwardsAndForwardsCount = 0;
-            while (!_taskParam.Cts.Token.IsCancellationRequested)
+            while (!_cts.Token.IsCancellationRequested)
             {
                 var treeRect = DetectTree(CaptureToRectArea());
                 if (treeRect != Rect.Empty)
@@ -520,7 +534,7 @@ public class AutoDomainTask
                         else
                         {
                             _simulator.KeyPress(VK.VK_W, 60);
-                            Sleep(500, _taskParam.Cts);
+                            Sleep(500, _cts);
                             treeCts.Cancel();
                             break;
                         }
@@ -565,12 +579,12 @@ public class AutoDomainTask
                 {
                     // 左右移动5次说明已经在树中心了
                     _simulator.KeyPress(VK.VK_W, 60);
-                    Sleep(500, _taskParam.Cts);
+                    Sleep(500, _cts);
                     treeCts.Cancel();
                     break;
                 }
 
-                Sleep(60, _taskParam.Cts);
+                Sleep(60, _cts);
             }
 
             VisionContext.Instance().DrawContent.ClearAll();
@@ -671,7 +685,7 @@ public class AutoDomainTask
     private bool GettingTreasure(bool recognizeResin, bool isLastTurn)
     {
         // 等待窗口弹出
-        Sleep(1500, _taskParam.Cts);
+        Sleep(1500, _cts);
 
         // 优先使用浓缩树脂
         var retryTimes = 0;
@@ -690,22 +704,22 @@ public class AutoDomainTask
                 useCondensedResinRa.Click();
                 // 点两下 #224 #218
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
-                Sleep(400, _taskParam.Cts);
+                Sleep(400, _cts);
                 useCondensedResinRa.Click();
                 break;
             }
 
-            Sleep(800, _taskParam.Cts);
+            Sleep(800, _cts);
         }
 
-        Sleep(1000, _taskParam.Cts);
+        Sleep(1000, _cts);
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         for (var i = 0; i < 30; i++)
         {
             // 跳过领取动画
             GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
-            Sleep(200, _taskParam.Cts);
+            Sleep(200, _cts);
             GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
 
             // 优先点击继续
@@ -749,7 +763,7 @@ public class AutoDomainTask
                 }
             }
 
-            Sleep(300, _taskParam.Cts);
+            Sleep(300, _cts);
         }
 
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");

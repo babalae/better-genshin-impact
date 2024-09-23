@@ -43,7 +43,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 截图
 
-<img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN016wk5ZC1lhoEMzz04F_!!2042484851.gif"/>
+<img src="https://img.alicdn.com/imgextra/i3/2042484851/O1CN01yzhTp81lhoJ6DaG5K_!!2042484851.gif"/>
 
 
 ## 下载
