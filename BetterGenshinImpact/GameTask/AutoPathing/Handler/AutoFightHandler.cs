@@ -13,22 +13,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 using System.Drawing;
+using BetterGenshinImpact.GameTask.AutoFight;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using System.IO;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
-// TODO 自动战斗的action
 internal class AutoFightHandler : IActionHandler
 {
-    private readonly CombatScriptBag _combatScriptBag;
-
-    // 780,50  778,50
-
-    public AutoFightHandler()
-    {
-        _combatScriptBag = CombatScriptParser.ReadAndParse(Global.Absolute(@"User\AutoFight\"));
-    }
-
     public async Task RunAsync(CancellationTokenSource cts)
     {
         await StartFight(cts);
@@ -36,64 +29,55 @@ internal class AutoFightHandler : IActionHandler
 
     private Task StartFight(CancellationTokenSource cts)
     {
-        var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
-        CancellationTokenSource cts2 = new();
-        cts.Token.Register(cts2.Cancel);
-        combatScenes.BeforeTask(cts2);
-        // 战斗操作
-        var combatTask = new Task(() =>
+        // 新的取消token
+        var cts2 = new CancellationTokenSource();
+        cts2.Token.Register(cts.Cancel);
+
+        // 战斗线程
+        var fightSoloTask = new AutoFightTask(new AutoFightParam(GetFightStrategy()));
+        var fightTask = Task.Run(() =>
         {
-            try
-            {
-                while (!cts2.Token.IsCancellationRequested)
-                {
-                    // 通用化战斗策略
-                    foreach (var command in combatCommands)
-                    {
-                        command.Execute(combatScenes);
-                    }
-                }
-            }
-            catch (NormalEndException e)
-            {
-                Logger.LogInformation("战斗操作中断：{Msg}", e.Message);
-            }
-            catch (Exception e)
-            {
-                Logger.LogWarning(e.Message);
-                throw;
-            }
-            finally
-            {
-                Logger.LogInformation("自动战斗线程结束");
-            }
+            fightSoloTask.Start(cts2);
         }, cts2.Token);
 
-        // 视角操作
-
-        // 战斗结束检测
-        var domainEndTask = new Task(() =>
+        // 战斗结束检测线程
+        var endTask = Task.Run(() =>
         {
-            // TODO
-            while (!cts.Token.IsCancellationRequested)
+            while (!cts2.IsCancellationRequested)
             {
-                if (checkFightFinish())
+                if (CheckFightFinish())
                 {
                     cts2.Cancel();
                     break;
                 }
-                Sleep(500);
+                Sleep(1000, cts2);
             }
-        });
-        combatTask.Start();
-        domainEndTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask);
+        }, cts2.Token);
+
+        // 等待战斗结束
+        return Task.WhenAll(fightTask, endTask);
+    }
+
+    private string GetFightStrategy()
+    {
+        var path = Global.Absolute(@"User\AutoFight\" + TaskContext.Instance().Config.AutoFightConfig.StrategyName + ".txt");
+        if ("根据队伍自动选择".Equals(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
+        {
+            path = Global.Absolute(@"User\AutoFight\");
+        }
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            throw new Exception("战斗策略文件不存在");
+        }
+
+        return path;
     }
 
     // 战斗结束检测
-    private bool checkFightFinish()
+    private bool CheckFightFinish()
     {
+        // TODO 添加战斗结束检测 YOLO 判断血条和怪物位置
+
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
         Sleep(50);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
