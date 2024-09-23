@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
@@ -15,6 +16,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
@@ -25,7 +28,7 @@ namespace BetterGenshinImpact.GameTask.AutoWood;
 /// <summary>
 /// 自动伐木
 /// </summary>
-public partial class AutoWoodTask
+public partial class AutoWoodTask : ISoloTask
 {
     private readonly AutoWoodAssets _assets;
 
@@ -37,30 +40,29 @@ public partial class AutoWoodTask
 
     private VK _zKey = VK.VK_Z;
 
-    public AutoWoodTask()
+    private readonly WoodTaskParam _taskParam;
+
+    private CancellationTokenSource? _cts;
+
+    public AutoWoodTask(WoodTaskParam taskParam)
     {
+        this._taskParam = taskParam;
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
         _assets = AutoWoodAssets.Instance;
         _printer = new WoodStatisticsPrinter(_assets);
     }
 
-    public void Start(WoodTaskParam taskParam)
+    public Task Start(CancellationTokenSource cts)
     {
-        var hasLock = false;
         var runTimeWatch = new Stopwatch();
+        _cts = cts;
+        _printer.Cts = _cts;
+
         try
         {
-            hasLock = TaskSemaphore.Wait(0);
-            if (!hasLock)
-            {
-                Logger.LogError("启动自动伐木功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-                return;
-            }
-
-            TaskTriggerDispatcher.Instance().StopTimer();
             Kernel32.SetThreadExecutionState(Kernel32.EXECUTION_STATE.ES_CONTINUOUS | Kernel32.EXECUTION_STATE.ES_SYSTEM_REQUIRED | Kernel32.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
-            Logger.LogInformation("→ {Text} 设置伐木总次数：{Cnt}，设置木材数量上限：{MaxCnt}", "自动伐木，启动！", taskParam.WoodRoundNum, taskParam.WoodDailyMaxCount);
+            Logger.LogInformation("→ {Text} 设置伐木总次数：{Cnt}，设置木材数量上限：{MaxCnt}", "自动伐木，启动！", _taskParam.WoodRoundNum, _taskParam.WoodDailyMaxCount);
 
             _login3rdParty.RefreshAvailabled();
             if (_login3rdParty.Type == Login3rdParty.The3rdPartyType.Bilibili)
@@ -86,7 +88,7 @@ public partial class AutoWoodTask
             SystemControl.ActivateWindow();
             // 伐木开始计时
             runTimeWatch.Start();
-            for (var i = 0; i < taskParam.WoodRoundNum; i++)
+            for (var i = 0; i < _taskParam.WoodRoundNum; i++)
             {
                 if (TaskContext.Instance().Config.AutoWoodConfig.WoodCountOcrEnabled)
                 {
@@ -98,48 +100,31 @@ public partial class AutoWoodTask
 
                     if (_printer.ReachedWoodMaxCount)
                     {
-                        Logger.LogInformation("{Names}已达到设置的上限：{MaxCnt}", _printer.WoodTotalDict.Keys, taskParam.WoodDailyMaxCount);
+                        Logger.LogInformation("{Names}已达到设置的上限：{MaxCnt}", _printer.WoodTotalDict.Keys, _taskParam.WoodDailyMaxCount);
                         break;
                     }
                 }
 
                 Logger.LogInformation("第{Cnt}次伐木", i + 1);
-                if (taskParam.Cts.IsCancellationRequested)
+                if (_cts.IsCancellationRequested)
                 {
                     break;
                 }
 
-                Felling(taskParam, i + 1 == taskParam.WoodRoundNum);
+                Felling(_taskParam, i + 1 == _taskParam.WoodRoundNum);
                 VisionContext.Instance().DrawContent.ClearAll();
-                Sleep(500, taskParam.Cts);
+                Sleep(500, _cts);
             }
-        }
-        catch (NormalEndException e)
-        {
-            Logger.LogInformation(e.Message);
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e.Message);
-            Logger.LogDebug(e.StackTrace);
-            MessageBox.Error("自动伐木时异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+
+            return Task.CompletedTask;
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
-            TaskSettingsPageViewModel.SetSwitchAutoWoodButtonText(false);
             // 伐木结束计时
             runTimeWatch.Stop();
             Kernel32.SetThreadExecutionState(Kernel32.EXECUTION_STATE.ES_CONTINUOUS);
             var elapsedTime = runTimeWatch.Elapsed;
             Logger.LogInformation(@"本次伐木总耗时：{Time:hh\:mm\:ss}", elapsedTime);
-            Logger.LogInformation("← {Text}", "退出自动伐木");
-            TaskTriggerDispatcher.Instance().StartTimer();
-
-            if (hasLock)
-            {
-                TaskSemaphore.Release();
-            }
         }
     }
 
@@ -160,6 +145,8 @@ public partial class AutoWoodTask
             "悬铃木", "白梣木", "炬木", "椴木", "香柏木", "刺葵木", "柽木", "辉木", "业果木", "证悟木", "枫木", "垂香木",
             "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
         ];
+
+        public CancellationTokenSource? Cts { get; set; }
 
         [GeneratedRegex("([^\\d\\n]+)[×x](\\d+)")]
         private static partial Regex _parseWoodStatisticsRegex();
@@ -230,7 +217,7 @@ public partial class AutoWoodTask
 
         private void SleepDurationBetweenOcrs(WoodTaskParam taskParam)
         {
-            Sleep(_firstWoodOcr ? 300 : 100, taskParam.Cts);
+            Sleep(_firstWoodOcr ? 300 : 100, Cts);
         }
 
         private string WoodTextAreaOcr()
@@ -446,7 +433,7 @@ public partial class AutoWoodTask
         {
             NewRetry.Do(() =>
             {
-                Sleep(1, taskParam.Cts);
+                Sleep(1, _cts);
                 using var contentRegion = CaptureToRectArea();
                 using var ra = contentRegion.Find(_assets.TheBoonOfTheElderTreeRo);
                 if (ra.IsEmpty())
@@ -460,12 +447,12 @@ public partial class AutoWoodTask
 
                 Simulation.SendInput.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
-                Sleep(500, taskParam.Cts);
+                Sleep(500, _cts);
             }, TimeSpan.FromSeconds(1), 120);
         }
 
-        Sleep(300, taskParam.Cts);
-        Sleep(TaskContext.Instance().Config.AutoWoodConfig.AfterZSleepDelay, taskParam.Cts);
+        Sleep(300, _cts);
+        Sleep(TaskContext.Instance().Config.AutoWoodConfig.AfterZSleepDelay, _cts);
     }
 
     private void PressEsc(WoodTaskParam taskParam)
@@ -474,17 +461,17 @@ public partial class AutoWoodTask
         Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         // if (TaskContext.Instance().Config.AutoWoodConfig.PressTwoEscEnabled)
         // {
-        //     Sleep(1500, taskParam.Cts);
+        //     Sleep(1500, _cts);
         //     Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         // }
         Debug.WriteLine("[AutoWood] Esc");
-        Sleep(800, taskParam.Cts);
+        Sleep(800, _cts);
         // 确认在菜单界面
         try
         {
             NewRetry.Do(() =>
             {
-                Sleep(1, taskParam.Cts);
+                Sleep(1, _cts);
                 using var contentRegion = CaptureToRectArea();
                 using var ra = contentRegion.Find(_assets.MenuBagRo);
                 if (ra.IsEmpty())
@@ -505,7 +492,7 @@ public partial class AutoWoodTask
 
         Debug.WriteLine("[AutoWood] Click exit button");
 
-        Sleep(500, taskParam.Cts);
+        Sleep(500, _cts);
 
         // 点击确认
         using var contentRegion = CaptureToRectArea();
@@ -521,14 +508,14 @@ public partial class AutoWoodTask
     {
         if (_login3rdParty.IsAvailabled)
         {
-            Sleep(1, taskParam.Cts);
-            _login3rdParty.Login(taskParam.Cts);
+            Sleep(1, _cts);
+            _login3rdParty.Login(_cts);
         }
 
         var clickCnt = 0;
         for (var i = 0; i < 50; i++)
         {
-            Sleep(1, taskParam.Cts);
+            Sleep(1, _cts);
 
             using var contentRegion = CaptureToRectArea();
             using var ra = contentRegion.Find(_assets.EnterGameRo);
@@ -542,12 +529,12 @@ public partial class AutoWoodTask
             {
                 if (clickCnt > 2)
                 {
-                    Sleep(5000, taskParam.Cts);
+                    Sleep(5000, _cts);
                     break;
                 }
             }
 
-            Sleep(1000, taskParam.Cts);
+            Sleep(1000, _cts);
         }
 
         if (clickCnt == 0)

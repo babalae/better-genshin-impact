@@ -10,6 +10,11 @@ public class Dispatcher
     {
     }
 
+    /// <summary>
+    /// 添加实时任务
+    /// </summary>
+    /// <param name="timer">实时任务触发器</param>
+    /// <exception cref="ArgumentNullException"></exception>
     public void AddTimer(RealtimeTimer timer)
     {
         var realtimeTimer = timer;
