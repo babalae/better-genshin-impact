@@ -386,6 +386,11 @@ public class AutoDomainTask : ISoloTask
             {
                 return;
             }
+            if (!IsTakeFood())
+            {
+                Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
+                return;
+            }
 
             try
             {
@@ -418,6 +423,17 @@ public class AutoDomainTask : ISoloTask
 
         // 判断颜色是否是 (255, 90, 90)
         return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+    }
+
+    private bool IsTakeFood()
+    {
+        // 获取图像
+        using var ra = CaptureToRectArea();
+        // 识别道具图标下是否是数字
+        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        var countArea = ra.DeriveCrop(1800 * s, 845 * s, 40 * s, 20 * s);
+        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+        return int.TryParse(count, out _);
     }
 
     /// <summary>
