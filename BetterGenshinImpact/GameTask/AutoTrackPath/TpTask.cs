@@ -37,6 +37,8 @@ public class TpTask(CancellationTokenSource cts)
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
     public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
     {
+        var s = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
+
         var (x, y) = (tpX, tpY);
 
         if (!force)
@@ -59,7 +61,10 @@ public class TpTask(CancellationTokenSource cts)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
-        while (!bigMapInAllMapRect.Shrink(115).Contains(x, y))
+        // while (!bigMapInAllMapRect.Shrink((int)Math.Round(115 * s)).Contains(x, y)
+        //        || new Rect(bigMapInAllMapRect.X, bigMapInAllMapRect.Y, (int)Math.Round(350 * s), (int)Math.Round(400 * s))
+        //            .Contains(x, y)) // 左上角 350x400也属于禁止点击区域
+        while (!bigMapInAllMapRect.Shrink((int)Math.Round(115 * s)).Contains(x, y)) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
@@ -119,6 +124,7 @@ public class TpTask(CancellationTokenSource cts)
                 Logger.LogError(e, "传送失败，重试 {I} 次", i + 1);
             }
         }
+
         throw new InvalidOperationException("传送失败");
     }
 
@@ -371,9 +377,9 @@ public class TpTask(CancellationTokenSource cts)
         // 1.判断是否在地图界面
         if (Bv.IsInBigMapUi(imageRegion))
         {
-            // 2. 存在地图关闭按钮，说明已经点出界面
+            // 2. 不存在外部地图关闭按钮，说明已经点出界面
             var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
-            if (!mapCloseRa1.IsEmpty())
+            if (mapCloseRa1.IsEmpty())
             {
                 // 3.此时不存在传送图标，一定不是传送点
                 if (!CheckTeleportButton(imageRegion))
