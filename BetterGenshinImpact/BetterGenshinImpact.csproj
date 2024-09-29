@@ -136,7 +136,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Assets\Model\World\" />
 	  <Folder Include="Script\JustTp\" />
 	</ItemGroup>
 

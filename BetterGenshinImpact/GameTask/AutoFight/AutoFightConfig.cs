@@ -15,4 +15,16 @@ public partial class AutoFightConfig : ObservableObject
     /// 英文逗号分割 强制指定队伍角色
     /// </summary>
     [ObservableProperty] private string _teamNames = "";
+
+    /// <summary>
+    /// 检测战斗结束
+    /// </summary>
+    [ObservableProperty]
+    private bool _endDetect = true;
+
+    /// <summary>
+    /// 检测战斗结束
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoPickAfterFight = true;
 }
