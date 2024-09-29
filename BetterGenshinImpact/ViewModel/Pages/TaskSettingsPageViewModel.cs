@@ -169,8 +169,15 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             return;
         }
+
+        var param = new AutoFightParam(path)
+        {
+            EndDetect = Config.AutoFightConfig.EndDetect,
+            AutoPickAfterFight = Config.AutoFightConfig.AutoPickAfterFight
+        };
+
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
-            .RunSoloTaskAsync(new AutoFightTask(new AutoFightParam(path)));
+            .RunSoloTaskAsync(new AutoFightTask(param));
     }
 
     [RelayCommand]

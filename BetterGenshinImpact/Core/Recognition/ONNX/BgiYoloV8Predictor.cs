@@ -4,8 +4,10 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Compunet.YoloV8;
 using OpenCvSharp;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -42,6 +44,7 @@ public class BgiYoloV8Predictor(string modelRelativePath) : IDisposable
                 dict[box.Class.Name].Add(new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height));
             }
         }
+        Debug.WriteLine("YOLOv8识别结果:" + JsonSerializer.Serialize(dict));
         return dict;
     }
 

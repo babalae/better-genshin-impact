@@ -274,6 +274,7 @@ public class PathExecutor(CancellationTokenSource cts)
             return diff;
         }
         // 平滑的旋转视角
+        // todo dpi 和分辨率都会影响转动速度
         if (Math.Abs(diff) > 90)
         {
             controlRatio = 5;

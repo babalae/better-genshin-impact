@@ -5,12 +5,14 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Gdi32;
 using System.Drawing;
+using BetterGenshinImpact.GameTask.AutoPathing;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -50,42 +52,55 @@ public class AutoFightTask : ISoloTask
 
         var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
 
-        combatScenes.BeforeTask(_cts);
-
         // 新的取消token
         var cts2 = new CancellationTokenSource();
         cts2.Token.Register(cts.Cancel);
 
+        combatScenes.BeforeTask(cts2);
+
         // 战斗操作
         var fightTask = Task.Run(() =>
         {
-            while (!cts2.Token.IsCancellationRequested)
+            try
             {
-                // 通用化战斗策略
-                foreach (var command in combatCommands)
+                while (!cts2.Token.IsCancellationRequested)
                 {
-                    command.Execute(combatScenes);
+                    // 通用化战斗策略
+                    foreach (var command in combatCommands)
+                    {
+                        command.Execute(combatScenes);
+                    }
                 }
+            }
+            catch
+            {
             }
         }, cts2.Token);
 
         // 战斗结束检测线程
-        var endTask = Task.Run(() =>
+        var endTask = Task.Run(async () =>
         {
             if (!_taskParam.EndDetect)
             {
                 return;
             }
 
-            while (!cts2.IsCancellationRequested)
+            try
             {
-                if (CheckFightFinish())
+                while (!cts2.IsCancellationRequested)
                 {
-                    cts2.Cancel();
-                    break;
-                }
+                    var finish = await CheckFightFinish();
+                    if (finish)
+                    {
+                        await cts2.CancelAsync();
+                        break;
+                    }
 
-                Sleep(1000, cts2);
+                    Sleep(1000, cts2);
+                }
+            }
+            catch
+            {
             }
         }, cts2.Token);
 
@@ -106,7 +121,7 @@ public class AutoFightTask : ISoloTask
         }
     }
 
-    private bool CheckFightFinish()
+    private async Task<bool> CheckFightFinish()
     {
         //  YOLO 判断血条和怪物位置
         if (HasFightFlag(CaptureToRectArea()))
@@ -115,11 +130,24 @@ public class AutoFightTask : ISoloTask
             return false;
         }
 
-        // 5s 内没有检测到血条和怪物位置，则开始旋转视角重新检测
+        // 几秒内没有检测到血条和怪物位置，则开始旋转视角重新检测
         if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > 5)
         {
             // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
+            List<int> angles = [0, 90, 180, 270];
+            var rotateTask = new CameraRotateTask(_cts!);
+            foreach (var a in angles)
+            {
+                await rotateTask.WaitUntilRotatedTo(a, 5);
+                await Delay(1000, _cts!); // 等待视角稳定
+                if (HasFightFlag(CaptureToRectArea()))
+                {
+                    return false;
+                }
+            }
 
+            // 最终方案确认战斗结束
+            Logger.LogInformation("识别到战斗结束");
             return true;
         }
 
