@@ -131,7 +131,7 @@ public class TaskControl
                 Sleep(30);
             }
 
-            throw new Exception("尝试多次后,截图失败!");
+            throw new System.Exception("尝试多次后,截图失败!");
         }
         else
         {

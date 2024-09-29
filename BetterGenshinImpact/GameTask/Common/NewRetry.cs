@@ -22,7 +22,7 @@ public static class NewRetry
 
     public static T Do<T>(Func<T> action, TimeSpan retryInterval, int maxAttemptCount = 3)
     {
-        List<Exception> exceptions = [];
+        List<System.Exception> exceptions = [];
 
         for (int attempted = 0; attempted < maxAttemptCount; attempted++)
         {

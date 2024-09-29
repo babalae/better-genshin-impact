@@ -16,6 +16,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -105,6 +106,13 @@ public class TpTask(CancellationTokenSource cts)
             try
             {
                 return await TpOnce(tpX, tpY, force);
+            }
+            catch (TpPointNotActivate)
+            {
+                // 传送点未激活或不存在 按ESC回到大地图界面
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(300, cts);
+                throw;
             }
             catch (Exception e)
             {
@@ -363,33 +371,35 @@ public class TpTask(CancellationTokenSource cts)
         // 1.判断是否在地图界面
         if (Bv.IsInBigMapUi(imageRegion))
         {
-            // 2. 判断是否有传送按钮
-            var hasTeleportButton = CheckTeleportButton(imageRegion);
-
-            if (!hasTeleportButton)
+            // 2. 存在地图关闭按钮，说明已经点出界面
+            var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
+            if (!mapCloseRa1.IsEmpty())
             {
-                // 存在地图关闭按钮，说明未选中传送点，直接返回
-                var mapCloseRa = imageRegion.Find(_assets.MapCloseButtonRo);
-                if (!mapCloseRa.IsEmpty())
+                // 3.此时不存在传送图标，一定不是传送点
+                if (!CheckTeleportButton(imageRegion))
                 {
-                    return;
+                    throw new TpPointNotActivate("传送点未激活或不存在");
                 }
-
-                // 存在地图选择按钮，说明未选中传送点，直接返回
-                var mapChooseRa = imageRegion.Find(_assets.MapChooseRo);
-                if (!mapChooseRa.IsEmpty())
-                {
-                    return;
-                }
-
-                // 3. 循环判断选项列表是否有传送点
+            }
+            else
+            {
+                // 3. 循环判断选项列表是否有传送点(未激活点位也在里面)
                 var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
                 if (hasMapChooseIcon)
                 {
                     var time = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
                     time = time < 100 ? 100 : time;
                     await Delay(time, cts);
-                    CheckTeleportButton(CaptureToRectArea());
+                    if (!CheckTeleportButton(CaptureToRectArea()))
+                    {
+                        // 没传送确认图标说明点开的是未激活传送锚点
+                        throw new TpPointNotActivate("传送点未激活或不存在");
+                    }
+                }
+                else
+                {
+                    // 没有传送点说明不是传送点
+                    throw new TpPointNotActivate("传送点未激活或不存在");
                 }
             }
         }

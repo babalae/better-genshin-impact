@@ -36,6 +36,6 @@ public class MapAssets : BaseAssets<MapAssets>
     public MapAssets()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-        TpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
+        TpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new System.Exception("tp.json deserialize failed");
     }
 }
