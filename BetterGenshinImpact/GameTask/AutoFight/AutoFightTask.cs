@@ -6,8 +6,11 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -50,7 +53,7 @@ public class AutoFightTask : ISoloTask
 
         // 新的取消token
         var cts2 = new CancellationTokenSource();
-        cts2.Token.Register(cts.Cancel);
+        cts.Token.Register(cts2.Cancel);
 
         combatScenes.BeforeTask(cts2);
 
@@ -68,8 +71,10 @@ public class AutoFightTask : ISoloTask
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
+                Debug.WriteLine(e.Message);
+                Debug.WriteLine(e.StackTrace);
             }
         }, cts2.Token);
 
@@ -95,8 +100,10 @@ public class AutoFightTask : ISoloTask
                     Sleep(1000, cts2);
                 }
             }
-            catch
+            catch (Exception e)
             {
+                Debug.WriteLine(e.Message);
+                Debug.WriteLine(e.StackTrace);
             }
         }, cts2.Token);
 
@@ -152,6 +159,10 @@ public class AutoFightTask : ISoloTask
 
     private bool HasFightFlag(ImageRegion imageRegion)
     {
+        if (RuntimeHelper.IsDebug)
+        {
+            imageRegion.SrcMat.SaveImage(Global.Absolute(@"log\fight\" + $"{DateTime.Now:yyyyMMdd_HHmmss_ffff}.png"));
+        }
         var dict = _predictor.Detect(imageRegion);
         return dict.ContainsKey("health_bar") || dict.ContainsKey("enemy_identify");
     }
