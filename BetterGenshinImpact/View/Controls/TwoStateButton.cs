@@ -6,8 +6,6 @@ namespace BetterGenshinImpact.View.Controls;
 
 public class TwoStateButton : Button
 {
-    private bool _isEnabled;
-
     public TwoStateButton()
     {
         if (TryFindResource(typeof(Button)) is Style style)
@@ -15,31 +13,28 @@ public class TwoStateButton : Button
             Style = style;
         }
 
-        Click += OnClick;
         Loaded += OnLoaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        Content = EnableContent;
-        Icon = EnableIcon;
+        UpdateButton();
     }
 
-    private void OnClick(object sender, RoutedEventArgs e)
+    private static void OnIsCheckedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (_isEnabled)
+        if (d is TwoStateButton button)
         {
-            DisableCommand?.Execute(null);
-            Content = EnableContent;
-            Icon = EnableIcon;
+            button.UpdateButton();
         }
-        else
-        {
-            EnableCommand?.Execute(null);
-            Content = DisableContent;
-            Icon = DisableIcon;
-        }
-        _isEnabled = !_isEnabled;
+    }
+
+    private static readonly DependencyProperty IsCheckedProperty = DependencyProperty.Register(nameof(IsChecked), typeof(bool), typeof(TwoStateButton), new PropertyMetadata(false, OnIsCheckedChanged));
+
+    public bool IsChecked
+    {
+        get => (bool)GetValue(IsCheckedProperty);
+        set => SetValue(IsCheckedProperty, value);
     }
 
     private static readonly DependencyProperty EnableContentProperty = DependencyProperty.Register(nameof(EnableContent), typeof(object), typeof(TwoStateButton), new PropertyMetadata("启动"));
@@ -88,5 +83,21 @@ public class TwoStateButton : Button
     {
         get => (ICommand)GetValue(DisableCommandProperty);
         set => SetValue(DisableCommandProperty, value);
+    }
+
+    private void UpdateButton()
+    {
+        if (IsChecked)
+        {
+            Command = DisableCommand;
+            Content = DisableContent;
+            Icon = DisableIcon;
+        }
+        else
+        {
+            Command = EnableCommand;
+            Content = EnableContent;
+            Icon = EnableIcon;
+        }
     }
 }

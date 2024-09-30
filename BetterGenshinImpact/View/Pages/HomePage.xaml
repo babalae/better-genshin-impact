@@ -4,7 +4,6 @@
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -101,7 +100,8 @@
                                                  DisableIcon="{ui:SymbolIcon Dismiss24}"
                                                  EnableCommand="{Binding StartTriggerCommand}"
                                                  EnableContent="启动"
-                                                 EnableIcon="{ui:SymbolIcon Play24}" />
+                                                 EnableIcon="{ui:SymbolIcon Play24}"
+                                                 IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
                         <!--  <ui:Button Command="{Binding StartTriggerCommand}"  -->
                         <!--  Content="启动"  -->
                         <!--  Icon="{ui:SymbolIcon Play24}"  -->

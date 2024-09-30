@@ -5,7 +5,6 @@
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
-      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -86,7 +85,8 @@
                                              DisableCommand="{Binding StopSoloTaskCommand}"
                                              DisableContent="停止"
                                              EnableCommand="{Binding SwitchAutoGeniusInvokationCommand}"
-                                             EnableContent="{Binding SwitchAutoGeniusInvokationButtonText}" />
+                                             EnableContent="{Binding SwitchAutoGeniusInvokationButtonText}"
+                                             IsChecked="{Binding SwitchAutoGeniusInvokationEnabled}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -188,7 +188,8 @@
                                              DisableCommand="{Binding StopSoloTaskCommand}"
                                              DisableContent="停止"
                                              EnableCommand="{Binding SwitchAutoWoodCommand}"
-                                             EnableContent="{Binding SwitchAutoWoodButtonText}" />
+                                             EnableContent="{Binding SwitchAutoWoodButtonText}"
+                                             IsChecked="{Binding SwitchAutoWoodEnabled}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -358,7 +359,8 @@
                                              DisableCommand="{Binding StopSoloTaskCommand}"
                                              DisableContent="停止"
                                              EnableCommand="{Binding SwitchAutoFightCommand}"
-                                             EnableContent="{Binding SwitchAutoFightButtonText}" />
+                                             EnableContent="{Binding SwitchAutoFightButtonText}"
+                                             IsChecked="{Binding SwitchAutoFightEnabled}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -518,7 +520,8 @@
                                              DisableCommand="{Binding StopSoloTaskCommand}"
                                              DisableContent="停止"
                                              EnableCommand="{Binding SwitchAutoDomainCommand}"
-                                             EnableContent="{Binding SwitchAutoDomainButtonText}" />
+                                             EnableContent="{Binding SwitchAutoDomainButtonText}"
+                                             IsChecked="{Binding SwitchAutoDomainEnabled}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
