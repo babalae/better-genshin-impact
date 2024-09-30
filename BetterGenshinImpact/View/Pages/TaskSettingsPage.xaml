@@ -2,6 +2,7 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
@@ -23,32 +24,32 @@
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="独立任务设置" />
-        <!--  停止任务  -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}">
-            <ui:CardControl.Header>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="停止任务"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        停止下方独立任务的运行
-                    </ui:TextBlock>
-                </Grid>
-            </ui:CardControl.Header>
-            <ui:Button Margin="0,0,36,0"
-                       Command="{Binding StopSoloTaskCommand}"
-                       Content="停止任务"
-                       Icon="{ui:SymbolIcon Dismiss24}" />
-        </ui:CardControl>
+        <!--  ~1~  停止任务  @1@  -->
+        <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}"> -->
+        <!--     <ui:CardControl.Header> -->
+        <!--         <Grid> -->
+        <!--             <Grid.RowDefinitions> -->
+        <!--                 <RowDefinition Height="Auto" /> -->
+        <!--                 <RowDefinition Height="Auto" /> -->
+        <!--             </Grid.RowDefinitions> -->
+        <!--  <ui:TextBlock Grid.Row="0"  -->
+        <!--  Grid.Column="0"  -->
+        <!--  FontTypography="Body"  -->
+        <!--  Text="停止任务"  -->
+        <!--  TextWrapping="Wrap" />  -->
+        <!--  <ui:TextBlock Grid.Row="1"  -->
+        <!--  Grid.Column="0"  -->
+        <!--  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"  -->
+        <!--  TextWrapping="Wrap">  -->
+        <!--  停止下方独立任务的运行  -->
+        <!--             </ui:TextBlock> -->
+        <!--         </Grid> -->
+        <!--     </ui:CardControl.Header> -->
+        <!--  <ui:Button Margin="0,0,36,0"  -->
+        <!--  Command="{Binding StopSoloTaskCommand}"  -->
+        <!--  Content="停止任务"  -->
+        <!--  Icon="{ui:SymbolIcon Dismiss24}" />  -->
+        <!-- </ui:CardControl> -->
 
 
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
@@ -78,12 +79,14 @@
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,24,0"
-                               Command="{Binding SwitchAutoGeniusInvokationCommand}"
-                               Content="{Binding SwitchAutoGeniusInvokationButtonText}" />
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoGeniusInvokationCommand}"
+                                             EnableContent="{Binding SwitchAutoGeniusInvokationButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -178,12 +181,14 @@
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,24,0"
-                               Command="{Binding SwitchAutoWoodCommand}"
-                               Content="{Binding SwitchAutoWoodButtonText}" />
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoWoodCommand}"
+                                             EnableContent="{Binding SwitchAutoWoodButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -346,12 +351,14 @@
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,24,0"
-                               Command="{Binding SwitchAutoFightCommand}"
-                               Content="{Binding SwitchAutoFightButtonText}" />
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoFightCommand}"
+                                             EnableContent="{Binding SwitchAutoFightButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -504,12 +511,14 @@
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,24,0"
-                               Command="{Binding SwitchAutoDomainCommand}"
-                               Content="{Binding SwitchAutoDomainButtonText}" />
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoDomainCommand}"
+                                             EnableContent="{Binding SwitchAutoDomainButtonText}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
