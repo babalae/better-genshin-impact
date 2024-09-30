@@ -8,16 +8,17 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
 		<AssemblyVersion>0.34.4</AssemblyVersion>
 		<Platforms>x64</Platforms>
+		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Remove="Assets\*.jpg" />
-		<None Remove="Assets\*.png" />
-		<None Remove="Assets\*.ico" />
+		<None Remove="Assets\Images\*.jpg" />
+		<None Remove="Assets\Images\*.png" />
+		<None Remove="Assets\Images\*.ico" />
 		<None Remove="Assets\Fonts\*.ttf" />
 		<None Remove="Assets\Highlighting\*.xshd" />
 		<None Remove="Assets\Strings\*.html" />
@@ -25,9 +26,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Resource Include="Assets\*.jpg" />
-		<Resource Include="Assets\*.png" />
-		<Resource Include="Assets\*.ico" />
+		<Resource Include="Assets\Images\*.jpg" />
+		<Resource Include="Assets\Images\*.png" />
+		<Resource Include="Assets\Images\*.ico" />
 		<Resource Include="Assets\Fonts\*.ttf" />
 		<Resource Include="Assets\Highlighting\*.xshd" />
 		<Resource Include="Assets\Strings\*.html" />
@@ -64,7 +65,7 @@
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.2" />
 		<PackageReference Include="WPF-UI" Version="3.0.5" />
 		<PackageReference Include="WPF-UI.Tray" Version="3.0.5" />
-		<PackageReference Include="WPF-UI.Violeta" Version="3.0.5.12" />
+		<PackageReference Include="WPF-UI.Violeta" Version="3.0.5.15" />
 		<PackageReference Include="YoloV8" Version="4.1.7" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 	</ItemGroup>
@@ -133,16 +134,6 @@
 		<None Update="Script\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Script\JustTp\" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Compile Update="View\Pages\MapPathingPage.xaml.cs">
-	    <SubType>Code</SubType>
-	  </Compile>
 	</ItemGroup>
 
 </Project>

@@ -23,7 +23,7 @@ public class PaddleOcrService : IOcrService
 
     public PaddleOcrService()
     {
-        var path = Global.Absolute("Assets\\Model\\PaddleOcr");
+        var path = Global.Absolute(@"Assets\Model\PaddleOcr");
         var localDetModel = DetectionModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_det"), ModelVersion.V4);
         var localClsModel = ClassificationModel.FromDirectory(Path.Combine(path, "ch_ppocr_mobile_v2.0_cls"));
         var localRecModel = RecognizationModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_rec"), Path.Combine(path, "ppocr_keys_v1.txt"), ModelVersion.V4);

@@ -32,7 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         private readonly IOcrService _ocrService = OcrFactory.Paddle;
-        private readonly YoloV8Predictor _predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute("Assets\\Model\\Fish\\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
+        private readonly YoloV8Predictor _predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }
