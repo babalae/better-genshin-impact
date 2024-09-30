@@ -1,6 +1,7 @@
 ﻿<Page x:Class="BetterGenshinImpact.View.Pages.HotKeyPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
@@ -23,6 +24,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
@@ -33,7 +35,7 @@
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       Text="全局热键：只支持组合键和功能键，软件启动直接生效。键鼠监听：支持任意键盘单键、鼠标侧键，功能启动后才生效（推荐）。点击类型按钮可以切换快捷键类型。其中存在长按需求的功能不能使用全局热键。"
                       TextWrapping="Wrap" />
-        <ItemsControl Grid.Row="2" ItemsSource="{Binding HotKeySettingModels}">
+        <!--<ItemsControl Grid.Row="2" ItemsSource="{Binding HotKeySettingModels}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type model:HotKeySettingModel}">
                     <Grid Margin="0,8">
@@ -59,6 +61,63 @@
                     </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        </ItemsControl>-->
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="15" />
+            </Grid.ColumnDefinitions>
+            <Grid x:Name="Col1" Grid.Column="0" />
+            <Grid x:Name="Col2" Grid.Column="1" />
+            <Grid x:Name="Col3" Grid.Column="2" />
+            <Grid x:Name="Col4" Grid.Column="3" />
+        </Grid>
+        <ui:TreeListView Grid.Row="3" ItemsSource="{Binding HotKeySettingModels}">
+            <b:Interaction.Triggers>
+                <b:EventTrigger EventName="PreviewMouseWheel">
+                    <b:InvokeCommandAction Command="{Binding MouseWheelCommand}" />
+                </b:EventTrigger>
+            </b:Interaction.Triggers>
+            <ui:TreeListView.Columns>
+                <GridViewColumnCollection>
+                    <ui:GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}" Header="功能">
+                        <ui:GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <ui:TreeRowExpander Content="{Binding FunctionName}" />
+                            </DataTemplate>
+                        </ui:GridViewColumn.CellTemplate>
+                    </ui:GridViewColumn>
+                    <ui:GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}" Header="快捷键类型">
+                        <ui:GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <ui:Button VerticalAlignment="Center"
+                                           Command="{Binding SwitchHotKeyTypeCommand}"
+                                           Content="{Binding HotKeyTypeName, Mode=OneWay}"
+                                           IsEnabled="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}"
+                                           Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
+                            </DataTemplate>
+                        </ui:GridViewColumn.CellTemplate>
+                    </ui:GridViewColumn>
+                    <ui:GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="配置快捷键">
+                        <ui:GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <hotKey:HotKeyTextBox VerticalAlignment="Center"
+                                                      HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
+                                                      Hotkey="{Binding HotKey}"
+                                                      Style="{StaticResource DefaultTextBoxStyle}"
+                                                      TextAlignment="Center"
+                                                      Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
+                            </DataTemplate>
+                        </ui:GridViewColumn.CellTemplate>
+                    </ui:GridViewColumn>
+                </GridViewColumnCollection>
+            </ui:TreeListView.Columns>
+            <ui:TreeListView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+            </ui:TreeListView.ItemTemplate>
+        </ui:TreeListView>
     </Grid>
 </Page>
