@@ -51,7 +51,7 @@ public class AutoDomainTask : ISoloTask
         _simulator = AutoFightContext.Instance.Simulator;
 
         _predictor = YoloV8Builder.CreateDefaultBuilder()
-            .UseOnnxModel(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"))
+            .UseOnnxModel(Global.Absolute(@"Assets\Model\Domain\bgi_tree.onnx"))
             .WithSessionOptions(BgiSessionOption.Instance.Options)
             .Build();
 

@@ -39,7 +39,7 @@ public class CombatScenes : IDisposable
 
     private readonly YoloV8Predictor _predictor =
         YoloV8Builder.CreateDefaultBuilder()
-            .UseOnnxModel(Global.Absolute("Assets\\Model\\Common\\avatar_side_classify_sim.onnx"))
+            .UseOnnxModel(Global.Absolute(@"Assets\Model\Common\avatar_side_classify_sim.onnx"))
             .WithSessionOptions(BgiSessionOption.Instance.Options)
             .Build();
 

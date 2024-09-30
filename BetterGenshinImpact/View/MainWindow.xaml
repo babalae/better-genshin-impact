@@ -154,7 +154,7 @@
 
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel>
@@ -172,7 +172,7 @@
 
         <tray:NotifyIcon Grid.Row="0"
                          FocusOnLeftClick="False"
-                         Icon="pack://application:,,,/Assets/logo.ico"
+                         Icon="pack://application:,,,/Assets/Images/logo.ico"
                          LeftDoubleClick="OnNotifyIconLeftDoubleClick"
                          MenuOnRightClick="True"
                          TooltipText="BetterGI">
