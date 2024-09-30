@@ -22,6 +22,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
@@ -501,8 +502,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    // _logger.LogInformation("开始重放脚本");
-                    User32.SetWindowPos(TaskContext.Instance().GameHandle, new HWND(), 0, 0, 1920, 1080, SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_NOZORDER);
+                    Simulation.SendInput.Mouse.MoveMouseBy(500, 0);
                 }
             ));
 

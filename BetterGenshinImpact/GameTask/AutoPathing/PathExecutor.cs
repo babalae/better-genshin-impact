@@ -25,6 +25,8 @@ public class PathExecutor(CancellationTokenSource cts)
 {
     private double _dpi = 1;
 
+    private CameraRotateTask _rotateTask = new(cts);
+
     public async Task Pathing(PathingTask task)
     {
         _dpi = TaskContext.Instance().DpiScale;
@@ -114,7 +116,7 @@ public class PathExecutor(CancellationTokenSource cts)
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.X:F1}", $"{waypoint.Y:F1}");
-        await WaitUntilRotatedTo(targetOrientation, 5);
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
         var startTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
@@ -169,7 +171,7 @@ public class PathExecutor(CancellationTokenSource cts)
             }
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            RotateTo(targetOrientation, screen);
+            _rotateTask.RotateToApproach(targetOrientation, screen);
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
             {
@@ -226,7 +228,7 @@ public class PathExecutor(CancellationTokenSource cts)
             Simulation.SendInput.Mouse.LeftButtonClick();
             await Delay(1000, cts);
         }
-        await WaitUntilRotatedTo(targetOrientation, 2);
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         var wPressed = false;
         var stepsTaken = 0;
         while (!cts.IsCancellationRequested)
@@ -244,7 +246,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 Logger.LogInformation("已到达路径点");
                 break;
             }
-            RotateTo(targetOrientation, screen); //不再改变视角
+            _rotateTask.RotateToApproach(targetOrientation, screen); //不再改变视角
             if (waypoint.MoveMode == MoveModeEnum.Walk.Code)
             {
                 // 小碎步接近
@@ -261,52 +263,6 @@ public class PathExecutor(CancellationTokenSource cts)
         if (wPressed)
         {
             Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-        }
-    }
-
-    private int RotateTo(int targetOrientation, ImageRegion imageRegion, double controlRatio = 1)
-    {
-        var cao = CameraOrientation.Compute(imageRegion.SrcGreyMat);
-        var diff = (cao - targetOrientation + 180) % 360 - 180;
-        diff += diff < -180 ? 360 : 0;
-        if (diff == 0)
-        {
-            return diff;
-        }
-        // 平滑的旋转视角
-        // todo dpi 和分辨率都会影响转动速度
-        if (Math.Abs(diff) > 90)
-        {
-            controlRatio = 5;
-        }
-        else if (Math.Abs(diff) > 30)
-        {
-            controlRatio = 3;
-        }
-        else if (Math.Abs(diff) > 5)
-        {
-            controlRatio = 2;
-        }
-        Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(-controlRatio * diff * _dpi), 0);
-        return diff;
-    }
-
-    private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
-    {
-        int count = 0;
-        while (!cts.IsCancellationRequested)
-        {
-            var screen = CaptureToRectArea();
-            if (Math.Abs(RotateTo(targetOrientation, screen)) < maxDiff)
-            {
-                break;
-            }
-            if (count > 50)
-            {
-                break;
-            }
-            await Delay(50, cts);
-            count++;
         }
     }
 

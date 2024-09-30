@@ -33,7 +33,7 @@ public class CameraRotateTask(CancellationTokenSource cts)
         double controlRatio = 1;
         if (Math.Abs(diff) > 90)
         {
-            controlRatio = 5;
+            controlRatio = 4;
         }
         else if (Math.Abs(diff) > 30)
         {
@@ -54,7 +54,7 @@ public class CameraRotateTask(CancellationTokenSource cts)
     /// <param name="maxDiff">最大误差</param>
     /// <param name="maxTryTimes">最大尝试次数（超时时间）</param>
     /// <returns></returns>
-    public async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff, int maxTryTimes = 30)
+    public async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff, int maxTryTimes = 50)
     {
         int count = 0;
         while (!cts.IsCancellationRequested)

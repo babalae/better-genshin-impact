@@ -1,18 +1,14 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX;
+﻿using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
-using Compunet.YoloV8;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Gdi32;
-using System.Drawing;
-using BetterGenshinImpact.GameTask.AutoPathing;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -33,7 +29,7 @@ public class AutoFightTask : ISoloTask
         _taskParam = taskParam;
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
 
-        if (_taskParam.EndDetect || _taskParam.AutoPickAfterFight)
+        if (_taskParam.FightFinishDetectEnabled)
         {
             _predictor = new BgiYoloV8Predictor(@"Assets\Model\World\bgi_world.onnx");
         }
@@ -80,7 +76,7 @@ public class AutoFightTask : ISoloTask
         // 战斗结束检测线程
         var endTask = Task.Run(async () =>
         {
-            if (!_taskParam.EndDetect)
+            if (!_taskParam.FightFinishDetectEnabled)
             {
                 return;
             }
@@ -106,7 +102,7 @@ public class AutoFightTask : ISoloTask
 
         await Task.WhenAll(fightTask, endTask);
 
-        if (_taskParam.AutoPickAfterFight)
+        if (_taskParam is { FightFinishDetectEnabled: true, PickDropsAfterFightEnabled: true })
         {
             // 执行自动拾取掉落物的功能
         }
@@ -138,7 +134,7 @@ public class AutoFightTask : ISoloTask
             var rotateTask = new CameraRotateTask(_cts!);
             foreach (var a in angles)
             {
-                await rotateTask.WaitUntilRotatedTo(a, 5);
+                await rotateTask.WaitUntilRotatedTo(a, 5, 30);
                 await Delay(1000, _cts!); // 等待视角稳定
                 if (HasFightFlag(CaptureToRectArea()))
                 {

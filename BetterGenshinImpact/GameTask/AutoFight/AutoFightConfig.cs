@@ -20,11 +20,11 @@ public partial class AutoFightConfig : ObservableObject
     /// 检测战斗结束
     /// </summary>
     [ObservableProperty]
-    private bool _endDetect = true;
+    private bool _fightFinishDetectEnabled = true;
 
     /// <summary>
     /// 检测战斗结束
     /// </summary>
     [ObservableProperty]
-    private bool _autoPickAfterFight = true;
+    private bool _pickDropsAfterFightEnabled = true;
 }

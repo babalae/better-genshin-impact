@@ -172,8 +172,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         var param = new AutoFightParam(path)
         {
-            EndDetect = Config.AutoFightConfig.EndDetect,
-            AutoPickAfterFight = Config.AutoFightConfig.AutoPickAfterFight
+            FightFinishDetectEnabled = Config.AutoFightConfig.FightFinishDetectEnabled,
+            PickDropsAfterFightEnabled = Config.AutoFightConfig.PickDropsAfterFightEnabled
         };
 
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
