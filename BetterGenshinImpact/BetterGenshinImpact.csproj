@@ -12,6 +12,7 @@
 		<AssemblyName>BetterGI</AssemblyName>
 		<AssemblyVersion>0.34.4</AssemblyVersion>
 		<Platforms>x64</Platforms>
+		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
