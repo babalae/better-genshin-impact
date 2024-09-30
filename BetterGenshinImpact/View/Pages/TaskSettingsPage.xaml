@@ -24,10 +24,7 @@
                       FontTypography="BodyStrong"
                       Text="独立任务设置" />
         <!--  停止任务  -->
-        <ui:CardControl Margin="0,0,0,12"
-                        Icon="{ui:SymbolIcon DismissCircle24}"
-                        Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
-                                                      Converter={StaticResource BooleanToVisibilityConverter}}">
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
