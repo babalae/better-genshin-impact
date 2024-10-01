@@ -777,7 +777,7 @@
                     </ui:TextBlock>
                 </Grid>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.AutoCookConfig.Enabled, Mode=TwoWay}" />
+            <ui:ToggleSwitch Margin="0,0,40,0" IsChecked="{Binding Config.AutoCookConfig.Enabled, Mode=TwoWay}" />
         </ui:CardControl>
 
         <!--  一键战斗  -->

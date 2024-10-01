@@ -51,7 +51,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         // 构建快捷键配置列表
         BuildHotKeySettingModelList();
 
-        foreach (var hotKeyConfig in HotKeySettingModels)
+        var list = GetAllNonDirectoryHotkey(HotKeySettingModels);
+        foreach (var hotKeyConfig in list)
         {
             hotKeyConfig.RegisterHotKey();
             hotKeyConfig.PropertyChanged += (sender, e) =>
@@ -107,13 +108,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         {
             return;
         }
-
-        var list = new List<HotKeySettingModel>();
-        foreach (var hotKeySettingModel in HotKeySettingModels)
-        {
-            list.AddRange(GetAllNonDirectoryChildren(hotKeySettingModel));
-        }
-
+        var list = GetAllNonDirectoryHotkey(HotKeySettingModels);
         foreach (var hotKeySettingModel in list)
         {
             if (hotKeySettingModel.HotKey.IsEmpty)
@@ -126,6 +121,20 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 hotKeySettingModel.HotKey = HotKey.None;
             }
         }
+    }
+
+    public static List<HotKeySettingModel> GetAllNonDirectoryHotkey(IEnumerable<HotKeySettingModel> modelList)
+    {
+        var list = new List<HotKeySettingModel>();
+        foreach (var hotKeySettingModel in modelList)
+        {
+            if (!hotKeySettingModel.IsDirectory)
+            {
+                list.Add(hotKeySettingModel);
+            }
+            list.AddRange(GetAllNonDirectoryChildren(hotKeySettingModel));
+        }
+        return list;
     }
 
     public static List<HotKeySettingModel> GetAllNonDirectoryChildren(HotKeySettingModel model)
