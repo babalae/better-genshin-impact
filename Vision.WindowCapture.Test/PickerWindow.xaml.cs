@@ -2,106 +2,97 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using Windows.Win32;
-using Windows.Win32.Foundation;
 using static Windows.Win32.PInvoke;
 
-namespace Vision.WindowCapture.Test
+namespace Vision.WindowCapture.Test;
+
+public partial class PickerWindow : Window
 {
-    /// <summary>
-    /// PickerWindow.xaml 的交互逻辑
-    /// </summary>
-    public partial class PickerWindow : Window
+    private readonly string[] _ignoreProcesses = { "applicationframehost", "shellexperiencehost", "systemsettings", "winstore.app", "searchui" };
+
+    public PickerWindow()
     {
-        private readonly string[] _ignoreProcesses = { "applicationframehost", "shellexperiencehost", "systemsettings", "winstore.app", "searchui" };
+        InitializeComponent();
+        Loaded += OnLoaded;
+    }
 
-        public PickerWindow()
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        FindWindows();
+    }
+
+    public IntPtr PickCaptureTarget(IntPtr hWnd)
+    {
+        new WindowInteropHelper(this).Owner = hWnd;
+        ShowDialog();
+
+        return ((CapturableWindow?)WindowList.SelectedItem)?.Handle ?? IntPtr.Zero;
+    }
+
+    private unsafe void FindWindows()
+    {
+        var wih = new WindowInteropHelper(this);
+        EnumWindows((hWnd, lParam) =>
         {
-            InitializeComponent();
-            Loaded += OnLoaded;
-        }
+            // ignore invisible windows
+            if (!IsWindowVisible(hWnd))
+                return true;
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            FindWindows();
-        }
-
-        public IntPtr PickCaptureTarget(IntPtr hWnd)
-        {
-            new WindowInteropHelper(this).Owner = hWnd;
-            ShowDialog();
-
-            return ((CapturableWindow?)WindowList.SelectedItem)?.Handle ?? IntPtr.Zero;
-        }
-
-        private unsafe void FindWindows()
-        {
-            var wih = new WindowInteropHelper(this);
-            EnumWindows((hWnd, lParam) =>
+            // ignore untitled windows
+            string title;
+            int bufferSize = GetWindowTextLength(hWnd) + 1;
+            fixed (char* windowNameChars = new char[bufferSize])
             {
-                // ignore invisible windows
-                if (!IsWindowVisible(hWnd))
-                    return true;
-
-                // ignore untitled windows
-                string title;
-                int bufferSize = GetWindowTextLength(hWnd) + 1;
-                fixed (char* windowNameChars = new char[bufferSize])
+                if (GetWindowText(hWnd, windowNameChars, bufferSize) == 0)
                 {
-                    if (GetWindowText(hWnd, windowNameChars, bufferSize) == 0)
+                    int errorCode = Marshal.GetLastWin32Error();
+                    if (errorCode != 0)
                     {
-                        int errorCode = Marshal.GetLastWin32Error();
-                        if (errorCode != 0)
-                        {
-                            throw new Win32Exception(errorCode);
-                        }
-
-                        return true;
+                        throw new Win32Exception(errorCode);
                     }
 
-                    title = new string(windowNameChars);
-                    if (string.IsNullOrWhiteSpace(title))
-                        return true;
+                    return true;
                 }
 
-
-                // ignore me
-                if (wih.Handle == hWnd)
+                title = new string(windowNameChars);
+                if (string.IsNullOrWhiteSpace(title))
                     return true;
+            }
 
-                uint processId;
-                GetWindowThreadProcessId(hWnd, &processId);
-
-                // ignore by process name
-                var process = Process.GetProcessById((int)processId);
-                if (_ignoreProcesses.Contains(process.ProcessName.ToLower()))
-                    return true;
-
-                WindowList.Items.Add(new CapturableWindow
-                {
-                    Handle = hWnd,
-                    Name = $"{title} ({process.ProcessName}.exe)"
-                });
-
+            // ignore me
+            if (wih.Handle == hWnd)
                 return true;
-            }, IntPtr.Zero);
-        }
 
-        private void WindowsOnMouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            Close();
-        }
+            uint processId;
+            GetWindowThreadProcessId(hWnd, &processId);
+
+            // ignore by process name
+            var process = Process.GetProcessById((int)processId);
+            if (_ignoreProcesses.Contains(process.ProcessName.ToLower()))
+                return true;
+
+            WindowList.Items.Add(new CapturableWindow
+            {
+                Handle = hWnd,
+                Name = $"{title} ({process.ProcessName}.exe)"
+            });
+
+            return true;
+        }, IntPtr.Zero);
     }
 
-    public struct CapturableWindow
+    private void WindowsOnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        public string Name { get; set; }
-        public IntPtr Handle { get; set; }
+        Close();
     }
+}
+
+public struct CapturableWindow
+{
+    public string Name { get; set; }
+    public IntPtr Handle { get; set; }
 }

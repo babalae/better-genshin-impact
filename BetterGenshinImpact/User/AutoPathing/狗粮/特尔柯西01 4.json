@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "特尔柯西01 4",
+    "type": "collect"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 3199.841796875,
+      "y": 3433.740966796875
+    },
+    {
+      "id": 2,
+      "x": 3158.96923828125,
+      "y": 3441.612060546875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": 3148.1279296875,
+      "y": 3446.9951171875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 4,
+      "x": 3107.638671875,
+      "y": 3435.495849609375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 5,
+      "x": 3103.57958984375,
+      "y": 3443.570068359375,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 6,
+      "x": 3105.67236328125,
+      "y": 3445.237060546875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 7,
+      "x": 3073.294921875,
+      "y": 3457.34228515625,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 8,
+      "x": 3069.38623046875,
+      "y": 3460.873779296875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

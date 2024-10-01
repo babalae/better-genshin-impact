@@ -1,0 +1,80 @@
+{
+  "info": {
+    "name": "",
+    "type": "collect"
+  },
+  "positions": [
+    {
+      "id": 2,
+      "x": -164.548828125,
+      "y": 1182.4853515625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport"
+    },
+    {
+      "id": 3,
+      "x": -172.9248046875,
+      "y": 1211.8779296875,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": -157.6103515625,
+      "y": 1246.97802734375,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 5,
+      "x": -137.8681640625,
+      "y": 1258.73095703125,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 6,
+      "x": -116.408203125,
+      "y": 1254.44091796875,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 7,
+      "x": -102.93359375,
+      "y": 1237.91552734375,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 8,
+      "x": -93.443359375,
+      "y": 1234.509765625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "target"
+    },
+    {
+      "id": 9,
+      "x": -90.7333984375,
+      "y": 1235.814453125,
+      "action": "",
+      "move_mode": "walk",
+      "type": "target"
+    },
+    {
+      "id": 10,
+      "x": -94.2021484375,
+      "y": 1238.49609375,
+      "action": "",
+      "move_mode": "walk",
+      "type": "target"
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+{
+  "info": {
+    "name": "碧水原02 9",
+    "type": "collect"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 730.140625,
+      "y": 1062.181640625
+    },
+    {
+      "id": 2,
+      "x": 758.384765625,
+      "y": 1050.73876953125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": 771.841796875,
+      "y": 1062.03076171875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 4,
+      "x": 750.146484375,
+      "y": 1047.14453125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 5,
+      "x": 712.9755859375,
+      "y": 1027.11962890625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 6,
+      "x": 679.0078125,
+      "y": 1007.54052734375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 7,
+      "x": 653.0595703125,
+      "y": 979.81298828125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 8,
+      "x": 642.37109375,
+      "y": 943.5791015625,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 9,
+      "x": 621.8720703125,
+      "y": 922.9013671875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 10,
+      "x": 579.31640625,
+      "y": 908.02734375,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 11,
+      "x": 576.90625,
+      "y": 914.8330078125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 12,
+      "x": 556.1796875,
+      "y": 905.69775390625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 13,
+      "x": 544.6455078125,
+      "y": 892.06298828125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 14,
+      "x": 523.6806640625,
+      "y": 907.0986328125,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 15,
+      "x": 537.94921875,
+      "y": 895.4423828125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 16,
+      "x": 569.7568359375,
+      "y": 888.72314453125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 17,
+      "x": 577.76171875,
+      "y": 892.47119140625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 18,
+      "x": 633.6943359375,
+      "y": 866.03515625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 19,
+      "x": 653.0478515625,
+      "y": 867.361328125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 20,
+      "x": 649.642578125,
+      "y": 843.95849609375,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 21,
+      "x": 648.4287109375,
+      "y": 835.875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 22,
+      "x": 646.67578125,
+      "y": 835.5107421875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 23,
+      "x": 645.49609375,
+      "y": 833.3212890625,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 24,
+      "x": 649.126953125,
+      "y": 831.51904296875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

@@ -22,6 +22,7 @@
 		<None Remove="Assets\Fonts\*.ttf" />
 		<None Remove="Assets\Highlighting\*.xshd" />
 		<None Remove="Assets\Strings\*.html" />
+		<None Remove="Assets\Strings\*.md" />
 		<None Remove="Assets\Audios\*.mp3" />
 	</ItemGroup>
 
@@ -32,6 +33,7 @@
 		<Resource Include="Assets\Fonts\*.ttf" />
 		<Resource Include="Assets\Highlighting\*.xshd" />
 		<Resource Include="Assets\Strings\*.html" />
+		<Resource Include="Assets\Strings\*.md" />
 		<Resource Include="Assets\Audios\*.mp3" />
 	</ItemGroup>
 

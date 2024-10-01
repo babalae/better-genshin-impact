@@ -1,28 +1,27 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.KeyMouseRecordPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      Title="KeyMouseRecordPage"
-      d:DataContext="{d:DesignInstance Type=pages:KeyMouseRecordPageViewModel}"
-      d:DesignHeight="600"
-      d:DesignWidth="800"
-      ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
-      ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      FontFamily="{StaticResource TextThemeFontFamily}"
-      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      mc:Ignorable="d">
-    <Page.Resources>
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.KeyMouseRecordPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:KeyMouseRecordPageViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Page.Resources>
+    </UserControl.Resources>
     <Grid Margin="42,16,42,12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -30,7 +29,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="400" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <ui:TextBlock Grid.Row="0"
@@ -120,4 +119,4 @@
             </ListView.Style>
         </ui:ListView>
     </Grid>
-</Page>
+</UserControl>

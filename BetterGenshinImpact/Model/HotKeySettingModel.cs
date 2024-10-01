@@ -28,6 +28,8 @@ public partial class HotKeySettingModel : ObservableObject
 
     public string FunctionName { get; set; }
 
+    public bool IsExpanded => true;
+
     /// <summary>
     /// 界面上显示是文件夹而不是快捷键
     /// </summary>

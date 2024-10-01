@@ -26,8 +26,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using System.Windows.Input;
-using System.Windows;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -609,11 +607,5 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private string ToChinese(bool enabled)
     {
         return enabled.ToChinese();
-    }
-
-    [RelayCommand]
-    private void OnMouseWheel(RoutedEventArgs e)
-    {
-        Debug.WriteLine("MouseWheel");
     }
 }

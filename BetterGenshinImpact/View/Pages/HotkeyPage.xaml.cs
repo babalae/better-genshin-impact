@@ -3,10 +3,7 @@ using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Pages;
 
-/// <summary>
-/// TaskSettingsPage.xaml 的交互逻辑
-/// </summary>
-public partial class HotKeyPage : Page
+public partial class HotKeyPage : UserControl
 {
     private HotKeyPageViewModel ViewModel { get; }
 

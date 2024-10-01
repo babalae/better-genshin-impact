@@ -7,6 +7,7 @@ using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Controls.Webview;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -16,7 +17,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
 using Wpf.Ui.Controls;
@@ -333,5 +337,27 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                 Config.GenshinStartConfig.InstallPath = path;
             }
         }
+    }
+
+    [RelayCommand]
+    private void OnOpenGameCommandLineDocument()
+    {
+        string md = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/gicli.md", Encoding.UTF8);
+
+        md = WebUtility.HtmlEncode(md);
+        string md2html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html", Encoding.UTF8);
+        var html = md2html.Replace("{{content}}", md);
+
+        WebpageWindow win = new()
+        {
+            Title = "启动参数说明",
+            Width = 800,
+            Height = 600,
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+
+        win.NavigateToHtml(html);
+        win.ShowDialog();
     }
 }

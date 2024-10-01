@@ -1,0 +1,80 @@
+{
+  "info": {
+    "name": "天云峠 01 6",
+    "type": "collect"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -4184.8212890625,
+      "y": -4244.6455078125
+    },
+    {
+      "id": 2,
+      "x": -4165.0224609375,
+      "y": -4241.1630859375,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": -4161.4111328125,
+      "y": -4244.427734375,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 4,
+      "x": -4153.8642578125,
+      "y": -4244.6904296875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 5,
+      "x": -4156.2919921875,
+      "y": -4233.982421875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 6,
+      "x": -4219.0185546875,
+      "y": -4225.755859375,
+      "type": "path",
+      "move_mode": "fly",
+      "action": ""
+    },
+    {
+      "id": 7,
+      "x": -4228.2177734375,
+      "y": -4236.013671875,
+      "type": "target",
+      "move_mode": "fly",
+      "action": ""
+    },
+    {
+      "id": 8,
+      "x": -4216.5830078125,
+      "y": -4251.5029296875,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 9,
+      "x": -4185.7109375,
+      "y": -4299.5673828125,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}
