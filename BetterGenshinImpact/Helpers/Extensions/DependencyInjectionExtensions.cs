@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.DependencyInjection;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace BetterGenshinImpact.Helpers.Extensions;
@@ -17,7 +18,7 @@ internal static class DependencyInjectionExtensions
     }
 
     public static IServiceCollection AddView<TPage, TViewModel>(this IServiceCollection services)
-        where TPage : Page
+        where TPage : FrameworkElement
         where TViewModel : class, IViewModel
     {
         return services

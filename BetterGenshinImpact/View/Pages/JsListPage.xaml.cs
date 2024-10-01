@@ -1,13 +1,9 @@
-﻿using BetterGenshinImpact.ViewModel;
-using BetterGenshinImpact.ViewModel.Pages;
+﻿using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Pages;
 
-/// <summary>
-/// JsListPage.xaml 的交互逻辑
-/// </summary>
-public partial class JsListPage : Page
+public partial class JsListPage : UserControl
 {
     private JsListViewModel ViewModel { get; }
 

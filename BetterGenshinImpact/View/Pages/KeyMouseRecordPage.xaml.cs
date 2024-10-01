@@ -3,10 +3,7 @@ using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Pages;
 
-/// <summary>
-/// KeyMouseRecordPage.xaml 的交互逻辑
-/// </summary>
-public partial class KeyMouseRecordPage : Page
+public partial class KeyMouseRecordPage : UserControl
 {
     private KeyMouseRecordPageViewModel ViewModel { get; }
 

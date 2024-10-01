@@ -1,17 +1,13 @@
-﻿using System.Windows;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.Common.Map;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Test.Dataset;
 using BetterGenshinImpact.Test.Simple;
 using BetterGenshinImpact.Test.Simple.AllMap;
 using BetterGenshinImpact.Test.Simple.Track;
 using BetterGenshinImpact.Test.View;
+using System.Windows;
 
 namespace BetterGenshinImpact.Test;
 
-/// <summary>
-/// MainWindow.xaml 的交互逻辑
-/// </summary>
 public partial class MainWindow : Window
 {
     public MainWindow()
