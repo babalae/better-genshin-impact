@@ -191,48 +191,6 @@ namespace BetterGenshinImpact.GameTask
             return _timer;
         }
 
-        /// <summary>
-        /// 启动独立任务
-        /// </summary>
-        public void StartIndependentTask(IndependentTaskEnum taskType, BaseTaskParam param)
-        {
-            // if (!_timer.Enabled)
-            // {
-            //     throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
-            // }
-            //
-            // var maskWindow = MaskWindow.Instance();
-            // maskWindow.Invoke(() => { maskWindow.Show(); });
-            // if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
-            // {
-            //     AutoGeniusInvokationTask.Start((GeniusInvokationTaskParam)param);
-            // }
-            // else if (taskType == IndependentTaskEnum.AutoWood)
-            // {
-            //     Task.Run(() => { new AutoWoodTask().Start((WoodTaskParam)param); });
-            // }
-            // else if (taskType == IndependentTaskEnum.AutoFight)
-            // {
-            //     Task.Run(() => { new AutoFightTask((AutoFightParam)param).Start(); });
-            // }
-            // else if (taskType == IndependentTaskEnum.AutoDomain)
-            // {
-            //     Task.Run(() => { new AutoDomainTask((AutoDomainParam)param).Start(); });
-            // }
-            // else if (taskType == IndependentTaskEnum.AutoTrack)
-            // {
-            //     Task.Run(() => { new AutoTrackTask((AutoTrackParam)param).Start(); });
-            // }
-            // else if (taskType == IndependentTaskEnum.AutoTrackPath)
-            // {
-            //     Task.Run(() => { new AutoTrackPathTask((AutoTrackPathParam)param).Start(); });
-            // }
-            // else if (taskType == IndependentTaskEnum.AutoMusicGame)
-            // {
-            //     Task.Run(() => { new AutoMusicGameTask((AutoMusicGameParam)param).Start(); });
-            // }
-        }
-
         public void Dispose()
         {
             Stop();

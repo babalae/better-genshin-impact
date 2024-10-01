@@ -18,9 +18,10 @@ public class EngineExtend
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
 
-        // 实时任务调度器
+        // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher());
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
+        engine.AddHostType("SoloTask", typeof(SoloTask));
 
         // 直接添加方法
 #pragma warning disable CS8974 // Converting method group to non-delegate type

@@ -22,7 +22,7 @@ public class RealtimeTimer
     /// <summary>
     /// 实时任务配置
     /// </summary>
-    public AutoPickExternalConfig? Config;
+    public object? Config;
 
     public RealtimeTimer()
     {
@@ -36,6 +36,9 @@ public class RealtimeTimer
     public RealtimeTimer(string name, dynamic config)
     {
         Name = name;
-        Config = ScriptObjectConverter.ConvertTo<AutoPickExternalConfig>(config);
+        if (Name == "AutoPick")
+        {
+            Config = ScriptObjectConverter.ConvertTo<AutoPickExternalConfig>(config);
+        }
     }
 }
