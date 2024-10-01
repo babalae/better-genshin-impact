@@ -134,6 +134,14 @@ public partial class AutoPickTrigger : ITaskTrigger
         content.CaptureRectArea.Find(_pickRo, foundRectArea =>
         {
             speedTimer.Record($"识别到 {_pickKeyName} 拾取键");
+
+            if (_externalConfig is { ForceInteraction: true })
+            {
+                LogPick(content, "直接拾取");
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
+                return;
+            }
+
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
