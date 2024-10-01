@@ -37,15 +37,19 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private static readonly object _locker = new();
 
     [ObservableProperty] private string[] _strategyList;
+    [ObservableProperty] private bool _switchAutoGeniusInvokationEnabled;
     [ObservableProperty] private string _switchAutoGeniusInvokationButtonText = "启动";
 
     [ObservableProperty] private int _autoWoodRoundNum;
     [ObservableProperty] private int _autoWoodDailyMaxCount = 2000;
+    [ObservableProperty] private bool _switchAutoWoodEnabled;
     [ObservableProperty] private string _switchAutoWoodButtonText = "启动";
 
     [ObservableProperty] private string[] _combatStrategyList;
     [ObservableProperty] private int _autoDomainRoundNum;
+    [ObservableProperty] private bool _switchAutoDomainEnabled;
     [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
+    [ObservableProperty] private bool _switchAutoFightEnabled;
     [ObservableProperty] private string _switchAutoFightButtonText = "启动";
     [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
     [ObservableProperty] private string _switchAutoTrackPathButtonText = "启动";
@@ -88,6 +92,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private async Task OnStopSoloTask()
     {
         CancellationContext.Instance.Cancel();
+        SwitchAutoGeniusInvokationEnabled = false;
+        SwitchAutoWoodEnabled = false;
+        SwitchAutoDomainEnabled = false;
+        SwitchAutoFightEnabled = false;
         await Task.Delay(800);
     }
 
@@ -139,8 +147,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         var content = await File.ReadAllTextAsync(path);
 
+        SwitchAutoGeniusInvokationEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunSoloTaskAsync(new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)));
+        SwitchAutoGeniusInvokationEnabled = false;
     }
 
     [RelayCommand]
@@ -152,8 +162,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnSwitchAutoWood()
     {
+        SwitchAutoWoodEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunSoloTaskAsync(new AutoWoodTask(new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount)));
+        SwitchAutoWoodEnabled = false;
     }
 
     [RelayCommand]
@@ -176,8 +188,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             PickDropsAfterFightEnabled = Config.AutoFightConfig.PickDropsAfterFightEnabled
         };
 
+        SwitchAutoFightEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
             .RunSoloTaskAsync(new AutoFightTask(param));
+        SwitchAutoFightEnabled = false;
     }
 
     [RelayCommand]
@@ -193,8 +207,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             return;
         }
+        SwitchAutoDomainEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
             .RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
+        SwitchAutoDomainEnabled = false;
     }
 
     private bool GetFightStrategy(out string path)
