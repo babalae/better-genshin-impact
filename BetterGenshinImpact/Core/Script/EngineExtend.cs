@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script;
@@ -13,7 +14,7 @@ public class EngineExtend
 
         // 添加我的自定义实例化对象
         engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir));
-        engine.AddHostObject("autoPathing", new AutoPathing(workDir));
+        engine.AddHostObject("autoPathingScript", new AutoPathingScript(workDir));
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
@@ -24,9 +25,7 @@ public class EngineExtend
         engine.AddHostType("SoloTask", typeof(SoloTask));
 
         // 直接添加方法
-#pragma warning disable CS8974 // Converting method group to non-delegate type
-        engine.AddHostObject("sleep", GlobalMethod.Sleep);
-#pragma warning restore CS8974 // Converting method group to non-delegate type
+        AddAllGlobalMethod(engine);
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
@@ -38,6 +37,19 @@ public class EngineExtend
         if (searchPaths != null)
         {
             engine.DocumentSettings.SearchPath = string.Join(';', searchPaths);
+        }
+    }
+
+    public static void AddAllGlobalMethod(IScriptEngine engine)
+    {
+        // 获取GlobalMethod类的所有静态方法
+        var methods = typeof(GlobalMethod).GetMethods(BindingFlags.Static | BindingFlags.Public);
+
+        foreach (var method in methods)
+        {
+            // 使用方法名首字母小写作为HostObject的名称
+            var methodName = char.ToLowerInvariant(method.Name[0]) + method.Name.Substring(1);
+            engine.AddHostObject(methodName, method);
         }
     }
 }

@@ -2,8 +2,6 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
-using Microsoft.ClearScript.Util.Web;
-using Microsoft.UI.Xaml.Automation;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 

@@ -5,7 +5,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
-internal class AutoPathing(string rootPath)
+public class AutoPathingScript(string rootPath)
 {
     public async Task Run(string json)
     {
