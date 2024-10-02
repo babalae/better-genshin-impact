@@ -1,25 +1,33 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Helpers;
 using System;
+using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Script.Dependence.Simulator;
 
-public class Keyboard
+public class PostMessage
 {
+    private readonly PostMessageSimulator _postMessageSimulator = TaskContext.Instance().PostMessageSimulator;
+
     public void KeyDown(string key)
     {
-        Simulation.SendInput.Keyboard.KeyDown(ToVk(key));
+        _postMessageSimulator.KeyDownBackground(ToVk(key));
     }
 
     public void KeyUp(string key)
     {
-        Simulation.SendInput.Keyboard.KeyUp(ToVk(key));
+        _postMessageSimulator.KeyUpBackground(ToVk(key));
     }
 
     public void KeyPress(string key)
     {
-        Simulation.SendInput.Keyboard.KeyPress(ToVk(key));
+        _postMessageSimulator.KeyPressBackground(ToVk(key));
+    }
+
+    public void Click()
+    {
+        _postMessageSimulator.LeftButtonClick();
     }
 
     private static User32.VK ToVk(string key)
