@@ -14,6 +14,7 @@ public class Manifest
     public int ManifestVersion { get; set; } = 1;
     public string Name { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string? BgiVersion { get; set; }
     public string Description { get; set; } = string.Empty;
     public List<Author> Authors { get; set; } = [];
     public string Main { get; set; } = string.Empty;
