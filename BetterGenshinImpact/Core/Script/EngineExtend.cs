@@ -3,11 +3,20 @@ using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
 using System.Reflection;
 using System.Threading.Tasks;
+using OpenCvSharp;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model.Area;
 
 namespace BetterGenshinImpact.Core.Script;
 
 public class EngineExtend
 {
+    /// <summary>
+    /// ！！！ 注意：这个方法会添加一些全局方法和对象，不要随便添加，以免安全风险！！！
+    /// </summary>
+    /// <param name="engine"></param>
+    /// <param name="workDir"></param>
+    /// <param name="searchPaths"></param>
     public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths = null)
     {
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
@@ -24,8 +33,19 @@ public class EngineExtend
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
 
+        // PostMessage 作为类型实例化
+        engine.AddHostType("PostMessage", typeof(Dependence.Simulator.PostMessage));
+
         // 直接添加方法
         AddAllGlobalMethod(engine);
+
+        // 识图模块相关
+        engine.AddHostType("Mat", typeof(Mat));
+        engine.AddHostType("RecognitionObject", typeof(RecognitionObject));
+        engine.AddHostType("DesktopRegion", typeof(DesktopRegion));
+        engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));
+        engine.AddHostType("ImageRegion", typeof(ImageRegion));
+        engine.AddHostType("Region", typeof(Region));
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
@@ -48,7 +68,7 @@ public class EngineExtend
         foreach (var method in methods)
         {
             // 使用方法名首字母小写作为HostObject的名称
-            var methodName = char.ToLowerInvariant(method.Name[0]) + method.Name.Substring(1);
+            var methodName = char.ToLowerInvariant(method.Name[0]) + method.Name[1..];
             engine.AddHostObject(methodName, method);
         }
     }

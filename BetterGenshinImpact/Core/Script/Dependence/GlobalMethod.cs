@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -139,4 +140,13 @@ public class GlobalMethod
     }
 
     #endregion 鼠标操作
+
+    #region 识图操作
+
+    public static ImageRegion CaptureGameRegion()
+    {
+        return TaskControl.CaptureToRectArea();
+    }
+
+    #endregion 识图操作
 }
