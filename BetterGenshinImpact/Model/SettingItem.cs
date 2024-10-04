@@ -68,7 +68,7 @@ public class SettingItem
                 {
                     comboBox.SelectedItem = Default;
                 }
-                BindingOperations.SetBinding(comboBox, ItemsControl.ItemsSourceProperty, binding);
+                BindingOperations.SetBinding(comboBox, Selector.SelectedItemProperty, binding);
                 list.Add(comboBox);
                 break;
 

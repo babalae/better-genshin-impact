@@ -2,6 +2,8 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
+using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoDomain;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -43,7 +45,7 @@ public class Dispatcher
     /// </param>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentException"></exception>
-    public void RunTask(SoloTask soloTask)
+    public async Task RunTask(SoloTask soloTask)
     {
         if (soloTask == null)
         {
@@ -71,7 +73,11 @@ public class Dispatcher
                 break;
 
             case "AutoDomain":
-                taskSettingsPageViewModel.SwitchAutoDomainCommand.Execute(null);
+                if (taskSettingsPageViewModel.GetFightStrategy(out var path))
+                {
+                    return;
+                }
+                await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts);
                 break;
 
             case "AutoMusicGame":

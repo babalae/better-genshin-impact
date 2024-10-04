@@ -213,7 +213,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         SwitchAutoDomainEnabled = false;
     }
 
-    private bool GetFightStrategy(out string path)
+    public bool GetFightStrategy(out string path)
     {
         path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
         if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))

@@ -377,35 +377,37 @@ public class TpTask(CancellationTokenSource cts)
         // 1.判断是否在地图界面
         if (Bv.IsInBigMapUi(imageRegion))
         {
-            // 2. 不存在外部地图关闭按钮，说明已经点出界面
-            var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
-            if (mapCloseRa1.IsEmpty())
+            // 2. 判断是否已经点出传送按钮
+            var hasTeleportButton = CheckTeleportButton(imageRegion);
+            if (!hasTeleportButton)
             {
-                // 3.此时不存在传送图标，一定不是传送点
-                if (!CheckTeleportButton(imageRegion))
+                // 3. 没点出传送按钮，且不存在外部地图关闭按钮
+                // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表
+                var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
+                if (!mapCloseRa1.IsEmpty())
                 {
                     throw new TpPointNotActivate("传送点未激活或不存在");
-                }
-            }
-            else
-            {
-                // 3. 循环判断选项列表是否有传送点(未激活点位也在里面)
-                var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
-                if (hasMapChooseIcon)
-                {
-                    var time = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
-                    time = time < 100 ? 100 : time;
-                    await Delay(time, cts);
-                    if (!CheckTeleportButton(CaptureToRectArea()))
-                    {
-                        // 没传送确认图标说明点开的是未激活传送锚点
-                        throw new TpPointNotActivate("传送点未激活或不存在");
-                    }
                 }
                 else
                 {
-                    // 没有传送点说明不是传送点
-                    throw new TpPointNotActivate("传送点未激活或不存在");
+                    // 3. 循环判断选项列表是否有传送点(未激活点位也在里面)
+                    var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
+                    if (hasMapChooseIcon)
+                    {
+                        var time = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
+                        time = time < 100 ? 100 : time;
+                        await Delay(time, cts);
+                        if (!CheckTeleportButton(CaptureToRectArea()))
+                        {
+                            // 没传送确认图标说明点开的是未激活传送锚点
+                            throw new TpPointNotActivate("传送点未激活或不存在");
+                        }
+                    }
+                    else
+                    {
+                        // 没有传送点说明不是传送点
+                        throw new TpPointNotActivate("传送点未激活或不存在");
+                    }
                 }
             }
         }
