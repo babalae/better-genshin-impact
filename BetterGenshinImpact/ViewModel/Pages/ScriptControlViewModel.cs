@@ -342,10 +342,11 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             };
             uiMessageBox.ShowDialogAsync();
 
-            // foreach (var group in ScriptGroups)
-            // {
-            //     WriteScriptGroup(group);
-            // }
+            // 由于 JsScriptSettingsObject 的存在，这里只能手动再次保存配置
+            foreach (var group in ScriptGroups)
+            {
+                WriteScriptGroup(group);
+            }
         }
         else
         {

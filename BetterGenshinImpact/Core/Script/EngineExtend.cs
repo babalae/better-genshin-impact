@@ -62,14 +62,35 @@ public class EngineExtend
 
     public static void AddAllGlobalMethod(IScriptEngine engine)
     {
-        // 获取GlobalMethod类的所有静态方法
-        var methods = typeof(GlobalMethod).GetMethods(BindingFlags.Static | BindingFlags.Public);
+        // // 获取GlobalMethod类的所有静态方法
+        // var methods = typeof(GlobalMethod).GetMethods(BindingFlags.Static | BindingFlags.Public);
+        //
+        // foreach (var method in methods)
+        // {
+        //     // 使用方法名首字母小写作为HostObject的名称
+        //     var methodName = char.ToLowerInvariant(method.Name[0]) + method.Name[1..];
+        //     engine.AddHostObject(methodName, method);
+        // }
 
-        foreach (var method in methods)
-        {
-            // 使用方法名首字母小写作为HostObject的名称
-            var methodName = char.ToLowerInvariant(method.Name[0]) + method.Name[1..];
-            engine.AddHostObject(methodName, method);
-        }
+#pragma warning disable CS8974 // Converting method group to non-delegate type
+        engine.AddHostObject("sleep", GlobalMethod.Sleep);
+        engine.AddHostObject("keyDown", GlobalMethod.KeyDown);
+        engine.AddHostObject("keyUp", GlobalMethod.KeyUp);
+        engine.AddHostObject("keyPress", GlobalMethod.KeyPress);
+        engine.AddHostObject("setGameMetrics", GlobalMethod.SetGameMetrics);
+        engine.AddHostObject("moveMouseBy", GlobalMethod.MoveMouseBy);
+        engine.AddHostObject("moveMouseTo", GlobalMethod.MoveMouseTo);
+        engine.AddHostObject("click", GlobalMethod.Click);
+        engine.AddHostObject("leftButtonClick", GlobalMethod.LeftButtonClick);
+        engine.AddHostObject("leftButtonDown", GlobalMethod.LeftButtonDown);
+        engine.AddHostObject("leftButtonUp", GlobalMethod.LeftButtonUp);
+        engine.AddHostObject("rightButtonClick", GlobalMethod.RightButtonClick);
+        engine.AddHostObject("rightButtonDown", GlobalMethod.RightButtonDown);
+        engine.AddHostObject("rightButtonUp", GlobalMethod.RightButtonUp);
+        engine.AddHostObject("middleButtonClick", GlobalMethod.MiddleButtonClick);
+        engine.AddHostObject("middleButtonDown", GlobalMethod.MiddleButtonDown);
+        engine.AddHostObject("middleButtonUp", GlobalMethod.MiddleButtonUp);
+        engine.AddHostObject("captureGameRegion", GlobalMethod.CaptureGameRegion);
+#pragma warning restore CS8974 // Converting method group to non-delegate type
     }
 }

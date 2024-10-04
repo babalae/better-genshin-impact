@@ -9,6 +9,15 @@ public class KeyMouseScriptInfo
 
     public string Description { get; set; } = string.Empty;
 
+    public string? Author { get; set; }
+
+    public string? Version { get; set; }
+
+    /// <summary>
+    /// 制作时 BetterGI 的版本，用于兼容性检查
+    /// </summary>
+    public string? BgiVersion { get; set; }
+
     public int X { get; set; }
     public int Y { get; set; }
     public int Width { get; set; }

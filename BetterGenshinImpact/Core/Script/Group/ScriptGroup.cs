@@ -34,6 +34,6 @@ public partial class ScriptGroup : ObservableObject
 
     public static ScriptGroup FromJson(string json)
     {
-        return JsonSerializer.Deserialize<ScriptGroup>(json, ConfigService.JsonOptions) ?? throw new Exception("解析配置组JSON配置失败");
+        return Newtonsoft.Json.JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception("解析配置组JSON配置失败");
     }
 }
