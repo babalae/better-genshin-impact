@@ -29,6 +29,10 @@ public class TpTask(CancellationTokenSource cts)
 {
     private readonly QuickTeleportAssets _assets = QuickTeleportAssets.Instance;
 
+    private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+
+    private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
+
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>
@@ -37,8 +41,6 @@ public class TpTask(CancellationTokenSource cts)
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
     public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
     {
-        var s = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
-
         var (x, y) = (tpX, tpY);
 
         if (!force)
@@ -61,10 +63,7 @@ public class TpTask(CancellationTokenSource cts)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
-        // while (!bigMapInAllMapRect.Shrink((int)Math.Round(115 * s)).Contains(x, y)
-        //        || new Rect(bigMapInAllMapRect.X, bigMapInAllMapRect.Y, (int)Math.Round(350 * s), (int)Math.Round(400 * s))
-        //            .Contains(x, y)) // 左上角 350x400也属于禁止点击区域
-        while (!bigMapInAllMapRect.Shrink((int)Math.Round(115 * s)).Contains(x, y)) // 左上角 350x400也属于禁止点击区域
+        while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y)) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
@@ -74,15 +73,10 @@ public class TpTask(CancellationTokenSource cts)
 
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
         // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
-        var (picX, picY) = MapCoordinate.GameToMain2048(x, y);
-        var picRect = MapCoordinate.GameToMain2048(bigMapInAllMapRect);
-        Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
-        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var clickX = (int)((picX - picRect.X) / picRect.Width * captureRect.Width);
-        var clickY = (int)((picY - picRect.Y) / picRect.Height * captureRect.Height);
+        var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
         Logger.LogInformation("点击传送点：({X},{Y})", clickX, clickY);
         using var ra = CaptureToRectArea();
-        ra.ClickTo(clickX, clickY);
+        ra.ClickTo((int)clickX, (int)clickY);
 
         // 触发一次快速传送功能
         await Delay(500, cts);
@@ -101,6 +95,57 @@ public class TpTask(CancellationTokenSource cts)
 
         Logger.LogInformation("传送完成");
         return (x, y);
+    }
+
+    /// <summary>
+    /// 传送点是否在大地图窗口内
+    /// </summary>
+    /// <param name="bigMapInAllMapRect">大地图在整个游戏地图中的矩形位置（原神坐标系）</param>
+    /// <param name="x">传送点x坐标（原神坐标系）</param>
+    /// <param name="y">传送点y坐标（原神坐标系）</param>
+    /// <returns></returns>
+    private bool IsPointInBigMapWindow(Rect bigMapInAllMapRect, double x, double y)
+    {
+        // 坐标不包含直接返回
+        if (!bigMapInAllMapRect.Contains(x, y))
+        {
+            return false;
+        }
+
+        var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
+        // 屏蔽左上角350x400区域
+        if (clickX < 250 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
+        {
+            return false;
+        }
+
+        // 屏蔽周围 115 一圈的区域
+        if (clickX < 115 * _zoomOutMax1080PRatio
+            || clickY < 115 * _zoomOutMax1080PRatio
+            || clickX > _captureRect.Width - 115 * _zoomOutMax1080PRatio
+            || clickY > _captureRect.Height - 115 * _zoomOutMax1080PRatio)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 转换传送点坐标到窗体内需要点击的坐标
+    /// </summary>
+    /// <param name="bigMapInAllMapRect">大地图在整个游戏地图中的矩形位置（原神坐标系）</param>
+    /// <param name="x">传送点x坐标（原神坐标系）</param>
+    /// <param name="y">传送点y坐标（原神坐标系）</param>
+    /// <returns></returns>
+    private (double clickX, double clickY) ConvertToGameRegionPosition(Rect bigMapInAllMapRect, double x, double y)
+    {
+        var (picX, picY) = MapCoordinate.GameToMain2048(x, y);
+        var picRect = MapCoordinate.GameToMain2048(bigMapInAllMapRect);
+        Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
+        var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
+        var clickY = (picY - picRect.Y) / picRect.Height * _captureRect.Height;
+        return (clickX, clickY);
     }
 
     public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
