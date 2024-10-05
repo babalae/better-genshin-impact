@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>12.0</LangVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Platforms>x64</Platforms>
   </PropertyGroup>

@@ -6,6 +6,7 @@
 		<Nullable>enable</Nullable>
 		<Platforms>x64</Platforms>
 		<LangVersion>12.0</LangVersion>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     </PropertyGroup>
 
