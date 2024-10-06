@@ -440,7 +440,7 @@ public class TpTask(CancellationTokenSource cts)
                     if (hasMapChooseIcon)
                     {
                         var time = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
-                        time = time < 100 ? 100 : time;
+                        time = time < 300 ? 300 : time;
                         await Delay(time, cts);
                         if (!CheckTeleportButton(CaptureToRectArea()))
                         {
