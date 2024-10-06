@@ -1,11 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -28,38 +27,19 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
 
     [ObservableProperty]
-    private ObservableCollection<PathingTask> _pathItems = [];
+    private ObservableCollection<FileTreeNode<PathingTask>> _treeList = [];
 
     private MapViewer? _mapViewer;
 
     private void InitScriptListViewData()
     {
-        _pathItems.Clear();
-        var fileInfos = LoadScriptFolder(PathJsonPath);
-        foreach (var f in fileInfos)
+        _treeList.Clear();
+        var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(PathJsonPath);
+        // 循环写入 root.Children
+        foreach (var item in root.Children)
         {
-            try
-            {
-                _pathItems.Add(PathingTask.BuildFromFilePath(f.FullName));
-            }
-            catch (Exception e)
-            {
-                Toast.Warning($"地图追踪任务 {f.Name} 载入失败：{e.Message}");
-            }
+            _treeList.Add(item);
         }
-    }
-
-    private IEnumerable<FileInfo> LoadScriptFolder(string folder)
-    {
-        if (!Directory.Exists(folder))
-        {
-            Directory.CreateDirectory(folder);
-        }
-
-        var files = Directory.GetFiles(folder, "*.*",
-            SearchOption.AllDirectories);
-
-        return files.Select(file => new FileInfo(file)).ToList();
     }
 
     public void OnNavigatedTo()
@@ -78,6 +58,7 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
         {
             Directory.CreateDirectory(PathJsonPath);
         }
+
         Process.Start("explorer.exe", PathJsonPath);
     }
 
@@ -88,6 +69,7 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
         {
             return;
         }
+
         Process.Start("explorer.exe", item.ProjectPath);
     }
 

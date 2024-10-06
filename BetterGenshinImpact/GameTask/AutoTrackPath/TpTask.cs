@@ -503,7 +503,7 @@ public class TpTask(CancellationTokenSource cts)
 
                 Logger.LogInformation("传送：点击 {Option}", textRegion.Text);
                 var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
-                time = time < 200 ? 200 : time;
+                time = time < 500 ? 500 : time;
                 Thread.Sleep(time);
                 ra.Click();
                 hasMapChooseIcon = true;

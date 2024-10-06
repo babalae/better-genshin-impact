@@ -35,7 +35,7 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="自定义 Javascript 脚本（开发中功能）" />
+                      Text="自定义 Javascript 脚本（实验功能）" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
