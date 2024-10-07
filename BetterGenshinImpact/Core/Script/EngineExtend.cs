@@ -23,7 +23,7 @@ public class EngineExtend
 
         // 添加我的自定义实例化对象
         engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir));
-        engine.AddHostObject("autoPathingScript", new AutoPathingScript(workDir));
+        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir));
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问

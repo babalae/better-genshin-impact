@@ -72,7 +72,7 @@ public class SettingItem
                 list.Add(comboBox);
                 break;
 
-            case "checkBox":
+            case "checkbox":
                 var checkBox = new CheckBox
                 {
                     Name = Name,
