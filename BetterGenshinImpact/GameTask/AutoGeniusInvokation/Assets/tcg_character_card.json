@@ -4602,6 +4602,75 @@
         ]
     },
     {
+        "id": 1609,
+        "nameEn": "chiori",
+        "type": "character",
+        "name": "千织",
+        "hp": 10,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "weaving_blade",
+                "name": "心织刀流",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "fluttering_hasode",
+                "name": "羽袖一触",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "hiyoku_twin_blades",
+                "name": "二刀之形·比翼",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1701,
         "nameEn": "collei",
         "type": "character",
@@ -6530,6 +6599,83 @@
         ]
     },
     {
+        "id": 2406,
+        "nameEn": "abyss_lector_violet_lightning",
+        "type": "character",
+        "name": "深渊咏者·紫电",
+        "hp": 6,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "den_of_thunder",
+                "name": "渊薮落雷",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "shock_of_the_enigmatic_abyss",
+                "name": "秘渊虚霆",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "wild_thunderburst",
+                "name": "狂迸骇雷",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "electric_rebirth",
+                "name": "雷之新生",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 2501,
         "nameEn": "maguu_kenki",
         "type": "character",
@@ -7075,6 +7221,83 @@
             {
                 "nameEn": "invokation_of_propagation",
                 "name": "增殖感召",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2703,
+        "nameEn": "eremite_floral_ringdancer",
+        "type": "character",
+        "name": "镀金旅团·叶轮舞者",
+        "hp": 10,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "floralring_caress",
+                "name": "叶轮轻扫",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "spiraling_whirl",
+                "name": "蔓延旋舞",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "spirit_of_omens_awakening_dendro_spiritserpent",
+                "name": "厄灵苏醒·草之灵蛇",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "spirit_of_omens_power",
+                "name": "厄灵之能",
                 "skillTag": [
                     "被动技能"
                 ],
