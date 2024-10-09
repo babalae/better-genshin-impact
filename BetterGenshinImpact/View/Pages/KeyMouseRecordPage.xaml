@@ -43,6 +43,22 @@
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <ui:Button Command="{Binding OpenScriptFolderCommand}"
+                       Content="打开脚本目录"
+                       Icon="{ui:SymbolIcon FolderOpen24}" />
+            <Separator Width="10" Opacity="0" />
+            <ui:Button Command="{Binding OpenScriptFolderCommand}" Icon="{ui:SymbolIcon Archive24}">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <ui:TextBlock>脚本仓库</ui:TextBlock>
+                    <ui:InfoBadge Margin="0,-3,-8,0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Top"
+                                  Severity="Attention"
+                                  Style="{DynamicResource DotInfoBadgeStyle}"
+                                  Visibility="Visible" />
+                </Grid>
+            </ui:Button>
+            <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding StartRecordCommand}"
                        Content="开始录制"
                        Icon="{ui:SymbolIcon Record20}"
@@ -52,10 +68,6 @@
                        Content="停止录制"
                        Icon="{ui:SymbolIcon Stop24}"
                        IsEnabled="{Binding IsRecording}" />
-            <Separator Width="10" Opacity="0" />
-            <ui:Button Command="{Binding OpenScriptFolderCommand}"
-                       Content="打开脚本目录"
-                       Icon="{ui:SymbolIcon FolderOpen24}" />
         </StackPanel>
 
         <Separator Grid.Row="3"

@@ -51,6 +51,19 @@
                        Content="打开任务目录"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
             <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenScriptFolderCommand}"
+                       Icon="{ui:SymbolIcon Archive24}">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <ui:TextBlock>脚本仓库</ui:TextBlock>
+                    <ui:InfoBadge Margin="0,-3,-8,0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Top"
+                                  Severity="Attention"
+                                  Style="{DynamicResource DotInfoBadgeStyle}"
+                                  Visibility="Visible" />
+                </Grid>
+            </ui:Button>
+            <ui:Button Margin="10,0,0,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看实时追踪地图" />
             <ui:Button Margin="10,0,0,0"
@@ -68,7 +81,7 @@
                    BorderThickness="1"
                    CornerRadius="{DynamicResource ControlCornerRadius}">
             <Grid Margin="4">
-                <ui:Grid ColumnDefinitions="*,235" Visibility="Hidden">
+                <ui:Grid ColumnDefinitions="*,130" Visibility="Hidden">
                     <Grid x:Name="TreeColumnStar" Grid.Column="0" />
                 </ui:Grid>
                 <ui:TreeListView BorderThickness="0" ItemsSource="{Binding TreeList}">
@@ -81,6 +94,9 @@
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
+                            <ui:GridViewColumn Width="120"
+                                               DisplayMemberBinding="{Binding Author}"
+                                               Header="作者" />
                         </GridViewColumnCollection>
                     </ui:TreeListView.Columns>
                     <ui:TreeListView.ItemTemplate>
