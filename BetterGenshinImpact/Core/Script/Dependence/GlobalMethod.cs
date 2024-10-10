@@ -81,11 +81,11 @@ public class GlobalMethod
             throw new ArgumentException("鼠标坐标超出游戏窗口范围");
         }
 
-        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var scale = captureAreaRect.Width * 1.0 / _gameWidth;
-
-        DesktopRegion.DesktopRegionMove(captureAreaRect.X + x * scale, captureAreaRect.Y + y * scale);
-        Simulation.SendInput.Mouse.MoveMouseTo(x, y);
+        GameCaptureRegion.GameRegionMove((size, s2) =>
+        {
+            var scale = 1920.0 / _gameWidth;
+            return (x * scale * s2, y * scale * s2);
+        });
     }
 
     public static void Click(int x, int y)
