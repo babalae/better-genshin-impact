@@ -39,8 +39,11 @@
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="可以通过 Javascript 调用 BetterGI 在原神中的各项能力，右键可以直接执行脚本。建议在调度器中使用！"
-                      TextWrapping="Wrap" />
+                      TextWrapping="Wrap">
+            可以通过 Javascript 调用 BetterGI 在原神中的各项能力。请在调度器中使用！<Hyperlink Command="{Binding GoToJsScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                点击查看 Javascript 脚本使用与编写教程
+            </Hyperlink>
+        </ui:TextBlock>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding OpenScriptsFolderCommand}"

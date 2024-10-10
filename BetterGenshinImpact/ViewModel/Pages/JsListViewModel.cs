@@ -100,4 +100,10 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     {
         InitScriptListViewData();
     }
+
+    [RelayCommand]
+    public void OnGoToJsScriptUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/jsscript.html") { UseShellExecute = true });
+    }
 }

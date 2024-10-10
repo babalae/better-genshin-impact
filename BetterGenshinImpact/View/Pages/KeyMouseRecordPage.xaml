@@ -39,8 +39,11 @@
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="建议在游戏内使用快捷键进行录制。&#x0a;1. 录制时遇到主界面和其他界面的切换时，不要操作，需要等待程序识别这个切换过程&#x0a;2. 尽量走平坦的路，每次碰撞都会出现不一样的结果&#x0a;3. 录制的距离越长，误差会更大"
-                      TextWrapping="Wrap" />
+                      TextWrapping="Wrap">
+            建议在游戏内使用快捷键进行录制，录制完成后在调度器中使用。<Hyperlink Command="{Binding GoToKmScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                点击查看键鼠录制回放功能教程
+            </Hyperlink>
+        </ui:TextBlock>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding OpenScriptFolderCommand}"

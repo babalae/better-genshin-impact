@@ -94,7 +94,7 @@
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                         <!--  WebAsset24 | DocumentJs16 | Script16  -->
-                        <ui:NavigationViewItem Content="脚本"
+                        <ui:NavigationViewItem Content="JS 脚本"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:JsListPage}">
                             <ui:NavigationViewItem.Icon>

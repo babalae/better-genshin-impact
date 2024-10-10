@@ -219,4 +219,10 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             InitScriptListViewData();
         }
     }
+
+    [RelayCommand]
+    public void OnGoToKmScriptUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/kmscript.html") { UseShellExecute = true });
+    }
 }
