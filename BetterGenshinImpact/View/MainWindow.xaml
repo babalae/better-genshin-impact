@@ -20,6 +20,7 @@
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                 WindowBackdropType="Auto"
                  WindowStartupLocation="CenterScreen"
                  WindowState="{Binding WindowState, Mode=TwoWay}"
                  mc:Ignorable="d">
