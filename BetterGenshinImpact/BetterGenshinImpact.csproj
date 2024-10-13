@@ -8,7 +8,7 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
+		<ApplicationIcon>Assets\Images\Anniversary\logo_1st.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
 		<AssemblyVersion>0.34.6</AssemblyVersion>
 		<Platforms>x64</Platforms>
@@ -17,6 +17,7 @@
 
 	<ItemGroup>
 		<None Remove="Assets\Images\*.jpg" />
+		<None Remove="Assets\Images\*" />
 		<None Remove="Assets\Images\*.png" />
 		<None Remove="Assets\Images\*.ico" />
 		<None Remove="Assets\Fonts\*.ttf" />
@@ -28,6 +29,7 @@
 
 	<ItemGroup>
 		<Resource Include="Assets\Images\*.jpg" />
+		<Resource Include="Assets\Images\Anniversary\*" />
 		<Resource Include="Assets\Images\*.png" />
 		<Resource Include="Assets\Images\*.ico" />
 		<Resource Include="Assets\Fonts\*.ttf" />
