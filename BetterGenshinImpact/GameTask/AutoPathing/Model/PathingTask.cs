@@ -34,6 +34,12 @@ public class PathingTask
         return task;
     }
 
+    public static PathingTask BuildFromJson(string json)
+    {
+        var task = JsonSerializer.Deserialize<PathingTask>(json, PathRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize PathingTask");
+        return task;
+    }
+
     public void SaveToFile(string filePath)
     {
         var json = JsonSerializer.Serialize(this, PathRecorder.JsonOptions);

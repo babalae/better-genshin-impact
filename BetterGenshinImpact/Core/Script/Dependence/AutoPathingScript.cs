@@ -1,7 +1,6 @@
-﻿using System.Threading.Tasks;
-using System.Text.Json;
-using BetterGenshinImpact.GameTask.AutoPathing;
+﻿using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -9,11 +8,7 @@ public class AutoPathingScript(string rootPath)
 {
     public async Task Run(string json)
     {
-        var task = JsonSerializer.Deserialize<PathingTask>(json);
-        if (task == null)
-        {
-            return;
-        }
+        var task = PathingTask.BuildFromJson(json);
         await new PathExecutor(CancellationContext.Instance.Cts).Pathing(task);
     }
 

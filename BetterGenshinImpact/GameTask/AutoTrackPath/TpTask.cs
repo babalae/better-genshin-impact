@@ -74,7 +74,7 @@ public class TpTask(CancellationTokenSource cts)
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
         // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
         var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
-        Logger.LogInformation("点击传送点：({X},{Y})", clickX, clickY);
+        Logger.LogInformation("点击传送点");
         using var ra = CaptureToRectArea();
         ra.ClickTo((int)clickX, (int)clickY);
 
