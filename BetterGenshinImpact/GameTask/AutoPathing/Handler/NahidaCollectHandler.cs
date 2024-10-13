@@ -24,8 +24,8 @@ public class NahidaCollectHandler : IActionHandler
 
         var dpi = TaskContext.Instance().DpiScale;
 
-        int x = (int)(200 * dpi), y = (int)(-50 * dpi);
-        int i = 80;
+        int x = (int)(250 * dpi), y = (int)(-30 * dpi);
+        int i = 60;
         // 视角拉到最下面
         Simulation.SendInput.Mouse.MoveMouseBy(0, 10000);
         await Delay(200, cts);
@@ -33,6 +33,15 @@ public class NahidaCollectHandler : IActionHandler
         // 按住E技能 无死角扫码
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
         await Delay(200, cts);
+
+        // 先地面来一圈
+        for (int j = 0; j < 15; j++)
+        {
+            Simulation.SendInput.Mouse.MoveMouseBy(x, 500);
+            await Delay(30, cts);
+        }
+
+        // 然后抬斜向转圈
         while (!cts.IsCancellationRequested && i > 0)
         {
             i--;
@@ -40,8 +49,9 @@ public class NahidaCollectHandler : IActionHandler
             {
                 y -= (int)(20 * dpi);
             }
+
             Simulation.SendInput.Mouse.MoveMouseBy(x, y);
-            await Delay(40, cts);
+            await Delay(30, cts);
         }
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_E);
 
