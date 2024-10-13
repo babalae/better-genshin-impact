@@ -800,7 +800,7 @@
     "weapon": "13"
   },
   {
-    "alias": [ "基尼奇", "Kinich", "基哥" ],
+    "alias": [ "基尼奇", "Kinich", "基哥", "基尼齐" ],
     "burstCD": 18.0,
     "id": "10000101",
     "name": "基尼奇",
@@ -817,5 +817,14 @@
     "skillCD": 1.8,
     "skillHoldCD": 6.0,
     "weapon": "10"
+  },
+  {
+    "alias": [ "希诺宁", "Xilonen", "豹女", "岩大猫", "大岩猫", "岩猫", "岩猫猫", "西诺宁" ],
+    "burstCD": 15.0,
+    "id": "10000103",
+    "name": "希诺宁",
+    "nameEn": "Xilonen",
+    "skillCD": 7.0,
+    "weapon": "1"
   }
 ]
