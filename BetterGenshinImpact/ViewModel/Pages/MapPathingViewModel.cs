@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.IO;
 using BetterGenshinImpact.Core.Script;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -73,21 +74,24 @@ public partial class MapPathingViewModel(IScriptService scriptService, IConfigSe
     }
 
     [RelayCommand]
-    public async void OnStart(PathingTask? item)
+    public async void OnStart(FileTreeNode<PathingTask>? item)
     {
         if (item == null)
         {
             return;
         }
+        if (item.IsDirectory)
+        {
+            Toast.Warning("执行多个地图追踪任务的时候，请使用调度器功能");
+            return;
+        }
 
-        // new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
-        // .FireAndForget(async () =>
-        // {
-        //     TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
-        //     await new PathExecutor(CancellationContext.Instance.Cts).Pathing(item);
-        // });
+        if (string.IsNullOrEmpty(item.FilePath))
+        {
+            return;
+        }
 
-        var fileInfo = new FileInfo(item.FullPath);
+        var fileInfo = new FileInfo(item.FilePath);
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
         await scriptService.RunMulti([project]);
     }
@@ -120,7 +124,7 @@ public partial class MapPathingViewModel(IScriptService scriptService, IConfigSe
     }
 
     [RelayCommand]
-    public void OnRefresh(PathingTask? item)
+    public void OnRefresh(object? item)
     {
         InitScriptListViewData();
     }

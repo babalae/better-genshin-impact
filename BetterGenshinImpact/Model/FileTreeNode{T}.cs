@@ -43,4 +43,10 @@ public partial class FileTreeNode<T> : ObservableObject
     // 子节点列表
     [ObservableProperty]
     private ObservableCollection<FileTreeNode<T>> _children = [];
+
+    public T BuildValue()
+    {
+        Value = default!;
+        return Value;
+    }
 }

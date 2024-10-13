@@ -41,7 +41,7 @@
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       TextWrapping="Wrap">
-            可以实现自动采集、自动挖矿（开发中）、自动锄地（开发中）等功能。建议在调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+            可以实现自动采集、自动挖矿（开发中）、自动锄地（开发中）等功能。请调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                 点击查看地图追踪与录制使用教程
             </Hyperlink>
         </ui:TextBlock>
@@ -81,7 +81,7 @@
                    BorderThickness="1"
                    CornerRadius="{DynamicResource ControlCornerRadius}">
             <Grid Margin="4">
-                <ui:Grid ColumnDefinitions="*,130" Visibility="Hidden">
+                <ui:Grid ColumnDefinitions="*,10" Visibility="Hidden">
                     <Grid x:Name="TreeColumnStar" Grid.Column="0" />
                 </ui:Grid>
                 <ui:TreeListView BorderThickness="0" ItemsSource="{Binding TreeList}">
@@ -94,20 +94,24 @@
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
-                            <ui:GridViewColumn Width="120"
+                            <!--<ui:GridViewColumn Width="120"
                                                DisplayMemberBinding="{Binding Author}"
-                                               Header="作者" />
+                                               Header="作者" />-->
                         </GridViewColumnCollection>
                     </ui:TreeListView.Columns>
                     <ui:TreeListView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
                     </ui:TreeListView.ItemTemplate>
-                    <ui:TreeListView.ContextMenu>
+                    <!--<ui:TreeListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding EditCommand}" Header="编辑" />
-                            <MenuItem Command="{Binding DeleteCommand}" Header="删除" />
+                            <MenuItem Command="{Binding StartCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="执行任务" />
+                            <MenuItem Command="{Binding RefreshCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="刷新" />
                         </ContextMenu>
-                    </ui:TreeListView.ContextMenu>
+                    </ui:TreeListView.ContextMenu>-->
                 </ui:TreeListView>
             </Grid>
         </ui:Border>
