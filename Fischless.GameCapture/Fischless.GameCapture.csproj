@@ -6,7 +6,6 @@
 		<Nullable>enable</Nullable>
 		<Platforms>x64</Platforms>
 		<UseWindowsForms>True</UseWindowsForms>
-		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 		<UseWPF>True</UseWPF>
 		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>

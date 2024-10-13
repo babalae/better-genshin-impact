@@ -6,7 +6,6 @@
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>true</UseWindowsForms>
-		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\Images\Anniversary\logo_1st.ico</ApplicationIcon>
