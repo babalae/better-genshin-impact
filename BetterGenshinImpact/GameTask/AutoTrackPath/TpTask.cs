@@ -47,7 +47,7 @@ public class TpTask(CancellationTokenSource cts)
         {
             // 获取最近的传送点位置
             (x, y) = GetRecentlyTpPoint(tpX, tpY);
-            Logger.LogInformation("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
+            Logger.LogDebug("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
         }
 
         // M 打开地图识别当前位置，中心点为当前位置
@@ -372,7 +372,7 @@ public class TpTask(CancellationTokenSource cts)
         if (bigMapCenterPointNullable != null)
         {
             var bigMapCenterPoint = bigMapCenterPointNullable.Value;
-            Logger.LogInformation("识别当前大地图位置：{Pos}", bigMapCenterPoint);
+            Logger.LogDebug("识别当前大地图位置：{Pos}", bigMapCenterPoint);
             minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
         }
 
@@ -387,7 +387,7 @@ public class TpTask(CancellationTokenSource cts)
             }
         }
 
-        Logger.LogInformation("离目标传送点最近的区域是：{Country}", minCountry);
+        Logger.LogDebug("离目标传送点最近的区域是：{Country}", minCountry);
         if (minCountry != "当前位置")
         {
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));

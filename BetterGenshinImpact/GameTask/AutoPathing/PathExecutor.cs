@@ -23,13 +23,10 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class PathExecutor(CancellationTokenSource cts)
 {
-    private double _dpi = 1;
-
-    private CameraRotateTask _rotateTask = new(cts);
+    private readonly CameraRotateTask _rotateTask = new(cts);
 
     public async Task Pathing(PathingTask task)
     {
-        _dpi = TaskContext.Instance().DpiScale;
         if (!task.Positions.Any())
         {
             Logger.LogWarning("没有路径点，寻路结束");
@@ -38,7 +35,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
         InitializePathing(task);
 
-        var waypoints = ConvertWaypoints(task.Positions);
+        var waypoints = ConvertWaypointsForTrack(task.Positions);
 
         await Delay(100, cts);
         Navigation.WarmUp(); // 提前加载地图特征点
@@ -80,42 +77,26 @@ public class PathExecutor(CancellationTokenSource cts)
             "UpdateCurrentPathing", new object(), task));
     }
 
-    private List<Waypoint> ConvertWaypoints(List<Waypoint> positions)
+    private List<WaypointForTrack> ConvertWaypointsForTrack(List<Waypoint> positions)
     {
-        var waypoints = new List<Waypoint>();
-        foreach (var waypoint in positions)
-        {
-            if (waypoint.Type == WaypointType.Teleport.Code)
-            {
-                waypoints.Add(waypoint);
-                continue;
-            }
-            var waypointCopy = new Waypoint
-            {
-                Action = waypoint.Action,
-                Type = waypoint.Type,
-                MoveMode = waypoint.MoveMode
-            };
-            (waypointCopy.X, waypointCopy.Y) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
-            waypoints.Add(waypointCopy);
-        }
-        return waypoints;
+        // 把 X Y 转换为 MatX MatY
+        return positions.Select(waypoint => new WaypointForTrack(waypoint)).ToList();
     }
 
-    private async Task HandleTeleportWaypoint(Waypoint waypoint)
+    private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.X, waypoint.Y, forceTp);
+        var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.GameX, waypoint.GameY, forceTp);
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
     }
 
-    private async Task MoveTo(Waypoint waypoint)
+    private async Task MoveTo(WaypointForTrack waypoint)
     {
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.X:F1}", $"{waypoint.Y:F1}");
+        Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
         var startTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
@@ -126,11 +107,12 @@ public class PathExecutor(CancellationTokenSource cts)
         while (!cts.IsCancellationRequested)
         {
             var now = DateTime.UtcNow;
-            if ((now - startTime).TotalSeconds > 60)
+            if ((now - startTime).TotalSeconds > 240)
             {
                 Logger.LogWarning("执行超时，跳过路径点");
                 break;
             }
+
             screen = CaptureToRectArea();
             position = Navigation.GetPosition(screen);
             var distance = Navigation.GetDistance(waypoint, position);
@@ -140,35 +122,33 @@ public class PathExecutor(CancellationTokenSource cts)
                 Logger.LogInformation("到达路径点附近");
                 break;
             }
+
             if (distance > 500)
             {
                 Logger.LogWarning("距离过远，跳过路径点");
                 break;
             }
-            if ((now - lastPositionRecord).TotalMilliseconds > 1000)
+
+            // 非爬行状态下，检测是否卡死
+            if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {
-                lastPositionRecord = now;
-                prevPositions.Add(position);
-                if (prevPositions.Count > 8)
+                if ((now - lastPositionRecord).TotalMilliseconds > 1000)
                 {
-                    var delta = prevPositions[^1] - prevPositions[^8];
-                    if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
+                    lastPositionRecord = now;
+                    prevPositions.Add(position);
+                    if (prevPositions.Count > 8)
                     {
-                        Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
-                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-                        await Delay(1500, cts);
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                        await Delay(500, cts);
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
-                        await Delay(1500, cts);
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_A);
-                        await Delay(1500, cts);
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_D);
-                        await Delay(500, cts);
-                        return;
+                        var delta = prevPositions[^1] - prevPositions[^8];
+                        if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
+                        {
+                            Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
+                            await EscapeTrap();
+                            return;
+                        }
                     }
                 }
             }
+
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             _rotateTask.RotateToApproach(targetOrientation, screen);
@@ -182,45 +162,97 @@ public class PathExecutor(CancellationTokenSource cts)
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                     await Delay(200, cts);
                 }
+
                 continue;
             }
-            // if (isFlying)
-            // {
-            //     Simulation.SendInput.Mouse.LeftButtonClick();
-            //     await Delay(1000, cts);
-            //     continue;
-            // }
+
             if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                 await Delay(200, cts);
                 continue;
             }
-            // 跑步或者游泳
-            if (distance > 20 != fastMode)// 距离大于20时可以使用疾跑/自由泳
+
+            // 只有设置为run才会疾跑
+            if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (fastMode)
+                if (distance > 20 != fastMode) // 距离大于20时可以使用疾跑/自由泳
                 {
-                    Simulation.SendInput.Mouse.RightButtonUp();
+                    if (fastMode)
+                    {
+                        Simulation.SendInput.Mouse.RightButtonUp();
+                    }
+                    else
+                    {
+                        Simulation.SendInput.Mouse.RightButtonDown();
+                    }
+
+                    fastMode = !fastMode;
                 }
-                else
-                {
-                    Simulation.SendInput.Mouse.RightButtonDown();
-                }
-                fastMode = !fastMode;
             }
+
             await Delay(100, cts);
         }
+
         // 抬起w键
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
 
-    private async Task MoveCloseTo(Waypoint waypoint)
+    private bool IsStuck(DateTime now, DateTime lastPositionRecord, List<Point2f> prevPositions, Point2f position)
+    {
+        if ((now - lastPositionRecord).TotalMilliseconds > 1000)
+        {
+            prevPositions.Add(position);
+            if (prevPositions.Count > 8)
+            {
+                var delta = prevPositions[^1] - prevPositions[^8];
+                if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private async Task EscapeTrap()
+    {
+        // 脱离攀爬状态
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+        await Delay(1500, cts);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        await Delay(500, cts);
+        // 向后移动
+        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
+        await Task.Delay(1500);
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
+        // 向左移动
+        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        await Task.Delay(1000);
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        await Delay(500, cts);
+        // 向右移动
+        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
+        await Task.Delay(300);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        await Task.Delay(700);
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        await Delay(500, cts);
+        // 跳跃
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        await Task.Delay(200); // 等待跳跃动作
+    }
+
+    private async Task MoveCloseTo(WaypointForTrack waypoint)
     {
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.X:F1}", $"{waypoint.Y:F1}");
+        Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
             //下落攻击接近目的地
@@ -228,17 +260,19 @@ public class PathExecutor(CancellationTokenSource cts)
             Simulation.SendInput.Mouse.LeftButtonClick();
             await Delay(1000, cts);
         }
+
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         var wPressed = false;
         var stepsTaken = 0;
         while (!cts.IsCancellationRequested)
         {
             stepsTaken++;
-            if (stepsTaken > 8)
+            if (stepsTaken > 12)
             {
                 Logger.LogWarning("精确接近超时");
                 break;
             }
+
             screen = CaptureToRectArea();
             position = Navigation.GetPosition(screen);
             if (Navigation.GetDistance(waypoint, position) < 2)
@@ -246,6 +280,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 Logger.LogInformation("已到达路径点");
                 break;
             }
+
             _rotateTask.RotateToApproach(targetOrientation, screen); //不再改变视角
             if (waypoint.MoveMode == MoveModeEnum.Walk.Code)
             {
@@ -254,12 +289,15 @@ public class PathExecutor(CancellationTokenSource cts)
                 await Delay(200, cts);
                 continue;
             }
+
             if (!wPressed)
             {
                 Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
             }
+
             await Delay(100, cts);
         }
+
         if (wPressed)
         {
             Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
