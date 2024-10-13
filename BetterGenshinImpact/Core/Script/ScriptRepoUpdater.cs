@@ -406,8 +406,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 Title = "enshin Copilot Scripts | BetterGI 脚本本地中央仓库",
                 Width = 1366,
                 Height = 768,
-                // Owner = Application.Current.MainWindow,
-                WindowState = WindowState.Maximized
             };
             _webWindow.Closed += (s, e) => _webWindow = null;
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;

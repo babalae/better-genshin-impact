@@ -110,7 +110,7 @@
                                Command="{Binding AddScriptGroupCommand}"
                                Content="新增配置组" />
                     <!--  示例配置组  -->
-                    <ui:TextBlock Margin="0,0,0,8"
+                    <!--<ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="也可以直接点击导入下面的示例配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
@@ -121,7 +121,7 @@
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             导入自动晶蝶示例配置组
                         </Hyperlink>
-                    </ui:TextBlock>
+                    </ui:TextBlock>-->
                 </StackPanel>
             </Grid>
         </Border>
