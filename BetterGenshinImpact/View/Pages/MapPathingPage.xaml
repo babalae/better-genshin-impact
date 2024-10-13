@@ -51,7 +51,7 @@
                        Content="打开任务目录"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
             <ui:Button Margin="10,0,0,0"
-                       Command="{Binding OpenScriptFolderCommand}"
+                       Command="{Binding OpenLocalScriptRepoCommand}"
                        Icon="{ui:SymbolIcon Archive24}">
                 <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <ui:TextBlock>脚本仓库</ui:TextBlock>
@@ -60,7 +60,7 @@
                                   VerticalAlignment="Top"
                                   Severity="Attention"
                                   Style="{DynamicResource DotInfoBadgeStyle}"
-                                  Visibility="Visible" />
+                                  Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
             </ui:Button>
             <ui:Button Margin="10,0,0,0"

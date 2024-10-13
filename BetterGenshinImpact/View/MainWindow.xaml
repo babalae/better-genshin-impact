@@ -158,7 +158,7 @@
 
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/Anniversary/logo_1st.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel>

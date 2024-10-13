@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
@@ -28,10 +29,13 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     private ISnackbarService _snackbarService;
     private IScriptService _scriptService;
 
-    public JsListViewModel(ISnackbarService snackbarService, IScriptService scriptService)
+    public AllConfig Config { get; set; }
+
+    public JsListViewModel(ISnackbarService snackbarService, IScriptService scriptService, IConfigService configService)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
+        Config = configService.Get();
     }
 
     private void InitScriptListViewData()
@@ -104,5 +108,12 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     public void OnGoToJsScriptUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/jsscript.html") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
 }

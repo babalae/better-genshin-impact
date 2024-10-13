@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -32,11 +33,14 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [ObservableProperty]
     private bool _isRecording = false;
 
-    private ISnackbarService _snackbarService;
+    private readonly ISnackbarService _snackbarService;
 
-    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService)
+    public AllConfig Config { get; set; }
+
+    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService)
     {
         _snackbarService = snackbarService;
+        Config = configService.Get();
     }
 
     private void InitScriptListViewData()
@@ -224,5 +228,12 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     public void OnGoToKmScriptUrl()
     {
         Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/kmscript.html") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
 }

@@ -107,6 +107,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             _logger.LogWarning("获取 BetterGI 最新版本信息失败");
         }
+
+        ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
     private async Task GetNewestInfoAsync()

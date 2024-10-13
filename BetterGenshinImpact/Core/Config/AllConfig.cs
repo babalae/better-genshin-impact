@@ -122,11 +122,16 @@ public partial class AllConfig : ObservableObject
     public AutoDomainConfig AutoDomainConfig { get; set; } = new();
 
     /// <summary>
-    ///     脚本类配置
+    ///     宏配置
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
 
     public RecordConfig RecordConfig { get; set; } = new();
+
+    /// <summary>
+    /// 脚本配置
+    /// </summary>
+    public ScriptConfig ScriptConfig { get; set; } = new();
 
     /// <summary>
     ///     快捷键配置
@@ -160,6 +165,8 @@ public partial class AllConfig : ObservableObject
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
+
+        ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

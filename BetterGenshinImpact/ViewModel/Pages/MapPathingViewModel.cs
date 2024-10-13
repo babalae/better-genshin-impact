@@ -10,18 +10,15 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
+using BetterGenshinImpact.Core.Script;
 using Wpf.Ui.Controls;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class MapPathingViewModel(IScriptService scriptService) : ObservableObject, INavigationAware, IViewModel
+public partial class MapPathingViewModel(IScriptService scriptService, IConfigService configService) : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
@@ -30,6 +27,8 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     private ObservableCollection<FileTreeNode<PathingTask>> _treeList = [];
 
     private MapViewer? _mapViewer;
+
+    public AllConfig Config { get; set; } = configService.Get();
 
     private void InitScriptListViewData()
     {
@@ -124,5 +123,12 @@ public partial class MapPathingViewModel(IScriptService scriptService) : Observa
     public void OnRefresh(PathingTask? item)
     {
         InitScriptListViewData();
+    }
+
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
 }

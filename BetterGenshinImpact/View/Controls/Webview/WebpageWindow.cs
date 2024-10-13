@@ -20,7 +20,7 @@ public class WebpageWindow : Window
         };
 
         Content = wp;
-        Background = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
+        // Background = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
     }
 
     protected override void OnSourceInitialized(EventArgs e)

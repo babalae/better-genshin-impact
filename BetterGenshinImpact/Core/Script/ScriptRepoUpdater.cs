@@ -1,6 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.WebView;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.View.Controls.Webview;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -17,6 +22,8 @@ namespace BetterGenshinImpact.Core.Script;
 
 public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 {
+    private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
+
     private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     // 仓储位置
@@ -41,7 +48,37 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         { "tcg", Global.Absolute("User\\AutoGeniusInvokation") },
     };
 
-    public async Task<string> UpdateCenterRepo()
+    private WebpageWindow? _webWindow;
+
+    public void AutoUpdate()
+    {
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+        // 判断更新周期是否到达
+        if (DateTime.Now - scriptConfig.LastUpdateScriptRepoTime >= TimeSpan.FromDays(scriptConfig.AutoUpdateScriptRepoPeriod))
+        {
+            // 更新仓库
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var (repoPath, updated) = await UpdateCenterRepo();
+                    Debug.WriteLine($"脚本仓库更新完成，路径：{repoPath}");
+                    scriptConfig.LastUpdateScriptRepoTime = DateTime.Now;
+                    if (updated)
+                    {
+                        scriptConfig.ScriptRepoHintDotVisible = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug(e, $"脚本仓库更新失败：{e.Message}");
+                }
+            });
+        }
+    }
+
+    public async Task<(string, bool)> UpdateCenterRepo()
     {
         // 测速并获取信息
         var res = await ProxySpeedTester.GetFastestProxyAsync(CenterRepoInfoUrl);
@@ -50,10 +87,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var jsonString = res.Item2;
         var (time, url, file) = ParseJson(jsonString);
 
+        var updated = false;
+
         // 检查仓库是否存在，不存在则下载
         if (!Directory.Exists(CenterRepoPath))
         {
             await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url));
+            updated = true;
         }
 
         // 搜索本地的 repo.json
@@ -69,6 +109,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         if (long.Parse(time) > long.Parse(time2))
         {
             await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url2));
+            updated = true;
         }
 
         // 获取与 localRepoJsonPath 同名（无扩展名）的文件夹路径
@@ -79,6 +120,23 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             throw new Exception("本地仓库文件夹不存在");
         }
 
+        return (folderPath, updated);
+    }
+
+    public string FindCenterRepoPath()
+    {
+        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+        if (localRepoJsonPath is null)
+        {
+            throw new Exception("本地仓库缺少 repo.json");
+        }
+        // 获取与 localRepoJsonPath 同名（无扩展名）的文件夹路径
+        var folderName = Path.GetFileNameWithoutExtension(localRepoJsonPath);
+        var folderPath = Path.Combine(Path.GetDirectoryName(localRepoJsonPath)!, folderName);
+        if (!Directory.Exists(folderPath))
+        {
+            throw new Exception("本地仓库文件夹不存在");
+        }
         return folderPath;
     }
 
@@ -138,32 +196,39 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         if (Clipboard.ContainsText())
         {
             string clipboardText = Clipboard.GetText();
+            await ImportScriptFromUri(clipboardText, true);
+        }
+    }
 
-            // 检查剪切板内容是否符合特定的URL格式
-            if (!string.IsNullOrEmpty(clipboardText) && clipboardText.Trim().ToLower().StartsWith("bettergi://script?import="))
+    public async Task ImportScriptFromUri(string uri, bool formClipboard)
+    {
+        // 检查剪切板内容是否符合特定的URL格式
+        if (!string.IsNullOrEmpty(uri) && uri.Trim().ToLower().StartsWith("bettergi://script?import="))
+        {
+            Debug.WriteLine($"脚本订购内容：{uri}");
+            // 执行相关操作
+            var pathJson = ParseUri(uri);
+            if (!string.IsNullOrEmpty(pathJson))
             {
-                Debug.WriteLine($"窗口激活时发现剪切板内容为脚本订购内容：{clipboardText}");
-                // 执行相关操作
-                var pathJson = ParseUri(clipboardText);
-                if (!string.IsNullOrEmpty(pathJson))
+                var uiMessageBox = new Wpf.Ui.Controls.MessageBox
                 {
-                    var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-                    {
-                        Title = "脚本订阅",
-                        Content = $"检测到剪切板上存在脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
-                        CloseButtonText = "关闭",
-                        PrimaryButtonText = "确认导入",
-                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                        Owner = Application.Current.MainWindow,
-                    };
+                    Title = "脚本订阅",
+                    Content = $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
+                    CloseButtonText = "关闭",
+                    PrimaryButtonText = "确认导入",
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    Owner = Application.Current.MainWindow,
+                };
 
-                    var result = await uiMessageBox.ShowDialogAsync();
-                    if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-                    {
-                        await ImportScriptFromPathJson(pathJson);
-                    }
+                var result = await uiMessageBox.ShowDialogAsync();
+                if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+                {
+                    await ImportScriptFromPathJson(pathJson);
                 }
+            }
 
+            if (formClipboard)
+            {
                 // 清空剪切板内容
                 Clipboard.Clear();
             }
@@ -201,10 +266,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             return;
         }
 
+        // 保存订阅信息
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+        scriptConfig.SubscribedScriptPaths.AddRange(paths);
+
         Toast.Information("获取最新仓库信息中...");
 
         // 更新仓库
-        var repoPath = await Task.Run(UpdateCenterRepo);
+        var (repoPath, _) = await Task.Run(UpdateCenterRepo);
 
         // // 收集将被覆盖的文件和文件夹
         // var filesToOverwrite = new List<string>();
@@ -283,6 +352,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     File.Copy(scriptPath, destPath, true);
                 }
+
                 Toast.Success("脚本订阅链接导入完成");
             }
             else
@@ -325,5 +395,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         // 返回第一个文件夹和剩余路径
         return parts.Length > 0 ? (parts[0], string.Join(Path.DirectorySeparatorChar, parts.Skip(1))) : (string.Empty, string.Empty);
+    }
+
+    public void OpenLocalRepoInWebView()
+    {
+        if (_webWindow is not { IsVisible: true })
+        {
+            _webWindow = new WebpageWindow
+            {
+                Title = "enshin Copilot Scripts | BetterGI 脚本本地中央仓库",
+                Width = 1366,
+                Height = 768,
+                // Owner = Application.Current.MainWindow,
+                WindowState = WindowState.Maximized
+            };
+            _webWindow.Closed += (s, e) => _webWindow = null;
+            _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
+            _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
+            _webWindow.Panel!.OnWebViewInitializedAction = () => _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+            _webWindow.Show();
+        }
+        else
+        {
+            _webWindow.Activate();
+        }
     }
 }

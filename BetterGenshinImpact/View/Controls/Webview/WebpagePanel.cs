@@ -21,6 +21,8 @@ public class WebpagePanel : UserControl
 
     public string? DownloadFolderPath { get; set; }
 
+    public Action? OnWebViewInitializedAction { get; set; }
+
     public WebpagePanel()
     {
         if (!IsWebView2Available())
@@ -54,6 +56,8 @@ public class WebpagePanel : UserControl
             {
                 WebView.CoreWebView2.Profile.DefaultDownloadFolderPath = DownloadFolderPath;
             }
+            // 调用外部设置的 Action
+            OnWebViewInitializedAction?.Invoke();
         }
         else
         {
