@@ -137,4 +137,8 @@
 		</None>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="User\AutoPathing\" />
+	</ItemGroup>
+
 </Project>
