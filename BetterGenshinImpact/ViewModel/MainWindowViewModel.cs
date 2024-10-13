@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -38,6 +39,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         _configService = configService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
+    }
+
+    [RelayCommand]
+    private async Task OnActivated()
+    {
+        await ScriptRepoUpdater.Instance.ImportScriptFromClipboard();
     }
 
     [RelayCommand]

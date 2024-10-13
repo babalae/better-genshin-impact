@@ -33,7 +33,7 @@ public class ProxySpeedTester
 
     public static async Task<(string, string)> GetFastestProxyAsync(List<string> proxyAddresses, string target)
     {
-        var tasks = new List<Task<(string, string)>>();
+        var tasks = new List<Task<(string, string, bool)>>(); // 修改为包含成功标志的元组
         var cts = new CancellationTokenSource();
 
         foreach (var proxy in proxyAddresses)
@@ -47,24 +47,34 @@ public class ProxySpeedTester
             tasks.Add(TestProxyAsync(proxy, target, cts.Token));
         }
 
-        var firstCompletedTask = await Task.WhenAny(tasks);
-        await cts.CancelAsync(); // 取消所有其他请求
+        while (tasks.Count > 0)
+        {
+            var firstCompletedTask = await Task.WhenAny(tasks);
+            tasks.Remove(firstCompletedTask);
 
-        try
-        {
-            return await firstCompletedTask; // 返回第一个完成的代理地址
+            var result = await firstCompletedTask;
+            if (result.Item3) // 检查是否成功
+            {
+                await cts.CancelAsync(); // 取消所有其他请求
+                return (result.Item1, result.Item2); // 返回第一个成功的代理地址
+            }
         }
-        catch (OperationCanceledException)
-        {
-            return (string.Empty, string.Empty); // 如果第一个任务被取消，返回空
-        }
+
+        return (string.Empty, string.Empty); // 如果没有成功的结果，返回空
     }
 
-    private static async Task<(string, string)> TestProxyAsync(string proxyAddress, string target, CancellationToken cancellationToken)
+    private static async Task<(string, string, bool)> TestProxyAsync(string proxyAddress, string target, CancellationToken cancellationToken)
     {
-        // 模拟代理测试请求
-        var response = await _httpClient.GetAsync(string.Format(proxyAddress, target), cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return (proxyAddress, response.Content.ToString()!);
+        try
+        {
+            // 模拟代理测试请求
+            var response = await _httpClient.GetAsync(string.Format(proxyAddress, target), cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return (proxyAddress, await response.Content.ReadAsStringAsync(cancellationToken), true);
+        }
+        catch (Exception e)
+        {
+            return (proxyAddress, e.Message, false);
+        }
     }
 }

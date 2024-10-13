@@ -29,12 +29,7 @@ public class Global
 
     public static string ScriptPath()
     {
-        return Absolute("Script");
-    }
-
-    public static string ScriptPath(string folderName)
-    {
-        return Path.Combine(Absolute("Script"), folderName);
+        return Absolute("User\\JsScript");
     }
 
     public static string? ReadAllTextIfExist(string relativePath)

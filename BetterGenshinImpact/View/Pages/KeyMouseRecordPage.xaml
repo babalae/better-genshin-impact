@@ -53,7 +53,7 @@
             <ui:Button Command="{Binding OpenScriptFolderCommand}" Icon="{ui:SymbolIcon Archive24}">
                 <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <ui:TextBlock>脚本仓库</ui:TextBlock>
-                    <ui:InfoBadge Margin="0,-3,-8,0"
+                    <ui:InfoBadge Margin="0,-8,-14,0"
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Top"
                                   Severity="Attention"

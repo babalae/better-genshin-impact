@@ -27,6 +27,9 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Window.Resources>
     <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Activated">
+            <b:InvokeCommandAction Command="{Binding ActivatedCommand}" />
+        </b:EventTrigger>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
