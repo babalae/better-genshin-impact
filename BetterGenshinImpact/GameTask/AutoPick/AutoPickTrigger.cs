@@ -213,7 +213,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                     return;
                 }
                 // 纳塔部落中文名特殊处理，不拾取
-                if (text.Contains("声望") && text.Contains("我在"))
+                if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") || text.Contains("流泉")))
                 {
                     return;
                 }
