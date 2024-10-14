@@ -4,6 +4,6 @@
 
 那维莱特 e,q
 芙宁娜 e,q
+希诺宁 e,q,attack,attack
 枫原万叶 e(hold),attack,q
-希诺宁 e,q,a,a
 那维莱特 e,charge(3),charge(3),charge(3)
