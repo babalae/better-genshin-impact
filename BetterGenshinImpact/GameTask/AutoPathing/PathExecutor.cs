@@ -261,12 +261,11 @@ public class PathExecutor(CancellationTokenSource cts)
         }
 
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
-        var wPressed = false;
         var stepsTaken = 0;
         while (!cts.IsCancellationRequested)
         {
             stepsTaken++;
-            if (stepsTaken > 12)
+            if (stepsTaken > 20)
             {
                 Logger.LogWarning("精确接近超时");
                 break;
@@ -280,27 +279,16 @@ public class PathExecutor(CancellationTokenSource cts)
                 break;
             }
 
-            _rotateTask.RotateToApproach(targetOrientation, screen); //不再改变视角
-            if (waypoint.MoveMode == MoveModeEnum.Walk.Code)
-            {
-                // 小碎步接近
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
-                await Delay(200, cts);
-                continue;
-            }
-
-            if (!wPressed)
-            {
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
-            }
-
-            await Delay(100, cts);
+            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+            // 小碎步接近
+            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
+            await Delay(50, cts);
         }
 
-        if (wPressed)
-        {
-            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-        }
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+
+        // 到达目的地后停顿一秒
+        await Delay(1000, cts);
     }
 
     private async Task AfterMoveToTarget(Waypoint waypoint)
@@ -311,6 +299,7 @@ public class PathExecutor(CancellationTokenSource cts)
         {
             var handler = ActionFactory.GetHandler(waypoint.Action);
             await handler.RunAsync(cts);
+            await Delay(800, cts);
         }
     }
 }

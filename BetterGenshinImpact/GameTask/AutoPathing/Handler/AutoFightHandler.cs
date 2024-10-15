@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.Common;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
@@ -16,6 +18,7 @@ internal class AutoFightHandler : IActionHandler
 
     private async Task StartFight(CancellationTokenSource cts)
     {
+        TaskControl.Logger.LogInformation("执行 {Text}", "自动战斗");
         // 爷们要战斗
         var taskParams = new AutoFightParam(GetFightStrategy())
         {

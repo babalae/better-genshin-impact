@@ -1,18 +1,20 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
-using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 /// <summary>
-/// 触发元素战技
+/// 触发普通攻击
 /// </summary>
 public class NormalAttackHandler : IActionHandler
 {
     public Task RunAsync(CancellationTokenSource cts)
     {
+        TaskControl.Logger.LogInformation("执行 {Text}", "普通攻击");
+
         Simulation.SendInput.Mouse.LeftButtonClick();
         return Task.CompletedTask;
     }

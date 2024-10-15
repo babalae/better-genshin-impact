@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -16,6 +17,7 @@ public class NahidaCollectHandler : IActionHandler
 
     public async Task RunAsync(CancellationTokenSource cts)
     {
+        Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
         var cd = DateTime.Now - lastETime;
         if (cd < TimeSpan.FromSeconds(10))
         {
