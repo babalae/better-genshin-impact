@@ -16,6 +16,8 @@ public class ActionFactory
                 "nahida_collect" => new NahidaCollectHandler(),
                 "pick_around" => new PickAroundHandler(),
                 "fight" => new AutoFightHandler(),
+                "normal_attack" => new NormalAttackHandler(),
+                "elemental_skill" => new ElementalSkillHandler(),
                 _ => throw new ArgumentException("未知的 action 类型")
             };
         });
