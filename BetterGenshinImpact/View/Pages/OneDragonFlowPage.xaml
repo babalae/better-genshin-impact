@@ -1,0 +1,87 @@
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.OneDragonFlowPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <Grid Margin="22,16,22,12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+
+        <!--  左侧任务列表  -->
+        <StackPanel Grid.Column="0">
+            <TextBlock Margin="0,0,0,10"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Text="任务列表" />
+            <ui:Card Margin="0,2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:FontIcon Grid.Column="0"
+                                 Glyph="&#xe411;"
+                                 Style="{StaticResource FaFontIconStyleForOneDragon}" />
+                    <Ellipse Grid.Column="1"
+                             Width="10"
+                             Height="10"
+                             Margin="10,0,10,0"
+                             Fill="Red" />
+                    <TextBlock Grid.Column="2"
+                               VerticalAlignment="Center"
+                               Text="登录游戏" />
+                    <ui:ToggleSwitch Grid.Column="3" />
+                </Grid>
+            </ui:Card>
+            <ui:Card Margin="0,2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:FontIcon Grid.Column="0"
+                                 Glyph="&#xe411;"
+                                 Style="{StaticResource FaFontIconStyleForOneDragon}" />
+                    <Ellipse Grid.Column="1"
+                             Width="10"
+                             Height="10"
+                             Margin="10,0,10,0"
+                             Fill="Red" />
+                    <TextBlock Grid.Column="2"
+                               VerticalAlignment="Center"
+                               Text="合成树脂" />
+                    <ui:ToggleSwitch Grid.Column="3" />
+                </Grid>
+            </ui:Card>
+            <!--  添加更多任务项...  -->
+            <ui:Button Margin="0,20,0,0" Content="一键执行" />
+        </StackPanel>
+
+        <!--  右侧配置  -->
+        <StackPanel Grid.Column="1" Margin="20,0,0,0">
+            <TextBlock Margin="0,0,0,10"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Text="登录游戏 配置" />
+            <!--  在这里添加配置项  -->
+        </StackPanel>
+    </Grid>
+</UserControl>

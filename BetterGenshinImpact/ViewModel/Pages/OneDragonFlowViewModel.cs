@@ -6,13 +6,13 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class DispatcherPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware, IViewModel
 {
-    private readonly ILogger<DispatcherPageViewModel> _logger = App.GetLogger<DispatcherPageViewModel>();
+    private readonly ILogger<OneDragonFlowViewModel> _logger = App.GetLogger<OneDragonFlowViewModel>();
 
     private ISnackbarService _snackbarService;
 
-    public DispatcherPageViewModel(ISnackbarService snackbarService)
+    public OneDragonFlowViewModel(ISnackbarService snackbarService)
     {
         _snackbarService = snackbarService;
     }
@@ -22,11 +22,6 @@ public partial class DispatcherPageViewModel : ObservableObject, INavigationAwar
     }
 
     public void OnNavigatedFrom()
-    {
-    }
-
-    [RelayCommand]
-    public void OnStartRecord()
     {
     }
 }

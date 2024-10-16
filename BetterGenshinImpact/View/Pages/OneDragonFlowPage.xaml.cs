@@ -2,11 +2,11 @@
 
 namespace BetterGenshinImpact.View.Pages;
 
-public partial class DispatcherPage
+public partial class OneDragonFlowPage
 {
-    public DispatcherPageViewModel ViewModel { get; }
+    public OneDragonFlowViewModel ViewModel { get; }
 
-    public DispatcherPage(DispatcherPageViewModel viewModel)
+    public OneDragonFlowPage(OneDragonFlowViewModel viewModel)
     {
         DataContext = ViewModel = viewModel;
         InitializeComponent();
