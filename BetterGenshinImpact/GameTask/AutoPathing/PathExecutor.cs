@@ -270,24 +270,25 @@ public class PathExecutor(CancellationTokenSource cts)
             // 使用下一个动作
             _lastActionIndex++;
         }
+        var difference = _lastActionIndex * 1000;
 
         switch (_lastActionIndex%3)
         {   
             case 0:
                 // 向后移动
                 Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-                await Task.Delay(1500);
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
-                // 跳跃
+                await Task.Delay(500);
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Task.Delay(200); // 等待跳跃动作
+                await Task.Delay(1000+difference);
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
                 break;
                 
             case 1:
                 // 向左移动
                 Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
+                await Task.Delay(300);
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Task.Delay(1000);
+                await Task.Delay(700+difference);
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
                 await Delay(500, cts);
@@ -298,7 +299,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
                 await Task.Delay(300);
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Task.Delay(700);
+                await Task.Delay(700+difference);
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
                 await Delay(500, cts);
