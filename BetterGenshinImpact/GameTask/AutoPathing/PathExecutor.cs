@@ -260,7 +260,7 @@ public class PathExecutor(CancellationTokenSource cts)
         
         TimeSpan timeSinceLastAction = DateTime.Now - _lastActionTime;
         _lastActionTime = DateTime.Now;
-        if (timeSinceLastAction.TotalSeconds >= 1)
+        if (timeSinceLastAction.TotalSeconds >= 3)
         {
             // 从零开始
             _lastActionIndex = 0;
