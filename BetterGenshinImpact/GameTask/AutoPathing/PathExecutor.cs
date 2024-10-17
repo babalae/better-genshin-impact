@@ -135,7 +135,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 break;
             }
 
-            // 非爬行状态下，检测是否卡死
+            // 非攀爬状态下，检测是否卡死
             if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {
                 if ((now - lastPositionRecord).TotalMilliseconds > 1000)
@@ -180,7 +180,7 @@ public class PathExecutor(CancellationTokenSource cts)
             {
                 if (Bv.GetMotionStatus(screen) != MotionStatus.Climb)
                 {
-                    Debug.WriteLine("未进入爬行状态，按下空格");
+                    Debug.WriteLine("未进入攀爬状态，按下空格");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                     await Delay(200, cts);
                 }
@@ -192,6 +192,14 @@ public class PathExecutor(CancellationTokenSource cts)
                 await Delay(200, cts);
                 continue;
             }
+            //设置为非攀爬时进入攀爬，自动脱离
+            if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
+                if (Bv.GetMotionStatus(screen) == MotionStatus.Climb)
+                {
+                    Debug.WriteLine("进入攀爬状态，按下x");
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                    continue;
+                }
 
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
