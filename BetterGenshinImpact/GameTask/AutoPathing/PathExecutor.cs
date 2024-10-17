@@ -160,7 +160,7 @@ public class PathExecutor(CancellationTokenSource cts)
             _rotateTask.RotateToApproach(targetOrientation, screen);
             if (_randomAngle != 0)
             {
-                if ((_lastActionTime - now).TotalSeconds > 1.5)
+                if ((now - _lastActionTime).TotalSeconds > 1.5)
                     _randomAngle = 0;
             }
             // 根据指定方式进行移动
