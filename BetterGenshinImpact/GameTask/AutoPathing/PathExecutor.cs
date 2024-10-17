@@ -26,6 +26,9 @@ public class PathExecutor(CancellationTokenSource cts)
     
     private static DateTime _lastActionTime = DateTime.MinValue;
     private static int _lastActionIndex = 0;
+    
+    private static Random _ran = new Random();
+    private static int _randomAngle = 0;
 
     public async Task Pathing(PathingTask task)
     {
@@ -102,7 +105,9 @@ public class PathExecutor(CancellationTokenSource cts)
         var startTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
-        var prevPositions = new List<Point2f>();
+        var prevPositions = new List<Point2f>(); 
+        var fastmodeColdTime = DateTime.UtcNow;
+        
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
         while (!cts.IsCancellationRequested)
@@ -151,8 +156,13 @@ public class PathExecutor(CancellationTokenSource cts)
             }
 
             // 旋转视角
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position) + _randomAngle;
             _rotateTask.RotateToApproach(targetOrientation, screen);
+            if (_randomAngle != 0)
+            {
+                if ((_lastActionTime - now).TotalSeconds > 1.5)
+                    _randomAngle = 0;
+            }
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
             {
@@ -185,7 +195,7 @@ public class PathExecutor(CancellationTokenSource cts)
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 30 != fastMode) // 距离大于20时可以使用疾跑/自由泳
+                if (distance > 20 != fastMode) // 距离大于30时可以使用疾跑/自由泳
                 {
                     if (fastMode)
                     {
@@ -199,11 +209,15 @@ public class PathExecutor(CancellationTokenSource cts)
                     fastMode = !fastMode;
                 }
             }
-            else //if (waypoint.MoveMode != MoveModeEnum.Swim.Code)//否则自动短疾跑
+            else if (waypoint.MoveMode != MoveModeEnum.Climb.Code)//否则自动短疾跑
             {
-                if (distance > 50)
+                if (distance > 10)
                 {
-                    Simulation.SendInput.Mouse.RightButtonClick();
+                    if (Math.Abs((fastmodeColdTime-now).TotalMilliseconds) > 2500)
+                    {
+                        fastmodeColdTime = now;
+                        Simulation.SendInput.Mouse.RightButtonClick();
+                    }
                 }
             }
 
@@ -234,6 +248,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
     private async Task EscapeTrap()
     {
+        _randomAngle = _ran.Next(-30, 30);
         // 脱离攀爬状态
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         await Delay(1500, cts);
@@ -244,7 +259,7 @@ public class PathExecutor(CancellationTokenSource cts)
         
         TimeSpan timeSinceLastAction = DateTime.Now - _lastActionTime;
         _lastActionTime = DateTime.Now;
-        if (timeSinceLastAction.TotalSeconds >= 0.9)
+        if (timeSinceLastAction.TotalSeconds >= 3)
         {
             // 从零开始
             _lastActionIndex = 0;
