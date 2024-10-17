@@ -71,7 +71,6 @@ public class PathExecutor(CancellationTokenSource cts)
 
     private void InitializePathing(PathingTask task)
     {
-        task.Positions.First().Type = WaypointType.Teleport.Code;
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
     }
