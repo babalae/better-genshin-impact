@@ -150,6 +150,7 @@ public class PathExecutor(CancellationTokenSource cts)
                             Logger.LogWarning("疑似卡死，尝试脱离");
                             await EscapeTrap();
                             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+                            continue;
                         }
                     }
                 }
@@ -160,7 +161,7 @@ public class PathExecutor(CancellationTokenSource cts)
             _rotateTask.RotateToApproach(targetOrientation, screen);
             if (_randomAngle != 0)
             {
-                if ((now - _lastActionTime).TotalSeconds > 1.5)
+                if ((now - _lastActionTime).TotalSeconds > 0.5)
                     _randomAngle = 0;
             }
             // 根据指定方式进行移动
@@ -259,7 +260,7 @@ public class PathExecutor(CancellationTokenSource cts)
         
         TimeSpan timeSinceLastAction = DateTime.Now - _lastActionTime;
         _lastActionTime = DateTime.Now;
-        if (timeSinceLastAction.TotalSeconds >= 3)
+        if (timeSinceLastAction.TotalSeconds >= 1)
         {
             // 从零开始
             _lastActionIndex = 0;
