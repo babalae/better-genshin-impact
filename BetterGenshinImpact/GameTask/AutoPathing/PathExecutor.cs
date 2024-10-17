@@ -23,6 +23,9 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 public class PathExecutor(CancellationTokenSource cts)
 {
     private readonly CameraRotateTask _rotateTask = new(cts);
+    
+    private static DateTime _lastActionTime = DateTime.MinValue;
+    private static int _lastActionIndex = 0;
 
     public async Task Pathing(PathingTask task)
     {
@@ -139,9 +142,9 @@ public class PathExecutor(CancellationTokenSource cts)
                         var delta = prevPositions[^1] - prevPositions[^8];
                         if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
                         {
-                            Logger.LogWarning("疑似卡死，尝试脱离并跳过路径点");
+                            Logger.LogWarning("疑似卡死，尝试脱离");
                             await EscapeTrap();
-                            return;
+                            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
                         }
                     }
                 }
@@ -160,10 +163,18 @@ public class PathExecutor(CancellationTokenSource cts)
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                     await Delay(200, cts);
                 }
-
                 continue;
             }
-
+            if (waypoint.MoveMode == MoveModeEnum.Climb.Code)
+            {
+                if (Bv.GetMotionStatus(screen) != MotionStatus.Climb)
+                {
+                    Debug.WriteLine("未进入爬行状态，按下空格");
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                    await Delay(200, cts);
+                }
+                continue;
+            }
             if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
@@ -171,10 +182,10 @@ public class PathExecutor(CancellationTokenSource cts)
                 continue;
             }
 
-            // 只有设置为run才会疾跑
+            // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 20 != fastMode) // 距离大于20时可以使用疾跑/自由泳
+                if (distance > 30 != fastMode) // 距离大于20时可以使用疾跑/自由泳
                 {
                     if (fastMode)
                     {
@@ -186,6 +197,13 @@ public class PathExecutor(CancellationTokenSource cts)
                     }
 
                     fastMode = !fastMode;
+                }
+            }
+            else //if (waypoint.MoveMode != MoveModeEnum.Swim.Code)//否则自动短疾跑
+            {
+                if (distance > 50)
+                {
+                    Simulation.SendInput.Mouse.RightButtonClick();
                 }
             }
 
@@ -220,29 +238,56 @@ public class PathExecutor(CancellationTokenSource cts)
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         await Delay(1500, cts);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        await Delay(75, cts);
+        Simulation.SendInput.Mouse.LeftButtonClick();
         await Delay(500, cts);
-        // 向后移动
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-        await Task.Delay(1500);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
-        // 向左移动
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        await Task.Delay(1000);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-        await Delay(500, cts);
-        // 向右移动
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
-        await Task.Delay(300);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        await Task.Delay(700);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-        await Delay(500, cts);
-        // 跳跃
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        await Task.Delay(200); // 等待跳跃动作
+        
+        TimeSpan timeSinceLastAction = DateTime.Now - _lastActionTime;
+        _lastActionTime = DateTime.Now;
+        if (timeSinceLastAction.TotalSeconds >= 0.9)
+        {
+            // 从零开始
+            _lastActionIndex = 0;
+        }
+        else
+        {
+            // 使用下一个动作
+            _lastActionIndex++;
+        }
+
+        switch (_lastActionIndex%3)
+        {   
+            case 0:
+                // 向后移动
+                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
+                await Task.Delay(1500);
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
+                // 跳跃
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                await Task.Delay(200); // 等待跳跃动作
+                break;
+                
+            case 1:
+                // 向左移动
+                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                await Task.Delay(1000);
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                await Delay(500, cts);
+                break;
+                
+            case 2:
+                // 向右移动
+                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
+                await Task.Delay(300);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                await Task.Delay(700);
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                await Delay(500, cts);
+                break;
+        }
     }
 
     private async Task MoveCloseTo(WaypointForTrack waypoint)
