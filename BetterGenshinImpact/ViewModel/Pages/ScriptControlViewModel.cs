@@ -1,6 +1,9 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
@@ -164,8 +167,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnAddPathing()
     {
-        var directories = LoadAllPathingScripts();
-        var stackPanel = CreatePathingScriptSelectionPanel(directories);
+        var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath);
+        var stackPanel = CreatePathingScriptSelectionPanel(root.Children);
 
         var result = PromptDialog.Prompt("请选择需要添加的路径追踪任务", "请选择需要添加的路径追踪任务", stackPanel, new Size(500, 600));
         if (!string.IsNullOrEmpty(result))
@@ -174,36 +177,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
     }
 
-    private ScrollViewer CreatePathingScriptSelectionPanel(Dictionary<string, List<FileInfo>> directories)
+    private ScrollViewer CreatePathingScriptSelectionPanel(IEnumerable<FileTreeNode<PathingTask>> list)
     {
         var stackPanel = new StackPanel();
-
-        foreach (var directory in directories)
-        {
-            var parentCheckBox = new CheckBox
-            {
-                Content = directory.Key,
-                Tag = directory.Value
-            };
-
-            var childStackPanel = new StackPanel();
-            foreach (var fileInfo in directory.Value)
-            {
-                var childCheckBox = new CheckBox
-                {
-                    Content = fileInfo.Name,
-                    Tag = fileInfo,
-                    Margin = new Thickness(30, 0, 0, 0)
-                };
-                childStackPanel.Children.Add(childCheckBox);
-            }
-
-            parentCheckBox.Checked += (s, e) => SetChildCheckBoxesState(childStackPanel, true);
-            parentCheckBox.Unchecked += (s, e) => SetChildCheckBoxesState(childStackPanel, false);
-
-            stackPanel.Children.Add(parentCheckBox);
-            stackPanel.Children.Add(childStackPanel);
-        }
+        AddNodesToPanel(stackPanel, list, 0);
 
         var scrollViewer = new ScrollViewer
         {
@@ -215,11 +192,45 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         return scrollViewer;
     }
 
+    private void AddNodesToPanel(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, int depth)
+    {
+        foreach (var node in nodes)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = node.FileName,
+                Tag = node.FilePath,
+                Margin = new Thickness(depth * 30, 0, 0, 0) // 根据深度计算Margin
+            };
+
+            if (node.IsDirectory)
+            {
+                var childPanel = new StackPanel();
+                AddNodesToPanel(childPanel, node.Children, depth + 1); // 递归调用时深度加1
+                checkBox.Checked += (s, e) => SetChildCheckBoxesState(childPanel, true);
+                checkBox.Unchecked += (s, e) => SetChildCheckBoxesState(childPanel, false);
+                parentPanel.Children.Add(checkBox);
+                parentPanel.Children.Add(childPanel);
+            }
+            else
+            {
+                parentPanel.Children.Add(checkBox);
+            }
+        }
+    }
+
     private void SetChildCheckBoxesState(StackPanel childStackPanel, bool state)
     {
-        foreach (CheckBox child in childStackPanel.Children)
+        foreach (var child in childStackPanel.Children)
         {
-            child.IsChecked = state;
+            if (child is CheckBox checkBox)
+            {
+                checkBox.IsChecked = state;
+            }
+            else if (child is StackPanel nestedStackPanel)
+            {
+                SetChildCheckBoxesState(nestedStackPanel, state);
+            }
         }
     }
 
@@ -231,9 +242,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 foreach (var grandChild in childStackPanel.Children)
                 {
-                    if (grandChild is CheckBox checkBox && checkBox.IsChecked == true)
+                    if (grandChild is CheckBox { IsChecked: true } checkBox)
                     {
-                        var fileInfo = (FileInfo)checkBox.Tag;
+                        var fileInfo = new FileInfo((string)checkBox.Tag);
                         SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
                     }
                 }
@@ -312,10 +323,12 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         {
             return;
         }
+
         if (item.Project == null)
         {
             item.BuildScriptProjectRelation();
         }
+
         if (item.Project == null)
         {
             return;
@@ -327,12 +340,14 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 item.JsScriptSettingsObject = new ExpandoObject();
             }
+
             var ui = item.Project.LoadSettingUi(item.JsScriptSettingsObject);
             if (ui == null)
             {
                 Toast.Warning("此脚本未提供自定义配置");
                 return;
             }
+
             var uiMessageBox = new Wpf.Ui.Controls.MessageBox
             {
                 Title = "修改JS脚本自定义设置    ",
@@ -394,6 +409,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 {
                     project.PropertyChanged -= ScriptProjectsPChanged;
                 }
+
                 oldItem.Projects.CollectionChanged -= ScriptProjectsCollectionChanged;
             }
         }
