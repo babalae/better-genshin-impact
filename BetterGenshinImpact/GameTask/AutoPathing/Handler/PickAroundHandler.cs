@@ -28,9 +28,11 @@ public class PickAroundHandler : IActionHandler
             angle = (5+angle)%360;
             rotateTask.RotateToApproach(angle, screen);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
             await Delay(100, cts);
             if (DateTime.UtcNow - startTime > TimeSpan.FromSeconds(5))
                 break;
         }
+        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
 }
