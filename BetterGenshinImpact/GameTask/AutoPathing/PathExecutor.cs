@@ -23,13 +23,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 public class PathExecutor(CancellationTokenSource cts)
 {
     private readonly CameraRotateTask _rotateTask = new(cts);
+    private readonly TrapEscaper _trapEscaper = new(cts);
     
-    private static DateTime _lastActionTime = DateTime.MinValue;
-    private static int _lastActionIndex = 0;
-    
-    private static Random _ran = new Random();
-    private static int _randomAngle = 0;
-
     public async Task Pathing(PathingTask task)
     {
         if (!task.Positions.Any())
@@ -107,6 +102,7 @@ public class PathExecutor(CancellationTokenSource cts)
         var fastMode = false;
         var prevPositions = new List<Point2f>(); 
         var fastmodeColdTime = DateTime.UtcNow;
+        bool isTrapped = false;
         
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
@@ -135,11 +131,10 @@ public class PathExecutor(CancellationTokenSource cts)
                 break;
             }
 
-            // 非攀爬状态下，检测是否卡死（大脱困触发器）
+            // 非攀爬状态下，检测是否卡死（脱困触发器）
             if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {   
-                // &&后面的条件是用于执行小脱困时屏蔽大脱困，防止二者同时执行或交替执行导致角度变换过大
-                if ((now - lastPositionRecord).TotalMilliseconds > 1000 && (DateTime.Now - _lastActionTime).TotalSeconds > 2)
+                if ((now - lastPositionRecord).TotalMilliseconds > 1000)
                 {
                     lastPositionRecord = now;
                     prevPositions.Add(position);
@@ -150,8 +145,9 @@ public class PathExecutor(CancellationTokenSource cts)
                         {
                             Logger.LogWarning("疑似卡死，尝试脱离");
                             
-                            //调用大脱困代码
-                            await EscapeTrap();
+                            //调用脱困代码，由TrapEscaper接管移动
+                            await _trapEscaper.RotateAndMove();
+                            await _trapEscaper.MoveTo(waypoint);
                             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
                             continue;
                         }
@@ -160,30 +156,9 @@ public class PathExecutor(CancellationTokenSource cts)
             }
 
             // 旋转视角
-            /* 这里的角度增加了一个randomAngle角度，用来在原角度不适用的情况下修改角度以适应复杂环境
-               randomAngle会定期归零，不会任何程度上影响路径追踪的结果（指到达既设点位）
-               randomAngle为类变量，会在需要修改角度的情况下进行更改，更改时会附带有重置计时器_lastActionTime的代码
-               更改角度的代码会
-               总体的自动避障逻辑为：
-               0. 检测是否卡在障碍物上，如果是则执行大脱困
-               1. 检测前面是否有障碍物，如果是则执行小脱困
-               2. 重复0和1，角度会一直增加，达到“转一圈”的360度脱困效果，若成功脱困则将randomAngle归零
-               */
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, position) + _randomAngle;
-            
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             //执行旋转
             _rotateTask.RotateToApproach(targetOrientation, screen);
-            
-            //
-            //这里是随机角度的归零逻辑，在脱困执行一秒后将randomAngle设为0以将实际角度重置为正面向点位的角度
-            //其实就是在一段时间内进行角度的修改以实现自动避障
-            if (_randomAngle != 0)
-            {
-                _randomAngle %= 360; //角度增加到360度时也会归零
-                if ((DateTime.Now - _lastActionTime).TotalSeconds > 1)
-                    _randomAngle = 0;
-            }
-            //
             
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
@@ -214,22 +189,17 @@ public class PathExecutor(CancellationTokenSource cts)
                 continue;
             }
             // 设置为非攀爬时误进入攀爬，自动脱离（小脱困）
-            // 小脱困逻辑，在进入攀爬时，即后一帧会自动脱离，因此无需再执行脱困代码
-            // 进入攀爬就代表前面有较高的物体（障碍物）阻挡，所以必须“旋转角度”以辅助绕过障碍物！！！
-            
+            // 小脱困逻辑，在进入攀爬时，即后一帧会自动脱离，后使用TrapEscaper接管移动
+
             // 先排除攀爬和飞行的情况
             if (waypoint.MoveMode != MoveModeEnum.Climb.Code &&
                 waypoint.MoveMode != MoveModeEnum.Fly.Code)
                 if (Bv.GetMotionStatus(screen) == MotionStatus.Climb)
                 {
-                    Debug.WriteLine("进入攀爬状态，按下x");
+                    Logger.LogWarning("进入攀爬状态，自动脱困中");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                    
-                    //重置计时器
-                    _lastActionTime = DateTime.Now;
-                    
-                    //！！！！！！！！这里修改了randomAngle的值，用于在脱困后随机旋转角度！！！！！！！！
-                    _randomAngle += _ran.Next(15, 30);
+                    await _trapEscaper.MoveTo(waypoint);
+                    Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
                     continue;
                 }
 
@@ -267,88 +237,6 @@ public class PathExecutor(CancellationTokenSource cts)
 
         // 抬起w键
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-    }
-
-    private bool IsStuck(DateTime now, DateTime lastPositionRecord, List<Point2f> prevPositions, Point2f position)
-    {
-        if ((now - lastPositionRecord).TotalMilliseconds > 1000)
-        {
-            prevPositions.Add(position);
-            if (prevPositions.Count > 8)
-            {
-                var delta = prevPositions[^1] - prevPositions[^8];
-                if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-    
-    // 大脱困逻辑，
-    private async Task EscapeTrap()
-    {
-        //！！！！！！！！这里修改了randomAngle的值，用于在脱困后随机旋转角度！！！！！！！！
-        _randomAngle += _ran.Next(15, 30);
-        // 脱离攀爬状态
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-        await Delay(1500, cts);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-        await Delay(75, cts);
-        Simulation.SendInput.Mouse.LeftButtonClick();
-        await Delay(500, cts);
-        
-        TimeSpan timeSinceLastAction = DateTime.Now - _lastActionTime;
-        
-        if (timeSinceLastAction.TotalSeconds >= 5) //调用间隔大于5秒识别为成功脱困后的下一次脱困
-        {
-            // 从零开始
-            _lastActionIndex = 0;
-        }
-        else
-        {
-            // 使用下一个动作
-            _lastActionIndex++;
-        }
-        var difference = _lastActionIndex * 1000;
-
-        switch (_lastActionIndex%3)
-        {   
-            case 0:
-                // 向后移动
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-                await Task.Delay(500);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Task.Delay(1000+difference);
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
-                break;
-                
-            case 1:
-                // 向左移动
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
-                await Task.Delay(300);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Task.Delay(700+difference);
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                await Delay(500, cts);
-                break;
-                
-            case 2:
-                // 向右移动
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
-                await Task.Delay(300);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Task.Delay(700+difference);
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                await Delay(500, cts);
-                break;
-        }
-        //重置计时器
-        _lastActionTime = DateTime.Now;
     }
 
     private async Task MoveCloseTo(WaypointForTrack waypoint)
