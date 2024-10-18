@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -28,7 +27,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
 
-    public Task Start(CancellationTokenSource cts)
+    public Task Start(CancellationToken ct)
     {
         Init();
 
@@ -43,16 +42,16 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         {
             var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
             // 添加任务
-            taskList.Add(taskFactory.StartNew(() => DoWhitePressWin32(cts, keyValuePair.Key, new Point(x, y))));
+            taskList.Add(taskFactory.StartNew(() => DoWhitePressWin32(ct, keyValuePair.Key, new Point(x, y))));
         }
 
         Task.WaitAll([.. taskList]);
         return Task.CompletedTask;
     }
 
-    private void DoWhitePressWin32(CancellationTokenSource cts, User32.VK key, Point point)
+    private void DoWhitePressWin32(CancellationToken ct, User32.VK key, Point point)
     {
-        while (!cts.Token.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             Thread.Sleep(10);
             // Stopwatch sw = new();
@@ -64,7 +63,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
             if (c.B < 220)
             {
                 KeyDown(key);
-                while (!cts.Token.IsCancellationRequested)
+                while (!ct.IsCancellationRequested)
                 {
                     Thread.Sleep(10);
                     hdc = User32.GetDC(_hWnd);

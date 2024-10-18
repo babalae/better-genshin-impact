@@ -37,7 +37,7 @@ public class Genshin
     /// <returns></returns>
     public async Task Tp(double x, double y)
     {
-        await new TpTask(CancellationContext.Instance.Cts).Tp(x, y);
+        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y);
     }
 
     /// <summary>

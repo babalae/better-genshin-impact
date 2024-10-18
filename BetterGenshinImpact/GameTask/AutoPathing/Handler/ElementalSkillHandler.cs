@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class ElementalSkillHandler : IActionHandler
 {
-    public Task RunAsync(CancellationTokenSource cts)
+    public Task RunAsync(CancellationToken ct)
     {
         TaskControl.Logger.LogInformation("执行 {Text}", "释放元素战技");
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);

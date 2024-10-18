@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class NormalAttackHandler : IActionHandler
 {
-    public Task RunAsync(CancellationTokenSource cts)
+    public Task RunAsync(CancellationToken ct)
     {
         TaskControl.Logger.LogInformation("执行 {Text}", "普通攻击");
 

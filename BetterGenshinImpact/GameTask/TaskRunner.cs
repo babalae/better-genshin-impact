@@ -102,7 +102,7 @@ public class TaskRunner
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
-        await Task.Run(() => RunAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts)));
+        await Task.Run(() => RunAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
 
     public void Init()

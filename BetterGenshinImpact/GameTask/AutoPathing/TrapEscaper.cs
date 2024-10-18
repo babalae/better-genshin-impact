@@ -10,9 +10,9 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class TrapEscaper(CancellationTokenSource cts)
+public class TrapEscaper(CancellationToken ct)
 {
-    private readonly CameraRotateTask _rotateTask = new(cts);
+    private readonly CameraRotateTask _rotateTask = new(ct);
     private static readonly Random _random = new Random();
     private int _lastActionIndex = 0;
     public static DateTime LastActionTime = DateTime.UtcNow;
@@ -39,7 +39,7 @@ public class TrapEscaper(CancellationTokenSource cts)
 
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
-        while (!cts.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             var now = DateTime.UtcNow;
             if ((now - LastActionTime).TotalSeconds > 5)
@@ -106,7 +106,7 @@ public class TrapEscaper(CancellationTokenSource cts)
                     continue;
                 }
 
-            await Delay(100, cts);
+            await Delay(100, ct);
         }
 
         // 抬起w键
@@ -119,9 +119,9 @@ public class TrapEscaper(CancellationTokenSource cts)
         // 脱离攀爬状态
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-        await Delay(75, cts);
+        await Delay(75, ct);
         Simulation.SendInput.Mouse.LeftButtonClick();
-        await Delay(500, cts);
+        await Delay(500, ct);
 
         TimeSpan timeSinceLastAction = DateTime.UtcNow - LastActionTime;
 

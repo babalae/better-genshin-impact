@@ -21,7 +21,7 @@ public class AutoFightTask : ISoloTask
 
     private readonly CombatScriptBag _combatScriptBag;
 
-    private CancellationTokenSource? _cts;
+    private CancellationToken _ct;
 
     private readonly BgiYoloV8Predictor _predictor;
 
@@ -38,9 +38,9 @@ public class AutoFightTask : ISoloTask
         }
     }
 
-    public async Task Start(CancellationTokenSource cts)
+    public async Task Start(CancellationToken ct)
     {
-        _cts = cts;
+        _ct = ct;
 
         LogScreenResolution();
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
@@ -53,9 +53,9 @@ public class AutoFightTask : ISoloTask
 
         // 新的取消token
         var cts2 = new CancellationTokenSource();
-        cts.Token.Register(cts2.Cancel);
+        ct.Register(cts2.Cancel);
 
-        combatScenes.BeforeTask(cts2);
+        combatScenes.BeforeTask(cts2.Token);
 
         // 战斗操作
         var fightTask = Task.Run(() =>
@@ -97,7 +97,7 @@ public class AutoFightTask : ISoloTask
                         break;
                     }
 
-                    Sleep(1000, cts2);
+                    Sleep(1000, cts2.Token);
                 }
             }
             catch (Exception e)
@@ -138,11 +138,11 @@ public class AutoFightTask : ISoloTask
         {
             // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
             List<int> angles = [0, 90, 180, 270];
-            var rotateTask = new CameraRotateTask(_cts!);
+            var rotateTask = new CameraRotateTask(_ct);
             foreach (var a in angles)
             {
                 await rotateTask.WaitUntilRotatedTo(a, 5, 30);
-                await Delay(1000, _cts!); // 等待视角稳定
+                await Delay(1000, _ct!); // 等待视角稳定
                 if (HasFightFlag(CaptureToRectArea()))
                 {
                     return false;

@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
@@ -8,7 +7,6 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -42,7 +40,7 @@ public partial class AutoWoodTask : ISoloTask
 
     private readonly WoodTaskParam _taskParam;
 
-    private CancellationTokenSource? _cts;
+    private CancellationToken _ct;
 
     public AutoWoodTask(WoodTaskParam taskParam)
     {
@@ -53,11 +51,11 @@ public partial class AutoWoodTask : ISoloTask
         _printer = new WoodStatisticsPrinter(_assets);
     }
 
-    public Task Start(CancellationTokenSource cts)
+    public Task Start(CancellationToken ct)
     {
         var runTimeWatch = new Stopwatch();
-        _cts = cts;
-        _printer.Cts = _cts;
+        _ct = ct;
+        _printer.Ct = _ct;
 
         try
         {
@@ -106,14 +104,14 @@ public partial class AutoWoodTask : ISoloTask
                 }
 
                 Logger.LogInformation("第{Cnt}次伐木", i + 1);
-                if (_cts.IsCancellationRequested)
+                if (_ct.IsCancellationRequested)
                 {
                     break;
                 }
 
                 Felling(_taskParam, i + 1 == _taskParam.WoodRoundNum);
                 VisionContext.Instance().DrawContent.ClearAll();
-                Sleep(500, _cts);
+                Sleep(500, _ct);
             }
 
             return Task.CompletedTask;
@@ -146,7 +144,7 @@ public partial class AutoWoodTask : ISoloTask
             "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
         ];
 
-        public CancellationTokenSource? Cts { get; set; }
+        public CancellationToken Ct { get; set; }
 
         [GeneratedRegex("([^\\d\\n]+)[×x](\\d+)")]
         private static partial Regex _parseWoodStatisticsRegex();
@@ -217,7 +215,7 @@ public partial class AutoWoodTask : ISoloTask
 
         private void SleepDurationBetweenOcrs(WoodTaskParam taskParam)
         {
-            Sleep(_firstWoodOcr ? 300 : 100, Cts);
+            Sleep(_firstWoodOcr ? 300 : 100, Ct);
         }
 
         private string WoodTextAreaOcr()
@@ -433,7 +431,7 @@ public partial class AutoWoodTask : ISoloTask
         {
             NewRetry.Do(() =>
             {
-                Sleep(1, _cts);
+                Sleep(1, _ct);
                 using var contentRegion = CaptureToRectArea();
                 using var ra = contentRegion.Find(_assets.TheBoonOfTheElderTreeRo);
                 if (ra.IsEmpty())
@@ -447,12 +445,12 @@ public partial class AutoWoodTask : ISoloTask
 
                 Simulation.SendInput.Keyboard.KeyPress(_zKey);
                 Debug.WriteLine("[AutoWood] Z");
-                Sleep(500, _cts);
+                Sleep(500, _ct);
             }, TimeSpan.FromSeconds(1), 120);
         }
 
-        Sleep(300, _cts);
-        Sleep(TaskContext.Instance().Config.AutoWoodConfig.AfterZSleepDelay, _cts);
+        Sleep(300, _ct);
+        Sleep(TaskContext.Instance().Config.AutoWoodConfig.AfterZSleepDelay, _ct);
     }
 
     private void PressEsc(WoodTaskParam taskParam)
@@ -465,13 +463,13 @@ public partial class AutoWoodTask : ISoloTask
         //     Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
         // }
         Debug.WriteLine("[AutoWood] Esc");
-        Sleep(800, _cts);
+        Sleep(800, _ct);
         // 确认在菜单界面
         try
         {
             NewRetry.Do(() =>
             {
-                Sleep(1, _cts);
+                Sleep(1, _ct);
                 using var contentRegion = CaptureToRectArea();
                 using var ra = contentRegion.Find(_assets.MenuBagRo);
                 if (ra.IsEmpty())
@@ -492,7 +490,7 @@ public partial class AutoWoodTask : ISoloTask
 
         Debug.WriteLine("[AutoWood] Click exit button");
 
-        Sleep(500, _cts);
+        Sleep(500, _ct);
 
         // 点击确认
         using var contentRegion = CaptureToRectArea();
@@ -508,14 +506,14 @@ public partial class AutoWoodTask : ISoloTask
     {
         if (_login3rdParty.IsAvailabled)
         {
-            Sleep(1, _cts);
-            _login3rdParty.Login(_cts);
+            Sleep(1, _ct);
+            _login3rdParty.Login(_ct);
         }
 
         var clickCnt = 0;
         for (var i = 0; i < 50; i++)
         {
-            Sleep(1, _cts);
+            Sleep(1, _ct);
 
             using var contentRegion = CaptureToRectArea();
             using var ra = contentRegion.Find(_assets.EnterGameRo);
@@ -529,12 +527,12 @@ public partial class AutoWoodTask : ISoloTask
             {
                 if (clickCnt > 2)
                 {
-                    Sleep(5000, _cts);
+                    Sleep(5000, _ct);
                     break;
                 }
             }
 
-            Sleep(1000, _cts);
+            Sleep(1000, _ct);
         }
 
         if (clickCnt == 0)
