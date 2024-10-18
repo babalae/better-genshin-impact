@@ -137,7 +137,7 @@ public partial class ScriptGroupProject : ObservableObject
             // 加载并执行
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
             TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
-            await new PathExecutor(CancellationContext.Instance.Cts).Pathing(task);
+            await new PathExecutor(CancellationContext.Instance.Cts.Token).Pathing(task);
         }
         else
         {

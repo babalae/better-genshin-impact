@@ -10,9 +10,9 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class PickAroundHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationTokenSource cts)
+    public async Task RunAsync(CancellationToken ct)
     {
-        await Task.Delay(1000, cts.Token);
+        await Task.Delay(1000, ct);
         throw new NotImplementedException();
     }
 }

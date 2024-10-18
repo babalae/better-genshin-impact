@@ -72,7 +72,7 @@ public class Avatar
     /// <summary>
     /// 任务取消令牌
     /// </summary>
-    public CancellationTokenSource? Cts { get; set; }
+    public CancellationToken Ct { get; set; }
 
     /// <summary>
     /// 战斗场景
@@ -106,7 +106,7 @@ public class Avatar
         if (!confirmRectArea.IsEmpty())
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            Sleep(600, Cts);
+            Sleep(600, Ct);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
             throw new Exception("存在角色被击败，按 M 键打开地图，并停止自动秘境。");
         }
@@ -120,7 +120,7 @@ public class Avatar
     {
         for (var i = 0; i < 30; i++)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
@@ -137,7 +137,7 @@ public class Avatar
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", content.CaptureRectArea.SrcMat);
-            Sleep(250, Cts);
+            Sleep(250, Ct);
         }
     }
 
@@ -248,14 +248,14 @@ public class Avatar
     {
         while (ms >= 0)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
 
             AutoFightContext.Instance.Simulator.LeftButtonClick();
             ms -= 200;
-            Sleep(200, Cts);
+            Sleep(200, Ct);
         }
     }
 
@@ -266,7 +266,7 @@ public class Avatar
     {
         for (var i = 0; i < 1; i++)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
@@ -276,7 +276,7 @@ public class Avatar
                 if (Name == "纳西妲")
                 {
                     AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
-                    Sleep(300, Cts);
+                    Sleep(300, Ct);
                     for (int j = 0; j < 10; j++)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
@@ -296,7 +296,7 @@ public class Avatar
                 AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_E);
             }
 
-            Sleep(200, Cts);
+            Sleep(200, Ct);
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
@@ -331,13 +331,13 @@ public class Avatar
         // var isBurstReleased = false;
         for (var i = 0; i < 10; i++)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
 
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
-            Sleep(200, Cts);
+            Sleep(200, Ct);
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
@@ -345,7 +345,7 @@ public class Avatar
             if (notActiveCount == 0)
             {
                 // isBurstReleased = true;
-                Sleep(1500, Cts);
+                Sleep(1500, Ct);
                 return;
             }
             // else
@@ -381,7 +381,7 @@ public class Avatar
     /// </summary>
     public void Dash(int ms = 0)
     {
-        if (Cts is { IsCancellationRequested: true })
+        if (Ct is { IsCancellationRequested: true })
         {
             return;
         }
@@ -398,7 +398,7 @@ public class Avatar
 
     public void Walk(string key, int ms)
     {
-        if (Cts is { IsCancellationRequested: true })
+        if (Ct is { IsCancellationRequested: true })
         {
             return;
         }
@@ -473,7 +473,7 @@ public class Avatar
             AutoFightContext.Instance.Simulator.LeftButtonDown();
             while (ms >= 0)
             {
-                if (Cts is { IsCancellationRequested: true })
+                if (Ct is { IsCancellationRequested: true })
                 {
                     return;
                 }

@@ -5,5 +5,5 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 public interface IActionHandler
 {
-    Task RunAsync(CancellationTokenSource cts);
+    Task RunAsync(CancellationToken ct);
 }

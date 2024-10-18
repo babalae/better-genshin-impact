@@ -9,7 +9,7 @@ public class AutoPathingScript(string rootPath)
     public async Task Run(string json)
     {
         var task = PathingTask.BuildFromJson(json);
-        await new PathExecutor(CancellationContext.Instance.Cts).Pathing(task);
+        await new PathExecutor(CancellationContext.Instance.Cts.Token).Pathing(task);
     }
 
     public async Task RunFile(string path)

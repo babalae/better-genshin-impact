@@ -20,10 +20,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class PathExecutor(CancellationTokenSource cts)
+public class PathExecutor(CancellationToken ct)
 {
-    private readonly CameraRotateTask _rotateTask = new(cts);
-    private readonly TrapEscaper _trapEscaper = new(cts);
+    private readonly CameraRotateTask _rotateTask = new(ct);
+    private readonly TrapEscaper _trapEscaper = new(ct);
 
     public async Task Pathing(PathingTask task)
     {
@@ -37,7 +37,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
         var waypoints = ConvertWaypointsForTrack(task.Positions);
 
-        await Delay(100, cts);
+        await Delay(100, ct);
         Navigation.WarmUp(); // 提前加载地图特征点
 
         try
@@ -85,7 +85,7 @@ public class PathExecutor(CancellationTokenSource cts)
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        var (tpX, tpY) = await new TpTask(cts).Tp(waypoint.GameX, waypoint.GameY, forceTp);
+        var (tpX, tpY) = await new TpTask(ct).Tp(waypoint.GameX, waypoint.GameY, forceTp);
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
     }
@@ -105,7 +105,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
-        while (!cts.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             var now = DateTime.UtcNow;
             if ((now - startTime).TotalSeconds > 240)
@@ -168,7 +168,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 {
                     Debug.WriteLine("未进入飞行状态，按下空格");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                    await Delay(200, cts);
+                    await Delay(200, ct);
                 }
 
                 continue;
@@ -177,7 +177,7 @@ public class PathExecutor(CancellationTokenSource cts)
             if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Delay(200, cts);
+                await Delay(200, ct);
                 continue;
             }
 
@@ -210,7 +210,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 }
             }
 
-            await Delay(100, cts);
+            await Delay(100, ct);
         }
 
         // 抬起w键
@@ -228,12 +228,12 @@ public class PathExecutor(CancellationTokenSource cts)
             //下落攻击接近目的地
             Logger.LogInformation("动作：下落攻击");
             Simulation.SendInput.Mouse.LeftButtonClick();
-            await Delay(1000, cts);
+            await Delay(1000, ct);
         }
 
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         var stepsTaken = 0;
-        while (!cts.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             stepsTaken++;
             if (stepsTaken > 20)
@@ -254,13 +254,13 @@ public class PathExecutor(CancellationTokenSource cts)
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
-            await Delay(50, cts);
+            await Delay(50, ct);
         }
 
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
 
         // 到达目的地后停顿一秒
-        await Delay(1000, cts);
+        await Delay(1000, ct);
     }
 
     private async Task AfterMoveToTarget(Waypoint waypoint)
@@ -270,8 +270,8 @@ public class PathExecutor(CancellationTokenSource cts)
             || waypoint.Action == ActionEnum.Fight.Code)
         {
             var handler = ActionFactory.GetHandler(waypoint.Action);
-            await handler.RunAsync(cts);
-            await Delay(800, cts);
+            await handler.RunAsync(ct);
+            await Delay(800, ct);
         }
     }
 }

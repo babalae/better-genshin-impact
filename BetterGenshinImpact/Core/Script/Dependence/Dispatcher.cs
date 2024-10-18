@@ -77,7 +77,7 @@ public class Dispatcher
                 {
                     return;
                 }
-                await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts);
+                await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
             case "AutoMusicGame":

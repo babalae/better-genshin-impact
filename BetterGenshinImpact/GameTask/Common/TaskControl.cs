@@ -39,9 +39,73 @@ public class TaskControl
         Thread.Sleep(millisecondsTimeout);
     }
 
-    public static void Sleep(int millisecondsTimeout, CancellationTokenSource? cts)
+    // public static void Sleep(int millisecondsTimeout, CancellationTokenSource? cts)
+    // {
+    //     if (cts is { IsCancellationRequested: true })
+    //     {
+    //         throw new NormalEndException("取消自动任务");
+    //     }
+    //
+    //     if (millisecondsTimeout <= 0)
+    //     {
+    //         return;
+    //     }
+    //
+    //     NewRetry.Do(() =>
+    //     {
+    //         if (cts is { IsCancellationRequested: true })
+    //         {
+    //             throw new NormalEndException("取消自动任务");
+    //         }
+    //
+    //         if (!SystemControl.IsGenshinImpactActiveByProcess())
+    //         {
+    //             Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+    //             throw new RetryException("当前获取焦点的窗口不是原神");
+    //         }
+    //     }, TimeSpan.FromSeconds(1), 100);
+    //     Thread.Sleep(millisecondsTimeout);
+    //     if (cts is { IsCancellationRequested: true })
+    //     {
+    //         throw new NormalEndException("取消自动任务");
+    //     }
+    // }
+
+    // public static async Task Delay(int millisecondsTimeout, CancellationTokenSource cts)
+    // {
+    //     if (cts is { IsCancellationRequested: true })
+    //     {
+    //         throw new NormalEndException("取消自动任务");
+    //     }
+    //
+    //     if (millisecondsTimeout <= 0)
+    //     {
+    //         return;
+    //     }
+    //
+    //     NewRetry.Do(() =>
+    //     {
+    //         if (cts is { IsCancellationRequested: true })
+    //         {
+    //             throw new NormalEndException("取消自动任务");
+    //         }
+    //
+    //         if (!SystemControl.IsGenshinImpactActiveByProcess())
+    //         {
+    //             Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+    //             throw new RetryException("当前获取焦点的窗口不是原神");
+    //         }
+    //     }, TimeSpan.FromSeconds(1), 100);
+    //     await Task.Delay(millisecondsTimeout, cts.Token);
+    //     if (cts is { IsCancellationRequested: true })
+    //     {
+    //         throw new NormalEndException("取消自动任务");
+    //     }
+    // }
+
+    public static void Sleep(int millisecondsTimeout, CancellationToken ct)
     {
-        if (cts is { IsCancellationRequested: true })
+        if (ct.IsCancellationRequested)
         {
             throw new NormalEndException("取消自动任务");
         }
@@ -53,7 +117,7 @@ public class TaskControl
 
         NewRetry.Do(() =>
         {
-            if (cts is { IsCancellationRequested: true })
+            if (ct.IsCancellationRequested)
             {
                 throw new NormalEndException("取消自动任务");
             }
@@ -65,15 +129,15 @@ public class TaskControl
             }
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
-        if (cts is { IsCancellationRequested: true })
+        if (ct.IsCancellationRequested)
         {
             throw new NormalEndException("取消自动任务");
         }
     }
 
-    public static async Task Delay(int millisecondsTimeout, CancellationTokenSource cts)
+    public static async Task Delay(int millisecondsTimeout, CancellationToken ct)
     {
-        if (cts is { IsCancellationRequested: true })
+        if (ct is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
         }
@@ -85,7 +149,7 @@ public class TaskControl
 
         NewRetry.Do(() =>
         {
-            if (cts is { IsCancellationRequested: true })
+            if (ct is { IsCancellationRequested: true })
             {
                 throw new NormalEndException("取消自动任务");
             }
@@ -96,8 +160,8 @@ public class TaskControl
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
         }, TimeSpan.FromSeconds(1), 100);
-        await Task.Delay(millisecondsTimeout, cts.Token);
-        if (cts is { IsCancellationRequested: true })
+        await Task.Delay(millisecondsTimeout, ct);
+        if (ct is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
         }

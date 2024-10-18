@@ -1,7 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -26,7 +25,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Gdi32;
+using static Vanara.PInvoke.Kernel32;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
@@ -43,7 +42,7 @@ public class AutoDomainTask : ISoloTask
 
     private readonly CombatScriptBag _combatScriptBag;
 
-    private CancellationTokenSource? _cts;
+    private CancellationToken _ct;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -60,9 +59,9 @@ public class AutoDomainTask : ISoloTask
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
     }
 
-    public async Task Start(CancellationTokenSource cts)
+    public async Task Start(CancellationToken ct)
     {
-        _cts = cts;
+        _ct = ct;
 
         AutoFightAssets.DestroyInstance();
         Init();
@@ -169,7 +168,7 @@ public class AutoDomainTask : ISoloTask
             Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
             Logger.LogInformation("自动秘境：{Text}", "进入秘境");
             // 秘境开门动画 5s
-            Sleep(5000, _cts);
+            Sleep(5000, _ct);
         }
 
         int retryTimes = 0, clickCount = 0;
@@ -183,11 +182,11 @@ public class AutoDomainTask : ISoloTask
                 clickCount++;
             }
 
-            Sleep(1500, _cts);
+            Sleep(1500, _ct);
         }
 
         // 载入动画
-        Sleep(3000, _cts);
+        Sleep(3000, _ct);
     }
 
     private void CloseDomainTip()
@@ -200,16 +199,16 @@ public class AutoDomainTask : ISoloTask
             using var cactRectArea = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
-                Sleep(1000, _cts);
+                Sleep(1000, _ct);
                 cactRectArea.Click();
                 break;
             }
 
             // todo 添加小地图角标位置检测 防止有人手点了
-            Sleep(1000, _cts);
+            Sleep(1000, _ct);
         }
 
-        Sleep(1500, _cts);
+        Sleep(1500, _ct);
     }
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
@@ -226,7 +225,7 @@ public class AutoDomainTask : ISoloTask
     /// </summary>
     private async Task WalkToPressF()
     {
-        if (_cts.Token.IsCancellationRequested)
+        if (_ct.IsCancellationRequested)
         {
             return;
         }
@@ -243,12 +242,12 @@ public class AutoDomainTask : ISoloTask
 
             try
             {
-                while (!_cts.Token.IsCancellationRequested)
+                while (!_ct.IsCancellationRequested)
                 {
                     using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
                     if (fRectArea.IsEmpty())
                     {
-                        Sleep(100, _cts);
+                        Sleep(100, _ct);
                     }
                     else
                     {
@@ -273,8 +272,8 @@ public class AutoDomainTask : ISoloTask
     private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
     {
         CancellationTokenSource cts = new();
-        _cts.Token.Register(cts.Cancel);
-        combatScenes.BeforeTask(cts);
+        _ct.Register(cts.Cancel);
+        combatScenes.BeforeTask(cts.Token);
         // 战斗操作
         var combatTask = new Task(() =>
         {
@@ -307,7 +306,7 @@ public class AutoDomainTask : ISoloTask
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
-        var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts);
+        var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
         combatTask.Start();
         domainEndTask.Start();
         autoEatRecoveryHpTask.Start();
@@ -316,7 +315,7 @@ public class AutoDomainTask : ISoloTask
 
     private void EndFightWait()
     {
-        if (_cts.Token.IsCancellationRequested)
+        if (_ct.IsCancellationRequested)
         {
             return;
         }
@@ -325,7 +324,7 @@ public class AutoDomainTask : ISoloTask
         if (s > 0)
         {
             Logger.LogInformation("战斗结束后等待 {Second} 秒", s);
-            Sleep((int)(s * 1000), _cts);
+            Sleep((int)(s * 1000), _ct);
         }
     }
 
@@ -338,7 +337,7 @@ public class AutoDomainTask : ISoloTask
         {
             try
             {
-                while (!_cts.Token.IsCancellationRequested)
+                while (!_ct.IsCancellationRequested)
                 {
                     if (IsDomainEnd())
                     {
@@ -346,7 +345,7 @@ public class AutoDomainTask : ISoloTask
                         break;
                     }
 
-                    await Delay(1000, cts);
+                    await Delay(1000, cts.Token);
                 }
             }
             catch
@@ -378,7 +377,7 @@ public class AutoDomainTask : ISoloTask
         return false;
     }
 
-    private Task AutoEatRecoveryHpTask(CancellationTokenSource cts)
+    private Task AutoEatRecoveryHpTask(CancellationToken ct)
     {
         return new Task(async () =>
         {
@@ -394,7 +393,7 @@ public class AutoDomainTask : ISoloTask
 
             try
             {
-                while (!_cts.Token.IsCancellationRequested)
+                while (!_ct.IsCancellationRequested)
                 {
                     if (IsLowHealth())
                     {
@@ -404,13 +403,13 @@ public class AutoDomainTask : ISoloTask
                         // TODO 吃饱了会一直吃
                     }
 
-                    await Delay(500, cts);
+                    await Delay(500, ct);
                 }
             }
             catch
             {
             }
-        }, cts.Token);
+        }, ct);
     }
 
     private bool IsLowHealth()
@@ -442,10 +441,10 @@ public class AutoDomainTask : ISoloTask
     private Task FindPetrifiedTree()
     {
         CancellationTokenSource treeCts = new();
-        _cts.Token.Register(treeCts.Cancel);
+        _ct.Register(treeCts.Cancel);
         // 中键回正视角
         Simulation.SendInput.Mouse.MiddleButtonClick();
-        Sleep(900, _cts);
+        Sleep(900, _ct);
 
         // 左右移动直到石化古树位于屏幕中心任务
         var moveAvatarTask = MoveAvatarHorizontallyTask(treeCts);
@@ -467,7 +466,7 @@ public class AutoDomainTask : ISoloTask
             var noDetectCount = 0;
             var prevKey = VK.VK_A;
             var backwardsAndForwardsCount = 0;
-            while (!_cts.Token.IsCancellationRequested)
+            while (!_ct.IsCancellationRequested)
             {
                 var treeRect = DetectTree(CaptureToRectArea());
                 if (treeRect != Rect.Empty)
@@ -550,7 +549,7 @@ public class AutoDomainTask : ISoloTask
                         else
                         {
                             _simulator.KeyPress(VK.VK_W, 60);
-                            Sleep(500, _cts);
+                            Sleep(500, _ct);
                             treeCts.Cancel();
                             break;
                         }
@@ -595,12 +594,12 @@ public class AutoDomainTask : ISoloTask
                 {
                     // 左右移动5次说明已经在树中心了
                     _simulator.KeyPress(VK.VK_W, 60);
-                    Sleep(500, _cts);
+                    Sleep(500, _ct);
                     treeCts.Cancel();
                     break;
                 }
 
-                Sleep(60, _cts);
+                Sleep(60, _ct);
             }
 
             VisionContext.Instance().DrawContent.ClearAll();
@@ -701,7 +700,7 @@ public class AutoDomainTask : ISoloTask
     private bool GettingTreasure(bool recognizeResin, bool isLastTurn)
     {
         // 等待窗口弹出
-        Sleep(1500, _cts);
+        Sleep(1500, _ct);
 
         // 优先使用浓缩树脂
         var retryTimes = 0;
@@ -720,22 +719,22 @@ public class AutoDomainTask : ISoloTask
                 useCondensedResinRa.Click();
                 // 点两下 #224 #218
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
-                Sleep(400, _cts);
+                Sleep(400, _ct);
                 useCondensedResinRa.Click();
                 break;
             }
 
-            Sleep(800, _cts);
+            Sleep(800, _ct);
         }
 
-        Sleep(1000, _cts);
+        Sleep(1000, _ct);
 
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         for (var i = 0; i < 30; i++)
         {
             // 跳过领取动画
             GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
-            Sleep(200, _cts);
+            Sleep(200, _ct);
             GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
 
             // 优先点击继续
@@ -779,7 +778,7 @@ public class AutoDomainTask : ISoloTask
                 }
             }
 
-            Sleep(300, _cts);
+            Sleep(300, _ct);
         }
 
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
