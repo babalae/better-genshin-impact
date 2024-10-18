@@ -21,6 +21,9 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         new OneDragonTaskItem { Name = "合成树脂", StatusColor = Brushes.Gray, IsEnabled = true },
     ];
 
+    [ObservableProperty]
+    private OneDragonTaskItem _selectedTask;
+
     public OneDragonFlowViewModel(ISnackbarService snackbarService)
     {
         _snackbarService = snackbarService;
