@@ -34,7 +34,9 @@
                        DockPanel.Dock="Bottom" />
             <ui:ListView dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"
+                         dd:DragDrop.UseDefaultDragAdorner="True"
                          ItemsSource="{Binding TaskList}"
+                         SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
                          SelectionMode="Single">
                 <ui:ListView.ItemTemplate>
                     <DataTemplate>
