@@ -28,6 +28,7 @@ public class CameraRotateTask(CancellationTokenSource cts)
         {
             return diff;
         }
+
         // 平滑的旋转视角
         // todo dpi 和分辨率都会影响转动速度
         double controlRatio = 1;
@@ -43,6 +44,7 @@ public class CameraRotateTask(CancellationTokenSource cts)
         {
             controlRatio = 2;
         }
+
         Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(-controlRatio * diff * _dpi), 0);
         return diff;
     }
@@ -64,11 +66,13 @@ public class CameraRotateTask(CancellationTokenSource cts)
             {
                 break;
             }
+
             if (count > maxTryTimes)
             {
                 Logger.LogWarning("视角转动到目标角度超时，停止转动");
                 break;
             }
+
             await Delay(50, cts);
             count++;
         }

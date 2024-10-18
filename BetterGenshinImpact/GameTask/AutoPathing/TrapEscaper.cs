@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using Microsoft.Extensions.Logging;
-using OpenCvSharp;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -17,7 +12,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class TrapEscaper(CancellationTokenSource cts)
 {
-    private  readonly CameraRotateTask _rotateTask = new(cts);
+    private readonly CameraRotateTask _rotateTask = new(cts);
     private static readonly Random _random = new Random();
     private int _lastActionIndex = 0;
     public static DateTime LastActionTime = DateTime.UtcNow;
@@ -28,21 +23,20 @@ public class TrapEscaper(CancellationTokenSource cts)
         _randomAngle += _random.Next(30, 45);
     }
 
-    private void ReduseRandomAngle()
+    private void ReduceRandomAngle()
     {
         _randomAngle += _random.Next(-45, -30);
     }
-    
+
     public async Task MoveTo(WaypointForTrack waypoint)
     {
         bool left = false;
-        var StartTime = DateTime.UtcNow;
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         LastActionTime = DateTime.UtcNow;
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
-        
+
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
         while (!cts.IsCancellationRequested)
@@ -52,9 +46,10 @@ public class TrapEscaper(CancellationTokenSource cts)
             {
                 break;
             }
+
             screen = CaptureToRectArea();
             position = Navigation.GetPosition(screen);
-            
+
             // 旋转视角
             /* 这里的角度增加了一个randomAngle角度，用来在原角度不适用的情况下修改角度以适应复杂环境
                randomAngle会定期归零，不会任何程度上影响路径追踪的结果（指到达既设点位）
@@ -65,7 +60,7 @@ public class TrapEscaper(CancellationTokenSource cts)
                2. 重复0和1，角度会一直增加，达到“转一圈”的360度脱困效果，若成功脱困则将randomAngle归零
                */
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position) + _randomAngle;
-            
+
             //执行旋转
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
@@ -76,12 +71,14 @@ public class TrapEscaper(CancellationTokenSource cts)
             {
                 _randomAngle %= 360; //角度增加到360度时也会归零
                 if ((DateTime.UtcNow - LastActionTime).TotalSeconds > 1.5)
+                {
                     _randomAngle = 0;
+                }
             }
             // 设置为非攀爬时误进入攀爬，自动脱离（小脱困）
             // 小脱困逻辑，在进入攀爬时，即后一帧会自动脱离，因此无需再执行脱困代码
             // 进入攀爬就代表前面有较高的物体（障碍物）阻挡，所以必须“旋转角度”以辅助绕过障碍物！！！
-            
+
             // 先排除攀爬和飞行的情况
             if (waypoint.MoveMode != MoveModeEnum.Climb.Code &&
                 waypoint.MoveMode != MoveModeEnum.Fly.Code)
@@ -89,11 +86,11 @@ public class TrapEscaper(CancellationTokenSource cts)
                 {
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                    TaskControl.Sleep(75);
+                    Sleep(75);
                     Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-                    TaskControl.Sleep(700);
+                    Sleep(700);
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
-                    
+
                     LastActionTime = DateTime.UtcNow;
 
                     //！！！！！！！！这里修改了randomAngle的值，用于在脱困后随机旋转角度！！！！！！！！
@@ -103,8 +100,9 @@ public class TrapEscaper(CancellationTokenSource cts)
                     }
                     else
                     {
-                        ReduseRandomAngle();
+                        ReduceRandomAngle();
                     }
+
                     continue;
                 }
 
@@ -114,6 +112,7 @@ public class TrapEscaper(CancellationTokenSource cts)
         // 抬起w键
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
     }
+
     public async Task RotateAndMove()
     {
         IncreaseRandomAngle();
@@ -134,6 +133,7 @@ public class TrapEscaper(CancellationTokenSource cts)
         {
             _lastActionIndex++;
         }
+
         var difference = _lastActionIndex * 1000;
 
         switch (_lastActionIndex % 3)
@@ -142,33 +142,36 @@ public class TrapEscaper(CancellationTokenSource cts)
                 // 向后移动
                 MoveBackward(1000 + difference);
                 break;
+
             case 1:
                 // 向左移动
                 MoveLeft(700 + difference);
                 break;
+
             case 2:
                 // 向右移动
                 MoveRight(700 + difference);
                 break;
         }
+
         LastActionTime = DateTime.UtcNow;
     }
 
     private void MoveBackward(int delay)
     {
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-        TaskControl.Sleep(500);
+        Sleep(500);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        TaskControl.Sleep(delay);
+        Sleep(delay);
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
     }
 
     private void MoveLeft(int delay)
     {
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
-        TaskControl.Sleep(300);
+        Sleep(300);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        TaskControl.Sleep(delay);
+        Sleep(delay);
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
     }
@@ -176,9 +179,9 @@ public class TrapEscaper(CancellationTokenSource cts)
     private void MoveRight(int delay)
     {
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
-        TaskControl.Sleep(300);
+        Sleep(300);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        TaskControl.Sleep(delay);
+        Sleep(delay);
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
     }

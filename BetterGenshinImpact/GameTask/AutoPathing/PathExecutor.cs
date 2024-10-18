@@ -24,7 +24,7 @@ public class PathExecutor(CancellationTokenSource cts)
 {
     private readonly CameraRotateTask _rotateTask = new(cts);
     private readonly TrapEscaper _trapEscaper = new(cts);
-    
+
     public async Task Pathing(PathingTask task)
     {
         if (!task.Positions.Any())
@@ -100,10 +100,9 @@ public class PathExecutor(CancellationTokenSource cts)
         var startTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
-        var prevPositions = new List<Point2f>(); 
-        var fastmodeColdTime = DateTime.UtcNow;
-        bool isTrapped = false;
-        
+        var prevPositions = new List<Point2f>();
+        var fastModeColdTime = DateTime.UtcNow;
+
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
         while (!cts.IsCancellationRequested)
@@ -133,7 +132,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
             // 非攀爬状态下，检测是否卡死（脱困触发器）
             if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
-            {   
+            {
                 if ((now - lastPositionRecord).TotalMilliseconds > 1000)
                 {
                     lastPositionRecord = now;
@@ -143,12 +142,13 @@ public class PathExecutor(CancellationTokenSource cts)
                         var delta = prevPositions[^1] - prevPositions[^8];
                         if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
                         {
-                            Logger.LogWarning("疑似卡死，尝试脱离");
-                            
+                            Logger.LogWarning("疑似卡死，尝试脱离...");
+
                             //调用脱困代码，由TrapEscaper接管移动
                             await _trapEscaper.RotateAndMove();
                             await _trapEscaper.MoveTo(waypoint);
                             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+                            Logger.LogInformation("卡死脱离结束");
                             continue;
                         }
                     }
@@ -159,7 +159,7 @@ public class PathExecutor(CancellationTokenSource cts)
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             //执行旋转
             _rotateTask.RotateToApproach(targetOrientation, screen);
-            
+
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
             {
@@ -170,43 +170,21 @@ public class PathExecutor(CancellationTokenSource cts)
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                     await Delay(200, cts);
                 }
+
                 continue;
             }
-            if (waypoint.MoveMode == MoveModeEnum.Climb.Code)
-            {
-                if (Bv.GetMotionStatus(screen) != MotionStatus.Climb)
-                {
-                    Debug.WriteLine("未进入攀爬状态，按下空格");
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                    await Delay(200, cts);
-                }
-                continue;
-            }
+
             if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
                 await Delay(200, cts);
                 continue;
             }
-            // 设置为非攀爬时误进入攀爬，自动脱离（小脱困）
-            // 小脱困逻辑，在进入攀爬时，即后一帧会自动脱离，后使用TrapEscaper接管移动
-
-            // 先排除攀爬和飞行的情况
-            if (waypoint.MoveMode != MoveModeEnum.Climb.Code &&
-                waypoint.MoveMode != MoveModeEnum.Fly.Code)
-                if (Bv.GetMotionStatus(screen) == MotionStatus.Climb)
-                {
-                    Logger.LogWarning("进入攀爬状态，自动脱困中");
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                    await _trapEscaper.MoveTo(waypoint);
-                    Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
-                    continue;
-                }
 
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 20 != fastMode) // 距离大于30时可以使用疾跑/自由泳
+                if (distance > 15 != fastMode) // 距离大于30时可以使用疾跑/自由泳
                 {
                     if (fastMode)
                     {
@@ -220,13 +198,13 @@ public class PathExecutor(CancellationTokenSource cts)
                     fastMode = !fastMode;
                 }
             }
-            else if (waypoint.MoveMode != MoveModeEnum.Climb.Code)//否则自动短疾跑
+            else if (waypoint.MoveMode != MoveModeEnum.Climb.Code) //否则自动短疾跑
             {
-                if (distance > 10)
+                if (distance > 15)
                 {
-                    if (Math.Abs((fastmodeColdTime-now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
+                    if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
                     {
-                        fastmodeColdTime = now;
+                        fastModeColdTime = now;
                         Simulation.SendInput.Mouse.RightButtonClick();
                     }
                 }
@@ -272,6 +250,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 break;
             }
 
+            // _rotateTask.RotateToApproach(targetOrientation, screen); //不再改变视角
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
