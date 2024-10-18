@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -88,9 +89,9 @@ public class TrapEscaper(CancellationTokenSource cts)
                 {
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-                    await Task.Delay(75);
+                    TaskControl.Sleep(75);
                     Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-                    await Task.Delay(700);
+                    TaskControl.Sleep(700);
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
                     
                     LastActionTime = DateTime.UtcNow;
@@ -119,9 +120,9 @@ public class TrapEscaper(CancellationTokenSource cts)
         // 脱离攀爬状态
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-        Delay(75, cts).Wait();
+        await Delay(75, cts);
         Simulation.SendInput.Mouse.LeftButtonClick();
-        Delay(500, cts).Wait();
+        await Delay(500, cts);
 
         TimeSpan timeSinceLastAction = DateTime.UtcNow - LastActionTime;
 
@@ -156,18 +157,18 @@ public class TrapEscaper(CancellationTokenSource cts)
     private void MoveBackward(int delay)
     {
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
-        Task.Delay(500).Wait();
+        TaskControl.Sleep(500);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        Task.Delay(delay).Wait();
+        TaskControl.Sleep(delay);
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
     }
 
     private void MoveLeft(int delay)
     {
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
-        Task.Delay(300).Wait();
+        TaskControl.Sleep(300);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        Task.Delay(delay).Wait();
+        TaskControl.Sleep(delay);
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
     }
@@ -175,18 +176,10 @@ public class TrapEscaper(CancellationTokenSource cts)
     private void MoveRight(int delay)
     {
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
-        Task.Delay(300).Wait();
+        TaskControl.Sleep(300);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-        Task.Delay(delay).Wait();
+        TaskControl.Sleep(delay);
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
-    }
-
-    private async Task Delay(int milliseconds, CancellationTokenSource cts)
-    {
-        if (!cts.IsCancellationRequested)
-        {
-            await Task.Delay(milliseconds);
-        }
     }
 }
