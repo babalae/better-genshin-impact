@@ -138,7 +138,7 @@ public class PathExecutor(CancellationTokenSource cts)
             // 非攀爬状态下，检测是否卡死
             if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {
-                if ((now - lastPositionRecord).TotalMilliseconds > 1000)
+                if ((now - lastPositionRecord).TotalMilliseconds > 1000 && (DateTime.Now - _lastActionTime).TotalSeconds > 2)
                 {
                     lastPositionRecord = now;
                     prevPositions.Add(position);
@@ -161,6 +161,7 @@ public class PathExecutor(CancellationTokenSource cts)
             _rotateTask.RotateToApproach(targetOrientation, screen);
             if (_randomAngle != 0)
             {
+                _randomAngle %= 360;
                 if ((DateTime.Now - _lastActionTime).TotalSeconds > 0.5)
                     _randomAngle = 0;
             }
@@ -192,12 +193,15 @@ public class PathExecutor(CancellationTokenSource cts)
                 await Delay(200, cts);
                 continue;
             }
-            //设置为非攀爬时进入攀爬，自动脱离
-            if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
+            //设置为非攀爬时进入攀爬，自动脱离（小脱困）
+            if (waypoint.MoveMode != MoveModeEnum.Climb.Code &&
+                waypoint.MoveMode != MoveModeEnum.Fly.Code)
                 if (Bv.GetMotionStatus(screen) == MotionStatus.Climb)
                 {
                     Debug.WriteLine("进入攀爬状态，按下x");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                    _lastActionTime = DateTime.Now;
+                    _randomAngle += _ran.Next(15, 30);
                     continue;
                 }
 
@@ -257,7 +261,7 @@ public class PathExecutor(CancellationTokenSource cts)
 
     private async Task EscapeTrap()
     {
-        _randomAngle = _ran.Next(-30, 30);
+        _randomAngle += _ran.Next(15, 30);
         // 脱离攀爬状态
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
         await Delay(1500, cts);
@@ -267,8 +271,8 @@ public class PathExecutor(CancellationTokenSource cts)
         await Delay(500, cts);
         
         TimeSpan timeSinceLastAction = DateTime.Now - _lastActionTime;
-        _lastActionTime = DateTime.Now;
-        if (timeSinceLastAction.TotalSeconds >= 3)
+        
+        if (timeSinceLastAction.TotalSeconds >= 5)
         {
             // 从零开始
             _lastActionIndex = 0;
@@ -313,6 +317,7 @@ public class PathExecutor(CancellationTokenSource cts)
                 await Delay(500, cts);
                 break;
         }
+        _lastActionTime = DateTime.Now;
     }
 
     private async Task MoveCloseTo(WaypointForTrack waypoint)
