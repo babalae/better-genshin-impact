@@ -23,9 +23,9 @@ public class PickAroundHandler : IActionHandler
         await rotateTask.WaitUntilRotatedTo(angle, 5);
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
         var startTime = DateTime.UtcNow;
-        while (!cts.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
-            angle = (5+angle)%360;
+            angle = (5 + angle) % 360;
             rotateTask.RotateToApproach(angle, screen);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
