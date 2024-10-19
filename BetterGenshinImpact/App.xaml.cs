@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -10,6 +11,7 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -36,6 +38,10 @@ public partial class App : Application
         .CheckIntegration()
         .UseElevated()
         .UseSingleInstance("BetterGI")
+        .ConfigureLogging(builder =>
+        {
+            builder.ClearProviders();
+        })
         .ConfigureServices(
             (context, services) =>
             {
@@ -66,7 +72,6 @@ public partial class App : Application
 
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
-
                 // Page resolver service
                 services.AddSingleton<IPageService, PageService>();
 
@@ -98,6 +103,7 @@ public partial class App : Application
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
+                services.AddSingleton<HutaoNamedPipe>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
