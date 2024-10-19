@@ -6,6 +6,8 @@
              xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
+             xmlns:oneDragonView="clr-namespace:View.Pages.OneDragon"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
@@ -96,12 +98,18 @@
         </DockPanel>
 
         <!--  右侧配置  -->
-        <StackPanel Grid.Column="1" Margin="20,0,0,0">
-            <TextBlock Margin="0,0,0,10"
-                       FontSize="15"
-                       FontWeight="Bold"
-                       Text="登录游戏 配置" />
-            <!--  在这里添加配置项  -->
-        </StackPanel>
+        <ContentControl Grid.Column="1"
+                        Margin="20,0,0,0"
+                        Content="{Binding SelectedTask.ViewModel}">
+            <ContentControl.Resources>
+                <DataTemplate DataType="{x:Type oneDragon:LoginConfigViewModel}">
+                    <oneDragonView:LoginConfigPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:MailConfigViewModel}">
+                    <oneDragonView:MailConfigPage />
+                </DataTemplate>
+                <!--  为其他任务类型添加相应的DataTemplate  -->
+            </ContentControl.Resources>
+        </ContentControl>
     </Grid>
 </UserControl>

@@ -17,6 +17,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 public class AutoFightTask : ISoloTask
 {
+    public string Name => "自动战斗";
+
     private readonly AutoFightParam _taskParam;
 
     private readonly CombatScriptBag _combatScriptBag;

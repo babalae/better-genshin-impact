@@ -1,3 +1,3 @@
 ﻿namespace BetterGenshinImpact.ViewModel;
 
-internal interface IViewModel;
+public interface IViewModel;

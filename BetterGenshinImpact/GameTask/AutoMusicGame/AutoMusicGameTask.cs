@@ -13,6 +13,8 @@ namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
 public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 {
+    public string Name => "自动音游";
+
     private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     {
         [User32.VK.VK_A] = 417,

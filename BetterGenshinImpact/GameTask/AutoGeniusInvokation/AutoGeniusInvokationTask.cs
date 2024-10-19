@@ -5,6 +5,8 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
 public class AutoGeniusInvokationTask(GeniusInvokationTaskParam taskParam) : ISoloTask
 {
+    public string Name => "自动七圣召唤";
+
     public Task Start(CancellationToken ct)
     {
         // 读取策略信息

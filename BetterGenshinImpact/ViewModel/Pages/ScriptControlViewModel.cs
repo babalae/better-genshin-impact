@@ -35,8 +35,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
 
-    private readonly HomePageViewModel _homePageViewModel;
-
     private readonly IScriptService _scriptService;
 
     /// <summary>
@@ -62,11 +60,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService, HomePageViewModel homePageViewModel)
+    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
-        _homePageViewModel = homePageViewModel;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
 

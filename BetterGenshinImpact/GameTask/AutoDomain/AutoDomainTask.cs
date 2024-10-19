@@ -32,6 +32,8 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask : ISoloTask
 {
+    public string Name => "自动秘境";
+
     private readonly AutoDomainParam _taskParam;
 
     private readonly PostMessageSimulator _simulator;

@@ -28,6 +28,8 @@ namespace BetterGenshinImpact.GameTask.AutoWood;
 /// </summary>
 public partial class AutoWoodTask : ISoloTask
 {
+    public string Name => "自动伐木";
+
     private readonly AutoWoodAssets _assets;
 
     private bool _first = true;
