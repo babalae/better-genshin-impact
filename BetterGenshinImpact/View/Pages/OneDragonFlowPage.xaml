@@ -7,7 +7,7 @@
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
-             xmlns:oneDragonView="clr-namespace:View.Pages.OneDragon"
+             xmlns:oneDragonView="clr-namespace:BetterGenshinImpact.View.Pages.OneDragon"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
@@ -102,13 +102,33 @@
                         Margin="20,0,0,0"
                         Content="{Binding SelectedTask.ViewModel}">
             <ContentControl.Resources>
-                <DataTemplate DataType="{x:Type oneDragon:LoginConfigViewModel}">
-                    <oneDragonView:LoginConfigPage />
+                <DataTemplate DataType="{x:Type oneDragon:MailViewModel}">
+                    <oneDragonView:MailPage />
                 </DataTemplate>
-                <DataTemplate DataType="{x:Type oneDragon:MailConfigViewModel}">
-                    <oneDragonView:MailConfigPage />
+                <DataTemplate DataType="{x:Type oneDragon:CraftViewModel}">
+                    <oneDragonView:CraftPage />
                 </DataTemplate>
-                <!--  为其他任务类型添加相应的DataTemplate  -->
+                <DataTemplate DataType="{x:Type oneDragon:DailyCommissionViewModel}">
+                    <oneDragonView:DailyCommissionPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:DailyRewardViewModel}">
+                    <oneDragonView:DailyRewardPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:DomainViewModel}">
+                    <oneDragonView:DomainPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:ForgingViewModel}">
+                    <oneDragonView:ForgingPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:LeyLineBlossomViewModel}">
+                    <oneDragonView:LeyLineBlossomPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:SereniteaPotViewModel}">
+                    <oneDragonView:SereniteaPotPage />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type oneDragon:TcgViewModel}">
+                    <oneDragonView:TcgPage />
+                </DataTemplate>
             </ContentControl.Resources>
         </ContentControl>
     </Grid>
