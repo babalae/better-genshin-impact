@@ -465,7 +465,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(new CancellationTokenSource()).GetPositionFromBigMap();
+                var p = new TpTask(new CancellationToken()).GetPositionFromBigMap();
                 _logger.LogInformation("大地图位置：{Position}", p);
             }
         ));
@@ -561,7 +561,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) =>
                 {
                     NahidaCollectHandler handler = new NahidaCollectHandler();
-                    handler.RunAsync(new CancellationTokenSource());
+                    handler.RunAsync(new CancellationToken());
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

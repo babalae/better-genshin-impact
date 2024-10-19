@@ -1,11 +1,9 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -50,25 +48,22 @@ public class Duel
     /// </summary>
     public int CurrentDiceCount { get; set; } = 0;
 
-    public CancellationTokenSource Cts { get; set; } = default!;
-
     private int _keqingECount = 0;
 
-    public async Task RunAsync(CancellationTokenSource cts)
+    public async Task RunAsync(CancellationToken ct)
     {
-        await Task.Run(() => { Run(cts); });
+        await Task.Run(() => { Run(ct); }, ct);
     }
 
-    public void Run(CancellationTokenSource cts)
+    public void Run(CancellationToken ct)
     {
-        Cts = cts;
         try
         {
             AutoGeniusInvokationAssets.DestroyInstance();
 
             LogScreenResolution();
             NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().Build()); // TODO 需要移动
-            GeniusInvokationControl.GetInstance().Init(Cts);
+            GeniusInvokationControl.GetInstance().Init(ct);
 
             // 对局准备 选择初始手牌
             GeniusInvokationControl.GetInstance().CommonDuelPrepare();

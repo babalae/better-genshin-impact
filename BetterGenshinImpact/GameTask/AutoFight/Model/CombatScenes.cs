@@ -188,11 +188,11 @@ public class CombatScenes : IDisposable
         return avatars;
     }
 
-    public void BeforeTask(CancellationTokenSource cts)
+    public void BeforeTask(CancellationToken ct)
     {
         for (var i = 0; i < AvatarCount; i++)
         {
-            Avatars[i].Cts = cts;
+            Avatars[i].Ct = ct;
         }
     }
 

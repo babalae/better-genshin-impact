@@ -25,7 +25,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// <summary>
 /// 传送任务
 /// </summary>
-public class TpTask(CancellationTokenSource cts)
+public class TpTask(CancellationToken ct)
 {
     private readonly QuickTeleportAssets _assets = QuickTeleportAssets.Instance;
 
@@ -55,7 +55,7 @@ public class TpTask(CancellationTokenSource cts)
         if (!Bv.IsInBigMapUi(ra1))
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
-            await Delay(1000, cts);
+            await Delay(1000, ct);
         }
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
@@ -79,13 +79,13 @@ public class TpTask(CancellationTokenSource cts)
         ra.ClickTo((int)clickX, (int)clickY);
 
         // 触发一次快速传送功能
-        await Delay(500, cts);
+        await Delay(500, ct);
         await ClickTpPoint(CaptureToRectArea());
 
         // 等待传送完成
         for (var i = 0; i < 20; i++)
         {
-            await Delay(1200, cts);
+            await Delay(1200, ct);
             using var ra3 = CaptureToRectArea();
             if (Bv.IsInMainUi(ra3))
             {
@@ -161,7 +161,7 @@ public class TpTask(CancellationTokenSource cts)
             {
                 // 传送点未激活或不存在 按ESC回到大地图界面
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(300, cts);
+                await Delay(300, ct);
                 throw;
             }
             catch (Exception e)
@@ -231,14 +231,14 @@ public class TpTask(CancellationTokenSource cts)
         var moveUnit = dx > 0 ? 20 : -20;
         GameCaptureRegion.GameRegionMove((rect, _) => (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6), rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
         Simulation.SendInput.Mouse.LeftButtonDown();
-        await Delay(200, cts);
+        await Delay(200, ct);
         for (var i = 0; i < dx / moveUnit; i++)
         {
             Simulation.SendInput.Mouse.MoveMouseBy(moveUnit, 0).Sleep(60); // 60 保证没有惯性
         }
 
         Simulation.SendInput.Mouse.LeftButtonUp();
-        await Delay(200, cts);
+        await Delay(200, ct);
     }
 
     public async Task MouseMoveMapY(int dy)
@@ -246,7 +246,7 @@ public class TpTask(CancellationTokenSource cts)
         var moveUnit = dy > 0 ? 20 : -20;
         GameCaptureRegion.GameRegionMove((rect, _) => (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6), rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
         Simulation.SendInput.Mouse.LeftButtonDown();
-        await Delay(200, cts);
+        await Delay(200, ct);
         // 原神地图在小范围内移动是无效的，所以先随便移动一下，所以肯定少移动一次
         for (var i = 0; i < dy / moveUnit; i++)
         {
@@ -254,7 +254,7 @@ public class TpTask(CancellationTokenSource cts)
         }
 
         Simulation.SendInput.Mouse.LeftButtonUp();
-        await Delay(200, cts);
+        await Delay(200, ct);
     }
 
     public Point2f GetPositionFromBigMap()
@@ -363,7 +363,7 @@ public class TpTask(CancellationTokenSource cts)
         if (Bv.BigMapIsUnderground(ra2))
         {
             ra2.Find(_assets.MapUndergroundToGroundButtonRo).Click();
-            await Delay(200, cts);
+            await Delay(200, ct);
         }
 
         // 识别当前位置
@@ -392,7 +392,7 @@ public class TpTask(CancellationTokenSource cts)
         if (minCountry != "当前位置")
         {
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-            await Delay(300, cts);
+            await Delay(300, ct);
             var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
             {
@@ -401,7 +401,7 @@ public class TpTask(CancellationTokenSource cts)
             });
             list.FirstOrDefault(r => r.Text.Length == minCountry.Length && !r.Text.Contains("委托") && r.Text.Contains(minCountry))?.Click();
             Logger.LogInformation("切换到区域：{Country}", minCountry);
-            await Delay(500, cts);
+            await Delay(500, ct);
             return true;
         }
 
@@ -442,7 +442,7 @@ public class TpTask(CancellationTokenSource cts)
                     {
                         var time = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
                         time = time < 300 ? 300 : time;
-                        await Delay(time, cts);
+                        await Delay(time, ct);
                         if (!CheckTeleportButton(CaptureToRectArea()))
                         {
                             // 没传送确认图标说明点开的是未激活传送锚点

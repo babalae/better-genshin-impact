@@ -14,11 +14,11 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class PickAroundHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationTokenSource cts)
+    public async Task RunAsync(CancellationToken ct)
     {
         var screen = CaptureToRectArea();
         var angle = 0;
-        CameraRotateTask rotateTask = new(cts);
+        CameraRotateTask rotateTask = new(ct);
         TaskControl.Logger.LogInformation("执行 {Text}", "小范围内自动拾取");
         await rotateTask.WaitUntilRotatedTo(angle, 5);
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
@@ -29,7 +29,7 @@ public class PickAroundHandler : IActionHandler
             rotateTask.RotateToApproach(angle, screen);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
-            await Delay(100, cts);
+            await Delay(100, ct);
             if (DateTime.UtcNow - startTime > TimeSpan.FromSeconds(5))
                 break;
         }

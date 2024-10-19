@@ -5,5 +5,5 @@ namespace BetterGenshinImpact.GameTask;
 
 public interface ISoloTask
 {
-    Task Start(CancellationTokenSource cts);
+    Task Start(CancellationToken ct);
 }

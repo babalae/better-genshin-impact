@@ -11,12 +11,12 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 internal class AutoFightHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationTokenSource cts)
+    public async Task RunAsync(CancellationToken ct)
     {
-        await StartFight(cts);
+        await StartFight(ct);
     }
 
-    private async Task StartFight(CancellationTokenSource cts)
+    private async Task StartFight(CancellationToken ct)
     {
         TaskControl.Logger.LogInformation("执行 {Text}", "自动战斗");
         // 爷们要战斗
@@ -26,7 +26,7 @@ internal class AutoFightHandler : IActionHandler
             PickDropsAfterFightEnabled = true
         };
         var fightSoloTask = new AutoFightTask(taskParams);
-        await fightSoloTask.Start(cts);
+        await fightSoloTask.Start(ct);
     }
 
     private string GetFightStrategy()

@@ -76,11 +76,11 @@ internal sealed class Login3rdParty
         }
     }
 
-    public void Login(CancellationTokenSource cts)
+    public void Login(CancellationToken ct)
     {
         int failCount = default;
 
-        while (!LoginPrivate(cts))
+        while (!LoginPrivate(ct))
         {
             // It is necessary to support exitable trying.
             // Can exit trying when over than 10s.
@@ -90,12 +90,12 @@ internal sealed class Login3rdParty
                 break;
             }
             Debug.WriteLine($"[AutoWood] Fail to check login button {failCount} time(s).");
-            Sleep(500, cts);
+            Sleep(500, ct);
         }
         Debug.WriteLine("[AutoWood] Exit while check login button.");
     }
 
-    private bool LoginPrivate(CancellationTokenSource cts)
+    private bool LoginPrivate(CancellationToken ct)
     {
         if (Type == The3rdPartyType.Bilibili)
         {
@@ -104,7 +104,7 @@ internal sealed class Login3rdParty
                 if (GetBHWnd(process) != IntPtr.Zero)
                 {
                     // Just for login WebUI fadein chattering
-                    Sleep(4000, cts);
+                    Sleep(4000, ct);
 
                     var p = TaskContext.Instance()
                         .SystemInfo.CaptureAreaRect.GetCenterPoint()
@@ -114,7 +114,7 @@ internal sealed class Login3rdParty
                     Debug.WriteLine("[AutoWood] Click login button for the B one");
 
                     // Just for login WebUI fadeout chattering
-                    Sleep(3000, cts);
+                    Sleep(3000, ct);
 
                     if (GetBHWnd(process) != IntPtr.Zero)
                     {

@@ -9,7 +9,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class CameraRotateTask(CancellationTokenSource cts)
+public class CameraRotateTask(CancellationToken ct)
 {
     private readonly double _dpi = TaskContext.Instance().DpiScale;
 
@@ -59,7 +59,7 @@ public class CameraRotateTask(CancellationTokenSource cts)
     public async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff, int maxTryTimes = 50)
     {
         int count = 0;
-        while (!cts.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             var screen = CaptureToRectArea();
             if (Math.Abs(RotateToApproach(targetOrientation, screen)) < maxDiff)
@@ -73,7 +73,7 @@ public class CameraRotateTask(CancellationTokenSource cts)
                 break;
             }
 
-            await Delay(50, cts);
+            await Delay(50, ct);
             count++;
         }
     }

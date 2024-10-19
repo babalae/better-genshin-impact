@@ -61,15 +61,15 @@ public class GeniusInvokationControl
 
     public static bool OutputImageWhenError = true;
 
-    private CancellationTokenSource? _cts;
+    private CancellationToken _ct;
 
     private readonly AutoGeniusInvokationAssets _assets = AutoGeniusInvokationAssets.Instance;
 
     // private IGameCapture? _gameCapture;
 
-    public void Init(CancellationTokenSource cts)
+    public void Init(CancellationToken ct)
     {
-        _cts = cts;
+        _ct = ct;
         // _gameCapture = taskParam.Dispatcher.GameCapture;
     }
 
@@ -103,7 +103,7 @@ public class GeniusInvokationControl
     {
         NewRetry.Do(() =>
         {
-            if (_cts is { IsCancellationRequested: true })
+            if (_ct is { IsCancellationRequested: true })
             {
                 return;
             }
@@ -115,7 +115,7 @@ public class GeniusInvokationControl
             }
         }, TimeSpan.FromSeconds(1), 100);
 
-        if (_cts is { IsCancellationRequested: true })
+        if (_ct is { IsCancellationRequested: true })
         {
             throw new TaskCanceledException("任务取消");
         }
