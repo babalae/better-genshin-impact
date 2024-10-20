@@ -22,10 +22,14 @@ public class ScriptProject
     {
         FolderName = folderName;
         ProjectPath = Path.Combine(Global.ScriptPath(), folderName);
+        if (!Directory.Exists(ProjectPath))
+        {
+            throw new DirectoryNotFoundException("脚本文件夹不存在:" + ProjectPath);
+        }
         ManifestFile = Path.GetFullPath(Path.Combine(ProjectPath, "manifest.json"));
         if (!File.Exists(ManifestFile))
         {
-            throw new FileNotFoundException("manifest.json file not found.");
+            throw new FileNotFoundException("manifest.json文件存在，请确认此脚本是JS脚本类型。" + ManifestFile);
         }
 
         Manifest = Manifest.FromJson(File.ReadAllText(ManifestFile));

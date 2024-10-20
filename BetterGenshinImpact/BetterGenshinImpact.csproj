@@ -10,7 +10,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\Images\Anniversary\logo_1st.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
-		<AssemblyVersion>0.35.0</AssemblyVersion>
+		<AssemblyVersion>0.35.1</AssemblyVersion>
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
