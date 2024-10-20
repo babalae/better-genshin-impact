@@ -470,6 +470,7 @@ public class Avatar
 
         if (Name == "那维莱特")
         {
+            var dpi = TaskContext.Instance().DpiScale;
             AutoFightContext.Instance.Simulator.LeftButtonDown();
             while (ms >= 0)
             {
@@ -478,7 +479,7 @@ public class Avatar
                     return;
                 }
 
-                Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                 ms -= 50;
                 Sleep(50); // 持续操作不应该被cts取消
             }
