@@ -9,6 +9,9 @@ public class ActionEnum(string code, string msg)
     public static readonly ActionEnum NahidaCollect = new("nahida_collect", "纳西妲长按E收集");
     public static readonly ActionEnum PickAround = new("pick_around", "尝试在周围拾取");
     public static readonly ActionEnum Fight = new("fight", "战斗");
+    public static readonly ActionEnum NormalAttack = new("normal_attack", "普通攻击");
+    public static readonly ActionEnum ElementalSkill = new("elemental_skill", "元素战技");
+    public static readonly ActionEnum UpDownGrabLeaf = new("up_down_grab_leaf", "四叶印");
 
     // 还有要加入的其他动作
     // 滚轮F

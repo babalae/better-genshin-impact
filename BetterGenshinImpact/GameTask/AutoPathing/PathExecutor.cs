@@ -50,6 +50,8 @@ public class PathExecutor(CancellationToken ct)
                 }
                 else
                 {
+                    await BeforeMoveToTarget(waypoint);
+
                     // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
                     await MoveTo(waypoint);
 
@@ -250,7 +252,7 @@ public class PathExecutor(CancellationToken ct)
                 break;
             }
 
-            // _rotateTask.RotateToApproach(targetOrientation, screen); //不再改变视角
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
@@ -263,15 +265,27 @@ public class PathExecutor(CancellationToken ct)
         await Delay(1000, ct);
     }
 
+    private async Task BeforeMoveToTarget(WaypointForTrack waypoint)
+    {
+        if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
+        {
+            var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
+            await handler.RunAsync(ct);
+            await Delay(800, ct);
+        }
+    }
+
     private async Task AfterMoveToTarget(Waypoint waypoint)
     {
         if (waypoint.Action == ActionEnum.NahidaCollect.Code
             || waypoint.Action == ActionEnum.PickAround.Code
-            || waypoint.Action == ActionEnum.Fight.Code)
+            || waypoint.Action == ActionEnum.Fight.Code
+            || waypoint.Action == ActionEnum.NormalAttack.Code
+            || waypoint.Action == ActionEnum.ElementalSkill.Code)
         {
-            var handler = ActionFactory.GetHandler(waypoint.Action);
+            var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             await handler.RunAsync(ct);
-            await Delay(800, ct);
+            await Delay(1000, ct);
         }
     }
 }
