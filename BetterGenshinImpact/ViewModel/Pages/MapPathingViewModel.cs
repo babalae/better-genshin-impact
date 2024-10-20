@@ -14,12 +14,14 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.ViewModel.Message;
+using CommunityToolkit.Mvvm.Messaging;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class MapPathingViewModel(IScriptService scriptService, IConfigService configService) : ObservableObject, INavigationAware, IViewModel
+public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
@@ -28,17 +30,26 @@ public partial class MapPathingViewModel(IScriptService scriptService, IConfigSe
     private ObservableCollection<FileTreeNode<PathingTask>> _treeList = [];
 
     private MapViewer? _mapViewer;
+    private readonly IScriptService _scriptService;
 
-    public AllConfig Config { get; set; } = configService.Get();
+    public AllConfig Config { get; set; }
+
+    /// <inheritdoc/>
+    public MapPathingViewModel(IScriptService scriptService, IConfigService configService)
+    {
+        _scriptService = scriptService;
+        Config = configService.Get();
+        WeakReferenceMessenger.Default.Register<RefreshDataMessage>(this, (r, m) => InitScriptListViewData());
+    }
 
     private void InitScriptListViewData()
     {
-        _treeList.Clear();
+        TreeList.Clear();
         var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(PathJsonPath);
         // 循环写入 root.Children
         foreach (var item in root.Children)
         {
-            _treeList.Add(item);
+            TreeList.Add(item);
         }
     }
 
@@ -93,7 +104,7 @@ public partial class MapPathingViewModel(IScriptService scriptService, IConfigSe
 
         var fileInfo = new FileInfo(item.FilePath);
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
-        await scriptService.RunMulti([project]);
+        await _scriptService.RunMulti([project]);
     }
 
     [RelayCommand]

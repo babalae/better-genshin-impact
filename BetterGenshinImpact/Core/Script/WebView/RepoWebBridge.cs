@@ -2,6 +2,10 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
+using System.Threading.Tasks;
+using BetterGenshinImpact.ViewModel.Message;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -13,14 +17,28 @@ namespace BetterGenshinImpact.Core.Script.WebView;
 [ComVisible(true)]
 public class RepoWebBridge
 {
-    public string GetRepoJson()
+    public async Task<string> GetRepoJson()
     {
         try
         {
-            var localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-            if (localRepoJsonPath is null)
+            var needUpdate = false;
+            string? localRepoJsonPath = null;
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
             {
-                _ = ScriptRepoUpdater.Instance.UpdateCenterRepo().ConfigureAwait(false);
+                localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                if (localRepoJsonPath is null)
+                {
+                    needUpdate = true;
+                }
+            }
+            else
+            {
+                needUpdate = true;
+            }
+
+            if (needUpdate)
+            {
+                await ScriptRepoUpdater.Instance.UpdateCenterRepo();
                 localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
                 if (localRepoJsonPath is null)
                 {
@@ -28,25 +46,26 @@ public class RepoWebBridge
                 }
             }
 
-            var json = File.ReadAllText(localRepoJsonPath);
+            var json = await File.ReadAllTextAsync(localRepoJsonPath);
             return json;
         }
         catch (Exception e)
         {
-            MessageBox.Show(e.Message, "获取仓库信息失败！");
+            await MessageBox.ShowAsync(e.Message, "获取仓库信息失败！");
             return "";
         }
     }
 
-    public void ImportUri(string url)
+    public async void ImportUri(string url)
     {
         try
         {
-            ScriptRepoUpdater.Instance.ImportScriptFromUri(url, false).ConfigureAwait(false);
+            await ScriptRepoUpdater.Instance.ImportScriptFromUri(url, false);
+            WeakReferenceMessenger.Default.Send(new RefreshDataMessage("Refresh"));
         }
         catch (Exception e)
         {
-            MessageBox.Show(e.Message, "订阅脚本链接失败！");
+            await MessageBox.ShowAsync(e.Message, "订阅脚本链接失败！");
         }
     }
 }

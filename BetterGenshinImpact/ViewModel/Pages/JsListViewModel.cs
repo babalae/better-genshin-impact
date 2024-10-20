@@ -12,6 +12,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.ViewModel.Message;
+using CommunityToolkit.Mvvm.Messaging;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -26,27 +29,28 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     [ObservableProperty]
     private ObservableCollection<ScriptProject> _scriptItems = [];
 
-    private ISnackbarService _snackbarService;
-    private IScriptService _scriptService;
+    private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
 
-    public JsListViewModel(ISnackbarService snackbarService, IScriptService scriptService, IConfigService configService)
+    public JsListViewModel(IScriptService scriptService, IConfigService configService)
     {
-        _snackbarService = snackbarService;
         _scriptService = scriptService;
         Config = configService.Get();
+
+        // 注册消息
+        WeakReferenceMessenger.Default.Register<RefreshDataMessage>(this, (r, m) => InitScriptListViewData());
     }
 
     private void InitScriptListViewData()
     {
-        _scriptItems.Clear();
+        ScriptItems.Clear();
         var directoryInfos = LoadScriptFolder(scriptPath);
         foreach (var f in directoryInfos)
         {
             try
             {
-                _scriptItems.Add(new ScriptProject(f.Name));
+                ScriptItems.Add(new ScriptProject(f.Name));
             }
             catch (Exception e)
             {
@@ -95,6 +99,7 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
         {
             return;
         }
+
         await _scriptService.RunMulti([new ScriptGroupProject(item)]);
     }
 

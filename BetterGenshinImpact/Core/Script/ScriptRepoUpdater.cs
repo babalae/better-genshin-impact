@@ -54,6 +54,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
 
+        if (!Directory.Exists(ReposPath))
+        {
+            Directory.CreateDirectory(ReposPath);
+        }
+
         // 判断更新周期是否到达
         if (DateTime.Now - scriptConfig.LastUpdateScriptRepoTime >= TimeSpan.FromDays(scriptConfig.AutoUpdateScriptRepoPeriod))
         {
@@ -130,6 +135,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             throw new Exception("本地仓库缺少 repo.json");
         }
+
         // 获取与 localRepoJsonPath 同名（无扩展名）的文件夹路径
         var folderName = Path.GetFileNameWithoutExtension(localRepoJsonPath);
         var folderPath = Path.Combine(Path.GetDirectoryName(localRepoJsonPath)!, folderName);
@@ -137,6 +143,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             throw new Exception("本地仓库文件夹不存在");
         }
+
         return folderPath;
     }
 

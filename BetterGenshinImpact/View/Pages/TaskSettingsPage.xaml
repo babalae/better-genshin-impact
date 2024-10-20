@@ -177,7 +177,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        需要装备「王树瑞佑」 -<Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        装备「王树瑞佑」，通过循环重启游戏刷新并收集木材 -<Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
