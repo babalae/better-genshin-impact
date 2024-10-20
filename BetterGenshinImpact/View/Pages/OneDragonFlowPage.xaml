@@ -98,7 +98,7 @@
         </DockPanel>
 
         <!--  右侧配置  -->
-        <ContentControl Grid.Column="1"
+        <!--<ContentControl Grid.Column="1"
                         Margin="20,0,0,0"
                         Content="{Binding SelectedTask.ViewModel}">
             <ContentControl.Resources>
@@ -130,6 +130,73 @@
                     <oneDragonView:TcgPage />
                 </DataTemplate>
             </ContentControl.Resources>
-        </ContentControl>
+        </ContentControl>-->
+
+        <!--  右侧配置  -->
+        <DockPanel Grid.Column="1" Margin="20,0,0,0">
+            <StackPanel Margin="0,0,0,10" DockPanel.Dock="Top">
+                <TextBlock Margin="0,0,0,10"
+                           FontSize="15"
+                           FontWeight="Bold"
+                           Text="配置" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0"
+                              ItemsSource="{Binding ConfigurationProfiles}"
+                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}" />
+                    <ui:Button Grid.Column="1"
+                               Margin="10,0,0,0"
+                               Command="{Binding SaveConfigurationCommand}"
+                               Content="保存配置" />
+                </Grid>
+            </StackPanel>
+
+            <ScrollViewer>
+                <StackPanel>
+                    <ui:Card Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Margin="0,0,0,10"
+                                       FontWeight="Bold"
+                                       Text="合成树脂" />
+                            <ComboBox Margin="0,0,0,10"
+                                      ItemsSource="{Binding CraftResinLocations}"
+                                      SelectedItem="{Binding SelectedCraftResinLocation, Mode=TwoWay}" />
+
+                            <TextBlock Margin="0,10,0,10"
+                                       FontWeight="Bold"
+                                       Text="合成数量" />
+                            <Slider Margin="0,0,0,10"
+                                    IsSnapToTickEnabled="True"
+                                    Maximum="5"
+                                    Minimum="0"
+                                    TickFrequency="1"
+                                    Value="{Binding CraftResinAmount, Mode=TwoWay}" />
+                            <TextBlock Text="{Binding CraftResinAmount, StringFormat={}当前选择: {0}}" />
+                        </StackPanel>
+                    </ui:Card>
+
+                    <ui:Card Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Margin="0,0,0,10"
+                                       FontWeight="Bold"
+                                       Text="领取每日奖励" />
+                            <ComboBox Margin="0,0,0,10"
+                                      ItemsSource="{Binding DailyRewardLocations}"
+                                      SelectedItem="{Binding SelectedDailyRewardLocation, Mode=TwoWay}" />
+
+                            <CheckBox Margin="0,0,0,10"
+                                      Content="自动领取"
+                                      IsChecked="{Binding AutoClaimDailyReward, Mode=TwoWay}" />
+                        </StackPanel>
+                    </ui:Card>
+
+                    <!--  可以继续添加其他设置项  -->
+
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
     </Grid>
 </UserControl>

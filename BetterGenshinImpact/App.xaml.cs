@@ -99,15 +99,15 @@ public partial class App : Application
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
 
                 // 一条龙 ViewModels
-                services.AddSingleton<CraftViewModel>();
-                services.AddSingleton<DailyCommissionViewModel>();
-                services.AddSingleton<DailyRewardViewModel>();
-                services.AddSingleton<DomainViewModel>();
-                services.AddSingleton<ForgingViewModel>();
-                services.AddSingleton<LeyLineBlossomViewModel>();
-                services.AddSingleton<MailViewModel>();
-                services.AddSingleton<SereniteaPotViewModel>();
-                services.AddSingleton<TcgViewModel>();
+                // services.AddSingleton<CraftViewModel>();
+                // services.AddSingleton<DailyCommissionViewModel>();
+                // services.AddSingleton<DailyRewardViewModel>();
+                // services.AddSingleton<DomainViewModel>();
+                // services.AddSingleton<ForgingViewModel>();
+                // services.AddSingleton<LeyLineBlossomViewModel>();
+                // services.AddSingleton<MailViewModel>();
+                // services.AddSingleton<SereniteaPotViewModel>();
+                // services.AddSingleton<TcgViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();

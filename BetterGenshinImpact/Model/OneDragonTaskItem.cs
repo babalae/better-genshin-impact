@@ -19,10 +19,9 @@ public partial class OneDragonTaskItem : ObservableObject
     [ObservableProperty]
     private OneDragonBaseViewModel? _viewModel;
 
-    public OneDragonTaskItem(OneDragonBaseViewModel viewModel)
+    public OneDragonTaskItem(string name)
     {
-        _viewModel = viewModel;
-        Name = viewModel.Title;
+        Name = name;
     }
 
     public OneDragonTaskItem(Type viewModelType)
