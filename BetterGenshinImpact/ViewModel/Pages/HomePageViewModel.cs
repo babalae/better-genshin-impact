@@ -223,7 +223,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         Start(hWnd);
     }
 
-    private void Start(IntPtr hWnd)
+    internal void Start(IntPtr hWnd)
     {
         Debug.WriteLine($"原神启动句柄{hWnd}");
         lock (this)

@@ -1,17 +1,21 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO.Pipes;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Hutao;
 
-internal sealed class HutaoNamedPipe : IDisposable
+internal sealed partial class HutaoNamedPipe : IDisposable
 {
+    private const int Version = 1;
+
     private readonly NamedPipeClientStream clientStream = new(".", "Snap.Hutao.PrivateNamedPipe", PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.WriteThrough);
 
     private readonly IServiceProvider serviceProvider;
 
-    private Lazy<bool> isSupported;
+    private readonly Lazy<bool> isSupported;
 
     public HutaoNamedPipe(IServiceProvider serviceProvider)
     {
