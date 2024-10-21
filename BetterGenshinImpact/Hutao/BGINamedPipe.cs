@@ -92,6 +92,10 @@ internal sealed partial class BGINamedPipe : IDisposable
                     }
 
                     break;
+
+                case (PipePacketType.SessionTermination, _):
+                    serverStream.Disconnect();
+                    return;
             }
         }
     }

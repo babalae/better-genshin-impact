@@ -1,9 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO.Pipes;
 using System.Text;
-using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Hutao;
 
@@ -38,6 +35,18 @@ internal sealed partial class HutaoNamedPipe : IDisposable
     public bool IsSupported
     {
         get => isSupported.Value;
+    }
+
+    public bool TryRedirectLog(string log)
+    {
+        if (!IsSupported)
+        {
+            return false;
+        }
+
+        byte[] buffer = Encoding.UTF8.GetBytes(log);
+        clientStream.Write(buffer, 0, buffer.Length);
+        return true;
     }
 
     public void Dispose()

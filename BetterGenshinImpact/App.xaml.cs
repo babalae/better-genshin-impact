@@ -69,6 +69,7 @@ public partial class App : Application
                 {
                     loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
                 }
+                loggerConfiguration.WriteTo.Sink(new HutaoNamedPipeLogEventSink(), LogEventLevel.Information);
 
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
