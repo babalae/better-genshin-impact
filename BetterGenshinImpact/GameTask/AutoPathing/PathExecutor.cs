@@ -1,10 +1,12 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,7 @@ public class PathExecutor(CancellationToken ct)
 {
     private readonly CameraRotateTask _rotateTask = new(ct);
     private readonly TrapEscaper _trapEscaper = new(ct);
+    private readonly PathingConfig _config = TaskContext.Instance().Config.PathingConfig;
 
     public async Task Pathing(PathingTask task)
     {
@@ -94,6 +97,10 @@ public class PathExecutor(CancellationToken ct)
 
     private async Task MoveTo(WaypointForTrack waypoint)
     {
+        // 切人
+        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(_config.MainAvatarIndex.ToString()));
+        await Delay(100, ct);
+
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
@@ -104,6 +111,7 @@ public class PathExecutor(CancellationToken ct)
         var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.UtcNow;
+        var elementalSkillLastUseTime = DateTime.UtcNow;
 
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
@@ -210,6 +218,14 @@ public class PathExecutor(CancellationToken ct)
                         Simulation.SendInput.Mouse.RightButtonClick();
                     }
                 }
+
+                // 使用 E 技能
+                if (Math.Abs((elementalSkillLastUseTime - now).TotalMilliseconds) > _config.GuardianElementalSkillInterval) //冷却时间2.5s，回复体力用
+                {
+                    elementalSkillLastUseTime = now;
+
+                    await UseElementalSkill();
+                }
             }
 
             await Delay(100, ct);
@@ -217,6 +233,22 @@ public class PathExecutor(CancellationToken ct)
 
         // 抬起w键
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+    }
+
+    private async Task UseElementalSkill()
+    {
+        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(_config.GuardianAvatarIndex.ToString()));
+        await Delay(300, ct);
+        if (_config.GuardianElementalSkillLongPress)
+        {
+            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
+            await Task.Delay(800); // 不能取消
+            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_E);
+        }
+        else
+        {
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+        }
     }
 
     private async Task MoveCloseTo(WaypointForTrack waypoint)

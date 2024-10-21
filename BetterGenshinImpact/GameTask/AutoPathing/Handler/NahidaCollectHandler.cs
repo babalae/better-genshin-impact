@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -18,6 +19,11 @@ public class NahidaCollectHandler : IActionHandler
     public async Task RunAsync(CancellationToken ct)
     {
         Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
+
+        // 切人
+        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(TaskContext.Instance().Config.PathingConfig.NahidaAvatarIndex.ToString()));
+        await Delay(300, ct);
+
         var cd = DateTime.Now - lastETime;
         if (cd < TimeSpan.FromSeconds(10))
         {
