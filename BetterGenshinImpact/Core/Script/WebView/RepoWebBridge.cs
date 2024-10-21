@@ -39,13 +39,13 @@ public class RepoWebBridge
             if (needUpdate)
             {
                 await ScriptRepoUpdater.Instance.UpdateCenterRepo();
-                localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                if (localRepoJsonPath is null)
-                {
-                    throw new Exception("本地仓库缺少 repo.json");
-                }
             }
 
+            localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (localRepoJsonPath is null)
+            {
+                throw new Exception("本地仓库缺少 repo.json");
+            }
             var json = await File.ReadAllTextAsync(localRepoJsonPath);
             return json;
         }
