@@ -1,10 +1,13 @@
 ﻿using BetterGenshinImpact.Model;
 using System.IO;
+using System.Linq;
 
 namespace BetterGenshinImpact.Helpers.Ui;
 
 public class FileTreeNodeHelper
 {
+    public static string[] AllowedExtensions { get; set; } = [".json"];
+
     public static FileTreeNode<T> LoadDirectory<T>(string directoryPath)
     {
         if (!Directory.Exists(directoryPath))
@@ -39,7 +42,7 @@ public class FileTreeNodeHelper
             LoadSubDirectories(directory, directoryNode);
         }
 
-        foreach (var file in directoryInfo.GetFiles())
+        foreach (var file in directoryInfo.GetFiles().Where(f => AllowedExtensions.Contains(f.Extension)))
         {
             var fileNode = new FileTreeNode<T>
             {

@@ -8,6 +8,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
              d:DataContext="{d:DesignInstance Type=pages:MapPathingViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -90,13 +91,19 @@
                             <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="名称">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ui:TreeRowExpander Content="{Binding FileName}" />
+                                        <ui:TreeRowExpander>
+                                            <ui:TreeRowExpander.Content>
+                                                <ui:StackPanel Margin="8,0,0,0"
+                                                               Orientation="Horizontal"
+                                                               Spacing="8">
+                                                    <Image Height="16" Source="{Binding IconFilePath, Converter={x:Static vio:PathToIconConverter.Instance}}" />
+                                                    <TextBlock VerticalAlignment="Center" Text="{Binding FileName}" />
+                                                </ui:StackPanel>
+                                            </ui:TreeRowExpander.Content>
+                                        </ui:TreeRowExpander>
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
-                            <!--<ui:GridViewColumn Width="120"
-                                               DisplayMemberBinding="{Binding Author}"
-                                               Header="作者" />-->
                         </GridViewColumnCollection>
                     </ui:TreeListView.Columns>
                     <ui:TreeListView.ItemTemplate>

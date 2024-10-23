@@ -49,6 +49,16 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         // 循环写入 root.Children
         foreach (var item in root.Children)
         {
+            // 补充图标
+            if (!string.IsNullOrEmpty(item.FilePath) && File.Exists(Path.Combine(item.FilePath, "icon.ico")))
+            {
+                item.IconFilePath = Path.Combine(item.FilePath, "icon.ico");
+            }
+            else
+            {
+                item.IconFilePath = item.FilePath;
+            }
+
             TreeList.Add(item);
         }
     }
@@ -91,6 +101,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         {
             return;
         }
+
         if (item.IsDirectory)
         {
             Toast.Warning("执行多个地图追踪任务的时候，请使用调度器功能");

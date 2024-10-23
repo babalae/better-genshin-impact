@@ -36,6 +36,12 @@ public partial class FileTreeNode<T> : ObservableObject
     [ObservableProperty]
     private string? _filePath;
 
+    /// <summary>
+    /// 展示图标路径
+    /// </summary>
+    [ObservableProperty]
+    private string? _iconFilePath;
+
     // 节点的值
     [ObservableProperty]
     private T? _value;
