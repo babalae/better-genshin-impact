@@ -1,0 +1,79 @@
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.View.PathingConfigView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Height="400"
+             d:DataContext="{d:DesignInstance Type=config:PathingConfig}"
+             d:DesignHeight="450"
+             d:DesignWidth="300"
+             mc:Ignorable="d">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12,0">
+            <ui:Card Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Margin="0,0,0,10"
+                               FontWeight="Bold"
+                               Text="行走位" />
+                    <TextBlock Margin="0,5,0,5"
+                               Text="主要行走的角色位置（推荐和生存位相同）"
+                               TextWrapping="Wrap" />
+                    <ComboBox MinWidth="100"
+                              Margin="0,0,0,5"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding AvatarIndexList}"
+                              SelectedItem="{Binding MainAvatarIndex}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Margin="0,0,0,10"
+                               FontWeight="Bold"
+                               Text="生存位（跑步模式下不会启用）" />
+                    <TextBlock Margin="0,5,0,5" Text="角色位置" />
+                    <ComboBox MinWidth="100"
+                              Margin="0,0,0,10"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding AvatarIndexList}"
+                              SelectedItem="{Binding GuardianAvatarIndex}" />
+
+                    <TextBlock Margin="0,0,0,5" Text="使用元素战技的时间间隔（秒）" />
+                    <ui:TextBox MinWidth="120"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Left"
+                                Text="{Binding GuardianElementalSkillSecondInterval}" />
+
+                    <TextBlock Margin="0,0,0,5" Text="使用元素战技的方式" />
+                    <ui:ToggleSwitch Margin="0,0,0,5"
+                                     IsChecked="{Binding GuardianElementalSkillLongPress}"
+                                     OffContent="短按"
+                                     OnContent="长按" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Margin="0,0,0,10"
+                               FontWeight="Bold"
+                               Text="Action设置" />
+                    <TextBlock Margin="0,5,0,5" Text="普通攻击Action角色位置" />
+                    <ComboBox MinWidth="100"
+                              Margin="0,0,0,10"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding AvatarIndexList}"
+                              SelectedItem="{Binding NormalAttackAvatarIndex}" />
+
+                    <TextBlock Margin="0,0,0,5" Text="元素战技Action角色位置" />
+                    <ComboBox MinWidth="100"
+                              Margin="0,0,0,5"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding AvatarIndexList}"
+                              SelectedItem="{Binding ElementalSkillAvatarIndex}" />
+                </StackPanel>
+            </ui:Card>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

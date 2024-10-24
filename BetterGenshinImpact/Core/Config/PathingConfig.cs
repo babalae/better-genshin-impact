@@ -1,5 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
+using System.Windows.Documents;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -14,9 +18,9 @@ public partial class PathingConfig : ObservableObject
     [ObservableProperty]
     private string _guardianAvatarIndex = string.Empty;
 
-    // [盾角]使用元素战技的时间间隔(ms)
+    // [盾角]使用元素战技的时间间隔(s)
     [ObservableProperty]
-    private int _guardianElementalSkillInterval = 10000;
+    private string _guardianElementalSkillSecondInterval = string.Empty;
 
     // [盾角]使用元素战技的方式 长按/短按
     [ObservableProperty]
@@ -29,4 +33,7 @@ public partial class PathingConfig : ObservableObject
     // elemental_skill 配置几号位
     [ObservableProperty]
     private string _elementalSkillAvatarIndex = string.Empty;
+
+    [JsonIgnore]
+    public List<string> AvatarIndexList { get; } = ["", "1", "2", "3", "4"];
 }

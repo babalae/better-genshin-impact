@@ -32,6 +32,8 @@ public class PathExecutor(CancellationToken ct)
 
     private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
+    private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
+
     public async Task Pathing(PathingTask task)
     {
         if (!task.Positions.Any())
@@ -125,6 +127,7 @@ public class PathExecutor(CancellationToken ct)
         {
             _actionAvatarIndexMap.Add("normal_attack", _config.NormalAttackAvatarIndex);
         }
+
         if (task.HasAction("elemental_skill"))
         {
             _actionAvatarIndexMap.Add("elemental_skill", _config.ElementalSkillAvatarIndex);
@@ -145,6 +148,7 @@ public class PathExecutor(CancellationToken ct)
         var (tpX, tpY) = await new TpTask(ct).Tp(waypoint.GameX, waypoint.GameY, forceTp);
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
+        await Delay(500, ct); // 多等一会
     }
 
     private async Task MoveTo(WaypointForTrack waypoint)
@@ -161,13 +165,14 @@ public class PathExecutor(CancellationToken ct)
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
         var prevPositions = new List<Point2f>();
-        var fastModeColdTime = DateTime.UtcNow;
-        var elementalSkillLastUseTime = DateTime.UtcNow;
+        var fastModeColdTime = DateTime.MinValue;
+        var num = 0;
 
         // 按下w，一直走
         Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
         while (!ct.IsCancellationRequested)
         {
+            num++;
             var now = DateTime.UtcNow;
             if ((now - startTime).TotalSeconds > 240)
             {
@@ -261,6 +266,30 @@ public class PathExecutor(CancellationToken ct)
             }
             else if (waypoint.MoveMode != MoveModeEnum.Climb.Code) //否则自动短疾跑
             {
+                // 使用 E 技能
+                if (!string.IsNullOrEmpty(_config.GuardianAvatarIndex) && double.TryParse(_config.GuardianElementalSkillSecondInterval, out var s))
+                {
+                    if (s < 1)
+                    {
+                        Logger.LogWarning("元素战技冷却时间设置太短，不执行！");
+                        return;
+                    }
+
+                    var ms = s * 1000;
+                    Debug.WriteLine($"元素战技释放间隔：{(now - _elementalSkillLastUseTime).TotalMilliseconds}ms");
+                    if ((now - _elementalSkillLastUseTime).TotalMilliseconds >= ms)
+                    {
+                        // 可能刚切过人在冷却时间内
+                        if (num <= 5 && _config.GuardianAvatarIndex != _config.MainAvatarIndex)
+                        {
+                            await Delay(800, ct); // 总共1s
+                        }
+
+                        await UseElementalSkill();
+                        _elementalSkillLastUseTime = now;
+                    }
+                }
+
                 if (distance > 15)
                 {
                     if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
@@ -268,14 +297,6 @@ public class PathExecutor(CancellationToken ct)
                         fastModeColdTime = now;
                         Simulation.SendInput.Mouse.RightButtonClick();
                     }
-                }
-
-                // 使用 E 技能
-                if (Math.Abs((elementalSkillLastUseTime - now).TotalMilliseconds) > _config.GuardianElementalSkillInterval) //冷却时间2.5s，回复体力用
-                {
-                    elementalSkillLastUseTime = now;
-
-                    await UseElementalSkill();
                 }
             }
 
@@ -293,17 +314,22 @@ public class PathExecutor(CancellationToken ct)
             return;
         }
 
+        await Delay(200, ct);
+
         // 切人
+        Logger.LogInformation("切换盾、回血角色，使用元素战技");
         await SwitchAvatar(_config.GuardianAvatarIndex);
         if (_config.GuardianElementalSkillLongPress)
         {
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
             await Task.Delay(800); // 不能取消
             Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_E);
+            await Delay(700, ct);
         }
         else
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+            await Delay(300, ct);
         }
     }
 
@@ -390,6 +416,7 @@ public class PathExecutor(CancellationToken ct)
             return;
         }
 
+        Logger.LogInformation("切换角色{index}", index);
         Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(index));
         await Delay(300, ct);
     }
