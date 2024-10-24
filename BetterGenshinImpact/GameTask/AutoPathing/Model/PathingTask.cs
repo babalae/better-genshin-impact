@@ -29,6 +29,11 @@ public class PathingTask
     public PathingTaskInfo Info { get; set; } = new();
     public List<Waypoint> Positions { get; set; } = [];
 
+    public bool HasAction(string actionName)
+    {
+        return Positions.Exists(p => p.Action == actionName);
+    }
+
     public static PathingTask BuildFromFilePath(string filePath)
     {
         var json = File.ReadAllText(filePath);

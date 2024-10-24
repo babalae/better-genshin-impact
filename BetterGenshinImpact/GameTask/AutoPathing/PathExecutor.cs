@@ -1,11 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.OneDragon;
 using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -28,11 +30,19 @@ public class PathExecutor(CancellationToken ct)
     private readonly TrapEscaper _trapEscaper = new(ct);
     private readonly PathingConfig _config = TaskContext.Instance().Config.PathingConfig;
 
+    private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
+
     public async Task Pathing(PathingTask task)
     {
         if (!task.Positions.Any())
         {
             Logger.LogWarning("没有路径点，寻路结束");
+            return;
+        }
+
+        // 校验路径是否可以执行
+        if (!await ValidateGameWithTask(task))
+        {
             return;
         }
 
@@ -69,6 +79,7 @@ public class PathExecutor(CancellationToken ct)
         }
         finally
         {
+            _actionAvatarIndexMap.Clear(); // 没啥用，但还是写上
             // 不管咋样，松开所有按键
             Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
             Simulation.SendInput.Mouse.RightButtonUp();
@@ -79,6 +90,47 @@ public class PathExecutor(CancellationToken ct)
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
+    }
+
+    private async Task<bool> ValidateGameWithTask(PathingTask task)
+    {
+        // 校验角色是否存在
+        if (task.HasAction("nahida_collect"))
+        {
+            Logger.LogInformation("此路线存在使用纳西妲收集的动作，校验纳西妲角色是否存在...");
+
+            // 返回主界面再识别
+            var returnMainUiTask = new ReturnMainUiTask();
+            await returnMainUiTask.Start(ct);
+
+            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            if (!combatScenes.CheckTeamInitialized())
+            {
+                Logger.LogError("队伍角色识别失败，无法执行此路径");
+                return false;
+            }
+
+            var avatar = combatScenes.SelectAvatar("纳西妲");
+            if (avatar == null)
+            {
+                Logger.LogError("队伍中没有纳西妲角色，无法执行此路径");
+                return false;
+            }
+
+            _actionAvatarIndexMap.Add("nahida_collect", avatar.Index.ToString());
+        }
+
+        // 把所有需要切换的角色编号记录下来
+        if (task.HasAction("normal_attack"))
+        {
+            _actionAvatarIndexMap.Add("normal_attack", _config.NormalAttackAvatarIndex);
+        }
+        if (task.HasAction("elemental_skill"))
+        {
+            _actionAvatarIndexMap.Add("elemental_skill", _config.ElementalSkillAvatarIndex);
+        }
+
+        return true;
     }
 
     private List<WaypointForTrack> ConvertWaypointsForTrack(List<Waypoint> positions)
@@ -98,8 +150,7 @@ public class PathExecutor(CancellationToken ct)
     private async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
-        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(_config.MainAvatarIndex.ToString()));
-        await Delay(100, ct);
+        await SwitchAvatar(_config.MainAvatarIndex);
 
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
@@ -237,8 +288,13 @@ public class PathExecutor(CancellationToken ct)
 
     private async Task UseElementalSkill()
     {
-        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(_config.GuardianAvatarIndex.ToString()));
-        await Delay(300, ct);
+        if (string.IsNullOrEmpty(_config.GuardianAvatarIndex))
+        {
+            return;
+        }
+
+        // 切人
+        await SwitchAvatar(_config.GuardianAvatarIndex);
         if (_config.GuardianElementalSkillLongPress)
         {
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
@@ -315,9 +371,26 @@ public class PathExecutor(CancellationToken ct)
             || waypoint.Action == ActionEnum.NormalAttack.Code
             || waypoint.Action == ActionEnum.ElementalSkill.Code)
         {
+            // 切人
+            if (_actionAvatarIndexMap.TryGetValue(waypoint.Action, out var index))
+            {
+                await SwitchAvatar(index);
+            }
+
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             await handler.RunAsync(ct);
             await Delay(1000, ct);
         }
+    }
+
+    private async Task SwitchAvatar(string index)
+    {
+        if (string.IsNullOrEmpty(index))
+        {
+            return;
+        }
+
+        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(index));
+        await Delay(300, ct);
     }
 }

@@ -139,7 +139,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="User\AutoPathing\" />
 	</ItemGroup>
 
