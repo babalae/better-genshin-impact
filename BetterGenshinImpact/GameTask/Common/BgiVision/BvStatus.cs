@@ -1,7 +1,13 @@
 ﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using OpenCvSharp;
 using System;
+using System.Linq;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -61,6 +67,43 @@ public static partial class Bv
         {
             return MotionStatus.Normal;
         }
+    }
+
+    /// <summary>
+    /// 是否出现复苏提示
+    /// </summary>
+    /// <param name="region"></param>
+    /// <returns></returns>
+    public static bool IsInRevivePrompt(ImageRegion region)
+    {
+        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+        if (!confirmRectArea.IsEmpty())
+        {
+            var list = region.FindMulti(new RecognitionObject
+            {
+                RecognitionType = RecognitionTypes.Ocr,
+                RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
+            });
+            if (list.Any(r => r.Text.Contains("复苏")))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 当前角色是否低血量
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool CurrentAvatarIsLowHp(ImageRegion captureRa)
+    {
+        // 获取 (808, 1010) 位置的像素颜色
+        var pixelColor = captureRa.SrcMat.At<Vec3b>(1010, 808);
+
+        // 判断颜色是否是 (255, 90, 90)
+        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
     }
 }
 

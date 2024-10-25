@@ -59,6 +59,7 @@ public class PathExecutor(CancellationToken ct)
         {
             foreach (var waypoint in waypoints)
             {
+                await RecoverWhenLowHp(); // 低血量恢复
                 if (waypoint.Type == WaypointType.Teleport.Code)
                 {
                     await HandleTeleportWaypoint(waypoint);
@@ -140,6 +141,20 @@ public class PathExecutor(CancellationToken ct)
     {
         // 把 X Y 转换为 MatX MatY
         return positions.Select(waypoint => new WaypointForTrack(waypoint)).ToList();
+    }
+
+    private async Task RecoverWhenLowHp()
+    {
+        var region = CaptureToRectArea();
+        if (Bv.CurrentAvatarIsLowHp(region))
+        {
+            Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
+            // tp 到七天神像回血
+            var tpTask = new TpTask(ct);
+            await tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true);
+            await Delay(2000, ct);
+            Logger.LogInformation("HP恢复完成");
+        }
     }
 
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)

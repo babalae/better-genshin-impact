@@ -33,6 +33,9 @@ public class TpTask(CancellationToken ct)
 
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
 
+    public static double ReviveStatueOfTheSevenPointX = 2296.4;
+    public static double ReviveStatueOfTheSevenPointY = -824.4;
+
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>

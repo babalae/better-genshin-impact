@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -9,6 +10,8 @@ using OpenCvSharp;
 using System;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -102,13 +105,18 @@ public class Avatar
     /// <returns></returns>
     public void ThrowWhenDefeated(ImageRegion region)
     {
-        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
-        if (!confirmRectArea.IsEmpty())
+        if (Bv.IsInRevivePrompt(region))
         {
+            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            // 先打开地图
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             Sleep(600, Ct);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
-            throw new Exception("存在角色被击败，按 M 键打开地图，并停止自动秘境。");
+            // tp 到七天神像复活
+            var tpTask = new TpTask(Ct);
+            tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true).Wait(Ct);
+
+            throw new Exception("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }
     }
 

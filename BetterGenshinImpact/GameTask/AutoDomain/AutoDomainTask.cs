@@ -23,6 +23,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
@@ -397,7 +398,7 @@ public class AutoDomainTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (IsLowHealth())
+                    if (Bv.CurrentAvatarIsLowHp(CaptureToRectArea()))
                     {
                         // 模拟按键 "Z"
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Z);
@@ -408,22 +409,11 @@ public class AutoDomainTask : ISoloTask
                     await Delay(500, ct);
                 }
             }
-            catch
+            catch (Exception e)
             {
+                Logger.LogDebug(e, "红血自动吃药检测时发生异常");
             }
         }, ct);
-    }
-
-    private bool IsLowHealth()
-    {
-        // 获取图像
-        using var ra = CaptureToRectArea();
-
-        // 获取 (808, 1010) 位置的像素颜色
-        var pixelColor = ra.SrcMat.At<Vec3b>(1010, 808);
-
-        // 判断颜色是否是 (255, 90, 90)
-        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
     }
 
     private bool IsTakeFood()
