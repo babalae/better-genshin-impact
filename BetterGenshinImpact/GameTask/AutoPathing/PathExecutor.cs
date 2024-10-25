@@ -145,16 +145,29 @@ public class PathExecutor(CancellationToken ct)
 
     private async Task RecoverWhenLowHp()
     {
-        var region = CaptureToRectArea();
+        using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region))
         {
             Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
-            // tp 到七天神像回血
-            var tpTask = new TpTask(ct);
-            await tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true);
-            await Delay(2000, ct);
-            Logger.LogInformation("HP恢复完成");
+            await TpStatueOfTheSeven();
         }
+        else if (Bv.ClickIfInReviveModal(region))
+        {
+            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
+            Logger.LogInformation("复苏完成");
+            await Delay(3000, ct);
+            // 血量肯定不满，直接去七天神像回血
+            await TpStatueOfTheSeven();
+        }
+    }
+
+    private async Task TpStatueOfTheSeven()
+    {
+        // tp 到七天神像回血
+        var tpTask = new TpTask(ct);
+        await tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true);
+        await Delay(3000, ct);
+        Logger.LogInformation("HP恢复完成");
     }
 
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)

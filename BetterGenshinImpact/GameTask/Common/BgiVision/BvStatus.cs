@@ -4,10 +4,12 @@ using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using OpenCvSharp;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using Vanara.PInvoke;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -32,6 +34,26 @@ public static partial class Bv
     public static bool IsInMainUi(ImageRegion captureRa)
     {
         return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
+    }
+
+    /// <summary>
+    /// 等待主界面加载完成
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes"></param>
+    /// <returns></returns>
+    public static async Task<bool> WaitForMainUi(CancellationToken ct, int retryTimes = 25)
+    {
+        for (var i = 0; i < retryTimes; i++)
+        {
+            await TaskControl.Delay(1000, ct);
+            using var ra3 = TaskControl.CaptureToRectArea();
+            if (IsInMainUi(ra3))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>
@@ -89,6 +111,29 @@ public static partial class Bv
                 return true;
             }
         }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 是否出现全队死亡和复苏提示
+    /// </summary>
+    /// <param name="region"></param>
+    /// <returns></returns>
+    public static bool ClickIfInReviveModal(ImageRegion region)
+    {
+        var list = region.FindMulti(new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect(0, region.Height / 4 * 3, region.Width, region.Height / 4)
+        });
+        var r = list.FirstOrDefault(r => r.Text.Contains("复苏"));
+        if (r != null)
+        {
+            r.Click();
+            return true;
+        }
+
         return false;
     }
 
