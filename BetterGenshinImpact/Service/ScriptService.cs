@@ -132,6 +132,7 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
         target.Schedule = source.Schedule;
         target.RunNum = source.RunNum;
         target.JsScriptSettingsObject = source.JsScriptSettingsObject;
+        target.GroupInfo = source.GroupInfo;
     }
 
     private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)

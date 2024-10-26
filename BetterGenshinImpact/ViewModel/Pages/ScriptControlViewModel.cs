@@ -142,7 +142,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         if (!string.IsNullOrEmpty(str))
         {
             var folderName = str.Split(" - ")[0];
-            SelectedScriptGroup?.Projects.Add(new ScriptGroupProject(new ScriptProject(folderName)));
+            SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
         }
     }
 
@@ -160,7 +160,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var str = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
         if (!string.IsNullOrEmpty(str))
         {
-            SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildKeyMouseProject(str));
+            SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildKeyMouseProject(str));
         }
     }
 
@@ -245,7 +245,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     if (grandChild is CheckBox { IsChecked: true } checkBox)
                     {
                         var fileInfo = new FileInfo((string)checkBox.Tag);
-                        SelectedScriptGroup?.Projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
+                        SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
                     }
                 }
             }
@@ -546,7 +546,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         if ("AutoCrystalflyExampleGroup" == scriptGroupExample)
         {
             group.Name = "晶蝶示例组";
-            group.Projects.Add(new ScriptGroupProject(new ScriptProject("AutoCrystalfly")));
+            group.AddProject(new ScriptGroupProject(new ScriptProject("AutoCrystalfly")));
         }
 
         if (ScriptGroups.Any(x => x.Name == group.Name))
@@ -583,7 +583,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     }
 
     [RelayCommand]
-    public async Task OnOpenScriptGroupSettings()
+    public void OnOpenScriptGroupSettings()
     {
         if (SelectedScriptGroup == null)
         {

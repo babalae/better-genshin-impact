@@ -145,14 +145,14 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [RelayCommand]
     public async void OnOpenSettings()
     {
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-            Content = new PathingConfigView(TaskContext.Instance().Config.PathingConfig),
-            Title = "路径追踪配置",
-            CloseButtonText = "关闭"
-        };
-
-        await uiMessageBox.ShowDialogAsync();
+        // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        // {
+        //     Content = new PathingConfigView(TaskContext.Instance().Config.PathingConfig),
+        //     Title = "路径追踪配置",
+        //     CloseButtonText = "关闭"
+        // };
+        //
+        // await uiMessageBox.ShowDialogAsync();
     }
 
     [RelayCommand]

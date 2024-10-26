@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Text.Json;
@@ -40,6 +41,22 @@ public partial class ScriptGroup : ObservableObject
 
     public static ScriptGroup FromJson(string json)
     {
-        return Newtonsoft.Json.JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception("解析配置组JSON配置失败");
+        var group = Newtonsoft.Json.JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception("解析配置组JSON配置失败");
+        ResetGroupInfo(group);
+        return group;
+    }
+
+    public static void ResetGroupInfo(ScriptGroup group)
+    {
+        foreach (var project in group.Projects)
+        {
+            project.GroupInfo = group;
+        }
+    }
+
+    public void AddProject(ScriptGroupProject project)
+    {
+        project.GroupInfo = this;
+        Projects.Add(project);
     }
 }

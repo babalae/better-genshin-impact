@@ -1,14 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.GameTask.OneDragon;
-using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
@@ -19,7 +18,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -29,7 +27,14 @@ public class PathExecutor(CancellationToken ct)
 {
     private readonly CameraRotateTask _rotateTask = new(ct);
     private readonly TrapEscaper _trapEscaper = new(ct);
-    private readonly PathingConfig _config = TaskContext.Instance().Config.PathingConfig;
+
+    private PathingConfig? _config;
+
+    public PathingConfig Config
+    {
+        get => _config ??= new PathingConfig();
+        set => _config = value;
+    }
 
     private CombatScenes? _combatScenes;
     private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
@@ -85,6 +90,8 @@ public class PathExecutor(CancellationToken ct)
                         }
                     }
                 }
+
+                break;
             }
             catch (RetryException retryException)
             {
@@ -130,24 +137,24 @@ public class PathExecutor(CancellationToken ct)
         // 把所有需要切换的角色编号记录下来
         if (task.HasAction("normal_attack"))
         {
-            if (string.IsNullOrEmpty(_config.NormalAttackAvatarIndex))
+            if (string.IsNullOrEmpty(Config.NormalAttackAvatarIndex))
             {
                 Logger.LogError("此路径存在普攻动作，未设置普攻角色编号，无法执行此路径！");
                 return false;
             }
 
-            _actionAvatarIndexMap.Add("normal_attack", _config.NormalAttackAvatarIndex);
+            _actionAvatarIndexMap.Add("normal_attack", Config.NormalAttackAvatarIndex);
         }
 
         if (task.HasAction("elemental_skill"))
         {
-            if (string.IsNullOrEmpty(_config.ElementalSkillAvatarIndex))
+            if (string.IsNullOrEmpty(Config.ElementalSkillAvatarIndex))
             {
                 Logger.LogError("此路径存在释放元素战技动作，未设置元素战技角色编号，无法执行此路径！");
                 return false;
             }
 
-            _actionAvatarIndexMap.Add("elemental_skill", _config.ElementalSkillAvatarIndex);
+            _actionAvatarIndexMap.Add("elemental_skill", Config.ElementalSkillAvatarIndex);
         }
 
         return true;
@@ -166,6 +173,7 @@ public class PathExecutor(CancellationToken ct)
         {
             Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
             await TpStatueOfTheSeven();
+            throw new RetryException("回血完成后重试路线");
         }
         else if (Bv.ClickIfInReviveModal(region))
         {
@@ -174,8 +182,8 @@ public class PathExecutor(CancellationToken ct)
             await Delay(3000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
+            throw new RetryException("回血完成后重试路线");
         }
-        throw new RetryException("回血完成后重试路线");
     }
 
     private async Task TpStatueOfTheSeven()
@@ -199,7 +207,7 @@ public class PathExecutor(CancellationToken ct)
     private async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
-        await SwitchAvatar(_config.MainAvatarIndex);
+        await SwitchAvatar(Config.MainAvatarIndex);
 
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
@@ -295,7 +303,7 @@ public class PathExecutor(CancellationToken ct)
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 15 != fastMode) // 距离大于30时可以使用疾跑/自由泳
+                if (distance > 20 != fastMode) // 距离大于30时可以使用疾跑/自由泳
                 {
                     if (fastMode)
                     {
@@ -311,8 +319,17 @@ public class PathExecutor(CancellationToken ct)
             }
             else if (waypoint.MoveMode != MoveModeEnum.Climb.Code) //否则自动短疾跑
             {
+                if (distance > 20)
+                {
+                    if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
+                    {
+                        fastModeColdTime = now;
+                        Simulation.SendInput.Mouse.RightButtonClick();
+                    }
+                }
+
                 // 使用 E 技能
-                if (!string.IsNullOrEmpty(_config.GuardianAvatarIndex) && double.TryParse(_config.GuardianElementalSkillSecondInterval, out var s))
+                if (!string.IsNullOrEmpty(Config.GuardianAvatarIndex) && double.TryParse(Config.GuardianElementalSkillSecondInterval, out var s))
                 {
                     if (s < 1)
                     {
@@ -325,22 +342,13 @@ public class PathExecutor(CancellationToken ct)
                     if ((now - _elementalSkillLastUseTime).TotalMilliseconds > ms)
                     {
                         // 可能刚切过人在冷却时间内
-                        if (num <= 5 && _config.GuardianAvatarIndex != _config.MainAvatarIndex)
+                        if (num <= 5 && (!string.IsNullOrEmpty(Config.MainAvatarIndex) && Config.GuardianAvatarIndex != Config.MainAvatarIndex))
                         {
                             await Delay(800, ct); // 总共1s
                         }
 
                         await UseElementalSkill();
                         _elementalSkillLastUseTime = now;
-                    }
-                }
-
-                if (distance > 15)
-                {
-                    if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
-                    {
-                        fastModeColdTime = now;
-                        Simulation.SendInput.Mouse.RightButtonClick();
                     }
                 }
             }
@@ -354,7 +362,7 @@ public class PathExecutor(CancellationToken ct)
 
     private async Task UseElementalSkill()
     {
-        if (string.IsNullOrEmpty(_config.GuardianAvatarIndex))
+        if (string.IsNullOrEmpty(Config.GuardianAvatarIndex))
         {
             return;
         }
@@ -363,7 +371,7 @@ public class PathExecutor(CancellationToken ct)
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(_config.GuardianAvatarIndex);
+        var avatar = await SwitchAvatar(Config.GuardianAvatarIndex);
         if (avatar == null)
         {
             return;
@@ -378,7 +386,7 @@ public class PathExecutor(CancellationToken ct)
             await Delay(200, ct);
         }
 
-        if (_config.GuardianElementalSkillLongPress)
+        if (Config.GuardianElementalSkillLongPress)
         {
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
             await Task.Delay(800); // 不能取消
