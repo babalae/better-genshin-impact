@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -34,6 +35,8 @@ public class PathExecutor(CancellationToken ct)
     private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
+
+    private readonly int _retryTimes = 2;
 
     public async Task Pathing(PathingTask task)
     {
@@ -56,37 +59,44 @@ public class PathExecutor(CancellationToken ct)
         await Delay(100, ct);
         Navigation.WarmUp(); // 提前加载地图特征点
 
-        try
+        for (var i = 0; i < _retryTimes; i++)
         {
-            foreach (var waypoint in waypoints)
+            try
             {
-                await RecoverWhenLowHp(); // 低血量恢复
-                if (waypoint.Type == WaypointType.Teleport.Code)
+                foreach (var waypoint in waypoints)
                 {
-                    await HandleTeleportWaypoint(waypoint);
-                }
-                else
-                {
-                    await BeforeMoveToTarget(waypoint);
-
-                    // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
-                    await MoveTo(waypoint);
-
-                    if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
+                    await RecoverWhenLowHp(); // 低血量恢复
+                    if (waypoint.Type == WaypointType.Teleport.Code)
                     {
-                        await MoveCloseTo(waypoint);
-                        // 到达点位后执行 action
-                        await AfterMoveToTarget(waypoint);
+                        await HandleTeleportWaypoint(waypoint);
+                    }
+                    else
+                    {
+                        await BeforeMoveToTarget(waypoint);
+
+                        // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
+                        await MoveTo(waypoint);
+
+                        if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
+                        {
+                            await MoveCloseTo(waypoint);
+                            // 到达点位后执行 action
+                            await AfterMoveToTarget(waypoint);
+                        }
                     }
                 }
             }
-        }
-        finally
-        {
-            _actionAvatarIndexMap.Clear(); // 没啥用，但还是写上
-            // 不管咋样，松开所有按键
-            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-            Simulation.SendInput.Mouse.RightButtonUp();
+            catch (RetryException retryException)
+            {
+                Logger.LogWarning(retryException.Message);
+            }
+            finally
+            {
+                _actionAvatarIndexMap.Clear(); // 没啥用，但还是写上
+                // 不管咋样，松开所有按键
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                Simulation.SendInput.Mouse.RightButtonUp();
+            }
         }
     }
 
@@ -165,6 +175,7 @@ public class PathExecutor(CancellationToken ct)
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
         }
+        throw new RetryException("回血完成后重试路线");
     }
 
     private async Task TpStatueOfTheSeven()
