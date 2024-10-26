@@ -75,4 +75,9 @@ public partial class MainWindow : Window
     {
         ScaleTest.ZoomOutTest();
     }
+
+    private void GenAvatarDataT(object sender, RoutedEventArgs e)
+    {
+        AvatarClassifyTransparentGen.GenAll();
+    }
 }

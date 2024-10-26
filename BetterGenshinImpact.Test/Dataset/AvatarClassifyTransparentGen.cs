@@ -14,27 +14,25 @@ public class AvatarClassifyTransparentGen
 
     private static readonly Random Rd = new Random();
 
+    // 在类的开头添加一个新的常量
+    private const string SideSrcDir = "side_src";
+
+    private const string SideSrcTransportDir = "side_src_transport";
+
     public static void GenAll()
     {
+        // 调整透明度（可选，取消注释以启用）
+        AdjustTransparency(0.5f);
+
         // 读取基础图像
-        // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Xilonen.png", SearchOption.TopDirectoryOnly).ToList();
-        // List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_MomokaCostumeErrantry.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles2);
-        // List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_NilouCostumeFairy.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles3);
-        // List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Kachina.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles4);
-        // List<string> sideImageFiles5 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Mualani.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles5);
-        // List<string> sideImageFiles6 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Kinich.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles6);
+        // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Xilonen.png", SearchOption.TopDirectoryOnly).ToList();
 
         // 生成训练集
-        GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 10);
+        GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 200);
         // 生成测试集
-        // GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\test"), 40);
+        GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\test"), 40);
         // GenTo(new List<string> { sideImageFiles[1] }, Path.Combine(BaseDir, @"dateset\test"), 1);
     }
 
@@ -137,7 +135,7 @@ public class AvatarClassifyTransparentGen
 
                 // Cv2.ImShow("avatarR", result);
                 // 保存生成的图像
-                Cv2.ImWrite(Path.Combine(sideDataFolder, $"{sideImageFileName}_{i}.png"), result);
+                Cv2.ImWrite(Path.Combine(sideDataFolder, $"{sideImageFileName}_t_{i}.png"), result);
             }
         }
 
@@ -152,5 +150,43 @@ public class AvatarClassifyTransparentGen
             Cv2.Merge(channels[..3], result);
             return result;
         }
+    }
+
+    // 在类中添加以下新方法
+    public static void AdjustTransparency(float targetAlpha = 0.5f)
+    {
+        string sourcePath = Path.Combine(BaseDir, SideSrcDir);
+        string destinationPath = Path.Combine(BaseDir, SideSrcTransportDir);
+
+        Directory.CreateDirectory(destinationPath);
+
+        List<string> sideImageFiles = Directory.GetFiles(sourcePath, "*.png", SearchOption.TopDirectoryOnly).ToList();
+
+        foreach (string sideImageFile in sideImageFiles)
+        {
+            string fileName = Path.GetFileName(sideImageFile);
+            string destFile = Path.Combine(destinationPath, fileName);
+
+            Mat image = Cv2.ImRead(sideImageFile, ImreadModes.Unchanged);
+            Mat[] channels = Cv2.Split(image);
+
+            if (channels.Length == 4) // 确保图像有透明通道
+            {
+                Mat alphaChannel = channels[3];
+                Cv2.Multiply(alphaChannel, targetAlpha, alphaChannel);
+
+                Mat result = new Mat();
+                Cv2.Merge(channels, result);
+
+                Cv2.ImWrite(destFile, result);
+            }
+            else
+            {
+                Console.WriteLine($"警告：{fileName} 没有透明通道，将直接复制原文件。");
+                File.Copy(sideImageFile, destFile, true);
+            }
+        }
+
+        Console.WriteLine($"已完成透明度调整，结果保存在 {destinationPath}");
     }
 }

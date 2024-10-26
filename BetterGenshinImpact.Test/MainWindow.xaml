@@ -49,7 +49,15 @@
                 Width="100"
                 Height="23"
                 Click="GenAvatarData"
-                Content="生成侧面头像数据集" />
+                Content="侧面头像数据集" />
+        <Button Canvas.Left="120"
+                Canvas.Top="190"
+                Width="100"
+                Height="23"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="GenAvatarDataT"
+                Content="透明头像数据集" />
         <Button Canvas.Left="10"
                 Canvas.Top="220"
                 Width="100"
