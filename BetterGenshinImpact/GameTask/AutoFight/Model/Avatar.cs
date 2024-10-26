@@ -150,6 +150,42 @@ public class Avatar
     }
 
     /// <summary>
+    /// 尝试切换到本角色
+    /// </summary>
+    /// <param name="tryTimes"></param>
+    /// <returns></returns>
+    public bool TrySwitch(int tryTimes = 4, bool needLog = true)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            if (Ct is { IsCancellationRequested: true })
+            {
+                return false;
+            }
+
+            var region = CaptureToRectArea();
+            ThrowWhenDefeated(region);
+
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            if (IsActive(region) && notActiveCount == 3)
+            {
+                if (needLog && i > 0)
+                {
+                    Logger.LogInformation("成功切换角色:{Name}", Name);
+                }
+
+                return true;
+            }
+
+            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+
+            Sleep(250, Ct);
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// 切换到本角色
     /// 切换cd是1秒，如果切换失败，会尝试再次切换，最多尝试5次
     /// </summary>

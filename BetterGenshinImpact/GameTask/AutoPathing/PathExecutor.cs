@@ -30,6 +30,7 @@ public class PathExecutor(CancellationToken ct)
     private readonly TrapEscaper _trapEscaper = new(ct);
     private readonly PathingConfig _config = TaskContext.Instance().Config.PathingConfig;
 
+    private CombatScenes? _combatScenes;
     private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
@@ -97,23 +98,16 @@ public class PathExecutor(CancellationToken ct)
 
     private async Task<bool> ValidateGameWithTask(PathingTask task)
     {
+        _combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        if (_combatScenes == null)
+        {
+            return false;
+        }
+
         // 校验角色是否存在
         if (task.HasAction("nahida_collect"))
         {
-            Logger.LogInformation("此路线存在使用纳西妲收集的动作，校验纳西妲角色是否存在...");
-
-            // 返回主界面再识别
-            var returnMainUiTask = new ReturnMainUiTask();
-            await returnMainUiTask.Start(ct);
-
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (!combatScenes.CheckTeamInitialized())
-            {
-                Logger.LogError("队伍角色识别失败，无法执行此路径");
-                return false;
-            }
-
-            var avatar = combatScenes.SelectAvatar("纳西妲");
+            var avatar = _combatScenes.SelectAvatar("纳西妲");
             if (avatar == null)
             {
                 Logger.LogError("队伍中没有纳西妲角色，无法执行此路径");
@@ -305,7 +299,7 @@ public class PathExecutor(CancellationToken ct)
 
                     var ms = s * 1000;
                     Debug.WriteLine($"元素战技释放间隔：{(now - _elementalSkillLastUseTime).TotalMilliseconds}ms");
-                    if ((now - _elementalSkillLastUseTime).TotalMilliseconds >= ms)
+                    if ((now - _elementalSkillLastUseTime).TotalMilliseconds > ms)
                     {
                         // 可能刚切过人在冷却时间内
                         if (num <= 5 && _config.GuardianAvatarIndex != _config.MainAvatarIndex)
@@ -346,7 +340,21 @@ public class PathExecutor(CancellationToken ct)
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        await SwitchAvatar(_config.GuardianAvatarIndex);
+        var avatar = await SwitchAvatar(_config.GuardianAvatarIndex);
+        if (avatar == null)
+        {
+            return;
+        }
+
+        // 钟离往身后放柱子
+        if (avatar.Name == "钟离")
+        {
+            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+            await Delay(50, ct);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
+            await Delay(200, ct);
+        }
+
         if (_config.GuardianElementalSkillLongPress)
         {
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
@@ -358,6 +366,12 @@ public class PathExecutor(CancellationToken ct)
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
             await Delay(300, ct);
+        }
+
+        // 钟离往身后放柱子 后继续走路
+        if (avatar.Name == "钟离")
+        {
+            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
         }
     }
 
@@ -428,7 +442,11 @@ public class PathExecutor(CancellationToken ct)
             // 切人
             if (_actionAvatarIndexMap.TryGetValue(waypoint.Action, out var index))
             {
-                await SwitchAvatar(index);
+                var avatar = await SwitchAvatar(index);
+                if (avatar == null)
+                {
+                    return;
+                }
             }
 
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
@@ -437,15 +455,28 @@ public class PathExecutor(CancellationToken ct)
         }
     }
 
-    private async Task SwitchAvatar(string index)
+    private async Task<Avatar?> SwitchAvatar(string index)
     {
         if (string.IsNullOrEmpty(index))
         {
-            return;
+            return null;
         }
 
-        Logger.LogInformation("切换角色{index}", index);
-        Simulation.SendInput.Keyboard.KeyPress(User32Helper.ToVk(index));
-        await Delay(300, ct);
+        var avatar = _combatScenes?.Avatars[int.Parse(index) - 1];
+        if (avatar != null)
+        {
+            bool success = avatar.TrySwitch();
+            if (success)
+            {
+                await Delay(100, ct);
+                return avatar;
+            }
+            else
+            {
+                Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
+            }
+        }
+
+        return null;
     }
 }

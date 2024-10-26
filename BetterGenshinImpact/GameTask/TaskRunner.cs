@@ -60,6 +60,7 @@ public class TaskRunner
             SendNotification();
 
             CancellationContext.Instance.Set();
+            RunnerContext.Instance.Clear();
 
             await action();
         }
@@ -81,6 +82,7 @@ public class TaskRunner
             SendNotification();
 
             CancellationContext.Instance.Clear();
+            RunnerContext.Instance.Clear();
 
             // 释放锁
             if (hasLock)
