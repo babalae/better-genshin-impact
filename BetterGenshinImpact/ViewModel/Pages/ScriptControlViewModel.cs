@@ -1,10 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls;
+using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -577,5 +580,44 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
 
         await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
+    }
+
+    [RelayCommand]
+    public async Task OnOpenScriptGroupSettings()
+    {
+        if (SelectedScriptGroup == null)
+        {
+            return;
+        }
+
+        // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        // {
+        //     Content = new ScriptGroupConfigView(SelectedScriptGroup.Config),
+        //     Title = "配置组设置"
+        // };
+        //
+        // await uiMessageBox.ShowDialogAsync();
+
+        var dialogWindow = new Window
+        {
+            Title = "配置组设置",
+            Content = new ScriptGroupConfigView(SelectedScriptGroup.Config),
+            SizeToContent = SizeToContent.WidthAndHeight,
+        };
+
+        // var dialogWindow = new WpfUiWindow(new ScriptGroupConfigView(SelectedScriptGroup.Config))
+        // {
+        //     Title = "配置组设置"
+        // };
+
+        // 显示对话框
+        var result = dialogWindow.ShowDialog();
+
+        // if (result == true)
+        // {
+        //     // 用户点击了确定或关闭
+        // }
+
+        WriteScriptGroup(SelectedScriptGroup);
     }
 }

@@ -110,7 +110,7 @@ public class PathExecutor(CancellationToken ct)
             var avatar = _combatScenes.SelectAvatar("纳西妲");
             if (avatar == null)
             {
-                Logger.LogError("队伍中没有纳西妲角色，无法执行此路径");
+                Logger.LogError("此路径存在纳西妲收集动作，队伍中没有纳西妲角色，无法执行此路径！");
                 return false;
             }
 
@@ -120,11 +120,23 @@ public class PathExecutor(CancellationToken ct)
         // 把所有需要切换的角色编号记录下来
         if (task.HasAction("normal_attack"))
         {
+            if (string.IsNullOrEmpty(_config.NormalAttackAvatarIndex))
+            {
+                Logger.LogError("此路径存在普攻动作，未设置普攻角色编号，无法执行此路径！");
+                return false;
+            }
+
             _actionAvatarIndexMap.Add("normal_attack", _config.NormalAttackAvatarIndex);
         }
 
         if (task.HasAction("elemental_skill"))
         {
+            if (string.IsNullOrEmpty(_config.ElementalSkillAvatarIndex))
+            {
+                Logger.LogError("此路径存在释放元素战技动作，未设置元素战技角色编号，无法执行此路径！");
+                return false;
+            }
+
             _actionAvatarIndexMap.Add("elemental_skill", _config.ElementalSkillAvatarIndex);
         }
 

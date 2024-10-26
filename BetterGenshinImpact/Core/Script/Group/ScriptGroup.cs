@@ -7,12 +7,18 @@ using System.Text.Json;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
+/// <summary>
+/// 调度器 配置组
+/// </summary>
 public partial class ScriptGroup : ObservableObject
 {
     public int Index { get; set; }
 
     [ObservableProperty]
     private string _name = string.Empty;
+
+    [ObservableProperty]
+    private ScriptGroupConfig _config = new();
 
     [ObservableProperty]
     private ObservableCollection<ScriptGroupProject> _projects = [];
