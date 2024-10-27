@@ -41,7 +41,8 @@ public class PathExecutor(CancellationToken ct)
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
 
-    private readonly int _retryTimes = 2;
+    private const int RetryTimes = 2;
+    private int _inTrap = 0;
 
     public async Task Pathing(PathingTask task)
     {
@@ -64,7 +65,7 @@ public class PathExecutor(CancellationToken ct)
         await Delay(100, ct);
         Navigation.WarmUp(); // 提前加载地图特征点
 
-        for (var i = 0; i < _retryTimes; i++)
+        for (var i = 0; i < RetryTimes; i++)
         {
             try
             {
@@ -261,6 +262,12 @@ public class PathExecutor(CancellationToken ct)
                         var delta = prevPositions[^1] - prevPositions[^8];
                         if (Math.Abs(delta.X) + Math.Abs(delta.Y) < 3)
                         {
+                            _inTrap++;
+                            if (_inTrap > 2)
+                            {
+                                throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
+                            }
+
                             Logger.LogWarning("疑似卡死，尝试脱离...");
 
                             //调用脱困代码，由TrapEscaper接管移动
