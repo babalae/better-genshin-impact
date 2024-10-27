@@ -1998,5 +1998,42 @@
     "description": "Domain",
     "name": "虹灵的净土",
     "position": [ -2421.4799804688, 213.12219238281, 9041.2890625 ]
+  },
+  {
+    "description": "Domain",
+    "name": "昏识塔",
+    "position": [ -93.67, 0, 3015.46 ]
+  },
+  {
+    "description": "往昔的恒纳兰那",
+    "position": [ -725.23, 0, 4041.75 ]
+  },
+  {
+    "description": "千柱的花园",
+    "position": [ -1821.68, 0, 5655.60 ]
+  },
+  {
+    "description": "北风之狼的庙宇/急冻树附近",
+    "position": [ 2160.22, 0, 1641.47 ]
+  },
+  {
+    "description": "往昔的桓那兰那神像",
+    "position": [ -719.72, 0, 4021.72 ]
+  },
+  {
+    "description": "纳塔四个七天神像",
+    "position": [ -2657.63, 0, 8577.09 ]
+  },
+  {
+    "description": "纳塔四个七天神像",
+    "position": [ -2223.43, 0, 8665.98 ]
+  },
+  {
+    "description": "纳塔四个七天神像",
+    "position": [ -1933.17, 0, 8597.36 ]
+  },
+  {
+    "description": "纳塔四个七天神像",
+    "position": [ -1396.77, 0, 7745.98 ]
   }
 ]
