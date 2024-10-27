@@ -145,7 +145,7 @@ public class Avatar
 
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
             // Debug.WriteLine($"切换到{Index}号位");
-            Cv2.ImWrite($"log/切换.png", region.SrcMat);
+            // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
         }
     }
@@ -223,7 +223,7 @@ public class Avatar
         {
             // 剪裁出IndexRect区域
             var indexRa = region.DeriveCrop(IndexRect);
-            Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
+            // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 251, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {
