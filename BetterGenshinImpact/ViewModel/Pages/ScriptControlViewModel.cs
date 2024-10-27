@@ -603,6 +603,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Title = "配置组设置",
             Content = new ScriptGroupConfigView(SelectedScriptGroup.Config),
             SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
         // var dialogWindow = new WpfUiWindow(new ScriptGroupConfigView(SelectedScriptGroup.Config))

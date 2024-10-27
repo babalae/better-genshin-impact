@@ -8,6 +8,7 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -137,14 +138,14 @@ public class Avatar
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == 3)
+            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
             {
                 return;
             }
 
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
             // Debug.WriteLine($"切换到{Index}号位");
-            // Cv2.ImWrite($"log/切换.png", content.CaptureRectArea.SrcMat);
+            Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
         }
     }
@@ -153,6 +154,7 @@ public class Avatar
     /// 尝试切换到本角色
     /// </summary>
     /// <param name="tryTimes"></param>
+    /// <param name="needLog"></param>
     /// <returns></returns>
     public bool TrySwitch(int tryTimes = 4, bool needLog = true)
     {
@@ -167,7 +169,7 @@ public class Avatar
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == 3)
+            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
             {
                 if (needLog && i > 0)
                 {
@@ -221,7 +223,7 @@ public class Avatar
         {
             // 剪裁出IndexRect区域
             var indexRa = region.DeriveCrop(IndexRect);
-            // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
+            Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 251, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {

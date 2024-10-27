@@ -29,7 +29,7 @@ public class ScriptProject
         ManifestFile = Path.GetFullPath(Path.Combine(ProjectPath, "manifest.json"));
         if (!File.Exists(ManifestFile))
         {
-            throw new FileNotFoundException("manifest.json文件存在，请确认此脚本是JS脚本类型。" + ManifestFile);
+            throw new FileNotFoundException("manifest.json文件不存在，请确认此脚本是JS脚本类型。" + ManifestFile);
         }
 
         Manifest = Manifest.FromJson(File.ReadAllText(ManifestFile));

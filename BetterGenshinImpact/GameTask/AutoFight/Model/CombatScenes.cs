@@ -31,7 +31,7 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 当前配队
     /// </summary>
-    public Avatar[] Avatars { get; set; } = new Avatar[1];
+    public Avatar[] Avatars { get; set; } = Array.Empty<Avatar>();
 
     public Dictionary<string, Avatar> AvatarMap { get; set; } = [];
 
@@ -42,6 +42,8 @@ public class CombatScenes : IDisposable
             .UseOnnxModel(Global.Absolute(@"Assets\Model\Common\avatar_side_classify_sim.onnx"))
             .WithSessionOptions(BgiSessionOption.Instance.Options)
             .Build();
+
+    public int ExpectedTeamAvatarNum { get; private set; } = 4;
 
     /// <summary>
     /// 通过YOLO分类器识别队伍内角色
@@ -56,14 +58,49 @@ public class CombatScenes : IDisposable
             return this;
         }
 
+        // 判断当前是否处于联机状态
+        List<Rect> avatarSideIconRectList;
+        List<Rect> avatarIndexRectList;
+        var pRaList = imageRegion.FindMulti(AutoFightAssets.Instance.PRa);
+        if (pRaList.Count > 0)
+        {
+            var num = pRaList.Count + 1;
+            if (num > 4)
+            {
+                throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
+            }
+            // 联机状态下判断
+            var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
+            var p = "p";
+            if (onePRa.IsEmpty())
+            {
+                Logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
+                p = "1p";
+            }
+            else
+            {
+                Logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
+            }
+
+            avatarSideIconRectList = AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{num}"];
+            avatarIndexRectList = AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{num}"];
+
+            ExpectedTeamAvatarNum = avatarSideIconRectList.Count;
+        }
+        else
+        {
+            avatarSideIconRectList = AutoFightAssets.Instance.AvatarSideIconRectList;
+            avatarIndexRectList = AutoFightAssets.Instance.AvatarIndexRectList;
+        }
+
         // 识别队伍
-        var names = new string[4];
-        var displayNames = new string[4];
+        var names = new string[avatarSideIconRectList.Count];
+        var displayNames = new string[avatarSideIconRectList.Count];
         try
         {
-            for (var i = 0; i < AutoFightAssets.Instance.AvatarSideIconRectList.Count; i++)
+            for (var i = 0; i < avatarSideIconRectList.Count; i++)
             {
-                var ra = imageRegion.DeriveCrop(AutoFightAssets.Instance.AvatarSideIconRectList[i]);
+                var ra = imageRegion.DeriveCrop(avatarSideIconRectList[i]);
                 var pair = ClassifyAvatarCnName(ra.SrcBitmap, i + 1);
                 names[i] = pair.Item1;
                 if (!string.IsNullOrEmpty(pair.Item2))
@@ -81,14 +118,16 @@ public class CombatScenes : IDisposable
                     displayNames[i] = pair.Item1;
                 }
             }
+
             Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
-            Avatars = BuildAvatars([.. names]);
+            Avatars = BuildAvatars([.. names], null, avatarIndexRectList);
             AvatarMap = Avatars.ToDictionary(x => x.Name);
         }
         catch (Exception e)
         {
             Logger.LogWarning(e.Message);
         }
+
         return this;
     }
 
@@ -164,7 +203,7 @@ public class CombatScenes : IDisposable
 
     public bool CheckTeamInitialized()
     {
-        if (Avatars.Length < 4)
+        if (Avatars.Length != ExpectedTeamAvatarNum)
         {
             return false;
         }
@@ -172,8 +211,18 @@ public class CombatScenes : IDisposable
         return true;
     }
 
-    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null)
+    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null, List<Rect>? avatarIndexRectList = null)
     {
+        if (avatarIndexRectList == null && ExpectedTeamAvatarNum == 4)
+        {
+            avatarIndexRectList = AutoFightContext.Instance.FightAssets.AvatarIndexRectList;
+        }
+
+        if (avatarIndexRectList == null)
+        {
+            throw new Exception("联机状态下，此方法必须传入队伍角色编号位置信息");
+        }
+
         AvatarCount = names.Count;
         var avatars = new Avatar[AvatarCount];
         for (var i = 0; i < AvatarCount; i++)
@@ -181,7 +230,7 @@ public class CombatScenes : IDisposable
             var nameRect = nameRects?[i] ?? Rect.Empty;
             avatars[i] = new Avatar(this, names[i], i + 1, nameRect)
             {
-                IndexRect = AutoFightContext.Instance.FightAssets.AvatarIndexRectList[i]
+                IndexRect = avatarIndexRectList[i]
             };
         }
 
@@ -198,7 +247,7 @@ public class CombatScenes : IDisposable
 
     public Avatar? SelectAvatar(string name)
     {
-        return AvatarMap.TryGetValue(name, out var avatar) ? avatar : null;
+        return AvatarMap.GetValueOrDefault(name);
     }
 
     #region OCR识别队伍（已弃用）
