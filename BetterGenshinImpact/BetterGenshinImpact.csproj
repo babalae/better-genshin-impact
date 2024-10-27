@@ -70,7 +70,7 @@
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.2" />
 		<PackageReference Include="WPF-UI" Version="3.0.5" />
 		<PackageReference Include="WPF-UI.Tray" Version="3.0.5" />
-		<PackageReference Include="WPF-UI.Violeta" Version="3.0.5.21" />
+		<PackageReference Include="WPF-UI.Violeta" Version="3.0.5.23" />
 		<PackageReference Include="YoloV8" Version="4.1.7" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 	</ItemGroup>

@@ -25,6 +25,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -620,5 +621,83 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         // }
 
         WriteScriptGroup(SelectedScriptGroup);
+    }
+
+    [RelayCommand]
+    public async Task OnStartMultiScriptGroupAsync()
+    {
+        // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
+        var stackPanel = new StackPanel();
+        var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
+
+        // 创建全选按钮
+        var selectAllCheckBox = new CheckBox
+        {
+            Content = "全选",
+        };
+        selectAllCheckBox.Checked += (s, e) =>
+        {
+            foreach (var checkBox in checkBoxes.Values)
+            {
+                checkBox.IsChecked = true;
+            }
+        };
+        selectAllCheckBox.Unchecked += (s, e) =>
+        {
+            foreach (var checkBox in checkBoxes.Values)
+            {
+                checkBox.IsChecked = false;
+            }
+        };
+        stackPanel.Children.Add(selectAllCheckBox);
+        // 添加分割线
+        var separator = new Separator
+        {
+            Margin = new Thickness(0, 4, 0, 4)
+        };
+        stackPanel.Children.Add(separator);
+
+        // 创建每个配置组的 CheckBox
+        foreach (var scriptGroup in ScriptGroups)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = scriptGroup.Name,
+                Tag = scriptGroup
+            };
+            checkBoxes[scriptGroup] = checkBox;
+            stackPanel.Children.Add(checkBox);
+        }
+
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "选择需要执行的配置组",
+            Content = new ScrollViewer
+            {
+                Content = stackPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Height = 300 // 设置固定高度
+            },
+            CloseButtonText = "关闭",
+            PrimaryButtonText = "确认执行",
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var result = await uiMessageBox.ShowDialogAsync();
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            var selectedGroups = checkBoxes
+                .Where(kv => kv.Value.IsChecked == true)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", selectedGroups.Select(x => x.Name)));
+
+            foreach (var scriptGroup in selectedGroups)
+            {
+                await _scriptService.RunMulti(scriptGroup.Projects, scriptGroup.Name);
+                await Task.Delay(2000);
+            }
+        }
     }
 }

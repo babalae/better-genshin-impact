@@ -36,6 +36,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Border Grid.Row="0"
                         BorderBrush="{DynamicResource ControlStrongFillColorDisabledBrush}"
@@ -65,6 +66,10 @@
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
+                <ui:Button Grid.Row="2"
+                           Margin="2"
+                           Command="{Binding StartMultiScriptGroupCommand}"
+                           Content="连续执行" />
             </Grid>
         </Grid>
 

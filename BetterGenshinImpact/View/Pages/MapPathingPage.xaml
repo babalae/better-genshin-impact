@@ -90,8 +90,7 @@
                 <ui:Grid ColumnDefinitions="*,10" Visibility="Hidden">
                     <Grid x:Name="TreeColumnStar" Grid.Column="0" />
                 </ui:Grid>
-                <ui:TreeListView behavior:RightClickSelectBehavior.Enabled="True"
-                                 BorderThickness="0"
+                <ui:TreeListView BorderThickness="0"
                                  ItemsSource="{Binding TreeList}"
                                  SelectedItem="{Binding SelectNode, Mode=TwoWay}">
                     <ui:TreeListView.Columns>
