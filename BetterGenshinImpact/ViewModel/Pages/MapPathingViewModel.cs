@@ -21,6 +21,7 @@ using Wpf.Ui.Violeta.Controls;
 using System.Windows;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.View.Pages.View;
+using Wpf.Ui.Violeta.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -31,6 +32,9 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
 
     [ObservableProperty]
     private ObservableCollection<FileTreeNode<PathingTask>> _treeList = [];
+
+    [ObservableProperty]
+    private FileTreeNode<PathingTask>? _selectNode;
 
     private MapViewer? _mapViewer;
     private readonly IScriptService _scriptService;
@@ -43,6 +47,8 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         _scriptService = scriptService;
         Config = configService.Get();
         WeakReferenceMessenger.Default.Register<RefreshDataMessage>(this, (r, m) => InitScriptListViewData());
+
+        IconManager.CacheExcludeExtensions = [".ico"];
     }
 
     private void InitScriptListViewData()
@@ -98,8 +104,9 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     }
 
     [RelayCommand]
-    public async void OnStart(FileTreeNode<PathingTask>? item)
+    public async void OnStart()
     {
+        var item = SelectNode;
         if (item == null)
         {
             return;
@@ -162,7 +169,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     }
 
     [RelayCommand]
-    public void OnRefresh(object? item)
+    public void OnRefresh()
     {
         InitScriptListViewData();
     }
