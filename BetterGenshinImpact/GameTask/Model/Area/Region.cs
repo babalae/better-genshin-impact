@@ -110,6 +110,13 @@ public class Region : IDisposable
         ClickTo(x, y, 0, 0);
     }
 
+    public void ClickTo(double dx, double dy)
+    {
+        var x = (int)Math.Round(dx);
+        var y = (int)Math.Round(dy);
+        ClickTo(x, y, 0, 0);
+    }
+
     /// <summary>
     /// 点击区域内【指定矩形区域】的中心
     /// </summary>

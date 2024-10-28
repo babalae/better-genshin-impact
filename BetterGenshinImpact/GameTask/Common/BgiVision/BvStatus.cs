@@ -42,7 +42,7 @@ public static partial class Bv
     /// <param name="ct"></param>
     /// <param name="retryTimes"></param>
     /// <returns></returns>
-    public static async Task<bool> WaitForMainUi(CancellationToken ct, int retryTimes = 25)
+    public static async Task<bool> WaitForMainUi(CancellationToken ct, int retryTimes = 10)
     {
         for (var i = 0; i < retryTimes; i++)
         {
@@ -53,7 +53,29 @@ public static partial class Bv
                 return true;
             }
         }
+
         return false;
+    }
+
+    /// <summary>
+    /// 是否在队伍选择界面
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInPartyViewUi(ImageRegion captureRa)
+    {
+        return captureRa.Find(ElementAssets.Instance.PartyBtnChooseView).IsExist();
+    }
+
+    /// <summary>
+    /// 等待队伍选择界面加载完成
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes"></param>
+    /// <returns></returns>
+    public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 3)
+    {
+        return await NewRetry.WaitForAction(() => IsInPartyViewUi(TaskControl.CaptureToRectArea()), ct, retryTimes);
     }
 
     /// <summary>

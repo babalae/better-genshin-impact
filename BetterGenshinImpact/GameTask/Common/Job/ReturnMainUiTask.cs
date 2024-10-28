@@ -5,9 +5,9 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
-namespace BetterGenshinImpact.GameTask.OneDragon;
+namespace BetterGenshinImpact.GameTask.Common.Job;
 
-public class ReturnMainUiTask : ISoloTask
+public class ReturnMainUiTask
 {
     public string Name => "返回主界面";
 

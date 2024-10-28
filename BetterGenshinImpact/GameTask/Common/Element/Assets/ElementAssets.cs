@@ -23,6 +23,9 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject FriendChat;
 
+    public RecognitionObject PartyBtnChooseView;
+    public RecognitionObject PartyBtnDelete;
+
     private ElementAssets()
     {
         // 按钮
@@ -127,6 +130,24 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "friend_chat.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(70 * AssetScale), (int)(83 * AssetScale), (int)(70 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 队伍切换
+        PartyBtnChooseView = new RecognitionObject
+        {
+            Name = "PartyBtnChooseView",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "party_btn_choose_view.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(120 * AssetScale), CaptureRect.Width / 7, (int)(120 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        PartyBtnDelete = new RecognitionObject
+        {
+            Name = "PartyBtnDelete",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "party_btn_delete.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 4, CaptureRect.Height - (int)(120 * AssetScale), CaptureRect.Width / 2, (int)(120 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
