@@ -161,12 +161,13 @@ public class TpTask(CancellationToken ct)
             {
                 return await TpOnce(tpX, tpY, force);
             }
-            catch (TpPointNotActivate)
+            catch (TpPointNotActivate e)
             {
                 // 传送点未激活或不存在 按ESC回到大地图界面
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(300, ct);
-                throw;
+                // throw; // 不抛出异常，继续重试
+                Logger.LogWarning(e.Message + "  重试");
             }
             catch (Exception e)
             {
