@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
@@ -18,6 +19,9 @@ public class ActionFactory
                 "fight" => new AutoFightHandler(),
                 "normal_attack" => new NormalAttackHandler(),
                 "elemental_skill" => new ElementalSkillHandler(),
+                "hydro_collect" => new ElementalCollectHandler(ElementalType.Hydro),
+                "electro_collect" => new ElementalCollectHandler(ElementalType.Electro),
+                "anemo_collect" => new ElementalCollectHandler(ElementalType.Anemo),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });

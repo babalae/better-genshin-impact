@@ -28,6 +28,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -549,11 +550,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    // NahidaCollectHandler handler = new NahidaCollectHandler();
-                    // handler.RunAsync(new CancellationToken());
+                    var handler = new ElementalCollectHandler(ElementalType.Anemo);
+                    handler.RunAsync(new CancellationToken());
 
-                    SwitchPartyTask switchPartyTask = new SwitchPartyTask();
-                    Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
+                    // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
+                    // Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
