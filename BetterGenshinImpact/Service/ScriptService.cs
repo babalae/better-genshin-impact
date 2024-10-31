@@ -8,6 +8,7 @@ using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -50,6 +51,8 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
         await new TaskRunner(timerOperation)
            .RunThreadAsync(async () =>
            {
+               var stopwatch = new Stopwatch();
+
                foreach (var project in list)
                {
                    if (project.Status != "Enabled")
@@ -74,9 +77,9 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
 
                            _logger.LogInformation("------------------------------");
 
+                           stopwatch.Reset();
+                           stopwatch.Start();
                            await ExecuteProject(project);
-
-                           await Task.Delay(2000);
                        }
                        catch (Exception e)
                        {
@@ -85,9 +88,12 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
                        }
                        finally
                        {
-                           _logger.LogInformation("→ 脚本执行结束: {Name}", project.Name);
+                           stopwatch.Stop();
+                           _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
                            _logger.LogInformation("------------------------------");
                        }
+
+                       await Task.Delay(2000);
                    }
                }
            });
