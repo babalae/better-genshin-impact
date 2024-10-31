@@ -71,6 +71,7 @@ public class TpTask(CancellationToken ct)
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
             await MoveMapTo(x, y);
+            await Delay(300, ct); // 等待地图移动完成
             bigMapInAllMapRect = GetBigMapRect();
         }
 
