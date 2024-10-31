@@ -1,17 +1,17 @@
-﻿using BetterGenshinImpact.Core.Config;
-using System.Windows.Controls;
+﻿using BetterGenshinImpact.ViewModel.Pages.View;
 
-namespace BetterGenshinImpact.View.Pages.View
+namespace BetterGenshinImpact.View.Pages.View;
+
+/// <summary>
+/// PathingConfigView.xaml 的交互逻辑
+/// </summary>
+public partial class PathingConfigView
 {
-    /// <summary>
-    /// PathingConfigView.xaml 的交互逻辑
-    /// </summary>
-    public partial class PathingConfigView : UserControl
+    private PathingConfigViewModel ViewModel { get; }
+
+    public PathingConfigView(PathingConfigViewModel viewModel)
     {
-        public PathingConfigView(PathingConfig pathingConfig)
-        {
-            InitializeComponent();
-            DataContext = pathingConfig;
-        }
+        DataContext = ViewModel = viewModel;
+        InitializeComponent();
     }
 }

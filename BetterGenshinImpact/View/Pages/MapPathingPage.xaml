@@ -65,10 +65,10 @@
                                   Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
             </ui:Button>
-            <!--<ui:Button Margin="10,0,0,0"
+            <ui:Button Margin="10,0,0,0"
                        Command="{Binding OpenSettingsCommand}"
                        Content="设置"
-                       Icon="{ui:SymbolIcon Settings24}" />-->
+                       Icon="{ui:SymbolIcon Settings24}" />
             <ui:Button Margin="10,0,0,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看实时追踪地图" />

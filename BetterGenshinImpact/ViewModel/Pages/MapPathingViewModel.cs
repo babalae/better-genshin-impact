@@ -21,6 +21,7 @@ using Wpf.Ui.Violeta.Controls;
 using System.Windows;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui.Violeta.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -152,14 +153,17 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [RelayCommand]
     public async void OnOpenSettings()
     {
+        var view = App.GetService<PathingConfigView>();
         // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         // {
-        //     Content = new PathingConfigView(TaskContext.Instance().Config.PathingConfig),
+        //     Content = view,
         //     Title = "路径追踪配置",
         //     CloseButtonText = "关闭"
         // };
         //
         // await uiMessageBox.ShowDialogAsync();
+
+        view?.ShowDialog();
     }
 
     [RelayCommand]

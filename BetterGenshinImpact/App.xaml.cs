@@ -22,7 +22,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui;
 using Wpf.Ui.Violeta.Controls;
 
@@ -97,6 +99,7 @@ public partial class App : Application
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
+                services.AddView<PathingConfigView, PathingConfigViewModel>();
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
