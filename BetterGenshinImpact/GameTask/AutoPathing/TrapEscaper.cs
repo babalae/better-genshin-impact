@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -30,6 +31,7 @@ public class TrapEscaper(CancellationToken ct)
 
     public async Task MoveTo(WaypointForTrack waypoint)
     {
+        var startTime = DateTime.UtcNow;
         bool left = false;
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
@@ -44,6 +46,11 @@ public class TrapEscaper(CancellationToken ct)
             var now = DateTime.UtcNow;
             if ((now - LastActionTime).TotalSeconds > 5)
             {
+                break;
+            }
+            if ((now - startTime).TotalSeconds > 25)
+            {
+                Logger.LogError("卡死脱困超时！");
                 break;
             }
 

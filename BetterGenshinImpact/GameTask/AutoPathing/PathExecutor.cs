@@ -180,7 +180,7 @@ public class PathExecutor(CancellationToken ct)
         {
             await Bv.WaitForMainUi(ct); // 等待主界面加载完成
             Logger.LogInformation("复苏完成");
-            await Delay(3000, ct);
+            await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
             throw new RetryException("回血完成后重试路线");
