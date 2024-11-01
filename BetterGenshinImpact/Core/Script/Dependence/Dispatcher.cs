@@ -4,6 +4,10 @@ using BetterGenshinImpact.ViewModel.Pages;
 using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -61,15 +65,29 @@ public class Dispatcher
         switch (soloTask.Name)
         {
             case "AutoGeniusInvokation":
-                taskSettingsPageViewModel.SwitchAutoGeniusInvokationCommand.Execute(null);
+                if (taskSettingsPageViewModel.GetTcgStrategy(out var content))
+                {
+                    return;
+                }
+                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
             case "AutoWood":
-                taskSettingsPageViewModel.SwitchAutoWoodCommand.Execute(null);
+                await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum, taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
             case "AutoFight":
-                taskSettingsPageViewModel.SwitchAutoFightCommand.Execute(null);
+                if (taskSettingsPageViewModel.GetFightStrategy(out var path1))
+                {
+                    return;
+                }
+                var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+                var param = new AutoFightParam(path1)
+                {
+                    FightFinishDetectEnabled = autoFightConfig.FightFinishDetectEnabled,
+                    PickDropsAfterFightEnabled = autoFightConfig.PickDropsAfterFightEnabled
+                };
+                await new AutoFightTask(param).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
             case "AutoDomain":
@@ -80,9 +98,9 @@ public class Dispatcher
                 await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
-            case "AutoMusicGame":
-                taskSettingsPageViewModel.SwitchAutoMusicGameCommand.Execute(null);
-                break;
+            // case "AutoMusicGame":
+            //     taskSettingsPageViewModel.SwitchAutoMusicGameCommand.Execute(null);
+            //     break;
 
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));

@@ -36,24 +36,53 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
 
-    [ObservableProperty] private string[] _strategyList;
-    [ObservableProperty] private bool _switchAutoGeniusInvokationEnabled;
-    [ObservableProperty] private string _switchAutoGeniusInvokationButtonText = "启动";
+    [ObservableProperty]
+    private string[] _strategyList;
 
-    [ObservableProperty] private int _autoWoodRoundNum;
-    [ObservableProperty] private int _autoWoodDailyMaxCount = 2000;
-    [ObservableProperty] private bool _switchAutoWoodEnabled;
-    [ObservableProperty] private string _switchAutoWoodButtonText = "启动";
+    [ObservableProperty]
+    private bool _switchAutoGeniusInvokationEnabled;
 
-    [ObservableProperty] private string[] _combatStrategyList;
-    [ObservableProperty] private int _autoDomainRoundNum;
-    [ObservableProperty] private bool _switchAutoDomainEnabled;
-    [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
-    [ObservableProperty] private bool _switchAutoFightEnabled;
-    [ObservableProperty] private string _switchAutoFightButtonText = "启动";
-    [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
-    [ObservableProperty] private string _switchAutoTrackPathButtonText = "启动";
-    [ObservableProperty] private string _switchAutoMusicGameButtonText = "启动";
+    [ObservableProperty]
+    private string _switchAutoGeniusInvokationButtonText = "启动";
+
+    [ObservableProperty]
+    private int _autoWoodRoundNum;
+
+    [ObservableProperty]
+    private int _autoWoodDailyMaxCount = 2000;
+
+    [ObservableProperty]
+    private bool _switchAutoWoodEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoWoodButtonText = "启动";
+
+    [ObservableProperty]
+    private string[] _combatStrategyList;
+
+    [ObservableProperty]
+    private int _autoDomainRoundNum;
+
+    [ObservableProperty]
+    private bool _switchAutoDomainEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoDomainButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoFightEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoFightButtonText = "启动";
+
+    [ObservableProperty]
+    private string _switchAutoTrackButtonText = "启动";
+
+    [ObservableProperty]
+    private string _switchAutoTrackPathButtonText = "启动";
+
+    [ObservableProperty]
+    private string _switchAutoMusicGameButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -81,6 +110,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
                 {
                     strategyName = strategyName[1..];
                 }
+
                 strategyList[i] = strategyName;
             }
         }
@@ -131,10 +161,24 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnSwitchAutoGeniusInvokation()
     {
+        if (GetTcgStrategy(out var content))
+        {
+            return;
+        }
+
+        SwitchAutoGeniusInvokationEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)));
+        SwitchAutoGeniusInvokationEnabled = false;
+    }
+
+    public bool GetTcgStrategy(out string content)
+    {
+        content = string.Empty;
         if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
         {
             Toast.Warning("请先选择策略");
-            return;
+            return true;
         }
 
         var path = Global.Absolute(@"User\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
@@ -142,15 +186,11 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         if (!File.Exists(path))
         {
             Toast.Error("策略文件不存在");
-            return;
+            return true;
         }
 
-        var content = await File.ReadAllTextAsync(path);
-
-        SwitchAutoGeniusInvokationEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-            .RunSoloTaskAsync(new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)));
-        SwitchAutoGeniusInvokationEnabled = false;
+        content = File.ReadAllText(path);
+        return false;
     }
 
     [RelayCommand]
@@ -207,6 +247,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             return;
         }
+
         SwitchAutoDomainEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
             .RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
@@ -220,6 +261,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
+
         if (!File.Exists(path) && !Directory.Exists(path))
         {
             Toast.Error("战斗策略文件不存在");
