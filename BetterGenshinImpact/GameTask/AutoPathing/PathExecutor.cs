@@ -100,7 +100,6 @@ public class PathExecutor(CancellationToken ct)
             }
             finally
             {
-                _actionAvatarIndexMap.Clear(); // 没啥用，但还是写上
                 // 不管咋样，松开所有按键
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                 Simulation.SendInput.Mouse.RightButtonUp();
