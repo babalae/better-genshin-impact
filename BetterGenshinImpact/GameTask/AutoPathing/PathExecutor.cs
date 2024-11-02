@@ -139,7 +139,7 @@ public class PathExecutor(CancellationToken ct)
     /// <summary>
     /// 切换队伍
     /// </summary>
-    /// <param name="task"></param>
+    /// <param name="partyName"></param>
     /// <returns></returns>
     private async Task<bool> SwitchParty(string? partyName)
     {
@@ -148,6 +148,12 @@ public class PathExecutor(CancellationToken ct)
             if (RunnerContext.Instance.PartyName == partyName)
             {
                 return true;
+            }
+
+            if (!string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
+            {
+                // 非空的情况下，先tp到安全位置（回血的七天神像）
+                await new TpTask(ct).Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true);
             }
 
             var success = await new SwitchPartyTask().Start(partyName, ct);
@@ -214,9 +220,9 @@ public class PathExecutor(CancellationToken ct)
         // 把所有需要切换的角色编号记录下来
         Dictionary<string, ElementalType> map = new()
         {
-            { "hydro_collect", ElementalType.Hydro },
-            { "electro_collect", ElementalType.Electro },
-            { "anemo_collect", ElementalType.Anemo }
+            { ActionEnum.HydroCollect.Code, ElementalType.Hydro },
+            { ActionEnum.ElectroCollect.Code, ElementalType.Electro },
+            { ActionEnum.AnemoCollect.Code, ElementalType.Anemo }
         };
 
         foreach (var (action, el) in map)
@@ -241,11 +247,14 @@ public class PathExecutor(CancellationToken ct)
                     return true;
                 }
             }
+
+            Logger.LogError("此路径存在 {action} 收集动作，队伍中没有对应元素角色:{}，无法执行此路径！", action, string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
+            return false;
         }
-
-        Logger.LogError("此路径存在 {action} 收集动作，队伍中没有对应元素角色:{}，无法执行此路径！", action, string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
-
-        return false;
+        else
+        {
+            return true;
+        }
     }
 
     private List<WaypointForTrack> ConvertWaypointsForTrack(List<Waypoint> positions)
@@ -433,7 +442,7 @@ public class PathExecutor(CancellationToken ct)
 
                     var ms = s * 1000;
                     Debug.WriteLine($"元素战技释放间隔：{(now - _elementalSkillLastUseTime).TotalMilliseconds}ms");
-                    if ((now - _elementalSkillLastUseTime).TotalMilliseconds > ms)
+                    if ((DateTime.UtcNow - _elementalSkillLastUseTime).TotalMilliseconds > ms)
                     {
                         // 可能刚切过人在冷却时间内
                         if (num <= 5 && (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex) && PartyConfig.GuardianAvatarIndex != PartyConfig.MainAvatarIndex))
@@ -442,7 +451,7 @@ public class PathExecutor(CancellationToken ct)
                         }
 
                         await UseElementalSkill();
-                        _elementalSkillLastUseTime = now;
+                        _elementalSkillLastUseTime = DateTime.UtcNow;
                     }
                 }
             }
@@ -519,7 +528,7 @@ public class PathExecutor(CancellationToken ct)
         while (!ct.IsCancellationRequested)
         {
             stepsTaken++;
-            if (stepsTaken > 20)
+            if (stepsTaken > 30)
             {
                 Logger.LogWarning("精确接近超时");
                 break;
@@ -537,7 +546,7 @@ public class PathExecutor(CancellationToken ct)
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
-            await Delay(50, ct);
+            await Delay(20, ct);
         }
 
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
@@ -561,8 +570,9 @@ public class PathExecutor(CancellationToken ct)
         if (waypoint.Action == ActionEnum.NahidaCollect.Code
             || waypoint.Action == ActionEnum.PickAround.Code
             || waypoint.Action == ActionEnum.Fight.Code
-            || waypoint.Action == ActionEnum.NormalAttack.Code
-            || waypoint.Action == ActionEnum.ElementalSkill.Code)
+            || waypoint.Action == ActionEnum.HydroCollect.Code
+            || waypoint.Action == ActionEnum.ElectroCollect.Code
+            || waypoint.Action == ActionEnum.AnemoCollect.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             await handler.RunAsync(ct);

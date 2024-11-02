@@ -241,7 +241,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 var fileInfo = new FileInfo(filePath);
                 if (!fileInfo.Attributes.HasFlag(FileAttributes.Directory))
                 {
-                    SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
+                    var relativePath = Path.GetRelativePath(MapPathingViewModel.PathJsonPath, fileInfo.Directory!.FullName);
+                    SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, relativePath));
                 }
             }
             else if (child is StackPanel childStackPanel)
@@ -251,21 +252,21 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
     }
 
-    private Dictionary<string, List<FileInfo>> LoadAllPathingScripts()
-    {
-        var folder = Global.Absolute(@"User\AutoPathing");
-        var directories = Directory.GetDirectories(folder);
-        var result = new Dictionary<string, List<FileInfo>>();
-
-        foreach (var directory in directories)
-        {
-            var dirInfo = new DirectoryInfo(directory);
-            var files = dirInfo.GetFiles("*.*", SearchOption.TopDirectoryOnly).ToList();
-            result.Add(dirInfo.Name, files);
-        }
-
-        return result;
-    }
+    // private Dictionary<string, List<FileInfo>> LoadAllPathingScripts()
+    // {
+    //     var folder = Global.Absolute(@"User\AutoPathing");
+    //     var directories = Directory.GetDirectories(folder);
+    //     var result = new Dictionary<string, List<FileInfo>>();
+    //
+    //     foreach (var directory in directories)
+    //     {
+    //         var dirInfo = new DirectoryInfo(directory);
+    //         var files = dirInfo.GetFiles("*.*", SearchOption.TopDirectoryOnly).ToList();
+    //         result.Add(dirInfo.Name, files);
+    //     }
+    //
+    //     return result;
+    // }
 
     private List<ScriptProject> LoadAllJsScriptProjects()
     {

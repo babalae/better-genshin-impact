@@ -108,7 +108,7 @@ public class ElementalCollectAvatarConfigs
         // 风
         new ElementalCollectAvatar("砂糖", ElementalType.Anemo, true, true),
         new ElementalCollectAvatar("鹿野院平藏", ElementalType.Anemo, true, true),
-        new ElementalCollectAvatar("散兵", ElementalType.Anemo, true, false),
+        new ElementalCollectAvatar("流浪者", ElementalType.Anemo, true, false),
         new ElementalCollectAvatar("闲云", ElementalType.Anemo, true, false),
         new ElementalCollectAvatar("万叶", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("珐露珊", ElementalType.Anemo, false, true),

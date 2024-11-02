@@ -7,6 +7,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -38,7 +40,12 @@ public partial class PathingConditionConfig : ObservableObject
                     continue;
                 }
 
-                var condition = PartyConditions.FirstOrDefault(c => c.Subject == "动作" && c.Object != null && c.Object.Contains(action));
+                if (!ConditionDefinitions.ActionCnDic.TryGetValue(action, out var actionCn))
+                {
+                    continue; // 不校验
+                }
+
+                var condition = PartyConditions.FirstOrDefault(c => c.Subject == "动作" && c.Object.Contains(actionCn));
                 if (condition is { Result: not null })
                 {
                     return condition.Result;
@@ -47,14 +54,14 @@ public partial class PathingConditionConfig : ObservableObject
         }
 
         // 采集物匹配队伍名
-        var materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object != null && c.Object.Contains(materialName));
+        var materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object.Contains(materialName));
         if (materialCondition is { Result: not null })
         {
             return materialCondition.Result;
         }
         else
         {
-            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object != null && c.Object.Contains("全部"));
+            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object.Contains("全部"));
             if (materialCondition is { Result: not null })
             {
                 return materialCondition.Result;
@@ -81,11 +88,20 @@ public partial class PathingConditionConfig : ObservableObject
                     if (avatarCondition is { Object: not null } && avatarCondition.Object.Contains(avatar.Name))
                     {
                         partyConfig.GuardianAvatarIndex = avatar.Index.ToString();
-                        partyConfig.GuardianElementalSkillSecondInterval = avatar.SkillCd.ToString(CultureInfo.CurrentCulture);
-                        partyConfig.GuardianElementalSkillLongPress = avatarCondition.Result == "循环长E";
+                        if (avatarCondition.Result == "循环长E")
+                        {
+                            partyConfig.GuardianElementalSkillLongPress = true;
+                            partyConfig.GuardianElementalSkillSecondInterval = avatar.SkillHoldCd.ToString(CultureInfo.CurrentCulture);
+                        }
+                        else
+                        {
+                            partyConfig.GuardianElementalSkillLongPress = false;
+                            partyConfig.GuardianElementalSkillSecondInterval = avatar.SkillCd.ToString(CultureInfo.CurrentCulture);
+                        }
                         break;
                     }
                 }
+
                 if (!string.IsNullOrEmpty(partyConfig.GuardianAvatarIndex))
                 {
                     break;
@@ -105,6 +121,7 @@ public partial class PathingConditionConfig : ObservableObject
                         break;
                     }
                 }
+
                 if (!string.IsNullOrEmpty(partyConfig.MainAvatarIndex))
                 {
                     break;

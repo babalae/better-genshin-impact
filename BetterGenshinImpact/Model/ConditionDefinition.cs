@@ -138,4 +138,12 @@ public class ConditionDefinitions
     public static List<string> AvatarSubjects { get; } = ["队伍中角色"];
 
     public static List<string> AvatarResultList { get; } = ["循环短E", "循环长E", "主要行走角色"];
+
+    public static Dictionary<string, string> ActionCnDic { get; } = new()
+    {
+        { "nahida_collect", "纳西妲采集" },
+        { "hydro_collect", "水元素采集" },
+        { "electro_collect", "雷元素采集" },
+        { "anemo_collect", "风元素采集" },
+    };
 }

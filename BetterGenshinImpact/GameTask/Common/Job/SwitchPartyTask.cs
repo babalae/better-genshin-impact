@@ -58,7 +58,7 @@ public class SwitchPartyTask
             });
 
             var currTeamName = string.Join("", currTeamNameRaList.Select(x => x.Text).Where(x => !string.IsNullOrWhiteSpace(x)));
-            Logger.LogInformation("切换队伍，当前队伍名称: {Text}", currTeamName);
+            // Logger.LogInformation("切换队伍，当前队伍名称: {Text}", currTeamName);
             if (currTeamName == partyName)
             {
                 Logger.LogInformation("切换队伍，当前队伍[{Name}]即为目标队伍，无需切换", partyName);
@@ -138,7 +138,7 @@ public class SwitchPartyTask
             {
                 page.ClickTo(textRegion.Right, textRegion.Bottom + textRegion.Height * 2);
                 await Delay(200, ct);
-                Logger.LogInformation("切换到队伍: {Text}", textRegion.Text);
+                Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
                 await ConfirmParty(page, ct);
                 return true;
             }

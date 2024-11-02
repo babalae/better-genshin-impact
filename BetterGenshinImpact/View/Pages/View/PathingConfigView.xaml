@@ -117,7 +117,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="角色设置" />
+                                      Text="角色设置（存在多个符合条件的角色情况下，优先使用游戏内编队编号更小的）" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl ItemsSource="{Binding Config.PathingConditionConfig.AvatarConditions, Mode=TwoWay}">
                             <ItemsControl.ItemTemplate>
