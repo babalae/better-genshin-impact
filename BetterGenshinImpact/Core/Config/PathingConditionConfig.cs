@@ -20,17 +20,6 @@ public partial class PathingConditionConfig : ObservableObject
     [ObservableProperty]
     private ObservableCollection<Condition> _avatarConditions = [];
 
-    public PathingConditionConfig()
-    {
-        _partyConditions.CollectionChanged += OnConditionsChanged;
-        _avatarConditions.CollectionChanged += OnConditionsChanged;
-    }
-
-    private void OnConditionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        OnPropertyChanged(nameof(PartyConditions));
-    }
-
     /// <summary>
     /// 找出当前应该切换的队伍名称
     /// </summary>

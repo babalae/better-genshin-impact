@@ -12,6 +12,10 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _enabled = false;
 
+    // 切换到队伍的名称
+    [ObservableProperty]
+    private string _partyName = string.Empty;
+
     // 主要行走追踪的角色编号
     [ObservableProperty]
     private string _mainAvatarIndex = string.Empty;

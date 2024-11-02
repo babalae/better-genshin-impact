@@ -18,9 +18,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -38,7 +40,7 @@ public class PathExecutor(CancellationToken ct)
     }
 
     private CombatScenes? _combatScenes;
-    private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
+    // private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
 
@@ -57,9 +59,18 @@ public class PathExecutor(CancellationToken ct)
         if (PartyConfig is { Enabled: false })
         {
             // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
-            if (!await SwitchParty(task))
+            var partyName = FilterPartyNameByConditionConfig(task);
+            if (!await SwitchParty(partyName))
             {
                 Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
+                return;
+            }
+        }
+        else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
+        {
+            if (!await SwitchParty(PartyConfig.PartyName))
+            {
+                Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
                 return;
             }
         }
@@ -130,16 +141,8 @@ public class PathExecutor(CancellationToken ct)
     /// </summary>
     /// <param name="task"></param>
     /// <returns></returns>
-    private async Task<bool> SwitchParty(PathingTask task)
+    private async Task<bool> SwitchParty(string? partyName)
     {
-        var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
-        var materialName = task.GetMaterialName();
-        var specialActions = task.Positions
-            .Select(p => p.Action)
-            .Where(action => !string.IsNullOrEmpty(action))
-            .Distinct()
-            .ToList();
-        var partyName = pathingConditionConfig.FilterPartyName(materialName, specialActions);
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
@@ -161,6 +164,19 @@ public class PathExecutor(CancellationToken ct)
         return true;
     }
 
+    private static string? FilterPartyNameByConditionConfig(PathingTask task)
+    {
+        var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
+        var materialName = task.GetMaterialName();
+        var specialActions = task.Positions
+            .Select(p => p.Action)
+            .Where(action => !string.IsNullOrEmpty(action))
+            .Distinct()
+            .ToList();
+        var partyName = pathingConditionConfig.FilterPartyName(materialName, specialActions);
+        return partyName;
+    }
+
     /// <summary>
     /// 校验
     /// </summary>
@@ -175,6 +191,7 @@ public class PathExecutor(CancellationToken ct)
         }
 
         // 没有强制配置的情况下，使用路径追踪内的条件配置
+        // 必须放在这里，因为要通过队伍识别来得到最终结果
         var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
         if (PartyConfig is { Enabled: false })
         {
@@ -191,45 +208,45 @@ public class PathExecutor(CancellationToken ct)
                 return false;
             }
 
-            _actionAvatarIndexMap.Add("nahida_collect", avatar.Index.ToString());
+            // _actionAvatarIndexMap.Add("nahida_collect", avatar.Index.ToString());
         }
 
         // 把所有需要切换的角色编号记录下来
-        // Dictionary<string, string> map = new()
-        // {
-        //     { "normal_attack", PartyConfig.NormalAttackAvatarIndex },
-        //     { "elemental_skill", PartyConfig.ElementalSkillAvatarIndex },
-        //     { "hydro_collect", PartyConfig.HydroCollectAvatarIndex },
-        //     { "electro_collect", PartyConfig.ElectroCollectAvatarIndex },
-        //     { "anemo_collect", PartyConfig.AnemoCollectAvatarIndex }
-        // };
-        //
-        // foreach (var (action, index) in map)
-        // {
-        //     if (!InitActionAvatarIndex(task, action, index))
-        //     {
-        //         return false;
-        //     }
-        // }
+        Dictionary<string, ElementalType> map = new()
+        {
+            { "hydro_collect", ElementalType.Hydro },
+            { "electro_collect", ElementalType.Electro },
+            { "anemo_collect", ElementalType.Anemo }
+        };
+
+        foreach (var (action, el) in map)
+        {
+            if (!ValidateElementalActionAvatarIndex(task, action, el, _combatScenes))
+            {
+                return false;
+            }
+        }
 
         return true;
     }
 
-    // private bool InitActionAvatarIndex(PathingTask task, string action, string index)
-    // {
-    //     if (task.HasAction(action))
-    //     {
-    //         if (string.IsNullOrEmpty(index))
-    //         {
-    //             Logger.LogError("此路径存在{Action}动作，未设置对应角色编号，无法执行此路径！", action);
-    //             return false;
-    //         }
-    //
-    //         _actionAvatarIndexMap.Add(action, index);
-    //     }
-    //
-    //     return true;
-    // }
+    private bool ValidateElementalActionAvatarIndex(PathingTask task, string action, ElementalType el, CombatScenes combatScenes)
+    {
+        if (task.HasAction(action))
+        {
+            foreach (var avatar in combatScenes.Avatars)
+            {
+                if (ElementalCollectAvatarConfigs.Get(avatar.Name, el) != null)
+                {
+                    return true;
+                }
+            }
+        }
+
+        Logger.LogError("此路径存在 {action} 收集动作，队伍中没有对应元素角色:{}，无法执行此路径！", action, string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
+
+        return false;
+    }
 
     private List<WaypointForTrack> ConvertWaypointsForTrack(List<Waypoint> positions)
     {

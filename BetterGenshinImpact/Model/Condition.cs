@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Model;
 
@@ -12,11 +13,12 @@ public partial class Condition : ObservableObject
     private string _predicate = "包含"; // 谓语
 
     [ObservableProperty]
-    private ObservableCollection<string>? _object; // 宾语
+    private ObservableCollection<string> _object = []; // 宾语
 
     [ObservableProperty]
     private string? _result; // 条件结果
 
+    [JsonIgnore]
     public ConditionDefinition Definition => string.IsNullOrEmpty(Subject) ? new ConditionDefinition() : ConditionDefinitions.Definitions[Subject];
 
     partial void OnSubjectChanged(string? value)
