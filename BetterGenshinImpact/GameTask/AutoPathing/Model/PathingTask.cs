@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
+using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -32,6 +33,24 @@ public class PathingTask
     public bool HasAction(string actionName)
     {
         return Positions.Exists(p => p.Action == actionName);
+    }
+
+    /// <summary>
+    /// 获取采集物名称
+    /// </summary>
+    /// <returns></returns>
+    public string GetMaterialName()
+    {
+        // 获取 MapPathingViewModel.PathJsonPath
+        var basePath = MapPathingViewModel.PathJsonPath;
+
+        // 获取 FullPath 相对于 basePath 的相对路径
+        var relativePath = Path.GetRelativePath(basePath, FullPath);
+
+        // 分割相对路径，获取第一个文件夹名称
+        var firstFolder = relativePath.Split(Path.DirectorySeparatorChar)[0];
+
+        return firstFolder;
     }
 
     public static PathingTask BuildFromFilePath(string filePath)

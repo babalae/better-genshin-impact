@@ -142,7 +142,7 @@ public partial class AllConfig : ObservableObject
     // /// <summary>
     // /// 路径追踪配置
     // /// </summary>
-    // public PathingConfig PathingConfig { get; set; } = new();
+    public PathingConditionConfig PathingConditionConfig { get; set; } = new();
 
     /// <summary>
     ///     快捷键配置
@@ -178,7 +178,7 @@ public partial class AllConfig : ObservableObject
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
 
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
-        // PathingConfig.PropertyChanged += OnAnyPropertyChanged;
+        PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

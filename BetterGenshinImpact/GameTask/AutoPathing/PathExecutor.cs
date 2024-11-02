@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -28,12 +29,12 @@ public class PathExecutor(CancellationToken ct)
     private readonly CameraRotateTask _rotateTask = new(ct);
     private readonly TrapEscaper _trapEscaper = new(ct);
 
-    private PathingConfig? _config;
+    private PathingPartyConfig? _partyConfig;
 
-    public PathingConfig Config
+    public PathingPartyConfig PartyConfig
     {
-        get => _config ??= new PathingConfig();
-        set => _config = value;
+        get => _partyConfig ?? new PathingPartyConfig();
+        set => _partyConfig = value;
     }
 
     private CombatScenes? _combatScenes;
@@ -50,6 +51,17 @@ public class PathExecutor(CancellationToken ct)
         {
             Logger.LogWarning("没有路径点，寻路结束");
             return;
+        }
+
+        // 切换队伍
+        if (PartyConfig is { Enabled: false })
+        {
+            // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
+            if (!await SwitchParty(task))
+            {
+                Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
+                return;
+            }
         }
 
         // 校验路径是否可以执行
@@ -113,12 +125,60 @@ public class PathExecutor(CancellationToken ct)
             "UpdateCurrentPathing", new object(), task));
     }
 
+    /// <summary>
+    /// 切换队伍
+    /// </summary>
+    /// <param name="task"></param>
+    /// <returns></returns>
+    private async Task<bool> SwitchParty(PathingTask task)
+    {
+        var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
+        var materialName = task.GetMaterialName();
+        var specialActions = task.Positions
+            .Select(p => p.Action)
+            .Where(action => !string.IsNullOrEmpty(action))
+            .Distinct()
+            .ToList();
+        var partyName = pathingConditionConfig.FilterPartyName(materialName, specialActions);
+        if (!string.IsNullOrEmpty(partyName))
+        {
+            if (RunnerContext.Instance.PartyName == partyName)
+            {
+                return true;
+            }
+
+            var success = await new SwitchPartyTask().Start(partyName, ct);
+            if (success)
+            {
+                RunnerContext.Instance.PartyName = partyName;
+                RunnerContext.Instance.ClearCombatScenes();
+                return true;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 校验
+    /// </summary>
+    /// <param name="task"></param>
+    /// <returns></returns>
     private async Task<bool> ValidateGameWithTask(PathingTask task)
     {
         _combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (_combatScenes == null)
         {
             return false;
+        }
+
+        // 没有强制配置的情况下，使用路径追踪内的条件配置
+        var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
+        if (PartyConfig is { Enabled: false })
+        {
+            PartyConfig = pathingConditionConfig.BuildPartyConfigByCondition(_combatScenes);
         }
 
         // 校验角色是否存在
@@ -135,30 +195,41 @@ public class PathExecutor(CancellationToken ct)
         }
 
         // 把所有需要切换的角色编号记录下来
-        if (task.HasAction("normal_attack"))
-        {
-            if (string.IsNullOrEmpty(Config.NormalAttackAvatarIndex))
-            {
-                Logger.LogError("此路径存在普攻动作，未设置普攻角色编号，无法执行此路径！");
-                return false;
-            }
-
-            _actionAvatarIndexMap.Add("normal_attack", Config.NormalAttackAvatarIndex);
-        }
-
-        if (task.HasAction("elemental_skill"))
-        {
-            if (string.IsNullOrEmpty(Config.ElementalSkillAvatarIndex))
-            {
-                Logger.LogError("此路径存在释放元素战技动作，未设置元素战技角色编号，无法执行此路径！");
-                return false;
-            }
-
-            _actionAvatarIndexMap.Add("elemental_skill", Config.ElementalSkillAvatarIndex);
-        }
+        // Dictionary<string, string> map = new()
+        // {
+        //     { "normal_attack", PartyConfig.NormalAttackAvatarIndex },
+        //     { "elemental_skill", PartyConfig.ElementalSkillAvatarIndex },
+        //     { "hydro_collect", PartyConfig.HydroCollectAvatarIndex },
+        //     { "electro_collect", PartyConfig.ElectroCollectAvatarIndex },
+        //     { "anemo_collect", PartyConfig.AnemoCollectAvatarIndex }
+        // };
+        //
+        // foreach (var (action, index) in map)
+        // {
+        //     if (!InitActionAvatarIndex(task, action, index))
+        //     {
+        //         return false;
+        //     }
+        // }
 
         return true;
     }
+
+    // private bool InitActionAvatarIndex(PathingTask task, string action, string index)
+    // {
+    //     if (task.HasAction(action))
+    //     {
+    //         if (string.IsNullOrEmpty(index))
+    //         {
+    //             Logger.LogError("此路径存在{Action}动作，未设置对应角色编号，无法执行此路径！", action);
+    //             return false;
+    //         }
+    //
+    //         _actionAvatarIndexMap.Add(action, index);
+    //     }
+    //
+    //     return true;
+    // }
 
     private List<WaypointForTrack> ConvertWaypointsForTrack(List<Waypoint> positions)
     {
@@ -207,7 +278,7 @@ public class PathExecutor(CancellationToken ct)
     private async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
-        await SwitchAvatar(Config.MainAvatarIndex);
+        await SwitchAvatar(PartyConfig.MainAvatarIndex);
 
         var screen = CaptureToRectArea();
         var position = Navigation.GetPosition(screen);
@@ -335,7 +406,7 @@ public class PathExecutor(CancellationToken ct)
                 }
 
                 // 使用 E 技能
-                if (!string.IsNullOrEmpty(Config.GuardianAvatarIndex) && double.TryParse(Config.GuardianElementalSkillSecondInterval, out var s))
+                if (!string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex) && double.TryParse(PartyConfig.GuardianElementalSkillSecondInterval, out var s))
                 {
                     if (s < 1)
                     {
@@ -348,7 +419,7 @@ public class PathExecutor(CancellationToken ct)
                     if ((now - _elementalSkillLastUseTime).TotalMilliseconds > ms)
                     {
                         // 可能刚切过人在冷却时间内
-                        if (num <= 5 && (!string.IsNullOrEmpty(Config.MainAvatarIndex) && Config.GuardianAvatarIndex != Config.MainAvatarIndex))
+                        if (num <= 5 && (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex) && PartyConfig.GuardianAvatarIndex != PartyConfig.MainAvatarIndex))
                         {
                             await Delay(800, ct); // 总共1s
                         }
@@ -368,7 +439,7 @@ public class PathExecutor(CancellationToken ct)
 
     private async Task UseElementalSkill()
     {
-        if (string.IsNullOrEmpty(Config.GuardianAvatarIndex))
+        if (string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex))
         {
             return;
         }
@@ -377,7 +448,7 @@ public class PathExecutor(CancellationToken ct)
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(Config.GuardianAvatarIndex);
+        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex);
         if (avatar == null)
         {
             return;
@@ -392,7 +463,7 @@ public class PathExecutor(CancellationToken ct)
             await Delay(200, ct);
         }
 
-        if (Config.GuardianElementalSkillLongPress)
+        if (PartyConfig.GuardianElementalSkillLongPress)
         {
             Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
             await Task.Delay(800); // 不能取消
@@ -476,16 +547,6 @@ public class PathExecutor(CancellationToken ct)
             || waypoint.Action == ActionEnum.NormalAttack.Code
             || waypoint.Action == ActionEnum.ElementalSkill.Code)
         {
-            // 切人
-            if (_actionAvatarIndexMap.TryGetValue(waypoint.Action, out var index))
-            {
-                var avatar = await SwitchAvatar(index);
-                if (avatar == null)
-                {
-                    return;
-                }
-            }
-
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             await handler.RunAsync(ct);
             await Delay(1000, ct);

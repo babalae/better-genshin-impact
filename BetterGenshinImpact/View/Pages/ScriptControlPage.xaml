@@ -25,7 +25,7 @@
     </UserControl.Resources>
     <Grid Margin="8,8,8,8">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="150" />
             <ColumnDefinition Width="7" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
@@ -203,16 +203,12 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="80" />
-                        <ColumnDefinition Width="80" />
-                        <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="20" />
                     </Grid.ColumnDefinitions>
                     <Grid x:Name="Col1" Grid.Column="0" />
                     <Grid x:Name="Col2" Grid.Column="1" />
                     <Grid x:Name="Col3" Grid.Column="2" />
                     <Grid x:Name="Col4" Grid.Column="3" />
-                    <Grid x:Name="Col5" Grid.Column="4" />
-                    <Grid x:Name="Col6" Grid.Column="5" />
                 </Grid>
                 <ui:ListView Grid.Row="5"
                              HorizontalAlignment="Stretch"
@@ -232,13 +228,7 @@
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding TypeDesc}"
                                             Header="类型" />
-                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding ScheduleDesc}"
-                                            Header="执行周期" />
-                            <GridViewColumn Width="{Binding ElementName=Col5, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding RunNum}"
-                                            Header="执行次数" />
-                            <GridViewColumn Width="{Binding ElementName=Col6, Path=ActualWidth}" Header="启用状态">
+                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="启用状态">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <ui:ToggleSwitch IsChecked="{Binding Status, Converter={StaticResource BooleanToEnableTextConverter}, Mode=TwoWay}" />

@@ -8,5 +8,5 @@ namespace BetterGenshinImpact.Core.Script.Group;
 public partial class ScriptGroupConfig : ObservableObject
 {
     [ObservableProperty]
-    private PathingConfig _pathingConfig = new();
+    private PathingPartyConfig _pathingConfig = new();
 }

@@ -5,6 +5,7 @@
              xmlns:group="clr-namespace:BetterGenshinImpact.Core.Script.Group"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Width="800"
              d:DataContext="{d:DesignInstance Type=group:ScriptGroupConfig}"
              d:DesignHeight="450"
              d:DesignWidth="800"
@@ -29,15 +30,19 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="路径追踪行走配置"
+                                      Text="路径追踪行走配置（不启用则使用路径追踪内的条件配置）"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       TextWrapping="Wrap">
-                            用于在行走途中配置开盾/回血角色在队伍内的编号等，编号为空则认为是不启用
+                            强制修改行走途中配置开盾/回血等角色在队伍内的编号
                         </ui:TextBlock>
-
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         IsChecked="{Binding PathingConfig.Enabled, Mode=TwoWay}" />
                     </Grid>
                 </ui:CardExpander.Header>
                 <StackPanel>
@@ -149,7 +154,7 @@
             </ui:CardExpander>
 
 
-            <ui:CardExpander Margin="0,0,0,12"
+            <!--<ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
                              Icon="{ui:SymbolIcon Map24}"
                              IsExpanded="True">
@@ -231,7 +236,7 @@
                                   SelectedItem="{Binding PathingConfig.ElementalSkillAvatarIndex}" />
                     </Grid>
                 </StackPanel>
-            </ui:CardExpander>
+            </ui:CardExpander>-->
         </StackPanel>
     </ScrollViewer>
 </UserControl>

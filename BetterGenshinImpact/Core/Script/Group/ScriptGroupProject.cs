@@ -144,7 +144,7 @@ public partial class ScriptGroupProject : ObservableObject
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
             TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
-            pathingTask.Config = GroupInfo?.Config.PathingConfig;
+            pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
             await pathingTask.Pathing(task);
         }
         else

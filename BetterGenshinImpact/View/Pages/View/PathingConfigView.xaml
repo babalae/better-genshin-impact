@@ -8,103 +8,173 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
                  Width="1000"
-                 Height="400"
+                 Height="500"
                  d:DataContext="{d:DesignInstance Type=view:PathingConfigViewModel}"
                  d:DesignHeight="450"
                  d:DesignWidth="300"
                  mc:Ignorable="d">
-    <Window.Resources>
-        <SolidColorBrush x:Key="MultiSelectComboBox.Text.Foreground" Color="#ffffff" />
-
-        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.SelectedOrder.Foreground" Color="#000000" />
-        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selector.Background" Color="#000000" />
-        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selector.Border" Color="#000000" />
-        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selected.Background" Color="#000000" />
-        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selected.Border" Color="#000000" />
-    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="1" Margin="12,0">
-            <ui:Card Margin="0,0,0,10">
-                <StackPanel>
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="12,0">
 
-                    <!--  使用ItemsControl来动态显示筛选条件  -->
-                    <ItemsControl ItemsSource="{Binding ConditionConfigs, Mode=TwoWay}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <WrapPanel Margin="0,0,0,10">
-                                    <!--  采集物、路径动作  -->
-                                    <ComboBox MinWidth="100"
-                                              Margin="0,0,10,5"
-                                              HorizontalAlignment="Left"
-                                              ItemsSource="{Binding Source={x:Static local:ConditionDefinitions.Subjects}}"
-                                              SelectedItem="{Binding Subject, Mode=TwoWay}" />
+                <StackPanel Margin="10,5">
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  FontSize="16"
+                                  FontTypography="BodyStrong"
+                                  Text="路径追踪设置（相关配置优先级从高到低）" />
 
-                                    <!--  包含  -->
-                                    <ComboBox MinWidth="80"
-                                              Margin="0,0,10,5"
-                                              HorizontalAlignment="Left"
-                                              ItemsSource="{Binding Definition.PredicateOptions}"
-                                              SelectedItem="{Binding Predicate}" />
+                </StackPanel>
 
-                                    <!--  搜索输入框  -->
-                                    <sdl:MultiSelectComboBox Width="300"
-                                                             MinWidth="300"
-                                                             Background="{DynamicResource ApplicationBackgroundBrush}"
-                                                             EnableAutoComplete="True"
-                                                             EnableBatchSelection="True"
-                                                             EnableFiltering="True"
-                                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                             IsEditable="True"
-                                                             ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
-                                                             MaxDropDownHeight="300"
-                                                             SelectedItems="{Binding Object, Mode=TwoWay}"
-                                                             SelectionMode="Multiple">
-                                        <!--<sdl:MultiSelectComboBox.Resources>
+                <ui:Card Margin="0,0,0,10">
+                    <StackPanel>
+
+                        <ui:TextBlock Margin="0,0,0,8"
+                                      FontTypography="BodyStrong"
+                                      Text="队伍切换设置" />
+                        <!--  使用ItemsControl来动态显示筛选条件  -->
+                        <ItemsControl ItemsSource="{Binding Config.PathingConditionConfig.PartyConditions, Mode=TwoWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <WrapPanel Margin="0,0,0,10">
+                                        <!--  采集物、路径动作  -->
+                                        <ComboBox MinWidth="100"
+                                                  Margin="0,0,10,5"
+                                                  HorizontalAlignment="Left"
+                                                  ItemsSource="{Binding Source={x:Static local:ConditionDefinitions.PartySubjects}}"
+                                                  SelectedItem="{Binding Subject, Mode=TwoWay}" />
+
+                                        <!--  包含  -->
+                                        <ComboBox MinWidth="80"
+                                                  Margin="0,0,10,5"
+                                                  HorizontalAlignment="Left"
+                                                  ItemsSource="{Binding Definition.PredicateOptions}"
+                                                  SelectedItem="{Binding Predicate, Mode=TwoWay}" />
+
+                                        <!--  搜索输入框  -->
+                                        <sdl:MultiSelectComboBox Width="300"
+                                                                 MinWidth="300"
+                                                                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                                                                 EnableAutoComplete="True"
+                                                                 EnableBatchSelection="True"
+                                                                 EnableFiltering="True"
+                                                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                 IsEditable="True"
+                                                                 ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
+                                                                 MaxDropDownHeight="300"
+                                                                 SelectedItems="{Binding Object, Mode=TwoWay}"
+                                                                 SelectionMode="Multiple">
+                                            <!--<sdl:MultiSelectComboBox.Resources>
                                             <Style TargetType="{x:Type TextBlock}">
                                                 <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
                                                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                             </Style>
                                             <SolidColorBrush x:Key="MultiSelectComboBox.Text.Foreground" Color="#ffffff" />
                                         </sdl:MultiSelectComboBox.Resources>-->
-                                    </sdl:MultiSelectComboBox>
+                                        </sdl:MultiSelectComboBox>
 
-                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">则使用</ui:TextBlock>
+                                        <ui:TextBlock Margin="10,0"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                            则切换到队伍
+                                        </ui:TextBlock>
 
-                                    <!--  搜索输入框  -->
-                                    <sdl:MultiSelectComboBox Width="300"
-                                                             MinWidth="300"
-                                                             EnableAutoComplete="True"
-                                                             EnableBatchSelection="True"
-                                                             EnableFiltering="True"
-                                                             IsEditable="True"
-                                                             ItemsSource="{Binding Definition.ResultOptions, Mode=TwoWay}"
-                                                             MaxDropDownHeight="300"
-                                                             RemoveToolTipString="Delete"
-                                                             SelectedItems="{Binding Result, Mode=TwoWay}"
-                                                             SelectionMode="Multiple" />
 
-                                    <!--  清除按钮  -->
-                                    <Button Margin="0,0,0,5"
-                                            Command="{Binding DataContext.RemoveFilterCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}"
-                                            Content="删除" />
-                                </WrapPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                        <!--  结果  -->
+                                        <ui:TextBox MinWidth="160"
+                                                    Margin="0,0,10,0"
+                                                    Text="{Binding Result, Mode=TwoWay}" />
 
-                    <!--  添加条件按钮  -->
-                    <Button HorizontalAlignment="Left"
-                            Command="{Binding AddConditionConfigCommand}"
-                            Content="+ 添加条件" />
-                </StackPanel>
-            </ui:Card>
-        </StackPanel>
+                                        <!--  清除按钮  -->
+                                        <Button Command="{Binding DataContext.RemovePartyConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="删除" />
+                                    </WrapPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!--  添加条件按钮  -->
+                        <Button HorizontalAlignment="Left"
+                                Command="{Binding AddPartyConditionConfigCommand}"
+                                Content="+ 添加条件" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="0,0,0,10">
+                    <StackPanel>
+
+                        <ui:TextBlock Margin="0,0,0,8"
+                                      FontTypography="BodyStrong"
+                                      Text="角色设置" />
+                        <!--  使用ItemsControl来动态显示筛选条件  -->
+                        <ItemsControl ItemsSource="{Binding Config.PathingConditionConfig.AvatarConditions, Mode=TwoWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <WrapPanel Margin="0,0,0,10">
+                                        <!--  角色  -->
+                                        <ComboBox MinWidth="100"
+                                                  Margin="0,0,10,5"
+                                                  HorizontalAlignment="Left"
+                                                  ItemsSource="{Binding Source={x:Static local:ConditionDefinitions.AvatarSubjects}}"
+                                                  SelectedItem="{Binding Subject, Mode=TwoWay}" />
+
+                                        <!--  包含  -->
+                                        <ComboBox MinWidth="80"
+                                                  Margin="0,0,10,5"
+                                                  HorizontalAlignment="Left"
+                                                  ItemsSource="{Binding Definition.PredicateOptions}"
+                                                  SelectedItem="{Binding Predicate}" />
+
+                                        <!--  搜索输入框  -->
+                                        <Grid Width="300" MinWidth="300">
+                                            <sdl:MultiSelectComboBox Background="{DynamicResource ApplicationBackgroundBrush}"
+                                                                     EnableAutoComplete="True"
+                                                                     EnableBatchSelection="True"
+                                                                     EnableFiltering="True"
+                                                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                                     IsEditable="True"
+                                                                     ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
+                                                                     MaxDropDownHeight="300"
+                                                                     SelectedItems="{Binding Object, Mode=TwoWay}"
+                                                                     SelectionMode="Multiple" />
+
+                                        </Grid>
+
+                                        <ui:TextBlock Margin="10,0"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+                                            则作为
+                                        </ui:TextBlock>
+
+                                        <!--  结果  -->
+                                        <ComboBox MinWidth="160"
+                                                  Margin="0,0,10,0"
+                                                  HorizontalAlignment="Left"
+                                                  ItemsSource="{Binding Source={x:Static local:ConditionDefinitions.AvatarResultList}}"
+                                                  SelectedItem="{Binding Result}" />
+
+                                        <!--  清除按钮  -->
+                                        <Button Command="{Binding DataContext.RemoveAvatarConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                Content="删除" />
+                                    </WrapPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!--  添加条件按钮  -->
+                        <Button HorizontalAlignment="Left"
+                                Command="{Binding AddAvatarConditionConfigCommand}"
+                                Content="+ 添加条件" />
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </ScrollViewer>
 
         <ui:TitleBar Name="MyTitleBar" Grid.Row="0">
             <ui:TitleBar.Icon>

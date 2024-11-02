@@ -22,8 +22,9 @@ public class SwitchPartyTask
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    public async Task Start(string partyName, CancellationToken ct)
+    public async Task<bool> Start(string partyName, CancellationToken ct)
     {
+        Logger.LogInformation("尝试切换至队伍: {Name}", partyName);
         using var ra1 = CaptureToRectArea();
 
         if (!Bv.IsInPartyViewUi(ra1))
@@ -61,7 +62,7 @@ public class SwitchPartyTask
             if (currTeamName == partyName)
             {
                 Logger.LogInformation("切换队伍，当前队伍[{Name}]即为目标队伍，无需切换", partyName);
-                return;
+                return true;
             }
 
             // 点击队伍选择按钮
@@ -96,7 +97,7 @@ public class SwitchPartyTask
                 var found = await FindPage(partyName, page, partyDeleteBtn, ct);
                 if (found)
                 {
-                    return;
+                    return true;
                 }
 
                 // 点击下一页
@@ -113,10 +114,12 @@ public class SwitchPartyTask
             // 未找到
             Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
             await _returnMainUiTask.Start(ct);
+            return false;
         }
         else
         {
-            throw new Exception("未能打开队伍界面");
+            Logger.LogError("未能打开队伍界面");
+            return false;
         }
     }
 

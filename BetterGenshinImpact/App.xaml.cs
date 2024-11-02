@@ -99,7 +99,8 @@ public partial class App : Application
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
-                services.AddView<PathingConfigView, PathingConfigViewModel>();
+                services.AddSingleton<PathingConfigViewModel>();
+                // services.AddView<PathingConfigView, PathingConfigViewModel>();
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();

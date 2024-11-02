@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -40,6 +41,11 @@ public class Genshin
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y);
     }
 
+    public async Task Tp(double x, double y, bool force)
+    {
+        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, force);
+    }
+
     /// <summary>
     /// 传送到指定位置
     /// </summary>
@@ -51,5 +57,22 @@ public class Genshin
         double.TryParse(x, out var dx);
         double.TryParse(y, out var dy);
         await Tp(dx, dy);
+    }
+
+    public async Task Tp(string x, string y, bool force)
+    {
+        double.TryParse(x, out var dx);
+        double.TryParse(y, out var dy);
+        await Tp(dx, dy, force);
+    }
+
+    /// <summary>
+    /// 切换队伍
+    /// </summary>
+    /// <param name="partyName">队伍界面自定义的队伍名称</param>
+    /// <returns></returns>
+    public async Task SwitchParty(string partyName)
+    {
+        await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
     }
 }

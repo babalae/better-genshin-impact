@@ -11,6 +11,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 触发元素战技
 /// </summary>
+[Obsolete]
 public class ElementalSkillHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct)

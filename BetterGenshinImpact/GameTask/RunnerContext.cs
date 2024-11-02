@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Job;
+using Wpf.Ui.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask;
@@ -13,6 +14,15 @@ namespace BetterGenshinImpact.GameTask;
 /// </summary>
 public class RunnerContext : Singleton<RunnerContext>
 {
+    /// <summary>
+    /// 当前使用队伍名称
+    /// 游戏内定义的队伍名称
+    /// </summary>
+    public string? PartyName { get; set; }
+
+    /// <summary>
+    /// 当前队伍角色信息
+    /// </summary>
     private CombatScenes? _combatScenes;
 
     public async Task<CombatScenes?> GetCombatScenes(CancellationToken ct)
@@ -35,8 +45,14 @@ public class RunnerContext : Singleton<RunnerContext>
         return _combatScenes;
     }
 
+    public void ClearCombatScenes()
+    {
+        _combatScenes = null;
+    }
+
     public void Clear()
     {
+        PartyName = null;
         _combatScenes = null;
     }
 }

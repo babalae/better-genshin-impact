@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using System;
+using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 触发普通攻击
 /// </summary>
+[Obsolete]
 public class NormalAttackHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct)

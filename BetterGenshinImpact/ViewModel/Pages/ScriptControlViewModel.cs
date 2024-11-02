@@ -1,12 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.View.Controls;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
@@ -25,7 +23,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -239,16 +236,17 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     {
         foreach (var child in stackPanel.Children)
         {
-            if (child is StackPanel childStackPanel)
+            if (child is CheckBox { IsChecked: true } checkBox && checkBox.Tag is string filePath)
             {
-                foreach (var grandChild in childStackPanel.Children)
+                var fileInfo = new FileInfo(filePath);
+                if (!fileInfo.Attributes.HasFlag(FileAttributes.Directory))
                 {
-                    if (grandChild is CheckBox { IsChecked: true } checkBox)
-                    {
-                        var fileInfo = new FileInfo((string)checkBox.Tag);
-                        SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
-                    }
+                    SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.Directory!.Name));
                 }
+            }
+            else if (child is StackPanel childStackPanel)
+            {
+                AddSelectedPathingScripts(childStackPanel);
             }
         }
     }

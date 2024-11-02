@@ -153,7 +153,6 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [RelayCommand]
     public async void OnOpenSettings()
     {
-        var view = App.GetService<PathingConfigView>();
         // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         // {
         //     Content = view,
@@ -163,6 +162,8 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         //
         // await uiMessageBox.ShowDialogAsync();
 
+        var vm = App.GetService<PathingConfigViewModel>();
+        var view = new PathingConfigView(vm);
         view?.ShowDialog();
     }
 

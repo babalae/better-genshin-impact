@@ -20,6 +20,24 @@ public class NahidaCollectHandler : IActionHandler
     {
         Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
 
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        if (combatScenes == null)
+        {
+            Logger.LogError("队伍识别未初始化成功！");
+            return;
+        }
+
+        // 切人
+        if (combatScenes.AvatarMap.TryGetValue("纳西妲", out var nahida))
+        {
+            nahida.TrySwitch();
+        }
+        else
+        {
+            Logger.LogError("队伍中未找到纳西妲角色！");
+            return;
+        }
+
         var cd = DateTime.Now - lastETime;
         if (cd < TimeSpan.FromSeconds(10))
         {
@@ -28,7 +46,7 @@ public class NahidaCollectHandler : IActionHandler
 
         var dpi = TaskContext.Instance().DpiScale;
 
-        int x = (int)(250 * dpi), y = (int)(-30 * dpi);
+        int x = (int)(400 * dpi), y = (int)(-30 * dpi);
         int i = 60;
         // 视角拉到最下面
         Simulation.SendInput.Mouse.MoveMouseBy(0, 10000);
