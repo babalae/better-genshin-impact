@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:dd="urn:gong-wpf-dragdrop"
                  xmlns:local="clr-namespace:BetterGenshinImpact.Model"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:sdl="http://schemas.sdl.com/xaml"
@@ -44,10 +45,17 @@
                                       FontTypography="BodyStrong"
                                       Text="队伍切换设置" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
-                        <ItemsControl ItemsSource="{Binding Config.PathingConditionConfig.PartyConditions, Mode=TwoWay}">
+                        <ItemsControl dd:DragDrop.IsDragSource="True"
+                                      dd:DragDrop.IsDropTarget="True"
+                                      dd:DragDrop.UseDefaultDragAdorner="True"
+                                      ItemsSource="{Binding Config.PathingConditionConfig.PartyConditions, Mode=TwoWay}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <WrapPanel Margin="0,0,0,10">
+                                        <ui:FontIcon Margin="0,0,15,0"
+                                                     FontSize="20"
+                                                     Glyph="&#xe411;"
+                                                     Style="{StaticResource FaFontIconStyleForOneDragon}" />
                                         <!--  采集物、路径动作  -->
                                         <ComboBox MinWidth="100"
                                                   Margin="0,0,10,5"
@@ -119,10 +127,17 @@
                                       FontTypography="BodyStrong"
                                       Text="角色设置（存在多个符合条件的角色情况下，优先使用游戏内编队编号更小的）" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
-                        <ItemsControl ItemsSource="{Binding Config.PathingConditionConfig.AvatarConditions, Mode=TwoWay}">
+                        <ItemsControl dd:DragDrop.IsDragSource="True"
+                                      dd:DragDrop.IsDropTarget="True"
+                                      dd:DragDrop.UseDefaultDragAdorner="True"
+                                      ItemsSource="{Binding Config.PathingConditionConfig.AvatarConditions, Mode=TwoWay}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <WrapPanel Margin="0,0,0,10">
+                                        <ui:FontIcon Margin="0,0,15,0"
+                                                     FontSize="20"
+                                                     Glyph="&#xe411;"
+                                                     Style="{StaticResource FaFontIconStyleForOneDragon}" />
                                         <!--  角色  -->
                                         <ComboBox MinWidth="100"
                                                   Margin="0,0,10,5"

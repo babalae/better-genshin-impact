@@ -57,9 +57,11 @@
                                          Width="10"
                                          Height="10"
                                          Margin="10,0,10,0"
-                                         Fill="{Binding StatusColor}" />
+                                         Fill="{Binding StatusColor}"
+                                         IsHitTestVisible="False" />
                                 <TextBlock Grid.Column="2"
                                            VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
                                            Text="{Binding Name}" />
                                 <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
                             </Grid>

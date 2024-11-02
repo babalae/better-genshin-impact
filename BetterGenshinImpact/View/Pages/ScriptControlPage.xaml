@@ -49,6 +49,7 @@
                 <ui:ListView Grid.Row="1"
                              dd:DragDrop.IsDragSource="True"
                              dd:DragDrop.IsDropTarget="True"
+                             dd:DragDrop.UseDefaultDragAdorner="True"
                              ItemsSource="{Binding ScriptGroups, Mode=TwoWay}"
                              SelectedItem="{Binding SelectedScriptGroup, Mode=TwoWay}"
                              SelectionMode="Single">
@@ -215,6 +216,7 @@
                              VerticalAlignment="Stretch"
                              dd:DragDrop.IsDragSource="True"
                              dd:DragDrop.IsDropTarget="True"
+                             dd:DragDrop.UseDefaultDragAdorner="True"
                              ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=TwoWay}"
                              SelectionMode="Single">
                     <ListView.View>
