@@ -143,7 +143,8 @@ namespace BetterGenshinImpact.GameTask
             GameCapture.Start(hWnd,
                 new Dictionary<string, object>()
                 {
-                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache }
+                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
                 }
             );
 

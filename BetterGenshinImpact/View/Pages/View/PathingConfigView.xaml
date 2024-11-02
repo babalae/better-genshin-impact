@@ -13,8 +13,15 @@
                  d:DesignHeight="450"
                  d:DesignWidth="300"
                  mc:Ignorable="d">
+    <Window.Resources>
+        <SolidColorBrush x:Key="MultiSelectComboBox.Text.Foreground" Color="#ffffff" />
 
-
+        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.SelectedOrder.Foreground" Color="#000000" />
+        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selector.Background" Color="#000000" />
+        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selector.Border" Color="#000000" />
+        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selected.Background" Color="#000000" />
+        <SolidColorBrush x:Key="MultiSelectComboBox.DropDown.ListBoxItem.Selected.Border" Color="#000000" />
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -47,14 +54,24 @@
                                     <!--  搜索输入框  -->
                                     <sdl:MultiSelectComboBox Width="300"
                                                              MinWidth="300"
+                                                             Background="{DynamicResource ApplicationBackgroundBrush}"
                                                              EnableAutoComplete="True"
                                                              EnableBatchSelection="True"
                                                              EnableFiltering="True"
+                                                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                              IsEditable="True"
                                                              ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
                                                              MaxDropDownHeight="300"
                                                              SelectedItems="{Binding Object, Mode=TwoWay}"
-                                                             SelectionMode="Multiple" />
+                                                             SelectionMode="Multiple">
+                                        <!--<sdl:MultiSelectComboBox.Resources>
+                                            <Style TargetType="{x:Type TextBlock}">
+                                                <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            </Style>
+                                            <SolidColorBrush x:Key="MultiSelectComboBox.Text.Foreground" Color="#ffffff" />
+                                        </sdl:MultiSelectComboBox.Resources>-->
+                                    </sdl:MultiSelectComboBox>
 
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">则使用</ui:TextBlock>
 

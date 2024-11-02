@@ -56,6 +56,12 @@ public partial class AllConfig : ObservableObject
     private bool _wgcUseBitmapCache = true;
 
     /// <summary>
+    /// 自动修复Win11下BitBlt截图方式不可用的问题
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoFixWin11BitBlt = true;
+
+    /// <summary>
     /// 推理使用的设备
     /// </summary>
     [ObservableProperty]

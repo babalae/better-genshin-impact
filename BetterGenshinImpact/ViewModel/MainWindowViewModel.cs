@@ -1,11 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -108,6 +110,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             _logger.LogWarning("获取 BetterGI 最新版本信息失败");
         }
 
+        //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
+        if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
+        {
+            BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+        }
+
+        // 更新仓库
         ScriptRepoUpdater.Instance.AutoUpdate();
     }
 

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View;
@@ -48,7 +49,8 @@ public partial class CaptureTestWindow : Window
         _capture.Start(hWnd,
             new Dictionary<string, object>()
             {
-                { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache }
+                { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
+                { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11 && TaskContext.Instance().Config.AutoFixWin11BitBlt }
             }
         );
 

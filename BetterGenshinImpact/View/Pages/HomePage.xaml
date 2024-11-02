@@ -296,23 +296,29 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="系统图形设置"
+                                  Text="自动关闭 Windows11 窗口化优化以支持 BitBlt"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可在此处关闭 Windows11 窗口化优化以支持 BitBlt"
+                                  Text="修改设置后重启游戏生效"
                                   TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,10,0"
+                                     IsChecked="{Binding Config.AutoFixWin11BitBlt, Mode=TwoWay}" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
-                               Grid.Column="1"
+                               Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
-                               Content="开始设置" />
+                               Content="手动设置" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

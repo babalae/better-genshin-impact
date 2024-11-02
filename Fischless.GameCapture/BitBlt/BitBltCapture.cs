@@ -17,6 +17,13 @@ public class BitBltCapture : IGameCapture
     {
         _hWnd = hWnd;
         IsCapturing = true;
+        if (settings != null && settings.TryGetValue("autoFixWin11BitBlt", out var value))
+        {
+            if (value is true)
+            {
+                BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+            }
+        }
     }
 
     public Bitmap? Capture()
