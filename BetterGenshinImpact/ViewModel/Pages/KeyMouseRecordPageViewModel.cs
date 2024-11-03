@@ -227,7 +227,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public void OnGoToKmScriptUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/kmscript.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/autos/kmscript.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

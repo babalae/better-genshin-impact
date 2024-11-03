@@ -170,7 +170,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     [RelayCommand]
     public void OnGoToPathingUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/autos/pathing.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/autos/pathing.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

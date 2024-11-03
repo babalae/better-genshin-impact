@@ -49,6 +49,6 @@ public partial class MacroSettingsPageViewModel : ObservableObject, INavigationA
     [RelayCommand]
     public void OnGoToOneKeyMacroUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/onem.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/macro/onem.html") { UseShellExecute = true });
     }
 }
