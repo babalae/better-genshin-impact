@@ -178,18 +178,37 @@ public class SystemControl
         ActivateWindow(TaskContext.Instance().GameHandle);
     }
 
-    public static void Focus(nint hWnd)
+    public static void FocusWindow(nint hWnd)
     {
         if (User32.IsWindow(hWnd))
         {
             _ = User32.SendMessage(hWnd, User32.WindowMessage.WM_SYSCOMMAND, User32.SysCommand.SC_RESTORE, 0);
             _ = User32.SetForegroundWindow(hWnd);
+
             while (User32.IsIconic(hWnd))
             {
                 continue;
             }
 
             _ = User32.BringWindowToTop(hWnd);
+            _ = User32.SetActiveWindow(hWnd);
+        }
+    }
+
+    public static void RestoreWindow(nint hWnd)
+    {
+        if (User32.IsWindow(hWnd))
+        {
+            _ = User32.SendMessage(hWnd, User32.WindowMessage.WM_SYSCOMMAND, User32.SysCommand.SC_RESTORE, 0);
+            _ = User32.SetForegroundWindow(hWnd);
+
+            if (User32.IsIconic(hWnd))
+            {
+                _ = User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
+            }
+
+            _ = User32.BringWindowToTop(hWnd);
+            _ = User32.SetActiveWindow(hWnd);
         }
     }
 

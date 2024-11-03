@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.ComponentModel;
@@ -9,6 +10,8 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Interop;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -116,19 +119,18 @@ internal static class RuntimeHelper
             handle = new EventWaitHandle(false, EventResetMode.AutoReset, instanceName);
         }
 
-        Task.Factory.StartNew(() =>
+        _ = Task.Factory.StartNew(() =>
         {
             while (handle.WaitOne())
             {
-#if false
-                UIDispatcherHelper.BeginInvoke(main =>
+                Application.Current.Dispatcher?.BeginInvoke(() =>
                 {
-                    main?.Activate();
-                    main?.Show();
+                    Application.Current.MainWindow?.Show();
+                    Application.Current.MainWindow?.Activate();
+                    SystemControl.RestoreWindow(new WindowInteropHelper(Application.Current.MainWindow).Handle);
                 });
-#endif
             }
-        }, TaskCreationOptions.LongRunning);
+        }, TaskCreationOptions.LongRunning).ConfigureAwait(false);
     }
 
     public static void CheckIntegration()
