@@ -68,7 +68,8 @@
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
                 <ui:Button Grid.Row="2"
-                           Margin="2"
+                           Margin="0,2,4,2"
+                           HorizontalAlignment="Stretch"
                            Command="{Binding StartMultiScriptGroupCommand}"
                            Content="连续执行" />
             </Grid>
