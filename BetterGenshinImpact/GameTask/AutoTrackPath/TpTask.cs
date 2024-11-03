@@ -508,7 +508,7 @@ public class TpTask(CancellationToken ct)
                     continue;
                 }
 
-                Logger.LogInformation("传送：点击 {Option}", textRegion.Text);
+                Logger.LogInformation("传送：点击 {Option}", textRegion.Text.Replace(">", ""));
                 var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
                 time = time < 500 ? 500 : time;
                 Thread.Sleep(time);
