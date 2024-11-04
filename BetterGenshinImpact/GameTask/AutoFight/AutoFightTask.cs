@@ -161,10 +161,10 @@ public class AutoFightTask : ISoloTask
 
     private bool HasFightFlag(ImageRegion imageRegion)
     {
-        if (RuntimeHelper.IsDebug)
-        {
-            imageRegion.SrcMat.SaveImage(Global.Absolute(@"log\fight\" + $"{DateTime.Now:yyyyMMdd_HHmmss_ffff}.png"));
-        }
+        // if (RuntimeHelper.IsDebug)
+        // {
+        //     imageRegion.SrcMat.SaveImage(Global.Absolute(@"log\fight\" + $"{DateTime.Now:yyyyMMdd_HHmmss_ffff}.png"));
+        // }
         var dict = _predictor.Detect(imageRegion);
         return dict.ContainsKey("health_bar") || dict.ContainsKey("enemy_identify");
     }

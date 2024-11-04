@@ -43,7 +43,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="队伍切换设置" />
+                                      Text="队伍切换设置（路径中存在符合条件的动作、采集物的情况下，自动切换至对应队伍）" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -170,7 +170,7 @@
                                         <ui:TextBlock Margin="10,0"
                                                       VerticalAlignment="Center"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                            则作为
+                                            则角色执行
                                         </ui:TextBlock>
 
                                         <!--  结果  -->

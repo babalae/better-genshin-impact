@@ -111,7 +111,7 @@ public partial class PathingConditionConfig : ObservableObject
 
         foreach (var avatarCondition in AvatarConditions)
         {
-            if (avatarCondition.Result == "作为主要行走人员")
+            if (avatarCondition.Result == "作为主要行走角色")
             {
                 foreach (var avatar in combatScenes.Avatars)
                 {

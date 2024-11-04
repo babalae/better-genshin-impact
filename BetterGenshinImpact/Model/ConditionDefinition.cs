@@ -137,7 +137,7 @@ public class ConditionDefinitions
 
     public static List<string> AvatarSubjects { get; } = ["队伍中角色"];
 
-    public static List<string> AvatarResultList { get; } = ["循环短E", "循环长E", "主要行走角色"];
+    public static List<string> AvatarResultList { get; } = ["循环短E", "循环长E", "作为主要行走角色"];
 
     public static Dictionary<string, string> ActionCnDic { get; } = new()
     {
