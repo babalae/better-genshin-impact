@@ -91,12 +91,12 @@ public class GlobalMethod
     public static void Click(int x, int y)
     {
         MoveMouseTo(x, y);
-        Simulation.SendInput.Mouse.LeftButtonClick();
+        LeftButtonClick();
     }
 
     public static void LeftButtonClick()
     {
-        Simulation.SendInput.Mouse.LeftButtonClick();
+        Simulation.SendInput.Mouse.LeftButtonDown().Sleep(60).LeftButtonUp();
     }
 
     public static void LeftButtonDown()
@@ -111,7 +111,7 @@ public class GlobalMethod
 
     public static void RightButtonClick()
     {
-        Simulation.SendInput.Mouse.RightButtonClick();
+        Simulation.SendInput.Mouse.RightButtonDown().Sleep(60).RightButtonUp();
     }
 
     public static void RightButtonDown()
