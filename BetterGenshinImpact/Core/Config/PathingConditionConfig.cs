@@ -28,7 +28,7 @@ public partial class PathingConditionConfig : ObservableObject
     /// <param name="materialName">采集物名称</param>
     /// <param name="specialActions">特殊动作</param>
     /// <returns></returns>
-    public string? FilterPartyName(string materialName, List<string?> specialActions)
+    public string? FilterPartyName(string? materialName, List<string?> specialActions)
     {
         if (specialActions is { Count: > 0 })
         {
@@ -54,7 +54,11 @@ public partial class PathingConditionConfig : ObservableObject
         }
 
         // 采集物匹配队伍名
-        var materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object.Contains(materialName));
+        Condition? materialCondition = null;
+        if (!string.IsNullOrEmpty(materialName))
+        {
+            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object.Contains(materialName));
+        }
         if (materialCondition is { Result: not null })
         {
             return materialCondition.Result;

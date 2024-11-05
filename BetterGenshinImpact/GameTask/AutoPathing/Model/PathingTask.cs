@@ -39,8 +39,13 @@ public class PathingTask
     /// 获取采集物名称
     /// </summary>
     /// <returns></returns>
-    public string GetMaterialName()
+    public string? GetMaterialName()
     {
+        if (string.IsNullOrWhiteSpace(FullPath))
+        {
+            return null;
+        }
+
         // 获取 MapPathingViewModel.PathJsonPath
         var basePath = MapPathingViewModel.PathJsonPath;
 
