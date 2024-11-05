@@ -4,11 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
-using Microsoft.Extensions.Logging;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -21,6 +18,26 @@ public partial class PathingConditionConfig : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<Condition> _avatarConditions = [];
+
+    public static PathingConditionConfig Default => new()
+    {
+        AvatarConditions =
+        [
+            new Condition
+            {
+                Subject = "队伍中角色",
+                Object = ["绮良良", "莱依拉", "芭芭拉", "七七"],
+                Result = "循环短E"
+            },
+
+            new Condition
+            {
+                Subject = "队伍中角色",
+                Object = ["钟离"],
+                Result = "循环长E"
+            }
+        ]
+    };
 
     /// <summary>
     /// 找出当前应该切换的队伍名称

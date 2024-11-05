@@ -139,10 +139,10 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public ScriptConfig ScriptConfig { get; set; } = new();
 
-    // /// <summary>
-    // /// 路径追踪配置
-    // /// </summary>
-    public PathingConditionConfig PathingConditionConfig { get; set; } = new();
+    /// <summary>
+    /// 路径追踪配置
+    /// </summary>
+    public PathingConditionConfig PathingConditionConfig { get; set; } = PathingConditionConfig.Default;
 
     /// <summary>
     ///     快捷键配置
