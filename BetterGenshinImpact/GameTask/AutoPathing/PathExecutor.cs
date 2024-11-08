@@ -30,6 +30,7 @@ public class PathExecutor(CancellationToken ct)
 {
     private readonly CameraRotateTask _rotateTask = new(ct);
     private readonly TrapEscaper _trapEscaper = new(ct);
+    private BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
 
     private PathingPartyConfig? _partyConfig;
 
@@ -126,6 +127,7 @@ public class PathExecutor(CancellationToken ct)
                 // 不管咋样，松开所有按键
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                 Simulation.SendInput.Mouse.RightButtonUp();
+                await _blessingOfTheWelkinMoonTask.Start(ct);
             }
         }
     }
@@ -603,5 +605,13 @@ public class PathExecutor(CancellationToken ct)
         }
 
         return null;
+    }
+
+    /**
+     * 处理月卡问题
+     */
+
+    public void BlessingOfTheWelkinMoon()
+    {
     }
 }

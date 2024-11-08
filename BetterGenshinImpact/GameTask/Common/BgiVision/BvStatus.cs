@@ -10,6 +10,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using Vanara.PInvoke;
 using System.Threading;
+using BetterGenshinImpact.GameTask.GameLoading.Assets;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -171,6 +172,16 @@ public static partial class Bv
 
         // 判断颜色是否是 (255, 90, 90)
         return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+    }
+
+    /// <summary>
+    /// 在空月祝福界面
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInBlessingOfTheWelkinMoon(ImageRegion captureRa)
+    {
+        return captureRa.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
     }
 }
 
