@@ -131,13 +131,6 @@ public class AutoFightTask : ISoloTask
 
     private async Task<bool> CheckFightFinish()
     {
-        // 小道具判断
-        if (HasFightFlagByGadget(CaptureToRectArea()))
-        {
-            _lastFightFlagTime = DateTime.Now;
-            return false;
-        }
-
         //  YOLO 判断血条和怪物位置
         if (HasFightFlagByYolo(CaptureToRectArea()))
         {
@@ -180,12 +173,14 @@ public class AutoFightTask : ISoloTask
         return dict.ContainsKey("health_bar") || dict.ContainsKey("enemy_identify");
     }
 
-    private bool HasFightFlagByGadget(ImageRegion imageRegion)
-    {
-        // 小道具位置 1920-133,800,60,50
-        var gadgetMat = imageRegion.DeriveCrop(AutoFightAssets.Instance.GadgetRect).SrcMat;
-        var list = ContoursHelper.FindSpecifyColorRects(gadgetMat, new Scalar(225, 220, 225), new Scalar(255, 255, 255));
-        // 要大于 gadgetMat 的 1/2
-        return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
-    }
+    // 无用
+    // [Obsolete]
+    // private bool HasFightFlagByGadget(ImageRegion imageRegion)
+    // {
+    //     // 小道具位置 1920-133,800,60,50
+    //     var gadgetMat = imageRegion.DeriveCrop(AutoFightAssets.Instance.GadgetRect).SrcMat;
+    //     var list = ContoursHelper.FindSpecifyColorRects(gadgetMat, new Scalar(225, 220, 225), new Scalar(255, 255, 255));
+    //     // 要大于 gadgetMat 的 1/2
+    //     return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
+    // }
 }
