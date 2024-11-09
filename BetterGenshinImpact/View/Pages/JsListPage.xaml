@@ -131,6 +131,13 @@
                     <Setter Property="Background" Value="Transparent" />
                 </Style>
             </ListView.Style>
+            <ListView.ItemContainerStyle>
+                <Style BasedOn="{StaticResource ListViewItemStyle}" TargetType="ui:ListViewItem">
+                    <Setter Property="ToolTip" Value="{Binding Manifest.Description}" />
+                    <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
+                    <Setter Property="ToolTipService.ShowDuration" Value="60000" />
+                </Style>
+            </ListView.ItemContainerStyle>
         </ui:ListView>
     </Grid>
 </UserControl>
