@@ -74,7 +74,7 @@ public static partial class Bv
     /// <param name="ct"></param>
     /// <param name="retryTimes"></param>
     /// <returns></returns>
-    public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 3)
+    public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 5)
     {
         return await NewRetry.WaitForAction(() => IsInPartyViewUi(TaskControl.CaptureToRectArea()), ct, retryTimes);
     }

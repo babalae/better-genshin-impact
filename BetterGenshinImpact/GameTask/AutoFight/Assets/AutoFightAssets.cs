@@ -36,6 +36,9 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Dictionary<string, List<Rect>> AvatarSideIconRectListMap; // 侧边栏角色头像 联机状态下
     public Dictionary<string, List<Rect>> AvatarIndexRectListMap; // 侧边栏角色头像对应的白色块 联机状态下
 
+    // 小道具位置
+    public Rect GadgetRect;
+
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -46,6 +49,9 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             (int)(77 * AssetScale), (int)(77 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
+        // 小道具位置 1920-133,800,60,50
+        GadgetRect = new Rect(CaptureRect.Width - (int)(133 * AssetScale), (int)(800 * AssetScale),
+            (int)(60 * AssetScale), (int)(50 * AssetScale));
         // 结束提示从中间开始找相对位置
         EndTipsUpperRect = new Rect(CaptureRect.Width / 2 - (int)(100 * AssetScale), (int)(243 * AssetScale),
             (int)(200 * AssetScale), (int)(50 * AssetScale));

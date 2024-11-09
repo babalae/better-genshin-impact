@@ -1,17 +1,18 @@
 ﻿using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
-using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -28,6 +29,8 @@ public class AutoFightTask : ISoloTask
     private readonly BgiYoloV8Predictor _predictor;
 
     private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
+
+    private readonly double _dpi = TaskContext.Instance().DpiScale;
 
     public AutoFightTask(AutoFightParam taskParam)
     {
@@ -128,8 +131,15 @@ public class AutoFightTask : ISoloTask
 
     private async Task<bool> CheckFightFinish()
     {
+        // 小道具判断
+        if (HasFightFlagByGadget(CaptureToRectArea()))
+        {
+            _lastFightFlagTime = DateTime.Now;
+            return false;
+        }
+
         //  YOLO 判断血条和怪物位置
-        if (HasFightFlag(CaptureToRectArea()))
+        if (HasFightFlagByYolo(CaptureToRectArea()))
         {
             _lastFightFlagTime = DateTime.Now;
             return false;
@@ -139,14 +149,15 @@ public class AutoFightTask : ISoloTask
         if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > 5)
         {
             // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
-            List<int> angles = [0, 90, 180, 270];
-            var rotateTask = new CameraRotateTask(_ct);
-            foreach (var a in angles)
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Delay(300, _ct);
+            for (var i = 0; i < 10; i++)
             {
-                await rotateTask.WaitUntilRotatedTo(a, 5, 30);
-                await Delay(1000, _ct!); // 等待视角稳定
-                if (HasFightFlag(CaptureToRectArea()))
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(100 * _dpi), 0);
+                await Delay(800, _ct); // 等待视角稳定
+                if (HasFightFlagByYolo(CaptureToRectArea()))
                 {
+                    _lastFightFlagTime = DateTime.Now;
                     return false;
                 }
             }
@@ -159,7 +170,7 @@ public class AutoFightTask : ISoloTask
         return false;
     }
 
-    private bool HasFightFlag(ImageRegion imageRegion)
+    private bool HasFightFlagByYolo(ImageRegion imageRegion)
     {
         // if (RuntimeHelper.IsDebug)
         // {
@@ -167,5 +178,14 @@ public class AutoFightTask : ISoloTask
         // }
         var dict = _predictor.Detect(imageRegion);
         return dict.ContainsKey("health_bar") || dict.ContainsKey("enemy_identify");
+    }
+
+    private bool HasFightFlagByGadget(ImageRegion imageRegion)
+    {
+        // 小道具位置 1920-133,800,60,50
+        var gadgetMat = imageRegion.DeriveCrop(AutoFightAssets.Instance.GadgetRect).SrcMat;
+        var list = ContoursHelper.FindSpecifyColorRects(gadgetMat, new Scalar(225, 220, 225), new Scalar(255, 255, 255));
+        // 要大于 gadgetMat 的 1/2
+        return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
     }
 }
