@@ -72,7 +72,7 @@ public class CombatScenes : IDisposable
             // 联机状态下判断
             var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
             var p = "p";
-            if (onePRa.IsEmpty())
+            if (!onePRa.IsEmpty())
             {
                 Logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
                 p = "1p";
