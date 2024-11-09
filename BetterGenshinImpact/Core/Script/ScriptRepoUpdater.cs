@@ -215,10 +215,18 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public async Task ImportScriptFromClipboard()
     {
         // 获取剪切板内容
-        if (Clipboard.ContainsText())
+        try
         {
-            string clipboardText = Clipboard.GetText();
-            await ImportScriptFromUri(clipboardText, true);
+            if (Clipboard.ContainsText())
+            {
+                string clipboardText = Clipboard.GetText();
+                await ImportScriptFromUri(clipboardText, true);
+            }
+        }
+        catch (Exception e)
+        {
+            // 剪切板内容可能获取会失败
+            Console.WriteLine(e);
         }
     }
 
@@ -373,7 +381,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 {
                     if (Directory.Exists(destPath))
                     {
-                        Directory.Delete(destPath, true);
+                        DirectoryHelper.DeleteDirectoryWithReadOnlyCheck(destPath);
                     }
 
                     CopyDirectory(scriptPath, destPath);
@@ -417,6 +425,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
             CopyDirectory(dir, destSubDir);
+            // 图标处理
+            DealWithIconFolder(destSubDir);
         }
     }
 
