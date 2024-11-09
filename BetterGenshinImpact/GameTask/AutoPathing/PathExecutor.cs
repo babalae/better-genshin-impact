@@ -22,6 +22,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
@@ -621,7 +622,15 @@ public class PathExecutor(CancellationToken ct)
         // 处理月卡
         await _blessingOfTheWelkinMoonTask.Start(ct);
 
-        // 判断是否进入剧情
+        if (PartyConfig.AutoSkipEnabled)
+        {
+            // 判断是否进入剧情
+            await AutoSkip();
+        }
+    }
+
+    private async Task AutoSkip()
+    {
         var ra = CaptureToRectArea();
         var disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
         if (disabledUiButtonRa.IsExist())
@@ -638,11 +647,11 @@ public class PathExecutor(CancellationToken ct)
 
             while (true)
             {
-                var content = CaptureToContent();
-                disabledUiButtonRa = content.CaptureRectArea.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+                ra = CaptureToRectArea();
+                disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
                 if (disabledUiButtonRa.IsExist())
                 {
-                    _autoSkipTrigger.OnCapture(content);
+                    _autoSkipTrigger.OnCapture(new CaptureContent(ra));
                 }
                 else
                 {

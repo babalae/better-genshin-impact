@@ -54,4 +54,12 @@ public partial class PathingPartyConfig : ObservableObject
 
     [JsonIgnore]
     public List<string> AvatarIndexList { get; } = ["", "1", "2", "3", "4"];
+
+    // 只在传送传送点时复活
+    [ObservableProperty]
+    private bool _onlyInTeleportRecover = false;
+
+    // 启用进入剧情自动脱离
+    [ObservableProperty]
+    private bool _autoSkipEnabled = false;
 }

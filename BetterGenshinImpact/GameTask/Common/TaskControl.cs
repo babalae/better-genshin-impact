@@ -203,16 +203,16 @@ public class TaskControl
         }
     }
 
-    private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
-    {
-        var bitmap = CaptureGameBitmap(gameCapture);
-        return new CaptureContent(bitmap, 0, 0);
-    }
-
-    public static CaptureContent CaptureToContent()
-    {
-        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
-    }
+    // private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
+    // {
+    //     var bitmap = CaptureGameBitmap(gameCapture);
+    //     return new CaptureContent(bitmap, 0, 0);
+    // }
+    //
+    // public static CaptureContent CaptureToContent()
+    // {
+    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
+    // }
 
     // public static ImageRegion CaptureToRectArea()
     // {

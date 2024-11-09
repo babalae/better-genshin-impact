@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask;
 public class CaptureContent : IDisposable
 {
     public static readonly int MaxFrameIndexSecond = 60;
-    public Bitmap SrcBitmap { get; }
+    private Bitmap? SrcBitmap { get; }
     public int FrameIndex { get; }
     public double TimerInterval { get; }
 
@@ -30,9 +30,18 @@ public class CaptureContent : IDisposable
         CaptureRectArea = gameCaptureRegion.DeriveTo1080P();
     }
 
+    /// <summary>
+    /// 用于兼容新的 ImageRegion
+    /// </summary>
+    /// <param name="ra"></param>
+    public CaptureContent(ImageRegion ra)
+    {
+        CaptureRectArea = ra;
+    }
+
     public void Dispose()
     {
         CaptureRectArea.Dispose();
-        SrcBitmap.Dispose();
+        SrcBitmap?.Dispose();
     }
 }
