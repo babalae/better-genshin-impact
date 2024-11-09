@@ -36,7 +36,7 @@ public class SwitchPartyTask
             }
 
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
-            await Delay(3000, ct); // 加载2s
+            await Delay(1000, ct); // 加载2s // 由于胡桃可以不等待直接进入，所以这里只等待1s
         }
 
         if (await Bv.WaitForPartyViewUi(ct))
