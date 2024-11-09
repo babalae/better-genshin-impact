@@ -209,11 +209,10 @@ public class TaskControl
         return new CaptureContent(bitmap, 0, 0);
     }
 
-    // [Obsolete]
-    // public static CaptureContent CaptureToContent()
-    // {
-    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
-    // }
+    public static CaptureContent CaptureToContent()
+    {
+        return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
+    }
 
     // public static ImageRegion CaptureToRectArea()
     // {

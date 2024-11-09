@@ -19,6 +19,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -30,7 +32,8 @@ public class PathExecutor(CancellationToken ct)
 {
     private readonly CameraRotateTask _rotateTask = new(ct);
     private readonly TrapEscaper _trapEscaper = new(ct);
-    private BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private AutoSkipTrigger? _autoSkipTrigger;
 
     private PathingPartyConfig? _partyConfig;
 
@@ -95,6 +98,7 @@ public class PathExecutor(CancellationToken ct)
             {
                 foreach (var waypoint in waypoints)
                 {
+                    await ResolveAnomalies();
                     await RecoverWhenLowHp(); // 低血量恢复
                     if (waypoint.Type == WaypointType.Teleport.Code)
                     {
@@ -127,7 +131,7 @@ public class PathExecutor(CancellationToken ct)
                 // 不管咋样，松开所有按键
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                 Simulation.SendInput.Mouse.RightButtonUp();
-                await _blessingOfTheWelkinMoonTask.Start(ct);
+                await ResolveAnomalies();
             }
         }
     }
@@ -608,10 +612,50 @@ public class PathExecutor(CancellationToken ct)
     }
 
     /**
-     * 处理月卡问题
+     * 处理各种异常场景
+     * 需要保证耗时不能太高
      */
 
-    public void BlessingOfTheWelkinMoon()
+    public async Task ResolveAnomalies()
     {
+        // 处理月卡
+        await _blessingOfTheWelkinMoonTask.Start(ct);
+
+        // 判断是否进入剧情
+        var ra = CaptureToRectArea();
+        var disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+        if (disabledUiButtonRa.IsExist())
+        {
+            Logger.LogWarning("进入剧情，自动点击剧情直到结束");
+
+            if (_autoSkipTrigger == null)
+            {
+                _autoSkipTrigger = new AutoSkipTrigger();
+                _autoSkipTrigger.Init();
+            }
+
+            int noDisabledUiButtonTimes = 0;
+
+            while (true)
+            {
+                var content = CaptureToContent();
+                disabledUiButtonRa = content.CaptureRectArea.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+                if (disabledUiButtonRa.IsExist())
+                {
+                    _autoSkipTrigger.OnCapture(content);
+                }
+                else
+                {
+                    noDisabledUiButtonTimes++;
+                    if (noDisabledUiButtonTimes > 50)
+                    {
+                        Logger.LogInformation("自动剧情结束");
+                        break;
+                    }
+                }
+
+                await Delay(210, ct);
+            }
+        }
     }
 }

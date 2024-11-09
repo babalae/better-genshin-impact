@@ -29,6 +29,7 @@ public class BlessingOfTheWelkinMoonTask
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
                 {
+                    Logger.LogInformation("检测到空月祝福界面，自动点击");
                     TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                     await Delay(5000, ct);
 
