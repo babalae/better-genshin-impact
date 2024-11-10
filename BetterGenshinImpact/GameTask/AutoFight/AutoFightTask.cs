@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using OpenCvSharp;
+using Vanara;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -63,7 +64,7 @@ public class AutoFightTask : ISoloTask
         combatScenes.BeforeTask(cts2.Token);
 
         // 战斗操作
-        var fightTask = Task.Run(() =>
+        var fightTask = Task.Run(async () =>
         {
             try
             {
@@ -74,35 +75,11 @@ public class AutoFightTask : ISoloTask
                     {
                         command.Execute(combatScenes);
                     }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-                Debug.WriteLine(e.StackTrace);
-            }
-        }, cts2.Token);
 
-        // 战斗结束检测线程
-        var endTask = Task.Run(async () =>
-        {
-            if (!_taskParam.FightFinishDetectEnabled)
-            {
-                return;
-            }
-
-            try
-            {
-                while (!cts2.IsCancellationRequested)
-                {
-                    var finish = await CheckFightFinish();
-                    if (finish)
+                    if (await CheckFightFinish())
                     {
-                        await cts2.CancelAsync();
                         break;
                     }
-
-                    Sleep(1000, cts2.Token);
                 }
             }
             catch (Exception e)
@@ -112,7 +89,38 @@ public class AutoFightTask : ISoloTask
             }
         }, cts2.Token);
 
-        await Task.WhenAll(fightTask, endTask);
+        await fightTask;
+
+        // 战斗结束检测线程
+        // var endTask = Task.Run(async () =>
+        // {
+        //     if (!_taskParam.FightFinishDetectEnabled)
+        //     {
+        //         return;
+        //     }
+        //
+        //     try
+        //     {
+        //         while (!cts2.IsCancellationRequested)
+        //         {
+        //             var finish = await CheckFightFinish();
+        //             if (finish)
+        //             {
+        //                 await cts2.CancelAsync();
+        //                 break;
+        //             }
+        //
+        //             Sleep(1000, cts2.Token);
+        //         }
+        //     }
+        //     catch (Exception e)
+        //     {
+        //         Debug.WriteLine(e.Message);
+        //         Debug.WriteLine(e.StackTrace);
+        //     }
+        // }, cts2.Token);
+        //
+        // await Task.WhenAll(fightTask, endTask);
 
         if (_taskParam is { FightFinishDetectEnabled: true, PickDropsAfterFightEnabled: true })
         {
@@ -139,14 +147,14 @@ public class AutoFightTask : ISoloTask
         }
 
         // 几秒内没有检测到血条和怪物位置，则开始旋转视角重新检测
-        if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > 5)
+        if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > 3)
         {
             // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Delay(300, _ct);
-            for (var i = 0; i < 10; i++)
+            for (var i = 0; i < 8; i++)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy((int)(100 * _dpi), 0);
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * _dpi), 0);
                 await Delay(800, _ct); // 等待视角稳定
                 if (HasFightFlagByYolo(CaptureToRectArea()))
                 {
