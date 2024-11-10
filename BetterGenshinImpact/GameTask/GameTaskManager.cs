@@ -125,6 +125,7 @@ internal class GameTaskManager
         ElementAssets.DestroyInstance();
         QuickSereniteaPotAssets.DestroyInstance();
         GameLoadingAssets.DestroyInstance();
+        MapAssets.DestroyInstance();
     }
 
     /// <summary>

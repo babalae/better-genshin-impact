@@ -10,6 +10,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using Vanara.PInvoke;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -184,6 +185,27 @@ public static partial class Bv
     public static bool IsInBlessingOfTheWelkinMoon(ImageRegion captureRa)
     {
         return captureRa.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
+    }
+
+    /// <summary>
+    /// 是否在对话界面
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInTalkUi(ImageRegion captureRa)
+    {
+        return captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo).IsExist();
+    }
+
+    /// <summary>
+    /// 等到对话界面加载完成
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes"></param>
+    /// <returns></returns>
+    public static async Task<bool> WaitAndSkipForTalkUi(CancellationToken ct, int retryTimes = 5)
+    {
+        return await NewRetry.WaitForAction(() => IsInTalkUi(TaskControl.CaptureToRectArea()), ct, retryTimes, 500);
     }
 }
 

@@ -1,0 +1,36 @@
+{
+  "info": {
+    "name": "合成台_璃月",
+    "type": "collect",
+    "author": "Yemaxul",
+    "version": "1.0",
+    "description": "璃月合成台，搭配树脂自动合成使用",
+    "bgiVersion": "0.35.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 266.86328125,
+      "y": -652.8173828125
+    },
+    {
+      "id": 2,
+      "x": 258.4609375,
+      "y": -658.4111328125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": 266.3046875,
+      "y": -653.61328125,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

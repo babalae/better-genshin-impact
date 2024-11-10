@@ -2,12 +2,17 @@
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Model.Area;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
@@ -18,11 +23,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
-using BetterGenshinImpact.GameTask.AutoSkip;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
@@ -99,7 +99,6 @@ public class PathExecutor(CancellationToken ct)
             {
                 foreach (var waypoint in waypoints)
                 {
-                    await ResolveAnomalies();
                     await RecoverWhenLowHp(); // 低血量恢复
                     if (waypoint.Type == WaypointType.Teleport.Code)
                     {
@@ -132,7 +131,7 @@ public class PathExecutor(CancellationToken ct)
                 // 不管咋样，松开所有按键
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                 Simulation.SendInput.Mouse.RightButtonUp();
-                await ResolveAnomalies();
+                await ResolveAnomalies(); // 异常场景处理
             }
         }
     }
@@ -328,7 +327,7 @@ public class PathExecutor(CancellationToken ct)
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
 
         var screen = CaptureToRectArea();
-        var position = Navigation.GetPosition(screen);
+        var position = await GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
@@ -352,7 +351,7 @@ public class PathExecutor(CancellationToken ct)
             }
 
             screen = CaptureToRectArea();
-            position = Navigation.GetPosition(screen);
+            position = await GetPosition(screen);
             var distance = Navigation.GetDistance(waypoint, position);
             Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
@@ -533,7 +532,7 @@ public class PathExecutor(CancellationToken ct)
     private async Task MoveCloseTo(WaypointForTrack waypoint)
     {
         var screen = CaptureToRectArea();
-        var position = Navigation.GetPosition(screen);
+        var position = await GetPosition(screen);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
@@ -549,14 +548,14 @@ public class PathExecutor(CancellationToken ct)
         while (!ct.IsCancellationRequested)
         {
             stepsTaken++;
-            if (stepsTaken > 30)
+            if (stepsTaken > 25)
             {
                 Logger.LogWarning("精确接近超时");
                 break;
             }
 
             screen = CaptureToRectArea();
-            position = Navigation.GetPosition(screen);
+            position = await GetPosition(screen);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
                 Logger.LogInformation("已到达路径点");
@@ -626,12 +625,27 @@ public class PathExecutor(CancellationToken ct)
         return null;
     }
 
+    private async Task<Point2f> GetPosition(ImageRegion imageRegion)
+    {
+        var position = Navigation.GetPosition(imageRegion);
+
+        if (position == new Point2f())
+        {
+            if (!Bv.IsInBigMapUi(imageRegion))
+            {
+                await ResolveAnomalies();
+            }
+        }
+
+        return position;
+    }
+
     /**
      * 处理各种异常场景
      * 需要保证耗时不能太高
      */
 
-    public async Task ResolveAnomalies()
+    private async Task ResolveAnomalies()
     {
         // 处理月卡
         await _blessingOfTheWelkinMoonTask.Start(ct);
@@ -670,7 +684,7 @@ public class PathExecutor(CancellationToken ct)
                 else
                 {
                     noDisabledUiButtonTimes++;
-                    if (noDisabledUiButtonTimes > 50)
+                    if (noDisabledUiButtonTimes > 10)
                     {
                         Logger.LogInformation("自动剧情结束");
                         break;

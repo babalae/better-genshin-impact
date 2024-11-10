@@ -196,7 +196,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoGeniusInvokationUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4"));
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/tcg.html"));
     }
 
     [RelayCommand]

@@ -550,11 +550,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    var handler = new ElementalCollectHandler(ElementalType.Anemo);
-                    handler.RunAsync(new CancellationToken());
+                    // var handler = new ElementalCollectHandler(ElementalType.Anemo);
+                    // handler.RunAsync(new CancellationToken());
 
                     // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
                     // Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
+
+                    GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
+                    Task.Run(async () => { await goToAdventurersGuildTask.Start("枫丹", new CancellationToken()); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

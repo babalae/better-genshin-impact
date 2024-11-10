@@ -4,9 +4,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
 using System;
-using System.Xml.Linq;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -24,7 +22,7 @@ public class OneKeyExpeditionTask
             {
                 // 1.全部领取
                 var region = CaptureToRectArea(true);
-                Cv2.ImWrite($"log/ts.png", region.SrcMat);
+                // Cv2.ImWrite($"log/ts.png", region.SrcMat);
                 var ra = region.Find(assets.CollectRo);
                 if (!ra.IsEmpty())
                 {

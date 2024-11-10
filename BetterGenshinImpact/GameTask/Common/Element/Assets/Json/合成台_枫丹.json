@@ -1,0 +1,28 @@
+{
+  "info": {
+    "name": "合成台_枫丹",
+    "type": "collect",
+    "author": "huiyadanli",
+    "version": "1.0",
+    "description": "枫丹合成台",
+    "bgiVersion": "0.35.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 4508.97509765625,
+      "y": 3630.557373046875,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": 4480.33,
+      "y": 3628.3,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

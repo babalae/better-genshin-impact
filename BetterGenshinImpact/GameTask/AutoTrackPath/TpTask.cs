@@ -380,6 +380,11 @@ public class TpTask(CancellationToken ct)
             var bigMapCenterPoint = bigMapCenterPointNullable.Value;
             Logger.LogDebug("识别当前大地图位置：{Pos}", bigMapCenterPoint);
             minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
+            if (minDistance < 50)
+            {
+                // 点位很近的情况下不切换
+                return false;
+            }
         }
 
         var minCountry = "当前位置";
