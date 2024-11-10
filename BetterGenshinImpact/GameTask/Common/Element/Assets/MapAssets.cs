@@ -33,9 +33,13 @@ public class MapAssets : BaseAssets<MapAssets>
         { "纳塔", [8973.5, -1879.1] },
     };
 
+    public Rect MimiMapRect { get; }
+
     public MapAssets()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
         TpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new System.Exception("tp.json deserialize failed");
+
+        MimiMapRect = new Rect((int)Math.Round(62 * AssetScale), (int)Math.Round(19 * AssetScale), (int)Math.Round(212 * AssetScale), (int)Math.Round(212 * AssetScale));
     }
 }

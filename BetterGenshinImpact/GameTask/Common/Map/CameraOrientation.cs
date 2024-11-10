@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Point = OpenCvSharp.Point;
 using Size = OpenCvSharp.Size;
 
@@ -18,7 +19,7 @@ public class CameraOrientation
     /// <returns>角度</returns>
     public static int Compute(Mat greyMat)
     {
-        var mat = new Mat(greyMat, new Rect(62, 19, 212, 212));
+        var mat = new Mat(greyMat, MapAssets.Instance.MimiMapRect);
         return ComputeMiniMap(mat);
     }
 

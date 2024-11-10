@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
@@ -33,7 +34,7 @@ public class Navigation
 
     public static Point2f GetPosition(ImageRegion imageRegion)
     {
-        var greyMat = new Mat(imageRegion.SrcGreyMat, new Rect(62, 19, 212, 212));
+        var greyMat = new Mat(imageRegion.SrcGreyMat, MapAssets.Instance.MimiMapRect);
         var p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
 
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),

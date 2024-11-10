@@ -139,8 +139,22 @@ public class PathExecutor(CancellationToken ct)
 
     private void InitializePathing(PathingTask task)
     {
+        LogScreenResolution();
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
+    }
+
+    private void LogScreenResolution()
+    {
+        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
+        {
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用路径追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
+        }
+        if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
+        {
+            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏路径追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
+        }
     }
 
     /// <summary>
