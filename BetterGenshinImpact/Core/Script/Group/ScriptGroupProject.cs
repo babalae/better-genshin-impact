@@ -130,6 +130,7 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 throw new Exception("JS脚本未初始化");
             }
+            JsScriptSettingsObject ??= new ExpandoObject();
             await Project.ExecuteAsync(JsScriptSettingsObject);
         }
         if (Type == "KeyMouse")
