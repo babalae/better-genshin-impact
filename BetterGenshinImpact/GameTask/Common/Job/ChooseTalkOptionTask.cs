@@ -14,6 +14,7 @@ using OpenCvSharp;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using System.Text.RegularExpressions;
+using BetterGenshinImpact.Core.Config;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 
@@ -62,6 +63,7 @@ public partial class ChooseTalkOptionTask
                 {
                     if (isOrange)
                     {
+                        region.DeriveCrop(optionRa.ToRect()).SrcMat.SaveImage(Global.Absolute($"log\\t{optionRa.Text}.png"));
                         if (!IsOrangeOption(region.DeriveCrop(optionRa.ToRect()).SrcMat))
                         {
                             return TalkOptionRes.FoundButNotOrange;
@@ -93,9 +95,9 @@ public partial class ChooseTalkOptionTask
         }
     }
 
-    public async Task SelectLastOptionUntilEnd(CancellationToken ct)
+    public async Task SelectLastOptionUntilEnd(CancellationToken ct, Func<ImageRegion, bool>? endAction = null, int retry = 2400)
     {
-        while (true)
+        for (var i = 0; i < retry; i++)
         {
             var region = CaptureToRectArea();
             if (Bv.IsInTalkUi(region))
@@ -112,6 +114,10 @@ public partial class ChooseTalkOptionTask
                 }
             }
             else if (Bv.IsInMainUi(region))
+            {
+                break;
+            }
+            else if (endAction != null && endAction(region))
             {
                 break;
             }
@@ -192,7 +198,7 @@ public partial class ChooseTalkOptionTask
     private bool IsOrangeOption(Mat textMat)
     {
         // 只提取橙色
-        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(243, 195, 48), new Scalar(255, 205, 55));
+        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(200, 165, 45), new Scalar(255, 205, 55));
         var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
         var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
         Debug.WriteLine($"识别到橙色文字区域占比:{rate}");

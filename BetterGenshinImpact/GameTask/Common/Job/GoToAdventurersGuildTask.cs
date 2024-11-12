@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
@@ -61,13 +62,16 @@ public class GoToAdventurersGuildTask
         }
 
         // 3. 等待对话界面
+        await Delay(200, ct);
 
         // 每日
         var res = await _chooseTalkOptionTask.SingleSelectText("每日", ct, 10, true);
         if (res == TalkOptionRes.FoundAndClick)
         {
             Logger.LogInformation("▶ {Text}", "领取『每日委托』奖励！");
-            await Delay(1000, ct);
+            await Delay(200, ct);
+            await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
+            await Delay(500, ct);
             await new ReturnMainUiTask().Start(ct);
 
             // 结束后重新打开
@@ -91,6 +95,7 @@ public class GoToAdventurersGuildTask
         res = await _chooseTalkOptionTask.SingleSelectText("探索", ct, 10, true);
         if (res == TalkOptionRes.FoundAndClick)
         {
+            await Delay(500, ct);
             new OneKeyExpeditionTask().Run(AutoSkipAssets.Instance);
         }
         else if (res == TalkOptionRes.FoundButNotOrange)

@@ -565,7 +565,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 nameof(Config.HotKeyConfig.Test2Hotkey),
                 Config.HotKeyConfig.Test2Hotkey,
                 Config.HotKeyConfig.Test2HotkeyType,
-                (_, _) => { Simulation.SendInput.Mouse.MoveMouseBy(500, 0); }
+                (_, _) =>
+                {
+                    GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
+                    Task.Run(async () => { await goToCraftingBenchTask.Start("枫丹", new CancellationToken()); });
+                }
             ));
 
             debugDirectory.Children.Add(new HotKeySettingModel(
