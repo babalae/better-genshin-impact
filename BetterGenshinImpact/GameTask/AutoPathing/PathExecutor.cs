@@ -44,6 +44,11 @@ public class PathExecutor(CancellationToken ct)
         set => _partyConfig = value;
     }
 
+    /// <summary>
+    /// 判断是否中止路径追踪的条件
+    /// </summary>
+    public Func<ImageRegion, bool>? EndAction { get; set; }
+
     private CombatScenes? _combatScenes;
     // private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
@@ -97,6 +102,7 @@ public class PathExecutor(CancellationToken ct)
         {
             try
             {
+                await ResolveAnomalies(); // 异常场景处理
                 foreach (var waypoint in waypoints)
                 {
                     await RecoverWhenLowHp(); // 低血量恢复
@@ -122,6 +128,11 @@ public class PathExecutor(CancellationToken ct)
 
                 break;
             }
+            catch (NormalEndException normalEndException)
+            {
+                Logger.LogInformation(normalEndException.Message);
+                break;
+            }
             catch (RetryException retryException)
             {
                 Logger.LogWarning(retryException.Message);
@@ -131,7 +142,6 @@ public class PathExecutor(CancellationToken ct)
                 // 不管咋样，松开所有按键
                 Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                 Simulation.SendInput.Mouse.RightButtonUp();
-                await ResolveAnomalies(); // 异常场景处理
             }
         }
     }
@@ -150,6 +160,7 @@ public class PathExecutor(CancellationToken ct)
         {
             Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用路径追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
         }
+
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
             Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏路径追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
@@ -351,6 +362,9 @@ public class PathExecutor(CancellationToken ct)
             }
 
             screen = CaptureToRectArea();
+
+            EndJudgment(screen);
+
             position = await GetPosition(screen);
             var distance = Navigation.GetDistance(waypoint, position);
             Debug.WriteLine($"接近目标点中，距离为{distance}");
@@ -555,6 +569,9 @@ public class PathExecutor(CancellationToken ct)
             }
 
             screen = CaptureToRectArea();
+
+            EndJudgment(screen);
+
             position = await GetPosition(screen);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
@@ -693,6 +710,14 @@ public class PathExecutor(CancellationToken ct)
 
                 await Delay(210, ct);
             }
+        }
+    }
+
+    private void EndJudgment(ImageRegion ra)
+    {
+        if (EndAction != null && EndAction(ra))
+        {
+            throw new NormalEndException("达成结束条件，结束路径追踪");
         }
     }
 }

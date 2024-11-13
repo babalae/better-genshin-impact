@@ -46,23 +46,14 @@ public class GoToAdventurersGuildTask
                 }
             }
         }
+
         Logger.LogInformation("→ {Name} 结束", Name);
     }
 
     public async Task DoOnce(string country, CancellationToken ct)
     {
-        // 1. 走到冒险家协会
+        // 1. 走到冒险家协会并对话
         await GoToAdventurersGuild(country, ct);
-
-        // 2. 交互
-        var ra = CaptureToRectArea();
-        if (!Bv.FindFAndPress(ra, "凯瑟琳"))
-        {
-            throw new Exception("未找与凯瑟琳对话交互按钮");
-        }
-
-        // 3. 等待对话界面
-        await Delay(200, ct);
 
         // 每日
         var res = await _chooseTalkOptionTask.SingleSelectText("每日", ct, 10, true);
@@ -76,7 +67,7 @@ public class GoToAdventurersGuildTask
 
             // 结束后重新打开
             await Delay(200, ct);
-            ra = CaptureToRectArea();
+            var ra = CaptureToRectArea();
             if (!Bv.FindFAndPress(ra, "凯瑟琳"))
             {
                 throw new Exception("未找与凯瑟琳对话交互按钮");
@@ -130,10 +121,17 @@ public class GoToAdventurersGuildTask
             {
                 Enabled = true,
                 AutoSkipEnabled = true
-            }
+            },
+            EndAction = region => Bv.FindFAndPress(region, "凯瑟琳")
         };
         await pathingTask.Pathing(task);
 
-        await Delay(500, ct);
+        await Delay(300, ct);
+
+        using var ra = CaptureToRectArea();
+        if (!Bv.IsInTalkUi(ra))
+        {
+            throw new Exception("未找与凯瑟琳对话交互按钮");
+        }
     }
 }

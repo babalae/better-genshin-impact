@@ -52,18 +52,10 @@ public class GoToCraftingBenchTask
 
     public async Task DoOnce(string country, CancellationToken ct)
     {
-        // 1. 走到合成台
+        // 1. 走到合成台并交互
         await GoToCraftingBench(country, ct);
 
-        // 2. 交互
-        var ra = CaptureToRectArea();
-        if (!Bv.FindFAndPress(ra, "合成"))
-        {
-            throw new Exception("未找与合成台交互按钮");
-        }
-
-        // 3. 等待合成界面
-        await Delay(100, ct);
+        // 2. 等待合成界面
         await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct,
             region => region.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist()
         );
@@ -71,7 +63,7 @@ public class GoToCraftingBenchTask
 
         // 判断浓缩树脂是否存在
         // TODO 满的情况是怎么样子的
-        ra = CaptureToRectArea();
+        var ra = CaptureToRectArea();
         var resin = ra.Find(ElementAssets.Instance.CraftCondensedResin);
         if (resin.IsExist())
         {
@@ -100,16 +92,24 @@ public class GoToCraftingBenchTask
     public async Task GoToCraftingBench(string country, CancellationToken ct)
     {
         var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"GameTask\Common\Element\Assets\Json\合成台_{country}.json"));
+
         var pathingTask = new PathExecutor(ct)
         {
             PartyConfig = new PathingPartyConfig
             {
                 Enabled = true,
                 AutoSkipEnabled = true
-            }
+            },
+            EndAction = region => Bv.FindFAndPress(region, "合成")
         };
         await pathingTask.Pathing(task);
 
-        await Delay(500, ct);
+        await Delay(300, ct);
+
+        using var ra = CaptureToRectArea();
+        if (!Bv.IsInTalkUi(ra))
+        {
+            throw new Exception("未找与合成台交互按钮");
+        }
     }
 }

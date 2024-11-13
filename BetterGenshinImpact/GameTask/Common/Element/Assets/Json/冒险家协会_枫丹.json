@@ -20,7 +20,7 @@
       "id": 2,
       "x": 4495.0,
       "y": 3638.0,
-      "type": "path",
+      "type": "target",
       "move_mode": "walk",
       "action": ""
     }
