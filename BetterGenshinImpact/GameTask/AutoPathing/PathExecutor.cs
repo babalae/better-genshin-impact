@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
@@ -66,22 +67,30 @@ public class PathExecutor(CancellationToken ct)
         }
 
         // 切换队伍
-        if (PartyConfig is { Enabled: false })
+        var pRaList = CaptureToRectArea().FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
+        if (pRaList.Count > 0)
         {
-            // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
-            var partyName = FilterPartyNameByConditionConfig(task);
-            if (!await SwitchParty(partyName))
-            {
-                Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
-                return;
-            }
+            Logger.LogInformation("处于联机状态下，不切换队伍");
         }
-        else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
+        else
         {
-            if (!await SwitchParty(PartyConfig.PartyName))
+            if (PartyConfig is { Enabled: false })
             {
-                Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
-                return;
+                // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
+                var partyName = FilterPartyNameByConditionConfig(task);
+                if (!await SwitchParty(partyName))
+                {
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
+                    return;
+                }
+            }
+            else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
+            {
+                if (!await SwitchParty(PartyConfig.PartyName))
+                {
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
+                    return;
+                }
             }
         }
 
