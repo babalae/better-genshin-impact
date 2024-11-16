@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
@@ -13,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 [Obsolete]
 public class NormalAttackHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
     {
         Logger.LogInformation("执行 {Text}", "普通攻击");
         Simulation.SendInput.Mouse.LeftButtonClick();

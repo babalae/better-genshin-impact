@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -15,7 +16,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class ElementalCollectHandler(ElementalType elementalType) : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
     {
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)

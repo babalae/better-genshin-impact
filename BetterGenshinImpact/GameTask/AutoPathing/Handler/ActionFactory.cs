@@ -22,6 +22,7 @@ public class ActionFactory
                 "hydro_collect" => new ElementalCollectHandler(ElementalType.Hydro),
                 "electro_collect" => new ElementalCollectHandler(ElementalType.Electro),
                 "anemo_collect" => new ElementalCollectHandler(ElementalType.Anemo),
+                "combat_script" => new CombatScriptHandler(),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });

@@ -5,13 +5,14 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 internal class AutoFightHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
     {
         await StartFight(ct);
     }

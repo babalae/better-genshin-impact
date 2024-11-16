@@ -126,10 +126,14 @@ public class PathExecutor(CancellationToken ct)
                         // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
                         await MoveTo(waypoint);
 
-                        if (waypoint.Type == WaypointType.Target.Code || !string.IsNullOrEmpty(waypoint.Action))
+                        if (waypoint.Type == WaypointType.Target.Code )
                         {
                             await MoveCloseTo(waypoint);
-                            // 到达点位后执行 action
+                        }
+                        
+                        if (!string.IsNullOrEmpty(waypoint.Action))
+                        {
+                            // 执行 action
                             await AfterMoveToTarget(waypoint);
                         }
                     }
@@ -611,17 +615,18 @@ public class PathExecutor(CancellationToken ct)
         }
     }
 
-    private async Task AfterMoveToTarget(Waypoint waypoint)
+    private async Task AfterMoveToTarget(WaypointForTrack waypoint)
     {
         if (waypoint.Action == ActionEnum.NahidaCollect.Code
             || waypoint.Action == ActionEnum.PickAround.Code
             || waypoint.Action == ActionEnum.Fight.Code
             || waypoint.Action == ActionEnum.HydroCollect.Code
             || waypoint.Action == ActionEnum.ElectroCollect.Code
-            || waypoint.Action == ActionEnum.AnemoCollect.Code)
+            || waypoint.Action == ActionEnum.AnemoCollect.Code
+            || waypoint.Action == ActionEnum.CombatScript.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
-            await handler.RunAsync(ct);
+            await handler.RunAsync(ct, waypoint);
             await Delay(1000, ct);
         }
     }

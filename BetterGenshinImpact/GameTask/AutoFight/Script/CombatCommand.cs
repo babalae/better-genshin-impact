@@ -64,11 +64,21 @@ public class CombatCommand
 
     public void Execute(CombatScenes combatScenes)
     {
-        var avatar = combatScenes.SelectAvatar(Name);
+        // 如果是当前角色
+        Avatar? avatar;
+        if (Name == CombatScriptParser.CurrentAvatarName)
+        {
+            avatar = combatScenes.Avatars[0]; // 随便取一个角色
+        }
+        else
+        {
+            avatar = combatScenes.SelectAvatar(Name);
+        }
         if (avatar == null)
         {
             return;
         }
+
 
         // 非宏类脚本，等待切换角色成功
         if (Method != Method.Wait

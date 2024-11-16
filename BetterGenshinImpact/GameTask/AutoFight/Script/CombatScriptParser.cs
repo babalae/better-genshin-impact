@@ -10,6 +10,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
 public class CombatScriptParser
 {
+    public static string CurrentAvatarName = "当前角色";
+    
     public static CombatScriptBag ReadAndParse(string path)
     {
         if (File.Exists(path))
@@ -50,7 +52,15 @@ public class CombatScriptParser
     public static CombatScript Parse(string path)
     {
         var script = File.ReadAllText(path);
-        var lines = script.Split(["\r\n", "\r", "\n", ";"], StringSplitOptions.RemoveEmptyEntries);
+        var combatScript = ParseContext(script);
+        combatScript.Path = path;
+        combatScript.Name = Path.GetFileNameWithoutExtension(path);
+        return combatScript;
+    }
+
+    public static CombatScript ParseContext(string context, bool validate = true)
+    {
+        var lines = context.Split(["\r\n", "\r", "\n", ";"], StringSplitOptions.RemoveEmptyEntries);
         var result = new List<string>();
         foreach (var line in lines)
         {
@@ -66,19 +76,16 @@ public class CombatScriptParser
             result.Add(l);
         }
 
-        var combatScript = Parse(result);
-        combatScript.Path = path;
-        combatScript.Name = Path.GetFileNameWithoutExtension(path);
-        return combatScript;
+        return ParseLines(result, validate);
     }
 
-    public static CombatScript Parse(List<string> lines)
+    private static CombatScript ParseLines(List<string> lines, bool validate = true)
     {
         List<CombatCommand> combatCommands = [];
         HashSet<string> combatAvatarNames = [];
         foreach (var line in lines)
         {
-            var oneLineCombatCommands = ParseLine(line, combatAvatarNames);
+            var oneLineCombatCommands = ParseLine(line, combatAvatarNames, validate);
             combatCommands.AddRange(oneLineCombatCommands);
         }
 
@@ -88,20 +95,29 @@ public class CombatScriptParser
         return new CombatScript(combatAvatarNames, combatCommands);
     }
 
-    public static List<CombatCommand> ParseLine(string line, HashSet<string> combatAvatarNames)
+    private static List<CombatCommand> ParseLine(string line, HashSet<string> combatAvatarNames, bool validate = true)
     {
         var oneLineCombatCommands = new List<CombatCommand>();
         // 以空格分隔角色和指令 截取第一个空格前的内容为角色名称，后面的为指令
+        // 20241116更新 不输入角色名称时，直接以当前角色为准
         var firstSpaceIndex = line.IndexOf(' ');
-        if (firstSpaceIndex < 0)
+        var character = CurrentAvatarName;
+        var commands = line;
+        if (firstSpaceIndex > 0)
         {
-            Logger.LogError("战斗脚本格式错误，必须以空格分隔角色和指令");
-            throw new Exception("战斗脚本格式错误，必须以空格分隔角色和指令");
+            character = line[..firstSpaceIndex];
+            character = DefaultAutoFightConfig.AvatarAliasToStandardName(character);
+            commands = line[(firstSpaceIndex + 1)..];
+        }
+        else
+        {
+            if (validate)
+            {
+                Logger.LogError("战斗脚本格式错误，必须以空格分隔角色和指令");
+                throw new Exception("战斗脚本格式错误，必须以空格分隔角色和指令");
+            }
         }
 
-        var character = line[..firstSpaceIndex];
-        character = DefaultAutoFightConfig.AvatarAliasToStandardName(character);
-        var commands = line[(firstSpaceIndex + 1)..];
         oneLineCombatCommands.AddRange(ParseLineCommands(commands, character));
         combatAvatarNames.Add(character);
         return oneLineCombatCommands;

@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -14,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class PickAroundHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
     {
         var screen = CaptureToRectArea();
         var angle = 0;

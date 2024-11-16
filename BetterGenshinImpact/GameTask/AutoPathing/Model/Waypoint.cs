@@ -23,4 +23,6 @@ public class Waypoint
     /// <see cref="ActionEnum"/>
     /// </summary>
     public string? Action { get; set; }
+    
+    public string? ActionParams { get; set; }
 }
