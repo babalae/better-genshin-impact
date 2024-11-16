@@ -104,12 +104,12 @@ public class GoToCraftingBenchTask
         };
         await pathingTask.Pathing(task);
 
-        await Delay(300, ct);
+        await Delay(500, ct);
 
         using var ra = CaptureToRectArea();
         if (!Bv.IsInTalkUi(ra))
         {
-            throw new Exception("未找与合成台交互按钮");
+            throw new Exception("未找到与合成台交互按钮");
         }
     }
 }

@@ -17,7 +17,7 @@ public class GoToAdventurersGuildTask
 {
     public string Name => "前往冒险家协会领取奖励";
 
-    private readonly int _retryTimes = 2;
+    private readonly int _retryTimes = 1;
 
     private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
 
@@ -126,12 +126,12 @@ public class GoToAdventurersGuildTask
         };
         await pathingTask.Pathing(task);
 
-        await Delay(300, ct);
+        await Delay(600, ct);
 
         using var ra = CaptureToRectArea();
         if (!Bv.IsInTalkUi(ra))
         {
-            throw new Exception("未找与凯瑟琳对话交互按钮");
+            throw new Exception("未找到与凯瑟琳对话交互按钮");
         }
     }
 }
