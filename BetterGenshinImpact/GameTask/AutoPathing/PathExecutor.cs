@@ -126,7 +126,9 @@ public class PathExecutor(CancellationToken ct)
                         // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
                         await MoveTo(waypoint);
 
-                        if (waypoint.Type == WaypointType.Target.Code )
+                        if (waypoint.Type == WaypointType.Target.Code 
+                            // 除了 fight 之外的 action 都需要接近
+                            || (!string.IsNullOrEmpty(waypoint.Action) && waypoint.Action != ActionEnum.Fight.Code))
                         {
                             await MoveCloseTo(waypoint);
                         }
