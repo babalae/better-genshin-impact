@@ -31,7 +31,7 @@
                 Width="100"
                 Height="23"
                 Click="DoMatchTest"
-                Content="特征匹配测试" />
+                Content="生成特征点" />
         <Button Canvas.Left="10"
                 Canvas.Top="130"
                 Width="100"

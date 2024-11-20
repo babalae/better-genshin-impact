@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map;
 public class BigMap : Singleton<BigMap>
 {
     // 直接从图像加载特征点
-    private readonly FeatureMatcher _featureMatcher = new(new Size(4096, 3328), new FeatureStorage("mainMap256Block"));
+    private readonly FeatureMatcher _featureMatcher = new(new Size(MapCoordinate.Main256Width, MapCoordinate.Main256Height), new FeatureStorage("mainMap256Block"));
 
     // 相对标准1024区块的缩放比例
     public const int ScaleTo1024 = 4;

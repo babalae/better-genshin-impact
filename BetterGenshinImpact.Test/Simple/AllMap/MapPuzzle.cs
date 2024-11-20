@@ -28,7 +28,7 @@ public class MapPuzzle
 
     public static void Put()
     {
-        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_5.0"; // 图片文件夹路径
+        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_5.2"; // 图片文件夹路径
         string pattern = @"UI_MapBack_([-+]?\d+)_([-+]?\d+)(.*)";
         var images = Directory.GetFiles(folderPath, "*.png", SearchOption.TopDirectoryOnly); // 获取所有图片文件路径
 
@@ -114,6 +114,7 @@ public class MapPuzzle
         // 计算大图的总宽度和高度
         var lenCol = maxCol - minCol;
         var lenRow = maxRow - minRow;
+        Debug.WriteLine($"列数X: {lenCol+1}, 行数Y: {lenRow+1}");
         int totalWidth = (lenCol + 1) * block;
         int totalHeight = (lenRow + 1) * block;
 
@@ -158,11 +159,15 @@ public class MapPuzzle
         }
 
         // 地图图片块
-        SaveImagesAs1024X1024(arr, imageLocations, @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\地图块", minRow, minCol);
+        // SaveImagesAs1024X1024(arr, imageLocations, @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\地图块", minRow, minCol);
 
         // 保存大图
-        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_50_2048.png", largeImage);
-        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", largeImage);
+
+        var grayImage = new Mat();
+        Cv2.CvtColor(largeImage.Resize(new Size(largeImage.Width / 8, largeImage.Height / 8), 0, 0, InterpolationFlags.Cubic), grayImage, ColorConversionCodes.BGR2GRAY);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_256.png", grayImage);
+        
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
         // 释放资源

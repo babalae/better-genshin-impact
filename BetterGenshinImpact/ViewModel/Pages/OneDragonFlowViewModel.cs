@@ -26,17 +26,23 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
 
         new OneDragonTaskItem("领取邮件"),
         new OneDragonTaskItem("合成树脂"),
-        new OneDragonTaskItem("每日委托"),
+        // new OneDragonTaskItem("每日委托"),
         new OneDragonTaskItem("自动秘境"),
-        new OneDragonTaskItem("自动锻造"),
-        new OneDragonTaskItem("自动刷地脉花"),
+        // new OneDragonTaskItem("自动锻造"),
+        // new OneDragonTaskItem("自动刷地脉花"),
         new OneDragonTaskItem("领取每日奖励"),
-        new OneDragonTaskItem("领取尘歌壶奖励"),
-        new OneDragonTaskItem("自动七圣召唤"),
+        // new OneDragonTaskItem("领取尘歌壶奖励"),
+        // new OneDragonTaskItem("自动七圣召唤"),
     ];
 
     [ObservableProperty]
     private OneDragonTaskItem? _selectedTask;
+    
+    [ObservableProperty]
+    private string _craftingBenchCountry = "枫丹";
+    
+    [ObservableProperty]
+    private string _adventurersGuildCountry = "枫丹";
 
     public void OnNavigatedTo()
     {

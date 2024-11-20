@@ -6,6 +6,8 @@ using OpenCvSharp;
 using OpenCvSharp.Detail;
 using System.Diagnostics;
 using System.Windows.Forms;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common.Map;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 
@@ -51,7 +53,13 @@ public class EntireMapTest
 
     public static void Storage()
     {
-        var featureMatcher = new FeatureMatcher(MapAssets.Instance.MainMap2048BlockMat.Value, new FeatureStorage("mainMap2048Block"));
+        var featureMatcher = new FeatureMatcher(new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", ImreadModes.Grayscale), new FeatureStorage("mainMap2048Block"));
         MessageBox.Show("特征点生成完成");
+    }
+    
+    public static void Storage256()
+    {
+        FeatureMatcher _featureMatcher = new( new Mat(Global.Absolute(@"Assets\Map\mainMap256Block.png"), ImreadModes.Grayscale), new FeatureStorage("mainMap256Block"));
+        MessageBox.Show("256特征点生成完成");
     }
 }

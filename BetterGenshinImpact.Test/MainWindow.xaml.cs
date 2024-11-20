@@ -45,10 +45,15 @@ public partial class MainWindow : Window
     {
         // KeyPointMatchTest.Test();
         // EntireMapTest.Test();
-        EntireMapTest.Storage();
+        // EntireMapTest.Storage();
         // BigMapMatchTest.Test();
 
         // FeatureTransfer.Transfer();
+        
+        // var extractor = new LargeSiftExtractor();
+        // extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\");
+        
+        EntireMapTest.Storage256();
     }
 
     private void MapDrawTeleportPoint(object sender, RoutedEventArgs e)

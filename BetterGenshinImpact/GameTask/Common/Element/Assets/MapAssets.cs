@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 public class MapAssets : BaseAssets<MapAssets>
 {
-    public Lazy<Mat> MainMap2048BlockMat { get; } = new(() => new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\mainMap2048Block.png", ImreadModes.Grayscale));
+    public Lazy<Mat> MainMap2048BlockMat { get; } = new(() => new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", ImreadModes.Grayscale));
 
     public Lazy<Mat> MainMap256BlockMat { get; } = new(() => new Mat(Global.Absolute(@"Assets\Map\mainMap256Block.png"), ImreadModes.Grayscale));
 
