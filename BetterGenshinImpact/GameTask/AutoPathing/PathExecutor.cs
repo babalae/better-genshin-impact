@@ -127,8 +127,12 @@ public class PathExecutor(CancellationToken ct)
                         await MoveTo(waypoint);
 
                         if (waypoint.Type == WaypointType.Target.Code 
-                            // 除了 fight 之外的 action 都需要接近
-                            || (!string.IsNullOrEmpty(waypoint.Action) && waypoint.Action != ActionEnum.Fight.Code))
+                            // 除了 fight mining 之外的 action 都需要接近
+                            || (!string.IsNullOrEmpty(waypoint.Action) 
+                                && waypoint.Action != ActionEnum.NahidaCollect.Code
+                                && waypoint.Action != ActionEnum.Fight.Code
+                                && waypoint.Action != ActionEnum.CombatScript.Code
+                                && waypoint.Action != ActionEnum.Mining.Code))
                         {
                             await MoveCloseTo(waypoint);
                         }

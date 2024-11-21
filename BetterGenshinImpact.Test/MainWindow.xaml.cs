@@ -28,7 +28,7 @@ public partial class MainWindow : Window
 
     private void DoMapPuzzle(object sender, System.Windows.RoutedEventArgs e)
     {
-        MapPuzzle.Put();
+        MapPuzzle.PutAll();
     }
 
     private void DoOcrTest(object sender, System.Windows.RoutedEventArgs e)

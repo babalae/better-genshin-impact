@@ -332,6 +332,12 @@ public class Avatar
                     Sleep(300); // 持续操作不应该被cts取消
                     AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
                 }
+                else if (Name == "坎蒂丝")
+                {
+                    AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
+                    Thread.Sleep(3000);
+                    AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
+                }
                 else
                 {
                     AutoFightContext.Instance.Simulator.LongKeyPress(User32.VK.VK_E);

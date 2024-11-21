@@ -8,7 +8,6 @@ namespace BetterGenshinImpact.Test.Simple.AllMap;
 
 public class MapPuzzle
 {
-    public static readonly int block = 2048;
 
     public static List<string> PicWhiteHashList = new List<string>
     {
@@ -26,7 +25,24 @@ public class MapPuzzle
 
     public static MD5 Md5Service = MD5.Create();
 
-    public static void Put()
+    public static void PutAll()
+    {
+        // 保存2048大图
+        // var img2048 = Put(2048);
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", img2048);
+        
+        // 保存1024
+        var img1024 = Put(1024);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_1024.png", img1024);
+        
+        // 保存256
+        // var grayImage = new Mat();
+        // Cv2.CvtColor(img1024.Resize(new Size(img1024.Width / 4, img1024.Height / 4), 0, 0, InterpolationFlags.Cubic), grayImage, ColorConversionCodes.BGR2GRAY);
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_256.png", grayImage);
+
+    }
+    
+    public static Mat Put(int block = 2048)
     {
         string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_5.2"; // 图片文件夹路径
         string pattern = @"UI_MapBack_([-+]?\d+)_([-+]?\d+)(.*)";
@@ -161,21 +177,11 @@ public class MapPuzzle
         // 地图图片块
         // SaveImagesAs1024X1024(arr, imageLocations, @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\地图块", minRow, minCol);
 
-        // 保存大图
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", largeImage);
 
-        var grayImage = new Mat();
-        Cv2.CvtColor(largeImage.Resize(new Size(largeImage.Width / 8, largeImage.Height / 8), 0, 0, InterpolationFlags.Cubic), grayImage, ColorConversionCodes.BGR2GRAY);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_256.png", grayImage);
-        
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
         // 释放资源
-        largeImage.Dispose();
-        foreach (var img in imageLocations.Values)
-        {
-            img.Img.Dispose();
-        }
+        return largeImage;
     }
 
     public static void SaveImagesAs1024X1024(int[,] arr, Dictionary<(int row, int col), ImgInfo> imageLocations, string outputFolder, int minRow, int minCol)
