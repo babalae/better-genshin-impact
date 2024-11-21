@@ -21,8 +21,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -116,9 +118,11 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
+
                 NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
                 break;
             }
+
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
         }
     }
@@ -143,6 +147,7 @@ public class AutoDomainTask : ISoloTask
         {
             Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
         }
+
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
             Logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏可能无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
@@ -388,6 +393,7 @@ public class AutoDomainTask : ISoloTask
             {
                 return;
             }
+
             if (!IsTakeFood())
             {
                 Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
@@ -721,17 +727,31 @@ public class AutoDomainTask : ISoloTask
 
         Sleep(1000, _ct);
 
+        var hasSkip = false;
         var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         for (var i = 0; i < 30; i++)
         {
             // 跳过领取动画
-            GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
-            Sleep(200, _ct);
-            GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 140 * scale, 53 * scale));
+            if (!hasSkip)
+            {
+                TaskContext.Instance().PostMessageSimulator.LeftButtonClick(); // 先随便点一个地方使得跳过出现
+            }
+
+            using var ra = CaptureToRectArea();
+            
+            // OCR识别是否有跳过
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0, 230 * assetScale, 80 * assetScale));
+            var skipTextRa = ocrList.FirstOrDefault(t => t.Text.Contains("跳过"));
+            if (skipTextRa != null)
+            {
+                hasSkip = true;
+                skipTextRa.Click(); // 有则点击
+            }
+
 
             // 优先点击继续
-            var ra = CaptureToRectArea();
-            var confirmRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+            using var confirmRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 if (isLastTurn)
