@@ -19,9 +19,9 @@ public class AvatarClassifyGen
         // 读取基础图像
         // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Xilonen.png", SearchOption.TopDirectoryOnly).ToList();
-        // List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_MomokaCostumeErrantry.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles2);
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Chasca.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Olorun.png", SearchOption.TopDirectoryOnly).ToList();
+        sideImageFiles.AddRange(sideImageFiles2);
         // List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_NilouCostumeFairy.png", SearchOption.TopDirectoryOnly).ToList();
         // sideImageFiles.AddRange(sideImageFiles3);
         // List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Kachina.png", SearchOption.TopDirectoryOnly).ToList();

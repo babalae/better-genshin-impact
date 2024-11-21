@@ -25,10 +25,11 @@ public class AvatarClassifyTransparentGen
         AdjustTransparency(0.5f);
 
         // 读取基础图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "*.png", SearchOption.TopDirectoryOnly).ToList();
+        // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Xilonen.png", SearchOption.TopDirectoryOnly).ToList();
-
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Chasca.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Olorun.png", SearchOption.TopDirectoryOnly).ToList();
+        sideImageFiles.AddRange(sideImageFiles2);
         // 生成训练集
         GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 200);
         // 生成测试集
