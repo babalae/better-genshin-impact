@@ -23,15 +23,15 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Margin="8,8,8,8">
+    <Grid Margin="8,0,8,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="150" />
-            <ColumnDefinition Width="7" />
+            <ColumnDefinition Width="16" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!--  左侧栏  -->
-        <Grid Grid.Column="0">
+        <Grid Grid.Column="0" Margin="0,8,8,8">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -68,7 +68,7 @@
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
                 <ui:Button Grid.Row="2"
-                           Margin="0,2,4,2"
+                           Margin="0,2,0,2"
                            HorizontalAlignment="Stretch"
                            Command="{Binding StartMultiScriptGroupCommand}"
                            Content="连续执行" />
@@ -76,13 +76,20 @@
         </Grid>
 
         <!--  分割  -->
+        <ui:FontIcon Grid.Column="1"
+                     HorizontalAlignment="Center"
+                     FontFamily="Segoe Fluent Icons"
+                     Glyph="&#xE784;" />
         <GridSplitter Grid.Column="1"
-                      Width="2"
+                      Width="16"
                       HorizontalAlignment="Stretch"
-                      Background="{DynamicResource ControlStrongFillColorDisabledBrush}" />
+                      Background="{DynamicResource ControlStrongFillColorDisabledBrush}"
+                      Focusable="False"
+                      Opacity="0.4" />
 
         <!--  右侧栏:无选中组  -->
         <Border Grid.Column="2"
+                Margin="8"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
@@ -135,6 +142,7 @@
 
         <!--  右侧栏:选中组  -->
         <Border Grid.Column="2"
+                Margin="8"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
