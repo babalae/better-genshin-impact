@@ -728,7 +728,7 @@ public class AutoDomainTask : ISoloTask
         Sleep(1000, _ct);
 
         var hasSkip = false;
-        var captureArea = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         for (var i = 0; i < 30; i++)
         {
@@ -739,9 +739,9 @@ public class AutoDomainTask : ISoloTask
             }
 
             using var ra = CaptureToRectArea();
-            
+
             // OCR识别是否有跳过
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0, 230 * assetScale, 80 * assetScale));
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0, 230 * assetScale - 5, 80 * assetScale));
             var skipTextRa = ocrList.FirstOrDefault(t => t.Text.Contains("跳过"));
             if (skipTextRa != null)
             {

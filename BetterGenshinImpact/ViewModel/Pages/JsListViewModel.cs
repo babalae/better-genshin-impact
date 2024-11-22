@@ -102,8 +102,8 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
 
         if (!string.IsNullOrEmpty(item.Manifest.SettingsUi))
         {
-            Toast.Warning("此脚本存在配置，请添加至【调度器】，并右键修改配置后使用！");
-            return;
+            Toast.Information("此脚本存在配置，不配置可能无法正常运行，建议请添加至【调度器】，并右键修改配置后使用！");
+            _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
         }
 
         await _scriptService.RunMulti([new ScriptGroupProject(item)]);
