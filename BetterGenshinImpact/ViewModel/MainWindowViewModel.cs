@@ -81,11 +81,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                    _logger.LogError("PaddleOcr预热异常，解决方案：https://bgi.huiyadan.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError("PaddleOcr预热内部异常：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bgi.huiyadan.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
                         throw innerException;
                     }
                     else

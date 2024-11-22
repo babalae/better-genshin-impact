@@ -77,11 +77,9 @@
 
         <!--  分割  -->
         <ui:FontIcon Grid.Column="1"
-                     HorizontalAlignment="Center"
-                     FontFamily="Segoe Fluent Icons"
-                     Glyph="&#xE784;" />
+                     HorizontalAlignment="Center" Glyph="&#xf7a5;" Style="{StaticResource FaFontIconStyle}" />
         <GridSplitter Grid.Column="1"
-                      Width="16"
+                      Width="12"
                       HorizontalAlignment="Stretch"
                       Background="{DynamicResource ControlStrongFillColorDisabledBrush}"
                       Focusable="False"
@@ -89,7 +87,7 @@
 
         <!--  右侧栏:无选中组  -->
         <Border Grid.Column="2"
-                Margin="8"
+                Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
@@ -142,7 +140,7 @@
 
         <!--  右侧栏:选中组  -->
         <Border Grid.Column="2"
-                Margin="8"
+                Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
