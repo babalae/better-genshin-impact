@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Diagnostics;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -17,6 +18,9 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
 {
     [ObservableProperty]
     private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
+
+    [ObservableProperty]
+    private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
 
     [ObservableProperty]
     private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];

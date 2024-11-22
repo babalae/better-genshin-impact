@@ -40,8 +40,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 拾取白名单
     /// </summary>
     private List<string> _whiteList = [];
-
-    private User32.VK _pickVk = User32.VK.VK_F;
+    
     private RecognitionObject _pickRo;
 
     // 外部配置

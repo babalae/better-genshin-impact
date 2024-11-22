@@ -19,6 +19,7 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
 
     public User32.VK PickVk = User32.VK.VK_F;
     public RecognitionObject PickRo;
+    public RecognitionObject ChatPickRo;
 
     private AutoPickAssets()
     {
@@ -59,6 +60,7 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             {
                 PickRo = LoadCustomPickKey(keyName);
                 PickVk = User32Helper.ToVk(keyName);
+                ChatPickRo = LoadCustomChatPickKey(keyName);
             }
             catch (Exception e)
             {
@@ -67,6 +69,7 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
                 TaskContext.Instance().Config.AutoPickConfig.PickKey = "F";
                 return;
             }
+
             if (keyName != "F")
             {
                 _logger.LogInformation("自定义拾取按键：{Key}", keyName);
@@ -85,6 +88,21 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
                 (int)(330 * AssetScale),
                 (int)(60 * AssetScale),
                 (int)(420 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+    }
+
+    public RecognitionObject LoadCustomChatPickKey(string key)
+    {
+        return new RecognitionObject
+        {
+            Name = "chatPick" + key,
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", key + ".png"),
+            RegionOfInterest = new Rect((int)(1200 * AssetScale),
+                (int)(350 * AssetScale),
+                (int)(50 * AssetScale),
+                CaptureRect.Height - (int)(220 * AssetScale) - (int)(350 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
