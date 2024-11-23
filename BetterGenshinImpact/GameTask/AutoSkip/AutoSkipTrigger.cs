@@ -40,6 +40,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool IsExclusive => false;
 
     public bool IsBackgroundRunning { get; private set; }
+    
+    public bool UseBackgroundOperation { get; private set; }
 
     public bool IsUseInteractionKey { get; set; } = false;
 
@@ -138,6 +140,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             return;
         }
+        UseBackgroundOperation = IsBackgroundRunning && !SystemControl.IsGenshinImpactActive();
 
         _prevExecute = DateTime.Now;
 
@@ -189,7 +192,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
             // 对话选项选择
             bool hasOption;
-            if (IsBackgroundRunning || IsUseInteractionKey)
+            if (UseBackgroundOperation || IsUseInteractionKey)
             {
                 hasOption = ChatOptionChooseUseKey(content.CaptureRectArea);
             }
@@ -232,7 +235,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
             if (rate is >= 0.5 and < 0.98999)
             {
-                if (IsBackgroundRunning)
+                if (UseBackgroundOperation)
                 {
                     TaskContext.Instance().PostMessageSimulator?.LeftButtonClickBackground();
                 }
@@ -331,7 +334,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 using var skipRa = captureRegion.Find(_autoSkipAssets.HangoutSkipRo);
                 if (skipRa.IsExist())
                 {
-                    if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
+                    if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
                     {
                         skipRa.BackgroundClick();
                     }
@@ -612,7 +615,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             Thread.Sleep(_config.AfterChooseOptionSleepDelay);
         }
 
-        if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
+        if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
         {
             region.BackgroundClick();
         }
@@ -631,7 +634,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             Thread.Sleep(_config.AutoHangoutChooseOptionSleepDelay);
         }
 
-        if (IsBackgroundRunning && !SystemControl.IsGenshinImpactActive())
+        if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
         {
             option.BackgroundClick();
         }
