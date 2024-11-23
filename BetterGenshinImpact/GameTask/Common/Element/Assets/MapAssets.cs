@@ -6,6 +6,7 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -32,6 +33,11 @@ public class MapAssets : BaseAssets<MapAssets>
         { "枫丹", [4515, 3631] },
         { "纳塔", [8973.5, -1879.1] },
     };
+    
+    public readonly Dictionary<string, GiWorldPosition> DomainPositionMap = new();
+    public readonly List<GiWorldPosition> DomainPositionsList = [];
+    // 反方向行走的副本
+    public readonly List<string> DomainBackwardList = ["无妄引咎密宫", "芬德尼尔之顶"];
 
     public Rect MimiMapRect { get; }
 
@@ -39,6 +45,13 @@ public class MapAssets : BaseAssets<MapAssets>
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
         TpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new System.Exception("tp.json deserialize failed");
+        
+        // 取出秘境 description=Domain
+        foreach (var tp in TpPositions.Where(tp => tp.Description == "Domain"))
+        {
+            DomainPositionMap[tp.Name] = tp;
+            DomainPositionsList.Add(tp);
+        }
 
         MimiMapRect = new Rect((int)Math.Round(62 * AssetScale), (int)Math.Round(19 * AssetScale), (int)Math.Round(212 * AssetScale), (int)Math.Round(212 * AssetScale));
     }

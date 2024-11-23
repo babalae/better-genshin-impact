@@ -25,7 +25,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
@@ -71,6 +74,11 @@ public class AutoDomainTask : ISoloTask
         AutoFightAssets.DestroyInstance();
         Init();
         NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
+
+        // 传送到秘境
+        await TpDomain();
+        // 切换队伍
+        await SwitchParty(_taskParam.PartyName);
 
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
 
@@ -166,10 +174,58 @@ public class AutoDomainTask : ISoloTask
         }
     }
 
+    private async Task TpDomain()
+    {
+        // 传送到秘境
+        if (!string.IsNullOrEmpty(_taskParam.DomainName))
+        {
+            if (MapAssets.Instance.DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
+            {
+                Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
+                await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
+                await Delay(1000, _ct);
+                await Bv.WaitForMainUi(_ct);
+                await Delay(1000, _ct);
+                var walkKey = User32.VK.VK_W;
+                if (MapAssets.Instance.DomainBackwardList.Contains(_taskParam.DomainName))
+                {
+                    walkKey = User32.VK.VK_S;
+                }
+
+                Simulation.SendInput.Keyboard.KeyDown(walkKey);
+                Thread.Sleep(3500);
+                Simulation.SendInput.Keyboard.KeyUp(walkKey);
+            }
+            else
+            {
+                Logger.LogError("自动秘境：未找到对应的秘境{Text}的传送点", _taskParam.DomainName);
+                throw new Exception($"未找到对应的秘境{_taskParam.DomainName}的传送点");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 切换队伍
+    /// </summary>
+    /// <param name="partyName"></param>
+    /// <returns></returns>
+    private async Task<bool> SwitchParty(string? partyName)
+    {
+        if (!string.IsNullOrEmpty(partyName))
+        {
+            var b = await new SwitchPartyTask().Start(partyName, _ct);
+            await Delay(500, _ct);
+            return b;
+        }
+
+        return true;
+    }
+
     private void EnterDomain()
     {
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
+        // 进入秘境
         using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
         if (!fRectArea.IsEmpty())
         {
