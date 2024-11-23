@@ -96,7 +96,9 @@
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible" />
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}" Value="True">
+                        <DataTrigger
+                            Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}"
+                            Value="True">
                             <Setter Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
                     </Style.Triggers>
@@ -111,7 +113,9 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在左侧栏目右键可以新增/修改配置组，拖拽进行配置组排序。配置组内可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        在左侧栏目右键可以新增/修改配置组，拖拽进行配置组排序。配置组内可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，
+                        <Hyperlink Command="{Binding GoToScriptGroupUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看调度器使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -190,6 +194,17 @@
                     <Separator Width="10" Opacity="0" />
 
 
+                    <ui:DropDownButton Content="添加" Icon="{ui:SymbolIcon Add24}">
+                        <ui:DropDownButton.Flyout>
+                            <ContextMenu> 
+                                <MenuItem Header="JS脚本" Command="{Binding AddJsScriptCommand}" />
+                                <MenuItem Header="路径追踪任务" Command="{Binding AddPathingCommand}" />
+                                <MenuItem Header="键鼠脚本" Command="{Binding AddKmScriptCommand}" />
+                            </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                    </ui:DropDownButton>
+                    <Separator Width="10" Opacity="0" />
+
                     <ui:Button Command="{Binding OpenScriptGroupSettingsCommand}"
                                Content="设置"
                                Icon="{ui:SymbolIcon Settings24}" />
@@ -240,7 +255,8 @@
                             <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="启用状态">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ui:ToggleSwitch IsChecked="{Binding Status, Converter={StaticResource BooleanToEnableTextConverter}, Mode=TwoWay}" />
+                                        <ui:ToggleSwitch
+                                            IsChecked="{Binding Status, Converter={StaticResource BooleanToEnableTextConverter}, Mode=TwoWay}" />
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
@@ -249,8 +265,8 @@
                     <ListView.ContextMenu>
                         <ContextMenu>
                             <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
-                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
                             <MenuItem Command="{Binding AddPathingCommand}" Header="添加路径追踪任务" />
+                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="修改通用配置" />
@@ -261,7 +277,9 @@
                                     <Style TargetType="MenuItem">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}" Value="Javascript">
+                                            <DataTrigger
+                                                Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}"
+                                                Value="Javascript">
                                                 <Setter Property="Visibility" Value="Visible" />
                                             </DataTrigger>
                                         </Style.Triggers>

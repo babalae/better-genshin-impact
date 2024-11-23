@@ -38,7 +38,7 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="地图追踪（实验功能）" />
+                      Text="路径追踪（实验功能）" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
