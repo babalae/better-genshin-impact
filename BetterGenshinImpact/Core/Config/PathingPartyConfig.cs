@@ -59,6 +59,10 @@ public partial class PathingPartyConfig : ObservableObject
     // 只在传送传送点时复活
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
+    
+    // 使用小道具的间隔时间
+    [ObservableProperty]
+    private int _useGadgetIntervalMs = 0;
 
     // 启用进入剧情自动脱离
     [ObservableProperty]
@@ -71,6 +75,7 @@ public partial class PathingPartyConfig : ObservableObject
         return new PathingPartyConfig
         {
             OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
+            UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs
         };
     }
 }

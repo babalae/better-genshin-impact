@@ -54,6 +54,7 @@ public class PathExecutor(CancellationToken ct)
     // private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
+    private DateTime _useGadgetLastUseTime = DateTime.MinValue;
 
     private const int RetryTimes = 2;
     private int _inTrap = 0;
@@ -511,6 +512,16 @@ public class PathExecutor(CancellationToken ct)
                         await UseElementalSkill();
                         _elementalSkillLastUseTime = DateTime.UtcNow;
                     }
+                }
+            }
+            
+            // 使用小道具
+            if (PartyConfig.UseGadgetIntervalMs > 0)
+            {
+                if ((DateTime.UtcNow - _useGadgetLastUseTime).TotalMilliseconds > PartyConfig.UseGadgetIntervalMs)
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Z);
+                    _useGadgetLastUseTime = DateTime.UtcNow;
                 }
             }
 

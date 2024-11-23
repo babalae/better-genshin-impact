@@ -22,6 +22,10 @@ public partial class PathingConditionConfig : ObservableObject
     // 只在传送传送点时复活
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
+    
+    // 使用小道具的间隔时间
+    [ObservableProperty]
+    private int _useGadgetIntervalMs = 0;
 
     public static PathingConditionConfig Default => new()
     {
