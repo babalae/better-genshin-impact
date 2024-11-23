@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -62,4 +63,14 @@ public partial class PathingPartyConfig : ObservableObject
     // 启用进入剧情自动脱离
     [ObservableProperty]
     private bool _autoSkipEnabled = false;
+    
+    public static PathingPartyConfig BuildDefault()
+    {
+        // 即便是不启用的情况下也设置默认值，减少后续使用的判断
+        var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
+        return new PathingPartyConfig
+        {
+            OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
+        };
+    }
 }

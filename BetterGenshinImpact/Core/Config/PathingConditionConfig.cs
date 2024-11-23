@@ -18,6 +18,10 @@ public partial class PathingConditionConfig : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<Condition> _avatarConditions = [];
+    
+    // 只在传送传送点时复活
+    [ObservableProperty]
+    private bool _onlyInTeleportRecover = false;
 
     public static PathingConditionConfig Default => new()
     {

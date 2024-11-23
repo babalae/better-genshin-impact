@@ -41,7 +41,7 @@ public class PathExecutor(CancellationToken ct)
 
     public PathingPartyConfig PartyConfig
     {
-        get => _partyConfig ?? new PathingPartyConfig();
+        get => _partyConfig ?? PathingPartyConfig.BuildDefault();
         set => _partyConfig = value;
     }
 
@@ -114,7 +114,7 @@ public class PathExecutor(CancellationToken ct)
                 await ResolveAnomalies(); // 异常场景处理
                 foreach (var waypoint in waypoints)
                 {
-                    await RecoverWhenLowHp(); // 低血量恢复
+                    await RecoverWhenLowHp(waypoint); // 低血量恢复
                     if (waypoint.Type == WaypointType.Teleport.Code)
                     {
                         await HandleTeleportWaypoint(waypoint);
@@ -313,8 +313,13 @@ public class PathExecutor(CancellationToken ct)
         return positions.Select(waypoint => new WaypointForTrack(waypoint)).ToList();
     }
 
-    private async Task RecoverWhenLowHp()
+    private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
+        if (PartyConfig.OnlyInTeleportRecover && waypoint.Type != WaypointType.Teleport.Code)
+        {
+            return;
+        }
+        
         using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region))
         {
