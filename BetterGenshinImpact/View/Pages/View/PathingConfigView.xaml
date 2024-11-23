@@ -11,9 +11,11 @@
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
                  Width="1000"
                  Height="500"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  d:DataContext="{d:DesignInstance Type=view:PathingConfigViewModel}"
-                 d:DesignHeight="450"
-                 d:DesignWidth="300"
+                 d:DesignHeight="1000"
+                 d:DesignWidth="500"
                  mc:Ignorable="d">
 
     <b:Interaction.Triggers>
@@ -105,9 +107,10 @@
                                                     Text="{Binding Result, Mode=TwoWay}" />
 
                                         <!--  清除按钮  -->
-                                        <Button Command="{Binding DataContext.RemovePartyConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                CommandParameter="{Binding}"
-                                                Content="删除" />
+                                        <Button
+                                            Command="{Binding DataContext.RemovePartyConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="删除" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -154,16 +157,17 @@
 
                                         <!--  搜索输入框  -->
                                         <Grid Width="300" MinWidth="300">
-                                            <sdl:MultiSelectComboBox Background="{DynamicResource ApplicationBackgroundBrush}"
-                                                                     EnableAutoComplete="True"
-                                                                     EnableBatchSelection="True"
-                                                                     EnableFiltering="True"
-                                                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                                     IsEditable="True"
-                                                                     ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
-                                                                     MaxDropDownHeight="300"
-                                                                     SelectedItems="{Binding Object, Mode=TwoWay}"
-                                                                     SelectionMode="Multiple" />
+                                            <sdl:MultiSelectComboBox
+                                                Background="{DynamicResource ApplicationBackgroundBrush}"
+                                                EnableAutoComplete="True"
+                                                EnableBatchSelection="True"
+                                                EnableFiltering="True"
+                                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                IsEditable="True"
+                                                ItemsSource="{Binding Definition.ObjectOptions, Mode=TwoWay}"
+                                                MaxDropDownHeight="300"
+                                                SelectedItems="{Binding Object, Mode=TwoWay}"
+                                                SelectionMode="Multiple" />
 
                                         </Grid>
 
@@ -181,9 +185,10 @@
                                                   SelectedItem="{Binding Result}" />
 
                                         <!--  清除按钮  -->
-                                        <Button Command="{Binding DataContext.RemoveAvatarConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                CommandParameter="{Binding}"
-                                                Content="删除" />
+                                        <Button
+                                            Command="{Binding DataContext.RemoveAvatarConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"
+                                            Content="删除" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -195,6 +200,65 @@
                                 Content="+ 添加条件" />
                     </StackPanel>
                 </ui:Card>
+
+
+
+                <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon BoxToolbox24}">
+
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="使用小道具的间隔时间（毫秒）"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="在移动期间自动使用小道具，填0为不使用"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+
+                    <ui:TextBox
+                        MinWidth="100"
+                        Margin="0,0,36,0"
+                        Text="{Binding Config.PathingConditionConfig.UseGadgetIntervalMs, Mode=TwoWay}"
+                        TextWrapping="NoWrap" />
+                </ui:CardControl>
+                
+                
+                <ui:CardControl Margin="0,0,0,12" >
+                    <ui:CardControl.Icon>
+                        <ui:FontIcon Glyph="&#xe3b2;" Style="{StaticResource FaFontIconStyle}" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="只在传送点时恢复"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="只有路径在传送点时，才会去七天神像恢复"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+
+                    <ui:ToggleSwitch
+                        Margin="0,0,36,0"
+                        IsChecked="{Binding Config.PathingConditionConfig.OnlyInTeleportRecover, Mode=TwoWay}" />
+                </ui:CardControl>
             </StackPanel>
         </ScrollViewer>
 

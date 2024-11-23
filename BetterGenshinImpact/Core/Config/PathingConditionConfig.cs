@@ -23,7 +23,7 @@ public partial class PathingConditionConfig : ObservableObject
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
     
-    // 使用小道具的间隔时间
+    // 使用小道具的间隔时间(ms)
     [ObservableProperty]
     private int _useGadgetIntervalMs = 0;
 
