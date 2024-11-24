@@ -14,11 +14,13 @@ using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.System;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -84,6 +86,12 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty]
     private string _switchAutoMusicGameButtonText = "启动";
 
+    [ObservableProperty]
+    private List<string> _domainNameList;
+
+    [ObservableProperty]
+    private List<string> _artifactSalvageStarList = ["4", "3", "2", "1"];
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -93,6 +101,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
 
         _combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
+
+        _domainNameList = MapLazyAssets.Instance.DomainNameList;
     }
 
     private string[] LoadCustomScript(string folder)

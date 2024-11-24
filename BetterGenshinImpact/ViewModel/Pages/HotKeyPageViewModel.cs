@@ -556,8 +556,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
                     // Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
 
-                    GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
-                    Task.Run(async () => { await goToAdventurersGuildTask.Start("枫丹", new CancellationToken()); });
+                    // GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
+                    // Task.Run(async () => { await goToAdventurersGuildTask.Start("枫丹", new CancellationToken()); });
+                    
+                    ArtifactSalvageTask artifactSalvageTask = new ArtifactSalvageTask();
+                    Task.Run(async () => { await artifactSalvageTask.Start(4, new CancellationToken()); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

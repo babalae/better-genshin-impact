@@ -62,6 +62,9 @@ public class SwitchPartyTask
             if (currTeamName == partyName)
             {
                 Logger.LogInformation("切换队伍，当前队伍[{Name}]即为目标队伍，无需切换", partyName);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(500, ct);
+                await _returnMainUiTask.Start(ct);
                 return true;
             }
 

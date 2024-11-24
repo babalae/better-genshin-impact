@@ -347,7 +347,7 @@ public class TpTask(CancellationToken ct)
         double recentX = 0;
         double recentY = 0;
         var minDistance = double.MaxValue;
-        foreach (var tpPosition in MapAssets.Instance.TpPositions)
+        foreach (var tpPosition in MapLazyAssets.Instance.TpPositions)
         {
             var distance = Math.Sqrt(Math.Pow(tpPosition.X - x, 2) + Math.Pow(tpPosition.Y - y, 2));
             if (distance < minDistance)
@@ -388,7 +388,7 @@ public class TpTask(CancellationToken ct)
         }
 
         var minCountry = "当前位置";
-        foreach (var (country, position) in MapAssets.Instance.CountryPositions)
+        foreach (var (country, position) in MapLazyAssets.Instance.CountryPositions)
         {
             var distance = Math.Sqrt(Math.Pow(position[0] - x, 2) + Math.Pow(position[1] - y, 2));
             if (distance < minDistance)

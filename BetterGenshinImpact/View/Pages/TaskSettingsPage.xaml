@@ -11,7 +11,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="TaskSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
-      d:DesignHeight="850"
+      d:DesignHeight="1150"
       d:DesignWidth="750"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -74,7 +74,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动打牌 -<Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        全自动打牌 -
+                        <Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -118,7 +120,8 @@
                               SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
-                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}" CommandParameter="GeniusInvocation" />
+                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                       CommandParameter="GeniusInvocation" />
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
                     </ComboBox>
@@ -177,7 +180,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        装备「王树瑞佑」，通过循环重启游戏刷新并收集木材 -<Hyperlink Command="{Binding GoToAutoWoodUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        装备「王树瑞佑」，通过循环重启游戏刷新并收集木材 -
+                        <Hyperlink Command="{Binding GoToAutoWoodUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -348,7 +353,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动执行选择的战斗策略 -<Hyperlink Command="{Binding GoToAutoFightUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        自动执行选择的战斗策略 -
+                        <Hyperlink Command="{Binding GoToAutoFightUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -399,7 +406,8 @@
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
-                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}" CommandParameter="Combat" />
+                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                       CommandParameter="Combat" />
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
                     </ComboBox>
@@ -509,7 +517,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        基于钟离的自动循环刷本 -<Hyperlink Command="{Binding GoToAutoDomainUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        基于钟离的自动循环刷本 -
+                        <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -560,11 +570,13 @@
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
-                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}" CommandParameter="Combat" />
+                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                       CommandParameter="Combat" />
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
                     </ComboBox>
                 </Grid>
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -577,22 +589,86 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="强制指定队伍"
+                                  Text="自动切换到指定队伍"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="队伍无法被识别时，请按顺序填写队伍内角色名称，逗号分割"
+                                  Text="注意队伍名称是游戏内你手动设置的名称"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="180"
-                                MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
-                                TextWrapping="Wrap" />
+                                Text="{Binding Config.AutoDomainConfig.PartyName, Mode=TwoWay}" />
                 </Grid>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="指定要前往的秘境"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="自动传送到刷取的秘境"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="180"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding DomainNameList}"
+                              SelectedItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}">
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="结束后自动分解圣遗物"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="可以选择要分解到圣遗物的最高星级"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="80"
+                              Margin="0,0,10,0"
+                              ItemsSource="{Binding ArtifactSalvageStarList, Mode=TwoWay}"
+                              SelectedItem="{Binding Config.AutoDomainConfig.MaxArtifactStar, Mode=TwoWay}">
+                    </ComboBox>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="2"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+
+                </Grid>
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -707,6 +783,34 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="强制指定队伍（非特殊情况无需使用）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="队伍无法被识别时，请按顺序填写队伍内角色名称，逗号分割"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                TextWrapping="Wrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="自动吃药"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
@@ -777,7 +881,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动走路跟踪剧情任务，不支持每日任务 -<Hyperlink Command="{Binding GoToAutoTrackUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        自动走路跟踪剧情任务，不支持每日任务 -
+                        <Hyperlink Command="{Binding GoToAutoTrackUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -841,7 +947,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        进入演奏界面使用，下落模式必须选择垂落模式 -<Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        进入演奏界面使用，下落模式必须选择垂落模式 -
+                        <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
@@ -851,7 +959,6 @@
                        Command="{Binding SwitchAutoMusicGameCommand}"
                        Content="{Binding SwitchAutoMusicGameButtonText}" />
         </ui:CardControl>
-
 
 
         <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Accessibility24}">

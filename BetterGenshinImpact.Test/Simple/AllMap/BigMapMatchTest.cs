@@ -17,7 +17,7 @@ public class BigMapMatchTest
         SpeedTimer speedTimer = new();
         // var mainMap100BlockMat = new Mat(@"D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\Assets\Map\mainMap100Block.png", ImreadModes.Grayscale);
 
-        var map2048 = MapAssets.Instance.MainMap2048BlockMat.Value;
+        var map2048 =  new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", ImreadModes.Grayscale);
         var mainMap100BlockMat = ResizeHelper.Resize(map2048, 1d / (4 * 2));
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\mainMap128Block.png", mainMap100BlockMat);
 

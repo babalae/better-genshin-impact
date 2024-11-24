@@ -75,10 +75,10 @@ public class AutoDomainTask : ISoloTask
         Init();
         NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
 
-        // // 传送到秘境
-        // await TpDomain();
-        // // 切换队伍
-        // await SwitchParty(_taskParam.PartyName);
+        // 传送到秘境
+        await TpDomain();
+        // 切换队伍
+        await SwitchParty(_taskParam.PartyName);
 
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
 
@@ -133,6 +133,11 @@ public class AutoDomainTask : ISoloTask
 
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
         }
+        
+        await Delay(1000, ct);
+        await Bv.WaitForMainUi(_ct);
+        
+        await ArtifactSalvage();
     }
 
     private void Init()
@@ -179,7 +184,7 @@ public class AutoDomainTask : ISoloTask
         // 传送到秘境
         if (!string.IsNullOrEmpty(_taskParam.DomainName))
         {
-            if (MapAssets.Instance.DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
+            if (MapLazyAssets.Instance.DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
             {
                 Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
                 await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
@@ -187,7 +192,7 @@ public class AutoDomainTask : ISoloTask
                 await Bv.WaitForMainUi(_ct);
                 await Delay(1000, _ct);
                 var walkKey = User32.VK.VK_W;
-                if (MapAssets.Instance.DomainBackwardList.Contains(_taskParam.DomainName))
+                if (MapLazyAssets.Instance.DomainBackwardList.Contains(_taskParam.DomainName))
                 {
                     walkKey = User32.VK.VK_S;
                 }
@@ -884,5 +889,20 @@ public class AutoDomainTask : ISoloTask
 
         Logger.LogInformation("剩余：浓缩树脂 {CondensedResinCount} 脆弱树脂 {FragileResinCount}", condensedResinCount, fragileResinCount);
         return (condensedResinCount, fragileResinCount);
+    }
+
+    private async Task ArtifactSalvage()
+    {
+        if (!_taskParam.AutoArtifactSalvage)
+        {
+            return;
+        }
+        
+        if (!int.TryParse(_taskParam.MaxArtifactStar, out var star))
+        {
+            star = 4;
+        }
+
+        await new ArtifactSalvageTask().Start(star, _ct);
     }
 }

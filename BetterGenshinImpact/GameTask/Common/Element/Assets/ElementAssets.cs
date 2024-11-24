@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -27,6 +28,11 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject PartyBtnDelete;
 
     public RecognitionObject CraftCondensedResin;
+
+    public RecognitionObject BagArtifactUnchecked;
+    public RecognitionObject BagArtifactChecked;
+    public RecognitionObject BtnArtifactSalvage;
+    public RecognitionObject BtnArtifactSalvageConfirm;
 
     private ElementAssets()
     {
@@ -160,6 +166,40 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "craft_condensed_resin.png"),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width / 2, CaptureRect.Height / 3 * 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 分解圣遗物
+        BagArtifactUnchecked = new RecognitionObject
+        {
+            Name = "BagArtifactUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_artifact_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagArtifactChecked = new RecognitionObject
+        {
+            Name = "BagArtifactChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_artifact_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnArtifactSalvage = new RecognitionObject
+        {
+            Name = "BtnArtifactSalvage",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage.png"),
+            RegionOfInterest = CaptureRect.CutBottom(0.1),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnArtifactSalvageConfirm = new RecognitionObject
+        {
+            Name = "BtnArtifactSalvageConfirm",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage_confirm.png"),
+            RegionOfInterest = CaptureRect.CutBottom(0.1),
             DrawOnWindow = false
         }.InitTemplate();
     }
