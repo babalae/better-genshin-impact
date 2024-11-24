@@ -110,6 +110,7 @@ public class ArtifactSalvageTask
         // 点击确认
         using var ra6 = CaptureToRectArea();
         Bv.ClickBlackConfirmButton(ra6);
+        Logger.LogInformation("完成{Star}星圣遗物分解", star);
         await Delay(400, ct);
 
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);

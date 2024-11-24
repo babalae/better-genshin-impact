@@ -33,6 +33,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BagArtifactChecked;
     public RecognitionObject BtnArtifactSalvage;
     public RecognitionObject BtnArtifactSalvageConfirm;
+    
+    public RecognitionObject BtnClaimEncounterPointsRewards;
 
     private ElementAssets()
     {
@@ -200,6 +202,16 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage_confirm.png"),
             RegionOfInterest = CaptureRect.CutBottom(0.1),
+            DrawOnWindow = false
+        }.InitTemplate();
+        
+        // 历练点奖励
+        BtnClaimEncounterPointsRewards = new RecognitionObject
+        {
+            Name = "BtnClaimEncounterPointsRewards",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_claim_encounter_points_rewards.png"),
+            RegionOfInterest = CaptureRect.CutRightBottom(0.3,0.5),
             DrawOnWindow = false
         }.InitTemplate();
     }
