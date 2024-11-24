@@ -75,10 +75,10 @@ public class AutoDomainTask : ISoloTask
         Init();
         NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
 
-        // 传送到秘境
-        await TpDomain();
-        // 切换队伍
-        await SwitchParty(_taskParam.PartyName);
+        // // 传送到秘境
+        // await TpDomain();
+        // // 切换队伍
+        // await SwitchParty(_taskParam.PartyName);
 
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
 
