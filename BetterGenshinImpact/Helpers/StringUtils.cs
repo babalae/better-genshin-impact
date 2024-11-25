@@ -82,6 +82,11 @@ public partial class StringUtils
         _ = int.TryParse(text, out int result);
         return result;
     }
+    
+    public static int TryParseInt(string text, int defaultValue)
+    {
+        return int.TryParse(text, out int result) ? result : defaultValue;
+    }
 
     public static int TryExtractPositiveInt(string text)
     {

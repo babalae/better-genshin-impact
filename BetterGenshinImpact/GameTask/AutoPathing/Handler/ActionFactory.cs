@@ -15,7 +15,7 @@ public class ActionFactory
             return key switch
             {
                 "nahida_collect" => new NahidaCollectHandler(),
-                "pick_around" => new PickAroundHandler(1),
+                "pick_around" => new PickAroundHandler(),
                 "fight" => new AutoFightHandler(),
                 "normal_attack" => new NormalAttackHandler(),
                 "elemental_skill" => new ElementalSkillHandler(),

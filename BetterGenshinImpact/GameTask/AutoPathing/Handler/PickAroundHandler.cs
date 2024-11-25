@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -13,15 +14,22 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 采集任务到达点位后执行拾取操作
 /// </summary>
-public class PickAroundHandler(int turns) : IActionHandler
+public class PickAroundHandler() : IActionHandler
 {
     private CancellationToken _ct;
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
     {
         this._ct = ct;
         Logger.LogInformation("执行 {Text}", "小范围内自动拾取");
 
         double speed = 1.1;
+        int turns = 1;
+        if (waypointForTrack is { ActionParams: not null })
+        {
+            turns = StringUtils.TryParseInt(waypointForTrack.ActionParams, 1);
+        }
+
         // 无加成幼年为 1, 少年为 1.1, 成年为 1.2, 若有移速加成, 再乘以加成倍率.
         CircularMotionCalculator calculator = new CircularMotionCalculator(speed);
         double oldRadiusT = 0;
@@ -45,6 +53,7 @@ public class PickAroundHandler(int turns) : IActionHandler
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Delay((int)Math.Round(edgeT), _ct);
         }
+
         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
         await Delay(200, _ct);
     }
