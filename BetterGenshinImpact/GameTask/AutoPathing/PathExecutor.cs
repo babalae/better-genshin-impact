@@ -103,65 +103,69 @@ public class PathExecutor(CancellationToken ct)
 
         InitializePathing(task);
 
-        var waypoints = ConvertWaypointsForTrack(task.Positions);
+        // 转换、按传送点分割路径
+        var waypointsList = ConvertWaypointsForTrack(task.Positions);
 
         await Delay(100, ct);
         Navigation.WarmUp(); // 提前加载地图特征点
 
-        for (var i = 0; i < RetryTimes; i++)
+        foreach (var waypoints in waypointsList)
         {
-            try
+            for (var i = 0; i < RetryTimes; i++)
             {
-                await ResolveAnomalies(); // 异常场景处理
-                foreach (var waypoint in waypoints)
+                try
                 {
-                    await RecoverWhenLowHp(waypoint); // 低血量恢复
-                    if (waypoint.Type == WaypointType.Teleport.Code)
+                    await ResolveAnomalies(); // 异常场景处理
+                    foreach (var waypoint in waypoints)
                     {
-                        await HandleTeleportWaypoint(waypoint);
-                    }
-                    else
-                    {
-                        await BeforeMoveToTarget(waypoint);
-
-                        // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
-                        await MoveTo(waypoint);
-
-                        if (waypoint.Type == WaypointType.Target.Code 
-                            // 除了 fight mining 之外的 action 都需要接近
-                            || (!string.IsNullOrEmpty(waypoint.Action) 
-                                && waypoint.Action != ActionEnum.NahidaCollect.Code
-                                && waypoint.Action != ActionEnum.Fight.Code
-                                && waypoint.Action != ActionEnum.CombatScript.Code
-                                && waypoint.Action != ActionEnum.Mining.Code))
+                        await RecoverWhenLowHp(waypoint); // 低血量恢复
+                        if (waypoint.Type == WaypointType.Teleport.Code)
                         {
-                            await MoveCloseTo(waypoint);
+                            await HandleTeleportWaypoint(waypoint);
                         }
-                        
-                        if (!string.IsNullOrEmpty(waypoint.Action))
+                        else
                         {
-                            // 执行 action
-                            await AfterMoveToTarget(waypoint);
+                            await BeforeMoveToTarget(waypoint);
+
+                            // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
+                            await MoveTo(waypoint);
+
+                            if (waypoint.Type == WaypointType.Target.Code
+                                // 除了 fight mining 之外的 action 都需要接近
+                                || (!string.IsNullOrEmpty(waypoint.Action)
+                                    && waypoint.Action != ActionEnum.NahidaCollect.Code
+                                    && waypoint.Action != ActionEnum.Fight.Code
+                                    && waypoint.Action != ActionEnum.CombatScript.Code
+                                    && waypoint.Action != ActionEnum.Mining.Code))
+                            {
+                                await MoveCloseTo(waypoint);
+                            }
+
+                            if (!string.IsNullOrEmpty(waypoint.Action))
+                            {
+                                // 执行 action
+                                await AfterMoveToTarget(waypoint);
+                            }
                         }
                     }
+
+                    break;
                 }
-
-                break;
-            }
-            catch (NormalEndException normalEndException)
-            {
-                Logger.LogInformation(normalEndException.Message);
-                break;
-            }
-            catch (RetryException retryException)
-            {
-                Logger.LogWarning(retryException.Message);
-            }
-            finally
-            {
-                // 不管咋样，松开所有按键
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-                Simulation.SendInput.Mouse.RightButtonUp();
+                catch (NormalEndException normalEndException)
+                {
+                    Logger.LogInformation(normalEndException.Message);
+                    break;
+                }
+                catch (RetryException retryException)
+                {
+                    Logger.LogWarning(retryException.Message);
+                }
+                finally
+                {
+                    // 不管咋样，松开所有按键
+                    Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                    Simulation.SendInput.Mouse.RightButtonUp();
+                }
             }
         }
     }
@@ -308,10 +312,30 @@ public class PathExecutor(CancellationToken ct)
         }
     }
 
-    private List<WaypointForTrack> ConvertWaypointsForTrack(List<Waypoint> positions)
+    private List<List<WaypointForTrack>> ConvertWaypointsForTrack(List<Waypoint> positions)
     {
         // 把 X Y 转换为 MatX MatY
-        return positions.Select(waypoint => new WaypointForTrack(waypoint)).ToList();
+        var allList = positions.Select(waypoint => new WaypointForTrack(waypoint)).ToList();
+
+        // 按照WaypointType.Teleport.Code切割数组
+        var result = new List<List<WaypointForTrack>>();
+        var tempList = new List<WaypointForTrack>();
+        foreach (var waypoint in allList)
+        {
+            if (waypoint.Type == WaypointType.Teleport.Code)
+            {
+                if (tempList.Count > 0)
+                {
+                    result.Add(tempList);
+                    tempList = new List<WaypointForTrack>();
+                }
+            }
+
+            tempList.Add(waypoint);
+        }
+        result.Add(tempList);
+
+        return result;
     }
 
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
@@ -320,7 +344,7 @@ public class PathExecutor(CancellationToken ct)
         {
             return;
         }
-        
+
         using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region))
         {
@@ -514,7 +538,7 @@ public class PathExecutor(CancellationToken ct)
                     }
                 }
             }
-            
+
             // 使用小道具
             if (PartyConfig.UseGadgetIntervalMs > 0)
             {
@@ -697,7 +721,6 @@ public class PathExecutor(CancellationToken ct)
      * 处理各种异常场景
      * 需要保证耗时不能太高
      */
-
     private async Task ResolveAnomalies()
     {
         // 处理月卡

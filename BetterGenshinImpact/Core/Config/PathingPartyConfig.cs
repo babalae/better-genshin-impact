@@ -66,7 +66,7 @@ public partial class PathingPartyConfig : ObservableObject
 
     // 启用进入剧情自动脱离
     [ObservableProperty]
-    private bool _autoSkipEnabled = false;
+    private bool _autoSkipEnabled = true;
     
     public static PathingPartyConfig BuildDefault()
     {
