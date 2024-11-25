@@ -37,6 +37,12 @@ public partial class AutoSkipConfig : ObservableObject
     private int _afterChooseOptionSleepDelay = 0;
 
     /// <summary>
+    /// 自动领取纪行
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoGetJournalEnabled = true;
+
+    /// <summary>
     /// 自动领取每日委托奖励
     /// </summary>
     [ObservableProperty]
