@@ -144,6 +144,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
         _prevExecute = DateTime.Now;
 
+        // 自动领取纪行
+        HandleGetJournal(content);
+
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
