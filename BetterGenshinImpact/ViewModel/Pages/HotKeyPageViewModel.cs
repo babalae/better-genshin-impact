@@ -553,7 +553,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // var handler = new ElementalCollectHandler(ElementalType.Anemo);
                     // handler.RunAsync(new CancellationToken());
                     
-                    var handler = new PickAroundHandler(1);
+                    var handler = new PickAroundHandler();
                     handler.RunAsync(new CancellationToken());
 
                     // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
