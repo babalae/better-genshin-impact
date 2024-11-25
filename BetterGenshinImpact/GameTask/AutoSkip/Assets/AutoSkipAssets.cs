@@ -193,5 +193,23 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_skip.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8)
         }.InitTemplate();
+
+        // 自动纪行
+        public RecognitionObject jixin_notice { get; set; } = new RecognitionObject
+        {
+            Name = "jixin_notice",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "jixin_notice.png"),
+            DrawOnWindow = true
+        }.InitTemplate();
+
+        public RecognitionObject jixin_reward { get; set; } = new RecognitionObject
+        {
+            Name = "jixin_reward",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "jixin_reward.png"),
+            DrawOnWindow = true
+        }.InitTemplate();
+
     }
 }
