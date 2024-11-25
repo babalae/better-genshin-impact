@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media;
@@ -18,19 +19,23 @@ public partial class OneDragonTaskItem : ObservableObject
 
     [ObservableProperty]
     private OneDragonBaseViewModel? _viewModel;
+    
+    public Func<Task> Action { get; private set; }
 
-    public OneDragonTaskItem(string name)
+    public OneDragonTaskItem(string name, Func<Task> action)
     {
         Name = name;
+        Action = action;
     }
 
-    public OneDragonTaskItem(Type viewModelType)
-    {
-        ViewModel = App.GetService(viewModelType) as OneDragonBaseViewModel;
-        if (ViewModel == null)
-        {
-            throw new ArgumentException("Invalid view model type", nameof(viewModelType));
-        }
-        Name = ViewModel.Title;
-    }
+    // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
+    // {
+    //     ViewModel = App.GetService(viewModelType) as OneDragonBaseViewModel;
+    //     if (ViewModel == null)
+    //     {
+    //         throw new ArgumentException("Invalid view model type", nameof(viewModelType));
+    //     }
+    //     Name = ViewModel.Title;
+    //     Action = action;
+    // }
 }

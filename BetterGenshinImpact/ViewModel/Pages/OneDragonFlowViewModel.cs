@@ -3,7 +3,17 @@ using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.Enum;
+using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui.Controls;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -24,13 +34,33 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         // new OneDragonTaskItem(typeof(SereniteaPotViewModel)),  // 领取尘歌壶奖励
         // new OneDragonTaskItem(typeof(TcgViewModel)),  // 自动七圣召唤
 
-        new OneDragonTaskItem("领取邮件"),
-        new OneDragonTaskItem("合成树脂"),
+        new OneDragonTaskItem("领取邮件", async () =>
+        {
+            await Task.Delay(100);
+        }),
+        new OneDragonTaskItem("合成树脂", async () =>
+        {
+            await new GoToCraftingBenchTask()
+                .Start("枫丹", CancellationContext.Instance.Cts.Token);
+        }),
         // new OneDragonTaskItem("每日委托"),
-        new OneDragonTaskItem("自动秘境"),
+        new OneDragonTaskItem("自动秘境", async () =>
+        {
+            var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+            if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
+            {
+                Logger.LogInformation("自动秘境战斗策略未配置，跳过");
+                return;
+            }
+            await new AutoDomainTask(new AutoDomainParam(0, path)).Start( CancellationContext.Instance.Cts.Token);
+        }),
         // new OneDragonTaskItem("自动锻造"),
         // new OneDragonTaskItem("自动刷地脉花"),
-        new OneDragonTaskItem("领取每日奖励"),
+        new OneDragonTaskItem("领取每日奖励", async () =>
+        {
+            await new GoToAdventurersGuildTask()
+                .Start("枫丹", CancellationContext.Instance.Cts.Token);
+        }),
         // new OneDragonTaskItem("领取尘歌壶奖励"),
         // new OneDragonTaskItem("自动七圣召唤"),
     ];
@@ -50,5 +80,19 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
 
     public void OnNavigatedFrom()
     {
+    }
+    
+    [RelayCommand]
+    private async Task OnOneKeyExecute()
+    {
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunAsync(async () =>
+            {
+                foreach (var task in TaskList)
+                {
+                   await task.Action();
+                   await Task.Delay(1000);
+                }
+            });
     }
 }

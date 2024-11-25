@@ -20,7 +20,6 @@ public class ClaimEncounterPointsRewardsTask
 
     public async Task Start(CancellationToken ct)
     {
-
         try
         {
             await DoOnce(ct);
@@ -31,8 +30,8 @@ public class ClaimEncounterPointsRewardsTask
             Logger.LogError("领取长效历练点奖励异常: {Msg}", e.Message);
         }
     }
-    
-    public async Task DoOnce( CancellationToken ct)
+
+    public async Task DoOnce(CancellationToken ct)
     {
         await _returnMainUiTask.Start(ct);
 
@@ -40,25 +39,35 @@ public class ClaimEncounterPointsRewardsTask
 
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F1); // F1 开书
 
-        // 找委托按钮
-        using var ra = CaptureToRectArea();
+        await Delay(2000, ct);
+
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
-        var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, 0, 360 * assetScale, ra.Height));
-
-        var wt = ocrList.FirstOrDefault(txt => txt.Text.Contains("委托"));
-
-        if (wt != null)
+        // 找委托按钮
+        var f1Success = await NewRetry.WaitForAction(() =>
         {
-            wt.Click();
-            await Delay(1000, ct);
-        }
-        else
+            using var ra = CaptureToRectArea();
+
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, 0, 360 * assetScale, ra.Height));
+
+            var wt = ocrList.FirstOrDefault(txt => txt.Text.Contains("委托"));
+
+            if (wt != null)
+            {
+                wt.Click();
+                return true;
+            }
+            return false;
+        }, ct, 5);
+
+        if (!f1Success)
         {
-            Logger.LogError("未找到委托按钮");
+            Logger.LogError("未找到委托按钮,F1打开冒险手册失败");
             return;
         }
-        
+
+        await Delay(1000, ct);
+
         // 领取
         using var ra2 = CaptureToRectArea();
         var claimBtn = ra2.Find(ElementAssets.Instance.BtnClaimEncounterPointsRewards);
@@ -73,7 +82,7 @@ public class ClaimEncounterPointsRewardsTask
         {
             Logger.LogInformation("未找到领取按钮");
         }
-        
+
         // 关闭
         await _returnMainUiTask.Start(ct);
     }

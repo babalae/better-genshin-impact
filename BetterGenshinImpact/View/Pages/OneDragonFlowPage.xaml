@@ -33,6 +33,7 @@
                        Text="任务列表" />
             <ui:Button Margin="0,10,0,0"
                        Content="一键执行"
+                       Command="{Binding OneKeyExecuteCommand}"
                        DockPanel.Dock="Bottom" />
             <ui:ListView dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"

@@ -25,27 +25,34 @@ public class ArtifactSalvageTask
 
         // B键打开背包
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_B);
-        await Delay(800, ct);
+        await Delay(1000, ct);
 
-
-        // 选择圣遗物
-        using var ra = CaptureToRectArea();
-        using var artifactBtn = ra.Find(ElementAssets.Instance.BagArtifactChecked);
-        if (artifactBtn.IsEmpty())
+        var openBagSuccess = await NewRetry.WaitForAction(() =>
         {
-            using var artifactBtn2 = ra.Find(ElementAssets.Instance.BagArtifactUnchecked);
-            if (artifactBtn2.IsExist())
+            // 选择圣遗物
+            using var ra = CaptureToRectArea();
+            using var artifactBtn = ra.Find(ElementAssets.Instance.BagArtifactChecked);
+            if (artifactBtn.IsEmpty())
             {
-                artifactBtn2.Click();
-                await Delay(800, ct);
+                using var artifactBtn2 = ra.Find(ElementAssets.Instance.BagArtifactUnchecked);
+                if (artifactBtn2.IsExist())
+                {
+                    artifactBtn2.Click();
+                    return true;
+                }
             }
-            else
-            {
-                Logger.LogError("未找到背包中圣遗物菜单按钮");
-                return;
-            }
+
+            return false;
+        }, ct, 5);
+
+        if (!openBagSuccess)
+        {
+            Logger.LogError("未找到背包中圣遗物菜单按钮,打开背包失败");
+            return;
         }
 
+
+        await Delay(800, ct);
 
         // 点击分解按钮打开分解界面
         using var ra2 = CaptureToRectArea();
