@@ -134,8 +134,9 @@ public class AutoDomainTask : ISoloTask
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
         }
         
-        await Delay(1000, ct);
-        await Bv.WaitForMainUi(_ct);
+        await Delay(2000, ct);
+        await Bv.WaitForMainUi(_ct, 30);
+        await Delay(2000, ct);
         
         await ArtifactSalvage();
     }

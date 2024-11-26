@@ -39,7 +39,7 @@ public class ClaimEncounterPointsRewardsTask
 
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F1); // F1 开书
 
-        await Delay(2000, ct);
+        await Delay(1000, ct);
 
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
@@ -57,12 +57,13 @@ public class ClaimEncounterPointsRewardsTask
                 wt.Click();
                 return true;
             }
+
             return false;
         }, ct, 5);
 
         if (!f1Success)
         {
-            Logger.LogError("未找到委托按钮,F1打开冒险手册失败");
+            Logger.LogError("{F}未找到委托按钮,F1打开冒险之证失败", "历练点：");
             return;
         }
 
@@ -74,13 +75,13 @@ public class ClaimEncounterPointsRewardsTask
         if (claimBtn.IsExist())
         {
             claimBtn.Click();
-            Logger.LogInformation("领取长效历练点奖励");
+            Logger.LogInformation("{F}领取长效历练点奖励", "历练点：");
             await Delay(1000, ct);
             // TODO 截图并通知
         }
         else
         {
-            Logger.LogInformation("未找到领取按钮");
+            Logger.LogInformation("{F}未找到领取历练点奖励按钮", "历练点：");
         }
 
         // 关闭

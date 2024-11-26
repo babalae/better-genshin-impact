@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
@@ -40,6 +41,13 @@ public class ArtifactSalvageTask
                     artifactBtn2.Click();
                     return true;
                 }
+            }
+
+            // 如果还在主界面就尝试再按下B键打开背包
+            if (Bv.IsInMainUi(ra))
+            {
+                Debug.WriteLine("背包打开失败,再次尝试打开背包");
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_B);
             }
 
             return false;
