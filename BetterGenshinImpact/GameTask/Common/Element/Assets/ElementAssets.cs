@@ -178,6 +178,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_artifact_unchecked.png"),
             RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
             DrawOnWindow = false
         }.InitTemplate();
         BagArtifactChecked = new RecognitionObject
@@ -186,6 +187,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_artifact_checked.png"),
             RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
             DrawOnWindow = false
         }.InitTemplate();
         BtnArtifactSalvage = new RecognitionObject

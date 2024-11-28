@@ -42,6 +42,10 @@ public class ArtifactSalvageTask
                     return true;
                 }
             }
+            else
+            {
+                return true;
+            }
 
             // 如果还在主界面就尝试再按下B键打开背包
             if (Bv.IsInMainUi(ra))
@@ -118,7 +122,8 @@ public class ArtifactSalvageTask
         }
         else
         {
-            Logger.LogError("未找到圣遗物分解按钮");
+            Logger.LogInformation("未找到圣遗物分解按钮，可能已经没有圣遗物需要分解");
+            await _returnMainUiTask.Start(ct);
             return;
         }
 
