@@ -552,7 +552,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     // var handler = new ElementalCollectHandler(ElementalType.Anemo);
                     // handler.RunAsync(new CancellationToken());
-                    
+
                     // var handler = new PickAroundHandler();
                     // handler.RunAsync(new CancellationToken());
 
@@ -561,11 +561,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                     // GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
                     // Task.Run(async () => { await goToAdventurersGuildTask.Start("枫丹", new CancellationToken()); });
-                    
-                    ArtifactSalvageTask artifactSalvageTask = new ArtifactSalvageTask();
-                    Task.Run(async () => { await artifactSalvageTask.Start(4, new CancellationToken()); });
-                    
 
+                    // ArtifactSalvageTask artifactSalvageTask = new ArtifactSalvageTask();
+                    // Task.Run(async () => { await artifactSalvageTask.Start(4, new CancellationToken()); });
+
+                    // 领取纪行奖励
+                    Task.Run(async () => { await new ClaimBattlePassRewardsTask().Start(new CancellationToken()); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

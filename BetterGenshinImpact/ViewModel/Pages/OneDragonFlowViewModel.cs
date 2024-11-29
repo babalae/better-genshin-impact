@@ -34,10 +34,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         // new OneDragonTaskItem(typeof(SereniteaPotViewModel)),  // 领取尘歌壶奖励
         // new OneDragonTaskItem(typeof(TcgViewModel)),  // 自动七圣召唤
 
-        new OneDragonTaskItem("领取邮件", async () =>
-        {
-            await Task.Delay(100);
-        }),
+        new OneDragonTaskItem("领取邮件", async () => { await Task.Delay(100); }),
         new OneDragonTaskItem("合成树脂", async () =>
         {
             await new GoToCraftingBenchTask()
@@ -52,14 +49,18 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                 Logger.LogInformation("自动秘境战斗策略未配置，跳过");
                 return;
             }
-            await new AutoDomainTask(new AutoDomainParam(0, path)).Start( CancellationContext.Instance.Cts.Token);
+
+            await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts.Token);
         }),
         // new OneDragonTaskItem("自动锻造"),
         // new OneDragonTaskItem("自动刷地脉花"),
         new OneDragonTaskItem("领取每日奖励", async () =>
         {
+            // 冒险者工会
             await new GoToAdventurersGuildTask()
                 .Start("枫丹", CancellationContext.Instance.Cts.Token);
+            // 领取纪行奖励
+            await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
         }),
         // new OneDragonTaskItem("领取尘歌壶奖励"),
         // new OneDragonTaskItem("自动七圣召唤"),
@@ -67,10 +68,10 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty]
     private OneDragonTaskItem? _selectedTask;
-    
+
     [ObservableProperty]
     private string _craftingBenchCountry = "枫丹";
-    
+
     [ObservableProperty]
     private string _adventurersGuildCountry = "枫丹";
 
@@ -81,7 +82,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     public void OnNavigatedFrom()
     {
     }
-    
+
     [RelayCommand]
     private async Task OnOneKeyExecute()
     {
@@ -90,8 +91,8 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
             {
                 foreach (var task in TaskList)
                 {
-                   await task.Action();
-                   await Task.Delay(1000);
+                    await task.Action();
+                    await Task.Delay(1000);
                 }
             });
     }
