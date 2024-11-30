@@ -5,6 +5,9 @@ using BetterGenshinImpact.Test.Simple.AllMap;
 using BetterGenshinImpact.Test.Simple.Track;
 using BetterGenshinImpact.Test.View;
 using System.Windows;
+using BetterGenshinImpact.GameTask.Common.Map;
+using OpenCvSharp;
+using Window = System.Windows.Window;
 
 namespace BetterGenshinImpact.Test;
 
@@ -84,5 +87,11 @@ public partial class MainWindow : Window
     private void GenAvatarDataT(object sender, RoutedEventArgs e)
     {
         AvatarClassifyTransparentGen.GenAll();
+    }
+
+    private void CameraTest(object sender, RoutedEventArgs e)
+    {
+        CameraOrientationV2 cameraOrientation = new();
+        cameraOrientation.PredictRotation(new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_183119.png"));
     }
 }

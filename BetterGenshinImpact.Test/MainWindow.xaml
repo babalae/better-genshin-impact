@@ -78,5 +78,13 @@
                 VerticalAlignment="Center"
                 Click="ZoomOut"
                 Content="缩小地图到256" />
+        <Button Canvas.Left="120"
+                Canvas.Top="40"
+                Width="100"
+                Height="23"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="CameraTest"
+                Content="新视角识别测试" />
     </Canvas>
 </Window>
