@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using BetterGenshinImpact.Core.Script.Dependence;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -65,6 +66,9 @@ public class ScriptProject
 
     public async Task ExecuteAsync(dynamic? context = null)
     {
+        // 默认值
+        GlobalMethod.SetGameMetrics(1920, 1080);
+        // 加载代码
         var code = await LoadCode();
         var engine = BuildScriptEngine();
         if (context != null)

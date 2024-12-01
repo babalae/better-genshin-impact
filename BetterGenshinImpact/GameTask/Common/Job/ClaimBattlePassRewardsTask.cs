@@ -41,12 +41,14 @@ public class ClaimBattlePassRewardsTask
         TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_F4); // F4 开纪行
 
 
+        // 领取点数
         await Delay(1000, ct);
         GameCaptureRegion.GameRegion1080PPosClick(960, 45); // 点中间
         await Delay(500, ct);
         ClaimAll();
         
-        await Delay(500, ct);
+        // 领取战令
+        await Delay(1500, ct);
         GameCaptureRegion.GameRegion1080PPosClick(858, 45);
         await Delay(500, ct);
         ClaimAll();
