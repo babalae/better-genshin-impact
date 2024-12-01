@@ -91,7 +91,7 @@ public partial class MainWindow : Window
 
     private void CameraTest(object sender, RoutedEventArgs e)
     {
-        CameraOrientationV2 cameraOrientation = new();
+        CameraOrientationV3 cameraOrientation = new();
         cameraOrientation.PredictRotation(new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_183119.png"));
     }
 }
