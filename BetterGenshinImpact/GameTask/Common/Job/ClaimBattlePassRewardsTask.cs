@@ -38,7 +38,7 @@ public class ClaimBattlePassRewardsTask
         await _returnMainUiTask.Start(ct);
 
         await Delay(200, ct);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F4); // F4 开纪行
+        TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_F4); // F4 开纪行
 
 
         await Delay(1000, ct);

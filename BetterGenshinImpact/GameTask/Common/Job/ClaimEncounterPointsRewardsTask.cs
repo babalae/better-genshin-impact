@@ -37,7 +37,7 @@ public class ClaimEncounterPointsRewardsTask
 
         await Delay(200, ct);
 
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F1); // F1 开书
+        TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_F1); // F1 开书
 
         await Delay(1000, ct);
 
