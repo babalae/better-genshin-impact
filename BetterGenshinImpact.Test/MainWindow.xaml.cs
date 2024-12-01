@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System.Diagnostics;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Test.Dataset;
 using BetterGenshinImpact.Test.Simple;
 using BetterGenshinImpact.Test.Simple.AllMap;
@@ -52,10 +53,10 @@ public partial class MainWindow : Window
         // BigMapMatchTest.Test();
 
         // FeatureTransfer.Transfer();
-        
+
         // var extractor = new LargeSiftExtractor();
         // extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\");
-        
+
         EntireMapTest.Storage256();
     }
 
@@ -91,7 +92,17 @@ public partial class MainWindow : Window
 
     private void CameraTest(object sender, RoutedEventArgs e)
     {
+        var path = @"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_185854.png";
+        
+        var pic = new Mat(path);
+
         CameraOrientationV3 cameraOrientation = new();
-        cameraOrientation.PredictRotation(new Mat(@"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_183119.png"));
+        var f = cameraOrientation.PredictRotation(pic);
+        Debug.WriteLine("方向1:" + f);
+
+        
+        var grey = new Mat(path, ImreadModes.Grayscale);
+        var f2 = CameraOrientation.ComputeMiniMap(grey);
+        Debug.WriteLine("方向2:" + f2);
     }
 }

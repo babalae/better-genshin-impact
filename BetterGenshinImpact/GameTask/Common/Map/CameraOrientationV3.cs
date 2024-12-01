@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -172,15 +173,16 @@ public class CameraOrientationV3
             Cv2.Split(remap, out var bgrChannels);
             var faBgr = ApplyMask(bgrChannels, alphaMask1, 0.0f);
             var hImg = BgrToHue(faBgr);
-            Cv2.Divide(faBgr[0] + faBgr[0] + faBgr[2], 3, faImg, 1, MatType.CV_32F);
+            Cv2.Add(faBgr[0], faBgr[1], faImg, null, MatType.CV_32F);
+            Cv2.Add(faImg, faBgr[2], faImg, null, MatType.CV_32F);
+            Cv2.Divide(faImg, 3, faImg, 1, MatType.CV_32F);
             var fbImg = ApplyMask([faImg], alphaMask2, 255.0f);
 
-            int[] channels = { 0, 0 };
-            Mat mask = null;
-            int[] histSize = { 360, 256 };
-            Rangef[] ranges = { new Rangef(0, 360), new Rangef(0, 256) };
-            Cv2.CalcHist([hImg, faImg], channels, mask, histA, 2, histSize, ranges);
-            Cv2.CalcHist([hImg, fbImg[0]], channels, mask, histB, 2, histSize, ranges);
+            int[] channels = [0, 1];
+            int[] histSize = [360, 256];
+            Rangef[] ranges = [new(0, 360), new(0, 256)];
+            Cv2.CalcHist([hImg, faImg], channels, null, histA, 2, histSize, ranges);
+            Cv2.CalcHist([hImg, fbImg[0]], channels, null, histB, 2, histSize, ranges);
 
             unsafe
             {
@@ -237,7 +239,7 @@ public class CameraOrientationV3
             float rotationConfidence = conv[maxIndex] / (peakWidth * 255);
             if (rotationConfidence < confidence)
             {
-                Console.WriteLine($"置信度{rotationConfidence}<{confidence}, 不可靠视角 {degree}");
+                Debug.WriteLine($"置信度{rotationConfidence}<{confidence}, 不可靠视角 {degree}");
                 return degree;
             }
 
