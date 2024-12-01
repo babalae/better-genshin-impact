@@ -40,18 +40,22 @@ public class ClaimBattlePassRewardsTask
         await Delay(200, ct);
         TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_F4); // F4 开纪行
 
+        // 领取战令1
+        await Delay(500, ct);
+        await ClaimAll(ct);
+
 
         // 领取点数
         await Delay(1000, ct);
         GameCaptureRegion.GameRegion1080PPosClick(960, 45); // 点中间
         await Delay(500, ct);
-        ClaimAll();
-        
-        // 领取战令
+        await ClaimAll(ct);
+
+        // 领取战令2
         await Delay(1500, ct);
         GameCaptureRegion.GameRegion1080PPosClick(858, 45);
         await Delay(500, ct);
-        ClaimAll();
+        await ClaimAll(ct);
 
         // 关闭
         await _returnMainUiTask.Start(ct);
@@ -61,7 +65,7 @@ public class ClaimBattlePassRewardsTask
     /// 一键领取
     /// </summary>
     /// <returns></returns>
-    private static bool ClaimAll()
+    private async Task<bool> ClaimAll(CancellationToken ct)
     {
         using var ra = CaptureToRectArea();
         var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.18)));
@@ -70,6 +74,13 @@ public class ClaimBattlePassRewardsTask
         {
             wt.Click();
             Logger.LogInformation("纪行：{Text}", "一键领取");
+            await Delay(500, ct);
+            using var ra2 = CaptureToRectArea();
+            if (ra2.Find(ElementAssets.Instance.PrimogemRo).IsExist())
+            {
+                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+            }
+
             return true;
         }
         else

@@ -35,6 +35,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BtnArtifactSalvageConfirm;
     
     public RecognitionObject BtnClaimEncounterPointsRewards;
+    public RecognitionObject PrimogemRo;
+
 
     private ElementAssets()
     {
@@ -214,6 +216,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_claim_encounter_points_rewards.png"),
             RegionOfInterest = CaptureRect.CutRightBottom(0.3,0.5),
+            DrawOnWindow = false
+        }.InitTemplate();
+        
+        PrimogemRo = new RecognitionObject
+        {
+            Name = "Primogem",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "primogem.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 3, CaptureRect.Width, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }
