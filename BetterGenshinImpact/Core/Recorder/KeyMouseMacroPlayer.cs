@@ -148,8 +148,8 @@ public class KeyMouseMacroPlayer
                 case MacroEventType.MouseMoveBy:
                     if (e.CameraOrientation != null)
                     {
-                        var cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
-                        var diff = (cao - (int)e.CameraOrientation + 180) % 360 - 180;
+                        var cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcMat);
+                        var diff = ((int)Math.Round(cao) - (int)e.CameraOrientation + 180) % 360 - 180;
                         diff += diff < -180 ? 360 : 0;
                         //过滤一下特别大的角度偏差
                         if (diff != 0 && diff < 8 && diff > -8)

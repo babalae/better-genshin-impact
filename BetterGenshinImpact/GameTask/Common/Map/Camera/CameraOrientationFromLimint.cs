@@ -1,13 +1,16 @@
 ﻿using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
-public class CameraOrientationV3
+/// <summary>
+/// author: https://github.com/Limint
+/// </summary>
+public class CameraOrientationFromLimint
 {
-    private bool debugEnable;
     private static int tplSize = 216;
     private int tplOutRad = 78;
     private int tplInnRad = 19;
@@ -22,20 +25,12 @@ public class CameraOrientationV3
     private Mat alphaMask1;
     private Mat alphaMask2;
 
-    public CameraOrientationV3(bool debugEnable = false)
+    public CameraOrientationFromLimint()
     {
-        this.debugEnable = debugEnable;
         GeneratePoints();
         CreateAlphaMask();
     }
 
-    /*
-    public float Compute(Mat bgrMat)
-    {
-      var mat = new Mat(bgrMat, MapAssets.Instance.MimiMapRect);
-      return PredictRotation(mat);
-    }
-    */
     public static float[] RightShift(float[] array, int k)
     {
         return array.Skip(array.Length - k)
@@ -149,7 +144,12 @@ public class CameraOrientationV3
         }
     }
 
-    public float PredictRotation(Mat image, float confidence = 0.3f)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="image"></param>
+    /// <returns>视角,置信度</returns>
+    public (float, float) PredictRotationWithConfidence(Mat image)
     {
         using (Mat remap = new Mat())
         using (Mat faImg = new Mat())
@@ -215,14 +215,19 @@ public class CameraOrientationV3
             }
 
             float rotationConfidence = (conv[maxIndex] + mean.Skip(thetaLength - peakWidth).Sum()) / (peakWidth * 255);
-            Console.WriteLine(rotationConfidence);
-            if (rotationConfidence < confidence)
-            {
-                Console.WriteLine($"置信度{rotationConfidence}<{confidence}, 不可靠视角 {degree}");
-                return degree;
-            }
+            Debug.WriteLine($"置信度:{rotationConfidence}");
+            // if (rotationConfidence < confidence)
+            // {
+            //     Debug.WriteLine($"置信度{rotationConfidence}<{confidence}, 不可靠视角 {degree}");
+            //     return degree;
+            // }
 
-            return degree;
+            return (degree, rotationConfidence);
         }
+    }
+
+    public float PredictRotation(Mat image)
+    {
+        return PredictRotationWithConfidence(image).Item1;
     }
 }

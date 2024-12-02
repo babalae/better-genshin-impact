@@ -19,9 +19,9 @@ public class CameraRotateTask(CancellationToken ct)
     /// <param name="targetOrientation"></param>
     /// <param name="imageRegion"></param>
     /// <returns></returns>
-    public int RotateToApproach(int targetOrientation, ImageRegion imageRegion)
+    public float RotateToApproach(float targetOrientation, ImageRegion imageRegion)
     {
-        var cao = CameraOrientation.Compute(imageRegion.SrcGreyMat);
+        var cao = CameraOrientation.Compute(imageRegion.SrcMat);
         var diff = (cao - targetOrientation + 180) % 360 - 180;
         diff += diff < -180 ? 360 : 0;
         if (diff == 0)
