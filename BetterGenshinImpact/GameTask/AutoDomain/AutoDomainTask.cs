@@ -133,11 +133,11 @@ public class AutoDomainTask : ISoloTask
 
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
         }
-        
+
         await Delay(2000, ct);
         await Bv.WaitForMainUi(_ct, 30);
         await Delay(2000, ct);
-        
+
         await ArtifactSalvage();
     }
 
@@ -699,7 +699,7 @@ public class AutoDomainTask : ISoloTask
             while (!cts.Token.IsCancellationRequested)
             {
                 using var captureRegion = CaptureToRectArea();
-                var angle = CameraOrientation.Compute(captureRegion.SrcGreyMat);
+                var angle = CameraOrientation.Compute(captureRegion.SrcMat);
                 CameraOrientation.DrawDirection(captureRegion, angle);
                 if (angle is >= 356 or <= 4)
                 {
@@ -710,7 +710,7 @@ public class AutoDomainTask : ISoloTask
                 if (angle <= 180)
                 {
                     // 左移视角
-                    var moveAngle = angle;
+                    var moveAngle = (int)Math.Round(angle);
                     if (moveAngle > 2)
                     {
                         moveAngle *= 2;
@@ -722,7 +722,7 @@ public class AutoDomainTask : ISoloTask
                 else if (angle is > 180 and < 360)
                 {
                     // 右移视角
-                    var moveAngle = 360 - angle;
+                    var moveAngle = 360 - (int)Math.Round(angle);
                     if (moveAngle > 2)
                     {
                         moveAngle *= 2;
@@ -898,7 +898,7 @@ public class AutoDomainTask : ISoloTask
         {
             return;
         }
-        
+
         if (!int.TryParse(_taskParam.MaxArtifactStar, out var star))
         {
             star = 4;
