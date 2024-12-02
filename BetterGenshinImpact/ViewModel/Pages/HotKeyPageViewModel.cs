@@ -577,7 +577,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) =>
                 {
                     GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
-                    Task.Run(async () => { await goToCraftingBenchTask.Start("枫丹", new CancellationToken()); });
+                    Task.Run(async () => { await goToCraftingBenchTask.Start("璃月", new CancellationToken()); });
                 }
             ));
 

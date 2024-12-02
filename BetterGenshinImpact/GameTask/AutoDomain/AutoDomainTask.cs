@@ -705,6 +705,19 @@ public class AutoDomainTask : ISoloTask
                 {
                     // 算作对准了
                     continuousCount++;
+                    // 360 度 东方向视角
+                    if (continuousCount > 5)
+                    {
+                        if (!started && moveAvatarTask.Status != TaskStatus.Running)
+                        {
+                            started = true;
+                            moveAvatarTask.Start();
+                        }
+                    }
+                }
+                else
+                {
+                    continuousCount = 0;
                 }
 
                 if (angle <= 180)
@@ -717,7 +730,6 @@ public class AutoDomainTask : ISoloTask
                     }
 
                     Simulation.SendInput.Mouse.MoveMouseBy(-moveAngle, 0);
-                    continuousCount = 0;
                 }
                 else if (angle is > 180 and < 360)
                 {
@@ -729,19 +741,6 @@ public class AutoDomainTask : ISoloTask
                     }
 
                     Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
-                    continuousCount = 0;
-                }
-                else
-                {
-                    // 360 度 东方向视角
-                    if (continuousCount > 5)
-                    {
-                        if (!started && moveAvatarTask.Status != TaskStatus.Running)
-                        {
-                            started = true;
-                            moveAvatarTask.Start();
-                        }
-                    }
                 }
 
                 Sleep(100);
