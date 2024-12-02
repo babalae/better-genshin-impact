@@ -94,15 +94,20 @@ public partial class MainWindow : Window
     {
         var path = @"E:\HuiTask\更好的原神\地图匹配\比较\小地图\Clip_20240323_185854.png";
         
-        var pic = new Mat(path);
-
+        var pic1 = new Mat(path);
         CameraOrientationV3 cameraOrientation = new();
-        var f = cameraOrientation.PredictRotation(pic);
-        Debug.WriteLine("方向1:" + f);
+        var f = cameraOrientation.PredictRotation(pic1);
+        Debug.WriteLine("C#版本 方向1:" + f);
+        
+                
+        var pic2 = new Mat(path);
+        CameraOrientationV2 cameraOrientation3 = new();
+        var f3 = cameraOrientation3.PredictRotation(pic2);
+        Debug.WriteLine("py直接翻译C#版本 方向1:" + f3);
 
         
         var grey = new Mat(path, ImreadModes.Grayscale);
         var f2 = CameraOrientation.ComputeMiniMap(grey);
-        Debug.WriteLine("方向2:" + f2);
+        Debug.WriteLine("老版本方向2:" + f2);
     }
 }

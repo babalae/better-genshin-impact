@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NumpyDotNet;
 using OpenCvSharp;
 
@@ -93,10 +94,18 @@ public class CameraOrientationV2
         Mat remap = new();
         Cv2.Remap(image, remap, InputArray.Create(rotationRemapDataX.AsFloatArray()), InputArray.Create(rotationRemapDataY.AsFloatArray()),
             InterpolationFlags.Lanczos4);
+        Cv2.Split(remap, out var bgrChannels);
+        List<float[]> remapChannels = [];
+        foreach (var channel in bgrChannels)
+        {
+            Mat floatChannel = new Mat();
+            channel.ConvertTo(floatChannel, MatType.CV_32F);
+            floatChannel.GetArray<float>(out var channelArray);
+            remapChannels.Add(channelArray);
+        }
+        // TODO float[,,] -> ndarray
         
-        remap.GetArray(out float[] remapArray);
-        
-        var bgrImg = ApplyMask(np.array(remapArray), alphaMask1.reshape(-1, 1), 0);
+        var bgrImg = ApplyMask(np.array(remapChannels), alphaMask1.reshape(-1, 1), 0);
         var hImg = Bgr2h(bgrImg);
         var faImg = np.mean(bgrImg, axis: 2);
         var fbImg = ApplyMask(faImg, alphaMask2, 255);
