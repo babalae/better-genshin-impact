@@ -15,6 +15,11 @@ namespace BetterGenshinImpact.GameTask;
 public class RunnerContext : Singleton<RunnerContext>
 {
     /// <summary>
+    /// 是否是连续执行配置组的场景
+    /// </summary>
+    public bool IsContinuousRunGroup { get; set; }
+
+    /// <summary>
     /// 当前使用队伍名称
     /// 游戏内定义的队伍名称
     /// </summary>
@@ -42,6 +47,7 @@ public class RunnerContext : Singleton<RunnerContext>
                 _combatScenes = null;
             }
         }
+
         return _combatScenes;
     }
 
@@ -50,8 +56,26 @@ public class RunnerContext : Singleton<RunnerContext>
         _combatScenes = null;
     }
 
+    /// <summary>
+    /// 任务结束后的清理
+    /// </summary>
     public void Clear()
     {
+        // 连续执行配置组的情况下，不清理当前队伍
+        if (!IsContinuousRunGroup)
+        {
+            PartyName = null;
+        }
+
+        _combatScenes = null;
+    }
+
+    /// <summary>
+    /// 彻底恢复到初始状态
+    /// </summary>
+    public void Reset()
+    {
+        IsContinuousRunGroup = false;
         PartyName = null;
         _combatScenes = null;
     }

@@ -23,6 +23,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.GameTask;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -579,6 +580,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             return;
         }
 
+        RunnerContext.Instance.Reset();
         await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
     }
 
@@ -692,11 +694,13 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
             _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", selectedGroups.Select(x => x.Name)));
 
+            RunnerContext.Instance.IsContinuousRunGroup = true;
             foreach (var scriptGroup in selectedGroups)
             {
                 await _scriptService.RunMulti(scriptGroup.Projects, scriptGroup.Name);
                 await Task.Delay(2000);
             }
+            RunnerContext.Instance.Reset();
         }
     }
 }
