@@ -34,7 +34,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         // new OneDragonTaskItem(typeof(SereniteaPotViewModel)),  // 领取尘歌壶奖励
         // new OneDragonTaskItem(typeof(TcgViewModel)),  // 自动七圣召唤
 
-        new OneDragonTaskItem("领取邮件", async () => { await Task.Delay(100); }),
+        new OneDragonTaskItem("领取邮件", async () => { await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token); }),
         new OneDragonTaskItem("合成树脂", async () =>
         {
             await new GoToCraftingBenchTask()

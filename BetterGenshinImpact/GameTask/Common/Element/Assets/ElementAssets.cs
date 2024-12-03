@@ -33,9 +33,12 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BagArtifactChecked;
     public RecognitionObject BtnArtifactSalvage;
     public RecognitionObject BtnArtifactSalvageConfirm;
-    
+
     public RecognitionObject BtnClaimEncounterPointsRewards;
     public RecognitionObject PrimogemRo;
+
+    public RecognitionObject EscMailReward;
+    public RecognitionObject CollectRo;
 
 
     private ElementAssets()
@@ -208,23 +211,41 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = CaptureRect.CutBottom(0.1),
             DrawOnWindow = false
         }.InitTemplate();
-        
+
         // 历练点奖励
         BtnClaimEncounterPointsRewards = new RecognitionObject
         {
             Name = "BtnClaimEncounterPointsRewards",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_claim_encounter_points_rewards.png"),
-            RegionOfInterest = CaptureRect.CutRightBottom(0.3,0.5),
+            RegionOfInterest = CaptureRect.CutRightBottom(0.3, 0.5),
             DrawOnWindow = false
         }.InitTemplate();
-        
+
         PrimogemRo = new RecognitionObject
         {
             Name = "Primogem",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "primogem.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "primogem.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 3, CaptureRect.Width, CaptureRect.Height / 3),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 邮件
+        EscMailReward = new RecognitionObject
+        {
+            Name = "EscMailReward",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_mail_reward.png"),
+            RegionOfInterest = CaptureRect.CutRightBottom(0.1, 0.5)
+        }.InitTemplate();
+
+        CollectRo = new RecognitionObject
+        {
+            Name = "Collect",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "collect.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - CaptureRect.Height / 3, CaptureRect.Width / 4, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }

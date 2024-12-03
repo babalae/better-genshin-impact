@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -52,7 +51,12 @@ public class ClaimBattlePassRewardsTask
         await ClaimAll(ct);
 
         // 领取战令2
-        await Delay(1500, ct);
+        await Delay(2000, ct); // 等待升级动画
+        // 还可能存在领取到原石的情况
+        if (CaptureToRectArea().Find(ElementAssets.Instance.PrimogemRo).IsExist())
+        {
+            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+        }
         GameCaptureRegion.GameRegion1080PPosClick(858, 45);
         await Delay(500, ct);
         await ClaimAll(ct);
