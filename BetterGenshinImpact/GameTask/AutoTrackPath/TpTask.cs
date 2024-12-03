@@ -118,7 +118,7 @@ public class TpTask(CancellationToken ct)
 
         var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
         // 屏蔽左上角350x400区域
-        if (clickX < 250 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
+        if (clickX < 350 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
         {
             return false;
         }
