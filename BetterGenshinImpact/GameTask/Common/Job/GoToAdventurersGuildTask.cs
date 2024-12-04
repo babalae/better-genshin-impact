@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -62,7 +63,8 @@ public class GoToAdventurersGuildTask
             Logger.LogInformation("▶ {Text}", "领取『每日委托』奖励！");
             await Delay(200, ct);
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
-            await Delay(500, ct);
+            await Bv.WaitUntilFound(ElementAssets.Instance.PaimonMenuRo, ct);
+            await Delay(200, ct);
             await new ReturnMainUiTask().Start(ct);
 
             // 结束后重新打开
