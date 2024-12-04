@@ -237,7 +237,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "EscMailReward",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_mail_reward.png"),
-            RegionOfInterest = CaptureRect.CutRightBottom(0.1, 0.5)
+            RegionOfInterest = CaptureRect.CutLeftBottom(0.1, 0.5)
         }.InitTemplate();
 
         CollectRo = new RecognitionObject

@@ -39,7 +39,7 @@ public class ClaimMailRewardsTask
 
         TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE); // ESC 
 
-        await Delay(700, ct);
+        await Delay(1300, ct);
 
         var ra = CaptureToRectArea();
         var mailIcon = ra.Find(ElementAssets.Instance.EscMailReward);
