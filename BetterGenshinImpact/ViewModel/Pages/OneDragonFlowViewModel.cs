@@ -91,8 +91,11 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
             {
                 foreach (var task in TaskList)
                 {
-                    await task.Action();
-                    await Task.Delay(1000);
+                    if (task.IsEnabled)
+                    {
+                        await task.Action();
+                        await Task.Delay(1000);
+                    }
                 }
             });
     }

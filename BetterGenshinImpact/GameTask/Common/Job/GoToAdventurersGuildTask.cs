@@ -64,7 +64,8 @@ public class GoToAdventurersGuildTask
             await Delay(200, ct);
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
             await Bv.WaitUntilFound(ElementAssets.Instance.PaimonMenuRo, ct);
-            await Delay(200, ct);
+            await Delay( 500, ct);
+            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
             await new ReturnMainUiTask().Start(ct);
 
             // 结束后重新打开

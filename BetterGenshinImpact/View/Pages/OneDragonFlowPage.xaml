@@ -26,15 +26,33 @@
 
         <!--  左侧任务列表  -->
         <DockPanel Grid.Column="0">
-            <TextBlock Margin="0,0,0,10"
-                       DockPanel.Dock="Top"
-                       FontSize="15"
-                       FontWeight="Bold"
-                       Text="任务列表" />
-            <ui:Button Margin="0,10,0,0"
-                       Content="一键执行"
-                       Command="{Binding OneKeyExecuteCommand}"
-                       DockPanel.Dock="Bottom" />
+            <Grid
+                DockPanel.Dock="Top"
+                Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    FontSize="16"
+                    FontWeight="Bold"
+                    Text="任务列表" />
+                <ui:Button
+                    Grid.Column="1"
+                    Margin="0,0,8,0"
+                    Appearance="Primary"
+                    Icon="{ui:SymbolIcon Play24}"
+                    Command="{Binding OneKeyExecuteCommand}" />
+                <ui:Button
+                    Grid.Column="2"
+                    Margin="0,0,14,0"
+                    Icon="{ui:SymbolIcon Add24}"
+                    Command="{Binding AddCommand}" />
+            </Grid>
+
             <ui:ListView dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"
                          dd:DragDrop.UseDefaultDragAdorner="True"
@@ -140,20 +158,26 @@
         <!--  右侧配置  -->
         <DockPanel Grid.Column="1" Margin="20,0,0,0">
             <StackPanel Margin="0,0,0,10" DockPanel.Dock="Top">
-                <TextBlock Margin="0,0,0,10"
-                           FontSize="15"
-                           FontWeight="Bold"
-                           Text="配置" />
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ComboBox Grid.Column="0"
+                    <TextBlock Grid.Column="0"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Text="配置" />
+                    <ComboBox Grid.Column="1"
+                              MinWidth="200"
+                              Height="30"
+                              Margin="10,0,10,0"
                               ItemsSource="{Binding ConfigurationProfiles}"
                               SelectedItem="{Binding SelectedProfile, Mode=TwoWay}" />
-                    <ui:Button Grid.Column="1"
-                               Margin="10,0,0,0"
+                    <ui:Button Grid.Column="2"
+                               Icon="{ui:SymbolIcon Save24}"
                                Command="{Binding SaveConfigurationCommand}"
                                Content="保存配置" />
                 </Grid>
@@ -201,16 +225,22 @@
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
                                Text="自动秘境" />
-                    <ui:CardControl Margin="0,0,0,12">
-                        <ui:CardControl.Icon>
+
+
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                        <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf073;" Style="{StaticResource FaFontIconStyle}" />
-                        </ui:CardControl.Icon>
-                        <ui:CardControl.Header>
+                        </ui:CardExpander.Icon>
+                        <ui:CardExpander.Header>
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
@@ -219,16 +249,77 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="每日都前往这个秘境消耗树脂"
-                                              TextWrapping="Wrap" />
+                                              TextWrapping="Wrap">
+                                    每日都前往指定秘境消耗树脂
+                                </ui:TextBlock>
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding Config.AutoDomainConfig.IsEnabled, Mode=TwoWay}" />
                             </Grid>
-                        </ui:CardControl.Header>
-                        <ComboBox MinWidth="100"
-                                  Margin="0,0,28,0"
-                                  SelectedItem="{Binding AdventurersGuildCountry, Mode=TwoWay}">
-                            <ComboBoxItem Content="枫丹" />
-                        </ComboBox>
-                    </ui:CardControl>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="进入秘境切换的队伍名称"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="注意是游戏内你设置的名称"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="150"
+                                            MaxWidth="800"
+                                            Margin="0,0,36,0"
+                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
+                                            TextWrapping="Wrap" />
+                            </Grid>
+
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="秘境名称"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="秘境名称"
+                                              TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.RowSpan="2"
+                                          Grid.Column="1"
+                                          Width="150"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding CombatStrategyList}"
+                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
 
                     <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                         <ui:CardExpander.Icon>
@@ -264,38 +355,6 @@
                         </ui:CardExpander.Header>
                         <StackPanel>
                             <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="周一、周四"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="周一、周四"
-                                              TextWrapping="Wrap" />
-                                <ComboBox Grid.Row="0"
-                                          Grid.RowSpan="2"
-                                          Grid.Column="1"
-                                          Width="180"
-                                          Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
-                                </ComboBox>
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
@@ -303,215 +362,100 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="选择战斗策略"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="选择你想要使用的战斗策略"
-                                              TextWrapping="Wrap" />
-                                <ui:Button Grid.Row="0"
-                                           Grid.RowSpan="2"
-                                           Grid.Column="1"
-                                           Margin="0,0,12,0"
-                                           Command="{Binding OpenFightFolderCommand}"
-                                           Content="打开策略目录" />
-                                <ComboBox Grid.Row="0"
-                                          Grid.RowSpan="2"
-                                          Grid.Column="2"
-                                          Width="180"
-                                          Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
-                                    <b:Interaction.Triggers>
-                                        <b:EventTrigger EventName="DropDownOpened">
-                                            <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
-                                                                   CommandParameter="Combat" />
-                                        </b:EventTrigger>
-                                    </b:Interaction.Triggers>
-                                </ComboBox>
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="强制指定队伍"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="队伍无法被识别时，请按顺序填写队伍内角色名称，逗号分割"
-                                              TextWrapping="Wrap" />
+                                              Text="周一/周四"
+                                              VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
                                             Grid.Column="1"
-                                            MinWidth="180"
-                                            MaxWidth="800"
-                                            Margin="0,0,36,0"
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
                                             Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            TextWrapping="Wrap"
+                                            VerticalAlignment="Center"
+                                            PlaceholderText="填写队伍名称" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding CombatStrategyList}"
+                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid Margin="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="周二/周五"
+                                              TextWrapping="Wrap"
+                                              VerticalAlignment="Center" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
+                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding CombatStrategyList}"
+                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="战斗完成后等待时间（秒）"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="战斗结束后，寻找石化古树前的延迟时间，等一些角色技能完全结束"
-                                              TextWrapping="Wrap" />
+                                              Text="周三/周六"
+                                              TextWrapping="Wrap"
+                                              VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
                                             Grid.Column="1"
-                                            MinWidth="90"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding Config.AutoDomainConfig.FightEndDelay, Mode=TwoWay}" />
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
+                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
+                                            TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding CombatStrategyList}"
+                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="寻找古树时使用小步伐行走（正常用户请不要启用）"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="如果电脑性能较差，寻找古树时间过久，可以尝试使用这个功能"
-                                              TextWrapping="Wrap" />
-                                <ui:ToggleSwitch Grid.Row="0"
-                                                 Grid.RowSpan="2"
-                                                 Grid.Column="1"
-                                                 Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoDomainConfig.ShortMovement, Mode=TwoWay}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="步行前往开启秘境和领取奖励"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="如果电脑性能较差，开启秘境或者领取奖励的F点击不到，可以尝试此功能"
-                                              TextWrapping="Wrap" />
-                                <ui:ToggleSwitch Grid.Row="0"
-                                                 Grid.RowSpan="2"
-                                                 Grid.Column="1"
-                                                 Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoDomainConfig.WalkToF, Mode=TwoWay}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="寻找古树时确认位置左右移动的次数（正常用户不要修改）"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="小步伐行走的时候左右确认位置的次数"
-                                              TextWrapping="Wrap" />
+                                              Text="周日"
+                                              TextWrapping="Wrap"
+                                              VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
                                             Grid.Column="1"
-                                            MinWidth="90"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding Config.AutoDomainConfig.LeftRightMoveTimes, Mode=TwoWay}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="自动吃药"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="请先装备 “便携营养袋” ，在红血时候后自动按Z键吃药"
-                                              TextWrapping="Wrap" />
-                                <ui:ToggleSwitch Grid.Row="0"
-                                                 Grid.RowSpan="2"
-                                                 Grid.Column="1"
-                                                 Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoDomainConfig.AutoEat, Mode=TwoWay}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="循环次数"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="循环秘境多少次，输入 0 则为用光所有树脂为止，优先使用浓缩树脂"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="90"
-                                            Margin="0,0,36,0"
-                                            Text="{Binding AutoDomainRoundNum, Mode=TwoWay}" />
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
+                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
+                                            TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding CombatStrategyList}"
+                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
