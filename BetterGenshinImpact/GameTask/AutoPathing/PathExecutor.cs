@@ -67,32 +67,11 @@ public class PathExecutor(CancellationToken ct)
             return;
         }
 
+
         // 切换队伍
-        var pRaList = CaptureToRectArea().FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
-        if (pRaList.Count > 0)
+        if (!await SwitchPartyBefore(task))
         {
-            Logger.LogInformation("处于联机状态下，不切换队伍");
-        }
-        else
-        {
-            if (PartyConfig is { Enabled: false })
-            {
-                // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
-                var partyName = FilterPartyNameByConditionConfig(task);
-                if (!await SwitchParty(partyName))
-                {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
-                    return;
-                }
-            }
-            else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
-            {
-                if (!await SwitchParty(PartyConfig.PartyName))
-                {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
-                    return;
-                }
-            }
+            return;
         }
 
         // 校验路径是否可以执行
@@ -170,6 +149,50 @@ public class PathExecutor(CancellationToken ct)
         }
     }
 
+    private async Task<bool> SwitchPartyBefore(PathingTask task)
+    {
+        var ra = CaptureToRectArea();
+
+        // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
+        if (Bv.ClickIfInReviveModal(ra))
+        {
+            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
+            Logger.LogInformation("复苏完成");
+            await Delay(4000, ct);
+            // 血量肯定不满，直接去七天神像回血
+            await TpStatueOfTheSeven();
+        }
+        
+        var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
+        if (pRaList.Count > 0)
+        {
+            Logger.LogInformation("处于联机状态下，不切换队伍");
+        }
+        else
+        {
+            if (PartyConfig is { Enabled: false })
+            {
+                // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
+                var partyName = FilterPartyNameByConditionConfig(task);
+                if (!await SwitchParty(partyName))
+                {
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
+                    return false;
+                }
+            }
+            else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
+            {
+                if (!await SwitchParty(PartyConfig.PartyName))
+                {
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
@@ -183,11 +206,13 @@ public class PathExecutor(CancellationToken ct)
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
             Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用路径追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用路径追踪功能！");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
             Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏路径追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用路径追踪功能！");
         }
     }
 
@@ -260,7 +285,7 @@ public class PathExecutor(CancellationToken ct)
         }
 
         // 校验角色是否存在
-        if (task.HasAction("nahida_collect"))
+        if (task.HasAction(ActionEnum.NahidaCollect.Code))
         {
             var avatar = _combatScenes.SelectAvatar("纳西妲");
             if (avatar == null)
@@ -333,6 +358,7 @@ public class PathExecutor(CancellationToken ct)
 
             tempList.Add(waypoint);
         }
+
         result.Add(tempList);
 
         return result;
