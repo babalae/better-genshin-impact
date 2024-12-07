@@ -94,7 +94,7 @@ public partial class App : Application
                 services.AddView<CommonSettingsPage, CommonSettingsPageViewModel>();
                 services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
-                services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
+                // services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();

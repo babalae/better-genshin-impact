@@ -73,29 +73,25 @@
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="辅助操控"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:MacroSettingsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="XboxController24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
+
                 <!--<ui:NavigationViewItemSeparator />-->
 
+                <ui:NavigationViewItem Content="一条龙"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:OneDragonFlowPage}"
+                                       Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
+                                                                             Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="AnimalTurtle24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                
                 <ui:NavigationViewItem Content="全自动">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
                     <ui:NavigationViewItem.MenuItems>
-                        <ui:NavigationViewItem Content="一条龙"
-                                               NavigationCacheMode="Enabled"
-                                               TargetPageType="{x:Type pages:OneDragonFlowPage}"
-                                               Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
-                                                                             Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <ui:NavigationViewItem.Icon>
-                                <ui:SymbolIcon Symbol="AnimalTurtle24" />
-                            </ui:NavigationViewItem.Icon>
-                        </ui:NavigationViewItem>
+
                         <!--<ui:NavigationViewItemSeparator />-->
                         <!--  ConvertRange20  -->
                         <ui:NavigationViewItem Content="调度器"
@@ -131,6 +127,14 @@
                         </ui:NavigationViewItem>
                     </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
+                
+                <ui:NavigationViewItem Content="辅助操控"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:MacroSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="XboxController24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
 
                 <ui:NavigationViewItem Content="快捷键"
                                        NavigationCacheMode="Enabled"
@@ -139,13 +143,13 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="通知"
+                <!--<ui:NavigationViewItem Content="通知"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:NotificationSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
+                </ui:NavigationViewItem>-->
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
