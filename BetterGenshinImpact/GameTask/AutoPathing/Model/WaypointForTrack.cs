@@ -28,6 +28,7 @@ public class WaypointForTrack : Waypoint
         Type = waypoint.Type;
         MoveMode = waypoint.MoveMode;
         Action = waypoint.Action;
+        ActionParams = waypoint.ActionParams;
         GameX = waypoint.X;
         GameY = waypoint.Y;
         // 坐标系转换
