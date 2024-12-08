@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common.Job;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -22,6 +23,8 @@ public class MiningHandler : IActionHandler
                                                                                         坎蒂丝 e(hold)
                                                                                         """);
 
+    private readonly ScanPickTask _scanPickTask = new();
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
     {
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
@@ -30,14 +33,14 @@ public class MiningHandler : IActionHandler
             Logger.LogError("队伍识别未初始化成功！");
             return;
         }
-        
+
         // 挖矿
         Mining(combatScenes);
-        
+
         await Delay(1000, ct);
-        
+
         // 拾取
-        
+        await _scanPickTask.Start(ct);
     }
 
     private void Mining(CombatScenes combatScenes)

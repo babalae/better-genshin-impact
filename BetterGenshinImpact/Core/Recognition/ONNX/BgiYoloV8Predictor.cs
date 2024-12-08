@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text.Json;
+using BetterGenshinImpact.View.Drawable;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -45,6 +46,16 @@ public class BgiYoloV8Predictor(string modelRelativePath) : IDisposable
             }
         }
         Debug.WriteLine("YOLOv8识别结果:" + JsonSerializer.Serialize(dict));
+        
+        var list = new List<RectDrawable>();
+        foreach (var box in result.Boxes)
+        {
+            var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+            list.Add(region.ToRectDrawable(rect, modelRelativePath));
+        }
+
+        VisionContext.Instance().DrawContent.PutOrRemoveRectList(modelRelativePath, list);
+        
         return dict;
     }
 

@@ -569,7 +569,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // Task.Run(async () => { await new ClaimBattlePassRewardsTask().Start(new CancellationToken()); });
                     
                     // 领取邮件奖励
-                    Task.Run(async () => { await new ClaimMailRewardsTask().Start(new CancellationToken()); });
+                    // Task.Run(async () => { await new ClaimMailRewardsTask().Start(new CancellationToken()); });
+                    
+                    // 拾取物品
+                    Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

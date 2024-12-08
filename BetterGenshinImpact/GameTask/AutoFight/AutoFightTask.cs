@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using Vanara;
 
@@ -40,7 +41,7 @@ public class AutoFightTask : ISoloTask
 
         if (_taskParam.FightFinishDetectEnabled)
         {
-            _predictor = new BgiYoloV8Predictor(@"Assets\Model\World\bgi_world.onnx");
+            _predictor = BgiYoloV8PredictorFactory.GetPredictor(@"Assets\Model\World\bgi_world.onnx");
         }
     }
 
@@ -124,7 +125,10 @@ public class AutoFightTask : ISoloTask
 
         if (_taskParam is { FightFinishDetectEnabled: true, PickDropsAfterFightEnabled: true })
         {
+            //
+            
             // 执行自动拾取掉落物的功能
+            await new ScanPickTask().Start(ct);
         }
     }
 
