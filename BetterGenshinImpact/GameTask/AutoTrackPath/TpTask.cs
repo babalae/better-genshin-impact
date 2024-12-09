@@ -196,8 +196,6 @@ public class TpTask(CancellationToken ct)
         // double distance = Math.Sqrt(xOffset * xOffset + yOffset * yOffset);        
         int moveMouseX = 100 * Math.Sign(xOffset);
         int moveMouseY = 100 * Math.Sign(yOffset);
-        double diffMapX = -99999.0;
-        double diffMapY = -99999.0;
         int moveSteps = 10;
         for (int iteration = 0; iteration < maxIterations; iteration++)
         {
@@ -207,8 +205,8 @@ public class TpTask(CancellationToken ct)
             bigMapCenterPoint = newBigMapCenterPoint; // 保存上一次移动的数据
             newBigMapCenterPoint = GetPositionFromBigMap(); // 随循环更新的地图中心
             // 本次移动的距离
-            diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X); 
-            diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
+            double diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
+            double diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
             double moveDistance = Math.Sqrt(diffMapX * diffMapX + diffMapY * diffMapY);
             
             if (moveDistance > 10) // 移动距离大于10认为本次移动成功
