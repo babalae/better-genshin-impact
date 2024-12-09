@@ -218,8 +218,16 @@ public class TpTask(CancellationToken ct)
                 double totalMoveMouseY = Math.Abs(moveMouseY * yOffset / diffMapY);
                 double mouseDistance = Math.Sqrt(totalMoveMouseX * totalMoveMouseX + totalMoveMouseY * totalMoveMouseY);
                 // 调整地图缩放
+                // mapZoomLevel<5 才显示传送锚点和秘境;
+                // mapZoomLevel<3 是为了避免部分锚点过于接近导致选错锚点；
+                // 风龙废墟无法避免，但是目前没有风龙废墟的脚本吧。:)
                 // https://github.com/babalae/better-genshin-impact/issues/318
-                if (mouseDistance > 1000 && mapZoomLevel < 6)
+                if (mouseDistance < tolerance && mapZoomLevel < 3)
+                {
+                    Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
+                    break;
+                }
+                else if (mouseDistance > 1000 && mapZoomLevel < 6)
                 {   // 缩小地图
                     await AdjustMapZoomLevel(false);
                     totalMoveMouseX *= (mapZoomLevel) / (mapZoomLevel + 1);
@@ -235,14 +243,8 @@ public class TpTask(CancellationToken ct)
                     mouseDistance *= (mapZoomLevel) / (mapZoomLevel - 1);
                     mapZoomLevel--;
                 }
-                // mapZoomLevel<5 才显示传送锚点和秘境;
-                // mapZoomLevel<3 是为了避免部分锚点过于接近导致选错锚点；
-                // 风龙废墟无法避免，但是目前没有风龙废墟的脚本吧。:)
-                else if (mouseDistance < tolerance && mapZoomLevel < 3)  
-                {
-                    Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
-                    break;
-                }
+                
+                
                 // 单次移动最大距离为 100，
                 moveMouseX = (int)Math.Min(totalMoveMouseX, 100 * totalMoveMouseX / mouseDistance) * Math.Sign(xOffset);
                 moveMouseY = (int)Math.Min(totalMoveMouseY, 100 * totalMoveMouseY / mouseDistance) * Math.Sign(yOffset);
