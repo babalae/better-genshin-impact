@@ -531,17 +531,8 @@ public class PathExecutor(CancellationToken ct)
             }
             else if (waypoint.MoveMode != MoveModeEnum.Climb.Code) //否则自动短疾跑
             {
-                if (distance > 20)
-                {
-                    if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
-                    {
-                        fastModeColdTime = now;
-                        Simulation.SendInput.Mouse.RightButtonClick();
-                    }
-                }
-
                 // 使用 E 技能
-                if (!string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex) && double.TryParse(PartyConfig.GuardianElementalSkillSecondInterval, out var s))
+                if (distance > 10 && !string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex) && double.TryParse(PartyConfig.GuardianElementalSkillSecondInterval, out var s))
                 {
                     if (s < 1)
                     {
@@ -561,6 +552,16 @@ public class PathExecutor(CancellationToken ct)
 
                         await UseElementalSkill();
                         _elementalSkillLastUseTime = DateTime.UtcNow;
+                    }
+                }
+                
+                // 自动疾跑
+                if (distance > 20)
+                {
+                    if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
+                    {
+                        fastModeColdTime = now;
+                        Simulation.SendInput.Mouse.RightButtonClick();
                     }
                 }
             }
