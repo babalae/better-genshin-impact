@@ -64,11 +64,13 @@ public class TpTask(CancellationToken ct)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
+        int zoomLevel = 4;
+        await AdjustMapZoomLevel(zoomLevel);
         while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y)) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
-            await MoveMapTo(x, y);
+            zoomLevel = await MoveMapTo(x, y, mapZoomLevel:zoomLevel);
             await Delay(300, ct); // 等待地图移动完成
             bigMapInAllMapRect = GetBigMapRect();
         }
@@ -183,13 +185,11 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="x">目标x坐标</param>
     /// <param name="y">目标y坐标</param>
-    /// <param name="tolerance">允许误差，默认50.0</param>
+    /// <param name="tolerance">允许误差，默认200.0</param>
     /// <param name="maxIterations">最大尝试次数，默认20</param>
-    public async Task MoveMapTo(double x, double y, double tolerance = 50.0, int maxIterations = 20)
+    public async Task<int> MoveMapTo(double x, double y, int mapZoomLevel = 4, double tolerance = 200.0, int maxIterations = 30)
     {
         // 获取当前地图中心点并计算到目标传送点的初始偏移
-        int mapZoomLevel = 4;
-        await AdjustMapZoomLevel(mapZoomLevel);
         var bigMapCenterPoint = GetPositionFromBigMap();  // 初始中心
         var newBigMapCenterPoint = bigMapCenterPoint;
         var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);
@@ -225,14 +225,14 @@ public class TpTask(CancellationToken ct)
                     Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
                     break;
                 }
-                else if (mouseDistance > 1000 && mapZoomLevel < 6)
-                {   // 缩小地图
-                    await AdjustMapZoomLevel(false);
-                    totalMoveMouseX *= (mapZoomLevel) / (mapZoomLevel + 1);
-                    totalMoveMouseY *= (mapZoomLevel) / (mapZoomLevel + 1);
-                    mouseDistance *= (mapZoomLevel) / (mapZoomLevel + 1);
-                    mapZoomLevel++;
-                }
+                //else if (mouseDistance > 1000 && mapZoomLevel < 6)
+                //{   // 缩小地图
+                //    await AdjustMapZoomLevel(false);
+                //    totalMoveMouseX *= (mapZoomLevel) / (mapZoomLevel + 1);
+                //    totalMoveMouseY *= (mapZoomLevel) / (mapZoomLevel + 1);
+                //    mouseDistance *= (mapZoomLevel) / (mapZoomLevel + 1);
+                //    mapZoomLevel++;
+                //}
                 else if (mouseDistance < 200 && mapZoomLevel > 1)
                 {   // 放大地图
                     await AdjustMapZoomLevel(true);
@@ -243,9 +243,9 @@ public class TpTask(CancellationToken ct)
                 }
                 
                 
-                // 单次移动最大距离为 100，
-                moveMouseX = (int)Math.Min(totalMoveMouseX, 100 * totalMoveMouseX / mouseDistance) * Math.Sign(xOffset);
-                moveMouseY = (int)Math.Min(totalMoveMouseY, 100 * totalMoveMouseY / mouseDistance) * Math.Sign(yOffset);
+                // 单次移动最大距离为 250，
+                moveMouseX = (int)Math.Min(totalMoveMouseX, 250 * totalMoveMouseX / mouseDistance) * Math.Sign(xOffset);
+                moveMouseY = (int)Math.Min(totalMoveMouseY, 250 * totalMoveMouseY / mouseDistance) * Math.Sign(yOffset);
                 double moveMouseLength = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY);
                 moveSteps = Math.Max((int)moveMouseLength / 10, 1);
             }
@@ -254,6 +254,7 @@ public class TpTask(CancellationToken ct)
                 Logger.LogDebug("鼠标无法移动地图，请检查！");
             }
         }
+        return mapZoomLevel;
     }
 
 
@@ -278,18 +279,18 @@ public class TpTask(CancellationToken ct)
     {
         for (int i = 0; i < 5; i++)
         {
-            await AdjustMapZoomLevel(true);
+            await AdjustMapZoomLevel(false);
         }
         await Delay(200, ct);
-        for (int i = 0; i < zoomLevel-1; i++)
+        for (int i = 0; i < 6-zoomLevel; i++)
         {
-            await AdjustMapZoomLevel(false);
+            await AdjustMapZoomLevel(true);
         }
     }
 
     public async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
     {
-        int stepIntervalMilliseconds = 50;
+        int stepIntervalMilliseconds = 10;
         int stepX = (int)pixelDeltaX / steps;
         int stepY = (int)pixelDeltaY / steps;
 
@@ -301,10 +302,11 @@ public class TpTask(CancellationToken ct)
         Simulation.SendInput.Mouse.LeftButtonDown();
         for (var i = 0; i < steps; i++)
         {
-            Simulation.SendInput.Mouse.MoveMouseBy(stepX, stepY).Sleep(stepIntervalMilliseconds);
+            Simulation.SendInput.Mouse.MoveMouseBy(stepX, stepY);
+            await Delay(stepIntervalMilliseconds, ct);
         }
         Simulation.SendInput.Mouse.LeftButtonUp();
-        await Delay(200, ct);
+        // await Delay(100, ct) // 后面有耗时任务，不延时 
     }
 
 
