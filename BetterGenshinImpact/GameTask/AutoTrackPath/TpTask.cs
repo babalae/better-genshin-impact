@@ -183,9 +183,9 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="x">目标x坐标</param>
     /// <param name="y">目标y坐标</param>
-    /// <param name="tolerance">允许误差，默认200.0</param>
-    /// <param name="maxIterations">最大尝试次数，默认20</param>
-    public async Task<int> MoveMapTo(double x, double y, int mapZoomLevel = 4, double tolerance = 200.0, int maxIterations = 30)
+    /// <param name="tolerance">允许误差，默认100.0</param>
+    /// <param name="maxIterations">最大尝试次数，默认30</param>
+    public async Task<int> MoveMapTo(double x, double y, int mapZoomLevel = 4, double tolerance = 100.0, int maxIterations = 30)
     {
         // 获取当前地图中心点并计算到目标传送点的初始偏移
         var bigMapCenterPoint = GetPositionFromBigMap();  // 初始中心
