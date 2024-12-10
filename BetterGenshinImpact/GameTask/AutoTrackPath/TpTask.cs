@@ -188,6 +188,7 @@ public class TpTask(CancellationToken ct)
     public async Task<int> MoveMapTo(double x, double y, int mapZoomLevel = 4, double tolerance = 100.0, int maxIterations = 30)
     {
         // 获取当前地图中心点并计算到目标传送点的初始偏移
+        await AdjustMapZoomLevel(mapZoomLevel);
         var bigMapCenterPoint = GetPositionFromBigMap();  // 初始中心
         var newBigMapCenterPoint = bigMapCenterPoint;
         var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);
@@ -196,8 +197,7 @@ public class TpTask(CancellationToken ct)
         int moveMouseY = 100 * Math.Sign(yOffset);
         int moveSteps = 10;
         for (int iteration = 0; iteration < maxIterations; iteration++)
-        {
-            await AdjustMapZoomLevel(mapZoomLevel);
+        {            
             // 移动鼠标
             await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
 
