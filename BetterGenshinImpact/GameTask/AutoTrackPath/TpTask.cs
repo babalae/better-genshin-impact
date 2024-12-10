@@ -40,7 +40,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
-    public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
+    public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false, int initialZoomLevel = 4)
     {
         var (x, y) = (tpX, tpY);
 
@@ -64,13 +64,11 @@ public class TpTask(CancellationToken ct)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
-        int zoomLevel = 4;
-        await AdjustMapZoomLevel(zoomLevel);
         while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y)) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
-            zoomLevel = await MoveMapTo(x, y, mapZoomLevel:zoomLevel);
+            await MoveMapTo(x, y, mapZoomLevel: initialZoomLevel);
             await Delay(300, ct); // 等待地图移动完成
             bigMapInAllMapRect = GetBigMapRect();
         }
@@ -199,6 +197,7 @@ public class TpTask(CancellationToken ct)
         int moveSteps = 10;
         for (int iteration = 0; iteration < maxIterations; iteration++)
         {
+            await AdjustMapZoomLevel(mapZoomLevel);
             // 移动鼠标
             await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
 
