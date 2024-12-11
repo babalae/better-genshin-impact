@@ -143,6 +143,12 @@ public class AutoFightTask : ISoloTask
 
     private async Task<bool> CheckFightFinish()
     {
+
+        if (!_taskParam.FightFinishDetectEnabled)
+        {
+            return false;
+        }
+
         //  YOLO 判断血条和怪物位置
         if (HasFightFlagByYolo(CaptureToRectArea()))
         {
