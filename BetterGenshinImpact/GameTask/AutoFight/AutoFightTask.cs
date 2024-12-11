@@ -77,7 +77,7 @@ public class AutoFightTask : ISoloTask
                         command.Execute(combatScenes);
                     }
 
-                    if (await CheckFightFinish())
+                    if (_taskParam.FightFinishDetectEnabled && await CheckFightFinish())
                     {
                         break;
                     }
@@ -143,6 +143,7 @@ public class AutoFightTask : ISoloTask
 
     private async Task<bool> CheckFightFinish()
     {
+
         //  YOLO 判断血条和怪物位置
         if (HasFightFlagByYolo(CaptureToRectArea()))
         {
