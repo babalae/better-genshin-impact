@@ -15,6 +15,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using Vanara;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -77,7 +78,7 @@ public class AutoFightTask : ISoloTask
                         command.Execute(combatScenes);
                     }
 
-                    if (await CheckFightFinish())
+                    if (_taskParam is { FightFinishDetectEnabled: true } && await CheckFightFinish())
                     {
                         break;
                     }
@@ -126,7 +127,7 @@ public class AutoFightTask : ISoloTask
         if (_taskParam is { FightFinishDetectEnabled: true, PickDropsAfterFightEnabled: true })
         {
             //
-            
+
             // 执行自动拾取掉落物的功能
             await new ScanPickTask().Start(ct);
         }
@@ -168,8 +169,20 @@ public class AutoFightTask : ISoloTask
             }
 
             // 最终方案确认战斗结束
-            Logger.LogInformation("识别到战斗结束");
-            return true;
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
+            await Delay(450, _ct);
+            var ra = CaptureToRectArea();
+            var b3 = ra.SrcMat.At<Vec3b>(50, 790);
+            if (b3.Equals(new Vec3b(95, 235, 255)))
+            {
+                Logger.LogInformation("识别到战斗结束");
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         return false;
