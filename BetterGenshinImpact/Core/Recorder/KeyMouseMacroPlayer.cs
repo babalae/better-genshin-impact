@@ -65,14 +65,33 @@ public class KeyMouseMacroPlayer
             {
                 await Task.Delay(timeToWait, ct);
             }
+
             switch (e.Type)
             {
                 case MacroEventType.KeyDown:
-                    Simulation.SendInput.Keyboard.KeyDown((User32.VK)e.KeyCode!);
-                    break;
+                    var vkDown = (User32.VK)e.KeyCode!;
+                    if (vkDown is User32.VK.VK_MENU or User32.VK.VK_LMENU)
+                    {
+                        TaskContext.Instance().PostMessageSimulator.KeyDown(vkDown);
+                    }
+                    else
+                    {
+                        Simulation.SendInput.Keyboard.KeyDown(vkDown);
+                    }
 
+                    break;
                 case MacroEventType.KeyUp:
-                    Simulation.SendInput.Keyboard.KeyUp((User32.VK)e.KeyCode!);
+
+                    var vkUp = (User32.VK)e.KeyCode!;
+                    if (vkUp is User32.VK.VK_MENU or User32.VK.VK_LMENU)
+                    {
+                        TaskContext.Instance().PostMessageSimulator.KeyUp(vkUp);
+                    }
+                    else
+                    {
+                        Simulation.SendInput.Keyboard.KeyUp(vkUp);
+                    }
+
                     break;
 
                 case MacroEventType.MouseDown:
@@ -144,14 +163,15 @@ public class KeyMouseMacroPlayer
                 case MacroEventType.MouseMoveTo:
                     Simulation.SendInput.Mouse.MoveMouseTo(ToVirtualDesktopX(e.MouseX), ToVirtualDesktopY(e.MouseY));
                     break;
-                
+
                 case MacroEventType.MouseWheel:
-                    var num  = (int)(e.MouseY/120.0);
+                    var num = (int)(e.MouseY / 120.0);
                     if (num != 0)
                     {
                         // 不支持多次的场景，但是不会出现这种情况
                         Simulation.SendInput.Mouse.VerticalScroll(num);
                     }
+
                     break;
 
                 case MacroEventType.MouseMoveBy:
@@ -167,6 +187,7 @@ public class KeyMouseMacroPlayer
                             e.MouseX -= diff;
                         }
                     }
+
                     Simulation.SendInput.Mouse.MoveMouseBy(e.MouseX, e.MouseY);
                     break;
 

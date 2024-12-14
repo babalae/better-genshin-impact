@@ -28,7 +28,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -572,7 +573,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // Task.Run(async () => { await new ClaimMailRewardsTask().Start(new CancellationToken()); });
                     
                     // 拾取物品
-                    Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
+                    // Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
+                    
+                    // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_LMENU);
+                    TaskContext.Instance().PostMessageSimulator.KeyDown(User32.VK.VK_MENU);
+                    Thread.Sleep(500);
+                    GameCaptureRegion.GameRegion1080PPosMove(200,100);
+                    Thread.Sleep(500);
+                    TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
+                    // Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_LMENU);
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
