@@ -46,6 +46,7 @@ public class MouseKeyMonitor
         _globalHook.MouseDownExt += GlobalHookMouseDownExt;
         _globalHook.MouseUpExt += GlobalHookMouseUpExt;
         _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+        _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _firstSpaceKeyDownTime = DateTime.MaxValue;
@@ -166,6 +167,12 @@ public class MouseKeyMonitor
         // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
         GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e);
     }
+    
+    private void GlobalHookMouseWheelExt(object? sender, MouseEventExtArgs e)
+    {
+        Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t Delta: {2};\t System Timestamp: {3}", e.Button, e.Location, e.Delta, e.Timestamp);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e);
+    }
 
     public void Unsubscribe()
     {
@@ -176,6 +183,7 @@ public class MouseKeyMonitor
             _globalHook.MouseDownExt -= GlobalHookMouseDownExt;
             _globalHook.MouseUpExt -= GlobalHookMouseUpExt;
             _globalHook.MouseMoveExt -= GlobalHookMouseMoveExt;
+            _globalHook.MouseWheelExt -= GlobalHookMouseWheelExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
         }

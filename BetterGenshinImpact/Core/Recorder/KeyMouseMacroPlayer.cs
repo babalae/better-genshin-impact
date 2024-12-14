@@ -144,6 +144,15 @@ public class KeyMouseMacroPlayer
                 case MacroEventType.MouseMoveTo:
                     Simulation.SendInput.Mouse.MoveMouseTo(ToVirtualDesktopX(e.MouseX), ToVirtualDesktopY(e.MouseY));
                     break;
+                
+                case MacroEventType.MouseWheel:
+                    var num  = (int)(e.MouseY/120.0);
+                    if (num != 0)
+                    {
+                        // 不支持多次的场景，但是不会出现这种情况
+                        Simulation.SendInput.Mouse.VerticalScroll(num);
+                    }
+                    break;
 
                 case MacroEventType.MouseMoveBy:
                     if (e.CameraOrientation != null)
