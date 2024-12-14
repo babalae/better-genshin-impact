@@ -86,7 +86,7 @@ public class KeyMouseMacroPlayer
                     var vkUp = (User32.VK)e.KeyCode!;
                     if (InputBuilder.IsExtendedKey(vkUp))
                     {
-                        Simulation.SendInput.Keyboard.KeyDown(false, vkUp);
+                        Simulation.SendInput.Keyboard.KeyUp(false, vkUp);
                     }
                     else
                     {
