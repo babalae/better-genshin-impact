@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Fischless.WindowsInput;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
@@ -70,9 +71,9 @@ public class KeyMouseMacroPlayer
             {
                 case MacroEventType.KeyDown:
                     var vkDown = (User32.VK)e.KeyCode!;
-                    if (vkDown is User32.VK.VK_MENU or User32.VK.VK_LMENU)
+                    if (InputBuilder.IsExtendedKey(vkDown))
                     {
-                        TaskContext.Instance().PostMessageSimulator.KeyDown(vkDown);
+                        Simulation.SendInput.Keyboard.KeyDown(false, vkDown);
                     }
                     else
                     {
@@ -83,9 +84,9 @@ public class KeyMouseMacroPlayer
                 case MacroEventType.KeyUp:
 
                     var vkUp = (User32.VK)e.KeyCode!;
-                    if (vkUp is User32.VK.VK_MENU or User32.VK.VK_LMENU)
+                    if (InputBuilder.IsExtendedKey(vkUp))
                     {
-                        TaskContext.Instance().PostMessageSimulator.KeyUp(vkUp);
+                        Simulation.SendInput.Keyboard.KeyDown(false, vkUp);
                     }
                     else
                     {
