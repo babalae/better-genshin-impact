@@ -15,6 +15,8 @@ namespace BetterGenshinImpact.Core.Recorder;
 public class KeyMouseRecorder
 {
     public List<MacroEvent> MacroEvents { get; } = [];
+    
+    public List<MacroEvent> MouseMoveByMacroEvents { get; } = [];
 
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
 

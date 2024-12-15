@@ -48,6 +48,7 @@
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.18.1" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.18.1" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
+		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.8.0.20230708" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.8.0.20230708" />
@@ -65,6 +66,7 @@
 		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
+		<PackageReference Include="SharpAvi" Version="3.0.1" />
 		<PackageReference Include="System.IO.Hashing" Version="8.0.0" />
 		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.0.2" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.0.2" />

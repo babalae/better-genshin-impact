@@ -9,8 +9,13 @@ using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Video;
+using NAudio.Wave;
+using SharpAvi;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Core.Recorder;
@@ -20,6 +25,8 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     private readonly ILogger<GlobalKeyMouseRecord> _logger = App.GetLogger<GlobalKeyMouseRecord>();
 
     private KeyMouseRecorder? _recorder;
+    
+    private SharpAviRecorder _sharpAviRecorder;
 
     private readonly Dictionary<Keys, bool> _keyDownState = [];
 
@@ -58,18 +65,29 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _logger.LogInformation("录制：{Text}", "实时任务已暂停");
         _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
 
+        // 先实例化
+        _recorder = new KeyMouseRecorder();
+        _directInputMonitor = new DirectInputMonitor();
+        var videoPath = Global.Absolute(@"video");
+        if (!Directory.Exists(videoPath))
+        {
+            Directory.CreateDirectory(videoPath);
+        }
+        _sharpAviRecorder = new SharpAviRecorder( Path.Combine(videoPath, $"{DateTime.Now:yyyyMMddHH_mmssffff.avi}"), 
+            CodecIds.MotionJpeg, 90, 0, SupportedWaveFormat.WAVE_FORMAT_44M16, false, 0);
+        
+        TaskTriggerDispatcher.Instance().StopTimer();
+        
         for (var i = 3; i >= 1; i--)
         {
             _logger.LogInformation("{Sec}秒后启动录制...", i);
             await Task.Delay(1000);
         }
 
-        TaskTriggerDispatcher.Instance().StopTimer();
 
-        _timer.Start();
 
-        _recorder = new KeyMouseRecorder();
-        _directInputMonitor = new DirectInputMonitor();
+        // _timer.Start();
+        _sharpAviRecorder.Start();
         _directInputMonitor.Start();
 
         Status = KeyMouseRecorderStatus.Recording;
@@ -89,8 +107,10 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _directInputMonitor?.Stop();
         _directInputMonitor?.Dispose();
         _directInputMonitor = null;
+        
+        _sharpAviRecorder.Dispose();
 
-        _timer.Stop();
+        // _timer.Stop();
 
         _logger.LogInformation("录制：{Text}", "结束录制");
 
@@ -187,11 +207,11 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookMouseMoveBy(MouseState state)
     {
+        // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
         if (state is { X: 0, Y: 0 } || !_isInMainUi)
         {
             return;
         }
-        // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
         _recorder?.MouseMoveBy(state);
     }
 }
