@@ -30,11 +30,12 @@ public class KeyMouseMacroPlayer
 
         var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
         script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect, TaskContext.Instance().DpiScale);
+        script.Merge();
         SystemControl.ActivateWindow();
 
         if (withDelay)
         {
-            for (var i = 1; i >= 1; i--)
+            for (var i = 2; i >= 1; i--)
             {
                 TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
                 await Task.Delay(1000, ct);
