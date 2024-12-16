@@ -28,6 +28,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Video;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
@@ -182,20 +183,20 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         );
         HotKeySettingModels.Add(systemDirectory);
 
-        var timerDirectory = new HotKeySettingModel(
-            "实时任务"
-        );
-        HotKeySettingModels.Add(timerDirectory);
-
-        var soloTaskDirectory = new HotKeySettingModel(
-            "独立任务"
-        );
-        HotKeySettingModels.Add(soloTaskDirectory);
-
-        var macroDirectory = new HotKeySettingModel(
-            "操控辅助"
-        );
-        HotKeySettingModels.Add(macroDirectory);
+        // var timerDirectory = new HotKeySettingModel(
+        //     "实时任务"
+        // );
+        // HotKeySettingModels.Add(timerDirectory);
+        //
+        // var soloTaskDirectory = new HotKeySettingModel(
+        //     "独立任务"
+        // );
+        // HotKeySettingModels.Add(soloTaskDirectory);
+        //
+        // var macroDirectory = new HotKeySettingModel(
+        //     "操控辅助"
+        // );
+        // HotKeySettingModels.Add(macroDirectory);
 
         var devDirectory = new HotKeySettingModel(
             "开发者"
@@ -233,7 +234,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
-        var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
+        /*var autoPickEnabledHotKeySettingModel = new HotKeySettingModel(
             "自动拾取开关",
             nameof(Config.HotKeyConfig.AutoPickEnabledHotkey),
             Config.HotKeyConfig.AutoPickEnabledHotkey,
@@ -424,7 +425,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         {
             OnKeyDownAction = (_, _) => { OneKeyFightTask.Instance.KeyDown(); },
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
-        });
+        });*/
 
         devDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止键鼠录制",
@@ -451,6 +452,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        /*
         devDirectory.Children.Add(new HotKeySettingModel(
             "（开发）获取当前大地图中心点位置",
             nameof(Config.HotKeyConfig.RecBigMapPosHotkey),
@@ -499,6 +501,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
             }
         ));
+        */
 
         // DEBUG
         if (RuntimeHelper.IsDebug)
@@ -508,13 +511,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             );
             HotKeySettingModels.Add(debugDirectory);
 
-            soloTaskDirectory.Children.Add(new HotKeySettingModel(
-                "启动/停止自动活动音游",
-                nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
-                Config.HotKeyConfig.AutoMusicGameHotkey,
-                Config.HotKeyConfig.AutoMusicGameHotkeyType,
-                (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand); }
-            ));
+            // soloTaskDirectory.Children.Add(new HotKeySettingModel(
+            //     "启动/停止自动活动音游",
+            //     nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
+            //     Config.HotKeyConfig.AutoMusicGameHotkey,
+            //     Config.HotKeyConfig.AutoMusicGameHotkeyType,
+            //     (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand); }
+            // ));
             // HotKeySettingModels.Add(new HotKeySettingModel(
             //     "（测试）启动/停止自动追踪",
             //     nameof(Config.HotKeyConfig.AutoTrackHotkey),
@@ -544,6 +547,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             //         // _taskSettingsPageViewModel.OnSwitchAutoTrackPath();
             //     }
             // ));
+            
+            FfmpegRecorder ffmpegRecorder = new FfmpegRecorder();
             debugDirectory.Children.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -574,14 +579,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                     // 拾取物品
                     // Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
-
-                    Simulation.SendInput.Keyboard.KeyDown(false, User32.VK.VK_LMENU);
-                    // TaskContext.Instance().PostMessageSimulator.KeyDown(User32.VK.VK_MENU);
-                    Thread.Sleep(500);
-                    GameCaptureRegion.GameRegion1080PPosMove(200, 100);
-                    Thread.Sleep(500);
-                    // TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
-                    Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
+                    
+                    ffmpegRecorder.Start();
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
@@ -591,8 +590,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
-                    Task.Run(async () => { await goToCraftingBenchTask.Start("璃月", new CancellationToken()); });
+                    // GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
+                    // Task.Run(async () => { await goToCraftingBenchTask.Start("璃月", new CancellationToken()); });
+                    ffmpegRecorder.Stop();
                 }
             ));
 

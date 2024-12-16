@@ -59,7 +59,7 @@ namespace BetterGenshinImpact.GameTask
         /// 1. 是否缓存图像
         /// 2. 是否执行触发器
         /// </summary>
-        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.NormalTrigger;
+        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.OnlyCacheCapture;
 
         private static readonly object _bitmapLocker = new();
         private static readonly object _triggerListLocker = new();
@@ -129,7 +129,7 @@ namespace BetterGenshinImpact.GameTask
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
-            GameCapture = GameCaptureFactory.Create(mode);
+            // GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
             SystemControl.ActivateWindow(hWnd);
 
@@ -137,22 +137,22 @@ namespace BetterGenshinImpact.GameTask
             TaskContext.Instance().Init(hWnd);
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
-            _triggers = GameTaskManager.LoadInitialTriggers();
+            _triggers = [];
 
             // 启动截图
-            GameCapture.Start(hWnd,
-                new Dictionary<string, object>()
-                {
-                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
-                }
-            );
+            // GameCapture.Start(hWnd,
+            //     new Dictionary<string, object>()
+            //     {
+            //         { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
+            //         { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+            //     }
+            // );
 
             // 捕获模式初始化配置
-            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
-            {
-                _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
-            }
+            // if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
+            // {
+            //     _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
+            // }
 
             // 启动定时器
             _frameIndex = 0;
@@ -211,21 +211,21 @@ namespace BetterGenshinImpact.GameTask
 
                 // 检查截图器是否初始化
                 var maskWindow = MaskWindow.Instance();
-                if (GameCapture == null || !GameCapture.IsCapturing)
-                {
-                    if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
-                    {
-                        _logger.LogError("截图器未初始化!");
-                    }
-                    else
-                    {
-                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
-                    }
-
-                    UiTaskStopTickEvent?.Invoke(sender, e);
-                    maskWindow.Invoke(maskWindow.Hide);
-                    return;
-                }
+                // if (GameCapture == null || !GameCapture.IsCapturing)
+                // {
+                //     if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
+                //     {
+                //         _logger.LogError("截图器未初始化!");
+                //     }
+                //     else
+                //     {
+                //         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                //     }
+                //
+                //     UiTaskStopTickEvent?.Invoke(sender, e);
+                //     maskWindow.Invoke(maskWindow.Hide);
+                //     return;
+                // }
 
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
@@ -303,60 +303,60 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
-                _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
-
-                if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.NormalTrigger
-                    && (_triggers == null || !_triggers.Exists(t => t.IsEnabled)))
-                {
-                    // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
-                    return;
-                }
-
-                var speedTimer = new SpeedTimer();
-                // 捕获游戏画面
-                var bitmap = GameCapture.Capture();
-                speedTimer.Record("截图");
-
-                if (bitmap == null)
-                {
-                    _logger.LogWarning("截图失败!");
-                    return;
-                }
-
-                if (IsOnlyCacheCapture(bitmap))
-                {
-                    return;
-                }
-
-                // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
-
-                lock (_triggerListLocker)
-                {
-                    var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
-                    if (exclusiveTrigger != null)
-                    {
-                        exclusiveTrigger.OnCapture(content);
-                        speedTimer.Record(exclusiveTrigger.Name);
-                    }
-                    else
-                    {
-                        var runningTriggers = _triggers!.Where(t => t.IsEnabled);
-                        if (hasBackgroundTriggerToRun)
-                        {
-                            runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
-                        }
-
-                        foreach (var trigger in runningTriggers)
-                        {
-                            trigger.OnCapture(content);
-                            speedTimer.Record(trigger.Name);
-                        }
-                    }
-                }
-
-                speedTimer.DebugPrint();
-                content.Dispose();
+                // _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
+                //
+                // if (_dispatcherCacheCaptureMode == DispatcherCaptureModeEnum.NormalTrigger
+                //     && (_triggers == null || !_triggers.Exists(t => t.IsEnabled)))
+                // {
+                //     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
+                //     return;
+                // }
+                //
+                // var speedTimer = new SpeedTimer();
+                // // 捕获游戏画面
+                // var bitmap = GameCapture.Capture();
+                // speedTimer.Record("截图");
+                //
+                // if (bitmap == null)
+                // {
+                //     _logger.LogWarning("截图失败!");
+                //     return;
+                // }
+                //
+                // if (IsOnlyCacheCapture(bitmap))
+                // {
+                //     return;
+                // }
+                //
+                // // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
+                // var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+                //
+                // lock (_triggerListLocker)
+                // {
+                //     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
+                //     if (exclusiveTrigger != null)
+                //     {
+                //         exclusiveTrigger.OnCapture(content);
+                //         speedTimer.Record(exclusiveTrigger.Name);
+                //     }
+                //     else
+                //     {
+                //         var runningTriggers = _triggers!.Where(t => t.IsEnabled);
+                //         if (hasBackgroundTriggerToRun)
+                //         {
+                //             runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
+                //         }
+                //
+                //         foreach (var trigger in runningTriggers)
+                //         {
+                //             trigger.OnCapture(content);
+                //             speedTimer.Record(trigger.Name);
+                //         }
+                //     }
+                // }
+                //
+                // speedTimer.DebugPrint();
+                // content.Dispose();
             }
             finally
             {

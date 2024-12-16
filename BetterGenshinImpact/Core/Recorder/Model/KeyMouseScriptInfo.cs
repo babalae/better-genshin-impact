@@ -24,4 +24,8 @@ public class KeyMouseScriptInfo
     public int Height { get; set; }
 
     public double RecordDpi { get; set; } = 1.0;
+    
+    public string StartTime { get; set; } = string.Empty;
+    
+    public string StartTimeUnixTimestamp { get; set; } = string.Empty;
 }

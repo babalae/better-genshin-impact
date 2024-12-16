@@ -424,12 +424,12 @@
             <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
         </ui:CardControl>
         
-        <ui:TextBlock Margin="0,0,0,8"
+        <!--<ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="通知设置" />
+                      Text="通知设置" />-->
 
         <!--  Webhook  -->
-        <ui:CardExpander Margin="0,0,0,12"
+        <!--<ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon VirtualNetwork20}">
             <ui:CardExpander.Header>
@@ -523,7 +523,7 @@
                                   TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
-        </ui:CardExpander>
+        </ui:CardExpander>-->
 
         <!--  地图  -->
         <!--<ui:CardControl Margin="0,0,0,12"

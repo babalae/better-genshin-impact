@@ -26,7 +26,9 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private KeyMouseRecorder? _recorder;
     
-    private SharpAviRecorder _sharpAviRecorder;
+    // private SharpAviRecorder _sharpAviRecorder;
+    
+    private FfmpegRecorder? _ffmpegRecorder;
 
     private readonly Dictionary<Keys, bool> _keyDownState = [];
 
@@ -63,7 +65,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         SystemControl.ActivateWindow();
 
         _logger.LogInformation("录制：{Text}", "实时任务已暂停");
-        _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
+        // _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
 
         // 先实例化
         _recorder = new KeyMouseRecorder();
@@ -73,8 +75,10 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         {
             Directory.CreateDirectory(videoPath);
         }
-        _sharpAviRecorder = new SharpAviRecorder( Path.Combine(videoPath, $"{DateTime.Now:yyyyMMddHH_mmssffff.avi}"), 
-            CodecIds.MotionJpeg, 90, 0, SupportedWaveFormat.WAVE_FORMAT_44M16, false, 0);
+        // _sharpAviRecorder = new SharpAviRecorder( Path.Combine(videoPath, $"{DateTime.Now:yyyyMMddHH_mmssffff.avi}"), 
+        //     CodecIds.MotionJpeg, 90, 0, SupportedWaveFormat.WAVE_FORMAT_44M16, false, 0);
+        
+        _ffmpegRecorder = new FfmpegRecorder();
         
         TaskTriggerDispatcher.Instance().StopTimer();
         
@@ -87,7 +91,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
 
         // _timer.Start();
-        _sharpAviRecorder.Start();
+        _ffmpegRecorder.Start();
         _directInputMonitor.Start();
 
         Status = KeyMouseRecorderStatus.Recording;
@@ -108,7 +112,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _directInputMonitor?.Dispose();
         _directInputMonitor = null;
         
-        _sharpAviRecorder.Dispose();
+        _ffmpegRecorder?.Stop();
 
         // _timer.Stop();
 
@@ -191,10 +195,10 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookMouseMoveTo(MouseEventExtArgs e)
     {
-        if (_isInMainUi)
-        {
-            return;
-        }
+        // if (_isInMainUi)
+        // {
+        //     return;
+        // }
         // Debug.WriteLine($"MouseMove: {e.X}, {e.Y}");
         _recorder?.MouseMoveTo(e);
     }
@@ -208,7 +212,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     public void GlobalHookMouseMoveBy(MouseState state)
     {
         // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
-        if (state is { X: 0, Y: 0 } || !_isInMainUi)
+        if (state is { X: 0, Y: 0 })
         {
             return;
         }

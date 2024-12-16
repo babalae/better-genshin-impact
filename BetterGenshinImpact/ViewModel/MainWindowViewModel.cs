@@ -26,7 +26,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
-    public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    public string Title => $"BetterGI · 更好的原神 · 采集版 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty]
     public bool _isVisible = true;
@@ -69,46 +69,46 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [SuppressMessage("CommunityToolkit.Mvvm.SourceGenerators.RelayCommandGenerator", "MVVMTK0039:Async void returning method annotated with RelayCommand")]
     private async void OnLoaded()
     {
-        try
-        {
-            await Task.Run(() =>
-            {
-                try
-                {
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png"), ImreadModes.Grayscale));
-                    Debug.WriteLine("PaddleOcr预热结果:" + s);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常，解决方案：https://bgi.huiyadan.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-                    var innerException = e.InnerException;
-                    if (innerException != null)
-                    {
-                        _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bgi.huiyadan.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
-                        throw innerException;
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-            });
-        }
-        catch (Exception e)
-        {
-            MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bgi.huiyadan.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-        }
-
-        try
-        {
-            await Task.Run(GetNewestInfoAsync);
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-            _logger.LogWarning("获取 BetterGI 最新版本信息失败");
-        }
+        // try
+        // {
+        //     await Task.Run(() =>
+        //     {
+        //         try
+        //         {
+        //             var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png"), ImreadModes.Grayscale));
+        //             Debug.WriteLine("PaddleOcr预热结果:" + s);
+        //         }
+        //         catch (Exception e)
+        //         {
+        //             Console.WriteLine(e);
+        //             _logger.LogError("PaddleOcr预热异常，解决方案：https://bgi.huiyadan.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        //             var innerException = e.InnerException;
+        //             if (innerException != null)
+        //             {
+        //                 _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bgi.huiyadan.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+        //                 throw innerException;
+        //             }
+        //             else
+        //             {
+        //                 throw;
+        //             }
+        //         }
+        //     });
+        // }
+        // catch (Exception e)
+        // {
+        //     MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bgi.huiyadan.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        // }
+        //
+        // try
+        // {
+        //     await Task.Run(GetNewestInfoAsync);
+        // }
+        // catch (Exception e)
+        // {
+        //     Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        //     _logger.LogWarning("获取 BetterGI 最新版本信息失败");
+        // }
 
         //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
         if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
@@ -117,7 +117,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
 
         // 更新仓库
-        ScriptRepoUpdater.Instance.AutoUpdate();
+        // ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
     private async Task GetNewestInfoAsync()

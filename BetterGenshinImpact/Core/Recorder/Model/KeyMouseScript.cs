@@ -9,6 +9,7 @@ namespace BetterGenshinImpact.Core.Recorder.Model;
 public class KeyMouseScript
 {
     public List<MacroEvent> MacroEvents { get; set; } = [];
+    public List<MacroEvent> MouseMoveByMacroEvents { get; set; } = [];
     public KeyMouseScriptInfo? Info { get; set; }
 
     /// <summary>

@@ -56,7 +56,7 @@ public partial class MaskWindowConfig : ObservableObject
     ///     显示状态指示
     /// </summary>
     [ObservableProperty]
-    private bool _showStatus = true;
+    private bool _showStatus = false;
 
     /// <summary>
     ///     UID遮盖是否启用

@@ -58,7 +58,16 @@
                         <ui:SymbolIcon Symbol="Play24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                
+                <ui:NavigationViewItem Content="录制回放"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:KeyMouseRecordPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Record24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
 
+                <!--
                 <ui:NavigationViewItem Content="实时触发"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:TriggerSettingsPage}">
@@ -74,7 +83,7 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <!--<ui:NavigationViewItemSeparator />-->
+                ~1~<ui:NavigationViewItemSeparator />@1@
 
                 <ui:NavigationViewItem Content="一条龙"
                                        NavigationCacheMode="Enabled"
@@ -90,8 +99,8 @@
                     </ui:NavigationViewItem.Icon>
                     <ui:NavigationViewItem.MenuItems>
 
-                        <!--<ui:NavigationViewItemSeparator />-->
-                        <!--  ConvertRange20  -->
+                        ~1~<ui:NavigationViewItemSeparator />@1@
+                        ~1~  ConvertRange20  @1@
                         <ui:NavigationViewItem Content="调度器"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:ScriptControlPage}">
@@ -99,7 +108,7 @@
                                 <ui:SymbolIcon Symbol="DeveloperBoard24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
-                        <!--  WebAsset24 | DocumentJs16 | Script16  -->
+                        ~1~  WebAsset24 | DocumentJs16 | Script16  @1@
                         <ui:NavigationViewItem Content="JS 脚本"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:JsListPage}">
@@ -107,7 +116,7 @@
                                 <ui:SymbolIcon Symbol="DocumentJs16" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
-                        <!--  Map24  -->
+                        ~1~  Map24  @1@
                         <ui:NavigationViewItem Content="地图追踪"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:MapPathingPage}">
@@ -115,7 +124,7 @@
                                 <ui:SymbolIcon Symbol="Map24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
-                        <!--  Script16  -->
+                        ~1~  Script16  @1@
                         <ui:NavigationViewItem Content="录制回放"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:KeyMouseRecordPage}">
@@ -132,7 +141,7 @@
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="XboxController24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
+                </ui:NavigationViewItem>-->
 
                 <ui:NavigationViewItem Content="快捷键"
                                        NavigationCacheMode="Enabled"
@@ -141,13 +150,6 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <!--<ui:NavigationViewItem Content="通知"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:NotificationSettingsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Alert24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>-->
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
