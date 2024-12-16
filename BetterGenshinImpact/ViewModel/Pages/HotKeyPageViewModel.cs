@@ -547,7 +547,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             //         // _taskSettingsPageViewModel.OnSwitchAutoTrackPath();
             //     }
             // ));
-            
+
             // FfmpegRecorder ffmpegRecorder = new FfmpegRecorder();
             debugDirectory.Children.Add(new HotKeySettingModel(
                 "（测试）测试",
@@ -579,8 +579,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                     // 拾取物品
                     // Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
-                    
+
                     // ffmpegRecorder.Start();
+
+                    DesktopRegion.DesktopRegionMove(0, 0);
+                    Thread.Sleep(100);
+                    DesktopRegion.DesktopRegionMove(500, 500);
+
+                    User32.GetCursorPos(out var p);
+                    _logger.LogInformation("当前鼠标位置：{Position}", p);
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
@@ -593,6 +600,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
                     // Task.Run(async () => { await goToCraftingBenchTask.Start("璃月", new CancellationToken()); });
                     // ffmpegRecorder.Stop();
+
+                    DesktopRegion.DesktopRegionMove(0, 0);
+                    Thread.Sleep(100);
+                    Simulation.SendInput.Mouse.MoveMouseBy(500, 500);
+
+                    User32.GetCursorPos(out var p);
+                    _logger.LogInformation("当前鼠标位置：{Position}", p);
                 }
             ));
 
