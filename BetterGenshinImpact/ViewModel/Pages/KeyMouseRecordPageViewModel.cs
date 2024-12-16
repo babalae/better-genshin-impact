@@ -36,6 +36,8 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     private readonly ISnackbarService _snackbarService;
 
     public AllConfig Config { get; set; }
+    
+    string fileName = $"{DateTime.Now:yyyyMMddHH_mmssffff}";
 
     public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService)
     {
@@ -67,8 +69,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             Directory.CreateDirectory(folder);
         }
 
-        var files = Directory.GetFiles(folder, "*.*",
-            SearchOption.AllDirectories);
+        var files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
 
         return files.Select(file => new FileInfo(file)).ToList();
     }
@@ -93,7 +94,8 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         if (!IsRecording)
         {
             IsRecording = true;
-            await GlobalKeyMouseRecord.Instance.StartRecord();
+            fileName = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss:ffff}";
+            await GlobalKeyMouseRecord.Instance.StartRecord(fileName);
         }
     }
 
@@ -106,7 +108,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             {
                 var macro = GlobalKeyMouseRecord.Instance.StopRecord();
                 // Genshin Copilot Macro
-                File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{DateTime.Now:yyyyMMddHHmmssffff}.json"), macro);
+                File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{fileName}.json"), macro);
                 // 刷新ListView
                 InitScriptListViewData();
                 IsRecording = false;

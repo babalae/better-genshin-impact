@@ -46,7 +46,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _timer.Interval = 50; // ms
     }
 
-    public async Task StartRecord()
+    public async Task StartRecord(string fileName)
     {
         if (!TaskContext.Instance().IsInitialized)
         {
@@ -64,35 +64,31 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         SystemControl.ActivateWindow();
 
-        _logger.LogInformation("录制：{Text}", "实时任务已暂停");
+        // _logger.LogInformation("录制：{Text}", "实时任务已暂停");
         // _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
 
         // 先实例化
-        _recorder = new KeyMouseRecorder();
-        _directInputMonitor = new DirectInputMonitor();
-        var videoPath = Global.Absolute(@"video");
-        if (!Directory.Exists(videoPath))
-        {
-            Directory.CreateDirectory(videoPath);
-        }
+
         // _sharpAviRecorder = new SharpAviRecorder( Path.Combine(videoPath, $"{DateTime.Now:yyyyMMddHH_mmssffff.avi}"), 
         //     CodecIds.MotionJpeg, 90, 0, SupportedWaveFormat.WAVE_FORMAT_44M16, false, 0);
         
-        _ffmpegRecorder = new FfmpegRecorder();
+        _ffmpegRecorder = new FfmpegRecorder(fileName);
+        _directInputMonitor = new DirectInputMonitor();
         
-        TaskTriggerDispatcher.Instance().StopTimer();
+        // TaskTriggerDispatcher.Instance().StopTimer();
         
-        for (var i = 3; i >= 1; i--)
-        {
-            _logger.LogInformation("{Sec}秒后启动录制...", i);
-            await Task.Delay(1000);
-        }
+        // for (var i = 3; i >= 1; i--)
+        // {
+        //     _logger.LogInformation("{Sec}秒后启动录制...", i);
+        //     await Task.Delay(1000);
+        // }
 
 
 
         // _timer.Start();
         _ffmpegRecorder.Start();
         _directInputMonitor.Start();
+        _recorder = new KeyMouseRecorder();
 
         Status = KeyMouseRecorderStatus.Recording;
 
@@ -118,7 +114,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         _logger.LogInformation("录制：{Text}", "结束录制");
 
-        TaskTriggerDispatcher.Instance().StartTimer();
+        // TaskTriggerDispatcher.Instance().StartTimer();
 
         Status = KeyMouseRecorderStatus.Stop;
 
@@ -127,7 +123,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void Tick(object? sender, EventArgs e)
     {
-        var ra = TaskControl.CaptureToRectArea();
+        var ra = TaskControl.CaptureToRectArea(true);
         var iconRa = ra.Find(ElementAssets.Instance.FriendChat);
         var exist = iconRa.IsExist();
         if (exist != _isInMainUi)

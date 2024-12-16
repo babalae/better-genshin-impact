@@ -548,7 +548,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             //     }
             // ));
             
-            FfmpegRecorder ffmpegRecorder = new FfmpegRecorder();
+            // FfmpegRecorder ffmpegRecorder = new FfmpegRecorder();
             debugDirectory.Children.Add(new HotKeySettingModel(
                 "（测试）测试",
                 nameof(Config.HotKeyConfig.Test1Hotkey),
@@ -580,7 +580,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // 拾取物品
                     // Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
                     
-                    ffmpegRecorder.Start();
+                    // ffmpegRecorder.Start();
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
@@ -592,7 +592,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     // GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
                     // Task.Run(async () => { await goToCraftingBenchTask.Start("璃月", new CancellationToken()); });
-                    ffmpegRecorder.Stop();
+                    // ffmpegRecorder.Stop();
                 }
             ));
 

@@ -17,9 +17,10 @@ public class KeyMouseRecorder
 {
     public List<MacroEvent> MacroEvents { get; } = [];
     
+    public List<MacroEvent> MouseMoveToMacroEvents { get; } = [];
     public List<MacroEvent> MouseMoveByMacroEvents { get; } = [];
 
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
+    public DateTime   StartTime { get; set; } = DateTime.UtcNow;
 
     public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
@@ -156,13 +157,15 @@ public class KeyMouseRecorder
 
     public void MouseMoveTo(MouseEventExtArgs e)
     {
-        MacroEvents.Add(new MacroEvent
+        var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveTo,
             MouseX = e.X,
             MouseY = e.Y,
             Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
-        });
+        };
+        MouseMoveToMacroEvents.Add(mEvent);
+        MacroEvents.Add(mEvent);
     }
     
     public void MouseWheel(MouseEventExtArgs e)

@@ -22,15 +22,18 @@ public class FfmpegRecorder
 
     private readonly string _filePath;
     private string _startTime = string.Empty;
+    
+    private readonly string _fileName;
 
-    public FfmpegRecorder()
+    public FfmpegRecorder(string fileName)
     {
+        _fileName = fileName;
         if (!File.Exists(FfmpegPath))
         {
             throw new Exception("ffmpeg.exe不存在");
         }
 
-        _filePath = Global.Absolute($@"video\{DateTime.Now:yyyyMMddHH_mmssffff}.mp4");
+        _filePath = Global.Absolute($@"video\{fileName}.mp4");
         var processInfo = new ProcessStartInfo
         {
             FileName = FfmpegPath,
@@ -57,7 +60,7 @@ public class FfmpegRecorder
                     Match match = Regex.Match(args.Data, pattern);
                     if (match.Success)
                     {
-                        _startTime = match.Groups[1].Value;
+                        _startTime = match.Groups[1].Value.Replace(".", "");
                         TaskControl.Logger.LogInformation("ffmpeg录制: 视频起始时间戳 {Text}", _startTime);
                     }
                 }
@@ -108,7 +111,7 @@ public class FfmpegRecorder
         if (File.Exists(_filePath))
         {
             // 重命名文件
-            var newFilePath = Global.Absolute($@"video\{_startTime}.mp4");
+            var newFilePath = Global.Absolute($@"video\{_fileName}_{_startTime}.mp4");
             File.Move(_filePath, newFilePath);
             TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", $"录制完成");
         } 

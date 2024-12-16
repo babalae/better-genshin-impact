@@ -34,7 +34,7 @@ public class KeyMouseMacroPlayer
 
         if (withDelay)
         {
-            for (var i = 3; i >= 1; i--)
+            for (var i = 1; i >= 1; i--)
             {
                 TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
                 await Task.Delay(1000, ct);

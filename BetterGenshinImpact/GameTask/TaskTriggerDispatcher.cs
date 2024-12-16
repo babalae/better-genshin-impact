@@ -129,7 +129,7 @@ namespace BetterGenshinImpact.GameTask
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
             // 初始化截图器
-            // GameCapture = GameCaptureFactory.Create(mode);
+            GameCapture = GameCaptureFactory.Create(mode);
             // 激活窗口 保证后面能够正常获取窗口信息
             SystemControl.ActivateWindow(hWnd);
 
@@ -140,13 +140,13 @@ namespace BetterGenshinImpact.GameTask
             _triggers = [];
 
             // 启动截图
-            // GameCapture.Start(hWnd,
-            //     new Dictionary<string, object>()
-            //     {
-            //         { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
-            //         { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
-            //     }
-            // );
+            GameCapture.Start(hWnd,
+                new Dictionary<string, object>()
+                {
+                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                }
+            );
 
             // 捕获模式初始化配置
             // if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
