@@ -16,11 +16,11 @@ namespace BetterGenshinImpact.Core.Recorder;
 public class KeyMouseRecorder
 {
     public List<MacroEvent> MacroEvents { get; } = [];
-    
+
     public List<MacroEvent> MouseMoveToMacroEvents { get; } = [];
     public List<MacroEvent> MouseMoveByMacroEvents { get; } = [];
 
-    public DateTime   StartTime { get; set; } = DateTime.UtcNow;
+    public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
     public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
@@ -155,7 +155,7 @@ public class KeyMouseRecorder
         });
     }
 
-    public void MouseMoveTo(MouseEventExtArgs e)
+    public void MouseMoveTo(MouseEventExtArgs e, bool save = false)
     {
         var mEvent = new MacroEvent
         {
@@ -165,9 +165,12 @@ public class KeyMouseRecorder
             Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
         };
         MouseMoveToMacroEvents.Add(mEvent);
-        MacroEvents.Add(mEvent);
+        if (save)
+        {
+            MacroEvents.Add(mEvent);
+        }
     }
-    
+
     public void MouseWheel(MouseEventExtArgs e)
     {
         MacroEvents.Add(new MacroEvent
@@ -178,24 +181,21 @@ public class KeyMouseRecorder
         });
     }
 
-    public void MouseMoveBy(MouseState state)
+    public void MouseMoveBy(MouseState state, bool save = false)
     {
         var now = DateTime.UtcNow;
-        // int? cao = null;
-        // if (TaskContext.Instance().Config.RecordConfig.IsRecordCameraOrientation)
-        // {
-        //     if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
-        //     {
-        //         LastOrientationDetection = now;
-        //         cao = (int)Math.Round(CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcMat));
-        //     }
-        // }
-        MouseMoveByMacroEvents.Add(new MacroEvent
+
+        var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
             Time = (now - StartTime).TotalMilliseconds,
-        });
+        };
+        MouseMoveByMacroEvents.Add(mEvent);
+        if (save)
+        {
+            MacroEvents.Add(mEvent);
+        }
     }
 }

@@ -94,7 +94,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         if (!IsRecording)
         {
             IsRecording = true;
-            fileName = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss:ffff}";
+            fileName = $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}";
             await GlobalKeyMouseRecord.Instance.StartRecord(fileName);
         }
     }
@@ -108,7 +108,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             {
                 var macro = GlobalKeyMouseRecord.Instance.StopRecord();
                 // Genshin Copilot Macro
-                File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{fileName}.json"), macro);
+                File.WriteAllText(Path.Combine(scriptPath, $"{fileName}.json"), macro);
                 // 刷新ListView
                 InitScriptListViewData();
                 IsRecording = false;

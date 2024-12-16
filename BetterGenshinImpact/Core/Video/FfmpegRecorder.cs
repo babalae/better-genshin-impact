@@ -22,7 +22,7 @@ public class FfmpegRecorder
 
     private readonly string _filePath;
     private string _startTime = string.Empty;
-    
+
     private readonly string _fileName;
 
     public FfmpegRecorder(string fileName)
@@ -33,7 +33,7 @@ public class FfmpegRecorder
             throw new Exception("ffmpeg.exe不存在");
         }
 
-        _filePath = Global.Absolute($@"video\{fileName}.mp4");
+        _filePath = Global.Absolute($@"User\KeyMouseScript\{fileName}.mp4");
         var processInfo = new ProcessStartInfo
         {
             FileName = FfmpegPath,
@@ -95,29 +95,37 @@ public class FfmpegRecorder
         // SetConsoleCtrlHandler(IntPtr.Zero, true);
         // GenerateConsoleCtrlEvent(0, 0);
         // FreeConsole();
-        TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", "正在停止录制，请稍后...");
-        _process.StandardInput.WriteLine("q");
-
-        if (!_process.WaitForExit(5000))
+        try
         {
-            _process.Kill();
+            TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", "正在停止录制，请稍后...");
+            _process.StandardInput.WriteLine("q");
+
+            if (!_process.WaitForExit(5000))
+            {
+                _process.Kill();
+            }
+
+            _process.Close();
+            _process.Dispose();
+
+
+            Thread.Sleep(3000);
+            if (File.Exists(_filePath))
+            {
+                // 重命名文件
+                var newFilePath = Global.Absolute($@"User\KeyMouseScript\{_fileName}_{_startTime}.mp4");
+                File.Move(_filePath, newFilePath);
+                TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", $"录制完成");
+            }
+            else
+            {
+                TaskControl.Logger.LogError("ffmpeg录制: {Text}", "未找到结果文件，录制失败");
+            }
         }
-
-        _process.Close();
-        _process.Dispose();
-        
-
-        Thread.Sleep(3000);
-        if (File.Exists(_filePath))
+        catch (Exception e)
         {
-            // 重命名文件
-            var newFilePath = Global.Absolute($@"video\{_fileName}_{_startTime}.mp4");
-            File.Move(_filePath, newFilePath);
-            TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", $"录制完成");
-        } 
-        else
-        {
-            TaskControl.Logger.LogError("ffmpeg录制: {Text}", "未找到结果文件，录制失败");
+            TaskControl.Logger.LogDebug(e, "ffmpeg录制: {Text}", "停止录制失败");
+            TaskControl.Logger.LogError("ffmpeg录制: 停止时异常：{Text}", e.Message);
         }
     }
 }

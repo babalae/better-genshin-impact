@@ -207,10 +207,10 @@ public partial class HotKeyConfig : ObservableObject
 
     // 键鼠录制/停止
     [ObservableProperty]
-    private string _keyMouseMacroRecordHotkey = "Ctrl + K";
+    private string _keyMouseMacroRecordHotkey = "K";
 
     [ObservableProperty]
-    private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
+    private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     // 停止任意独立任务
     [ObservableProperty]

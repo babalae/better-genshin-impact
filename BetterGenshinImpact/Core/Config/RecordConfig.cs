@@ -24,4 +24,10 @@ public partial class RecordConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isRecordCameraOrientation = false;
+    
+    /// <summary>
+    /// 通过派蒙判断是否在主界面
+    /// </summary>
+    [ObservableProperty]
+    private bool _paimonSwitchEnabled = true;
 }

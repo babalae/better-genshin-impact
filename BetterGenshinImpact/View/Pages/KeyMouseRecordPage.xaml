@@ -69,6 +69,10 @@
                        Content="停止录制"
                        Icon="{ui:SymbolIcon Stop24}"
                        IsEnabled="{Binding IsRecording}" />
+            <Separator Width="20" Opacity="0" />
+            <ui:ToggleSwitch 
+                Content="主界面切换识别"
+                IsChecked="{Binding Config.RecordConfig.PaimonSwitchEnabled, Mode=TwoWay}" />
         </StackPanel>
 
         <Separator Grid.Row="3"
