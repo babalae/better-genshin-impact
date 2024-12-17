@@ -222,7 +222,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
         else
         {
-            _recorder?.MouseMoveTo(e, true);
+            _recorder?.MouseMoveTo(e, false);
         }
     }
 
@@ -254,7 +254,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
         else
         {
-            _recorder?.MouseMoveBy(state, false);
+            _recorder?.MouseMoveBy(state, true);
         }
     }
 }
