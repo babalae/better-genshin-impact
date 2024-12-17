@@ -22,7 +22,11 @@ public class TaskControl
             Logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
             throw new NormalEndException("当前获取焦点的窗口不是原神");
         }
-
+        if (SystemControl.Suspend())
+        {
+            Logger.LogWarning("快捷键触发暂停，等待解除");
+            throw new RetryException("快捷键触发暂停");
+        }
         Thread.Sleep(millisecondsTimeout);
     }
 
@@ -34,6 +38,11 @@ public class TaskControl
             {
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
+            }
+            if (SystemControl.Suspend())
+            {
+                Logger.LogWarning("快捷键触发暂停，等待解除");
+                throw new RetryException("快捷键触发暂停");
             }
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
@@ -127,6 +136,11 @@ public class TaskControl
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
+            if (SystemControl.Suspend())
+            {
+                Logger.LogWarning("快捷键触发暂停，等待解除");
+                throw new RetryException("快捷键触发暂停");
+            }
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
         if (ct.IsCancellationRequested)
@@ -158,6 +172,11 @@ public class TaskControl
             {
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
+            }
+            if (SystemControl.Suspend())
+            {
+                Logger.LogWarning("快捷键触发暂停，等待解除");
+                throw new RetryException("快捷键触发暂停");
             }
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);

@@ -364,6 +364,71 @@ public class PathExecutor(CancellationToken ct)
         return result;
     }
 
+    /// <summary>
+    /// 尝试队伍回血，如果单人回血，由于记录检查时是哪位残血，则当作行走位处理。
+    /// </summary>
+    private async Task<bool> TryPartyHealing() {
+       // var avatar
+
+         foreach (var a in _combatScenes?.Avatars ?? [])
+        {
+           
+        }
+
+
+
+
+
+
+
+            foreach (var avatar in _combatScenes?.Avatars ?? [])
+        {
+            if (avatar.Name == "白术" )
+            {
+                if (avatar.TrySwitch())
+                {
+                    //1命白术能两次
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(800, ct);
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(800, ct);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await Delay(4000, ct);
+                    return true;
+                }
+               
+                break;
+            }
+            else if (avatar.Name == "希格雯") {
+                if (avatar.TrySwitch())
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(11000, ct);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    return true;
+                }
+                
+                break;
+            }else if (avatar.Name == "珊瑚宫心海")
+            {
+                if (avatar.TrySwitch())
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(500, ct);
+                    //尝试Q全队回血
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Q);
+                    //单人血只给行走位加血
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await Delay(5000, ct);
+                    return true;
+                }
+
+            }
+        }
+
+       
+        return false;
+    }
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
         if (PartyConfig.OnlyInTeleportRecover && waypoint.Type != WaypointType.Teleport.Code)
@@ -372,11 +437,11 @@ public class PathExecutor(CancellationToken ct)
         }
 
         using var region = CaptureToRectArea();
-        if (Bv.CurrentAvatarIsLowHp(region))
+        if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
-            Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
-            await TpStatueOfTheSeven();
-            throw new RetryException("回血完成后重试路线");
+                Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
+                await TpStatueOfTheSeven();
+                throw new RetryException("回血完成后重试路线");
         }
         else if (Bv.ClickIfInReviveModal(region))
         {

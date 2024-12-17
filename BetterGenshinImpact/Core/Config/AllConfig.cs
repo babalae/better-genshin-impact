@@ -12,8 +12,10 @@ using BetterGenshinImpact.Service.Notification;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -66,6 +68,14 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _inferenceDevice = "CPU";
+    /// <summary>
+    /// 暂停
+    /// </summary>
+    [ObservableProperty]
+    private bool _suspend = false;
+
+    [ObservableProperty]
+    private List<ValueTuple<string,int, string, string>> _NextScheduledTask = [];
 
     /// <summary>
     ///     遮罩窗口配置
