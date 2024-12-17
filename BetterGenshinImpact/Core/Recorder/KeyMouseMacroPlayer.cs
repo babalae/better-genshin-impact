@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Fischless.WindowsInput;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
@@ -65,14 +66,33 @@ public class KeyMouseMacroPlayer
             {
                 await Task.Delay(timeToWait, ct);
             }
+
             switch (e.Type)
             {
                 case MacroEventType.KeyDown:
-                    Simulation.SendInput.Keyboard.KeyDown((User32.VK)e.KeyCode!);
-                    break;
+                    var vkDown = (User32.VK)e.KeyCode!;
+                    if (InputBuilder.IsExtendedKey(vkDown))
+                    {
+                        Simulation.SendInput.Keyboard.KeyDown(false, vkDown);
+                    }
+                    else
+                    {
+                        Simulation.SendInput.Keyboard.KeyDown(vkDown);
+                    }
 
+                    break;
                 case MacroEventType.KeyUp:
-                    Simulation.SendInput.Keyboard.KeyUp((User32.VK)e.KeyCode!);
+
+                    var vkUp = (User32.VK)e.KeyCode!;
+                    if (InputBuilder.IsExtendedKey(vkUp))
+                    {
+                        Simulation.SendInput.Keyboard.KeyUp(false, vkUp);
+                    }
+                    else
+                    {
+                        Simulation.SendInput.Keyboard.KeyUp(vkUp);
+                    }
+
                     break;
 
                 case MacroEventType.MouseDown:
@@ -145,6 +165,16 @@ public class KeyMouseMacroPlayer
                     Simulation.SendInput.Mouse.MoveMouseTo(ToVirtualDesktopX(e.MouseX), ToVirtualDesktopY(e.MouseY));
                     break;
 
+                case MacroEventType.MouseWheel:
+                    var num = (int)(e.MouseY / 120.0);
+                    if (num != 0)
+                    {
+                        // 不支持多次的场景，但是不会出现这种情况
+                        Simulation.SendInput.Mouse.VerticalScroll(num);
+                    }
+
+                    break;
+
                 case MacroEventType.MouseMoveBy:
                     if (e.CameraOrientation != null)
                     {
@@ -158,6 +188,7 @@ public class KeyMouseMacroPlayer
                             e.MouseX -= diff;
                         }
                     }
+
                     Simulation.SendInput.Mouse.MoveMouseBy(e.MouseX, e.MouseY);
                     break;
 

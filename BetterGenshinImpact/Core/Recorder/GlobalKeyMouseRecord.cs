@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Wpf.Ui.Violeta.Controls;
@@ -176,6 +177,12 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
         // Debug.WriteLine($"MouseMove: {e.X}, {e.Y}");
         _recorder?.MouseMoveTo(e);
+    }
+    
+    public void GlobalHookMouseWheel(MouseEventExtArgs e)
+    {
+        // Debug.WriteLine($"MouseWheel: {e.Delta}");
+        _recorder?.MouseWheel(e);
     }
 
     public void GlobalHookMouseMoveBy(MouseState state)

@@ -158,6 +158,16 @@ public class KeyMouseRecorder
             Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
         });
     }
+    
+    public void MouseWheel(MouseEventExtArgs e)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.MouseWheel,
+            MouseY = e.Delta, // 120 的倍率
+            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+        });
+    }
 
     public void MouseMoveBy(MouseState state)
     {
