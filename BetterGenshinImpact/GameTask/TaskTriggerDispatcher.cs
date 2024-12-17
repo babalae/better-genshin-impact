@@ -252,6 +252,16 @@ namespace BetterGenshinImpact.GameTask
                         {
                             maskWindow.Invoke(() => { maskWindow.Hide(); });
                         }
+                        else
+                        {
+                            maskWindow.Invoke(() =>
+                            {
+                                if (maskWindow.IsExist())
+                                {
+                                    maskWindow.Show();
+                                }
+                            });
+                        }
                     }
 
                     _prevGameActive = active;
