@@ -241,40 +241,8 @@
                              dd:DragDrop.UseDefaultDragAdorner="True"
                              ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=TwoWay}"
                              SelectionMode="Single">
-                    <!-- 仅修改行背景色 -->
-                    <!--
-                    
+     
                   
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            
-            
-                            <Setter Property="Foreground" Value="White" />
-                            <Setter Property="BorderThickness" Value="0" />
-                                <Style.Triggers>
-                   
-                                <DataTrigger Binding="{Binding NextFlag}" Value="True">
-                                    <Setter Property="Foreground" Value="LightGreen" />
-
-                                </DataTrigger>
-                    
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background"  Value="{x:Null}" />
-                                    <Setter Property="BorderBrush" Value="Transparent" />
-                                </Trigger>
-
-              
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{x:Null}" />
-                                    <Setter Property="BorderBrush" Value="Transparent" />
-                                    
-                                </Trigger>
-                            </Style.Triggers>
-
-                        </Style>
-
-                    </ListView.ItemContainerStyle>
-  -->
                     <ListView.View>
 
                         <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
