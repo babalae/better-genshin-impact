@@ -209,7 +209,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.CancelTaskHotkeyType,
             (_, _) => { CancellationContext.Instance.Cancel(); }
         ));
-
+        systemDirectory.Children.Add(new HotKeySettingModel(
+            "暂停当前脚本/独立任务",
+            nameof(Config.HotKeyConfig.SuspendHotkey),
+            Config.HotKeyConfig.SuspendHotkey,
+            Config.HotKeyConfig.SuspendHotkeyType,
+            (_, _) => { TaskContext.Instance().Config.Suspend = !TaskContext.Instance().Config.Suspend; }
+        ));
         var takeScreenshotHotKeySettingModel = new HotKeySettingModel(
             "游戏截图",
             nameof(Config.HotKeyConfig.TakeScreenshotHotkey),

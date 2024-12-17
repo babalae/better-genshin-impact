@@ -28,6 +28,9 @@ using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 using StackPanel = Wpf.Ui.Controls.StackPanel;
+using System.Windows.Navigation;
+using Newtonsoft.Json.Linq;
+using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -162,6 +165,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildKeyMouseProject(str));
         }
     }
+
+
 
     [RelayCommand]
     private void OnAddPathing()
@@ -304,7 +309,27 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         //     WriteScriptGroup(group);
         // }
     }
+    [RelayCommand]
+    private void AddNextFlag(ScriptGroupProject? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+        List<ValueTuple<string,int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
+        var nst=nextScheduledTask.Find(item2 => item2.Item1== SelectedScriptGroup?.Name);
+        if (nst != default) {
+            nextScheduledTask.Remove(nst);
+        }
+        nextScheduledTask.Add((SelectedScriptGroup?.Name,item.Index, item.FolderName, item.Name));
+        foreach (var item1 in SelectedScriptGroup.Projects)
+        {
+            item1.NextFlag = false;
+        }
+        item.NextFlag = true;
+        
 
+    }
     public static void ShowEditWindow(object viewModel)
     {
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
@@ -499,6 +524,19 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 {
                     var json = File.ReadAllText(file);
                     var group = ScriptGroup.FromJson(json);
+
+
+                    var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item=>item.Item1 == group.Name);
+                    foreach (var item in group.Projects)
+                    {
+                        item.NextFlag = false;
+                        if (nst != default) {
+                            if (nst.Item2 == item.Index && nst.Item3==item.FolderName && nst.Item4==item.Name) {
+                                item.NextFlag = true;
+                            }
+                        }
+                    }
+
                     groups.Add(group);
                 }
                 catch (Exception e)
@@ -581,7 +619,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
 
         RunnerContext.Instance.Reset();
-        await _scriptService.RunMulti(SelectedScriptGroup.Projects, SelectedScriptGroup.Name);
+        await _scriptService.RunMulti(getNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name);
     }
 
     [RelayCommand]
@@ -624,6 +662,45 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         WriteScriptGroup(SelectedScriptGroup);
     }
 
+    public List<ScriptGroupProject> getNextProjects(ScriptGroup group) {
+        List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
+        bool start = false;
+        foreach (var item in group.Projects)
+        {
+            if (item.NextFlag??false) { 
+                start = true;
+            }
+            if (start) {
+                ls.Add(item);
+            }
+        }
+        if (!start)
+        {
+            ls.AddRange(group.Projects);
+        }
+
+        //拿出来后清空，和置状态
+        if (start) {
+            List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
+            foreach (var item in nextScheduledTask)
+            {
+                if (item.Item1 == group.Name) {
+                    nextScheduledTask.Remove(item);
+                    break;
+                }
+            }
+            foreach (var item in group.Projects)
+            {
+                item.NextFlag = false;
+            }
+
+
+        }
+
+
+
+        return ls;
+    }
     [RelayCommand]
     public async Task OnStartMultiScriptGroupAsync()
     {
@@ -697,7 +774,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             RunnerContext.Instance.IsContinuousRunGroup = true;
             foreach (var scriptGroup in selectedGroups)
             {
-                await _scriptService.RunMulti(scriptGroup.Projects, scriptGroup.Name);
+               
+                await _scriptService.RunMulti(getNextProjects(scriptGroup), scriptGroup.Name);
                 await Task.Delay(2000);
             }
             RunnerContext.Instance.Reset();

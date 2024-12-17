@@ -733,6 +733,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
                     throw new RetryException("当前获取焦点的窗口不是原神");
                 }
+                if (IsEnabled && SystemControl.Suspend())
+                {
+                    _logger.LogWarning("快捷键触发暂停，等待解除");
+                    throw new RetryException("快捷键触发暂停");
+                }
             }, TimeSpan.FromSeconds(1), 100);
             CheckFishingUserInterface(_currContent);
             Thread.Sleep(millisecondsTimeout);

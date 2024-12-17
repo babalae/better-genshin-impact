@@ -241,14 +241,67 @@
                              dd:DragDrop.UseDefaultDragAdorner="True"
                              ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=TwoWay}"
                              SelectionMode="Single">
+                    <!-- 仅修改行背景色 -->
+                    <!--
+                    
+                  
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            
+            
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="BorderThickness" Value="0" />
+                                <Style.Triggers>
+                   
+                                <DataTrigger Binding="{Binding NextFlag}" Value="True">
+                                    <Setter Property="Foreground" Value="LightGreen" />
+
+                                </DataTrigger>
+                    
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background"  Value="{x:Null}" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                </Trigger>
+
+              
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{x:Null}" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    
+                                </Trigger>
+                            </Style.Triggers>
+
+                        </Style>
+
+                    </ListView.ItemContainerStyle>
+  -->
                     <ListView.View>
+
                         <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                             <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding Index}"
                                             Header="#" />
                             <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding Name}"
-                                            Header="名称" />
+                                  
+                                            Header="名称" >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" FontSize="14">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding NextFlag}" Value="True">
+                                                            <Setter Property="Foreground" Value="Green" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+
+                            </GridViewColumn>
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding TypeDesc}"
                                             Header="类型" />
@@ -267,6 +320,10 @@
                             <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
                             <MenuItem Command="{Binding AddPathingCommand}" Header="添加路径追踪任务" />
                             <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
+                            <MenuItem Command="{Binding AddNextFlagCommand}" Header="下一次任务从此处执行"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      />
+                            
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="修改通用配置" />

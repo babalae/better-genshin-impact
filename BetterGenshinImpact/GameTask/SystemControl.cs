@@ -12,7 +12,10 @@ public class SystemControl
     {
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
-
+    public static bool Suspend()
+    {
+        return  TaskContext.Instance().Config.Suspend;
+    }
     public static async Task<nint> StartFromLocalAsync(string path)
     {
         // 直接exe启动
