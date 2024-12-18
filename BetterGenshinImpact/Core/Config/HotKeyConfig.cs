@@ -207,7 +207,7 @@ public partial class HotKeyConfig : ObservableObject
 
     // 键鼠录制/停止
     [ObservableProperty]
-    private string _keyMouseMacroRecordHotkey = "K";
+    private string _keyMouseMacroRecordHotkey = "F12";
 
     [ObservableProperty]
     private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
