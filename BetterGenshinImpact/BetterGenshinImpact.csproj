@@ -42,6 +42,7 @@
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+		<PackageReference Include="Downloader" Version="3.3.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
@@ -71,7 +72,7 @@
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.2" />
 		<PackageReference Include="WPF-UI" Version="3.0.5" />
 		<PackageReference Include="WPF-UI.Tray" Version="3.0.5" />
-		<PackageReference Include="WPF-UI.Violeta" Version="3.0.5.23" />
+		<PackageReference Include="WPF-UI.Violeta" Version="3.0.5.26" />
 		<PackageReference Include="YoloV8" Version="4.1.7" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 	</ItemGroup>

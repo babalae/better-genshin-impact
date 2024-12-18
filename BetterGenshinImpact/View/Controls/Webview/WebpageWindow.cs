@@ -1,7 +1,6 @@
-﻿using System;
+﻿using Microsoft.Web.WebView2.Wpf;
+using System;
 using System.Windows;
-using System.Windows.Media;
-using Microsoft.Web.WebView2.Wpf;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
@@ -20,7 +19,6 @@ public class WebpageWindow : Window
         };
 
         Content = wp;
-        // Background = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
     }
 
     protected override void OnSourceInitialized(EventArgs e)
