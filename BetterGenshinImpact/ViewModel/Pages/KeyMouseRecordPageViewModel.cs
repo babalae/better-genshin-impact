@@ -56,6 +56,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             _scriptItems.Add(new KeyMouseScriptItem
             {
                 Name = f.Name,
+                Path = f.FullName,
                 CreateTime = f.CreationTime,
                 CreateTimeStr = f.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
             });
@@ -69,7 +70,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             Directory.CreateDirectory(folder);
         }
 
-        var files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
+        var files = Directory.GetFiles(folder, "*.json", SearchOption.AllDirectories);
 
         return files.Select(file => new FileInfo(file)).ToList();
     }
@@ -108,7 +109,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             {
                 var macro = GlobalKeyMouseRecord.Instance.StopRecord();
                 // Genshin Copilot Macro
-                File.WriteAllText(Path.Combine(scriptPath, $"{fileName}.json"), macro);
+                File.WriteAllText(Path.Combine(scriptPath, $"{fileName}/{fileName}.json"), macro);
                 // 刷新ListView
                 InitScriptListViewData();
                 IsRecording = false;
@@ -122,12 +123,13 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    public async Task OnStartPlay(string name)
+    public async Task OnStartPlay(string path)
     {
+        var name = new FileInfo(path).Name;
         _logger.LogInformation("重放开始：{Name}", name);
         try
         {
-            var s = await File.ReadAllTextAsync(Path.Combine(scriptPath, name));
+            var s = await File.ReadAllTextAsync(path);
 
             await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
                 .RunAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));

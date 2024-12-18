@@ -35,7 +35,7 @@ public class FfmpegRecorder
 
         var folderPath = Global.Absolute($@"User\KeyMouseScript\{fileName}\");
         Directory.CreateDirectory(folderPath);
-        _filePath = Path.Combine(folderPath, "%Y-%m-%d_%H-%M-%S.mp4");
+        _filePath = Path.Combine(folderPath, "%Y_%m_%d_%H_%M_%S.mp4");
         var processInfo = new ProcessStartInfo
         {
             FileName = FfmpegPath,

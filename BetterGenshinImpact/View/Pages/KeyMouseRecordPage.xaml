@@ -108,7 +108,7 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.StartPlayCommand}"
-                                               CommandParameter="{Binding Name}"
+                                               CommandParameter="{Binding Path}"
                                                Content="播放脚本"
                                                Icon="{ui:SymbolIcon Play24}" />
                                 </StackPanel>

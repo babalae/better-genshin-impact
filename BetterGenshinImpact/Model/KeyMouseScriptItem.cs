@@ -12,4 +12,6 @@ public partial class KeyMouseScriptItem : ObservableObject
     private string _createTimeStr = string.Empty;
 
     public DateTime CreateTime { get; set; }
+
+    public string Path { get; set; }
 }
