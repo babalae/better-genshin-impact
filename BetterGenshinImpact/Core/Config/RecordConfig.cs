@@ -29,5 +29,5 @@ public partial class RecordConfig : ObservableObject
     /// 通过派蒙判断是否在主界面
     /// </summary>
     [ObservableProperty]
-    private bool _paimonSwitchEnabled = true;
+    private bool _paimonSwitchEnabled = false;
 }

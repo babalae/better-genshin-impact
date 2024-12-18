@@ -56,7 +56,7 @@
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
 		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
-		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
+<!--		<PackageReference Include="MouseKeyHook" Version="5.7.1" />-->
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
 		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
 		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.5.1" />
@@ -85,6 +85,7 @@
 		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
 		<ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
 		<ProjectReference Include="..\Fischless.WindowsInput\Fischless.WindowsInput.csproj" />
+		<ProjectReference Include="..\Common\MouseKeyHook\MouseKeyHook.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

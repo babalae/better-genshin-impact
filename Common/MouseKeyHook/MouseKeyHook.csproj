@@ -1,0 +1,70 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <ProjectGuid>{F52AA97E-180A-40ED-8F2B-09080171D6C7}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <AssemblyTitle>MouseKeyHook</AssemblyTitle>
+    <AssemblyName>Gma.System.MouseKeyHook</AssemblyName>
+    <Version>5.7.1</Version>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net8.0-windows10.0.22621.0</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Gma.System.MouseKeyHook</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>George Mamaladze</Authors>
+    <Description>
+      This library attaches to windows global hooks, tracks keyboard and mouse clicks and movement and raises common .NET events with KeyEventArgs and MouseEventArgs, so you can easily retrieve any information you need:
+
+      * Mouse coordinates
+      * Mouse buttons clicked
+      * Mouse wheel scrolls
+      * Key presses and releases
+      * Special key states
+      * [NEW] Key combinations and sequences
+
+      Additionally, there is a possibility to supress certain keyboard or mouse clicks, or detect special key combinations.
+    </Description>
+    <Copyright>(c) George Mamaladze 2000-2023</Copyright>
+    <PackageId>MouseKeyHook</PackageId>
+    <PackageIconUrl></PackageIconUrl>
+    <PackageProjectUrl>https://github.com/gmamaladze/globalmousekeyhook</PackageProjectUrl>
+    <PackageTags>keyboard mouse hook event global spy</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/gmamaladze/globalmousekeyhook</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+<!--    <PackageIcon>mouse-keyboard-hook-logo64x64.png</PackageIcon>-->
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <DefineConstants>TRACE</DefineConstants>
+    <DebugSymbols>false</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <NoStdLib>false</NoStdLib>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+</Project>
