@@ -41,8 +41,8 @@ public class MouseKeyMonitor
         // Note: for the application hook, use the Hook.AppEvents() instead
         _globalHook = Hook.GlobalEvents();
 
-        _globalHook.KeyDown += GlobalHookKeyDown;
-        _globalHook.KeyUp += GlobalHookKeyUp;
+        _globalHook.KeyDownExt += GlobalHookKeyDown;
+        _globalHook.KeyUpExt += GlobalHookKeyUp;
         _globalHook.MouseDownExt += GlobalHookMouseDownExt;
         _globalHook.MouseUpExt += GlobalHookMouseUpExt;
         _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
@@ -59,9 +59,11 @@ public class MouseKeyMonitor
         _fTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F); };
     }
 
-    private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
+    private void GlobalHookKeyDown(object? sender, KeyEventArgsExt e)
     {
-        // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
+        // Debug.WriteLine(Kernel32.GetTickCount());
+        // Debug.WriteLine(System.Environment.TickCount);
+        // Debug.WriteLine("KeyDown: \t{0} \tIsKeyDown:{1} \tIsKeyUp:{2} \t Time:{3}", e.KeyCode, e.IsKeyDown, e.IsKeyUp, e.Timestamp);
         GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e);
 
         // 热键按下事件
@@ -97,7 +99,7 @@ public class MouseKeyMonitor
         }
     }
 
-    private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
+    private void GlobalHookKeyUp(object? sender, KeyEventArgsExt e)
     {
         // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
         GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e);
@@ -178,8 +180,8 @@ public class MouseKeyMonitor
     {
         if (_globalHook != null)
         {
-            _globalHook.KeyDown -= GlobalHookKeyDown;
-            _globalHook.KeyUp -= GlobalHookKeyUp;
+            _globalHook.KeyDownExt -= GlobalHookKeyDown;
+            _globalHook.KeyUpExt -= GlobalHookKeyUp;
             _globalHook.MouseDownExt -= GlobalHookMouseDownExt;
             _globalHook.MouseUpExt -= GlobalHookMouseUpExt;
             _globalHook.MouseMoveExt -= GlobalHookMouseMoveExt;

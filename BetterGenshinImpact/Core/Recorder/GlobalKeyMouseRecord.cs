@@ -16,6 +16,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Video;
 using NAudio.Wave;
 using SharpAvi;
+using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Core.Recorder;
@@ -150,7 +151,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         ra.Dispose();
     }
 
-    public void GlobalHookKeyDown(KeyEventArgs e)
+    public void GlobalHookKeyDown(KeyEventArgsExt e)
     {
         // 排除热键
         if (e.KeyCode.ToString() == _keyMouseMacroRecordHotkey)
@@ -178,7 +179,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _recorder?.KeyDown(e);
     }
 
-    public void GlobalHookKeyUp(KeyEventArgs e)
+    public void GlobalHookKeyUp(KeyEventArgsExt e)
     {
         if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.Test1Hotkey)
         {
@@ -241,20 +242,22 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             return;
         }
 
+        var tick = Kernel32.GetTickCount();
+
         if (_paimonSwitchEnabled)
         {
             if (!_isInMainUi)
             {
-                _recorder?.MouseMoveBy(state, false);
+                _recorder?.MouseMoveBy(state, tick, false);
             }
             else
             {
-                _recorder?.MouseMoveBy(state, true);
+                _recorder?.MouseMoveBy(state, tick, true);
             }
         }
         else
         {
-            _recorder?.MouseMoveBy(state, true);
+            _recorder?.MouseMoveBy(state, tick, true);
         }
     }
 }

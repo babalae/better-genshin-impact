@@ -6,10 +6,12 @@ using Gma.System.MouseKeyHook;
 using SharpDX.DirectInput;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -21,6 +23,8 @@ public class KeyMouseRecorder
     public List<MacroEvent> MouseMoveByMacroEvents { get; } = [];
 
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
+
+    public uint StartTick { get; set; } = Kernel32.GetTickCount();
 
     public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
@@ -38,6 +42,9 @@ public class KeyMouseRecorder
 
     public string ToJsonMacro()
     {
+        // MacroEvents 需要以实际时间进行排序
+        MacroEvents.Sort((a, b) => a.Time.CompareTo(b.Time));
+        
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         KeyMouseScript keyMouseScript = new()
         {
@@ -58,58 +65,63 @@ public class KeyMouseRecorder
         return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
     }
 
-    public void KeyDown(KeyEventArgs e)
+    public void KeyDown(KeyEventArgsExt e)
     {
+        var time = e.Timestamp - StartTick;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.KeyDown,
             KeyCode = e.KeyValue,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time
         });
     }
 
-    public void KeyUp(KeyEventArgs e)
+    public void KeyUp(KeyEventArgsExt e)
     {
+        var time = e.Timestamp - StartTick;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.KeyUp,
             KeyCode = e.KeyValue,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time
         });
     }
 
     public void MouseDown(MouseEventExtArgs e)
     {
+        var time = e.Timestamp - StartTick;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseDown,
             MouseX = e.X,
             MouseY = e.Y,
             MouseButton = e.Button.ToString(),
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time
         });
     }
 
     public void MouseUp(MouseEventExtArgs e)
     {
+        var time = e.Timestamp - StartTick;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseUp,
             MouseX = e.X,
             MouseY = e.Y,
             MouseButton = e.Button.ToString(),
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time
         });
     }
 
     public void MouseMoveTo(MouseEventExtArgs e, bool save = false)
     {
+        var time = e.Timestamp - StartTick;
         var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveTo,
             MouseX = e.X,
             MouseY = e.Y,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time
         };
         MouseMoveToMacroEvents.Add(mEvent);
         if (save)
@@ -120,24 +132,34 @@ public class KeyMouseRecorder
 
     public void MouseWheel(MouseEventExtArgs e)
     {
+        var time = e.Timestamp - StartTick;
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseWheel,
             MouseY = e.Delta, // 120 的倍率
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time
         });
     }
 
-    public void MouseMoveBy(MouseState state, bool save = false)
+    public void MouseMoveBy(MouseState state, uint tick, bool save = false)
     {
-        var now = DateTime.UtcNow;
+        uint prevTickCount = 0;
+        if (MouseMoveByMacroEvents.Count > 0)
+        {
+            prevTickCount = MouseMoveByMacroEvents[^1].TickCount - StartTick;
+        }
+        else
+        {
+            prevTickCount = tick - 5; // 减去间隔时间5ms
+        }
 
         var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = (now - StartTime).TotalMilliseconds,
+            Time = prevTickCount,
+            TickCount = tick
         };
         MouseMoveByMacroEvents.Add(mEvent);
         if (save)

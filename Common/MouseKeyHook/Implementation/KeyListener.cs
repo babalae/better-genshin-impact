@@ -27,15 +27,25 @@ namespace Gma.System.MouseKeyHook.Implementation
 
         public void InvokeKeyDown(KeyEventArgsExt e)
         {
+            OnKeyDownExt(e);
+            OnKeyDown(e);
+        }
+        
+        
+        private void OnKeyDown(KeyEventArgsExt e)
+        {
             var handler = KeyDown;
             if (handler == null || e.Handled || !e.IsKeyDown)
                 return;
             handler(this, e);
-            
-            var handlerExt = KeyDownExt;
-            if (handlerExt == null || e.Handled || !e.IsKeyDown)
+        }
+
+        private void OnKeyDownExt(KeyEventArgsExt e)
+        {
+            var handler = KeyDownExt;
+            if (handler == null || e.Handled || !e.IsKeyDown)
                 return;
-            handlerExt(this, e);
+            handler(this, e);
         }
 
         public void InvokeKeyPress(KeyPressEventArgsExt e)
@@ -56,15 +66,24 @@ namespace Gma.System.MouseKeyHook.Implementation
 
         public void InvokeKeyUp(KeyEventArgsExt e)
         {
+            OnKeyUpExt(e);
+            OnKeyUp(e);
+        }
+        
+        private void OnKeyUp(KeyEventArgsExt e)
+        {
             var handler = KeyUp;
             if (handler == null || e.Handled || !e.IsKeyUp)
                 return;
             handler(this, e);
-            
-            var handlerExt = KeyUpExt;
-            if (handlerExt == null || e.Handled || !e.IsKeyDown)
+        }
+
+        private void OnKeyUpExt(KeyEventArgsExt e)
+        {
+            var handler = KeyUpExt;
+            if (handler == null || e.Handled || !e.IsKeyUp)
                 return;
-            handlerExt(this, e);
+            handler(this, e);
         }
 
         protected override bool Callback(CallbackData data)
@@ -98,13 +117,6 @@ namespace Gma.System.MouseKeyHook.Implementation
 
         protected abstract IEnumerable<KeyPressEventArgsExt> GetPressEventArgs(CallbackData data);
         protected abstract KeyEventArgsExt GetDownUpEventArgs(CallbackData data);
-        
-        private void OnKeyUpExt(KeyEventArgsExt e)
-        {
-            var handler = KeyUpExt;
-            if (handler == null || e.Handled || !e.IsKeyUp)
-                return;
-            handler(this, e);
-        }
+
     }
 }

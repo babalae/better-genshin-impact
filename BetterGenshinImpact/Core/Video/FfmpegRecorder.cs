@@ -33,11 +33,13 @@ public class FfmpegRecorder
             throw new Exception("ffmpeg.exe不存在");
         }
 
-        _filePath = Global.Absolute($@"User\KeyMouseScript\{fileName}.mp4");
+        var folderPath = Global.Absolute($@"User\KeyMouseScript\{fileName}\");
+        Directory.CreateDirectory(folderPath);
+        _filePath = Path.Combine(folderPath, "%Y-%m-%d_%H-%M-%S.mp4");
         var processInfo = new ProcessStartInfo
         {
             FileName = FfmpegPath,
-            Arguments = $" -f gdigrab -hwaccel cuvid -show_region 1 -framerate 60 -use_wallclock_as_timestamps 1 -i title=原神 -pix_fmt yuv420p  -c:v libx264 -preset ultrafast \"{_filePath}\"",
+            Arguments = $" -f gdigrab -hwaccel cuvid -show_region 1 -framerate 60 -use_wallclock_as_timestamps 1 -i title=原神 -pix_fmt yuv420p  -c:v libx264 -preset ultrafast -f segment -segment_time 300 -reset_timestamps 1 -strftime 1  \"{_filePath}\"",
             StandardInputEncoding = Encoding.UTF8,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -62,6 +64,7 @@ public class FfmpegRecorder
                     {
                         _startTime = match.Groups[1].Value.Replace(".", "");
                         TaskControl.Logger.LogInformation("ffmpeg录制: 视频起始时间戳 {Text}", _startTime);
+                        File.WriteAllText(Path.Combine(folderPath, $"{_startTime}.txt"), _startTime);
                     }
                 }
             }
@@ -109,18 +112,18 @@ public class FfmpegRecorder
             _process.Dispose();
 
 
-            Thread.Sleep(3000);
-            if (File.Exists(_filePath))
-            {
-                // 重命名文件
-                var newFilePath = Global.Absolute($@"User\KeyMouseScript\{_fileName}_{_startTime}.mp4");
-                File.Move(_filePath, newFilePath);
-                TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", $"录制完成");
-            }
-            else
-            {
-                TaskControl.Logger.LogError("ffmpeg录制: {Text}", "未找到结果文件，录制失败");
-            }
+            // Thread.Sleep(3000);
+            // if (File.Exists(_filePath))
+            // {
+            //     // 重命名文件
+            //     var newFilePath = Global.Absolute($@"User\KeyMouseScript\{_fileName}_{_startTime}.mp4");
+            //     File.Move(_filePath, newFilePath);
+            //     TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", $"录制完成");
+            // }
+            // else
+            // {
+            //     TaskControl.Logger.LogError("ffmpeg录制: {Text}", "未找到结果文件，录制失败");
+            // }
         }
         catch (Exception e)
         {
