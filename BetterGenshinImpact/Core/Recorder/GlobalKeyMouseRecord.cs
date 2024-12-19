@@ -115,7 +115,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         ra.Dispose();
     }
 
-    public void GlobalHookKeyDown(KeyEventArgs e)
+    public void GlobalHookKeyDown(KeyEventArgs e, uint time)
     {
         // 排除热键
         if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey)
@@ -139,10 +139,10 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             _keyDownState.Add(e.KeyCode, true);
         }
         // Debug.WriteLine($"KeyDown: {e.KeyCode}");
-        _recorder?.KeyDown(e);
+        _recorder?.KeyDown(e, time);
     }
 
-    public void GlobalHookKeyUp(KeyEventArgs e)
+    public void GlobalHookKeyUp(KeyEventArgs e, uint time)
     {
         if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.Test1Hotkey)
         {
@@ -153,7 +153,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         {
             // Debug.WriteLine($"KeyUp: {e.KeyCode}");
             _keyDownState[e.KeyCode] = false;
-            _recorder?.KeyUp(e);
+            _recorder?.KeyUp(e, time);
         }
     }
 
@@ -185,14 +185,14 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _recorder?.MouseWheel(e);
     }
 
-    public void GlobalHookMouseMoveBy(MouseState state)
+    public void GlobalHookMouseMoveBy(MouseState state, uint time)
     {
         if (state is { X: 0, Y: 0 } || !_isInMainUi)
         {
             return;
         }
         // Debug.WriteLine($"MouseMoveBy: {state.X}, {state.Y}");
-        _recorder?.MouseMoveBy(state);
+        _recorder?.MouseMoveBy(state, time);
     }
 }
 

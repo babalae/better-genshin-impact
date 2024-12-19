@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -16,7 +17,7 @@ public class KeyMouseRecorder
 {
     public List<MacroEvent> MacroEvents { get; } = [];
 
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
+    public uint StartTime { get; set; } = Kernel32.GetTickCount();
 
     public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
@@ -104,23 +105,23 @@ public class KeyMouseRecorder
         return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
     }
 
-    public void KeyDown(KeyEventArgs e)
+    public void KeyDown(KeyEventArgs e, uint time)
     {
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.KeyDown,
             KeyCode = e.KeyValue,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time - StartTime
         });
     }
 
-    public void KeyUp(KeyEventArgs e)
+    public void KeyUp(KeyEventArgs e, uint time)
     {
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.KeyUp,
             KeyCode = e.KeyValue,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time - StartTime
         });
     }
 
@@ -132,7 +133,7 @@ public class KeyMouseRecorder
             MouseX = e.X,
             MouseY = e.Y,
             MouseButton = e.Button.ToString(),
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
         });
     }
 
@@ -144,7 +145,7 @@ public class KeyMouseRecorder
             MouseX = e.X,
             MouseY = e.Y,
             MouseButton = e.Button.ToString(),
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
         });
     }
 
@@ -155,7 +156,7 @@ public class KeyMouseRecorder
             Type = MacroEventType.MouseMoveTo,
             MouseX = e.X,
             MouseY = e.Y,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
         });
     }
     
@@ -165,28 +166,30 @@ public class KeyMouseRecorder
         {
             Type = MacroEventType.MouseWheel,
             MouseY = e.Delta, // 120 的倍率
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
         });
     }
 
-    public void MouseMoveBy(MouseState state)
+    public void MouseMoveBy(MouseState state, uint time)
     {
-        var now = DateTime.UtcNow;
+        
         int? cao = null;
         if (TaskContext.Instance().Config.RecordConfig.IsRecordCameraOrientation)
         {
+            var now = DateTime.UtcNow;
             if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
             {
                 LastOrientationDetection = now;
                 cao = (int)Math.Round(CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcMat));
             }
         }
+        
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = (now - StartTime).TotalMilliseconds,
+            Time = time - 5,
             CameraOrientation = cao,
         });
     }
