@@ -368,17 +368,6 @@ public class PathExecutor(CancellationToken ct)
     /// 尝试队伍回血，如果单人回血，由于记录检查时是哪位残血，则当作行走位处理。
     /// </summary>
     private async Task<bool> TryPartyHealing() {
-       // var avatar
-
-         foreach (var a in _combatScenes?.Avatars ?? [])
-        {
-           
-        }
-
-
-
-
-
 
 
             foreach (var avatar in _combatScenes?.Avatars ?? [])

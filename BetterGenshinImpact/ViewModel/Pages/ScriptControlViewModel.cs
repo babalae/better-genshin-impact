@@ -95,7 +95,45 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
         }
     }
+    [RelayCommand]
+    public void OnRenameScriptGroup(ScriptGroup? item)
+    {
 
+        if (item == null)
+        {
+            return;
+        }
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "重命名配置组", item.Name);
+        if (!string.IsNullOrEmpty(str))
+        {
+            if (item.Name == str)
+            {
+                return;
+            }
+            // 检查是否已存在
+            if (ScriptGroups.Any(x => x.Name == str))
+            {
+                _snackbarService.Show(
+                    "配置组已存在",
+                    $"配置组 {str} 已经存在，重命名失败",
+                    ControlAppearance.Caution,
+                    null,
+                    TimeSpan.FromSeconds(2)
+                );
+            }
+            else
+            {
+
+                File.Move(Path.Combine(ScriptGroupPath, $"{item.Name}.json"), Path.Combine(ScriptGroupPath, $"{str}.json"));
+                item.Name = str;
+                WriteScriptGroup(item);
+            }
+        }
+
+
+
+    }
     [RelayCommand]
     public void OnDeleteScriptGroup(ScriptGroup? item)
     {

@@ -64,6 +64,9 @@
                             <MenuItem Command="{Binding DeleteScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="删除组" />
+                            <MenuItem Command="{Binding RenameScriptGroupCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="重命名" />
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>

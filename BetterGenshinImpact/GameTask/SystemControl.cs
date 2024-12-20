@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFishing;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
 
 public class SystemControl
 {
+
+
     public static nint FindGenshinImpactHandle()
     {
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
@@ -15,6 +20,14 @@ public class SystemControl
     public static bool Suspend()
     {
         return  TaskContext.Instance().Config.Suspend;
+    }
+    public static void TrySuspend()
+    {
+        while (SystemControl.Suspend())
+        {
+            App.GetLogger<SystemControl>().LogWarning("快捷键触发暂停，等待解除");
+            Thread.Sleep(1000);
+        }
     }
     public static async Task<nint> StartFromLocalAsync(string path)
     {
