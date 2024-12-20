@@ -62,7 +62,7 @@ public class MouseKeyMonitor
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, Kernel32.GetTickCount());
 
         // 热键按下事件
         HotKeyDown(sender, e);
@@ -100,7 +100,7 @@ public class MouseKeyMonitor
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e, Kernel32.GetTickCount());
 
         // 热键松开事件
         HotKeyUp(sender, e);
