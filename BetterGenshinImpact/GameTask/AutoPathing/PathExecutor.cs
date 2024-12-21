@@ -24,20 +24,33 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
+using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class PathExecutor(CancellationToken ct)
+public class PathExecutor
 {
-    private readonly CameraRotateTask _rotateTask = new(ct);
-    private readonly TrapEscaper _trapEscaper = new(ct);
+    private readonly CameraRotateTask _rotateTask;
+    private readonly TrapEscaper _trapEscaper;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
 
     private PathingPartyConfig? _partyConfig;
+    private CancellationToken ct;
+    private PathExecutorSuspend pathExecutorSuspend;
+
+    public PathExecutor(CancellationToken ct)
+    {
+        _trapEscaper = new(ct);
+        _rotateTask = new(ct);
+        this.ct = ct;
+        pathExecutorSuspend = new PathExecutorSuspend(this);
+    }
 
     public PathingPartyConfig PartyConfig
     {
@@ -59,8 +72,58 @@ public class PathExecutor(CancellationToken ct)
     private const int RetryTimes = 2;
     private int _inTrap = 0;
 
+
+    //记录当前相关点位数组
+    public (int, List<WaypointForTrack>) CurWaypoints { get; set; }
+
+    //记录当前点位
+    public (int, WaypointForTrack) CurWaypoint { get; set; }
+
+    //记录恢复点位数组
+    private (int, List<WaypointForTrack>) RecordWaypoints { get; set; }
+
+    //记录恢复点位
+    private (int, WaypointForTrack) RecordWaypoint { get; set; }
+
+    //跳过除走路径以外的操作
+    private bool _skipOtherOperations = false;
+
+
+    //当到达恢复点位
+    public void TryCloseSkipOtherOperations()
+    {
+        Logger.LogWarning("判断是否跳过路径追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
+        if (RecordWaypoints == CurWaypoints && CurWaypoint.Item1 < RecordWaypoint.Item1)
+        {
+            return;
+        }
+
+        if (_skipOtherOperations)
+        {
+            Logger.LogWarning("已到达上次点位，路径追踪功能恢复");
+        }
+
+        _skipOtherOperations = false;
+    }
+
+    //记录点位，方便后面恢复
+    public void StartSkipOtherOperations()
+    {
+        Logger.LogWarning("记录恢复点位，路径追踪将到达上次点位之前将跳过走路之外的操作");
+        _skipOtherOperations = true;
+        RecordWaypoints = CurWaypoints;
+        RecordWaypoint = CurWaypoint;
+    }
+
     public async Task Pathing(PathingTask task)
     {
+        // SuspendableDictionary;
+        const string sdKey = "PathExecutor";
+        var sd = RunnerContext.Instance.SuspendableDictionary;
+        sd.Remove(sdKey);
+
+        RunnerContext.Instance.SuspendableDictionary.TryAdd(sdKey, pathExecutorSuspend);
+
         if (!task.Positions.Any())
         {
             Logger.LogWarning("没有路径点，寻路结束");
@@ -90,6 +153,9 @@ public class PathExecutor(CancellationToken ct)
 
         foreach (var waypoints in waypointsList)
         {
+            CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
+
+
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -97,6 +163,8 @@ public class PathExecutor(CancellationToken ct)
                     await ResolveAnomalies(); // 异常场景处理
                     foreach (var waypoint in waypoints)
                     {
+                        CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
+                        TryCloseSkipOtherOperations();
                         await RecoverWhenLowHp(waypoint); // 低血量恢复
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
@@ -120,7 +188,8 @@ public class PathExecutor(CancellationToken ct)
                                 await MoveCloseTo(waypoint);
                             }
 
-                            if (!string.IsNullOrEmpty(waypoint.Action))
+                            //skipOtherOperations如果重试，则跳过相关操作
+                            if (!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations)
                             {
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
@@ -137,8 +206,17 @@ public class PathExecutor(CancellationToken ct)
                 }
                 catch (RetryException retryException)
                 {
+                    StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
+                catch (RetryNoCountException retryException)
+                {
+                    //特殊情况下，重试不消耗次数
+                    i--;
+                    StartSkipOtherOperations();
+                    Logger.LogWarning(retryException.Message);
+                }
+
                 finally
                 {
                     // 不管咋样，松开所有按键
@@ -162,7 +240,7 @@ public class PathExecutor(CancellationToken ct)
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
         }
-        
+
         var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
         if (pRaList.Count > 0)
         {
@@ -364,6 +442,61 @@ public class PathExecutor(CancellationToken ct)
         return result;
     }
 
+    /// <summary>
+    /// 尝试队伍回血，如果单人回血，由于记录检查时是哪位残血，则当作行走位处理。
+    /// </summary>
+    private async Task<bool> TryPartyHealing()
+    {
+        foreach (var avatar in _combatScenes?.Avatars ?? [])
+        {
+            if (avatar.Name == "白术")
+            {
+                if (avatar.TrySwitch())
+                {
+                    //1命白术能两次
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(800, ct);
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(800, ct);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await Delay(4000, ct);
+                    return true;
+                }
+
+                break;
+            }
+            else if (avatar.Name == "希格雯")
+            {
+                if (avatar.TrySwitch())
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(11000, ct);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    return true;
+                }
+
+                break;
+            }
+            else if (avatar.Name == "珊瑚宫心海")
+            {
+                if (avatar.TrySwitch())
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+                    await Delay(500, ct);
+                    //尝试Q全队回血
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_Q);
+                    //单人血只给行走位加血
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await Delay(5000, ct);
+                    return true;
+                }
+            }
+        }
+
+
+        return false;
+    }
+
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
         if (PartyConfig.OnlyInTeleportRecover && waypoint.Type != WaypointType.Teleport.Code)
@@ -372,7 +505,7 @@ public class PathExecutor(CancellationToken ct)
         }
 
         using var region = CaptureToRectArea();
-        if (Bv.CurrentAvatarIsLowHp(region))
+        if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
             Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
             await TpStatueOfTheSeven();
@@ -451,7 +584,16 @@ public class PathExecutor(CancellationToken ct)
 
             if (distance > 500)
             {
-                Logger.LogWarning("距离过远，跳过路径点");
+                if (pathExecutorSuspend.CheckAndResetSuspendPoint())
+                {
+                    throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+                }
+                else
+                {
+                    Logger.LogWarning("距离过远，跳过路径点");
+                }
+
+
                 break;
             }
 
@@ -554,7 +696,7 @@ public class PathExecutor(CancellationToken ct)
                         _elementalSkillLastUseTime = DateTime.UtcNow;
                     }
                 }
-                
+
                 // 自动疾跑
                 if (distance > 20)
                 {

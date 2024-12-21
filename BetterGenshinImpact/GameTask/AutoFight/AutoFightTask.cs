@@ -64,6 +64,8 @@ public class AutoFightTask : ISoloTask
         ct.Register(cts2.Cancel);
 
         combatScenes.BeforeTask(cts2.Token);
+        TimeSpan fightTimeout = TimeSpan.FromSeconds(120); // 默认战斗超时时间
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
         // 战斗操作
         var fightTask = Task.Run(async () =>
@@ -78,7 +80,7 @@ public class AutoFightTask : ISoloTask
                         command.Execute(combatScenes);
                     }
 
-                    if (_taskParam is { FightFinishDetectEnabled: true } && await CheckFightFinish())
+                    if (stopwatch.Elapsed > fightTimeout || _taskParam is { FightFinishDetectEnabled: true } && await CheckFightFinish())
                     {
                         break;
                     }
@@ -151,10 +153,17 @@ public class AutoFightTask : ISoloTask
             return false;
         }
 
+
+        Random random = new Random();
+        double randomFraction = random.NextDouble();  // 生成 0 到 1 之间的随机小数
+        //此处随机数，防止固定招式下，使按L正好处于招式下，导致无法准确判断战斗结束
+        double randomNumber = 1 + (randomFraction * (3 - 1));
+
         // 几秒内没有检测到血条和怪物位置，则开始旋转视角重新检测
-        if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > 3)
+        if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
         {
             // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
+            /** 
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Delay(300, _ct);
             for (var i = 0; i < 8; i++)
@@ -167,7 +176,9 @@ public class AutoFightTask : ISoloTask
                     return false;
                 }
             }
-
+            **/
+            await Delay(1000, _ct);
+            Logger.LogInformation("按了L");
             // 最终方案确认战斗结束
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
             await Delay(450, _ct);
@@ -181,6 +192,7 @@ public class AutoFightTask : ISoloTask
             }
             else
             {
+                _lastFightFlagTime = DateTime.Now;
                 return false;
             }
         }

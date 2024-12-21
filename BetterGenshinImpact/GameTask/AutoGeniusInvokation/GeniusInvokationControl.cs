@@ -107,12 +107,13 @@ public class GeniusInvokationControl
             {
                 return;
             }
-
+            TaskControl.TrySuspend();
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
+           
         }, TimeSpan.FromSeconds(1), 100);
 
         if (_ct is { IsCancellationRequested: true })

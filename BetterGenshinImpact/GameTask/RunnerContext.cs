@@ -1,9 +1,12 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
+﻿using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
+using OpenCvSharp;
 using Wpf.Ui.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -18,6 +21,16 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 是否是连续执行配置组的场景
     /// </summary>
     public bool IsContinuousRunGroup { get; set; }
+    
+    /// <summary>
+    /// 暂停逻辑
+    /// </summary>
+    public bool IsSuspend { get; set; }
+    
+    /// <summary>
+    /// 暂停实现
+    /// </summary>
+    public Dictionary<string, ISuspendable> SuspendableDictionary = new();
 
     /// <summary>
     /// 当前使用队伍名称
@@ -68,6 +81,8 @@ public class RunnerContext : Singleton<RunnerContext>
         }
 
         _combatScenes = null;
+        IsSuspend = false;
+        SuspendableDictionary.Clear();
     }
 
     /// <summary>
@@ -78,5 +93,7 @@ public class RunnerContext : Singleton<RunnerContext>
         IsContinuousRunGroup = false;
         PartyName = null;
         _combatScenes = null;
+        IsSuspend = false;
+        SuspendableDictionary.Clear();
     }
 }

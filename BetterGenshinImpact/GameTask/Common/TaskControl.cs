@@ -3,9 +3,11 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -15,14 +17,18 @@ public class TaskControl
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
 
+    
+    
+    
     public static void CheckAndSleep(int millisecondsTimeout)
     {
+        TrySuspend();
         if (!SystemControl.IsGenshinImpactActiveByProcess())
         {
             Logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
             throw new NormalEndException("当前获取焦点的窗口不是原神");
         }
-
+        
         Thread.Sleep(millisecondsTimeout);
     }
 
@@ -30,78 +36,45 @@ public class TaskControl
     {
         NewRetry.Do(() =>
         {
+            TrySuspend();
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
+            
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
     }
+    
+    public static void TrySuspend()
+    {
+        bool first = true;
+        while (RunnerContext.Instance.IsSuspend)
+        {
+            if (first)
+            {
+                Logger.LogWarning("快捷键触发暂停，等待解除");
+                foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+                {
+                    item.Value.Suspend();
+                }
 
-    // public static void Sleep(int millisecondsTimeout, CancellationTokenSource? cts)
-    // {
-    //     if (cts is { IsCancellationRequested: true })
-    //     {
-    //         throw new NormalEndException("取消自动任务");
-    //     }
-    //
-    //     if (millisecondsTimeout <= 0)
-    //     {
-    //         return;
-    //     }
-    //
-    //     NewRetry.Do(() =>
-    //     {
-    //         if (cts is { IsCancellationRequested: true })
-    //         {
-    //             throw new NormalEndException("取消自动任务");
-    //         }
-    //
-    //         if (!SystemControl.IsGenshinImpactActiveByProcess())
-    //         {
-    //             Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-    //             throw new RetryException("当前获取焦点的窗口不是原神");
-    //         }
-    //     }, TimeSpan.FromSeconds(1), 100);
-    //     Thread.Sleep(millisecondsTimeout);
-    //     if (cts is { IsCancellationRequested: true })
-    //     {
-    //         throw new NormalEndException("取消自动任务");
-    //     }
-    // }
+                first = false;
+            }
 
-    // public static async Task Delay(int millisecondsTimeout, CancellationTokenSource cts)
-    // {
-    //     if (cts is { IsCancellationRequested: true })
-    //     {
-    //         throw new NormalEndException("取消自动任务");
-    //     }
-    //
-    //     if (millisecondsTimeout <= 0)
-    //     {
-    //         return;
-    //     }
-    //
-    //     NewRetry.Do(() =>
-    //     {
-    //         if (cts is { IsCancellationRequested: true })
-    //         {
-    //             throw new NormalEndException("取消自动任务");
-    //         }
-    //
-    //         if (!SystemControl.IsGenshinImpactActiveByProcess())
-    //         {
-    //             Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-    //             throw new RetryException("当前获取焦点的窗口不是原神");
-    //         }
-    //     }, TimeSpan.FromSeconds(1), 100);
-    //     await Task.Delay(millisecondsTimeout, cts.Token);
-    //     if (cts is { IsCancellationRequested: true })
-    //     {
-    //         throw new NormalEndException("取消自动任务");
-    //     }
-    // }
+            Thread.Sleep(1000);
+        }
+
+        if (RunnerContext.Instance.IsSuspend)
+        {
+            Logger.LogWarning("暂停已经解除");
+            foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+            {
+                item.Value.Resume();
+            }
+        }
+    }
 
     public static void Sleep(int millisecondsTimeout, CancellationToken ct)
     {
@@ -121,12 +94,13 @@ public class TaskControl
             {
                 throw new NormalEndException("取消自动任务");
             }
-
+            TrySuspend();
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
+            
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
         if (ct.IsCancellationRequested)
@@ -153,12 +127,13 @@ public class TaskControl
             {
                 throw new NormalEndException("取消自动任务");
             }
-
+            TrySuspend();
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
+            
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);
         if (ct is { IsCancellationRequested: true })
