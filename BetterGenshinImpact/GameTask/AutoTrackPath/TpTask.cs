@@ -287,11 +287,39 @@ public class TpTask(CancellationToken ct)
         }
     }
 
-    public async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
+    public async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10, int stepIntervalMilliseconds = 10)
     {
-        int stepIntervalMilliseconds = 10;
-        int stepX = (int)pixelDeltaX / steps;
-        int stepY = (int)pixelDeltaY / steps;
+        // 确保不影响总移动距离
+        double totalX = 0;
+        double totalY = 0;
+
+        // 梯形缩放因子
+        double scaleFactor = 0.75;
+
+        // 计算每一步的位移，从steps/2逐渐减小到0
+        int[] stepX = new int[steps];
+        int[] stepY = new int[steps];
+        for (int i = 0; i < steps; i++)
+        {
+            double factor = ((double)(steps - Math.Max(i, steps / 2)) / (steps / 2)) * scaleFactor; // 从steps/2逐渐减小到0
+            stepX[i] = (int)(pixelDeltaX * factor / steps);
+            stepY[i] = (int)(pixelDeltaY * factor / steps);
+            totalX += stepX[i];
+            totalY += stepY[i];
+        }
+
+        // 均匀分配多余的部分到前半段
+        int remainingX = (int)(pixelDeltaX - totalX);
+        int remainingY = (int)(pixelDeltaY - totalY);
+        for (int i = 0; i < steps / 2; i++)
+        {
+            stepX[i] += remainingX / (steps / 2);
+            stepY[i] += remainingY / (steps / 2);
+        }
+
+        // 修正剩余误差到中间
+        stepX[steps / 2] += remainingX % (steps / 2);
+        stepY[steps / 2] += remainingY % (steps / 2);
 
         // 随机起点以避免地图移动无效
         GameCaptureRegion.GameRegionMove((rect, _) =>
@@ -301,12 +329,12 @@ public class TpTask(CancellationToken ct)
         Simulation.SendInput.Mouse.LeftButtonDown();
         for (var i = 0; i < steps; i++)
         {
-            Simulation.SendInput.Mouse.MoveMouseBy(stepX, stepY);
+            Simulation.SendInput.Mouse.MoveMouseBy(stepX[i], stepY[i]);
             await Delay(stepIntervalMilliseconds, ct);
         }
         Simulation.SendInput.Mouse.LeftButtonUp();
-        // await Delay(100, ct) // 后面有耗时任务，不延时 
     }
+
 
 
     public Point2f GetPositionFromBigMap()
@@ -569,7 +597,6 @@ public class TpTask(CancellationToken ct)
                 break;
             }
         }
-
         return hasMapChooseIcon;
     }
 }

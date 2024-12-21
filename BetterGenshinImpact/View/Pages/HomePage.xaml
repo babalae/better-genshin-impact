@@ -23,7 +23,7 @@
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
-    <StackPanel Margin="42,16,42,12">
+    <StackPanel Margin="42,16,42,12" d:IsLocked="True">
 
         <Border Height="200" CornerRadius="8">
             <Grid>
@@ -86,10 +86,12 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
+                        截图器启动后才能使用各项功能，
+                        <Run FontWeight="Bold" TextDecorations="Underline">
                             点击展开启动相关配置
                         </Run>
-                        。</ui:TextBlock>
+                        。
+                    </ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
