@@ -31,6 +31,7 @@ using StackPanel = Wpf.Ui.Controls.StackPanel;
 using System.Windows.Navigation;
 using Newtonsoft.Json.Linq;
 using static Vanara.PInvoke.User32;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -95,10 +96,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
         }
     }
+
     [RelayCommand]
     public void OnRenameScriptGroup(ScriptGroup? item)
     {
-
         if (item == null)
         {
             return;
@@ -111,6 +112,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 return;
             }
+
             // 检查是否已存在
             if (ScriptGroups.Any(x => x.Name == str))
             {
@@ -124,16 +126,13 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
             else
             {
-
                 File.Move(Path.Combine(ScriptGroupPath, $"{item.Name}.json"), Path.Combine(ScriptGroupPath, $"{str}.json"));
                 item.Name = str;
                 WriteScriptGroup(item);
             }
         }
-
-
-
     }
+
     [RelayCommand]
     public void OnDeleteScriptGroup(ScriptGroup? item)
     {
@@ -205,7 +204,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     }
 
 
-
     [RelayCommand]
     private void OnAddPathing()
     {
@@ -222,7 +220,14 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     private ScrollViewer CreatePathingScriptSelectionPanel(IEnumerable<FileTreeNode<PathingTask>> list)
     {
         var stackPanel = new StackPanel();
-        AddNodesToPanel(stackPanel, list, 0);
+        var filterTextBox = new TextBox
+        {
+            Margin = new Thickness(0, 0, 0, 10),
+            PlaceholderText = "输入筛选条件..."
+        };
+        filterTextBox.TextChanged += (s, e) => ApplyFilter(stackPanel, list, filterTextBox.Text);
+        stackPanel.Children.Add(filterTextBox);
+        AddNodesToPanel(stackPanel, list, 0, filterTextBox.Text);
 
         var scrollViewer = new ScrollViewer
         {
@@ -234,10 +239,25 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         return scrollViewer;
     }
 
-    private void AddNodesToPanel(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, int depth)
+    private void ApplyFilter(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, string filter)
+    {
+        if (parentPanel.Children.Count > 0 && parentPanel.Children[0] is TextBox filterTextBox)
+        {
+            parentPanel.Children.Clear();
+            parentPanel.Children.Add(filterTextBox); // 保留筛选框
+            AddNodesToPanel(parentPanel, nodes, 0, filter);
+        }
+    }
+
+    private void AddNodesToPanel(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, int depth, string filter)
     {
         foreach (var node in nodes)
         {
+            if (depth == 0 && !string.IsNullOrEmpty(filter) && !node.FileName.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var checkBox = new CheckBox
             {
                 Content = node.FileName,
@@ -248,11 +268,19 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             if (node.IsDirectory)
             {
                 var childPanel = new StackPanel();
-                AddNodesToPanel(childPanel, node.Children, depth + 1); // 递归调用时深度加1
+                AddNodesToPanel(childPanel, node.Children, depth + 1, filter);
+
+                var expander = new Expander
+                {
+                    Header = checkBox,
+                    Content = childPanel,
+                    IsExpanded = false // 默认不展开
+                };
+
                 checkBox.Checked += (s, e) => SetChildCheckBoxesState(childPanel, true);
                 checkBox.Unchecked += (s, e) => SetChildCheckBoxesState(childPanel, false);
-                parentPanel.Children.Add(checkBox);
-                parentPanel.Children.Add(childPanel);
+
+                parentPanel.Children.Add(expander);
             }
             else
             {
@@ -269,8 +297,13 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 checkBox.IsChecked = state;
             }
-            else if (child is StackPanel nestedStackPanel)
+            else if (child is Expander expander && expander.Content is StackPanel nestedStackPanel)
             {
+                if (expander.Header is CheckBox headerCheckBox)
+                {
+                    headerCheckBox.IsChecked = state;
+                }
+
                 SetChildCheckBoxesState(nestedStackPanel, state);
             }
         }
@@ -347,6 +380,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         //     WriteScriptGroup(group);
         // }
     }
+
     [RelayCommand]
     private void AddNextFlag(ScriptGroupProject? item)
     {
@@ -354,20 +388,23 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         {
             return;
         }
-        List<ValueTuple<string,int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
-        var nst=nextScheduledTask.Find(item2 => item2.Item1== SelectedScriptGroup?.Name);
-        if (nst != default) {
+
+        List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
+        var nst = nextScheduledTask.Find(item2 => item2.Item1 == SelectedScriptGroup?.Name);
+        if (nst != default)
+        {
             nextScheduledTask.Remove(nst);
         }
-        nextScheduledTask.Add((SelectedScriptGroup?.Name,item.Index, item.FolderName, item.Name));
+
+        nextScheduledTask.Add((SelectedScriptGroup?.Name, item.Index, item.FolderName, item.Name));
         foreach (var item1 in SelectedScriptGroup.Projects)
         {
             item1.NextFlag = false;
         }
-        item.NextFlag = true;
-        
 
+        item.NextFlag = true;
     }
+
     public static void ShowEditWindow(object viewModel)
     {
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
@@ -564,12 +601,14 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     var group = ScriptGroup.FromJson(json);
 
 
-                    var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item=>item.Item1 == group.Name);
+                    var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
                     foreach (var item in group.Projects)
                     {
                         item.NextFlag = false;
-                        if (nst != default) {
-                            if (nst.Item2 == item.Index && nst.Item3==item.FolderName && nst.Item4==item.Name) {
+                        if (nst != default)
+                        {
+                            if (nst.Item2 == item.Index && nst.Item3 == item.FolderName && nst.Item4 == item.Name)
+                            {
                                 item.NextFlag = true;
                             }
                         }
@@ -700,45 +739,51 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         WriteScriptGroup(SelectedScriptGroup);
     }
 
-    public List<ScriptGroupProject> getNextProjects(ScriptGroup group) {
+    public List<ScriptGroupProject> getNextProjects(ScriptGroup group)
+    {
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
         bool start = false;
         foreach (var item in group.Projects)
         {
-            if (item.NextFlag??false) { 
+            if (item.NextFlag ?? false)
+            {
                 start = true;
             }
-            if (start) {
+
+            if (start)
+            {
                 ls.Add(item);
             }
         }
+
         if (!start)
         {
             ls.AddRange(group.Projects);
         }
 
         //拿出来后清空，和置状态
-        if (start) {
+        if (start)
+        {
             List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
             foreach (var item in nextScheduledTask)
             {
-                if (item.Item1 == group.Name) {
+                if (item.Item1 == group.Name)
+                {
                     nextScheduledTask.Remove(item);
                     break;
                 }
             }
+
             foreach (var item in group.Projects)
             {
                 item.NextFlag = false;
             }
-
-
         }
-
 
 
         return ls;
     }
+
     [RelayCommand]
     public async Task OnStartMultiScriptGroupAsync()
     {
@@ -812,10 +857,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             RunnerContext.Instance.IsContinuousRunGroup = true;
             foreach (var scriptGroup in selectedGroups)
             {
-               
                 await _scriptService.RunMulti(getNextProjects(scriptGroup), scriptGroup.Name);
                 await Task.Delay(2000);
             }
+
             RunnerContext.Instance.Reset();
         }
     }

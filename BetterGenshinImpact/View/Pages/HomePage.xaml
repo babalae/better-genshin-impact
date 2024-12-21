@@ -23,7 +23,7 @@
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
-    <StackPanel Margin="42,16,42,12" d:IsLocked="True">
+    <StackPanel Margin="42,16,42,12">
 
         <Border Height="200" CornerRadius="8">
             <Grid>
