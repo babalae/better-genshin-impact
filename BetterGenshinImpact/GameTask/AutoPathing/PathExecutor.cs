@@ -912,7 +912,10 @@ public class PathExecutor
 
             if (_autoSkipTrigger == null)
             {
-                _autoSkipTrigger = new AutoSkipTrigger();
+                _autoSkipTrigger = new AutoSkipTrigger(new AutoSkipConfig
+                {
+                    ClickChatOption = "优先选择最后一个选项",
+                });
                 _autoSkipTrigger.Init();
             }
 

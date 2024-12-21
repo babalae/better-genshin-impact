@@ -65,11 +65,24 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private List<string> _selectList = [];
 
     private PostMessageSimulator? _postMessageSimulator;
+    
+    private readonly bool _isCustomConfiguration;
 
     public AutoSkipTrigger()
     {
         _autoSkipAssets = AutoSkipAssets.Instance;
         _config = TaskContext.Instance().Config.AutoSkipConfig;
+    }
+    
+    /// <summary>
+    /// 用于内部的其他方法调用
+    /// </summary>
+    /// <param name="config"></param>
+    public AutoSkipTrigger(AutoSkipConfig config)
+    {
+        _autoSkipAssets = AutoSkipAssets.Instance;
+        _config = config;
+        _isCustomConfiguration = true;
     }
 
     public void Init()
@@ -79,6 +92,14 @@ public partial class AutoSkipTrigger : ITaskTrigger
         // IsUseInteractionKey = _config.SelectChatOptionType == SelectChatOptionTypes.UseInteractionKey;
         _postMessageSimulator = TaskContext.Instance().PostMessageSimulator;
 
+        if (!_isCustomConfiguration)
+        {
+            InitKeyword();
+        }
+    }
+
+    private void InitKeyword()
+    {
         try
         {
             var defaultPauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\default_pause_options.json");

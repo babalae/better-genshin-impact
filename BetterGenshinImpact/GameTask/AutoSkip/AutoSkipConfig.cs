@@ -26,9 +26,9 @@ public partial class AutoSkipConfig : ObservableObject
     [ObservableProperty]
     private bool _quicklySkipConversationsEnabled = true;
 
-    public int ChatOptionTextWidth { get; set; } = 280;
-
-    public int ExpeditionOptionTextWidth { get; set; } = 130;
+    // public int ChatOptionTextWidth { get; set; } = 280;
+    //
+    // public int ExpeditionOptionTextWidth { get; set; } = 130;
 
     /// <summary>
     /// 选择选项前的延迟（毫秒）
