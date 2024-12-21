@@ -215,7 +215,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.SuspendHotkey),
             Config.HotKeyConfig.SuspendHotkey,
             Config.HotKeyConfig.SuspendHotkeyType,
-            (_, _) => { TaskContext.Instance().Config.Suspend = !TaskContext.Instance().Config.Suspend; }
+            (_, _) => { RunnerContext.Instance.IsSuspend = !RunnerContext.Instance.IsSuspend; }
         ));
         var takeScreenshotHotKeySettingModel = new HotKeySettingModel(
             "游戏截图",

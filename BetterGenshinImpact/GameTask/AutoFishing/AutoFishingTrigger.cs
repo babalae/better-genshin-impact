@@ -728,7 +728,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             NewRetry.Do(() =>
             {
-                SystemControl.TrySuspend();
+                TaskControl.TrySuspend();
                 if (IsEnabled && !SystemControl.IsGenshinImpactActiveByProcess())
                 {
                     _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");

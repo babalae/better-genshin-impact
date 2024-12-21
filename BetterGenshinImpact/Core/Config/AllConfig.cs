@@ -68,11 +68,6 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _inferenceDevice = "CPU";
-    /// <summary>
-    /// 暂停
-    /// </summary>
-    [ObservableProperty]
-    private bool _suspend = false;
 
     [ObservableProperty]
     private List<ValueTuple<string,int, string, string>> _NextScheduledTask = [];
