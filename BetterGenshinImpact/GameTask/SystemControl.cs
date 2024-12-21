@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -17,16 +18,42 @@ public class SystemControl
     {
         return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
     }
+
+    //实现暂停逻辑
+    public interface ISuspendable
+    {
+        void Suspend();         // 暂停操作
+        void Resume();          // 恢复操作
+        bool IsSuspended { get; } // 是否处于暂停状态
+    }
     public static bool Suspend()
     {
         return  TaskContext.Instance().Config.Suspend;
     }
+    public static Dictionary<String, ISuspendable> SuspendableDictionary = new();
     public static void TrySuspend()
     {
+        bool isSuspend= SystemControl.Suspend();
+        bool first = true;
         while (SystemControl.Suspend())
         {
-            App.GetLogger<SystemControl>().LogWarning("快捷键触发暂停，等待解除");
+            if (first) {
+                App.GetLogger<SystemControl>().LogWarning("快捷键触发暂停，等待解除");
+                foreach (var item in SuspendableDictionary)
+                {
+                    item.Value.Suspend();
+                }
+                first = false;
+            }
+            
             Thread.Sleep(1000);
+        }
+        if (isSuspend) {
+            App.GetLogger<SystemControl>().LogWarning("暂停已经解除");
+            foreach (var item in SuspendableDictionary)
+            {
+                item.Value.Resume();
+            }
         }
     }
     public static async Task<nint> StartFromLocalAsync(string path)

@@ -26,18 +26,28 @@ using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class PathExecutor(CancellationToken ct)
+public class PathExecutor
 {
-    private readonly CameraRotateTask _rotateTask = new(ct);
-    private readonly TrapEscaper _trapEscaper = new(ct);
+    private readonly CameraRotateTask _rotateTask;
+    private readonly TrapEscaper _trapEscaper; 
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
 
     private PathingPartyConfig? _partyConfig;
+    private CancellationToken ct;
+    private PathExecutorSuspend pathExecutorSuspend;
+    public PathExecutor(CancellationToken ct) {
+
+        _trapEscaper= new(ct);
+        _rotateTask = new(ct);
+        this.ct = ct;
+        pathExecutorSuspend=new PathExecutorSuspend(this);
+    }
 
     public PathingPartyConfig PartyConfig
     {
@@ -59,8 +69,110 @@ public class PathExecutor(CancellationToken ct)
     private const int RetryTimes = 2;
     private int _inTrap = 0;
 
+
+   
+    //记录当前相关点位数组
+    private ValueTuple<int, List<WaypointForTrack>> curWaypoints;
+    //记录当前点位
+    private ValueTuple<int, WaypointForTrack> curWaypoint;
+
+    //记录恢复点位数组
+    private ValueTuple<int, List<WaypointForTrack>> recordWaypoints;
+    //记录恢复点位
+    private ValueTuple<int, WaypointForTrack> recordWaypoint;
+
+    //跳过除走路径以外的操作
+    private bool skipOtherOperations=false;
+
+    //暂停逻辑相关实现,这里主要用来记录，用来恢复相应操作
+    public class PathExecutorSuspend : ISuspendable
+    {
+        private bool _isSuspended;
+        //记录当前相关点位数组
+        private ValueTuple<int, List<WaypointForTrack>> waypoints;
+        //记录当前点位
+        private ValueTuple<int, WaypointForTrack> waypoint;
+
+        private PathExecutor pathExecutor;
+
+        public PathExecutorSuspend(PathExecutor pathExecutor)
+        {
+            this.pathExecutor = pathExecutor;
+        }
+
+        public bool IsSuspended
+        {
+            get
+            {
+                return _isSuspended;
+            }
+        }
+
+        public void Suspend()
+        {
+            waypoints = pathExecutor.curWaypoints;
+            waypoint = pathExecutor.curWaypoint;
+            _isSuspended = true;
+        }
+        //路径过远时，检查路径追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态
+        public bool checkAndResetSuspendPoint()
+        {
+            if (_isSuspended)
+            {
+                return false;
+            }
+
+            if (pathExecutor.curWaypoints == waypoints && (pathExecutor.curWaypoint == waypoint || (pathExecutor.curWaypoint.Item1-1) == waypoint.Item1))
+            {
+                return true;
+            }
+            reset();
+            return false;
+        }
+        public void Resume()
+        {
+             _isSuspended = false;
+        }
+        public void reset()
+        {
+            waypoints = default;
+            waypoint = default;
+        }
+
+    }
+
+   //当到达恢复点位
+    public  void TryCloseSkipOtherOperations()
+    {
+        Logger.LogWarning("判断是否跳过路径追踪:" + (curWaypoint.Item1 < recordWaypoint.Item1));
+        if (recordWaypoints == curWaypoints && curWaypoint.Item1 < recordWaypoint.Item1)
+        {
+           return;
+        }
+        if (skipOtherOperations) {
+            Logger.LogWarning("已到达上次点位，路径追踪功能恢复");
+        }
+        skipOtherOperations = false;
+    }
+
+    //记录点位，方便后面恢复
+    public  void StartSkipOtherOperations() {
+        Logger.LogWarning("记录恢复点位，路径追踪将到达上次点位之前将跳过走路之外的操作");
+        skipOtherOperations = true;
+        recordWaypoints = curWaypoints;
+        recordWaypoint = curWaypoint;
+    }
+
     public async Task Pathing(PathingTask task)
     {
+        // SuspendableDictionary;
+        var sdkey = "PathExecutor";
+        var sd= SystemControl.SuspendableDictionary;
+        if (sd.ContainsKey(sdkey)) {
+            sd.Remove(sdkey);
+        }
+        SystemControl.SuspendableDictionary.TryAdd(sdkey, pathExecutorSuspend);
+
         if (!task.Positions.Any())
         {
             Logger.LogWarning("没有路径点，寻路结束");
@@ -90,6 +202,9 @@ public class PathExecutor(CancellationToken ct)
 
         foreach (var waypoints in waypointsList)
         {
+            curWaypoints = (waypointsList.FindIndex(wps=>wps==waypoints), waypoints);
+          
+
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -97,6 +212,9 @@ public class PathExecutor(CancellationToken ct)
                     await ResolveAnomalies(); // 异常场景处理
                     foreach (var waypoint in waypoints)
                     {
+
+                        curWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
+                        TryCloseSkipOtherOperations();
                         await RecoverWhenLowHp(waypoint); // 低血量恢复
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
@@ -119,8 +237,8 @@ public class PathExecutor(CancellationToken ct)
                             {
                                 await MoveCloseTo(waypoint);
                             }
-
-                            if (!string.IsNullOrEmpty(waypoint.Action))
+                            //skipOtherOperations如果重试，则跳过相关操作
+                            if (!string.IsNullOrEmpty(waypoint.Action) && !skipOtherOperations)
                             {
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
@@ -137,8 +255,17 @@ public class PathExecutor(CancellationToken ct)
                 }
                 catch (RetryException retryException)
                 {
+                    StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
+                catch (RetryNoCountException retryException)
+                {
+                    //特殊情况下，重试不消耗次数
+                    i--;
+                    StartSkipOtherOperations();
+                    Logger.LogWarning(retryException.Message);
+                }
+                
                 finally
                 {
                     // 不管咋样，松开所有按键
@@ -505,7 +632,17 @@ public class PathExecutor(CancellationToken ct)
 
             if (distance > 500)
             {
-                Logger.LogWarning("距离过远，跳过路径点");
+
+                if (pathExecutorSuspend.checkAndResetSuspendPoint())
+                {
+
+                    throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+                }
+                else {
+                    Logger.LogWarning("距离过远，跳过路径点");
+                }
+                
+                
                 break;
             }
 
