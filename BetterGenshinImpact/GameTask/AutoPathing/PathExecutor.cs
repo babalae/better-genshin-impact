@@ -92,7 +92,7 @@ public class PathExecutor
     //当到达恢复点位
     public void TryCloseSkipOtherOperations()
     {
-        Logger.LogWarning("判断是否跳过路径追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
+        // Logger.LogWarning("判断是否跳过路径追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
         if (RecordWaypoints == CurWaypoints && CurWaypoint.Item1 < RecordWaypoint.Item1)
         {
             return;
