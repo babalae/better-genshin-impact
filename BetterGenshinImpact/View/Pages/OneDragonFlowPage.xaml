@@ -177,7 +177,14 @@
                               Margin="10,0,10,0"
                               DisplayMemberPath="Name"
                               ItemsSource="{Binding ConfigList}"
-                              SelectedItem="{Binding SelectedConfig, Mode=TwoWay}" />
+                              SelectedItem="{Binding SelectedConfig, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding ConfigDropDownChangedCommand}"
+                                                       CommandParameter="GeniusInvocation" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
                     <ui:Button
                         Grid.Column="2"
                         Margin="0,0,10,0"

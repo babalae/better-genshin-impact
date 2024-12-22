@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -26,7 +27,7 @@ public partial class OneDragonTaskItem : ObservableObject
 
     [ObservableProperty]
     private OneDragonBaseViewModel? _viewModel;
-    
+
     public Func<Task>? Action { get; private set; }
 
     public OneDragonTaskItem(string name)
@@ -44,7 +45,7 @@ public partial class OneDragonTaskItem : ObservableObject
     //     Name = ViewModel.Title;
     //     Action = action;
     // }
-    
+
     public void InitAction(OneDragonFlowConfig config)
     {
         switch (Name)
@@ -58,12 +59,18 @@ public partial class OneDragonTaskItem : ObservableObject
             case "自动秘境":
                 Action = async () =>
                 {
+                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
+                    {
+                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = "根据队伍自动选择";
+                    }
+
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
                     if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
                     {
                         TaskControl.Logger.LogInformation("自动秘境战斗策略未配置，跳过");
                         return;
                     }
+
                     var autoDomainParam = new AutoDomainParam(0, path)
                     {
                         PartyName = config.PartyName,

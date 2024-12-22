@@ -4,6 +4,7 @@ using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -62,6 +63,28 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     [ObservableProperty]
     private List<string> _domainNameList = MapLazyAssets.Instance.DomainNameList;
 
+    public OneDragonFlowViewModel()
+    {
+        ConfigList.CollectionChanged += (sender, e) =>
+        {
+            if (e.NewItems != null)
+            {
+                foreach (OneDragonFlowConfig newItem in e.NewItems)
+                {
+                    newItem.PropertyChanged += ConfigPropertyChanged;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (OneDragonFlowConfig oldItem in e.OldItems)
+                {
+                    oldItem.PropertyChanged -= ConfigPropertyChanged;
+                }
+            }
+        };
+    }
+
     public void OnNavigatedTo()
     {
         InitConfigList();
@@ -105,11 +128,48 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
             }
         }
 
-        SelectedConfig = selected;
         ConfigList.Clear();
         foreach (var config in configs)
         {
             ConfigList.Add(config);
+        }
+
+        SelectedConfig = selected;
+        TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = selected.Name;
+    }
+
+    [RelayCommand]
+    private void OnConfigDropDownChanged()
+    {
+        if (SelectedConfig != null)
+        {
+            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+        }
+    }
+
+    private void ConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        WriteConfig(SelectedConfig);
+    }
+
+    private void WriteConfig(OneDragonFlowConfig? config)
+    {
+        if (config == null)
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(OneDragonFlowConfigFolder);
+            var json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            var filePath = Path.Combine(OneDragonFlowConfigFolder, $"{config.Name}.json");
+            File.WriteAllText(filePath, json);
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "保存配置时失败");
+            Toast.Error("保存配置时失败");
         }
     }
 
