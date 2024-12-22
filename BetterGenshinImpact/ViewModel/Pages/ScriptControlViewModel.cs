@@ -696,7 +696,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
 
         RunnerContext.Instance.Reset();
-        await _scriptService.RunMulti(getNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name);
+        await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name);
     }
 
     [RelayCommand]
@@ -739,7 +739,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         WriteScriptGroup(SelectedScriptGroup);
     }
 
-    public List<ScriptGroupProject> getNextProjects(ScriptGroup group)
+    public static List<ScriptGroupProject> GetNextProjects(ScriptGroup group)
     {
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
         bool start = false;
@@ -857,7 +857,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             RunnerContext.Instance.IsContinuousRunGroup = true;
             foreach (var scriptGroup in selectedGroups)
             {
-                await _scriptService.RunMulti(getNextProjects(scriptGroup), scriptGroup.Name);
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
                 await Task.Delay(2000);
             }
 

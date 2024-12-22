@@ -50,7 +50,7 @@
                     Grid.Column="2"
                     Margin="0,0,14,0"
                     Icon="{ui:SymbolIcon Add24}"
-                    Command="{Binding AddCommand}" />
+                    Command="{Binding AddTaskCommand}" />
             </Grid>
 
             <ui:ListView dd:DragDrop.IsDragSource="True"
@@ -164,6 +164,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0"
                                FontSize="16"
@@ -172,14 +173,20 @@
                                Text="配置" />
                     <ComboBox Grid.Column="1"
                               MinWidth="200"
-                              Height="30"
+                              Height="34"
                               Margin="10,0,10,0"
-                              ItemsSource="{Binding ConfigurationProfiles}"
-                              SelectedItem="{Binding SelectedProfile, Mode=TwoWay}" />
-                    <ui:Button Grid.Column="2"
+                              DisplayMemberPath="Name"
+                              ItemsSource="{Binding ConfigList}"
+                              SelectedItem="{Binding SelectedConfig, Mode=TwoWay}" />
+                    <ui:Button
+                        Grid.Column="2"
+                        Margin="0,0,10,0"
+                        Icon="{ui:SymbolIcon Add24}"
+                        Command="{Binding AddConfigCommand}" />
+                    <!--<ui:Button Grid.Column="3"
                                Icon="{ui:SymbolIcon Save24}"
                                Command="{Binding SaveConfigurationCommand}"
-                               Content="保存配置" />
+                               Content="保存配置" />-->
                 </Grid>
                 <Separator Margin="0,5,0,0" BorderThickness="0,1,0,0" />
             </StackPanel>
@@ -213,10 +220,8 @@
                         </ui:CardControl.Header>
                         <ComboBox MinWidth="100"
                                   Margin="0,0,28,0"
-                                  SelectedItem="{Binding CraftingBenchCountry, Mode=TwoWay}">
-                            <ComboBoxItem Content="枫丹" />
-                            <ComboBoxItem Content="璃月" />
-                        </ComboBox>
+                                  SelectedItem="{Binding SelectedConfig.CraftingBenchCountry, Mode=TwoWay}"
+                                  ItemsSource="{Binding CraftingBenchCountry}" />
                     </ui:CardControl>
 
 
@@ -256,7 +261,7 @@
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
                                                  Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoDomainConfig.IsEnabled, Mode=TwoWay}" />
+                                                 IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}" />
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
@@ -285,7 +290,7 @@
                                             MinWidth="150"
                                             MaxWidth="800"
                                             Margin="0,0,36,0"
-                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.PartyName, Mode=TwoWay}"
                                             PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
                             </Grid>
@@ -314,8 +319,8 @@
                                           Grid.Column="1"
                                           Width="150"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.DomainName, Mode=TwoWay}">
                                 </ComboBox>
                             </Grid>
                         </StackPanel>
@@ -350,7 +355,7 @@
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
                                                  Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoDomainConfig.IsEnabled, Mode=TwoWay}" />
+                                                 IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}" />
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
@@ -368,7 +373,7 @@
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.MondayThursdayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             PlaceholderText="填写队伍名称" />
@@ -376,8 +381,8 @@
                                           Grid.Column="2"
                                           Width="140"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.MondayThursdayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -395,15 +400,15 @@
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.TuesdayFridayPartyName, Mode=TwoWay}"
                                             PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.TuesdayFridayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -421,15 +426,15 @@
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.WednesdaySaturdayPartyName, Mode=TwoWay}"
                                             PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.WednesdaySaturdayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -447,15 +452,15 @@
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.SundayPartyName, Mode=TwoWay}"
                                             PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding CombatStrategyList}"
-                                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}" />
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}" />
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
@@ -489,9 +494,8 @@
                         </ui:CardControl.Header>
                         <ComboBox MinWidth="100"
                                   Margin="0,0,28,0"
-                                  SelectedItem="{Binding AdventurersGuildCountry, Mode=TwoWay}">
-                            <ComboBoxItem Content="枫丹" />
-                        </ComboBox>
+                                  SelectedItem="{Binding SelectedConfig.AdventurersGuildCountry, Mode=TwoWay}"
+                                  ItemsSource="{Binding AdventurersGuildCountry}" />
                     </ui:CardControl>
 
                     <!--  可以继续添加其他设置项  -->

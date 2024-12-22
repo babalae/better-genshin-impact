@@ -70,7 +70,13 @@ public partial class AllConfig : ObservableObject
     private string _inferenceDevice = "CPU";
 
     [ObservableProperty]
-    private List<ValueTuple<string,int, string, string>> _NextScheduledTask = [];
+    private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
+
+    /// <summary>
+    /// 一条龙选中使用的配置
+    /// </summary>
+    [ObservableProperty]
+    private string _selectedOneDragonFlowConfigName = string.Empty;
 
     /// <summary>
     ///     遮罩窗口配置

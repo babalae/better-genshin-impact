@@ -1,22 +1,23 @@
-﻿using BetterGenshinImpact.Model;
-using BetterGenshinImpact.ViewModel.Pages.OneDragon;
+﻿using System;
+using System.Collections.Generic;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
-using System.Threading;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.Input;
+using Newtonsoft.Json;
 using Wpf.Ui.Controls;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -24,62 +25,92 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
 {
     private readonly ILogger<OneDragonFlowViewModel> _logger = App.GetLogger<OneDragonFlowViewModel>();
 
+    public static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
+
     [ObservableProperty]
     private ObservableCollection<OneDragonTaskItem> _taskList =
     [
-        // new OneDragonTaskItem(typeof(MailViewModel)), //领取邮件
-        // new OneDragonTaskItem(typeof(CraftViewModel)), // 合成树脂
-        // new OneDragonTaskItem(typeof(DailyCommissionViewModel)), // 每日委托
-        // new OneDragonTaskItem(typeof(DomainViewModel)), // 自动秘境
-        // new OneDragonTaskItem(typeof(ForgingViewModel)), // 自动锻造
-        // new OneDragonTaskItem(typeof(LeyLineBlossomViewModel)), // 自动刷地脉花
-        // new OneDragonTaskItem(typeof(DailyRewardViewModel)),  // 领取每日奖励
-        // new OneDragonTaskItem(typeof(SereniteaPotViewModel)),  // 领取尘歌壶奖励
-        // new OneDragonTaskItem(typeof(TcgViewModel)),  // 自动七圣召唤
-
-        new OneDragonTaskItem("领取邮件", async () => { await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token); }),
-        new OneDragonTaskItem("合成树脂", async () =>
-        {
-            await new GoToCraftingBenchTask()
-                .Start("枫丹", CancellationContext.Instance.Cts.Token);
-        }),
-        // new OneDragonTaskItem("每日委托"),
-        new OneDragonTaskItem("自动秘境", async () =>
-        {
-            var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-            if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
-            {
-                Logger.LogInformation("自动秘境战斗策略未配置，跳过");
-                return;
-            }
-
-            await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts.Token);
-        }),
-        // new OneDragonTaskItem("自动锻造"),
-        // new OneDragonTaskItem("自动刷地脉花"),
-        new OneDragonTaskItem("领取每日奖励", async () =>
-        {
-            // 冒险者工会
-            await new GoToAdventurersGuildTask()
-                .Start("枫丹", CancellationContext.Instance.Cts.Token);
-            // 领取纪行奖励
-            await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
-        }),
-        // new OneDragonTaskItem("领取尘歌壶奖励"),
-        // new OneDragonTaskItem("自动七圣召唤"),
+        new("领取邮件"),
+        new("合成树脂"),
+        // new ("每日委托"),
+        new("自动秘境"),
+        // new ("自动锻造"),
+        // new ("自动刷地脉花"),
+        new("领取每日奖励"),
+        // new ("领取尘歌壶奖励"),
+        // new ("自动七圣召唤"),
     ];
 
     [ObservableProperty]
     private OneDragonTaskItem? _selectedTask;
 
     [ObservableProperty]
-    private string _craftingBenchCountry = "枫丹";
+    private ObservableCollection<OneDragonFlowConfig> _configList = [];
+
+    /// <summary>
+    /// 当前生效配置
+    /// </summary>
+    [ObservableProperty]
+    private OneDragonFlowConfig? _selectedConfig;
 
     [ObservableProperty]
-    private string _adventurersGuildCountry = "枫丹";
+    private List<string> _craftingBenchCountry = ["枫丹", "璃月"];
+
+    [ObservableProperty]
+    private List<string> _adventurersGuildCountry = ["枫丹"];
+
+    [ObservableProperty]
+    private List<string> _domainNameList = MapLazyAssets.Instance.DomainNameList;
 
     public void OnNavigatedTo()
     {
+        InitConfigList();
+    }
+
+    private void InitConfigList()
+    {
+        Directory.CreateDirectory(OneDragonFlowConfigFolder);
+        // 读取文件夹内所有json配置，按创建时间正序
+        var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
+        var configs = new List<OneDragonFlowConfig>();
+
+        OneDragonFlowConfig? selected = null;
+        foreach (var configFile in configFiles)
+        {
+            var json = File.ReadAllText(configFile);
+            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            if (config != null)
+            {
+                configs.Add(config);
+                if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
+                {
+                    selected = config;
+                }
+            }
+        }
+
+        if (selected == null)
+        {
+            if (configs.Count > 0)
+            {
+                selected = configs[0];
+            }
+            else
+            {
+                selected = new OneDragonFlowConfig
+                {
+                    Name = "默认配置"
+                };
+                configs.Add(selected);
+            }
+        }
+
+        SelectedConfig = selected;
+        ConfigList.Clear();
+        foreach (var config in configs)
+        {
+            ConfigList.Add(config);
+        }
     }
 
     public void OnNavigatedFrom()
@@ -89,20 +120,53 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private async Task OnOneKeyExecute()
     {
+        // 根据配置初始化任务
+        foreach (var task in TaskList)
+        {
+            task.InitAction(SelectedConfig);
+        }
+
         // 没启动的时候先启动
         await ScriptService.StartGameTask();
-        
+
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunAsync(async () =>
             {
                 foreach (var task in TaskList)
                 {
-                    if (task.IsEnabled)
+                    if (task is { IsEnabled: true, Action: not null })
                     {
                         await task.Action();
                         await Task.Delay(1000);
                     }
                 }
             });
+    }
+
+    [RelayCommand]
+    private void OnAddTask()
+    {
+        Toast.Information("正在开发中...");
+    }
+
+    [RelayCommand]
+    private void OnAddConfig()
+    {
+        // 添加配置
+        var str = PromptDialog.Prompt("请输入一条龙配置名称", "新增一条龙配置");
+        if (!string.IsNullOrEmpty(str))
+        {
+            // 检查是否已存在
+            if (ConfigList.Any(x => x.Name == str))
+            {
+                Toast.Warning($"一条龙配置 {str} 已经存在，请勿重复添加");
+            }
+            else
+            {
+                var nc = new OneDragonFlowConfig { Name = str };
+                ConfigList.Insert(0, nc);
+                SelectedConfig = nc;
+            }
+        }
     }
 }
