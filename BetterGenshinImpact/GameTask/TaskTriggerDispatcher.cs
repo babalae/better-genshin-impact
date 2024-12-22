@@ -282,8 +282,8 @@ namespace BetterGenshinImpact.GameTask
                 {
                     if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
                     {
-                        if (!_prevGameActive)
-                        {
+                        // if (!_prevGameActive)
+                        // {
                             maskWindow.Invoke(() =>
                             {
                                 if (maskWindow.IsExist())
@@ -291,7 +291,7 @@ namespace BetterGenshinImpact.GameTask
                                     maskWindow.Show();
                                 }
                             });
-                        }
+                        // }
                     }
 
                     _prevGameActive = active;

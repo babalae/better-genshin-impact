@@ -2,6 +2,10 @@
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using System;
 using System.Diagnostics;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
 
@@ -21,11 +25,13 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
 
-    private int _enterGameClickCount = 0;
-    private int _welkinMoonClickCount = 0;
-    private int _noneClickCount, _wmNoneClickCount;
+    // private int _enterGameClickCount = 0;
+    // private int _welkinMoonClickCount = 0;
+    // private int _noneClickCount, _wmNoneClickCount;
 
     private DateTime _prevExecuteTime = DateTime.MinValue;
+    
+    private DateTime _triggerStartTime = DateTime.Now;
 
     public GameLoadingTrigger()
     {
@@ -36,25 +42,29 @@ public class GameLoadingTrigger : ITaskTrigger
     public void Init()
     {
         IsEnabled = _config.AutoEnterGameEnabled;
-        // 前面没有联动启动原神，这个任务也不用启动
-        if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
-        {
-            IsEnabled = false;
-        }
-
-        _enterGameClickCount = 0;
+        // // 前面没有联动启动原神，这个任务也不用启动
+        // if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
+        // {
+        //     IsEnabled = false;
+        // }
     }
 
     public void OnCapture(CaptureContent content)
     {
-        // 5s 一次
-        if ((DateTime.Now - _prevExecuteTime).TotalMilliseconds <= 5000)
+        // 2s 一次
+        if ((DateTime.Now - _prevExecuteTime).TotalMilliseconds <= 2000)
         {
             return;
         }
         _prevExecuteTime = DateTime.Now;
         // 5min 后自动停止
-        if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
+        if ((DateTime.Now -_triggerStartTime).TotalMinutes >= 5)
+        {
+            IsEnabled = false;
+            return;
+        }
+        
+        if (Bv.IsInMainUi(content.CaptureRectArea))
         {
             IsEnabled = false;
             return;
@@ -65,45 +75,26 @@ public class GameLoadingTrigger : ITaskTrigger
         {
             // 随便找个相对点击的位置
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-            _enterGameClickCount++;
-        }
-        else
-        {
-            if (_enterGameClickCount > 0 && !_config.AutoClickBlessingOfTheWelkinMoonEnabled)
-            {
-                _noneClickCount++;
-                if (_noneClickCount > 5)
-                {
-                    IsEnabled = false;
-                }
-            }
+            // TaskControl.Logger.LogInformation("自动开门");
+            return;
         }
 
-        if (_enterGameClickCount > 0 && _config.AutoClickBlessingOfTheWelkinMoonEnabled)
+        var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
+        if (!wmRa.IsEmpty())
         {
-            var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
-            if (!wmRa.IsEmpty())
-            {
-                // wmRa.BackgroundClick();
-                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                _welkinMoonClickCount++;
-                Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
-                if (_welkinMoonClickCount > 2)
-                {
-                    IsEnabled = false;
-                }
-            }
-            else
-            {
-                if (_welkinMoonClickCount > 0)
-                {
-                    _wmNoneClickCount++;
-                    if (_wmNoneClickCount > 1)
-                    {
-                        IsEnabled = false;
-                    }
-                }
-            }
+            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+            Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
+            // TaskControl.Logger.LogInformation("自动点击月卡");
+            return;
+        }
+        
+        // 原石
+        var ysRa = content.CaptureRectArea.Find(ElementAssets.Instance.PrimogemRo);
+        if (!ysRa.IsEmpty())
+        {
+            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+            Debug.WriteLine("[GameLoading] 跳过原石");
+            return;
         }
     }
 }

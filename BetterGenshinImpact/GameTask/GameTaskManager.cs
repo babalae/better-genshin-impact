@@ -104,7 +104,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoSkip")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoFish")?.Init();
             TriggerDictionary.GetValueOrDefault("QuickTeleport")?.Init();
-            TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
+            // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             // 清理画布
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
