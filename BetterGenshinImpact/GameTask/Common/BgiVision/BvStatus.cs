@@ -58,6 +58,16 @@ public static partial class Bv
 
         return false;
     }
+    
+    /// <summary>
+    /// 在任意可以关闭的UI界面（识别关闭按钮）
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInAnyClosableUi(ImageRegion captureRa)
+    {
+        return captureRa.Find(QuickTeleportAssets.Instance.MapCloseButtonRo).IsExist();
+    }
 
     /// <summary>
     /// 是否在队伍选择界面

@@ -12,10 +12,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.Service;
 
-public partial class ScriptService(HomePageViewModel homePageViewModel) : IScriptService
+public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
 
@@ -35,7 +37,7 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
         }
 
         // 没启动时候，启动截图器
-        await homePageViewModel.OnStartTriggerAsync();
+        await StartGameTask();
 
         if (!string.IsNullOrEmpty(groupName))
         {
@@ -197,4 +199,39 @@ public partial class ScriptService(HomePageViewModel homePageViewModel) : IScrip
 
     [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
     private static partial Regex DispatcherAddTimerRegex();
+    
+    
+    public static async Task StartGameTask()
+    {
+        // 没启动时候，启动截图器
+        var homePageViewModel = App.GetService<HomePageViewModel>();
+        if (!homePageViewModel!.TaskDispatcherEnabled)
+        {
+            await homePageViewModel.OnStartTriggerAsync();
+
+            await Task.Run(() =>
+            {
+                var first = true;
+                while (true)
+                {
+                    if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                    {
+                        continue;
+                    }
+
+                    var content = TaskControl.CaptureToRectArea();
+                    if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
+                    {
+                        return;
+                    }
+
+                    if (first)
+                    {
+                        first = false;
+                        TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                    }
+                }
+            });
+        }
+    }
 }

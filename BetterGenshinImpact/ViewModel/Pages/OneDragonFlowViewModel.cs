@@ -9,8 +9,11 @@ using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -86,6 +89,9 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private async Task OnOneKeyExecute()
     {
+        // 没启动的时候先启动
+        await ScriptService.StartGameTask();
+        
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunAsync(async () =>
             {

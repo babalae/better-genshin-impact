@@ -64,7 +64,7 @@ public class GameLoadingTrigger : ITaskTrigger
             return;
         }
         
-        if (Bv.IsInMainUi(content.CaptureRectArea))
+        if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea))
         {
             IsEnabled = false;
             return;
