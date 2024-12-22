@@ -106,7 +106,7 @@ public partial class PathingConditionConfig : ObservableObject
     /// <returns></returns>
     public PathingPartyConfig BuildPartyConfigByCondition(CombatScenes combatScenes)
     {
-        PathingPartyConfig partyConfig = new();
+        PathingPartyConfig partyConfig = PathingPartyConfig.BuildDefault();
         // 使用最优先匹配上的条件
         foreach (var avatarCondition in AvatarConditions)
         {

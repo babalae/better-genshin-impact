@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map;
 
 public class CameraOrientation
 {
-    private static CameraOrientationFromLimint _coV2 = new();
+    private static readonly CameraOrientationFromLimint _coV2 = new();
     
     /// <summary>
     /// 计算当前小地图摄像机朝向的角度
@@ -35,6 +35,7 @@ public class CameraOrientation
        if (confidence < 0.3)
        {
            Debug.WriteLine($"置信度过低, {confidence}<0.3, 不可靠视角 {angle}");
+           Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
            return CameraOrientationFromGia.ComputeMiniMap(mat);
        }
        return angle;
