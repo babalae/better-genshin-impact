@@ -58,7 +58,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     private List<string> _craftingBenchCountry = ["枫丹", "璃月"];
 
     [ObservableProperty]
-    private List<string> _adventurersGuildCountry = ["枫丹"];
+    private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
 
     [ObservableProperty]
     private List<string> _domainNameList = MapLazyAssets.Instance.DomainNameList;
@@ -135,15 +135,27 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         }
 
         SelectedConfig = selected;
-        TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = selected.Name;
+        SetSomeSelectedConfig(SelectedConfig);
     }
 
     [RelayCommand]
     private void OnConfigDropDownChanged()
     {
+        SetSomeSelectedConfig(SelectedConfig);
+    }
+
+    private void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
+    {
         if (SelectedConfig != null)
         {
             TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+            foreach (var task in TaskList)
+            {
+                if (SelectedConfig.TaskEnabledList.TryGetValue(task.Name, out var value))
+                {
+                    task.IsEnabled = value;
+                }
+            }
         }
     }
 

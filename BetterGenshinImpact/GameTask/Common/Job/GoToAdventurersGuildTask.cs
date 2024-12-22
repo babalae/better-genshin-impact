@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -64,7 +66,7 @@ public class GoToAdventurersGuildTask
             await Delay(200, ct);
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
             await Bv.WaitUntilFound(ElementAssets.Instance.PaimonMenuRo, ct);
-            await Delay( 500, ct);
+            await Delay(500, ct);
             TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
             await new ReturnMainUiTask().Start(ct);
 
@@ -131,10 +133,20 @@ public class GoToAdventurersGuildTask
 
         await Delay(600, ct);
 
-        using var ra = CaptureToRectArea();
-        if (!Bv.IsInTalkUi(ra))
+        const int retryTalkTimes = 3;
+        for (int i = 0; i < retryTalkTimes; i++)
         {
-            throw new Exception("未找到与凯瑟琳对话交互按钮");
+            using var ra = CaptureToRectArea();
+            if (!Bv.IsInTalkUi(ra))
+            {
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                await Delay(500, ct);
+
+                if (i == retryTalkTimes - 1)
+                {
+                    throw new Exception("与凯瑟琳对话失败");
+                }
+            }
         }
     }
 }

@@ -1,0 +1,36 @@
+{
+  "info": {
+    "name": "稻妻凯瑟琳",
+    "type": "collect",
+    "author": "½",
+    "version": "1.0",
+    "description": "",
+    "bgiVersion": "0.35.1"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -4402.556640625,
+      "y": -3053.041015625
+    },
+    {
+      "id": 2,
+      "x": -4408.984375,
+      "y": -3068.2470703125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": -4418.185546875,
+      "y": -3086.4326171875,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}
