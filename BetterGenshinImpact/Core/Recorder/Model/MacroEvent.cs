@@ -12,10 +12,6 @@ public class MacroEvent
     public int MouseY { get; set; }
     public string? MouseButton { get; set; }
     public double Time { get; set; }
-    
-    [JsonIgnore]
-    public uint TickCount { get; set; }
-
     public int? CameraOrientation { get; set; }
 }
 

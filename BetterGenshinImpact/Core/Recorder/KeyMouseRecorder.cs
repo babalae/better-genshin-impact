@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;
@@ -21,8 +22,6 @@ public class KeyMouseRecorder
 
     public List<MacroEvent> MouseMoveToMacroEvents { get; } = [];
     public List<MacroEvent> MouseMoveByMacroEvents { get; } = [];
-
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
     public uint StartTick { get; set; } = Kernel32.GetTickCount();
 
@@ -44,6 +43,10 @@ public class KeyMouseRecorder
     {
         // MacroEvents 需要以实际时间进行排序
         MacroEvents.Sort((a, b) => a.Time.CompareTo(b.Time));
+        // 删除为负数的时间
+        MacroEvents.RemoveAll(m => m.Time < 0);
+        
+        var startTime = EnvironmentUtil.LastBootUpTime()! + TimeSpan.FromMilliseconds(StartTick);
         
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         KeyMouseScript keyMouseScript = new()
@@ -58,8 +61,8 @@ public class KeyMouseRecorder
                 Width = rect.Width,
                 Height = rect.Height,
                 RecordDpi = TaskContext.Instance().DpiScale,
-                StartTime = $"{StartTime:yyyy-MM-dd HH:mm:ss:ffff}",
-                StartTimeUnixTimestamp = (StartTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0")
+                StartTime = $"{startTime:yyyy-MM-dd HH:mm:ss:ffff}",
+                StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).Value.TotalNanoseconds.ToString("F0")
             }
         };
         return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
@@ -143,23 +146,12 @@ public class KeyMouseRecorder
 
     public void MouseMoveBy(MouseState state, uint tick, bool save = false)
     {
-        uint prevTickCount = 0;
-        if (MouseMoveByMacroEvents.Count > 0)
-        {
-            prevTickCount = MouseMoveByMacroEvents[^1].TickCount - StartTick;
-        }
-        else
-        {
-            prevTickCount = tick - 5; // 减去间隔时间5ms
-        }
-
         var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = prevTickCount,
-            TickCount = tick
+            Time = tick - 5,
         };
         MouseMoveByMacroEvents.Add(mEvent);
         if (save)

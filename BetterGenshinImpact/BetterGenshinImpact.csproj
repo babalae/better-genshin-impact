@@ -68,6 +68,7 @@
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
 		<PackageReference Include="SharpAvi" Version="3.0.1" />
 		<PackageReference Include="System.IO.Hashing" Version="8.0.0" />
+		<PackageReference Include="System.Management" Version="9.0.0" />
 		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.0.2" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.0.2" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.2" />

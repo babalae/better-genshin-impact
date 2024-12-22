@@ -118,6 +118,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
+        
+        EnvironmentUtil.PrintMouseSettings();
     }
 
     private async Task GetNewestInfoAsync()
