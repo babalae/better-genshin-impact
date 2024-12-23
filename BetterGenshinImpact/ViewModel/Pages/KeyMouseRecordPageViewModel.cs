@@ -36,7 +36,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     private readonly ISnackbarService _snackbarService;
 
     public AllConfig Config { get; set; }
-    
+
     string fileName = $"{DateTime.Now:yyyyMMddHH_mmssffff}";
 
     public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService)
@@ -92,6 +92,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             Toast.Warning("请先在启动页，启动截图器再使用本功能");
             return;
         }
+
         if (!IsRecording)
         {
             IsRecording = true;
@@ -156,6 +157,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             return;
         }
+
         try
         {
             var str = PromptDialog.Prompt("请输入要修改为的名称（实际就是文件名）", "修改名称");
@@ -200,9 +202,26 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             return;
         }
+
         try
         {
-            File.Delete(Path.Combine(scriptPath, item.Name));
+            var path = new FileInfo(item.Path).Directory!.FullName;
+            // 校验文件夹是否在 scriptPath 下
+            if (!path.StartsWith(scriptPath))
+            {
+                _snackbarService.Show(
+                    "删除失败",
+                    $"{path} 删除失败，不在脚本目录下",
+                    ControlAppearance.Danger,
+                    null,
+                    TimeSpan.FromSeconds(3)
+                );
+                return;
+            }
+
+            // 删除目录
+            Directory.Delete(path, true);
+
             _snackbarService.Show(
                 "删除成功",
                 $"{item.Name} 已经被删除",

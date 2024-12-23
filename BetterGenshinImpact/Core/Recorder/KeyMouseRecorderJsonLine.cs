@@ -69,7 +69,7 @@ public class KeyMouseRecorderJsonLine
             StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0")
         };
         var infoJson = JsonSerializer.Serialize(Info, JsonOptions);
-        File.WriteAllText(Path.Combine(path, "info.json"), infoJson);
+        File.WriteAllText(Path.Combine(path, $"{folderName}.json"), infoJson);
 
         _consumerTask = Task.Run(async () => await ConsumeEventsAsync(path));
     }
