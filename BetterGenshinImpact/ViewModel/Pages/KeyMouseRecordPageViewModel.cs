@@ -16,9 +16,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
+using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using MessageBoxButton = Wpf.Ui.Controls.MessageBoxButton;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -91,6 +94,30 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             Toast.Warning("请先在启动页，启动截图器再使用本功能");
             return;
+        }
+
+        if (!File.Exists(Global.Absolute(@"User\not_check")))
+        {
+            try
+            {
+                if (EnvironmentUtil.IsProcessRunning("QQ")
+                    || EnvironmentUtil.IsProcessRunning("WeChat")
+                    || EnvironmentUtil.IsProcessRunning("dingtalk")
+                    || EnvironmentUtil.IsProcessRunning("Feishu"))
+                {
+                    throw new Exception("请关闭 QQ、微信、飞书等聊天软件再进行录制");
+                }
+
+                if (EnvironmentUtil.GetMasterVolume() <= 0)
+                {
+                    throw new Exception("请保持系统音量大于0再进行录制");
+                }
+            }
+            catch (Exception e)
+            {
+                await MessageBox.ShowAsync(e.Message, "校验错误", System.Windows.MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
         }
 
         if (!IsRecording)
