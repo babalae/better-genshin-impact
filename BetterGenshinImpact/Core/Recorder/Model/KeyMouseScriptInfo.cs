@@ -28,4 +28,6 @@ public class KeyMouseScriptInfo
     public string StartTime { get; set; } = string.Empty;
     
     public string StartTimeUnixTimestamp { get; set; } = string.Empty;
+    
+    public SysParams? SysParams { get; set; }
 }

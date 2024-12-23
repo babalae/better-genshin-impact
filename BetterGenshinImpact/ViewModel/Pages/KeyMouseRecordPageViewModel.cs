@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -90,6 +91,8 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public async Task OnStartRecord()
     {
+        var s = RecordContext.Instance.SysParams; // 提前实例化，避免延迟
+        Debug.WriteLine(s.EnhancePointerPrecision);
         if (!TaskContext.Instance().IsInitialized)
         {
             Toast.Warning("请先在启动页，启动截图器再使用本功能");

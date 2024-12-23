@@ -66,7 +66,8 @@ public class KeyMouseRecorderJsonLine
             Height = rect.Height,
             RecordDpi = TaskContext.Instance().DpiScale,
             StartTime = $"{startTime:yyyy-MM-dd HH:mm:ss:ffff}",
-            StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0")
+            StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"),
+            SysParams =  RecordContext.Instance.SysParams
         };
         var infoJson = JsonSerializer.Serialize(Info, JsonOptions);
         File.WriteAllText(Path.Combine(path, $"{folderName}.json"), infoJson);
