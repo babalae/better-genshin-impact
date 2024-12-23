@@ -18,6 +18,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -119,7 +120,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
         
+        
         EnvironmentUtil.PrintMouseSettings();
+
     }
 
     private async Task GetNewestInfoAsync()

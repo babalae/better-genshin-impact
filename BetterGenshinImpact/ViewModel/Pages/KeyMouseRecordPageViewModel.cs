@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -122,10 +123,16 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 return;
             }
         }
+        
+
 
         if (!IsRecording)
         {
             IsRecording = true;
+            SystemSettingsManager.GetSystemSettings();
+            SystemSettingsManager.SetSystemSettings();
+            
+            
             fileName = $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}";
             await GlobalKeyMouseRecord.Instance.StartRecord(fileName);
         }
@@ -150,6 +157,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 _logger.LogDebug(e, "停止录制时发生异常");
                 _logger.LogWarning(e.Message);
             }
+            SystemSettingsManager.RestoreSystemSettings();
         }
     }
 
