@@ -67,6 +67,10 @@ public class AutoFightTask : ISoloTask
         TimeSpan fightTimeout = TimeSpan.FromSeconds(120); // 默认战斗超时时间
         Stopwatch stopwatch = Stopwatch.StartNew();
 
+        //战斗前检查，可做成配置
+/*        if (await CheckFightFinish()) {
+            return;
+        }*/
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -147,44 +151,47 @@ public class AutoFightTask : ISoloTask
     private async Task<bool> CheckFightFinish()
     {
         //  YOLO 判断血条和怪物位置
-        if (HasFightFlagByYolo(CaptureToRectArea()))
-        {
-            _lastFightFlagTime = DateTime.Now;
-            return false;
-        }
+        // if (HasFightFlagByYolo(CaptureToRectArea()))
+        //  {
+        //    _lastFightFlagTime = DateTime.Now;
+        //  return false;
+        //   }
+        //
 
-
-        Random random = new Random();
-        double randomFraction = random.NextDouble();  // 生成 0 到 1 之间的随机小数
+        //Random random = new Random();
+        //double randomFraction = random.NextDouble();  // 生成 0 到 1 之间的随机小数
         //此处随机数，防止固定招式下，使按L正好处于招式下，导致无法准确判断战斗结束
-        double randomNumber = 1 + (randomFraction * (3 - 1));
+        // double randomNumber = 1 + (randomFraction * (3 - 1));
 
         // 几秒内没有检测到血条和怪物位置，则开始旋转视角重新检测
-        if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
+        //if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
+        //{
+        // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
+        /** 
+        Simulation.SendInput.Mouse.MiddleButtonClick();
+        await Delay(300, _ct);
+        for (var i = 0; i < 8; i++)
         {
-            // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
-            /** 
-            Simulation.SendInput.Mouse.MiddleButtonClick();
-            await Delay(300, _ct);
-            for (var i = 0; i < 8; i++)
+            Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * _dpi), 0);
+            await Delay(800, _ct); // 等待视角稳定
+            if (HasFightFlagByYolo(CaptureToRectArea()))
             {
-                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * _dpi), 0);
-                await Delay(800, _ct); // 等待视角稳定
-                if (HasFightFlagByYolo(CaptureToRectArea()))
-                {
-                    _lastFightFlagTime = DateTime.Now;
-                    return false;
-                }
+                _lastFightFlagTime = DateTime.Now;
+                return false;
             }
-            **/
-            await Delay(1000, _ct);
+        }
+        **/
+            //检查延时，根据队伍不同可以进行优化，可做成配置
+            await Delay(1500, _ct);
             Logger.LogInformation("按了L");
             // 最终方案确认战斗结束
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
             await Delay(450, _ct);
             var ra = CaptureToRectArea();
             var b3 = ra.SrcMat.At<Vec3b>(50, 790);
-            if (b3.Equals(new Vec3b(95, 235, 255)))
+
+            int tolerance = 6;
+            if (Math.Abs(b3.Item0 - 95)< tolerance&& Math.Abs(b3.Item1 - 235) < tolerance&& Math.Abs(b3.Item2 - 255) < tolerance)
             {
                 Logger.LogInformation("识别到战斗结束");
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
@@ -192,10 +199,11 @@ public class AutoFightTask : ISoloTask
             }
             else
             {
+               Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
                 _lastFightFlagTime = DateTime.Now;
                 return false;
             }
-        }
+      //  }
 
         return false;
     }
