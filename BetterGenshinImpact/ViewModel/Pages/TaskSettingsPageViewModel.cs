@@ -375,4 +375,11 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/music.html"));
     }
+    
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+    }
 }
