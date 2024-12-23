@@ -107,9 +107,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             try
             {
-                var macro = GlobalKeyMouseRecord.Instance.StopRecord();
+                GlobalKeyMouseRecord.Instance.StopRecord();
                 // Genshin Copilot Macro
-                File.WriteAllText(Path.Combine(scriptPath, $"{fileName}/{fileName}.json"), macro);
+                // File.WriteAllText(Path.Combine(scriptPath, $"{fileName}/{fileName}.json"), macro);
                 // 刷新ListView
                 InitScriptListViewData();
                 IsRecording = false;
@@ -125,14 +125,13 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public async Task OnStartPlay(string path)
     {
-        var name = new FileInfo(path).Name;
+        var file = new FileInfo(path);
+        var name = file.Name;
         _logger.LogInformation("重放开始：{Name}", name);
         try
         {
-            var s = await File.ReadAllTextAsync(path);
-
             await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-                .RunAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
+                .RunAsync(async () => await KeyMouseMacroPlayerJsonLine.PlayMacro(path, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)
         {

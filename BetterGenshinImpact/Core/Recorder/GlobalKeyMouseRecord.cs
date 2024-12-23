@@ -25,7 +25,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 {
     private readonly ILogger<GlobalKeyMouseRecord> _logger = App.GetLogger<GlobalKeyMouseRecord>();
 
-    private KeyMouseRecorder? _recorder;
+    private KeyMouseRecorderJsonLine? _recorder;
 
     // private SharpAviRecorder _sharpAviRecorder;
 
@@ -100,21 +100,21 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         _ffmpegRecorder.Start();
         _directInputMonitor.Start();
-        _recorder = new KeyMouseRecorder();
+        _recorder = new KeyMouseRecorderJsonLine(fileName);
 
         Status = KeyMouseRecorderStatus.Recording;
 
         _logger.LogInformation("录制：{Text}", "已启动");
     }
 
-    public string StopRecord()
+    public void StopRecord()
     {
         if (Status != KeyMouseRecorderStatus.Recording)
         {
             throw new InvalidOperationException("未处于录制中状态，无法停止");
         }
 
-        var macro = _recorder?.ToJsonMacro() ?? string.Empty;
+        // var macro = _recorder?.ToJsonMacro() ?? string.Empty;
         _recorder = null;
         _directInputMonitor?.Stop();
         _directInputMonitor?.Dispose();
@@ -133,7 +133,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         Status = KeyMouseRecorderStatus.Stop;
 
-        return macro;
+        // return macro;
     }
 
     public void Tick(object? sender, EventArgs e)

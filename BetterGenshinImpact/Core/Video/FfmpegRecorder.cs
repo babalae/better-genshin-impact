@@ -52,7 +52,7 @@ public class FfmpegRecorder
         // _process.OutputDataReceived += (sender, args) => { Debug.WriteLine(args.Data); };
         _process.ErrorDataReceived += (sender, args) =>
         {
-            Debug.WriteLine(args.Data);
+            TaskControl.Logger.LogDebug(args.Data);
             if (string.IsNullOrEmpty(_startTime))
             {
                 if (args.Data != null && args.Data.Contains("start"))

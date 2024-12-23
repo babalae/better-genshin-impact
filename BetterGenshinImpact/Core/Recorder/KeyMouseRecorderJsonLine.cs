@@ -14,7 +14,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;
@@ -40,15 +42,21 @@ public class KeyMouseRecorderJsonLine
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public KeyMouseRecorderJsonLine(string path)
+    public KeyMouseRecorderJsonLine(string folderName)
     {
+        var path = Global.Absolute($@"User\KeyMouseScript\{folderName}\");
+
+        DateTime startTime = DateTime.UtcNow;
         var bootTime = EnvironmentUtil.LastBootUpTime();
-        if (bootTime != null)
+        if (bootTime == null)
         {
-            throw new Exception("无法获取系统启动时间");
+            TaskControl.Logger.LogWarning("无法获取系统启动时间");
+        }
+        else
+        {
+            startTime = bootTime.Value + TimeSpan.FromMilliseconds(StartTick);
         }
 
-        var startTime = bootTime! + TimeSpan.FromMilliseconds(StartTick);
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         Info = new KeyMouseScriptInfo
         {
@@ -58,7 +66,7 @@ public class KeyMouseRecorderJsonLine
             Height = rect.Height,
             RecordDpi = TaskContext.Instance().DpiScale,
             StartTime = $"{startTime:yyyy-MM-dd HH:mm:ss:ffff}",
-            StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).Value.TotalNanoseconds.ToString("F0")
+            StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0")
         };
         var infoJson = JsonSerializer.Serialize(Info, JsonOptions);
         File.WriteAllText(Path.Combine(path, "info.json"), infoJson);
@@ -174,13 +182,12 @@ public class KeyMouseRecorderJsonLine
 
     public void MouseMoveBy(MouseState state, uint tick, bool save = false)
     {
-
         var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = tick - 5
+            Time = tick - 5 - StartTick
         };
         AddEvent(_mouseMoveByMacroEventsChannel, mEvent);
         if (save)

@@ -79,7 +79,7 @@ public class KeyMouseScript
                     break;
 
                 case MacroEventType.MouseMoveBy:
-                    if (macroEvent.Time - currentMerge.Time > mergedEventTimeMax)
+                    if (macroEvent.Time - currentMerge.Time > 10)
                     {
                         mergedMacroEvents.Add(currentMerge);
                         currentMerge = macroEvent;
