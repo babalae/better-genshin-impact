@@ -41,10 +41,7 @@ public partial class App : Application
         .CheckIntegration()
         .UseElevated()
         .UseSingleInstance("BetterGI")
-        .ConfigureLogging(builder =>
-        {
-            builder.ClearProviders();
-        })
+        .ConfigureLogging(builder => { builder.ClearProviders(); })
         .ConfigureServices(
             (context, services) =>
             {
@@ -157,6 +154,9 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        var homePageViewModel = GetService<HomePageViewModel>();
+        homePageViewModel?.ChangeResolution();
+        
         base.OnStartup(e);
 
         try
@@ -182,6 +182,9 @@ public partial class App : Application
     /// </summary>
     protected override async void OnExit(ExitEventArgs e)
     {
+        var homePageViewModel = GetService<HomePageViewModel>();
+        homePageViewModel?.ResetResolution();
+
         base.OnExit(e);
 
         await _host.StopAsync();
@@ -273,12 +276,12 @@ public partial class App : Application
             // Fallback.
             System.Windows.Forms.MessageBox.Show(
                 $"""
-                程序异常：{e.Source}
-                --
-                {e.StackTrace}
-                --
-                {e.Message}
-                """
+                 程序异常：{e.Source}
+                 --
+                 {e.StackTrace}
+                 --
+                 {e.Message}
+                 """
             );
         }
 

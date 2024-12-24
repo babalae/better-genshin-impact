@@ -23,17 +23,21 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
+using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
 {
-    [ObservableProperty] private string[] _modeNames = GameCaptureFactory.ModeNames();
+    [ObservableProperty]
+    private string[] _modeNames = GameCaptureFactory.ModeNames();
 
-    [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
+    [ObservableProperty]
+    private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty] private bool _taskDispatcherEnabled = false;
+    [ObservableProperty]
+    private bool _taskDispatcherEnabled = false;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
@@ -56,6 +60,8 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
     [ObservableProperty]
     private string[] _inferenceDeviceTypes = BgiSessionOption.InferenceDeviceTypes;
+
+    Resolution? resolution;
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -237,6 +243,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                 _maskWindow?.Close();
                 _maskWindow = null;
             }
+
             TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
         }
@@ -359,5 +366,16 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
         win.NavigateToHtml(html);
         win.ShowDialog();
+    }
+
+    public void ChangeResolution()
+    {
+        resolution = new Resolution();
+        resolution.ChangeResolution(1920, 1080);
+    }
+
+    public void ResetResolution()
+    {
+        resolution?.ChangeResolution(resolution.autoWidth, resolution.autoHeight);
     }
 }
