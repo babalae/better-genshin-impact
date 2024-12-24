@@ -196,13 +196,26 @@ public class TpTask(CancellationToken ct)
         int moveMouseX = 100 * Math.Sign(xOffset);
         int moveMouseY = 100 * Math.Sign(yOffset);
         int moveSteps = 10;
+        double totalMoveMouseX = Double.MaxValue;
+        double totalMoveMouseY = Double.MaxValue;
         for (int iteration = 0; iteration < maxIterations; iteration++)
         {            
             // 移动鼠标
             await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
 
             bigMapCenterPoint = newBigMapCenterPoint; // 保存上一次移动的数据
-            newBigMapCenterPoint = GetPositionFromBigMap(); // 随循环更新的地图中心
+            try
+            {
+                newBigMapCenterPoint = GetPositionFromBigMap(); // 随循环更新的地图中心
+            }
+            catch (Exception)
+            {
+                newBigMapCenterPoint = new Point2f(
+                (float)(bigMapCenterPoint.X + xOffset * moveMouseX / totalMoveMouseX),
+                (float)(bigMapCenterPoint.Y + yOffset * moveMouseY / totalMoveMouseY)
+            );
+                // 利用移动鼠标的距离获取新的中心
+            }
             // 本次移动的距离
             double diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
             double diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
@@ -211,8 +224,8 @@ public class TpTask(CancellationToken ct)
             if (moveDistance > 10) // 移动距离大于10认为本次移动成功
             {
                 (xOffset, yOffset) = (x - newBigMapCenterPoint.X, y - newBigMapCenterPoint.Y); // 更新目标偏移量
-                double totalMoveMouseX = Math.Abs(moveMouseX * xOffset / diffMapX);
-                double totalMoveMouseY = Math.Abs(moveMouseY * yOffset / diffMapY);
+                totalMoveMouseX = Math.Abs(moveMouseX * xOffset / diffMapX);
+                totalMoveMouseY = Math.Abs(moveMouseY * yOffset / diffMapY);
                 double mouseDistance = Math.Sqrt(totalMoveMouseX * totalMoveMouseX + totalMoveMouseY * totalMoveMouseY);
                 // 调整地图缩放
                 // mapZoomLevel<5 才显示传送锚点和秘境;
@@ -224,23 +237,14 @@ public class TpTask(CancellationToken ct)
                     Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
                     break;
                 }
-                //else if (mouseDistance > 1000 && mapZoomLevel < 6)
-                //{   // 缩小地图
-                //    await AdjustMapZoomLevel(false);
-                //    totalMoveMouseX *= (mapZoomLevel) / (mapZoomLevel + 1);
-                //    totalMoveMouseY *= (mapZoomLevel) / (mapZoomLevel + 1);
-                //    mouseDistance *= (mapZoomLevel) / (mapZoomLevel + 1);
-                //    mapZoomLevel++;
-                //}
-                else if (mouseDistance < 200 && mapZoomLevel > 1)
+                while (mouseDistance < 2 * tolerance && mapZoomLevel > 1)
                 {   // 放大地图
                     await AdjustMapZoomLevel(true);
                     totalMoveMouseX *= (mapZoomLevel) / (mapZoomLevel - 1);
                     totalMoveMouseY *= (mapZoomLevel) / (mapZoomLevel - 1);
                     mouseDistance *= (mapZoomLevel) / (mapZoomLevel - 1);
                     mapZoomLevel--;
-                }
-                
+                }                
                 
                 // 单次移动最大距离为 250，
                 moveMouseX = (int)Math.Min(totalMoveMouseX, 250 * totalMoveMouseX / mouseDistance) * Math.Sign(xOffset);
