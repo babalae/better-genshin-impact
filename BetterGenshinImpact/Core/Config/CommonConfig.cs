@@ -26,4 +26,9 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _exitToTray;
+    
+    
+        
+    [ObservableProperty]
+    private bool _processCheckEnabled = true;
 }

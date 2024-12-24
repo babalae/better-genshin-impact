@@ -18,6 +18,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Recorder.Model;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui;
@@ -100,7 +101,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             return;
         }
 
-        if (!File.Exists(Global.Absolute(@"User\not_check")))
+        if (TaskContext.Instance().Config.CommonConfig.ProcessCheckEnabled)
         {
             try
             {

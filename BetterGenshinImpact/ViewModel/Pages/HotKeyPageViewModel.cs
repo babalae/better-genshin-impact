@@ -198,13 +198,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         // );
         // HotKeySettingModels.Add(macroDirectory);
 
-        var devDirectory = new HotKeySettingModel(
+        /*var devDirectory = new HotKeySettingModel(
             "开发者"
         );
-        HotKeySettingModels.Add(devDirectory);
+        HotKeySettingModels.Add(devDirectory);*/
 
         // 二级快捷键
-        systemDirectory.Children.Add(new HotKeySettingModel(
+        /*systemDirectory.Children.Add(new HotKeySettingModel(
             "停止当前脚本/独立任务",
             nameof(Config.HotKeyConfig.CancelTaskHotkey),
             Config.HotKeyConfig.CancelTaskHotkey,
@@ -219,7 +219,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.TakeScreenshotHotkeyType,
             (_, _) => { TaskTriggerDispatcher.Instance().TakeScreenshot(); }
         );
-        systemDirectory.Children.Add(takeScreenshotHotKeySettingModel);
+        systemDirectory.Children.Add(takeScreenshotHotKeySettingModel);*/
 
         systemDirectory.Children.Add(new HotKeySettingModel(
             "日志与状态窗口展示开关",
@@ -427,7 +427,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
         });*/
 
-        devDirectory.Children.Add(new HotKeySettingModel(
+        systemDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止键鼠录制",
             nameof(Config.HotKeyConfig.KeyMouseMacroRecordHotkey),
             Config.HotKeyConfig.KeyMouseMacroRecordHotkey,

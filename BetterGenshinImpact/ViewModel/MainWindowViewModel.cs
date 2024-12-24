@@ -27,7 +27,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
-    public string Title => $"BetterGI · 更好的原神 · 采集版 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    public string Title => $"采集版 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty]
     public bool _isVisible = true;

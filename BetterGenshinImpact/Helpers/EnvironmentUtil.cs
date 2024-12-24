@@ -31,15 +31,22 @@ public class EnvironmentUtil
 
     public static DateTime? LastBootUpTime()
     {
-        // 创建管理对象查询
-        ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT LastBootUpTime FROM Win32_OperatingSystem");
-
-        foreach (ManagementObject queryObj in searcher.Get())
+        try
         {
-            // 获取系统开机时间
-            DateTime bootTime = ManagementDateTimeConverter.ToDateTime(queryObj["LastBootUpTime"].ToString());
-            Debug.WriteLine("系统开机时间: " + bootTime);
-            return bootTime;
+            // 创建管理对象查询
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT LastBootUpTime FROM Win32_OperatingSystem");
+
+            foreach (ManagementObject queryObj in searcher.Get())
+            {
+                // 获取系统开机时间
+                DateTime bootTime = ManagementDateTimeConverter.ToDateTime(queryObj["LastBootUpTime"].ToString());
+                Debug.WriteLine("系统开机时间: " + bootTime);
+                return bootTime;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("An error occurred: " + ex.Message);
         }
 
         return null;
@@ -101,6 +108,7 @@ public class EnvironmentUtil
         {
             Marshal.FreeHGlobal(ptr);
         }
+
         return (mouseParams[0], mouseParams[1], mouseParams[2]);
     }
 
@@ -113,19 +121,19 @@ public class EnvironmentUtil
         Debug.WriteLine("鼠标阈值1 Mouse Double Click Time (ms): " + mouseThreshold1);
         Debug.WriteLine("鼠标阈值2 Mouse Buttons Swapped:: " + mouseThreshold2);
         Debug.WriteLine("鼠标阈值3 Mouse Speed:  " + mouseThreshold3);
-        
+
         // Debug.WriteLine("Touchpad Enabled: " + IsTouchpadEnabled());
-        
+
         Debug.WriteLine("当前音量: " + GetMasterVolume());
     }
-    
+
     public static bool IsTouchpadEnabled()
     {
         try
         {
             // Create a ManagementObjectSearcher to query for touchpad devices
             ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PointingDevice");
-            
+
             foreach (ManagementObject obj in searcher.Get())
             {
                 // Check if the device is a touchpad
@@ -133,9 +141,9 @@ public class EnvironmentUtil
                 {
                     // Get the status of the touchpad
                     string status = obj["Status"].ToString();
-                    
+
                     Debug.WriteLine($"Touchpad Status: {status}");
-                    
+
                     // Check if the touchpad is enabled
                     if (status.Equals("OK", StringComparison.OrdinalIgnoreCase))
                     {
@@ -154,14 +162,15 @@ public class EnvironmentUtil
         {
             Debug.WriteLine($"An error occurred: {ex.Message}");
         }
+
         return true;
     }
-    
+
     public static List<(string, int)> GetCurrentSpeakerVolume()
     {
         int volume = 0;
         var enumerator = new MMDeviceEnumerator();
- 
+
         //获取音频输出设备
         IEnumerable<MMDevice> speakDevices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).ToArray();
 
@@ -173,23 +182,23 @@ public class EnvironmentUtil
             volume = (int)(speakDevice.AudioEndpointVolume.MasterVolumeLevelScalar * 100);
             devices.Add((speakDevice.FriendlyName, volume));
         }
+
         return devices;
     }
-    
+
     public static float GetMasterVolume()
     {
         var enumerator = new MMDeviceEnumerator();
         var device = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
         return device.AudioEndpointVolume.MasterVolumeLevelScalar;
     }
-    
+
     public static void GetCurrentSpeakerVolume(int volume)
     {
         var enumerator = new MMDeviceEnumerator();
         IEnumerable<MMDevice> speakDevices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).ToArray();
         if (speakDevices.Count() > 0)
         {
-        
             MMDevice mMDevice = speakDevices.ToList()[0];
             mMDevice.AudioEndpointVolume.MasterVolumeLevelScalar = volume / 100.0f;
         }

@@ -25,44 +25,6 @@
 
     <StackPanel Margin="42,16,42,12">
 
-        <Border Height="200" CornerRadius="8">
-            <Grid>
-                <Border ClipToBounds="True" CornerRadius="8">
-                    <Border.Background>
-                        <ImageBrush ImageSource="pack://application:,,,/Assets/Images/banner_sayu.jpg"
-                                    RenderOptions.BitmapScalingMode="HighQuality"
-                                    Stretch="UniformToFill" />
-                    </Border.Background>
-                    <Border.OpacityMask>
-                        <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
-                            <GradientStop Color="Transparent" />
-                            <GradientStop Offset="0.7" Color="White" />
-                        </LinearGradientBrush>
-                    </Border.OpacityMask>
-                </Border>
-                <Grid>
-                    <StackPanel Margin="52,0,0,26"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Bottom"
-                                Background="Transparent">
-                        <ui:TextBlock FontTypography="Title" Text="BetterGI" />
-                        <ui:TextBlock FontTypography="Subtitle"
-                                      Opacity="0.8"
-                                      Text="更好的原神，免费且开源" />
-                        <ui:TextBlock FontTypography="BodyStrong" Opacity="0.6">
-                            <Hyperlink Command="{Binding GoToWikiUrlCommand}"
-                                       Foreground="#B7FFFFFF"
-                                       TextDecorations="None">
-                                <Run>点击查看文档与教程</Run>
-                                <Run FontFamily="{StaticResource FluentSystemIcons}" FontWeight="Light">&#xEE7A;</Run>
-                            </Hyperlink>
-
-                        </ui:TextBlock>
-                    </StackPanel>
-                </Grid>
-            </Grid>
-        </Border>
-
         <!--  更好的原神，启动！  -->
         <ui:CardExpander Margin="0,12,0,12"
                          ContentPadding="0"
@@ -80,16 +42,14 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="BetterGI 截图器，启动！"
+                                  Text="启动截图器"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
-                            点击展开启动相关配置
-                        </Run>
-                        。</ui:TextBlock>
+                        截图器启动后才能使用各项功能
+                        </ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -201,7 +161,7 @@
                                      IsChecked="{Binding Config.WgcUseBitmapCache, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -260,7 +220,7 @@
                                Command="{Binding StartCaptureTestCommand}"
                                Content="测试图像捕获" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />-->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -319,6 +279,32 @@
                                Margin="0,0,36,0"
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
                                Content="手动设置" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启动时检查"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="启动时检查"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.CommonConfig.ProcessCheckEnabled, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -399,15 +385,6 @@
                                   TextWrapping="Wrap">
                         <ui:TextBlock.Inlines>
                             <Run Text="启动参数" />
-                            <ui:HyperlinkButton Grid.Row="1"
-                                                Margin="0,0,0,0"
-                                                Padding="0"
-                                                Command="{Binding OpenGameCommandLineDocumentCommand}"
-                                                Cursor="Hand">
-                                <ui:HyperlinkButton.Content>
-                                    <TextBlock FontSize="11" Text="打开文档" />
-                                </ui:HyperlinkButton.Content>
-                            </ui:HyperlinkButton>
                         </ui:TextBlock.Inlines>
                     </ui:TextBlock>
                     <ui:TextBlock Grid.Row="1"
@@ -425,58 +402,6 @@
                                 PlaceholderText="示例：-screen-width 1920"
                                 Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
                                 TextWrapping="Wrap" />
-                </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="自动进入游戏"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神启动后自动进入游戏（自动开门）"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.GenshinStartConfig.AutoEnterGameEnabled, Mode=TwoWay}" />
-                </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="自动点击获取月卡"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="进入游戏后自动点击月卡，如果有的话"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.GenshinStartConfig.AutoClickBlessingOfTheWelkinMoonEnabled, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

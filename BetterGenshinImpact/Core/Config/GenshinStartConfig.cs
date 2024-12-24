@@ -38,4 +38,5 @@ public partial class GenshinStartConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _linkedStartEnabled = true;
+
 }

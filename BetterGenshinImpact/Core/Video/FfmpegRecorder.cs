@@ -39,7 +39,7 @@ public class FfmpegRecorder
         var processInfo = new ProcessStartInfo
         {
             FileName = FfmpegPath,
-            Arguments = $" -f gdigrab -hwaccel cuvid -show_region 1 -framerate 60 -use_wallclock_as_timestamps 1 -i title=原神 -pix_fmt yuv420p  -c:v libx264 -preset ultrafast -f segment -segment_time 1800 -reset_timestamps 1 -strftime 1  \"{_filePath}\"",
+            Arguments = $" -f gdigrab -framerate 60 -use_wallclock_as_timestamps 1 -i title=原神 -pix_fmt yuv420p  -c:v libx264 -preset ultrafast -f segment -segment_time 1800 -reset_timestamps 1 -strftime 1  \"{_filePath}\"",
             StandardInputEncoding = Encoding.UTF8,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -64,7 +64,7 @@ public class FfmpegRecorder
                     {
                         _startTime = match.Groups[1].Value.Replace(".", "");
                         TaskControl.Logger.LogInformation("ffmpeg录制: 视频起始时间戳 {Text}", _startTime);
-                        File.WriteAllText(Path.Combine(folderPath, $"{_startTime}.txt"), _startTime);
+                        File.WriteAllText(Path.Combine(folderPath, $"videoStartTime.txt"), _startTime);
                     }
                 }
             }
