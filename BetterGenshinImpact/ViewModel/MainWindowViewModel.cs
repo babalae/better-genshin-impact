@@ -18,8 +18,11 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
+using System.Windows.Interop;
 using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui;
+using Application = System.Windows.Application;
 
 namespace BetterGenshinImpact.ViewModel;
 
@@ -36,6 +39,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public WindowState _windowState = WindowState.Normal;
 
     public AllConfig Config { get; set; }
+    
+   private SysDpi? _sysDpi;
 
     public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
     {
@@ -122,8 +127,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         
         
         EnvironmentUtil.PrintMouseSettings();
-
+        
+        // 设置DPI
+        SysDpi.Instance.SetDpi();
     }
+    
+    
 
     private async Task GetNewestInfoAsync()
     {

@@ -25,7 +25,7 @@ public partial class GenshinStartConfig : ObservableObject
     ///     原神启动参数
     /// </summary>
     [ObservableProperty]
-    private string _genshinStartArgs = "";
+    private string _genshinStartArgs = "-screen-width 1920 -screen-height 1080 -popupwindow";
 
     /// <summary>
     ///     原神安装路径

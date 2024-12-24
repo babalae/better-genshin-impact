@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Helpers.Device;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using BetterGenshinImpact.ViewModel.Pages.View;
@@ -184,6 +185,7 @@ public partial class App : Application
     {
         var homePageViewModel = GetService<HomePageViewModel>();
         homePageViewModel?.ResetResolution();
+        SysDpi.Instance.ResetDpi();
 
         base.OnExit(e);
 

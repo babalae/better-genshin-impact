@@ -21,10 +21,12 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Interop;
 using Windows.System;
 using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui.Controls;
+using Application = System.Windows.Application;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
