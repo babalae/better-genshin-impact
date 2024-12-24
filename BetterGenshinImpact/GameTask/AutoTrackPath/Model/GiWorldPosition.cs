@@ -15,6 +15,7 @@ public class GiWorldPosition
     /// 坐标描述
     /// </summary>
     public string? Description { get; set; }
+    public string? Country { get; set; }
 
     /// <summary>
     /// 坐标 x,y,z 三个值，分别代表纵向、高度、横向，采用原神实际的坐标系
