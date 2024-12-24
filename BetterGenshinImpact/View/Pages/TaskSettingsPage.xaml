@@ -100,6 +100,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -111,9 +112,16 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="选择你想要使用的卡组与策略"
                                   TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,12,0"
+                               Content="脚本仓库"
+                               Command="{Binding OpenLocalScriptRepoCommand}" 
+                               Icon="{ui:SymbolIcon Archive24}"/>
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
-                              Grid.Column="1"
+                              Grid.Column="2"
                               Width="180"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding StrategyList}"
@@ -380,6 +388,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -389,17 +398,24 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择你想要使用的战斗策略"
+                                  Text="用于战斗"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
+                               Content="脚本仓库"
+                               Command="{Binding OpenLocalScriptRepoCommand}" 
+                               Icon="{ui:SymbolIcon Archive24}"/>
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,12,0"
                                Command="{Binding OpenFightFolderCommand}"
-                               Content="打开策略目录" />
+                               Content="打开目录" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
-                              Grid.Column="2"
+                              Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding CombatStrategyList}"
@@ -544,6 +560,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -553,17 +570,24 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择你想要使用的战斗策略"
+                                  Text="用于战斗"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
+                               Content="脚本仓库"
+                               Command="{Binding OpenLocalScriptRepoCommand}" 
+                               Icon="{ui:SymbolIcon Archive24}"/>
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,12,0"
                                Command="{Binding OpenFightFolderCommand}"
-                               Content="打开策略目录" />
+                               Content="打开目录" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
-                              Grid.Column="2"
+                              Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding CombatStrategyList}"

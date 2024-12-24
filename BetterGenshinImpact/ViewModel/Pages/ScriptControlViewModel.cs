@@ -322,9 +322,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildPathingProject(fileInfo.Name, relativePath));
                 }
             }
-            else if (child is StackPanel childStackPanel)
+            else if (child is Expander { Header: CheckBox { IsChecked: true }, Content: StackPanel nestedStackPanel })
             {
-                AddSelectedPathingScripts(childStackPanel);
+                AddSelectedPathingScripts(nestedStackPanel);
             }
         }
     }
