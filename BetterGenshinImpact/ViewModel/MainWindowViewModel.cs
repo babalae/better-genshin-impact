@@ -14,6 +14,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -39,8 +40,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public WindowState _windowState = WindowState.Normal;
 
     public AllConfig Config { get; set; }
-    
-   private SysDpi? _sysDpi;
+
+    private SysDpi? _sysDpi;
 
     public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
     {
@@ -124,15 +125,25 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
-        
-        
+
+
         EnvironmentUtil.PrintMouseSettings();
-        
+
         // 设置DPI
         SysDpi.Instance.SetDpi();
+
+        try
+        {
+            var json = GetPCInfo.GetJson();
+            // 保存
+            File.WriteAllText(Global.Absolute("User\\pc.json"), json);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        }
     }
-    
-    
+
 
     private async Task GetNewestInfoAsync()
     {

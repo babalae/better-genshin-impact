@@ -70,7 +70,7 @@ public class KeyMouseRecorderJsonLine
             SysParams =  RecordContext.Instance.SysParams
         };
         var infoJson = JsonSerializer.Serialize(Info, JsonOptions);
-        File.WriteAllText(Path.Combine(path, $"{folderName}.json"), infoJson);
+        File.WriteAllText(Path.Combine(path, $"systemInfo.json"), infoJson);
 
         _consumerTask = Task.Run(async () => await ConsumeEventsAsync(path));
     }

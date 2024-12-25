@@ -80,4 +80,22 @@ public static class TouchpadManager
             Console.WriteLine("无法禁用触控板，错误代码: " + result);
         }
     }
+    
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetSystemMetrics(Int32 nIndex);
+
+    const int SM_DIGITIZER = 94;
+    const int NID_INTEGRATED_TOUCH = 0x01;
+    const int NID_EXTERNAL_TOUCH = 0x02;
+    const int NID_INTEGRATED_PEN = 0x04;
+    const int NID_EXTERNAL_PEN = 0x08;
+    const int NID_MULTI_INPUT = 0x40;
+    const int NID_READY = 0x80;
+
+    public static bool IsTouchpadPresent()
+    {
+        IntPtr digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
+        return (digitizerStatus.ToInt32() & NID_INTEGRATED_TOUCH) != 0 ||
+               (digitizerStatus.ToInt32() & NID_EXTERNAL_TOUCH) != 0;
+    }
 }

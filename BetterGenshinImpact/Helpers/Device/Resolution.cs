@@ -113,7 +113,7 @@ public class Resolution
                     }
                     default:
                     {
-                        System.Windows.Forms.MessageBox.Show("改变屏幕分辨率失败", "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        System.Windows.Forms.MessageBox.Show("改变屏幕分辨率失败，错误码：" + iRet, "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         break;
                     }
                 }
