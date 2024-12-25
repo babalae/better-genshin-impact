@@ -12,7 +12,7 @@ public class PCInfo
     public 磁盘[] 磁盘 { get; set; }
     public 打印机[] 打印机 { get; set; }
     public 显卡[] 显卡 { get; set; }
-    
+
     public 笔记本 笔记本 { get; set; }
 }
 
@@ -127,8 +127,11 @@ subchassis (19)
 https://learn.microsoft.com/zh-cn/windows/win32/cimwin32prov/win32-systemenclosure
      */
     public List<string> 计算机类型 { get; set; }
+
     public bool 是否笔记本 { get; set; }
     public bool 是否插入电源 { get; set; }
-    
-    public bool 触控板是否启用 { get; set; } = TouchpadManager.IsTouchpadPresent();
+
+    public bool 系统级触控板是否启用 { get; set; } = TouchpadSoft.Instance.QueryTouchpadStatus() == 1;
+
+    public bool 是否存在触控屏 { get; set; } = TouchpadManager.HasTouchInput();
 }

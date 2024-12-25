@@ -306,6 +306,35 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.CommonConfig.ProcessCheckEnabled, Mode=TwoWay}" />
                 </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="ffmpeg参数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="ffmpeg参数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.CommonConfig.FfmpegCommand, Mode=TwoWay}"
+                                TextWrapping="Wrap" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
 

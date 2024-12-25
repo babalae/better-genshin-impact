@@ -183,6 +183,8 @@ public partial class App : Application
     /// </summary>
     protected override async void OnExit(ExitEventArgs e)
     {
+        TouchpadSoft.Instance.RestoreTouchpadByHotKey();
+
         var homePageViewModel = GetService<HomePageViewModel>();
         homePageViewModel?.ResetResolution();
         SysDpi.Instance.ResetDpi();

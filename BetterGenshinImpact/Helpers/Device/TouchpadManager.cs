@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.Helpers.Device;
+﻿using System.Windows.Input;
+
+namespace BetterGenshinImpact.Helpers.Device;
 
 using System;
 using System.Runtime.InteropServices;
@@ -98,4 +100,20 @@ public static class TouchpadManager
         return (digitizerStatus.ToInt32() & NID_INTEGRATED_TOUCH) != 0 ||
                (digitizerStatus.ToInt32() & NID_EXTERNAL_TOUCH) != 0;
     }
+    
+    public static bool HasTouchInput()
+    {
+        foreach (TabletDevice tabletDevice in Tablet.TabletDevices)
+        {
+            //Only detect if it is a touch Screen not how many touches (i.e. Single touch or Multi-touch)
+            if(tabletDevice.Type == TabletDeviceType.Touch)
+                return true;
+        }
+
+        return false;
+    }
+    
+    
+
+    
 }

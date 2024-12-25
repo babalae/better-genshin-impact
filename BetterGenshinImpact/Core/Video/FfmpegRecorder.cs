@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Serilog.Core;
@@ -39,7 +40,7 @@ public class FfmpegRecorder
         var processInfo = new ProcessStartInfo
         {
             FileName = FfmpegPath,
-            Arguments = $" -f gdigrab -framerate 60 -use_wallclock_as_timestamps 1 -i title=原神 -pix_fmt yuv420p  -c:v libx264 -preset ultrafast -f segment -segment_time 1800 -reset_timestamps 1 -strftime 1  \"{_filePath}\"",
+            Arguments = $"{TaskContext.Instance().Config.CommonConfig.FfmpegCommand} \"{_filePath}\"",
             StandardInputEncoding = Encoding.UTF8,
             UseShellExecute = false,
             CreateNoWindow = true,

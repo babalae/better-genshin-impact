@@ -128,9 +128,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
 
         EnvironmentUtil.PrintMouseSettings();
-
-        // 设置DPI
-        SysDpi.Instance.SetDpi();
+        
+        
+        TouchpadSoft.Instance.CheckAndRecordStatus();
+        TouchpadSoft.Instance.DisableTouchpadWhenEnabledByHotKey();
 
         try
         {
@@ -142,6 +143,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             _logger.LogError("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
+        
+
+        
+        // 设置DPI
+        SysDpi.Instance.SetDpi();
     }
 
 
