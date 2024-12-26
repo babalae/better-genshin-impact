@@ -340,11 +340,22 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         // 检查用户是否配置了原神安装目录，如果没有，尝试从注册表中读取
         if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
         {
-            var path = GameExePath.GetWithoutCloud();
-            if (!string.IsNullOrEmpty(path))
+            Task.Run(async () =>
             {
-                Config.GenshinStartConfig.InstallPath = path;
-            }
+                var p1 = RegistryGameLocator.GetDefaultGameInstallPath();
+                if (!string.IsNullOrEmpty(p1))
+                {
+                    Config.GenshinStartConfig.InstallPath = p1;
+                }
+                else
+                {
+                    var path = await UnityLogGameLocator.LocateSingleGamePathAsync();
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        Config.GenshinStartConfig.InstallPath = path;
+                    }
+                }
+            });
         }
     }
 
