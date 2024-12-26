@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -17,19 +18,19 @@ public class RegistryGameLocator
             var cn = Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\1_1\hk4e_cn", "GameInstallPath", null) as string;
             if (!string.IsNullOrEmpty(cn))
             {
-                return cn;
+                return Path.Combine(cn, "YuanShen.exe");
             }
 
             var global = Registry.GetValue($@"HKEY_CURRENT_USER\Software\Cognosphere\HYP\1_0\hk4e_global", "GameInstallPath", null) as string;
             if (!string.IsNullOrEmpty(global))
             {
-                return global;
+                return Path.Combine(global, "GenshinImpact.exe");
             }
 
-            var bilibili = Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\standalone\14_0\hk4e_bilibili\BilibiliGenshin\hk4e_bilibili", "GameInstallPath", null) as string;
+            var bilibili = Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\standalone\14_0\hk4e_cn\umfgRO5gh5\hk4e_cn", "GameInstallPath", null) as string;
             if (!string.IsNullOrEmpty(bilibili))
             {
-                return bilibili;
+                return Path.Combine(bilibili, "YuanShen.exe");
             }
         }
         catch (Exception e)

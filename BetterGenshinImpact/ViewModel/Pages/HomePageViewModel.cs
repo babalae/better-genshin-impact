@@ -340,17 +340,17 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         {
             Task.Run(async () =>
             {
-                var p1 = RegistryGameLocator.GetDefaultGameInstallPath();
+                var p1 = await UnityLogGameLocator.LocateSingleGamePathAsync();
                 if (!string.IsNullOrEmpty(p1))
                 {
                     Config.GenshinStartConfig.InstallPath = p1;
                 }
                 else
                 {
-                    var path = await UnityLogGameLocator.LocateSingleGamePathAsync();
-                    if (!string.IsNullOrEmpty(path))
+                    var p2 = RegistryGameLocator.GetDefaultGameInstallPath();
+                    if (!string.IsNullOrEmpty(p2))
                     {
-                        Config.GenshinStartConfig.InstallPath = path;
+                        Config.GenshinStartConfig.InstallPath = p2;
                     }
                 }
             });
