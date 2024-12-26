@@ -35,11 +35,13 @@ public class SysDpi : Singleton<SysDpi>
         try
         {
             originalDpiRate = RunSetDpiExe($"value {ScreenIndex}");
+            TaskControl.Logger.LogDebug("启动时查询DPI：{Num}", originalDpiRate);
             if (originalDpiRate == "100")
             {
                 TaskControl.Logger.LogError("当前DPI已经是100，无需设置");
                 return;
             }
+            
 
             RunSetDpiExe($"100 {ScreenIndex}"); // 设置DPI为100
             needResetDpi = true;
@@ -56,6 +58,7 @@ public class SysDpi : Singleton<SysDpi>
         {
             if (originalDpiRate != null && needResetDpi)
             {
+                TaskControl.Logger.LogDebug("退出时恢复DPI：{Num}", originalDpiRate);
                 RunSetDpiExe($"{originalDpiRate} {ScreenIndex}");
             }
         }

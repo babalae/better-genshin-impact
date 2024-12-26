@@ -135,6 +135,8 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         try
         {
             var json = GetPCInfo.GetJson();
+            var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
+            Directory.CreateDirectory(pcFolder);
             // 保存
             await File.WriteAllTextAsync(Global.Absolute(@$"User/KeyMouseScript/{fileName}/pc.json"), json);
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
@@ -28,9 +29,13 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
 
         if (TaskContext.Instance().Config.CommonConfig.ChangeResolutionOnStart)
         {
-            ChangeResolution();
             // 设置DPI
             SysDpi.Instance.SetDpi();
+            
+            Thread.Sleep(2000);
+            
+            ChangeResolution();
+
         }
         
 
@@ -43,6 +48,7 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
         if (TaskContext.Instance().Config.CommonConfig.RestoreResolutionOnExit)
         {
             ResetResolution();
+            Thread.Sleep(2000);
             SysDpi.Instance.ResetDpi();
         }
 
