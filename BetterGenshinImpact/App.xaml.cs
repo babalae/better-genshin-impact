@@ -23,6 +23,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Helpers.Device;
+using BetterGenshinImpact.Service.Singletons;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using BetterGenshinImpact.ViewModel.Pages.View;
@@ -155,8 +156,7 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
-        var homePageViewModel = GetService<HomePageViewModel>();
-        homePageViewModel?.ChangeResolution();
+        StartEndSingleton.Instance.OnStartup();
         
         base.OnStartup(e);
 
@@ -183,12 +183,7 @@ public partial class App : Application
     /// </summary>
     protected override async void OnExit(ExitEventArgs e)
     {
-        TouchpadSoft.Instance.RestoreTouchpadByHotKey();
-
-        var homePageViewModel = GetService<HomePageViewModel>();
-        homePageViewModel?.ResetResolution();
-        SysDpi.Instance.ResetDpi();
-
+        StartEndSingleton.Instance.OnExit();
         base.OnExit(e);
 
         await _host.StopAsync();

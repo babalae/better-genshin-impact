@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
 
 namespace BetterGenshinImpact.Helpers.Device;
 
 public class Resolution
 {
-    public int autoWidth = Screen.PrimaryScreen.Bounds.Width;
-    public int autoHeight = Screen.PrimaryScreen.Bounds.Height;
+    public int autoWidth = PrimaryScreen.WorkingArea.Width;
+    public int autoHeight = PrimaryScreen.WorkingArea.Height;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct DEVMODE
@@ -113,7 +115,7 @@ public class Resolution
                     }
                     default:
                     {
-                        System.Windows.Forms.MessageBox.Show("改变屏幕分辨率失败，错误码：" + iRet, "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        System.Windows.Forms.MessageBox.Show($"改变屏幕分辨率失败，目标{width}x{height}，错误码：{iRet}", "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         break;
                     }
                 }

@@ -34,4 +34,12 @@ public partial class CommonConfig : ObservableObject
     
     [ObservableProperty]
     private string _ffmpegCommand = " -f gdigrab -framerate 60 -use_wallclock_as_timestamps 1 -i title=原神 -pix_fmt yuv420p  -c:v libx264 -preset ultrafast -f segment -segment_time 1800 -reset_timestamps 1 -strftime 1  ";
+    
+    // 启动时修改分辨率
+    [ObservableProperty]
+    private bool _changeResolutionOnStart = true;
+    
+    // 关闭时还原分辨率
+    [ObservableProperty]
+    private bool _restoreResolutionOnExit;
 }

@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
@@ -54,31 +55,31 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     private void InitScriptListViewData()
     {
         _scriptItems.Clear();
-        var fileInfos = LoadScriptFiles(scriptPath)
-            .OrderByDescending(f => f.CreationTime)
+        var directoryInfos = LoadScriptDirectories(scriptPath)
+            .OrderByDescending(d => d.CreationTime)
             .ToList();
-        foreach (var f in fileInfos)
+        foreach (var d in directoryInfos)
         {
             _scriptItems.Add(new KeyMouseScriptItem
             {
-                Name = f.Name,
-                Path = f.FullName,
-                CreateTime = f.CreationTime,
-                CreateTimeStr = f.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+                Name = d.Name,
+                Path = d.FullName,
+                CreateTime = d.CreationTime,
+                CreateTimeStr = d.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
             });
         }
     }
 
-    private List<FileInfo> LoadScriptFiles(string folder)
+    private List<DirectoryInfo> LoadScriptDirectories(string folder)
     {
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
         }
 
-        var files = Directory.GetFiles(folder, "*.json", SearchOption.AllDirectories);
+        var directories = Directory.GetDirectories(folder);
 
-        return files.Select(file => new FileInfo(file)).ToList();
+        return directories.Select(dir => new DirectoryInfo(dir)).ToList();
     }
 
     public void OnNavigatedTo()
@@ -120,21 +121,36 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             }
             catch (Exception e)
             {
-                await MessageBox.ShowAsync(e.Message, "校验错误", System.Windows.MessageBoxButton.OK, MessageBoxImage.Error);
+                // await MessageBox.ShowAsync(e.Message, "校验错误", System.Windows.MessageBoxButton.OK, MessageBoxImage.Error);
+                // SystemControl.ActivateWindow(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
+                Toast.Error(e.Message);
+                _logger.LogError(e.Message);
                 return;
             }
         }
         
 
+        fileName = $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}";
+        
+        try
+        {
+            var json = GetPCInfo.GetJson();
+            // 保存
+            await File.WriteAllTextAsync(Global.Absolute(@$"User/KeyMouseScript/{fileName}/pc.json"), json);
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        }
 
+        
         if (!IsRecording)
         {
             IsRecording = true;
             SystemSettingsManager.GetSystemSettings();
             SystemSettingsManager.SetSystemSettings();
             
-            
-            fileName = $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}";
+
             await GlobalKeyMouseRecord.Instance.StartRecord(fileName);
         }
     }
@@ -165,13 +181,13 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public async Task OnStartPlay(string path)
     {
-        var file = new FileInfo(path);
-        var name = file.Name;
+        var file = new FileInfo(Path.Combine(path, "systemInfo.json"));
+        var name = file.Directory?.Name;
         _logger.LogInformation("重放开始：{Name}", name);
         try
         {
             await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-                .RunAsync(async () => await KeyMouseMacroPlayerJsonLine.PlayMacro(path, CancellationContext.Instance.Cts.Token));
+                .RunAsync(async () => await KeyMouseMacroPlayerJsonLine.PlayMacro(file.FullName, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)
         {
@@ -244,7 +260,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
 
         try
         {
-            var path = new FileInfo(item.Path).Directory!.FullName;
+            var path = item.Path;
             // 校验文件夹是否在 scriptPath 下
             if (!path.StartsWith(scriptPath))
             {

@@ -63,8 +63,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     [ObservableProperty]
     private string[] _inferenceDeviceTypes = BgiSessionOption.InferenceDeviceTypes;
 
-    Resolution? resolution;
-
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         _taskDispatcher = taskTriggerDispatcher;
@@ -379,16 +377,5 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
         win.NavigateToHtml(html);
         win.ShowDialog();
-    }
-
-    public void ChangeResolution()
-    {
-        resolution = new Resolution();
-        resolution.ChangeResolution(1920, 1080);
-    }
-
-    public void ResetResolution()
-    {
-        resolution?.ChangeResolution(resolution.autoWidth, resolution.autoHeight);
     }
 }

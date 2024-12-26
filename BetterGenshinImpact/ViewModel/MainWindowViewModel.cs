@@ -22,6 +22,7 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using BetterGenshinImpact.Helpers.Device;
+using BetterGenshinImpact.Service.Singletons;
 using Wpf.Ui;
 using Application = System.Windows.Application;
 
@@ -129,25 +130,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         EnvironmentUtil.PrintMouseSettings();
         
-        
-        TouchpadSoft.Instance.CheckAndRecordStatus();
-        TouchpadSoft.Instance.DisableTouchpadWhenEnabledByHotKey();
 
-        try
-        {
-            var json = GetPCInfo.GetJson();
-            // 保存
-            File.WriteAllText(Global.Absolute("User\\pc.json"), json);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-        }
-        
-
-        
-        // 设置DPI
-        SysDpi.Instance.SetDpi();
+        StartEndSingleton.Instance.OnMainWindowLoad();
     }
 
 
