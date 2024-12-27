@@ -240,7 +240,7 @@ public class TpTask(CancellationToken ct)
                     Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
                     break;
                 }
-                else if (mouseDistance < 200 && currentZoomLevel > 2)
+                while (mouseDistance < 200 && currentZoomLevel > 2)
                 {   // 放大地图
                     await AdjustMapZoomLevel(true);
                     totalMoveMouseX *= (currentZoomLevel) / (currentZoomLevel - 1);
