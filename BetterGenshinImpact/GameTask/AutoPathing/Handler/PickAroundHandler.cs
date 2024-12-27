@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
@@ -18,7 +19,7 @@ public class PickAroundHandler() : IActionHandler
 {
     private CancellationToken _ct;
 
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         this._ct = ct;
         Logger.LogInformation("执行 {Text}", "小范围内自动拾取");

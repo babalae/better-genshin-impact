@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
@@ -14,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class UpDownGrabLeaf : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         await Delay(500, ct);
         Logger.LogInformation("开始上下晃动视角抓{Syy}", "四叶印");

@@ -124,7 +124,7 @@
                               Grid.Column="2"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding StrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.StrategyList}"
                               SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -418,7 +418,7 @@
                               Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -590,7 +590,7 @@
                               Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">

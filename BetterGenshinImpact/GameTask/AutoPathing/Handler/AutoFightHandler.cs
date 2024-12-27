@@ -12,28 +12,47 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 internal class AutoFightHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        await StartFight(ct);
+        await StartFight(ct, config);
     }
 
-    private async Task StartFight(CancellationToken ct)
+    private async Task StartFight(CancellationToken ct,object? config = null)
     {
         TaskControl.Logger.LogInformation("执行 {Text}", "自动战斗");
         // 爷们要战斗
-        var taskParams = new AutoFightParam(GetFightStrategy())
-        {
-            FightFinishDetectEnabled = true,
-            PickDropsAfterFightEnabled = true
-        };
+        AutoFightParam taskParams = null;
+        if (config!=null && config is PathingPartyConfig patyConfig && patyConfig.AutoFightEabled) {
+            //替换配置为路径追踪
+
+            taskParams = GetFightAutoFightParam(patyConfig.AutoFightConfig);
+
+        }
+        else {
+            taskParams = new AutoFightParam(GetFightStrategy())
+            {
+                FightFinishDetectEnabled = true,
+                PickDropsAfterFightEnabled = true
+            };
+        }
+
         var fightSoloTask = new AutoFightTask(taskParams);
         await fightSoloTask.Start(ct);
     }
-
-    private string GetFightStrategy()
+    private AutoFightParam GetFightAutoFightParam(AutoFightConfig? config)
     {
-        var path = Global.Absolute(@"User\AutoFight\" + TaskContext.Instance().Config.AutoFightConfig.StrategyName + ".txt");
-        if ("根据队伍自动选择".Equals(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
+        AutoFightParam autoFightParam = new AutoFightParam(GetFightStrategy(config))
+        {
+            FightFinishDetectEnabled = config.FightFinishDetectEnabled,
+            PickDropsAfterFightEnabled = config.PickDropsAfterFightEnabled
+        };
+   
+        return autoFightParam;
+    }
+    private string GetFightStrategy(AutoFightConfig config)
+    {
+        var path = Global.Absolute(@"User\AutoFight\" + config.StrategyName + ".txt");
+        if ("根据队伍自动选择".Equals(config.StrategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
@@ -43,5 +62,9 @@ internal class AutoFightHandler : IActionHandler
         }
 
         return path;
+    }
+    private string GetFightStrategy()
+    {
+        return GetFightStrategy(TaskContext.Instance().Config.AutoFightConfig);
     }
 }

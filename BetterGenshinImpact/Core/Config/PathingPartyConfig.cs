@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -67,7 +68,14 @@ public partial class PathingPartyConfig : ObservableObject
     // 启用进入剧情自动脱离
     [ObservableProperty]
     private bool _autoSkipEnabled = true;
-    
+
+    //启用自动战斗配置
+    [ObservableProperty]
+    private bool _autoFightEabled = false;
+
+    [ObservableProperty]
+    private AutoFightConfig _autoFightConfig = new();
+
     public static PathingPartyConfig BuildDefault()
     {
         // 即便是不启用的情况下也设置默认值，减少后续使用的判断

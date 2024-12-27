@@ -841,7 +841,8 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.CombatScript.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
-            await handler.RunAsync(ct, waypoint);
+            //,PartyConfig
+            await handler.RunAsync(ct, waypoint, PartyConfig);
             await Delay(1000, ct);
         }
     }

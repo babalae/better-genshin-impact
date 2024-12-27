@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
@@ -15,7 +16,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 [Obsolete]
 public class ElementalSkillHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行 {Text}", "释放元素战技");
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
