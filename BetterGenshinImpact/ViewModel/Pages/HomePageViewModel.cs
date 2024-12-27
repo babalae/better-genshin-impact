@@ -29,11 +29,14 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
 {
-    [ObservableProperty] private string[] _modeNames = GameCaptureFactory.ModeNames();
+    [ObservableProperty]
+    private string[] _modeNames = GameCaptureFactory.ModeNames();
 
-    [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
+    [ObservableProperty]
+    private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty] private bool _taskDispatcherEnabled = false;
+    [ObservableProperty]
+    private bool _taskDispatcherEnabled = false;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
@@ -237,6 +240,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                 _maskWindow?.Close();
                 _maskWindow = null;
             }
+
             TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
         }
@@ -331,11 +335,22 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         // 检查用户是否配置了原神安装目录，如果没有，尝试从注册表中读取
         if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
         {
-            var path = GameExePath.GetWithoutCloud();
-            if (!string.IsNullOrEmpty(path))
+            Task.Run(async () =>
             {
-                Config.GenshinStartConfig.InstallPath = path;
-            }
+                var p1 = await UnityLogGameLocator.LocateSingleGamePathAsync();
+                if (!string.IsNullOrEmpty(p1))
+                {
+                    Config.GenshinStartConfig.InstallPath = p1;
+                }
+                else
+                {
+                    var p2 = RegistryGameLocator.GetDefaultGameInstallPath();
+                    if (!string.IsNullOrEmpty(p2))
+                    {
+                        Config.GenshinStartConfig.InstallPath = p2;
+                    }
+                }
+            });
         }
     }
 
