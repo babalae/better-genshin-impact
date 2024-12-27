@@ -33,7 +33,7 @@ public class TpTask(CancellationToken ct)
 
     public static double ReviveStatueOfTheSevenPointX = 2296.4;
     public static double ReviveStatueOfTheSevenPointY = -824.4;
-    public int currentZoomLevel = 4;
+    public static int currentZoomLevel = 4;
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>
@@ -51,13 +51,7 @@ public class TpTask(CancellationToken ct)
             Logger.LogDebug("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
         }
 
-        // M 打开地图识别当前位置，中心点为当前位置
-        using var ra1 = CaptureToRectArea();
-        if (!Bv.IsInBigMapUi(ra1))
-        {
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
-            await Delay(1000, ct);
-        }
+
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
         await SwitchRecentlyCountryMap(x, y, country);
@@ -152,6 +146,13 @@ public class TpTask(CancellationToken ct)
 
     public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false, int initialZoomLevel = 4)
     {
+        // M 打开地图识别当前位置，中心点为当前位置
+        using var ra1 = CaptureToRectArea();
+        if (!Bv.IsInBigMapUi(ra1))
+        {
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
+            await Delay(1000, ct);
+        }
         await AdjustMapZoomLevel(initialZoomLevel);
         currentZoomLevel = initialZoomLevel;
         Logger.LogInformation($"调整缩放等级为{initialZoomLevel}，地图移动过程中不要操作鼠标中键。");
@@ -239,7 +240,7 @@ public class TpTask(CancellationToken ct)
                     Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
                     break;
                 }
-                while (mouseDistance < 2 * tolerance && currentZoomLevel > 1)
+                else if (mouseDistance < 200 && currentZoomLevel > 2)
                 {   // 放大地图
                     await AdjustMapZoomLevel(true);
                     totalMoveMouseX *= (currentZoomLevel) / (currentZoomLevel - 1);
