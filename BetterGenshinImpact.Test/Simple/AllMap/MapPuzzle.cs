@@ -33,7 +33,7 @@ public class MapPuzzle
         
         // 保存1024
         var img1024 = Put(1024);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_1024.png", img1024);
+        Cv2.ImWrite(@"C:\Users\root\Downloads\map\map_52_1024.png", img1024);
         
         // 保存256
         // var grayImage = new Mat();
@@ -44,7 +44,7 @@ public class MapPuzzle
     
     public static Mat Put(int block = 2048)
     {
-        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_5.2"; // 图片文件夹路径
+        string folderPath = @"C:\Users\root\Downloads\map"; // 图片文件夹路径
         string pattern = @"UI_MapBack_([-+]?\d+)_([-+]?\d+)(.*)";
         var images = Directory.GetFiles(folderPath, "*.png", SearchOption.TopDirectoryOnly); // 获取所有图片文件路径
 

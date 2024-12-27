@@ -15,9 +15,9 @@ public class MapTeleportPointDraw
     {
         // var pList = LoadTeleportPoint(@"E:\HuiTask\更好的原神\地图匹配\地图点位\5.0");
         // pList.AddRange(MapAssets.Instance.TpPositions);
-        var map = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\mainMap1024BlockColor.png");
+        var map = new Mat(@"C:\Users\root\Downloads\map\map_52_1024.png");
         DrawTeleportPoint(map, MapLazyAssets.Instance.TpPositions);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\传送点_1024_0.34.3.png", map);
+        Cv2.ImWrite(@"C:\Users\root\Downloads\map\map_52_1024_with_tp.png", map);
     }
 
     public static void DrawTeleportPoint(Mat map, List<GiWorldPosition> points)
@@ -26,8 +26,9 @@ public class MapTeleportPointDraw
         {
             var p = MapCoordinate.GameToMain1024(point.Position);
             Cv2.Circle(map, p, 4, Scalar.Red, 2);
+            Cv2.PutText(map, point.Country, new Point(p.X + 10, p.Y + 5), HersheyFonts.HersheySimplex, 1, Scalar.Red, 2);
             // 写文字
-            Cv2.PutText(map, $"[{point.X:F2},{point.Y:F2}]", new Point(p.X + 10, p.Y + 5), HersheyFonts.HersheySimplex, 1, Scalar.Red, 2);
+            // Cv2.PutText(map, $"[{point.X:F2},{point.Y:F2}]", new Point(p.X + 10, p.Y + 5), HersheyFonts.HersheySimplex, 1, Scalar.Red, 2);
         }
     }
 
@@ -44,7 +45,7 @@ public class MapTeleportPointDraw
                 continue;
             }
 
-            points.Add(Transform(gamePoint.Position));
+            points.Add(Transform(gamePoint.Position,gamePoint.Country));
         }
 
         return points;
@@ -55,11 +56,12 @@ public class MapTeleportPointDraw
     /// </summary>
     /// <param name="position">[a,b,c]</param>
     /// <returns></returns>
-    public static GiWorldPosition Transform(decimal[] position)
+    public static GiWorldPosition Transform(decimal[] position,string country)
     {
         return new GiWorldPosition
         {
             Position = position,
+            Country = country,
         };
     }
 
@@ -67,6 +69,7 @@ public class MapTeleportPointDraw
     {
         public string Description { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
         public decimal[] Position { get; set; } = new decimal[3];
     }
 }
