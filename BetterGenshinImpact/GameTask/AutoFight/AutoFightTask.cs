@@ -64,7 +64,7 @@ public class AutoFightTask : ISoloTask
         ct.Register(cts2.Cancel);
 
         combatScenes.BeforeTask(cts2.Token);
-        TimeSpan fightTimeout = TimeSpan.FromSeconds(120); // 默认战斗超时时间
+        TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 默认战斗超时时间
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         //战斗前检查，可做成配置

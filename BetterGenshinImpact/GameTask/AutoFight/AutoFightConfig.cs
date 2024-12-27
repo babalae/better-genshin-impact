@@ -27,4 +27,10 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _pickDropsAfterFightEnabled = true;
+
+    /// <summary>
+    /// 战斗超时，单位秒
+    /// </summary>
+    [ObservableProperty]
+    private int _timeout = 120;
 }

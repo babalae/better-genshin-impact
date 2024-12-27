@@ -13,7 +13,7 @@
              d:DesignHeight="850"
              d:DesignWidth="800"
              mc:Ignorable="d">
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"  Height="800">
         <StackPanel Margin="42,16,42,12">
 
             <ui:CardExpander Margin="0,0,0,12"
@@ -400,6 +400,31 @@
                        Grid.Column="1"
                        Margin="0,0,36,0"
                        IsChecked="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="战斗超时（秒）"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="当战斗超过一定时间后，自动停止战斗"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="120"
+                                    Text="{Binding PathingConfig.AutoFightConfig.Timeout}" />
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>

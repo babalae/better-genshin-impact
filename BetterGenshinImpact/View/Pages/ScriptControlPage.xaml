@@ -207,11 +207,11 @@
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
-                    <ui:DropDownButton Content="更多功能" Icon="{ui:SymbolIcon Add24}">
+                    <ui:DropDownButton Content="更多功能">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu>
                                 <MenuItem Header="清空" Command="{Binding ClearTasksCommand}" />
-                                <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
+                                <!--<MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />-->
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>

@@ -9,4 +9,6 @@ public class AutoFightParam(string path) : BaseTaskParam
     public bool FightFinishDetectEnabled { get; set; } = false;
 
     public bool PickDropsAfterFightEnabled { get; set; } = false;
+
+    public int Timeout { get; set; } = 120;
 }

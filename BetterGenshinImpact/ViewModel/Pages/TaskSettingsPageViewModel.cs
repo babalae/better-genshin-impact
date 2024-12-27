@@ -232,7 +232,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         var param = new AutoFightParam(path)
         {
             FightFinishDetectEnabled = Config.AutoFightConfig.FightFinishDetectEnabled,
-            PickDropsAfterFightEnabled = Config.AutoFightConfig.PickDropsAfterFightEnabled
+            PickDropsAfterFightEnabled = Config.AutoFightConfig.PickDropsAfterFightEnabled,
+            Timeout = Config.AutoFightConfig.Timeout
         };
 
         SwitchAutoFightEnabled = true;

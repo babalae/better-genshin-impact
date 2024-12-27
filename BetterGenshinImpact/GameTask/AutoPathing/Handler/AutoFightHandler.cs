@@ -44,7 +44,8 @@ internal class AutoFightHandler : IActionHandler
         AutoFightParam autoFightParam = new AutoFightParam(GetFightStrategy(config))
         {
             FightFinishDetectEnabled = config.FightFinishDetectEnabled,
-            PickDropsAfterFightEnabled = config.PickDropsAfterFightEnabled
+            PickDropsAfterFightEnabled = config.PickDropsAfterFightEnabled,
+            Timeout = config.Timeout
         };
    
         return autoFightParam;
