@@ -55,7 +55,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     private OneDragonFlowConfig? _selectedConfig;
 
     [ObservableProperty]
-    private List<string> _craftingBenchCountry = ["枫丹", "璃月"];
+    private List<string> _craftingBenchCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
 
     [ObservableProperty]
     private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];

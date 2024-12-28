@@ -80,10 +80,12 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
+                    var (partyName, domainName) = config.GetDomainConfig();
+
                     var autoDomainParam = new AutoDomainParam(0, path)
                     {
-                        PartyName = config.PartyName,
-                        DomainName = config.DomainName
+                        PartyName = partyName,
+                        DomainName = domainName
                     };
                     await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };

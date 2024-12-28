@@ -61,5 +61,29 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private string _sundayDomainName = string.Empty;
 
+    // 通过当天是哪一天来返回配置
+    public (string partyName, string domainName) GetDomainConfig()
+    {
+        if (WeeklyDomainEnabled)
+        {
+            var dayOfWeek = DateTime.Now.DayOfWeek;
+            return dayOfWeek switch
+            {
+                DayOfWeek.Monday => (MondayThursdayPartyName, MondayThursdayDomainName),
+                DayOfWeek.Tuesday => (TuesdayFridayPartyName, TuesdayFridayDomainName),
+                DayOfWeek.Wednesday => (WednesdaySaturdayPartyName, WednesdaySaturdayDomainName),
+                DayOfWeek.Thursday => (MondayThursdayPartyName, MondayThursdayDomainName),
+                DayOfWeek.Friday => (TuesdayFridayPartyName, TuesdayFridayDomainName),
+                DayOfWeek.Saturday => (WednesdaySaturdayPartyName, WednesdaySaturdayDomainName),
+                DayOfWeek.Sunday => (SundayPartyName, SundayDomainName),
+                _ => (PartyName, DomainName)
+            };
+        }
+        else
+        {
+            return (PartyName, DomainName);
+        }
+    }
+
     #endregion
 }
