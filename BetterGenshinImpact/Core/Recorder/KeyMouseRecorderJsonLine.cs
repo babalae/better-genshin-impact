@@ -47,15 +47,15 @@ public class KeyMouseRecorderJsonLine
         var path = Global.Absolute($@"User\KeyMouseScript\{folderName}\");
 
         DateTime startTime = DateTime.UtcNow;
-        var bootTime = EnvironmentUtil.LastBootUpTime();
-        if (bootTime == null)
-        {
-            TaskControl.Logger.LogWarning("无法获取系统启动时间");
-        }
-        else
-        {
-            startTime = bootTime.Value + TimeSpan.FromMilliseconds(StartTick);
-        }
+        // var bootTime = EnvironmentUtil.LastBootUpTime();
+        // if (bootTime == null)
+        // {
+        //     TaskControl.Logger.LogWarning("无法获取系统启动时间");
+        // }
+        // else
+        // {
+        //     startTime = bootTime.Value + TimeSpan.FromMilliseconds(StartTick);
+        // }
 
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         Info = new KeyMouseScriptInfo

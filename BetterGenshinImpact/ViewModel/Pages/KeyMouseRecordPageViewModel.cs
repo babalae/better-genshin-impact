@@ -132,18 +132,21 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
 
         fileName = $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}";
         
-        try
+        await Task.Run(() =>
         {
-            var json = GetPCInfo.GetJson();
-            var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
-            Directory.CreateDirectory(pcFolder);
-            // 保存
-            await File.WriteAllTextAsync(Global.Absolute(@$"User/KeyMouseScript/{fileName}/pc.json"), json);
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-        }
+            try
+            {
+                var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
+                Directory.CreateDirectory(pcFolder);
+                // 移动PC信息
+                File.Copy(Global.Absolute(@$"User/pc.json"), Path.Combine(pcFolder, "pc.json"), true);
+            }
+            catch (Exception e)
+            {
+                TaskControl.Logger.LogDebug("移动PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            }
+        });
+
 
         
         if (!IsRecording)

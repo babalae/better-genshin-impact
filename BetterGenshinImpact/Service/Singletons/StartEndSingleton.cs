@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
@@ -38,6 +39,21 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
 
         }
         
+        // 获取PC信息
+        Task.Run(() =>
+        {
+            try
+            {
+                var json = GetPCInfo.GetJson();
+                // 保存
+                File.WriteAllText(Global.Absolute(@$"User/pc.json"), json);
+            }
+            catch (Exception e)
+            {
+                TaskControl.Logger.LogDebug("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            }
+        });
+
 
     }
     
