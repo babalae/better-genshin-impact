@@ -52,6 +52,11 @@ public class Avatar
     /// 长按元素战技CD
     /// </summary>
     public double SkillHoldCd { get; set; }
+    
+    /// <summary>
+    /// 最近一次使用元素战技的时间
+    /// </summary>
+    public DateTime LastSkillTime { get; set; }
 
     /// <summary>
     /// 元素爆发CD
@@ -357,6 +362,7 @@ public class Avatar
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
                 // todo 把cd加入执行队列
+                LastSkillTime = DateTime.UtcNow;
                 return;
             }
         }
