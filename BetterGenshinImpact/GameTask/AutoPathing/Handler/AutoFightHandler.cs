@@ -29,11 +29,7 @@ internal class AutoFightHandler : IActionHandler
 
         }
         else {
-            taskParams = new AutoFightParam(GetFightStrategy())
-            {
-                FightFinishDetectEnabled = true,
-                PickDropsAfterFightEnabled = true
-            };
+            taskParams = new AutoFightParam(GetFightStrategy(),TaskContext.Instance().Config.AutoFightConfig);
         }
 
         var fightSoloTask = new AutoFightTask(taskParams);
@@ -41,13 +37,7 @@ internal class AutoFightHandler : IActionHandler
     }
     private AutoFightParam GetFightAutoFightParam(AutoFightConfig? config)
     {
-        AutoFightParam autoFightParam = new AutoFightParam(GetFightStrategy(config))
-        {
-            FightFinishDetectEnabled = config.FightFinishDetectEnabled,
-            PickDropsAfterFightEnabled = config.PickDropsAfterFightEnabled,
-            Timeout = config.Timeout
-        };
-   
+        AutoFightParam autoFightParam = new AutoFightParam(GetFightStrategy(config), config);
         return autoFightParam;
     }
     private string GetFightStrategy(AutoFightConfig config)

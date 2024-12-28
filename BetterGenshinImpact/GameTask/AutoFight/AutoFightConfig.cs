@@ -33,4 +33,16 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _timeout = 120;
+
+    /// <summary>
+    /// 判断战斗结束读条颜色，不同帧率可能下会有些不同，默认为95,235,255
+    /// </summary>
+    [ObservableProperty]
+    private string _battleEndProgressBarColor = "";
+
+    /// <summary>
+    /// 对于上方颜色地偏差值，即±某个值，例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置
+    /// </summary>
+    [ObservableProperty]
+    private string _battleEndProgressBarColorTolerance = "";
 }

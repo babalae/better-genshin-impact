@@ -229,12 +229,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             return;
         }
 
-        var param = new AutoFightParam(path)
-        {
-            FightFinishDetectEnabled = Config.AutoFightConfig.FightFinishDetectEnabled,
-            PickDropsAfterFightEnabled = Config.AutoFightConfig.PickDropsAfterFightEnabled,
-            Timeout = Config.AutoFightConfig.Timeout
-        };
+        var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)

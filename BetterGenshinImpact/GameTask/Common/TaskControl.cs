@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -46,14 +48,34 @@ public class TaskControl
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
     }
-    
+    private static bool IsKeyPressed(User32.VK key)
+    {
+        // 获取按键状态
+        var state = User32.GetAsyncKeyState((int)key);
+
+        // 检查高位是否为 1（表示按键被按下）
+        return (state & 0x8000) != 0;
+    }
     public static void TrySuspend()
     {
-        bool first = true;
+        var first = true;
+        //此处为了记录最开始的暂停状态
+        var isSuspend = RunnerContext.Instance.IsSuspend;
         while (RunnerContext.Instance.IsSuspend)
         {
             if (first)
             {
+                //使快捷键本身释放
+                Thread.Sleep(300);
+                foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+                {
+                    // 检查键是否被按下
+                    if (IsKeyPressed(key)) // 强制转换 VK 枚举为 int
+                    {
+                        Logger.LogWarning($"解除{key}的按下状态.");
+                        Simulation.SendInput.Keyboard.KeyUp(key);
+                    }
+                }
                 Logger.LogWarning("快捷键触发暂停，等待解除");
                 foreach (var item in RunnerContext.Instance.SuspendableDictionary)
                 {
@@ -65,8 +87,8 @@ public class TaskControl
 
             Thread.Sleep(1000);
         }
-
-        if (RunnerContext.Instance.IsSuspend)
+        //从暂停中解除
+        if (isSuspend)
         {
             Logger.LogWarning("暂停已经解除");
             foreach (var item in RunnerContext.Instance.SuspendableDictionary)
