@@ -178,7 +178,19 @@ public class AutoFightTask : ISoloTask
 
         if (_taskParam is { FightFinishDetectEnabled: true, PickDropsAfterFightEnabled: true })
         {
-            //
+            // 队伍中存在万叶的时候使用一次长E
+            var kazuha = combatScenes.Avatars.FirstOrDefault(a => a.Name == "枫原万叶");
+            if (kazuha != null)
+            {
+                Logger.LogInformation("使用枫原万叶长E拾取掉落物");
+                var time = DateTime.UtcNow -  kazuha.LastSkillTime;
+                if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
+                {
+                    Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s",time.TotalSeconds);
+                    await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
+                }
+                kazuha.UseSkill(true);
+            }
 
             // 执行自动拾取掉落物的功能
             await new ScanPickTask().Start(ct);

@@ -567,8 +567,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
                     // Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
 
-                    // GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
-                    // Task.Run(async () => { await goToAdventurersGuildTask.Start("枫丹", new CancellationToken()); });
+                    GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
+                    Task.Run(async () => { await goToAdventurersGuildTask.Start("蒙德", new CancellationToken()); });
 
                     // ArtifactSalvageTask artifactSalvageTask = new ArtifactSalvageTask();
                     // Task.Run(async () => { await artifactSalvageTask.Start(4, new CancellationToken()); });
@@ -590,7 +590,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // // TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
                     // Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
                     
-                    TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
+                    // TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
@@ -601,7 +601,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 (_, _) =>
                 {
                     GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
-                    Task.Run(async () => { await goToCraftingBenchTask.Start("璃月", new CancellationToken()); });
+                    Task.Run(async () => { await goToCraftingBenchTask.Start("稻妻", new CancellationToken()); });
                 }
             ));
 

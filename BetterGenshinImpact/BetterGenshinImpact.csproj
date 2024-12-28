@@ -143,7 +143,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="GameTask\Common\Element\Assets\Json\" />
 	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="User\AutoPathing\" />
 	</ItemGroup>
