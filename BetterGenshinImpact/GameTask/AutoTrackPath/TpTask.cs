@@ -34,6 +34,7 @@ public class TpTask(CancellationToken ct)
     public static double ReviveStatueOfTheSevenPointX = 2296.4;
     public static double ReviveStatueOfTheSevenPointY = -824.4;
     public static int currentZoomLevel = 4;
+
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>
@@ -52,14 +53,13 @@ public class TpTask(CancellationToken ct)
         }
 
 
-
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
         await SwitchRecentlyCountryMap(x, y, country);
 
         // 计算坐标后点击
 
         var bigMapInAllMapRect = GetBigMapRect();
-        while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y) || currentZoomLevel>2) // 左上角 350x400也属于禁止点击区域
+        while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y) || currentZoomLevel > 2) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
@@ -89,6 +89,7 @@ public class TpTask(CancellationToken ct)
                 break;
             }
         }
+
         Logger.LogInformation("传送完成");
         return (x, y);
     }
@@ -153,6 +154,7 @@ public class TpTask(CancellationToken ct)
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
             await Delay(1000, ct);
         }
+
         await AdjustMapZoomLevel(initialZoomLevel);
         currentZoomLevel = initialZoomLevel;
         Logger.LogInformation($"调整缩放等级为{initialZoomLevel}，地图移动过程中不要操作鼠标中键。");
@@ -193,7 +195,7 @@ public class TpTask(CancellationToken ct)
     {
         // 获取当前地图中心点并计算到目标传送点的初始偏移
         // await AdjustMapZoomLevel(mapZoomLevel);
-        var bigMapCenterPoint = GetPositionFromBigMap();  // 初始中心
+        var bigMapCenterPoint = GetPositionFromBigMap(); // 初始中心
         var newBigMapCenterPoint = bigMapCenterPoint;
         var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);      
         int moveMouseX = 100 * Math.Sign(xOffset);
@@ -216,8 +218,10 @@ public class TpTask(CancellationToken ct)
                 newBigMapCenterPoint = new Point2f(
                 (float)(bigMapCenterPoint.X + xOffset * moveMouseX / totalMoveMouseX),
                 (float)(bigMapCenterPoint.Y + yOffset * moveMouseY / totalMoveMouseY)
-                ); // 利用移动鼠标的距离获取新的中心
+            );
+                // 利用移动鼠标的距离获取新的中心
             }
+
             // 本次移动的距离
             double diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
             double diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
@@ -240,8 +244,9 @@ public class TpTask(CancellationToken ct)
                     Logger.LogInformation($"移动 {iteration} 次鼠标后，已经接近目标点，不再进一步调整。");
                     break;
                 }
-                while (mouseDistance < 2*tolerance && currentZoomLevel > 2)
-                {   // 放大地图
+                while (mouseDistance < 200 && currentZoomLevel > 2)
+                {
+                    // 放大地图
                     await AdjustMapZoomLevel(true);
                     totalMoveMouseX *= (currentZoomLevel) / (currentZoomLevel - 1);
                     totalMoveMouseY *= (currentZoomLevel) / (currentZoomLevel - 1);
@@ -278,16 +283,19 @@ public class TpTask(CancellationToken ct)
         {
             GameCaptureRegion.GameRegionClick((rect, scale) => (50 * scale, 650 * scale));
         }
+
         await Delay(50, ct);
     }
+
     public async Task AdjustMapZoomLevel(int zoomLevel)
     {
         for (int i = 0; i < 5; i++)
         {
             await AdjustMapZoomLevel(false);
         }
+
         await Delay(200, ct);
-        for (int i = 0; i < 6-zoomLevel; i++)
+        for (int i = 0; i < 6 - zoomLevel; i++)
         {
             await AdjustMapZoomLevel(true);
         }
@@ -326,7 +334,7 @@ public class TpTask(CancellationToken ct)
         // 随机起点以避免地图移动无效
         GameCaptureRegion.GameRegionMove((rect, _) =>
             (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6),
-             rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
+                rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
 
         Simulation.SendInput.Mouse.LeftButtonDown();
         for (var i = 0; i < steps; i++)
@@ -334,9 +342,9 @@ public class TpTask(CancellationToken ct)
             Simulation.SendInput.Mouse.MoveMouseBy(stepX[i], stepY[i]);
             await Delay(stepIntervalMilliseconds, ct);
         }
+
         Simulation.SendInput.Mouse.LeftButtonUp();
     }
-
 
 
     public Point2f GetPositionFromBigMap()
@@ -436,6 +444,7 @@ public class TpTask(CancellationToken ct)
                 country = tpPosition.Country;
             }
         }
+
         // todo: 识别当前国家
         return (recentX, recentY, country);
     }
@@ -465,6 +474,7 @@ public class TpTask(CancellationToken ct)
                 return false;
             }
         }
+
         string minCountry = "当前位置";
         foreach (var (country, position) in MapLazyAssets.Instance.CountryPositions)
         {
@@ -479,10 +489,11 @@ public class TpTask(CancellationToken ct)
         Logger.LogDebug("离目标传送点最近的区域是：{Country}", minCountry);
         if (minCountry != "当前位置")
         {
-            if(forceCountry != null)
+            if (forceCountry != null)
             {
                 minCountry = forceCountry;
             }
+
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
             await Delay(300, ct);
             var ra = CaptureToRectArea();
@@ -499,7 +510,6 @@ public class TpTask(CancellationToken ct)
 
         return false;
     }
-
 
 
     public async Task Tp(string name)
@@ -606,6 +616,26 @@ public class TpTask(CancellationToken ct)
                 break;
             }
         }
+
         return hasMapChooseIcon;
+    }
+
+    /// <summary>
+    /// 给定的映射关系可以表示成 (x, y) 对的形式，其中 x 是输入值，y 是输出值
+    ///    1 - 1
+    ///  0.8 - 2
+    ///  0.6 - 3
+    ///  0.4 - 4
+    ///  0.2 - 5
+    ///    0 - 6
+    /// y=−5x+6
+    /// </summary>
+    /// <param name="region"></param>
+    /// <returns></returns>
+    private int GetBigMapZoomLevel(ImageRegion region)
+    {
+        var s = Bv.GetBigMapScale(region);
+        // 1~6 的缩放等级
+        return (int)(-5 * s) + 6;
     }
 }
