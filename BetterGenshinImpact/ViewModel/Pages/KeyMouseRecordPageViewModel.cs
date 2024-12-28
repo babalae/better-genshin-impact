@@ -128,10 +128,10 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 return;
             }
         }
-        
+
 
         fileName = $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}";
-        
+
         await Task.Run(() =>
         {
             try
@@ -139,7 +139,11 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
                 Directory.CreateDirectory(pcFolder);
                 // 移动PC信息
-                File.Copy(Global.Absolute(@$"User/pc.json"), Path.Combine(pcFolder, "pc.json"), true);
+                var src= Global.Absolute(@$"User/pc.json");
+                if (File.Exists(src))
+                {
+                    File.Copy(Global.Absolute(@$"User/pc.json"), Path.Combine(pcFolder, "pc.json"), true);
+                }
             }
             catch (Exception e)
             {
@@ -148,15 +152,22 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         });
 
 
-        
         if (!IsRecording)
         {
             IsRecording = true;
             SystemSettingsManager.GetSystemSettings();
             SystemSettingsManager.SetSystemSettings();
-            
 
-            await GlobalKeyMouseRecord.Instance.StartRecord(fileName);
+            try
+            {
+                await GlobalKeyMouseRecord.Instance.StartRecord(fileName);
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug(e, "启动录制时发生异常");
+                _logger.LogError(e.Message);
+                IsRecording = false;
+            }
         }
     }
 
@@ -177,9 +188,30 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             catch (Exception e)
             {
                 _logger.LogDebug(e, "停止录制时发生异常");
-                _logger.LogWarning(e.Message);
+                _logger.LogError(e.Message);
             }
+
             SystemSettingsManager.RestoreSystemSettings();
+            
+            
+            Task.Run(() =>
+            {
+                try
+                {
+                    var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
+                    Directory.CreateDirectory(pcFolder);
+                    // 移动PC信息
+                    var src= Global.Absolute(@$"User/pc.json");
+                    if (File.Exists(src))
+                    {
+                        File.Copy(Global.Absolute(@$"User/pc.json"), Path.Combine(pcFolder, "pc.json"), true);
+                    }
+                }
+                catch (Exception e)
+                {
+                    TaskControl.Logger.LogDebug("移动PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                }
+            });
         }
     }
 

@@ -29,7 +29,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     // private SharpAviRecorder _sharpAviRecorder;
 
-    private FfmpegRecorder? _ffmpegRecorder;
+    private IVideoRecorder? _videoRecorder;
 
     private readonly Dictionary<Keys, bool> _keyDownState = [];
 
@@ -64,6 +64,11 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             Toast.Warning("已经在录制状态，请不要重复启动录制功能");
             return;
         }
+        
+        if (TaskContext.Instance().Config.CommonConfig.Recorder == "obs")
+        {
+            TaskControl.Logger.LogInformation("当前选择使用OBS录制，OBS启动较慢，请耐心等待...");
+        }
 
         _keyMouseMacroRecordHotkey = TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey;
         _paimonSwitchEnabled = TaskContext.Instance().Config.RecordConfig.PaimonSwitchEnabled;
@@ -80,7 +85,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         // _sharpAviRecorder = new SharpAviRecorder( Path.Combine(videoPath, $"{DateTime.Now:yyyyMMddHH_mmssffff.avi}"), 
         //     CodecIds.MotionJpeg, 90, 0, SupportedWaveFormat.WAVE_FORMAT_44M16, false, 0);
 
-        _ffmpegRecorder = new FfmpegRecorder(fileName);
+        _videoRecorder = VideoRecorderFactory.Create(TaskContext.Instance().Config.CommonConfig.Recorder, fileName);
         _directInputMonitor = new DirectInputMonitor();
 
         // TaskTriggerDispatcher.Instance().StopTimer();
@@ -98,7 +103,8 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
 
 
-        _ffmpegRecorder.Start();
+        var videoEnabled = _videoRecorder.Start();
+        
         _directInputMonitor.Start();
         _recorder = new KeyMouseRecorderJsonLine(fileName);
 
@@ -120,7 +126,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         _directInputMonitor?.Dispose();
         _directInputMonitor = null;
 
-        _ffmpegRecorder?.Stop();
+        _videoRecorder?.Stop();
 
         if (_timer.Enabled)
         {

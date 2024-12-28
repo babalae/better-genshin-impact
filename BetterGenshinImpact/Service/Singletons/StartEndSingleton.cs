@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -68,6 +70,16 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
             SysDpi.Instance.ResetDpi();
         }
 
+        try
+        {
+            Process.GetProcessesByName("obs64").ToList().ForEach(p => p.Kill());
+            Process.GetProcessesByName("ffmpeg").ToList().ForEach(p => p.Kill());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
     
     

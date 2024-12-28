@@ -28,7 +28,10 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     [ObservableProperty] private bool _isLoading;
 
     [ObservableProperty] private string _webhookStatus = string.Empty;
-
+    
+    
+    [ObservableProperty] 
+    private string[] _recorderTypes = ["ffmpeg", "obs"];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService, NotificationService notificationService)
     {

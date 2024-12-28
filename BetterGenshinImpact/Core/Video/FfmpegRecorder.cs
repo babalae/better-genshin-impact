@@ -13,7 +13,7 @@ using Serilog.Core;
 
 namespace BetterGenshinImpact.Core.Video;
 
-public class FfmpegRecorder
+public class FfmpegRecorder : IVideoRecorder
 {
     // ffmpeg进程
     private readonly Process _process;
@@ -131,5 +131,10 @@ public class FfmpegRecorder
             TaskControl.Logger.LogDebug(e, "ffmpeg录制: {Text}", "停止录制失败");
             TaskControl.Logger.LogError("ffmpeg录制: 停止时异常：{Text}", e.Message);
         }
+    }
+
+    public void Dispose()
+    {
+   
     }
 }
