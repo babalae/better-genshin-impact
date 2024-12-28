@@ -186,16 +186,16 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="x">目标x坐标</param>
     /// <param name="y">目标y坐标</param>
-    /// <param name="tolerance">允许误差，默认100.0</param>
+    /// <param name="tolerance">允许误差，默认100</param>
     /// <param name="maxIterations">最大尝试次数，默认30</param>
-    public async Task MoveMapTo(double x, double y, double tolerance = 100.0, int maxIterations = 30)
+    /// <param name="maxMouseMove">单次移动最大距离，默认250</param>
+    public async Task MoveMapTo(double x, double y, double tolerance = 200, int maxIterations = 30, int maxMouseMove = 250)
     {
         // 获取当前地图中心点并计算到目标传送点的初始偏移
         // await AdjustMapZoomLevel(mapZoomLevel);
         var bigMapCenterPoint = GetPositionFromBigMap();  // 初始中心
         var newBigMapCenterPoint = bigMapCenterPoint;
-        var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);
-        // double distance = Math.Sqrt(xOffset * xOffset + yOffset * yOffset);        
+        var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);      
         int moveMouseX = 100 * Math.Sign(xOffset);
         int moveMouseY = 100 * Math.Sign(yOffset);
         int moveSteps = 10;
@@ -203,9 +203,8 @@ public class TpTask(CancellationToken ct)
         double totalMoveMouseY = Double.MaxValue;
         for (int iteration = 0; iteration < maxIterations; iteration++)
         {
-            // 移动鼠标
+            // 尝试移动鼠标
             await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
-
             bigMapCenterPoint = newBigMapCenterPoint; // 保存上一次移动的数据
             try
             {
@@ -213,15 +212,16 @@ public class TpTask(CancellationToken ct)
             }
             catch (Exception)
             {
+                Logger.LogWarning("中心点识别失败，尝试预测移动的距离。");
                 newBigMapCenterPoint = new Point2f(
                 (float)(bigMapCenterPoint.X + xOffset * moveMouseX / totalMoveMouseX),
                 (float)(bigMapCenterPoint.Y + yOffset * moveMouseY / totalMoveMouseY)
-            );
-                // 利用移动鼠标的距离获取新的中心
+                ); // 利用移动鼠标的距离获取新的中心
             }
             // 本次移动的距离
             double diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
             double diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
+
             double moveDistance = Math.Sqrt(diffMapX * diffMapX + diffMapY * diffMapY);
 
             if (moveDistance > 10) // 移动距离大于10认为本次移动成功
@@ -237,10 +237,10 @@ public class TpTask(CancellationToken ct)
                 // https://github.com/babalae/better-genshin-impact/issues/318
                 if (mouseDistance < tolerance && currentZoomLevel < 3)
                 {
-                    Debug.WriteLine($"在 {iteration} 迭代后，已经接近目标点，不再进一步调整。");
+                    Logger.LogInformation($"移动 {iteration} 次鼠标后，已经接近目标点，不再进一步调整。");
                     break;
                 }
-                while (mouseDistance < 200 && currentZoomLevel > 2)
+                while (mouseDistance < 2*tolerance && currentZoomLevel > 2)
                 {   // 放大地图
                     await AdjustMapZoomLevel(true);
                     totalMoveMouseX *= (currentZoomLevel) / (currentZoomLevel - 1);
@@ -250,14 +250,14 @@ public class TpTask(CancellationToken ct)
                 }
 
                 // 单次移动最大距离为 250，
-                moveMouseX = (int)Math.Min(totalMoveMouseX, 250 * totalMoveMouseX / mouseDistance) * Math.Sign(xOffset);
-                moveMouseY = (int)Math.Min(totalMoveMouseY, 250 * totalMoveMouseY / mouseDistance) * Math.Sign(yOffset);
+                moveMouseX = (int)Math.Min(totalMoveMouseX, maxMouseMove * totalMoveMouseX / mouseDistance) * Math.Sign(xOffset);
+                moveMouseY = (int)Math.Min(totalMoveMouseY, maxMouseMove * totalMoveMouseY / mouseDistance) * Math.Sign(yOffset);
                 double moveMouseLength = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY);
-                moveSteps = Math.Max((int)moveMouseLength / 10, 1);
+                moveSteps = Math.Max((int)moveMouseLength / 10, 3); // 每次移动的步数最小为3，避免除0错误
             }
             else
             {
-                Logger.LogDebug("鼠标无法移动地图，请检查！");
+                Logger.LogDebug($"第 {iteration} 次移动鼠标失败，可能是点击了传送点或者其他交互对象。");
             }
         }
     }
@@ -296,8 +296,8 @@ public class TpTask(CancellationToken ct)
     public async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10, int stepIntervalMilliseconds = 10)
     {
         // 确保不影响总移动距离
-        double totalX = 0;
-        double totalY = 0;
+        int totalX = 0;
+        int totalY = 0;
 
         // 梯形缩放因子
         double scaleFactor = 0.75;
@@ -307,7 +307,7 @@ public class TpTask(CancellationToken ct)
         int[] stepY = new int[steps];
         for (int i = 0; i < steps; i++)
         {
-            double factor = ((double)(steps - Math.Max(i, steps / 2)) / (steps / 2)) * scaleFactor; // 从steps/2逐渐减小到0
+            double factor = ((double)(steps - Math.Max(i, steps / 2)) / (steps / 2)) / scaleFactor;
             stepX[i] = (int)(pixelDeltaX * factor / steps);
             stepY[i] = (int)(pixelDeltaY * factor / steps);
             totalX += stepX[i];
@@ -317,15 +317,11 @@ public class TpTask(CancellationToken ct)
         // 均匀分配多余的部分到前半段
         int remainingX = (int)(pixelDeltaX - totalX);
         int remainingY = (int)(pixelDeltaY - totalY);
-        for (int i = 0; i < steps / 2; i++)
+        for (int i = 0; i < steps / 2 + 1; i++)
         {
-            stepX[i] += remainingX / (steps / 2);
-            stepY[i] += remainingY / (steps / 2);
+            stepX[i] += remainingX / (steps / 2 + 1) + ((remainingX % (steps / 2 + 1) > i) ? 0 : 1);
+            stepY[i] += remainingY / (steps / 2 + 1) + ((remainingX % (steps / 2 + 1) > i) ? 0 : 1);
         }
-
-        // 修正剩余误差到中间
-        stepX[steps / 2] += remainingX % (steps / 2);
-        stepY[steps / 2] += remainingY % (steps / 2);
 
         // 随机起点以避免地图移动无效
         GameCaptureRegion.GameRegionMove((rect, _) =>
