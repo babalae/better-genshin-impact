@@ -29,6 +29,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
@@ -581,13 +582,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // 拾取物品
                     // Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
 
-                    Simulation.SendInput.Keyboard.KeyDown(false, User32.VK.VK_LMENU);
-                    // TaskContext.Instance().PostMessageSimulator.KeyDown(User32.VK.VK_MENU);
-                    Thread.Sleep(500);
-                    GameCaptureRegion.GameRegion1080PPosMove(200, 100);
-                    Thread.Sleep(500);
-                    // TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
-                    Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
+                    // Simulation.SendInput.Keyboard.KeyDown(false, User32.VK.VK_LMENU);
+                    // // TaskContext.Instance().PostMessageSimulator.KeyDown(User32.VK.VK_MENU);
+                    // Thread.Sleep(500);
+                    // GameCaptureRegion.GameRegion1080PPosMove(200, 100);
+                    // Thread.Sleep(500);
+                    // // TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
+                    // Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
+                    
+                    TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
