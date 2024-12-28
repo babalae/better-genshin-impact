@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -25,7 +26,7 @@ public class MiningHandler : IActionHandler
 
     private readonly ScanPickTask _scanPickTask = new();
 
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)

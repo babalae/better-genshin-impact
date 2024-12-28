@@ -1,5 +1,6 @@
 ﻿using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.ViewModel.Pages.View;
 
 namespace BetterGenshinImpact.View.Pages.View
 {
@@ -8,10 +9,13 @@ namespace BetterGenshinImpact.View.Pages.View
     /// </summary>
     public partial class ScriptGroupConfigView : UserControl
     {
-        public ScriptGroupConfigView(ScriptGroupConfig config)
+        private ScriptGroupConfigViewModel ViewModel { get; }
+
+        public ScriptGroupConfigView(ScriptGroupConfigViewModel viewModel)
         {
+            DataContext  = ViewModel = viewModel;
             InitializeComponent();
-            DataContext = config;
+            
         }
     }
 }

@@ -82,11 +82,7 @@ public class Dispatcher
                     return;
                 }
                 var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
-                var param = new AutoFightParam(path1)
-                {
-                    FightFinishDetectEnabled = autoFightConfig.FightFinishDetectEnabled,
-                    PickDropsAfterFightEnabled = autoFightConfig.PickDropsAfterFightEnabled
-                };
+                var param = new AutoFightParam(path1, autoFightConfig);
                 await new AutoFightTask(param).Start(CancellationContext.Instance.Cts.Token);
                 break;
 

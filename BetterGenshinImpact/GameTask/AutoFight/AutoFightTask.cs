@@ -34,6 +34,8 @@ public class AutoFightTask : ISoloTask
     private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
+    private (int, int, int) _battleEndProgressBarColor;
+    private (int, int, int) _battleEndProgressBarColorTolerance;
 
     public AutoFightTask(AutoFightParam taskParam)
     {
@@ -44,6 +46,42 @@ public class AutoFightTask : ISoloTask
         {
             _predictor = BgiYoloV8PredictorFactory.GetPredictor(@"Assets\Model\World\bgi_world.onnx");
         }
+
+        _battleEndProgressBarColor = ParseStringToTuple(taskParam.BattleEndProgressBarColor, (95, 235, 255));
+        _battleEndProgressBarColorTolerance = ParseSingleOrCommaSeparated(taskParam.BattleEndProgressBarColorTolerance, (6, 6, 6));
+    }
+
+    // 方法1：判断是否是单个数字
+    static bool IsSingleNumber(string input, out int result)
+    {
+        return int.TryParse(input, out result);
+    }
+
+    static (int, int, int) ParseSingleOrCommaSeparated(string input, (int, int, int) defaultValue)
+    {
+        // 如果是单个数字
+        if (IsSingleNumber(input, out var singleNumber))
+        {
+            return (singleNumber, singleNumber, singleNumber);
+        }
+
+        return ParseStringToTuple(input, defaultValue);
+    }
+
+    static (int, int, int) ParseStringToTuple(string input, (int, int, int) defaultValue)
+    {
+        // 尝试按逗号分割字符串
+        var parts = input.Split(',');
+        if (parts.Length == 3 &&
+            int.TryParse(parts[0], out var num1) &&
+            int.TryParse(parts[1], out var num2) &&
+            int.TryParse(parts[2], out var num3))
+        {
+            return (num1, num2, num3);
+        }
+
+        // 如果解析失败，返回默认值
+        return defaultValue;
     }
 
     public async Task Start(CancellationToken ct)
@@ -64,7 +102,7 @@ public class AutoFightTask : ISoloTask
         ct.Register(cts2.Cancel);
 
         combatScenes.BeforeTask(cts2.Token);
-        TimeSpan fightTimeout = TimeSpan.FromSeconds(120); // 默认战斗超时时间
+        TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 默认战斗超时时间
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         //战斗前检查，可做成配置
@@ -78,13 +116,21 @@ public class AutoFightTask : ISoloTask
             {
                 while (!cts2.Token.IsCancellationRequested)
                 {
+                    var timeoutFlag = false;
                     // 通用化战斗策略
                     foreach (var command in combatCommands)
                     {
+                        if (stopwatch.Elapsed > fightTimeout)
+                        {
+                            Logger.LogInformation("战斗超时结束");
+                            timeoutFlag = true;
+                            break;
+                        }
+
                         command.Execute(combatScenes);
                     }
 
-                    if (stopwatch.Elapsed > fightTimeout || _taskParam is { FightFinishDetectEnabled: true } && await CheckFightFinish())
+                    if (timeoutFlag || _taskParam is { FightFinishDetectEnabled: true } && await CheckFightFinish())
                     {
                         break;
                     }
@@ -148,6 +194,14 @@ public class AutoFightTask : ISoloTask
         }
     }
 
+    static bool AreDifferencesWithinBounds((int, int, int) a, (int, int, int) b, (int, int, int) c)
+    {
+        // 计算每个位置的差值绝对值并进行比较
+        return Math.Abs(a.Item1 - b.Item1) < c.Item1 &&
+               Math.Abs(a.Item2 - b.Item2) < c.Item2 &&
+               Math.Abs(a.Item3 - b.Item3) < c.Item3;
+    }
+
     private async Task<bool> CheckFightFinish()
     {
         //  YOLO 判断血条和怪物位置
@@ -167,7 +221,7 @@ public class AutoFightTask : ISoloTask
         //if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
         //{
         // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
-        /** 
+        /**
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(300, _ct);
         for (var i = 0; i < 8; i++)
@@ -181,29 +235,28 @@ public class AutoFightTask : ISoloTask
             }
         }
         **/
-            //检查延时，根据队伍不同可以进行优化，可做成配置
-            await Delay(1500, _ct);
-            Logger.LogInformation("按了L");
-            // 最终方案确认战斗结束
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
-            await Delay(450, _ct);
-            var ra = CaptureToRectArea();
-            var b3 = ra.SrcMat.At<Vec3b>(50, 790);
+        //检查延时，根据队伍不同可以进行优化，可做成配置
+        await Delay(1500, _ct);
+        Logger.LogInformation("按L检查战斗是否结束");
+        // 最终方案确认战斗结束
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
+        await Delay(450, _ct);
+        var ra = CaptureToRectArea();
+        var b3 = ra.SrcMat.At<Vec3b>(50, 790);
 
-            int tolerance = 6;
-            if (Math.Abs(b3.Item0 - 95)< tolerance&& Math.Abs(b3.Item1 - 235) < tolerance&& Math.Abs(b3.Item2 - 255) < tolerance)
-            {
-                Logger.LogInformation("识别到战斗结束");
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                return true;
-            }
-            else
-            {
-               Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
-                _lastFightFlagTime = DateTime.Now;
-                return false;
-            }
-      //  }
+        if (AreDifferencesWithinBounds(_battleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _battleEndProgressBarColorTolerance))
+        {
+            Logger.LogInformation("识别到战斗结束");
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+            return true;
+        }
+
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
+        _lastFightFlagTime = DateTime.Now;
+        return false;
+
+        //  }
 
         return false;
     }

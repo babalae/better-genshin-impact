@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -10,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 public class CombatScriptHandler : IActionHandler
 {
-    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null)
+    public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         if (waypointForTrack is { CombatScript: not null })
         {

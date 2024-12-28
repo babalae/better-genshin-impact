@@ -32,6 +32,7 @@ using System.Windows.Navigation;
 using Newtonsoft.Json.Linq;
 using static Vanara.PInvoke.User32;
 using TextBox = Wpf.Ui.Controls.TextBox;
+using BetterGenshinImpact.ViewModel.Pages.View;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -96,7 +97,19 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
         }
     }
-
+    [RelayCommand]
+    private void ClearTasks()
+    {
+        SelectedScriptGroup.Projects.Clear();
+        WriteScriptGroup(SelectedScriptGroup);
+    }
+    private void UpdateTasks()
+    {
+        //PromptDialog.Prompt
+       // SelectedScriptGroup.Projects.Clear();
+       // WriteScriptGroup(SelectedScriptGroup);
+    }
+    
     [RelayCommand]
     public void OnRenameScriptGroup(ScriptGroup? item)
     {
@@ -718,7 +731,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var dialogWindow = new Window
         {
             Title = "配置组设置",
-            Content = new ScriptGroupConfigView(SelectedScriptGroup.Config),
+            Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedScriptGroup.Config)),
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
