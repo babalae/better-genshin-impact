@@ -58,7 +58,7 @@ public static partial class Bv
 
         return false;
     }
-    
+
     /// <summary>
     /// 在任意可以关闭的UI界面（识别关闭按钮）
     /// </summary>
@@ -109,6 +109,22 @@ public static partial class Bv
     public static bool BigMapIsUnderground(ImageRegion captureRa)
     {
         return captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo).IsExist();
+    }
+
+    public static double GetBigMapScale(ImageRegion region)
+    {
+        var scaleRa = region.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        if (scaleRa.IsEmpty())
+        {
+            throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
+        }
+
+        // 452 ~ 627 间隔 35 和截图有关的，截图高24
+        var start = QuickTeleportAssets.MapScaleButton1080StartY;
+        var end = QuickTeleportAssets.MapScaleButton1080EndY;
+        var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
+
+        return (end * 1.0 - cur) / (end - start);
     }
 
     public static MotionStatus GetMotionStatus(ImageRegion captureRa)
