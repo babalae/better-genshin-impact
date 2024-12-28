@@ -13,9 +13,10 @@ using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
-public partial class AutoFightViewModel : ObservableObject,IViewModel
+public partial class AutoFightViewModel : ObservableObject, IViewModel
 {
     public AllConfig Config { get; set; }
+
     public AutoFightViewModel()
     {
         Config = TaskContext.Instance().Config;
@@ -25,13 +26,14 @@ public partial class AutoFightViewModel : ObservableObject,IViewModel
 
     public AutoFightViewModel(AllConfig config)
     {
-         Config = config;
+        Config = config;
         _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
         _combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
     }
 
     [ObservableProperty]
     private string[] _combatStrategyList;
+
     [ObservableProperty]
     private string[] _strategyList;
 
@@ -57,6 +59,7 @@ public partial class AutoFightViewModel : ObservableObject,IViewModel
 
         return strategyList;
     }
+
     [RelayCommand]
     public void OnStrategyDropDownOpened(string type)
     {
@@ -71,16 +74,17 @@ public partial class AutoFightViewModel : ObservableObject,IViewModel
                 break;
         }
     }
+
     [RelayCommand]
     public void OnOpenLocalScriptRepo()
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
+
     [RelayCommand]
     public void OnOpenFightFolder()
     {
         Process.Start("explorer.exe", Global.Absolute(@"User\AutoFight\"));
     }
-
 }

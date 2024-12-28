@@ -47,25 +47,28 @@ public class AutoFightTask : ISoloTask
             _predictor = BgiYoloV8PredictorFactory.GetPredictor(@"Assets\Model\World\bgi_world.onnx");
         }
 
-        _battleEndProgressBarColor = ParseStringToTuple(taskParam.BattleEndProgressBarColor,(95, 235, 255));
-        _battleEndProgressBarColorTolerance = ParseSingleOrCommaSeparated(taskParam.BattleEndProgressBarColorTolerance,(6, 6, 6));
+        _battleEndProgressBarColor = ParseStringToTuple(taskParam.BattleEndProgressBarColor, (95, 235, 255));
+        _battleEndProgressBarColorTolerance = ParseSingleOrCommaSeparated(taskParam.BattleEndProgressBarColorTolerance, (6, 6, 6));
     }
-    
+
     // 方法1：判断是否是单个数字
     static bool IsSingleNumber(string input, out int result)
     {
         return int.TryParse(input, out result);
     }
-    static (int, int, int) ParseSingleOrCommaSeparated(string input,(int, int, int) defaultValue)
+
+    static (int, int, int) ParseSingleOrCommaSeparated(string input, (int, int, int) defaultValue)
     {
         // 如果是单个数字
         if (IsSingleNumber(input, out var singleNumber))
         {
             return (singleNumber, singleNumber, singleNumber);
         }
-        return ParseStringToTuple(input,defaultValue);
+
+        return ParseStringToTuple(input, defaultValue);
     }
-    static (int, int, int) ParseStringToTuple(string input,(int, int, int) defaultValue)
+
+    static (int, int, int) ParseStringToTuple(string input, (int, int, int) defaultValue)
     {
         // 尝试按逗号分割字符串
         var parts = input.Split(',');
@@ -80,6 +83,7 @@ public class AutoFightTask : ISoloTask
         // 如果解析失败，返回默认值
         return defaultValue;
     }
+
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
@@ -189,6 +193,7 @@ public class AutoFightTask : ISoloTask
             Logger.LogWarning("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏可能无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
         }
     }
+
     static bool AreDifferencesWithinBounds((int, int, int) a, (int, int, int) b, (int, int, int) c)
     {
         // 计算每个位置的差值绝对值并进行比较
@@ -196,6 +201,7 @@ public class AutoFightTask : ISoloTask
                Math.Abs(a.Item2 - b.Item2) < c.Item2 &&
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
+
     private async Task<bool> CheckFightFinish()
     {
         //  YOLO 判断血条和怪物位置
@@ -215,7 +221,7 @@ public class AutoFightTask : ISoloTask
         //if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
         //{
         // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
-        /** 
+        /**
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(300, _ct);
         for (var i = 0; i < 8; i++)
@@ -229,27 +235,28 @@ public class AutoFightTask : ISoloTask
             }
         }
         **/
-            //检查延时，根据队伍不同可以进行优化，可做成配置
-            await Delay(1500, _ct);
-            Logger.LogInformation("按L检查战斗是否结束");
-            // 最终方案确认战斗结束
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
-            await Delay(450, _ct);
-            var ra = CaptureToRectArea();
-            var b3 = ra.SrcMat.At<Vec3b>(50, 790);
-        
-            if (AreDifferencesWithinBounds(_battleEndProgressBarColor,(b3.Item0,b3.Item1,b3.Item2),_battleEndProgressBarColorTolerance))
-            {
-                Logger.LogInformation("识别到战斗结束");
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                return true;
-            }
+        //检查延时，根据队伍不同可以进行优化，可做成配置
+        await Delay(1500, _ct);
+        Logger.LogInformation("按L检查战斗是否结束");
+        // 最终方案确认战斗结束
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
+        await Delay(450, _ct);
+        var ra = CaptureToRectArea();
+        var b3 = ra.SrcMat.At<Vec3b>(50, 790);
+
+        if (AreDifferencesWithinBounds(_battleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _battleEndProgressBarColorTolerance))
+        {
+            Logger.LogInformation("识别到战斗结束");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
-            Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
-            _lastFightFlagTime = DateTime.Now;
-            return false;
-            
-      //  }
+            return true;
+        }
+
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
+        _lastFightFlagTime = DateTime.Now;
+        return false;
+
+        //  }
 
         return false;
     }
