@@ -64,11 +64,6 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             Toast.Warning("已经在录制状态，请不要重复启动录制功能");
             return;
         }
-        
-        if (TaskContext.Instance().Config.CommonConfig.Recorder == "obs")
-        {
-            TaskControl.Logger.LogInformation("当前选择使用OBS录制，OBS启动较慢，请耐心等待...");
-        }
 
         _keyMouseMacroRecordHotkey = TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey;
         _paimonSwitchEnabled = TaskContext.Instance().Config.RecordConfig.PaimonSwitchEnabled;

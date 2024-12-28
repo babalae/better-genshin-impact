@@ -265,6 +265,9 @@ public partial class App : Application
         {
             e = e.InnerException;
         }
+        
+        var logger = GetLogger<App>();
+        logger.LogError("出现未捕获的异常，请切换到软件界面查看详情！{Exception}", e.Message);
 
         try
         {
@@ -285,6 +288,6 @@ public partial class App : Application
         }
 
         // log
-        GetLogger<App>().LogDebug(e, "UnHandle Exception");
+        logger.LogDebug(e, "UnHandle Exception");
     }
 }

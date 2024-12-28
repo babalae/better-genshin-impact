@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
@@ -19,8 +20,13 @@ public class ObsRecorder : IVideoRecorder
     private OBSWebsocket obs;
     private bool isConnected = false;
 
-    public ObsRecorder()
+    private DateTime _lastRecordTime = DateTime.MinValue;
+
+    private readonly string _fileName;
+
+    public ObsRecorder(string fileName)
     {
+        _fileName = fileName;
         // 判断 OBS 是否已经启动
         if (Process.GetProcessesByName("obs64").Length == 0)
         {
@@ -89,7 +95,8 @@ public class ObsRecorder : IVideoRecorder
                 try
                 {
                     obs.StartRecord();
-                    TaskControl.Logger.LogInformation("OBS: 开始录制");
+                    _lastRecordTime = DateTime.UtcNow;
+                    TaskControl.Logger.LogInformation("OBS: 开始录制，时间: {Time}", _lastRecordTime.ToString("yyyy-MM-dd HH:mm:ss:ffff"));
                     return true;
                 }
                 catch (ErrorResponseException ex)
@@ -125,8 +132,83 @@ public class ObsRecorder : IVideoRecorder
         {
             var path = obs.StopRecord();
             TaskControl.Logger.LogInformation("OBS: 停止录制录制");
-            TaskControl.Logger.LogInformation("OBS: 文件存储在 {Path}", path);
+            var name = Path.GetFileName(path);
+            TaskControl.Logger.LogInformation("OBS: 文件存储在 {Path}", name);
+
+            MoveFile(name);
+
         }
+    }
+
+    private void MoveFile(string name)
+    {
+        Task.Run(() =>
+        {
+            try
+            {
+                var videoPath = Global.Absolute($@"video\{name}");
+                var folderPath = Global.Absolute($@"User\KeyMouseScript\{_fileName}\");
+                if (File.Exists(videoPath))
+                {
+                    int i = 0;
+                    for (i = 0; i < 10; i++)
+                    {
+                        if (IsFileLocked(videoPath))
+                        {
+                            TaskControl.Logger.LogDebug("OBS: 等待文件保存完成...重试次数: {Count}", i + 1);
+                            Thread.Sleep(1000);
+                        }
+                        else
+                        {
+                            var targetPath = Path.Combine(folderPath, Path.GetFileName(videoPath));
+                            File.Move(videoPath, targetPath);
+                            TaskControl.Logger.LogInformation("OBS: 录制结果文件已移动到 {Path}", targetPath);
+                            break;
+                        }
+                    }
+                    
+                    if (i == 10)
+                    {
+                        TaskControl.Logger.LogError("未能移动录制结果文件，文件可能被占用，请手动移动，文件路径: {Path}", videoPath);
+                    }
+
+                }
+                else
+                {
+                    TaskControl.Logger.LogError("OBS: 未找到录制结果文件");
+                }
+
+                File.WriteAllText(Path.Combine(folderPath, "videoStartTime.txt"), (_lastRecordTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"));
+            }
+            catch (Exception e)
+            {
+                TaskControl.Logger.LogError("移动录制结果文件时出现错误: {Error}", e.Message);
+            }
+        });
+
+    }
+    
+    static bool IsFileLocked(string filePath)
+    {
+        FileStream stream = null;
+
+        try
+        {
+            // 尝试以读取方式打开文件
+            stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        }
+        catch (IOException)
+        {
+            // 捕获IOException异常表示文件被占用
+            return true;
+        }
+        finally
+        {
+            // 关闭文件流
+            stream?.Close();
+        }
+
+        return false;
     }
 
     private void OnConnected(object? sender, EventArgs e)
