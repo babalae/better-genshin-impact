@@ -5338,7 +5338,7 @@
     "mapIndex": 0
   },
   {
-    "country": "枫丹",
+    "country": "纳塔",
     "type": "Domain",
     "description": "Domain",
     "name": "蕴火的幽墟",
@@ -5445,5 +5445,17 @@
       7745.98
     ],
     "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Other",
+    "description": "神庙·煅石之轮",
+    "mapIndex": 0,
+    "version": "5.0",
+    "position": [
+      9019.80,
+      0,
+      -1916.06
+    ]
   }
 ]
