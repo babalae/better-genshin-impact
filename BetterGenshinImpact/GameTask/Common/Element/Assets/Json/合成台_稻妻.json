@@ -1,0 +1,60 @@
+{
+  "info": {
+    "name": "稻妻凯瑟琳-合成台",
+    "type": "collect",
+    "author": "XS",
+    "version": "1.0",
+    "description": "",
+    "bgiVersion": "0.35.1"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -4402.443359375,
+      "y": -3053.1025390625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": -4402.888671875,
+      "y": -3060.0810546875,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": -4414.158203125,
+      "y": -3076.2705078125,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": -4420.93359375,
+      "y": -3084.6572265625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 5,
+      "x": -4431.484375,
+      "y": -3092.462890625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 6,
+      "x": -4432.345703125,
+      "y": -3093.796875,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    }
+  ]
+}

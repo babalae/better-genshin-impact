@@ -12,33 +12,33 @@
       "id": 1,
       "x": -867.6884765625,
       "y": 2281.365966796875,
-      "type": "teleport",
+      "action": "",
       "move_mode": "walk",
-      "action": ""
+      "type": "teleport"
     },
     {
       "id": 2,
       "x": -882.1455078125,
       "y": 2262.399658203125,
-      "type": "path",
+      "action": "",
       "move_mode": "walk",
-      "action": ""
+      "type": "path"
     },
     {
       "id": 3,
-      "x": -893.3056640625,
-      "y": 2249.19482421875,
-      "type": "path",
+      "x": -911.3125,
+      "y": 2240.5625,
+      "action": "",
       "move_mode": "walk",
-      "action": ""
+      "type": "path"
     },
     {
       "id": 4,
-      "x": -914.3564453125,
-      "y": 2233.071044921875,
-      "type": "path",
+      "x": -913.5625,
+      "y": 2233.5625,
+      "action": "",
       "move_mode": "walk",
-      "action": ""
+      "type": "path"
     }
   ]
 }
