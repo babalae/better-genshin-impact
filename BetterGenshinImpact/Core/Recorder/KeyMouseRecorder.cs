@@ -35,6 +35,11 @@ public class KeyMouseRecorder
 
     public string ToJsonMacro()
     {
+        // MacroEvents 需要以实际时间进行排序
+        MacroEvents.Sort((a, b) => a.Time.CompareTo(b.Time));
+        // 删除为负数的时间
+        MacroEvents.RemoveAll(m => m.Time < 0);
+        
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         // 合并鼠标移动事件
         var mergedMacroEvents = new List<MacroEvent>();
@@ -189,7 +194,7 @@ public class KeyMouseRecorder
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = time - 5,
+            Time = time - 5 - StartTime,
             CameraOrientation = cao,
         });
     }

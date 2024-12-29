@@ -5457,5 +5457,450 @@
       0,
       9019.80
     ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Statue",
+    "description": "奥奇卡纳塔",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -619.27,
+      0,
+      9758.57
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Reputation",
+    "description": "我在「烟谜主」的声望",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1653.83,
+      0,
+      9713.33
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Reputation",
+    "description": "我在「花羽会」的声望",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1205.22,
+      0,
+      9485.59
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Statue",
+    "description": "花羽会神像",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1288.47,
+      0,
+      9847.33
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Statue",
+    "description": "烟谜主神像",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1782.06,
+      0,
+      9533.38
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1733.95,
+      0,
+      9229.58
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1806.69,
+      0,
+      9393.26
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1669.50,
+      0,
+      9469.82
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1857.84,
+      0,
+      9642.35
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1768.67,
+      0,
+      9782.39
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1624.28,
+      0,
+      9691.16
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1552.21,
+      0,
+      9711.72
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1604.83,
+      0,
+      9969.99
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1422.04,
+      0,
+      9306.38
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1286.57,
+      0,
+      9588.86
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -1113.75,
+      0,
+      9543.89
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -847.87,
+      0,
+      9716.26
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -640.28,
+      0,
+      10033.22
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -399.07,
+      0,
+      10163.81
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -203.70,
+      0,
+      10275.98
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -133.31,
+      0,
+      10119.13
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -208.18,
+      0,
+      10076.43
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -215.86,
+      0,
+      9954.87
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -337.91,
+      0,
+      10009.56
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      21.09,
+      0,
+      10073.35
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      257.03,
+      0,
+      9967.33
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      166.88,
+      0,
+      9673.21
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      56.56,
+      0,
+      9702.95
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "position": [
+      -354.76,
+      0,
+      9427.51
+    ],
+    "version": "5.2",
+    "mapIndex": 0
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -404.72,
+      0,
+      9865.10
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -378.93,
+      0,
+      9816.65
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -314.75,
+      0,
+      9929.66
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -389.51,
+      0,
+      9688.61
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -169.13,
+      0,
+      10030.32
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -158.47,
+      0,
+      10074.34
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1345.35,
+      0,
+      9342.99
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1511.23,
+      0,
+      9383.95
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -1380.37,
+      0,
+      10733.42
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -577.64,
+      0,
+      9190.05
+    ]
+  },
+  {
+    "country": "纳塔",
+    "type": "Waypoint",
+    "mapIndex": 0,
+    "version": "5.2",
+    "position": [
+      -31.92,
+      0,
+      9183.47
+    ]
   }
 ]

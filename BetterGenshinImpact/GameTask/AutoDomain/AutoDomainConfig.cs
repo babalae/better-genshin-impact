@@ -22,7 +22,7 @@ public partial class AutoDomainConfig : ObservableObject
     /// 寻找古树时，短距离移动，用于识别速度过慢的计算机使用
     /// </summary>
     [ObservableProperty]
-    private bool _walkToF = false;
+    private bool _walkToF = true;
 
     /// <summary>
     /// 寻找古树时，短距离移动的次数

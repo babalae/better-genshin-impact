@@ -60,7 +60,7 @@ public class KeyMouseMacroPlayer
             var timeToWait = e.Time - (Kernel32.GetTickCount() - startTime);
             if (timeToWait < 0)
             {
-                TaskControl.Logger.LogWarning("无法原速重放事件{Event}，落后{TimeToWait}ms", e.Type.ToString(), -timeToWait);
+                TaskControl.Logger.LogDebug("无法原速重放事件{Event}，落后{TimeToWait}ms", e.Type.ToString(), (-timeToWait).ToString("F0"));
             }
             else
             {

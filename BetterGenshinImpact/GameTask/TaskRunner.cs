@@ -68,6 +68,21 @@ public class TaskRunner
         {
             _logger.LogInformation("任务中断:{Msg}", e.Message);
             SendNotification();
+            if (RunnerContext.Instance.IsContinuousRunGroup)
+            {
+                // 连续执行时，抛出异常，终止执行
+                throw;
+            }
+        }
+        catch (TaskCanceledException e)
+        {
+            _logger.LogInformation("任务中断:{Msg}", "任务被取消");
+            SendNotification();
+            if (RunnerContext.Instance.IsContinuousRunGroup)
+            {
+                // 连续执行时，抛出异常，终止执行
+                throw;
+            }
         }
         catch (Exception e)
         {

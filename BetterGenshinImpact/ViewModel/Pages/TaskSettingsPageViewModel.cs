@@ -83,6 +83,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     [ObservableProperty]
     private string _switchAutoTrackPathButtonText = "启动";
+    
+    [ObservableProperty]
+    private bool _switchAutoMusicGameEnabled;
 
     [ObservableProperty]
     private string _switchAutoMusicGameButtonText = "启动";
@@ -111,29 +114,6 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     }
 
-    private string[] LoadCustomScript(string folder)
-    {
-        var files = Directory.GetFiles(folder, "*.*",
-            SearchOption.AllDirectories);
-
-        var strategyList = new string[files.Length];
-        for (var i = 0; i < files.Length; i++)
-        {
-            if (files[i].EndsWith(".txt"))
-            {
-                var strategyName = files[i].Replace(folder, "").Replace(".txt", "");
-                if (strategyName.StartsWith('\\'))
-                {
-                    strategyName = strategyName[1..];
-                }
-
-                strategyList[i] = strategyName;
-            }
-        }
-
-        return strategyList;
-    }
-
     [RelayCommand]
     private async Task OnStopSoloTask()
     {
@@ -142,6 +122,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         SwitchAutoWoodEnabled = false;
         SwitchAutoDomainEnabled = false;
         SwitchAutoFightEnabled = false;
+        SwitchAutoMusicGameEnabled = false;
         await Task.Delay(800);
     }
 
@@ -283,7 +264,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public void OnOpenFightFolder()
     {
-       _autoFightViewModel.OnOpenFightFolder();
+       _autoFightViewModel?.OnOpenFightFolder();
     }
 
     [Obsolete]
@@ -359,8 +340,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnSwitchAutoMusicGame()
     {
+        SwitchAutoMusicGameEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunSoloTaskAsync(new AutoMusicGameTask(new AutoMusicGameParam()));
+        SwitchAutoMusicGameEnabled = false;
     }
 
     [RelayCommand]

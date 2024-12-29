@@ -163,7 +163,7 @@ public class CombatScenes : IDisposable
         if (result.TopClass.Name.Name.StartsWith("Qin") || result.TopClass.Name.Name.Contains("Costume"))
         {
             // 降低琴和衣装角色的识别率要求
-            if (result.TopClass.Confidence < 0.6)
+            if (result.TopClass.Confidence < 0.51)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
                 throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");

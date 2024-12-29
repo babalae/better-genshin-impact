@@ -282,6 +282,7 @@ public class AutoFightTask : ISoloTask
             {
                 Debug.WriteLine(e.Message);
                 Debug.WriteLine(e.StackTrace);
+                throw;
             }
         }, cts2.Token);
 

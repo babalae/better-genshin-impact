@@ -97,19 +97,21 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
         }
     }
+
     [RelayCommand]
     private void ClearTasks()
     {
         SelectedScriptGroup.Projects.Clear();
         WriteScriptGroup(SelectedScriptGroup);
     }
+
     private void UpdateTasks()
     {
         //PromptDialog.Prompt
-       // SelectedScriptGroup.Projects.Clear();
-       // WriteScriptGroup(SelectedScriptGroup);
+        // SelectedScriptGroup.Projects.Clear();
+        // WriteScriptGroup(SelectedScriptGroup);
     }
-    
+
     [RelayCommand]
     public void OnRenameScriptGroup(ScriptGroup? item)
     {
@@ -867,14 +869,23 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
             _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", selectedGroups.Select(x => x.Name)));
 
-            RunnerContext.Instance.IsContinuousRunGroup = true;
-            foreach (var scriptGroup in selectedGroups)
+            try
             {
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
-                await Task.Delay(2000);
+                RunnerContext.Instance.IsContinuousRunGroup = true;
+                foreach (var scriptGroup in selectedGroups)
+                {
+                    await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
+                    await Task.Delay(2000);
+                }
             }
-
-            RunnerContext.Instance.Reset();
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
+            finally
+            {
+                RunnerContext.Instance.Reset();
+            }
         }
     }
 }

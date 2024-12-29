@@ -274,7 +274,7 @@
                 </Grid>
 
 
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -298,7 +298,7 @@
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.MaskWindowConfig.UseSubform, Mode=TwoWay}" />
-                </Grid>
+                </Grid>-->
             </StackPanel>
         </ui:CardExpander>
 
