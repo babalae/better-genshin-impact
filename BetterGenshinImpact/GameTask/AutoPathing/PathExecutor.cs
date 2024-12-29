@@ -202,7 +202,11 @@ public class PathExecutor
                 catch (NormalEndException normalEndException)
                 {
                     Logger.LogInformation(normalEndException.Message);
-                    break;
+                    throw;
+                }
+                catch (TaskCanceledException e)
+                {
+                    throw;
                 }
                 catch (RetryException retryException)
                 {
@@ -216,7 +220,6 @@ public class PathExecutor
                     StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
-
                 finally
                 {
                     // 不管咋样，松开所有按键

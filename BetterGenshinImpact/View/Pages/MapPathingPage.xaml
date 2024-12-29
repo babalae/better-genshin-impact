@@ -43,7 +43,7 @@
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       TextWrapping="Wrap">
-            可以实现自动采集、自动挖矿（开发中）、自动锄地（开发中）等功能。请在调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+            可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                 点击查看地图追踪与录制使用教程
             </Hyperlink>
         </ui:TextBlock>

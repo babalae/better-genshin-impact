@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -45,60 +46,71 @@ public partial class ScriptService : IScriptService
             {
                 _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
             }
+
             _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
         }
 
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
 
         await new TaskRunner(timerOperation)
-           .RunThreadAsync(async () =>
-           {
-               var stopwatch = new Stopwatch();
+            .RunThreadAsync(async () =>
+            {
+                var stopwatch = new Stopwatch();
 
-               foreach (var project in list)
-               {
-                   if (project.Status != "Enabled")
-                   {
-                       _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
-                       continue;
-                   }
-                   if (CancellationContext.Instance.Cts.IsCancellationRequested)
-                   {
-                       _logger.LogInformation("执行被取消");
-                       break;
-                   }
+                foreach (var project in list)
+                {
+                    if (project.Status != "Enabled")
+                    {
+                        _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
+                        continue;
+                    }
 
-                   for (var i = 0; i < project.RunNum; i++)
-                   {
-                       try
-                       {
-                           if (hasTimer)
-                           {
-                               TaskTriggerDispatcher.Instance().ClearTriggers();
-                           }
+                    if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("执行被取消");
+                        break;
+                    }
 
-                           _logger.LogInformation("------------------------------");
+                    for (var i = 0; i < project.RunNum; i++)
+                    {
+                        try
+                        {
+                            if (hasTimer)
+                            {
+                                TaskTriggerDispatcher.Instance().ClearTriggers();
+                            }
 
-                           stopwatch.Reset();
-                           stopwatch.Start();
-                           await ExecuteProject(project);
-                       }
-                       catch (Exception e)
-                       {
-                           _logger.LogDebug(e, "执行脚本时发生异常");
-                           _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
-                       }
-                       finally
-                       {
-                           stopwatch.Stop();
-                           _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
-                           _logger.LogInformation("------------------------------");
-                       }
+                            _logger.LogInformation("------------------------------");
 
-                       await Task.Delay(2000);
-                   }
-               }
-           });
+                            stopwatch.Reset();
+                            stopwatch.Start();
+                            await ExecuteProject(project);
+                        }
+                        catch (NormalEndException e)
+                        {
+                            throw;
+                        }
+                        catch (TaskCanceledException e)
+                        {
+                            _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
+                            throw;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogDebug(e, "执行脚本时发生异常");
+                            _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                        }
+                        finally
+                        {
+                            stopwatch.Stop();
+                            _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
+                            _logger.LogInformation("------------------------------");
+                        }
+
+                        await Task.Delay(2000);
+                    }
+                }
+            });
 
         if (!string.IsNullOrEmpty(groupName))
         {
@@ -131,6 +143,7 @@ public partial class ScriptService : IScriptService
                 hasTimer = true;
             }
         }
+
         return list;
     }
 
@@ -153,6 +166,7 @@ public partial class ScriptService : IScriptService
                 jsProjects.Add(project.Project);
             }
         }
+
         return jsProjects;
     }
 
@@ -199,8 +213,8 @@ public partial class ScriptService : IScriptService
 
     [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
     private static partial Regex DispatcherAddTimerRegex();
-    
-    
+
+
     public static async Task StartGameTask()
     {
         // 没启动时候，启动截图器

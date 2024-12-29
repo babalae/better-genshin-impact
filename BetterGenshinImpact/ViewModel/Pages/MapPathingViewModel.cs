@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
@@ -105,7 +106,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
     }
 
     [RelayCommand]
-    public async void OnStart()
+    public async Task OnStart()
     {
         var item = SelectNode;
         if (item == null)
