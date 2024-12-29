@@ -66,7 +66,7 @@ public class FfmpegRecorder : IVideoRecorder
                     {
                         _startTime = match.Groups[1].Value.Replace(".", "");
                         TaskControl.Logger.LogInformation("ffmpeg录制: 视频起始时间戳 {Text}", _startTime);
-                        File.WriteAllText(Path.Combine(folderPath, $"videoStartTime.txt"), _startTime);
+                        File.WriteAllText(Path.Combine(folderPath, $"videoStartTime.txt"), _startTime + "000");
                     }
                 }
             }

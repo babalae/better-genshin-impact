@@ -41,9 +41,9 @@ public partial class CommonConfig : ObservableObject
     
     // 关闭时还原分辨率
     [ObservableProperty]
-    private bool _restoreResolutionOnExit;
+    private bool _restoreResolutionOnExit = false;
     
     // 录制工具 ffmpeg/obs
     [ObservableProperty]
-    private string _recorder = "ffmpeg";
+    private string _recorder = "obs";
 }

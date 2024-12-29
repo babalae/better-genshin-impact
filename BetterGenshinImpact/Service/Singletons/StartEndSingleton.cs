@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -28,9 +29,8 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
                 
         TouchpadSoft.Instance.CheckAndRecordStatus();
         TouchpadSoft.Instance.DisableTouchpadWhenEnabledByHotKey();
-
-
-        if (TaskContext.Instance().Config.CommonConfig.ChangeResolutionOnStart)
+        
+        if (TaskContext.Instance().Config.CommonConfig.ChangeResolutionOnStart && !RuntimeHelper.IsDebug)
         {
             // 设置DPI
             SysDpi.Instance.SetDpi();
@@ -63,7 +63,7 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
     {
         TouchpadSoft.Instance.RestoreTouchpadByHotKey();
         
-        if (TaskContext.Instance().Config.CommonConfig.RestoreResolutionOnExit)
+        if (TaskContext.Instance().Config.CommonConfig.RestoreResolutionOnExit && !RuntimeHelper.IsDebug)
         {
             ResetResolution();
             Thread.Sleep(2000);

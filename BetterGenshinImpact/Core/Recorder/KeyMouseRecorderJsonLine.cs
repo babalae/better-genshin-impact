@@ -46,7 +46,7 @@ public class KeyMouseRecorderJsonLine
     {
         var path = Global.Absolute($@"User\KeyMouseScript\{folderName}\");
 
-        DateTime startTime = DateTime.UtcNow;
+        DateTime startTime = DateTime.Now;
         // var bootTime = EnvironmentUtil.LastBootUpTime();
         // if (bootTime == null)
         // {
@@ -66,7 +66,7 @@ public class KeyMouseRecorderJsonLine
             Height = rect.Height,
             RecordDpi = TaskContext.Instance().DpiScale,
             StartTime = $"{startTime:yyyy-MM-dd HH:mm:ss:ffff}",
-            StartTimeUnixTimestamp = (startTime - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"),
+            StartTimeUnixTimestamp = (startTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"),
             SysParams =  RecordContext.Instance.SysParams
         };
         var infoJson = JsonSerializer.Serialize(Info, JsonOptions);

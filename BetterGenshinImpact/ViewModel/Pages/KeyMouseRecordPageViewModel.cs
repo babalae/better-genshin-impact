@@ -102,7 +102,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             return;
         }
 
-        if (TaskContext.Instance().Config.CommonConfig.ProcessCheckEnabled)
+        if (TaskContext.Instance().Config.CommonConfig.ProcessCheckEnabled && !RuntimeHelper.IsDebug)
         {
             try
             {
