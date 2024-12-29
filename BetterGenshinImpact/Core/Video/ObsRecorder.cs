@@ -22,11 +22,11 @@ public class ObsRecorder : IVideoRecorder
 
     private DateTime _lastRecordTime = DateTime.MinValue;
 
-    private readonly string _fileName;
 
-    public ObsRecorder(string fileName)
+    public string FileName { get; set; }
+
+    public ObsRecorder()
     {
-        _fileName = fileName;
         // 判断 OBS 是否已经启动
         if (Process.GetProcessesByName("obs64").Length == 0)
         {
@@ -140,6 +140,7 @@ public class ObsRecorder : IVideoRecorder
         }
     }
 
+
     private void MoveFile(string name)
     {
         Task.Run(() =>
@@ -147,7 +148,7 @@ public class ObsRecorder : IVideoRecorder
             try
             {
                 var videoPath = Global.Absolute($@"video\{name}");
-                var folderPath = Global.Absolute($@"User\KeyMouseScript\{_fileName}\");
+                var folderPath = Global.Absolute($@"User\KeyMouseScript\{FileName}\");
                 if (File.Exists(videoPath))
                 {
                     int i = 0;

@@ -7,4 +7,6 @@ public interface IVideoRecorder : IDisposable
     public bool Start();
     
     public void Stop();
+    
+    string FileName { get; set; }
 }

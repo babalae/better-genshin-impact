@@ -23,18 +23,19 @@ public class FfmpegRecorder : IVideoRecorder
 
     private readonly string _filePath;
     private string _startTime = string.Empty;
+    
+    public string FileName { get; set; }
 
-    private readonly string _fileName;
 
     public FfmpegRecorder(string fileName)
     {
-        _fileName = fileName;
+        FileName = fileName;
         if (!File.Exists(FfmpegPath))
         {
             throw new Exception("ffmpeg.exe不存在");
         }
 
-        var folderPath = Global.Absolute($@"User\KeyMouseScript\{fileName}\");
+        var folderPath = Global.Absolute($@"User\KeyMouseScript\{FileName}\");
         Directory.CreateDirectory(folderPath);
         _filePath = Path.Combine(folderPath, "%Y_%m_%d_%H_%M_%S.mp4");
         var processInfo = new ProcessStartInfo
@@ -117,7 +118,7 @@ public class FfmpegRecorder : IVideoRecorder
             // if (File.Exists(_filePath))
             // {
             //     // 重命名文件
-            //     var newFilePath = Global.Absolute($@"User\KeyMouseScript\{_fileName}_{_startTime}.mp4");
+            //     var newFilePath = Global.Absolute($@"User\KeyMouseScript\{_FileName}_{_startTime}.mp4");
             //     File.Move(_filePath, newFilePath);
             //     TaskControl.Logger.LogInformation("ffmpeg录制: {Text}", $"录制完成");
             // }
@@ -132,6 +133,7 @@ public class FfmpegRecorder : IVideoRecorder
             TaskControl.Logger.LogError("ffmpeg录制: 停止时异常：{Text}", e.Message);
         }
     }
+
 
     public void Dispose()
     {
