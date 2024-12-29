@@ -136,7 +136,6 @@ public class ObsRecorder : IVideoRecorder
             TaskControl.Logger.LogInformation("OBS: 文件存储在 {Path}", name);
 
             MoveFile(name);
-
         }
     }
 
@@ -161,18 +160,17 @@ public class ObsRecorder : IVideoRecorder
                         }
                         else
                         {
-                            var targetPath = Path.Combine(folderPath, Path.GetFileName(videoPath));
+                            var targetPath = Path.Combine(folderPath, "video" + Path.GetExtension(videoPath));
                             File.Move(videoPath, targetPath);
                             TaskControl.Logger.LogInformation("OBS: 录制结果文件已移动到 {Path}", targetPath);
                             break;
                         }
                     }
-                    
+
                     if (i == 10)
                     {
                         TaskControl.Logger.LogError("未能移动录制结果文件，文件可能被占用，请手动移动，文件路径: {Path}", videoPath);
                     }
-
                 }
                 else
                 {
@@ -186,9 +184,8 @@ public class ObsRecorder : IVideoRecorder
                 TaskControl.Logger.LogError("移动录制结果文件时出现错误: {Error}", e.Message);
             }
         });
-
     }
-    
+
     static bool IsFileLocked(string filePath)
     {
         FileStream stream = null;
