@@ -404,11 +404,11 @@ public class AutoFightTask : ISoloTask
         if (AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance))
         {
             Logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
             return true;
         }
 
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
         Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
         _lastFightFlagTime = DateTime.Now;
         return false;
