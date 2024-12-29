@@ -170,7 +170,7 @@ public class MouseKeyMonitor
     
     private void GlobalHookMouseWheelExt(object? sender, MouseEventExtArgs e)
     {
-        Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t Delta: {2};\t System Timestamp: {3}", e.Button, e.Location, e.Delta, e.Timestamp);
+        // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t Delta: {2};\t System Timestamp: {3}", e.Button, e.Location, e.Delta, e.Timestamp);
         GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e);
     }
 

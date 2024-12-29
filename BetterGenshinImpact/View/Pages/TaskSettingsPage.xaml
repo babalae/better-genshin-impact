@@ -1052,9 +1052,12 @@
                     </ui:TextBlock>
                 </Grid>
             </ui:CardControl.Header>
-            <ui:Button Margin="0,0,36,0"
-                       Command="{Binding SwitchAutoMusicGameCommand}"
-                       Content="{Binding SwitchAutoMusicGameButtonText}" />
+            <controls:TwoStateButton Margin="0,0,36,0"
+                                     DisableCommand="{Binding StopSoloTaskCommand}"
+                                     DisableContent="停止"
+                                     EnableCommand="{Binding SwitchAutoMusicGameCommand}"
+                                     EnableContent="{Binding SwitchAutoMusicGameButtonText}"
+                                     IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
         </ui:CardControl>
 
 
