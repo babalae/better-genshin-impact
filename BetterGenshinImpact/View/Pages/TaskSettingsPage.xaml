@@ -456,6 +456,121 @@
                                 Text="{Binding Config.AutoFightConfig.TeamNames, Mode=TwoWay}"
                                 TextWrapping="Wrap" />
                 </Grid>
+
+
+                <Grid Margin="16">
+                    
+                    <ui:CardExpander Margin="0,0,0,12"
+                                     ContentPadding="0"
+                                     IsExpanded="False">
+
+                        <ui:CardExpander.Header>
+                            <Grid>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="自动检测战斗结束"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="检测到战斗已经结束的情况下，停止自动战斗功能"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding Config.AutoFightConfig.FightFinishDetectEnabled, Mode=TwoWay}" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                                            <Grid Margin="16">
+                            
+                            <ui:CardExpander Margin="0,0,0,12"
+                                             ContentPadding="0"
+                                             IsExpanded="False">
+
+                                <ui:CardExpander.Header>
+                                    <Grid>
+
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="Body"
+                                                      Text="更快检查结束战斗"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                      TextWrapping="Wrap" />
+                                        <ui:ToggleSwitch Grid.Row="0"
+                                                         Grid.RowSpan="2"
+                                                         Grid.Column="1"
+                                                         Margin="0,0,36,0"
+                                                         IsChecked="{Binding Config.AutoFightConfig.FinishDetectConfig.FastCheckEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                    </ui:CardExpander.Header>
+                                        <StackPanel>
+                                            <Grid Margin="16">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ui:TextBlock Grid.Row="0"
+                                                              Grid.Column="0"
+                                                              FontTypography="Body"
+                                                              Text="更快检查结束战斗参数"
+                                                              TextWrapping="Wrap" />
+                                                <ui:TextBlock Grid.Row="1"
+                                                              Grid.Column="0"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                              TextWrapping="Wrap" />
+                                                <ui:TextBox Grid.Row="0"
+                                                            Grid.RowSpan="2"
+                                                            Grid.Column="1"
+                                                            MinWidth="180"
+                                                            MaxWidth="800"
+                                                            Margin="0,0,36,0"
+                                                            Text="{Binding Config.AutoFightConfig.FinishDetectConfig.FastCheckParams, Mode=TwoWay}"
+                                                            TextWrapping="Wrap" />
+                                            </Grid>
+                                             </StackPanel>
+                                    </ui:CardExpander>
+                                </Grid>
+
+                            </Grid>
+    
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -468,18 +583,73 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动检测战斗结束"
+                                  Text="检查战斗结束的延时"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="检测到战斗已经结束的情况下，停止自动战斗功能"
+                                  Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
                                   TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.AutoFightConfig.FightFinishDetectEnabled, Mode=TwoWay}" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="120"
+                                Text="{Binding Config.AutoFightConfig.FinishDetectConfig.CheckEndDelay}" />
+                </Grid>            
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="战斗结束基准色"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                     Grid.Column="0"
+                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                     Text="判断战斗结束读条颜色，默认为95,235,255，一般无需修改"
+                                     TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                   Grid.RowSpan="2"
+                                   Grid.Column="1"
+                                   MinWidth="120"
+                                   Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                     Grid.Column="0"
+                                     FontTypography="Body"
+                                     Text="战斗结束基准色偏差值"
+                                     TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                     Grid.Column="0"
+                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                     Text="对于战斗结束基准色的偏差值，即±某个值（默认为6），例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置"
+                                     TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                   Grid.RowSpan="2"
+                                   Grid.Column="1"
+                                   MinWidth="120"
+                                   Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance}" />
+                </Grid>
+                            
+                        </StackPanel>
+                        </ui:CardExpander>
+                    
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -498,13 +668,38 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在战斗结束检测启用的情况下才会生效"
+                                  Text=""
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.AutoFightConfig.PickDropsAfterFightEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="战斗结束后，如果存在枫原万叶，则使用该角色捡材料"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text=""
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -531,56 +726,8 @@
                                    MinWidth="120"
                                    Text="{Binding Config.AutoFightConfig.Timeout}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                     Grid.Column="0"
-                                     FontTypography="Body"
-                                     Text="战斗结束基准色"
-                                     TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                     Grid.Column="0"
-                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                     Text="判断战斗结束读条颜色，默认为95,235,255，一般无需修改"
-                                     TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                   Grid.RowSpan="2"
-                                   Grid.Column="1"
-                                   MinWidth="120"
-                                   Text="{Binding Config.AutoFightConfig.BattleEndProgressBarColor}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                     Grid.Column="0"
-                                     FontTypography="Body"
-                                     Text="战斗结束基准色偏差值"
-                                     TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                     Grid.Column="0"
-                                     Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                     Text="对于战斗结束基准色的偏差值，即±某个值（默认为6），例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置"
-                                     TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                   Grid.RowSpan="2"
-                                   Grid.Column="1"
-                                   MinWidth="120"
-                                   Text="{Binding Config.AutoFightConfig.BattleEndProgressBarColorTolerance}" />
-                </Grid>
+                
+
             </StackPanel>
         </ui:CardExpander>
 
