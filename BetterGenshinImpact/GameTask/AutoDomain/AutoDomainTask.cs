@@ -75,6 +75,37 @@ public class AutoDomainTask : ISoloTask
         Init();
         NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
 
+        // 3次复活重试
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                await DoDomain();
+            }
+            catch (Exception e)
+            {
+                if (e.Message.Contains("复活") && !string.IsNullOrEmpty(_taskParam.DomainName))
+                {
+                    Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
+                    await Delay(2000, ct);
+                    continue;
+                }
+            }
+            // 其他场景不重试
+            break;
+        }
+        
+
+
+        await Delay(2000, ct);
+        await Bv.WaitForMainUi(_ct, 30);
+        await Delay(2000, ct);
+
+        await ArtifactSalvage();
+    }
+
+    private async Task DoDomain()
+    {
         // 传送到秘境
         await TpDomain();
         // 切换队伍
@@ -133,12 +164,6 @@ public class AutoDomainTask : ISoloTask
 
             NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
         }
-
-        await Delay(2000, ct);
-        await Bv.WaitForMainUi(_ct, 30);
-        await Delay(2000, ct);
-
-        await ArtifactSalvage();
     }
 
     private void Init()
