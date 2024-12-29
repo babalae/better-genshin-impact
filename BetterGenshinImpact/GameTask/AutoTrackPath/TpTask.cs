@@ -41,6 +41,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
+    /// <param name="initialZoomLevel">地图缩放等级</param>
     public async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false, int initialZoomLevel = 4)
     {
         var (x, y) = (tpX, tpY);
@@ -62,7 +63,7 @@ public class TpTask(CancellationToken ct)
         {
             await AdjustMapZoomLevel(true);
             currentZoomLevel--;
-            Logger.LogInformation($"缩放等级过大，调整为{currentZoomLevel}。");
+            Logger.LogInformation("当前缩放等级过大，调整为{currentZoomLevel}。", currentZoomLevel);
         }
         while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y) || currentZoomLevel > 2.5) // 左上角 350x400也属于禁止点击区域
         {
@@ -159,10 +160,16 @@ public class TpTask(CancellationToken ct)
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
             await Delay(1000, ct);
             ra1 = CaptureToRectArea();
+            for (int i = 0; i < 3; i++)
+            {
+                if (!Bv.IsInBigMapUi(ra1))
+                {
+                    await Delay(500, ct);
+                    ra1 = CaptureToRectArea();
+                }
+            }
         }        
-        currentZoomLevel = GetBigMapZoomLevel(ra1);
-        Logger.LogInformation($"当前缩放等级为{currentZoomLevel:F}，地图移动过程中不要操作鼠标中键。");
-        
+
         for (var i = 0; i < 3; i++)
         {
             try

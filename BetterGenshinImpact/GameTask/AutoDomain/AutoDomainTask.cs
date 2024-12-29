@@ -81,6 +81,8 @@ public class AutoDomainTask : ISoloTask
             try
             {
                 await DoDomain();
+                // 其他场景不重试
+                break;
             }
             catch (Exception e)
             {
@@ -90,9 +92,11 @@ public class AutoDomainTask : ISoloTask
                     await Delay(2000, ct);
                     continue;
                 }
+                else
+                {
+                    throw;
+                }
             }
-            // 其他场景不重试
-            break;
         }
         
 
