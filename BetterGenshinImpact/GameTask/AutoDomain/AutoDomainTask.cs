@@ -336,7 +336,7 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.Keyboard.KeyUp(VK.VK_SHIFT);
                 }
             }
-        }));
+        }), _ct);
     }
 
     private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)

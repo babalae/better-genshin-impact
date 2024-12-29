@@ -952,7 +952,7 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardExpander Margin="0,0,0,12"
+        <!--<ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
                                                        Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -1024,13 +1024,11 @@
                                 TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
-        </ui:CardExpander>
+        </ui:CardExpander>-->
 
         <!--  活动音游（限时，已失效）  -->
         <ui:CardControl Margin="0,0,0,12"
-                        Icon="{ui:SymbolIcon MusicNote224}"
-                        Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
-                                                      Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Icon="{ui:SymbolIcon MusicNote224}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -1040,7 +1038,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="活动音游（限时，已失效）"
+                                  Text="自动音游"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
