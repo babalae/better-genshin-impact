@@ -161,7 +161,7 @@ public class TpTask(CancellationToken ct)
             ra1 = CaptureToRectArea();
         }        
         currentZoomLevel = GetBigMapZoomLevel(ra1);
-        Logger.LogInformation($"当前缩放等级为{currentZoomLevel}，地图移动过程中不要操作鼠标中键。");
+        Logger.LogInformation($"当前缩放等级为{currentZoomLevel:F}，地图移动过程中不要操作鼠标中键。");
         
         for (var i = 0; i < 3; i++)
         {
