@@ -202,11 +202,25 @@ public class PathExecutor
                 catch (NormalEndException normalEndException)
                 {
                     Logger.LogInformation(normalEndException.Message);
-                    throw;
+                    if (RunnerContext.Instance.IsContinuousRunGroup)
+                    {
+                        throw;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 catch (TaskCanceledException e)
                 {
-                    throw;
+                    if (RunnerContext.Instance.IsContinuousRunGroup)
+                    {
+                        throw;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 catch (RetryException retryException)
                 {
