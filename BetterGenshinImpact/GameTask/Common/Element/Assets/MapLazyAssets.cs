@@ -42,7 +42,7 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
         TpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new System.Exception("tp.json deserialize failed");
         
         // 取出秘境 description=Domain
-        foreach (var tp in TpPositions.Where(tp => tp.Description == "Domain"))
+        foreach (var tp in TpPositions.Where(tp => (tp.Description == "材料本"|| tp.Description == "圣遗物本")))
         {
             DomainPositionMap[tp.Name] = tp;
             DomainNameList.Add(tp.Name);
