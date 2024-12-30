@@ -12,6 +12,7 @@ using System.IO;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.View;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -49,6 +50,19 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     public void OnRefreshMaskSettings()
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+    }
+    
+    [RelayCommand]
+    private void OnSwitchMaskEnabled()
+    {
+        // if (Config.MaskWindowConfig.MaskEnabled)
+        // {
+        //     MaskWindow.Instance().Show();
+        // }
+        // else
+        // {
+        //     MaskWindow.Instance().Hide();
+        // }
     }
 
     [RelayCommand]
