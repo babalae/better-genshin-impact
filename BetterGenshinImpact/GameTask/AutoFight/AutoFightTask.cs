@@ -78,7 +78,7 @@ public class AutoFightTask : ISoloTask
                 // 如果是纯数字部分
                 if (double.TryParse(trimmedSegment, NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
                 {
-                    checkTime = number * 1000; // 更新 CheckTime
+                    checkTime = number; // 更新 CheckTime
                 }
                 else if (!uniqueNames.Contains(trimmedSegment)) // 如果是非数字且不重复
                 {
@@ -239,15 +239,16 @@ public class AutoFightTask : ISoloTask
                         
                         if (!fightEndFlag  && _taskParam is { FightFinishDetectEnabled: true } )
                         {
-                            
+
                             //处于最后一个位置，或者当前执行人和下一个人名字不一样的情况，满足一定条件(开启快速检查，并且检查时间大于0或人名存在配置)检查战斗
                             if (i==combatCommands.Count - 1 
-                                || ((
+                                || (
                                     _finishDetectConfig.FastCheckEnabled  && command.Name!=combatCommands[i+1].Name &&
-                                        (_finishDetectConfig.CheckTime>0 && checkFightFinishStopwatch.Elapsed>checkFightFinishTime)
-                                     ||  _finishDetectConfig.CheckNames.Contains(command.Name)   
-                                    ) ))
+                                        ((_finishDetectConfig.CheckTime>0 && checkFightFinishStopwatch.Elapsed>checkFightFinishTime)
+                                     ||  _finishDetectConfig.CheckNames.Contains(command.Name))   
+                                     ))
                             {
+                                
                                 checkFightFinishStopwatch.Restart();
                                 var delayTime = _finishDetectConfig.DelayTime;
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
@@ -260,6 +261,10 @@ public class AutoFightTask : ISoloTask
                                     Logger.LogInformation($"延时检查为{delayTime}毫秒");
                                 }
 
+                                /*if (i<combatCommands.Count - 1)
+                                {
+                                    Logger.LogInformation($"{command.Name}下一个人为{combatCommands[i+1].Name}毫秒");
+                                }*/
                                 fightEndFlag = await CheckFightFinish(delayTime);
                             }
                         }
@@ -324,14 +329,25 @@ public class AutoFightTask : ISoloTask
             var kazuha = combatScenes.Avatars.FirstOrDefault(a => a.Name == "枫原万叶");
             if (kazuha != null)
             {
-                Logger.LogInformation("使用枫原万叶长E拾取掉落物");
-                var time = DateTime.UtcNow -  kazuha.LastSkillTime;
-                if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
-                {
-                    Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s",time.TotalSeconds);
-                    await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
-                }
-                kazuha.UseSkill(true);
+                    Logger.LogInformation("使用枫原万叶长E拾取掉落物");
+                    await Delay(300, ct);
+                    if (kazuha.TrySwitch())
+                    {
+                        
+                        var time = DateTime.UtcNow -  kazuha.LastSkillTime;
+                        if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
+                        {
+                            Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s",time.TotalSeconds);
+                            await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
+                        }
+                        kazuha.UseSkill(true);
+                        await Task.Delay(100);
+                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        await Delay(1500, ct);
+                    }
+
+
+
             }
         }
 
