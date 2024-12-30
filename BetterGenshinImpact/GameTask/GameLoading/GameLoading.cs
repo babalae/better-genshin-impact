@@ -5,6 +5,7 @@ using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
@@ -92,6 +93,7 @@ public class GameLoadingTrigger : ITaskTrigger
         var ysRa = content.CaptureRectArea.Find(ElementAssets.Instance.PrimogemRo);
         if (!ysRa.IsEmpty())
         {
+            GameCaptureRegion.GameRegion1080PPosMove(10,10);
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             Debug.WriteLine("[GameLoading] 跳过原石");
             return;
