@@ -213,7 +213,7 @@ public class AutoFightTask : ISoloTask
             return;
         }*/
         var fightEndFlag = false;
-
+        string lastFighttName = "";
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -234,9 +234,9 @@ public class AutoFightTask : ISoloTask
                         }
 
                         command.Execute(combatScenes);
-                        
 
-                        
+
+                        lastFighttName = command.Name;
                         if (!fightEndFlag  && _taskParam is { FightFinishDetectEnabled: true } )
                         {
 
@@ -329,23 +329,31 @@ public class AutoFightTask : ISoloTask
             var kazuha = combatScenes.Avatars.FirstOrDefault(a => a.Name == "枫原万叶");
             if (kazuha != null)
             {
+                var time = DateTime.UtcNow -  kazuha.LastSkillTime;
+                //当万叶最后一个出招，并且cd大于3时，此时不再触发万叶拾取
+                if (!(lastFighttName== "枫原万叶" && time.TotalSeconds>3))
+                {
+                
                     Logger.LogInformation("使用枫原万叶长E拾取掉落物");
                     await Delay(300, ct);
                     if (kazuha.TrySwitch())
                     {
-                        
-                        var time = DateTime.UtcNow -  kazuha.LastSkillTime;
-                        if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
-                        {
-                            Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s",time.TotalSeconds);
-                            await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
-                        }
-                        kazuha.UseSkill(true);
-                        await Task.Delay(100);
-                        Simulation.SendInput.Mouse.LeftButtonClick();
-                        await Delay(1500, ct);
+                            if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
+                            {
+                                Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s",time.TotalSeconds);
+                                await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
+                            }
+                            kazuha.UseSkill(true);
+                            await Task.Delay(100);
+                            Simulation.SendInput.Mouse.LeftButtonClick();
+                            await Delay(1500, ct);
+                       
                     }
-
+                }
+                else
+                {
+                    Logger.LogInformation("最后一次由万叶出招，不再重复拾取！");
+                }
 
 
             }
