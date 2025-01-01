@@ -4,7 +4,6 @@ using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
@@ -16,7 +15,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 {
     public string Name => "自动音游";
 
-    
+
     // private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     // {
     //     [User32.VK.VK_A] = 417,
@@ -29,7 +28,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
     //
     // private readonly int _keyY = 916;
 
-    
+
     private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     {
         [User32.VK.VK_A] = 417,
@@ -39,17 +38,22 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         [User32.VK.VK_K] = 1277,
         [User32.VK.VK_L] = 1493
     };
-    
+
     private readonly int _keyY = 921;
 
     private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
 
     public async Task Start(CancellationToken ct)
     {
+        Init();
+        await StartWithOutInit(ct);
+    }
+
+    public async Task StartWithOutInit(CancellationToken ct)
+    {
         try
         {
-            Init();
-
+            Logger.LogInformation("开始自动演奏");
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // var taskFactory = new TaskFactory();
             var taskList = new List<Task>();
@@ -69,6 +73,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         finally
         {
             Simulation.ReleaseAllKey();
+            Logger.LogInformation("结束自动演奏");
         }
     }
 
@@ -231,12 +236,12 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         Simulation.SendInput.Keyboard.KeyDown(key);
     }
 
-    private void Init()
+    public static void Init()
     {
         LogScreenResolution();
     }
 
-    private void LogScreenResolution()
+    public static void LogScreenResolution()
     {
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)

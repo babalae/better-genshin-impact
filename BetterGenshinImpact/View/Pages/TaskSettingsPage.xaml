@@ -1176,7 +1176,7 @@
             </StackPanel>
         </ui:CardExpander>-->
 
-        <!--  活动音游（限时，已失效）  -->
+        <!--  自动音游  -->
         <ui:CardControl Margin="0,0,0,12"
                         Icon="{ui:SymbolIcon MusicNote224}">
             <ui:CardControl.Header>
@@ -1188,7 +1188,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动音游"
+                                  Text="自动音游（千音雅集）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -1208,6 +1208,42 @@
                                      EnableCommand="{Binding SwitchAutoMusicGameCommand}"
                                      EnableContent="{Binding SwitchAutoMusicGameButtonText}"
                                      IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
+        </ui:CardControl>
+        
+        <!--  自动音游专辑  -->
+        <ui:CardControl Margin="0,0,0,12">
+            <ui:CardControl.Icon>
+                <ui:FontIcon Glyph="&#xf89f;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="全自动完成专辑下所有乐曲（千音雅集）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        进入专辑界面使用，自动演奏未完成乐曲 -
+                        <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
+                    </ui:TextBlock>
+                </Grid>
+            </ui:CardControl.Header>
+            <controls:TwoStateButton Margin="0,0,36,0"
+                                     DisableCommand="{Binding StopSoloTaskCommand}"
+                                     DisableContent="停止"
+                                     EnableCommand="{Binding SwitchAutoAlbumCommand}"
+                                     EnableContent="{Binding SwitchAutoAlbumButtonText}"
+                                     IsChecked="{Binding SwitchAutoAlbumEnabled}" />
         </ui:CardControl>
 
 
