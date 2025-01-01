@@ -12,9 +12,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Service;
 
@@ -64,13 +68,45 @@ public partial class ScriptService : IScriptService
                         _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
                         continue;
                     }
-
+                  
+                    
                     if (CancellationContext.Instance.Cts.IsCancellationRequested)
                     {
                         _logger.LogInformation("执行被取消");
                         break;
                     }
-
+                    
+                    var uictFlag = true;
+                    var unknownInterfaceCheckingTask = Task.Run(async () =>
+                    {
+                        if (project.GroupInfo.Config.PathingConfig.Enabled && project.GroupInfo.Config.PathingConfig.CloseUnknownInterfaceCheck)
+                        {
+                            _logger.LogInformation("开始未知界面检查");
+                            while (uictFlag && !CancellationContext.Instance.Cts.IsCancellationRequested)
+                            {
+                                ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
+                                var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
+                                if (cookRa.IsExist())
+                                {
+                                    _logger.LogInformation("检查到烹饪界面，使用ESC关闭界面");
+                                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                                }
+                            
+                                for (int i = 0; i < 5; i++)
+                                {
+                                    if (!uictFlag || CancellationContext.Instance.Cts.IsCancellationRequested)
+                                    {
+                                        break;
+                                    }
+                                    await Task.Delay(1000,CancellationContext.Instance.Cts.Token);
+                                }
+                          
+                            }
+                            _logger.LogInformation("关闭未知界面检查");
+                        }
+                    },CancellationContext.Instance.Cts.Token);
+                    
+                    
                     for (var i = 0; i < project.RunNum; i++)
                     {
                         try
@@ -85,6 +121,7 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
+ 
                         }
                         catch (NormalEndException e)
                         {
@@ -107,8 +144,17 @@ public partial class ScriptService : IScriptService
                             _logger.LogInformation("------------------------------");
                         }
 
+                        if (i == project.RunNum - 1)
+                        {
+                            uictFlag = false;
+                        }
+
                         await Task.Delay(2000);
                     }
+
+                    await Task.WhenAll(unknownInterfaceCheckingTask);
+                    
+                    
                 }
             });
 

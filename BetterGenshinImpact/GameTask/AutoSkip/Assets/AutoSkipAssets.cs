@@ -36,7 +36,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 
     public RecognitionObject HangoutUnselectedRo;
     public RecognitionObject HangoutSkipRo;
-
+    public RecognitionObject CookRo;
     private AutoSkipAssets()
     {
         StopAutoButtonRo = new RecognitionObject
@@ -47,7 +47,14 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
-
+        CookRo = new RecognitionObject
+        {
+            Name = "OptionIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "cook.png"),
+            RegionOfInterest = OptionRoi,
+            DrawOnWindow = false
+        }.InitTemplate();
         // ChatReviewButtonRo = new RecognitionObject
         // {
         //     Name = "ChatReviewButton",
