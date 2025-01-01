@@ -353,7 +353,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
     
     [RelayCommand]
-    public void OnOpenLocalScriptRepo()
+    public void OnOpenLocalScriptRepo() 
     {
         _autoFightViewModel.OnOpenLocalScriptRepo();
     }

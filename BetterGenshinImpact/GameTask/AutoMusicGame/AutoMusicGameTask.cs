@@ -4,6 +4,7 @@ using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
@@ -18,14 +19,14 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
     private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
     {
         [User32.VK.VK_A] = 417,
-        [User32.VK.VK_S] = 632,
-        [User32.VK.VK_D] = 846,
-        [User32.VK.VK_J] = 1065,
-        [User32.VK.VK_K] = 1282,
-        [User32.VK.VK_L] = 1500
+        [User32.VK.VK_S] = 628,
+        [User32.VK.VK_D] = 844,
+        [User32.VK.VK_J] = 1061,
+        [User32.VK.VK_K] = 1277,
+        [User32.VK.VK_L] = 1493
     };
 
-    private readonly int _keyY = 916;
+    private readonly int _keyY = 921;
 
     private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
 
@@ -44,18 +45,18 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         {
             var (x, y) = gameCaptureRegion.ConvertPositionToGameCaptureRegion((int)(keyValuePair.Value * assetScale), (int)(_keyY * assetScale));
             // 添加任务
-            taskList.Add(taskFactory.StartNew(() => DoWhitePressWin32(ct, keyValuePair.Key, new Point(x, y))));
+            taskList.Add(taskFactory.StartNew(async () => await DoWhitePressWin32(ct, keyValuePair.Key, new Point(x, y)), ct));
         }
 
-        Task.WaitAll([.. taskList]);
+        Task.WaitAll([.. taskList], ct);
         return Task.CompletedTask;
     }
 
-    private void DoWhitePressWin32(CancellationToken ct, User32.VK key, Point point)
+    private async Task DoWhitePressWin32(CancellationToken ct, User32.VK key, Point point)
     {
         while (!ct.IsCancellationRequested)
         {
-            Thread.Sleep(10);
+            await Task.Delay(5, ct);
             // Stopwatch sw = new();
             // sw.Start();
             var hdc = User32.GetDC(_hWnd);
@@ -67,7 +68,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
                 KeyDown(key);
                 while (!ct.IsCancellationRequested)
                 {
-                    Thread.Sleep(10);
+                    await Task.Delay(5, ct);
                     hdc = User32.GetDC(_hWnd);
                     c = Gdi32.GetPixel(hdc, point.X, point.Y);
                     Gdi32.DeleteDC(hdc);
@@ -76,6 +77,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
                         break;
                     }
                 }
+
                 KeyUp(key);
             }
 
