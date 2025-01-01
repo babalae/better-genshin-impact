@@ -98,7 +98,6 @@ public class AutoDomainTask : ISoloTask
                 }
             }
         }
-        
 
 
         await Delay(2000, ct);
@@ -221,15 +220,37 @@ public class AutoDomainTask : ISoloTask
                 await Delay(1000, _ct);
                 await Bv.WaitForMainUi(_ct);
                 await Delay(1000, _ct);
-                var walkKey = User32.VK.VK_W;
-                if (MapLazyAssets.Instance.DomainBackwardList.Contains(_taskParam.DomainName))
-                {
-                    walkKey = User32.VK.VK_S;
-                }
 
-                Simulation.SendInput.Keyboard.KeyDown(walkKey);
-                Thread.Sleep(3500);
-                Simulation.SendInput.Keyboard.KeyUp(walkKey);
+                if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
+                {
+                    Simulation.SendInput.Keyboard.KeyDown(VK.VK_S);
+                    Thread.Sleep(3000);
+                    Simulation.SendInput.Keyboard.KeyUp(VK.VK_S);
+                }
+                else if ("无妄引咎密宫".Equals(_taskParam.DomainName))
+                {
+                    Simulation.SendInput.Keyboard.KeyDown(VK.VK_W);
+                    Thread.Sleep(500);
+                    Simulation.SendInput.Keyboard.KeyUp(VK.VK_W);
+                    Thread.Sleep(100);
+                    Simulation.SendInput.Keyboard.KeyDown(VK.VK_A);
+                    Thread.Sleep(1600);
+                    Simulation.SendInput.Keyboard.KeyUp(VK.VK_A);
+                }
+                else if ("苍白的遗荣".Equals(_taskParam.DomainName))
+                {
+                    Simulation.SendInput.Keyboard.KeyDown(VK.VK_W);
+                    Thread.Sleep(1000);
+                    Simulation.SendInput.Keyboard.KeyUp(VK.VK_W);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyDown(VK.VK_W);
+                    Thread.Sleep(3000);
+                    Simulation.SendInput.Keyboard.KeyUp(VK.VK_W);
+                }
+                
+                await Delay(3000, _ct); // 站稳
             }
             else
             {

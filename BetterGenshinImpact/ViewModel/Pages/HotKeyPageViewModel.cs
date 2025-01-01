@@ -382,6 +382,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoDomainHotkeyType,
             (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoDomainCommand); }
         ));
+        soloTaskDirectory.Children.Add(new HotKeySettingModel(
+            "启动/停止自动音游",
+            nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
+            Config.HotKeyConfig.AutoMusicGameHotkey,
+            Config.HotKeyConfig.AutoMusicGameHotkeyType,
+            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand); }
+        ));
 
         macroDirectory.Children.Add(new HotKeySettingModel(
             "快捷点击原神内确认按钮",
@@ -515,13 +522,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             );
             HotKeySettingModels.Add(debugDirectory);
 
-            soloTaskDirectory.Children.Add(new HotKeySettingModel(
-                "启动/停止自动活动音游",
-                nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
-                Config.HotKeyConfig.AutoMusicGameHotkey,
-                Config.HotKeyConfig.AutoMusicGameHotkeyType,
-                (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand); }
-            ));
+
             // HotKeySettingModels.Add(new HotKeySettingModel(
             //     "（测试）启动/停止自动追踪",
             //     nameof(Config.HotKeyConfig.AutoTrackHotkey),
