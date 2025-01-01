@@ -24,13 +24,19 @@ public class GoToAdventurersGuildTask
 
     private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
 
-    public async Task Start(string country, CancellationToken ct)
+    public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null)
     {
         Logger.LogInformation("→ {Name} 开始", Name);
         for (int i = 0; i < _retryTimes; i++)
         {
             try
             {
+                // 如果有好感队伍名称，先切换到好感队伍
+                if (!string.IsNullOrEmpty(dailyRewardPartyName))
+                {
+                    await new SwitchPartyTask().Start(dailyRewardPartyName, ct);
+                }
+
                 await DoOnce(country, ct);
                 break;
             }

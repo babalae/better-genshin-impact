@@ -34,6 +34,11 @@ public partial class OneDragonFlowConfig : ObservableObject
 
     [ObservableProperty]
     private bool _weeklyDomainEnabled = false;
+    
+    // 领取每日奖励的好感队伍名称
+    [ObservableProperty]
+    private string _dailyRewardPartyName = string.Empty;
+
 
     #region 每周秘境配置
 
