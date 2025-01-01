@@ -239,9 +239,11 @@ public class PathExecutor
                     // 不管咋样，松开所有按键
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Mouse.RightButtonUp();
+                   
                 }
             }
         }
+        _unknownInterfaceCheckingTask = false;
     }
 
     private async Task<bool> SwitchPartyBefore(PathingTask task)
@@ -287,12 +289,55 @@ public class PathExecutor
 
         return true;
     }
+    bool _unknownInterfaceCheckingTask = false;
+    private void UnknownInterfaceCheckingTaskStart()
+    {
+        if (_partyConfig.Enabled && _partyConfig.CloseUnknownInterfaceCheck)
+        {
+            _unknownInterfaceCheckingTask = true;
+            Task.Run(async () =>
+            {
+
+                Logger.LogInformation("开始未知界面检查");
+                while (_unknownInterfaceCheckingTask && !ct.IsCancellationRequested)
+                {
+                    ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
+                    var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
+                    if (cookRa.IsExist())
+                    {
+                        //一次判断，有时候会在战斗界面都误判，再判断一次
+                        var cook2Ra = imageRegion.Find(AutoSkipAssets.Instance.Cook2Ro);
+                        if (cook2Ra.IsExist())
+                        {
+                            Logger.LogInformation("检查到烹饪界面，使用ESC关闭界面");
+                            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                        }
+                    }
+                
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (!_unknownInterfaceCheckingTask || ct.IsCancellationRequested)
+                        {
+                            break;
+                        }
+                        await Task.Delay(1000,ct);
+                    }
+              
+                }
+                Logger.LogInformation("关闭未知界面检查");
+            
+            },ct);
+        }    
+    }
+
+
 
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
+        UnknownInterfaceCheckingTaskStart();
     }
 
     private void LogScreenResolution()
