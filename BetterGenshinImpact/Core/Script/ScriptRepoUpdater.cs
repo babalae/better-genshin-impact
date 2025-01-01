@@ -451,7 +451,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             _webWindow = new WebpageWindow
             {
-                Title = "enshin Copilot Scripts | BetterGI 脚本本地中央仓库",
+                Title = "Genshin Copilot Scripts | BetterGI 脚本本地中央仓库",
                 Width = 1366,
                 Height = 768,
             };

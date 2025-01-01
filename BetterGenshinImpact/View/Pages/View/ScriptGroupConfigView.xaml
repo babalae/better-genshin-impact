@@ -358,7 +358,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="强制指定配队"
+                                      Text="强制指定配队（非特殊情况无需使用）"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
