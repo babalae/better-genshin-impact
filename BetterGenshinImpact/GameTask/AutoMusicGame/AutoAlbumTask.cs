@@ -16,6 +16,8 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
 {
     public string Name => "自动音游专辑";
 
+    private AutoMusicGameTask _autoMusicGameTask = new AutoMusicGameTask(taskParam);
+
     public async Task Start(CancellationToken ct)
     {
         try
@@ -79,13 +81,15 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             }, cts.Token);
 
             // 演奏任务
-            var musicTask = new AutoMusicGameTask(taskParam).StartWithOutInit(cts.Token);
+            var musicTask = _autoMusicGameTask.StartWithOutInit(cts.Token);
 
             // 等待任意一个任务完成
             await Task.WhenAny(checkTask, musicTask);
+            await cts.CancelAsync();
             Logger.LogInformation("当前音乐{Num}演奏结束", i + 1);
             await Delay(2000, ct);
         }
+
         Logger.LogInformation("当前专辑所有音乐演奏结束");
     }
 }
