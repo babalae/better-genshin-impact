@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Video;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Genshin.Settings;
@@ -54,6 +55,8 @@ public class StartEndSingleton : Singleton<StartEndSingleton>
                 TaskControl.Logger.LogDebug("获取PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             }
         });
+        
+        ObsRecorder.StartObs();
 
         var res = GameSettingsChecker.LoadGameSettingsAndCheck();
         // if (res != null && res.Value == false)
@@ -61,6 +64,8 @@ public class StartEndSingleton : Singleton<StartEndSingleton>
         //     // 退出
         //     Environment.Exit(0);
         // }
+        
+
     }
 
 

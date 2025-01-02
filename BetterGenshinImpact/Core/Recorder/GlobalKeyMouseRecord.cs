@@ -41,7 +41,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     private bool _paimonSwitchEnabled = false; // 是否启用派蒙切换
 
-    private string _keyMouseMacroRecordHotkey = "";
+    // private string _keyMouseMacroRecordHotkey = "";
 
     public KeyMouseRecorderStatus Status { get; set; } = KeyMouseRecorderStatus.Stop;
 
@@ -65,7 +65,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             return;
         }
 
-        _keyMouseMacroRecordHotkey = TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey;
+        // _keyMouseMacroRecordHotkey = TaskContext.Instance().Config.HotKeyConfig.KeyMouseMacroRecordHotkey;
         _paimonSwitchEnabled = TaskContext.Instance().Config.RecordConfig.PaimonSwitchEnabled;
 
         Status = KeyMouseRecorderStatus.Start;
@@ -155,10 +155,10 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     public void GlobalHookKeyDown(KeyEventArgsExt e)
     {
         // 排除热键
-        if (e.KeyCode.ToString() == _keyMouseMacroRecordHotkey)
-        {
-            return;
-        }
+        // if (e.KeyCode.ToString() == _keyMouseMacroRecordHotkey)
+        // {
+        //     return;
+        // }
 
         if (_keyDownState.TryGetValue(e.KeyCode, out var v))
         {
@@ -182,10 +182,6 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookKeyUp(KeyEventArgsExt e)
     {
-        if (e.KeyCode.ToString() == TaskContext.Instance().Config.HotKeyConfig.Test1Hotkey)
-        {
-            return;
-        }
 
         if (_keyDownState.TryGetValue(e.KeyCode, out bool state) && state)
         {

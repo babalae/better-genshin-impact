@@ -27,8 +27,22 @@ public class ObsRecorder : IVideoRecorder
 
     public ObsRecorder()
     {
+        _obs64Process = StartObs();
+
+        obs = new OBSWebsocket();
+
+        // 注册连接事件处理
+        obs.Connected += OnConnected;
+        obs.Disconnected += OnDisconnected;
+
+        Connect();
+    }
+
+    public static Process? StartObs()
+    {
         // 判断 OBS 是否已经启动
-        if (Process.GetProcessesByName("obs64").Length == 0)
+        var list = Process.GetProcessesByName("obs64");
+        if (list.Length == 0)
         {
             // 启动 OBS 并等待启动完成
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -38,27 +52,23 @@ public class ObsRecorder : IVideoRecorder
                 WorkingDirectory = Path.GetDirectoryName(ObsPath)
             };
 
-            _obs64Process = Process.Start(startInfo);
-            if (_obs64Process != null)
+            var obs64Process = Process.Start(startInfo);
+            if (obs64Process != null)
             {
-                _obs64Process.WaitForInputIdle(); // Wait for the process to be ready for input
+                obs64Process.WaitForInputIdle(); // Wait for the process to be ready for input
                 Debug.WriteLine("OBS has started and is ready for input.");
                 TaskControl.Logger.LogInformation("OBS: 启动完成");
+                return obs64Process;
             }
             else
             {
                 TaskControl.Logger.LogError("OBS: 启动失败");
                 throw new Exception("OBS启动失败");
+                return null;
             }
         }
 
-        obs = new OBSWebsocket();
-
-        // 注册连接事件处理
-        obs.Connected += OnConnected;
-        obs.Disconnected += OnDisconnected;
-
-        Connect();
+        return list[0];
     }
 
     // 连接到 OBS
