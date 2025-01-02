@@ -37,8 +37,15 @@ public class InputDataSettings
 
 public class InputDataConfig
 {
+    // 默认值2
     [JsonPropertyName("mouseSensitivity")]
     public double MouseSensitivity { get; set; }
+    
+    [JsonPropertyName("mouseSenseIndex")]
+    public int MouseSenseIndex { get; set; }
+
+    [JsonPropertyName("mouseSenseIndexY")]
+    public int MouseSenseIndexY { get; set; }
 
     [JsonPropertyName("mouseFocusSenseIndex")]
     public int MouseFocusSenseIndex { get; set; }

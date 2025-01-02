@@ -20,6 +20,7 @@ using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
 using Wpf.Ui;
@@ -193,12 +194,12 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
 
             SystemSettingsManager.RestoreSystemSettings();
             
+            var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
             
             Task.Run(() =>
             {
                 try
                 {
-                    var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
                     Directory.CreateDirectory(pcFolder);
                     // 移动PC信息
                     var src= Global.Absolute(@$"User/pc.json");
@@ -212,6 +213,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                     TaskControl.Logger.LogDebug("移动PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                 }
             });
+            
+            // 结束时检查游戏设置
+            GameSettingsChecker.LoadGameSettingsAndCheck(Path.Combine(pcFolder, "gameSettings.json"));
         }
     }
 

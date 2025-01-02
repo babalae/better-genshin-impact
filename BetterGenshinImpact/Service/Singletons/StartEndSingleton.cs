@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Genshin.Settings;
+using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
 using BetterGenshinImpact.Model;
@@ -15,32 +17,29 @@ using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service.Singletons;
 
-public class StartEndSingleton: Singleton<StartEndSingleton>
+public class StartEndSingleton : Singleton<StartEndSingleton>
 {
     private Resolution? _resolution;
-    
+
     public void OnStartup()
     {
-
     }
-    
+
     public void OnMainWindowLoad()
     {
-                
         TouchpadSoft.Instance.CheckAndRecordStatus();
         TouchpadSoft.Instance.DisableTouchpadWhenEnabledByHotKey();
-        
+
         if (TaskContext.Instance().Config.CommonConfig.ChangeResolutionOnStart && !RuntimeHelper.IsDebug)
         {
             // 设置DPI
             SysDpi.Instance.SetDpi();
-            
-            Thread.Sleep(2000);
-            
-            ChangeResolution();
 
+            Thread.Sleep(2000);
+
+            ChangeResolution();
         }
-        
+
         // 获取PC信息
         Task.Run(() =>
         {
@@ -56,13 +55,19 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
             }
         });
 
-
+        var res = GameSettingsChecker.LoadGameSettingsAndCheck();
+        // if (res != null && res.Value == false)
+        // {
+        //     // 退出
+        //     Environment.Exit(0);
+        // }
     }
-    
+
+
     public void OnExit()
     {
         TouchpadSoft.Instance.RestoreTouchpadByHotKey();
-        
+
         if (TaskContext.Instance().Config.CommonConfig.RestoreResolutionOnExit && !RuntimeHelper.IsDebug)
         {
             ResetResolution();
@@ -81,8 +86,8 @@ public class StartEndSingleton: Singleton<StartEndSingleton>
             throw;
         }
     }
-    
-    
+
+
     public void ChangeResolution()
     {
         _resolution = new Resolution();

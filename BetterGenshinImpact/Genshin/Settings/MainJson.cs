@@ -18,4 +18,10 @@ public sealed class MainJson
 
     [JsonPropertyName("_overrideControllerMapValueList")]
     public string[]? OverrideControllerMapValueList { get; set; }
+    //
+    // /// <summary>
+    // /// 亮度
+    // /// </summary>
+    // [JsonPropertyName("maxLuminosity")]
+    // public string MaxLuminosity { get; set; }
 }

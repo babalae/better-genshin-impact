@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -63,6 +64,8 @@ public class SettingsContainer
             {
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
             });
+            
+            Debug.WriteLine(Encoding.UTF8.GetString(rawCfg));
 
             if (data is null)
             {
