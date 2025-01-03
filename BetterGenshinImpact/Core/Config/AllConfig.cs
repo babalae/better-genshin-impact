@@ -165,6 +165,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public NotificationConfig NotificationConfig { get; set; } = new();
 
+    /// <summary>
+    /// 原神按键绑定配置
+    /// </summary>
+    public KeyBindingsConfig KeyBindingsConfig { get; set; } = new();
+
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -176,6 +181,7 @@ public partial class AllConfig : ObservableObject
         GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
         NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
         NotificationConfig.PropertyChanged += OnNotificationPropertyChanged;
+        KeyBindingsConfig.PropertyChanged += OnAnyPropertyChanged;
 
         AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
