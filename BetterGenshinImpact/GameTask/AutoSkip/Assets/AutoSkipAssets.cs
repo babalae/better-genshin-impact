@@ -20,7 +20,8 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
     public RecognitionObject ExclamationIconRo;
 
     public RecognitionObject PageCloseRo;
-
+    public RecognitionObject CookRo;
+    public RecognitionObject PageCloseMainRo;
     public RecognitionObject CollectRo;
     public RecognitionObject ReRo;
 
@@ -36,8 +37,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 
     public RecognitionObject HangoutUnselectedRo;
     public RecognitionObject HangoutSkipRo;
-    public RecognitionObject CookRo;
-    public RecognitionObject Cook2Ro;
+
     private AutoSkipAssets()
     {
         StopAutoButtonRo = new RecognitionObject
@@ -48,22 +48,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
-        CookRo = new RecognitionObject
-        {
-            Name = "OptionIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "cook.png"),
-            RegionOfInterest = OptionRoi,
-            DrawOnWindow = false
-        }.InitTemplate();
-        Cook2Ro = new RecognitionObject
-        {
-            Name = "OptionIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "cook2.png"),
-            RegionOfInterest = OptionRoi,
-            DrawOnWindow = false
-        }.InitTemplate();
+
         // ChatReviewButtonRo = new RecognitionObject
         // {
         //     Name = "ChatReviewButton",
@@ -133,7 +118,24 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 8, 0, CaptureRect.Width / 8, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
-
+        CookRo= new RecognitionObject
+        {
+            Name = "Cook",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "cook.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 15, 0, CaptureRect.Width / 14, CaptureRect.Height /14),
+            DrawOnWindow = true
+        }.InitTemplate();
+        PageCloseMainRo= new RecognitionObject
+        {
+            Name = "PageCloseMain",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "page_close_main.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 25, CaptureRect.Height / 14),
+            DrawOnWindow = true
+        }.InitTemplate();
+        
+        
         // 一键派遣
         CollectRo = new RecognitionObject
         {

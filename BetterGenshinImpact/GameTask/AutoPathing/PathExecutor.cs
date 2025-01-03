@@ -302,18 +302,23 @@ public class PathExecutor
                 while (_unknownInterfaceCheckingTask && !ct.IsCancellationRequested)
                 {
                     ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
+
                     var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
                     if (cookRa.IsExist())
                     {
                         //一次判断，有时候会在战斗界面都误判，再判断一次
-                        var cook2Ra = imageRegion.Find(AutoSkipAssets.Instance.Cook2Ro);
-                        if (cook2Ra.IsExist())
-                        {
-                            Logger.LogInformation("检查到烹饪界面，使用ESC关闭界面");
-                            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                        }
+                        Logger.LogInformation("检测到烹饪界面，使用ESC关闭界面");
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                     }
-                
+                    var mainRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
+                    if (mainRa2.IsExist())
+                    {
+                   
+                        Logger.LogInformation("检测到主界面，使用ESC关闭界面");
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                    }
+                    
+                    
                     for (int i = 0; i < 5; i++)
                     {
                         if (!_unknownInterfaceCheckingTask || ct.IsCancellationRequested)

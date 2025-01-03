@@ -249,7 +249,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="独立线程检查，每5秒检查一次未预期到的界面，并关掉该界面，此设置会影响调度器所有任务类型，现支持：烹饪"
+                                      Text="独立线程检查，每5秒检查一次未预期到的界面，并关掉该界面，此设置会影响路径追踪，现支持：烹饪，首页按ESC出的界面"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -286,7 +286,7 @@
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       TextWrapping="Wrap">
-                            开启此项可制定战斗配置，关闭此项，则用于独立任务中的配置
+                            需开启上方路径追踪配置，开启此项可制定战斗配置，关闭此项，则用于独立任务中的配置
                         </ui:TextBlock>
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"

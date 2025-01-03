@@ -77,7 +77,7 @@ public partial class PathingPartyConfig : ObservableObject
     private AutoFightConfig _autoFightConfig = new();
     
     [ObservableProperty]
-    private bool _closeUnknownInterfaceCheck = false;
+    private bool _closeUnknownInterfaceCheck = true;
 
     public static PathingPartyConfig BuildDefault()
     {
