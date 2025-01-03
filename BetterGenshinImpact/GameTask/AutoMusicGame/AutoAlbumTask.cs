@@ -34,25 +34,27 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
 
     public async Task StartOneAlbum(CancellationToken ct)
     {
+        using var iconRa = CaptureToRectArea().Find(AutoMusicAssets.Instance.UiLeftTopAlbumIcon);
+        if (!iconRa.IsExist())
+        {
+            throw new Exception("当前未处于专辑界面，请在专辑界面运行本任务");
+        }
+        
         // 12个音乐
         for (int i = 0; i < 13; i++)
         {
-            using var iconRa = CaptureToRectArea().Find(AutoMusicAssets.Instance.UiLeftTopAlbumIcon);
-            if (!iconRa.IsExist())
-            {
-                throw new Exception("当前未处于专辑界面，请在专辑界面运行本任务");
-            }
+
 
             using var doneRa = CaptureToRectArea().Find(AutoMusicAssets.Instance.AlbumMusicComplate);
             if (doneRa.IsExist())
             {
-                Logger.LogInformation("当前音乐{Num}所有奖励已领取，切换下一首", i + 1);
+                Logger.LogInformation("当前乐曲{Num}所有奖励已领取，切换下一首", i + 1);
                 GameCaptureRegion.GameRegion1080PPosClick(310, 220);
                 await Delay(800, ct);
                 continue;
             }
 
-            Logger.LogInformation("当前音乐{Num}存在未领取奖励，前往演奏", i + 1);
+            Logger.LogInformation("当前乐曲{Num}存在未领取奖励，前往演奏", i + 1);
             Bv.ClickWhiteConfirmButton(CaptureToRectArea());
             await Delay(800, ct);
             // 点击传说
@@ -86,10 +88,15 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             // 等待任意一个任务完成
             await Task.WhenAny(checkTask, musicTask);
             await cts.CancelAsync();
-            Logger.LogInformation("当前音乐{Num}演奏结束", i + 1);
+            Logger.LogInformation("当前乐曲{Num}演奏结束", i + 1);
             await Delay(2000, ct);
+            
+            await Bv.WaitUntilFound(AutoMusicAssets.Instance.UiLeftTopAlbumIcon, ct);
+            Logger.LogInformation("切换下一首");
+            GameCaptureRegion.GameRegion1080PPosClick(310, 220);
+            await Delay(800, ct);
         }
 
-        Logger.LogInformation("当前专辑所有音乐演奏结束");
+        Logger.LogInformation("当前专辑所有乐曲演奏结束");
     }
 }

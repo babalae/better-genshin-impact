@@ -1788,6 +1788,75 @@
         ]
     },
     {
+        "id": 1214,
+        "nameEn": "mualani",
+        "type": "character",
+        "name": "玛拉妮",
+        "hp": 10,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "cooling_treatment",
+                "name": "降温处理",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "surfshark_wavebreaker",
+                "name": "踏鲨破浪",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "boomsharkalaka",
+                "name": "爆瀑飞弹",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1301,
         "nameEn": "diluc",
         "type": "character",
@@ -3462,6 +3531,75 @@
             {
                 "nameEn": "gyoei_narukami_kariyama_rite",
                 "name": "御咏鸣神刈山祭",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 1412,
+        "nameEn": "clorinde",
+        "type": "character",
+        "name": "克洛琳德",
+        "hp": 10,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "oath_of_hunting_shadows",
+                "name": "逐影之誓",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "hunters_vigil",
+                "name": "狩夜之巡",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "last_lightfall",
+                "name": "残光将终",
                 "skillTag": [
                     "元素爆发"
                 ],
@@ -7221,6 +7359,75 @@
         ]
     },
     {
+        "id": 2603,
+        "nameEn": "golden_wolflord",
+        "type": "character",
+        "name": "黄金王兽",
+        "hp": 10,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "wolflords_strike",
+                "name": "王狼直击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "howling_riftcall",
+                "name": "兽境轰召",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "golden_cankerbind",
+                "name": "黄金侵绞",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 2701,
         "nameEn": "jadeplume_terrorshroom",
         "type": "character",
@@ -7448,75 +7655,6 @@
                     "被动技能"
                 ],
                 "cost": []
-            }
-        ]
-    },
-    {
-        "id": 4608,
-        "nameEn": "golden_wolflord",
-        "type": "character",
-        "name": "黄金王兽",
-        "hp": 40,
-        "energy": 2,
-        "element": "岩元素",
-        "weapon": "其他武器",
-        "skills": [
-            {
-                "nameEn": "wolflords_strike",
-                "name": "王狼直击",
-                "skillTag": [
-                    "普通攻击"
-                ],
-                "cost": [
-                    {
-                        "id": 1106,
-                        "nameEn": "geo",
-                        "type": "岩元素",
-                        "count": 1
-                    },
-                    {
-                        "id": 1109,
-                        "nameEn": "unaligned_element",
-                        "type": "无色元素",
-                        "count": 2
-                    }
-                ]
-            },
-            {
-                "nameEn": "howling_riftcall",
-                "name": "兽境轰召",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": [
-                    {
-                        "id": 1106,
-                        "nameEn": "geo",
-                        "type": "岩元素",
-                        "count": 3
-                    }
-                ]
-            },
-            {
-                "nameEn": "golden_cankerbind",
-                "name": "黄金侵绞",
-                "skillTag": [
-                    "元素爆发"
-                ],
-                "cost": [
-                    {
-                        "id": 1106,
-                        "nameEn": "geo",
-                        "type": "岩元素",
-                        "count": 3
-                    },
-                    {
-                        "id": 1110,
-                        "nameEn": "energy",
-                        "type": "充能",
-                        "count": 2
-                    }
-                ]
             }
         ]
     }

@@ -117,13 +117,13 @@ public class AutoDomainTask : ISoloTask
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
 
         // 前置进入秘境
-        EnterDomain();
+        await EnterDomain();
 
         for (var i = 0; i < _taskParam.DomainRoundNum; i++)
         {
             // 0. 关闭秘境提示
             Logger.LogDebug("0. 关闭秘境提示");
-            CloseDomainTip();
+            await CloseDomainTip();
 
             // 队伍没初始化成功则重试
             RetryTeamInit(combatScenes);
@@ -249,7 +249,7 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(3000);
                     Simulation.SendInput.Keyboard.KeyUp(VK.VK_W);
                 }
-                
+
                 await Delay(3000, _ct); // 站稳
             }
             else
@@ -277,7 +277,7 @@ public class AutoDomainTask : ISoloTask
         return true;
     }
 
-    private void EnterDomain()
+    private async Task EnterDomain()
     {
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
@@ -288,7 +288,7 @@ public class AutoDomainTask : ISoloTask
             Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
             Logger.LogInformation("自动秘境：{Text}", "进入秘境");
             // 秘境开门动画 5s
-            Sleep(5000, _ct);
+            await Delay(5000, _ct);
         }
 
         int retryTimes = 0, clickCount = 0;
@@ -302,14 +302,14 @@ public class AutoDomainTask : ISoloTask
                 clickCount++;
             }
 
-            Sleep(1500, _ct);
+            await Delay(1500, _ct);
         }
 
         // 载入动画
-        Sleep(3000, _ct);
+        await Delay(3000, _ct);
     }
 
-    private void CloseDomainTip()
+    private async Task CloseDomainTip()
     {
         // 2min的载入时间总够了吧
         var retryTimes = 0;
@@ -319,16 +319,16 @@ public class AutoDomainTask : ISoloTask
             using var cactRectArea = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
-                Sleep(1000, _ct);
+                await Delay(1000, _ct);
                 cactRectArea.Click();
                 break;
             }
 
             // todo 添加小地图角标位置检测 防止有人手点了
-            Sleep(1000, _ct);
+            await Delay(1000, _ct);
         }
 
-        Sleep(1500, _ct);
+        await Delay(1500, _ct);
     }
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
