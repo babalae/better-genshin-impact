@@ -306,7 +306,6 @@ public class PathExecutor
                     var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
                     if (cookRa.IsExist())
                     {
-                        //一次判断，有时候会在战斗界面都误判，再判断一次
                         Logger.LogInformation("检测到烹饪界面，使用ESC关闭界面");
                         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                     }
