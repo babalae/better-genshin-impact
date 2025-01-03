@@ -151,7 +151,7 @@ public class TpTask(CancellationToken ct)
         return (clickX, clickY);
     }
 
-    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
+    private async Task checkInBigMapUi()
     {
         // M 打开地图识别当前位置，中心点为当前位置
         var ra1 = CaptureToRectArea();
@@ -167,8 +167,14 @@ public class TpTask(CancellationToken ct)
                     await Delay(500, ct);
                 }
             }
-        }        
+        }   
+    }
 
+    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
+    {
+     
+        await checkInBigMapUi();
+        
         for (var i = 0; i < 3; i++)
         {
             try
@@ -185,6 +191,7 @@ public class TpTask(CancellationToken ct)
             }
             catch (Exception e)
             {
+                await checkInBigMapUi();
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
                 Logger.LogDebug(e, "传送失败，重试 {I} 次", i + 1);
             }

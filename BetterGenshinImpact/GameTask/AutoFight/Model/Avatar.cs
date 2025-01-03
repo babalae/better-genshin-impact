@@ -11,6 +11,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
@@ -122,7 +123,7 @@ public class Avatar
             var tpTask = new TpTask(Ct);
             tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true).Wait(Ct);
 
-            throw new Exception("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }
     }
 
