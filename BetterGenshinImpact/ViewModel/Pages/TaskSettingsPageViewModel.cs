@@ -39,8 +39,8 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
 
-   // [ObservableProperty]
-   // private string[] _strategyList;
+    // [ObservableProperty]
+    // private string[] _strategyList;
 
     [ObservableProperty]
     private bool _switchAutoGeniusInvokationEnabled;
@@ -83,12 +83,18 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     [ObservableProperty]
     private string _switchAutoTrackPathButtonText = "启动";
-    
+
     [ObservableProperty]
     private bool _switchAutoMusicGameEnabled;
 
     [ObservableProperty]
     private string _switchAutoMusicGameButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoAlbumEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoAlbumButtonText = "启动";
 
     [ObservableProperty]
     private List<string> _domainNameList;
@@ -110,8 +116,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
         _domainNameList = MapLazyAssets.Instance.DomainNameList;
-        _autoFightViewModel=new AutoFightViewModel(Config);
-
+        _autoFightViewModel = new AutoFightViewModel(Config);
     }
 
     [RelayCommand]
@@ -264,7 +269,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public void OnOpenFightFolder()
     {
-       _autoFightViewModel?.OnOpenFightFolder();
+        _autoFightViewModel?.OnOpenFightFolder();
     }
 
     [Obsolete]
@@ -351,7 +356,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/music.html"));
     }
-    
+
+    [RelayCommand]
+    public async Task OnSwitchAutoAlbum()
+    {
+        SwitchAutoAlbumEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
+        SwitchAutoAlbumEnabled = false;
+    }
+
     [RelayCommand]
     public void OnOpenLocalScriptRepo()
     {
