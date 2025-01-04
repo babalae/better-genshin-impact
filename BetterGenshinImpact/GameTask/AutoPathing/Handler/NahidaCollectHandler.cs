@@ -55,7 +55,7 @@ public class NahidaCollectHandler : IActionHandler
         await Delay(200, ct);
 
         // 按住E技能 无死角扫码
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_E);
+        Simulation.SendInput.Keyboard.KeyDown(TaskContext.Instance().Config.KeyBindingsConfig.ElementalSkill.ToVK());
         await Delay(200, ct);
 
         // 先地面来一圈
@@ -77,7 +77,7 @@ public class NahidaCollectHandler : IActionHandler
             Simulation.SendInput.Mouse.MoveMouseBy(x, y);
             await Delay(30, ct);
         }
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_E);
+        Simulation.SendInput.Keyboard.KeyUp(TaskContext.Instance().Config.KeyBindingsConfig.ElementalSkill.ToVK());
 
         lastETime = DateTime.Now;
 
