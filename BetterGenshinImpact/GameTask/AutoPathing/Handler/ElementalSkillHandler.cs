@@ -19,7 +19,7 @@ public class ElementalSkillHandler : IActionHandler
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行 {Text}", "释放元素战技");
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_E);
+        Simulation.SendInput.Keyboard.KeyPress(TaskContext.Instance().Config.KeyBindingsConfig.ElementalSkill.ToVK()) ;
         await Delay(1000, ct);
     }
 }
