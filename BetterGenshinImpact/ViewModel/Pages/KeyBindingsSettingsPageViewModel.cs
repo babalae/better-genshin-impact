@@ -380,7 +380,7 @@ public partial class KeyBindingsSettingsPageViewModel : ObservableObject, INavig
                     {
                         continue;
                     }
-                    var key = keyId.ToVK();
+                    var key = KeyIdConverter.FromVK(keyId.ToVK());
                     switch (item.ActionId)
                     {
                         case ActionId.MoveForwardShow:
@@ -408,7 +408,7 @@ public partial class KeyBindingsSettingsPageViewModel : ObservableObject, INavig
                             _config.ElementalBurst = key;
                             break;
                         case ActionId.Sprint:
-                            if (key >= VK.VK_LBUTTON && key <= VK.VK_XBUTTON2)
+                            if (key >= KeyId.MouseLeftButton && key <= KeyId.MouseSideButton2)
                             {
                                 _config.SprintMouse = key;
                             }

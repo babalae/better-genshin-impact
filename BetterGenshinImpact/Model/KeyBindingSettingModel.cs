@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Model;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace Model
         /// 按键绑定值
         /// </summary>
         [ObservableProperty]
-        private VK _keyValue;
+        private KeyId _keyValue;
 
         [ObservableProperty]
         private ObservableCollection<KeyBindingSettingModel> _children = [];
@@ -38,7 +39,7 @@ namespace Model
             ActionName = name;
         }
 
-        public KeyBindingSettingModel(string actionName,  string configPropertyName, VK keyValue)
+        public KeyBindingSettingModel(string actionName,  string configPropertyName, KeyId keyValue)
         {
             ActionName = actionName;
             ConfigPropertyName = configPropertyName;

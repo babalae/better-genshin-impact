@@ -83,12 +83,12 @@ public class AutoDomainTask : ISoloTask
     {
         // 从KeyBindingsConfig中读取配置
         var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
-        _moveForwardKey = keyConfig.MoveForward;
-        _moveBackwardKey = keyConfig.MoveBackward;
-        _movLeftKey = keyConfig.MoveLeft;
-        _moveRightKey = keyConfig.MoveRight;
-        _sprintKey = keyConfig.SprintKeyboard;
-        _useGadgetKey = keyConfig.QuickUseGadget;
+        _moveForwardKey = keyConfig.MoveForward.ToVK();
+        _moveBackwardKey = keyConfig.MoveBackward.ToVK();
+        _movLeftKey = keyConfig.MoveLeft.ToVK();
+        _moveRightKey = keyConfig.MoveRight.ToVK();
+        _sprintKey = keyConfig.SprintKeyboard.ToVK();
+        _useGadgetKey = keyConfig.QuickUseGadget.ToVK();
 
         _ct = ct;
 

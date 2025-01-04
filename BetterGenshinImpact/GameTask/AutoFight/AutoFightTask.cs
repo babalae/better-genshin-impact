@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using Vanara;
 using Vanara.PInvoke;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -191,8 +192,8 @@ public class AutoFightTask : ISoloTask
     {
         // 从KeyBindingsConfig中读取配置
         var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
-        _partySetupKey = keyConfig.OpenPartySetupScreen;
-        _dropKey = keyConfig.Drop;
+        _partySetupKey = keyConfig.OpenPartySetupScreen.ToVK();
+        _dropKey = keyConfig.Drop.ToVK();
 
         _ct = ct;
 
