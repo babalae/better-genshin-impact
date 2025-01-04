@@ -66,7 +66,8 @@ public class KeyMouseRecorderJsonLine
             Width = rect.Width,
             Height = rect.Height,
             RecordDpi = TaskContext.Instance().DpiScale,
-            SysParams = RecordContext.Instance.SysParams
+            SysParams = RecordContext.Instance.SysParams,
+            BgiVersion = Global.Version
         };
 
         _consumerTask = Task.Run(async () => await ConsumeEventsAsync(_path));
