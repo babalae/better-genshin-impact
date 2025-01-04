@@ -119,7 +119,7 @@ public class MouseKeyMonitor
         // 热键松开事件
         HotKeyUp(sender, e);
 
-        if (e.KeyCode == Keys.Space)
+        if (e.KeyCode == _releaseControlKey)
         {
             if (_firstSpaceKeyDownTime != DateTime.MaxValue)
             {
@@ -129,7 +129,7 @@ public class MouseKeyMonitor
                 _spaceTimer.Stop();
             }
         }
-        else if (e.KeyCode == Keys.F)
+        else if (e.KeyCode == _pickUpKey)
         {
             if (_firstFKeyDownTime != DateTime.MaxValue)
             {
