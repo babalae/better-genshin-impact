@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -89,36 +90,6 @@ public class Avatar
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
 
-    /* 按键配置 - 开始*/
-    // NOTE: 该模块的普攻、冲刺不支持改键
-
-    private User32.VK _moveForwardKey = User32.VK.VK_W;
-
-    private User32.VK _moveBackwardKey = User32.VK.VK_S;
-
-    private User32.VK _moveLeftKey = User32.VK.VK_A;
-
-    private User32.VK _moveRightKey = User32.VK.VK_D;
-
-    private User32.VK _elementalSkillKey = User32.VK.VK_E;
-
-    private User32.VK _elementalBurstKey = User32.VK.VK_Q;
-
-    private User32.VK _jumpKey = User32.VK.VK_SPACE;
-
-    private User32.VK _openMapKey = User32.VK.VK_M;
-
-    private User32.VK _switchMember1Key = User32.VK.VK_1;
-
-    private User32.VK _switchMember2Key = User32.VK.VK_2;
-
-    private User32.VK _switchMember3Key = User32.VK.VK_3;
-
-    private User32.VK _switchMember4Key = User32.VK.VK_4;
-
-    private User32.VK _switchMember5Key = User32.VK.VK_5;
-
-    /* 按键配置 - 结束*/
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect)
     {
@@ -126,22 +97,6 @@ public class Avatar
         Name = name;
         Index = index;
         NameRect = nameRect;
-
-        // 加载按键配置
-        var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
-        _moveForwardKey = keyConfig.MoveForward.ToVK();
-        _moveBackwardKey = keyConfig.MoveBackward.ToVK();
-        _moveLeftKey = keyConfig.MoveLeft.ToVK();
-        _moveRightKey = keyConfig.MoveRight.ToVK();
-        _elementalSkillKey = keyConfig.ElementalSkill.ToVK();
-        _elementalBurstKey = keyConfig.ElementalBurst.ToVK();
-        _jumpKey = keyConfig.Jump.ToVK();
-        _openMapKey = keyConfig.OpenMap.ToVK();
-        _switchMember1Key = keyConfig.SwitchMember1.ToVK();
-        _switchMember2Key = keyConfig.SwitchMember2.ToVK();
-        _switchMember3Key = keyConfig.SwitchMember3.ToVK();
-        _switchMember4Key = keyConfig.SwitchMember4.ToVK();
-        _switchMember5Key = keyConfig.SwitchMember5.ToVK();
 
         var ca = DefaultAutoFightConfig.CombatAvatarMap[name];
         NameEn = ca.NameEn;
@@ -165,7 +120,7 @@ public class Avatar
             // 先打开地图
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);    // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, Ct);
-            Simulation.SendInput.Keyboard.KeyPress(_openMapKey);
+            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
             // tp 到七天神像复活
             var tpTask = new TpTask(Ct);
             tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true).Wait(Ct);
@@ -196,28 +151,26 @@ public class Avatar
                 return;
             }
 
-            User32.VK switchKey = User32.VK.VK_NONAME;
             switch (Index)
             {
                 case 1:
-                    switchKey = _switchMember1Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember1);
                     break;
                 case 2:
-                    switchKey = _switchMember2Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember2);
                     break;
                 case 3:
-                    switchKey = _switchMember3Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember3);
                     break;
                 case 4:
-                    switchKey = _switchMember4Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember4);
                     break;
                 case 5:
-                    switchKey = _switchMember5Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember5);
                     break;
                 default:
                     break;
             }
-            AutoFightContext.Instance.Simulator.KeyPress(switchKey);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -253,28 +206,26 @@ public class Avatar
                 return true;
             }
 
-            User32.VK switchKey = User32.VK.VK_NONAME;
             switch (Index)
             {
                 case 1:
-                    switchKey = _switchMember1Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember1);
                     break;
                 case 2:
-                    switchKey = _switchMember2Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember2);
                     break;
                 case 3:
-                    switchKey = _switchMember3Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember3);
                     break;
                 case 4:
-                    switchKey = _switchMember4Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember4);
                     break;
                 case 5:
-                    switchKey = _switchMember5Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember5);
                     break;
                 default:
                     break;
             }
-            AutoFightContext.Instance.Simulator.KeyPress(switchKey);
 
             Sleep(250, Ct);
         }
@@ -299,28 +250,26 @@ public class Avatar
                 return;
             }
 
-            User32.VK switchKey = User32.VK.VK_NONAME;
             switch (Index)
             {
                 case 1:
-                    switchKey = _switchMember1Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember1);
                     break;
                 case 2:
-                    switchKey = _switchMember2Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember2);
                     break;
                 case 3:
-                    switchKey = _switchMember3Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember3);
                     break;
                 case 4:
-                    switchKey = _switchMember4Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember4);
                     break;
                 case 5:
-                    switchKey = _switchMember5Key;
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember5);
                     break;
                 default:
                     break;
             }
-            AutoFightContext.Instance.Simulator.KeyPress(switchKey);
             Sleep(250);
         }
     }
@@ -415,7 +364,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.LeftButtonClick();
+            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack);
             ms -= 200;
             Sleep(200, Ct);
         }
@@ -437,7 +386,7 @@ public class Avatar
             {
                 if (Name == "纳西妲")
                 {
-                    AutoFightContext.Instance.Simulator.KeyDown(_elementalSkillKey);
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Sleep(300, Ct);
                     for (int j = 0; j < 10; j++)
                     {
@@ -446,22 +395,22 @@ public class Avatar
                     }
 
                     Sleep(300); // 持续操作不应该被cts取消
-                    AutoFightContext.Instance.Simulator.KeyUp(_elementalSkillKey);
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                 }
                 else if (Name == "坎蒂丝")
                 {
-                    AutoFightContext.Instance.Simulator.KeyDown(_elementalSkillKey);
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Thread.Sleep(3000);
-                    AutoFightContext.Instance.Simulator.KeyUp(_elementalSkillKey);
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                 }
                 else
                 {
-                    AutoFightContext.Instance.Simulator.LongKeyPress(_elementalSkillKey);
+                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
                 }
             }
             else
             {
-                AutoFightContext.Instance.Simulator.KeyPress(_elementalSkillKey);
+                AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyPress);
             }
 
             Sleep(200, Ct);
@@ -505,7 +454,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.KeyPress(_elementalBurstKey);
+            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalBurst);
             Sleep(200, Ct);
 
             var region = CaptureToRectArea();
@@ -560,9 +509,9 @@ public class Avatar
             ms = 200;
         }
 
-        AutoFightContext.Instance.Simulator.RightButtonDown();
+        AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
         Sleep(ms); // 冲刺不能被cts取消
-        AutoFightContext.Instance.Simulator.RightButtonUp();
+        AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
     }
 
     public void Walk(string key, int ms)
@@ -575,19 +524,19 @@ public class Avatar
         User32.VK vk = User32.VK.VK_NONAME;
         if (key == "w")
         {
-            vk = _moveForwardKey;
+            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveForward).ToVK();
         }
         else if (key == "s")
         {
-            vk = _moveBackwardKey;
+            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveBackward).ToVK();
         }
         else if (key == "a")
         {
-            vk = _moveLeftKey;
+            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveLeft).ToVK();
         }
         else if (key == "d")
         {
-            vk = _moveRightKey;
+            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveRight).ToVK();
         }
 
         if (vk == User32.VK.VK_NONAME)
@@ -624,7 +573,7 @@ public class Avatar
     /// </summary>
     public void Jump()
     {
-        AutoFightContext.Instance.Simulator.KeyPress(_jumpKey);
+        AutoFightContext.Instance.Simulator.SimulateAction(GIActions.Jump);
     }
 
     /// <summary>
@@ -640,7 +589,7 @@ public class Avatar
         if (Name == "那维莱特")
         {
             var dpi = TaskContext.Instance().DpiScale;
-            AutoFightContext.Instance.Simulator.LeftButtonDown();
+            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
             while (ms >= 0)
             {
                 if (Ct is { IsCancellationRequested: true })
@@ -653,13 +602,13 @@ public class Avatar
                 Sleep(50); // 持续操作不应该被cts取消
             }
 
-            AutoFightContext.Instance.Simulator.LeftButtonUp();
+            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
         else
         {
-            AutoFightContext.Instance.Simulator.LeftButtonDown();
+            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
             Sleep(ms); // 持续操作不应该被cts取消
-            AutoFightContext.Instance.Simulator.LeftButtonUp();
+            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
     }
 
