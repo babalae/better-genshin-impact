@@ -279,7 +279,7 @@ namespace BetterGenshinImpact.Core.Config
         /// 打开队伍配置界面
         /// </summary>
         [ObservableProperty]
-        private VK _openPartySetupScreen = VK.VK_I;
+        private VK _openPartySetupScreen = VK.VK_L;
 
         /// <summary>
         /// 打开好友界面
