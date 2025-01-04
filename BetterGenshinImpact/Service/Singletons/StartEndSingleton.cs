@@ -12,6 +12,7 @@ using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
+using BetterGenshinImpact.Helpers.Upload;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -64,7 +65,7 @@ public class StartEndSingleton : Singleton<StartEndSingleton>
         //     // 退出
         //     Environment.Exit(0);
         // }
-        
+        TosClientHelper.Instance.Test(Global.Absolute(@$"User/config.json"));
 
     }
 
