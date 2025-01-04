@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recorder;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model;
@@ -18,12 +19,20 @@ public class MouseKeyMonitor
     /// </summary>
     private readonly Timer _fTimer = new();
 
+    private Keys _pickUpKey = Keys.F;
+
+    private User32.VK _pickUpKeyCode = User32.VK.VK_F;
+
     //private readonly Random _random = new();
 
     /// <summary>
     ///     长按空格变空格连发
     /// </summary>
     private readonly Timer _spaceTimer = new();
+
+    private Keys _releaseControlKey = Keys.Space;
+
+    private User32.VK _releaseControlKeyCode = User32.VK.VK_SPACE;
 
     private DateTime _firstFKeyDownTime = DateTime.MaxValue;
 
@@ -49,14 +58,19 @@ public class MouseKeyMonitor
         _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
+        _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
+        _pickUpKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToVK();
+        _releaseControlKey = TaskContext.Instance().Config.KeyBindingsConfig.Jump.ToWinFormKeys();
+        _releaseControlKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.Jump.ToVK();
+
         _firstSpaceKeyDownTime = DateTime.MaxValue;
         var si = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
         _spaceTimer.Interval = si;
-        _spaceTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_SPACE); };
+        _spaceTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(_releaseControlKeyCode); };
 
         var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
         _fTimer.Interval = fi;
-        _fTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(User32.VK.VK_F); };
+        _fTimer.Elapsed += (sender, args) => { Simulation.PostMessage(_hWnd).KeyPress(_pickUpKeyCode); };
     }
 
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
@@ -67,7 +81,7 @@ public class MouseKeyMonitor
         // 热键按下事件
         HotKeyDown(sender, e);
 
-        if (e.KeyCode == Keys.Space)
+        if (e.KeyCode == _releaseControlKey)
         {
             if (_firstSpaceKeyDownTime == DateTime.MaxValue)
             {
@@ -81,7 +95,7 @@ public class MouseKeyMonitor
                         _spaceTimer.Start();
             }
         }
-        else if (e.KeyCode == Keys.F)
+        else if (e.KeyCode == _pickUpKey)
         {
             if (_firstFKeyDownTime == DateTime.MaxValue)
             {

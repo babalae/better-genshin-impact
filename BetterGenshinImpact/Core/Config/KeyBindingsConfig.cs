@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Windows.Forms;
 using System.Windows.Input;
+using Windows.Networking.PushNotifications;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -490,6 +492,22 @@ public static class KeyIdConverter
         };
     }
 
+    /// <summary>
+    /// [实验] 将KeyId转换为WinForm中的Keys（用于兼容按键连发功能）
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static Keys ToWinFormKeys(this KeyId value)
+    {
+        try
+        {
+            return Enum.Parse<Keys>(value.ToInputKey().ToString());
+        }
+        catch
+        {
+            return default;
+        }
+    }
 
     /// <summary>
     /// 将VK转换为KeyId
