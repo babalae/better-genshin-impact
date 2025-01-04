@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,7 @@ public class NahidaCollectHandler : IActionHandler
         await Delay(200, ct);
 
         // 按住E技能 无死角扫码
-        Simulation.SendInput.Keyboard.KeyDown(TaskContext.Instance().Config.KeyBindingsConfig.ElementalSkill.ToVK());
+        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
         await Delay(200, ct);
 
         // 先地面来一圈
@@ -77,7 +78,7 @@ public class NahidaCollectHandler : IActionHandler
             Simulation.SendInput.Mouse.MoveMouseBy(x, y);
             await Delay(30, ct);
         }
-        Simulation.SendInput.Keyboard.KeyUp(TaskContext.Instance().Config.KeyBindingsConfig.ElementalSkill.ToVK());
+        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
 
         lastETime = DateTime.Now;
 
