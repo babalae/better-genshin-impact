@@ -92,7 +92,7 @@ public class KeyBindingTextBox:TextBox
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {
-        Text = "等待键入...";
+        Text = "等待按键...";
         base.OnGotFocus(e);
     }
 
