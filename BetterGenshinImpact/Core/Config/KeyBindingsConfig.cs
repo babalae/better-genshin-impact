@@ -498,7 +498,7 @@ public static class KeyIdConverter
     /// <returns></returns>
     public static KeyId FromVK(VK value)
     {
-        // 尝试通过VK的值获取KeyId的枚举名，若成功，表示对应的VK在KeyId支持的范围内，直接转换，否则返回Unknown
+        // 尝试通过VK的值获取KeyId的枚举名。若成功，表示对应的VK在KeyId支持的范围内，直接转换；否则返回Unknown
         return string.IsNullOrEmpty(Enum.GetName(typeof(KeyId), value)) ? KeyId.Unknown : (KeyId)value;
     }
 
