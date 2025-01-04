@@ -172,7 +172,8 @@ public class Simulation2
             GIActions.ShowCursor => KeyConfig.ShowCursor,
             GIActions.OpenPartySetupScreen => KeyConfig.OpenPartySetupScreen,
             GIActions.OpenFriendsScreen => KeyConfig.OpenFriendsScreen,
-            GIActions.HideUI => KeyConfig.HideUI,            _ => default,
+            GIActions.HideUI => KeyConfig.HideUI,
+            _ => default,
         };
     }
 
