@@ -317,7 +317,7 @@ public static class KeyIdConverter
         {
             // 需要单独翻译的按键
             KeyId.None => "<未指定>",
-            KeyId.UnKnow => "<未知>",
+            KeyId.Unknown => "<未知>",
             KeyId.MouseLeftButton => "鼠标左键",
             KeyId.MouseRightButton => "鼠标右键",
             KeyId.MouseMiddleButton => "鼠标中键",
@@ -345,7 +345,7 @@ public static class KeyIdConverter
         {
             // 需要转换的部分
             KeyId.None => "<None>",
-            KeyId.UnKnow => "<Unknown>",
+            KeyId.Unknown => "<Unknown>",
             KeyId.MouseLeftButton => "Mouse LButton",
             KeyId.MouseRightButton => "Mouse RButton",
             KeyId.MouseMiddleButton => "Mouse MButton",
@@ -423,7 +423,7 @@ public static class KeyIdConverter
         {
             // 这两个值在VK中没有，抛异常
             KeyId.None => throw new ArgumentOutOfRangeException(nameof(value), "未指定按键，无法转换为VK。"),
-            KeyId.UnKnow => throw new ArgumentOutOfRangeException(nameof(value), "未知按键，无法转换为VK。"),
+            KeyId.Unknown => throw new ArgumentOutOfRangeException(nameof(value), "未知按键，无法转换为VK。"),
             // 剩下的值相同，直接转
             _ => (VK)value,
         };
@@ -499,7 +499,7 @@ public static class KeyIdConverter
     public static KeyId FromVK(VK value)
     {
         // 尝试通过VK的值获取KeyId的枚举名，若成功，表示对应的VK在KeyId支持的范围内，直接转换，否则返回Unknown
-        return string.IsNullOrEmpty(Enum.GetName(typeof(KeyId), value)) ? KeyId.UnKnow : (KeyId)value;
+        return string.IsNullOrEmpty(Enum.GetName(typeof(KeyId), value)) ? KeyId.Unknown : (KeyId)value;
     }
 
     /// <summary>
@@ -539,7 +539,7 @@ public static class KeyIdConverter
                 Key.Back => KeyId.Backspace,
                 Key.Capital => KeyId.CapsLock,
                 // 支持列表外的值返回Unknown
-                _ => KeyId.UnKnow,
+                _ => KeyId.Unknown,
             };
         }
     }
@@ -558,7 +558,7 @@ public static class KeyIdConverter
             MouseButton.Middle => KeyId.MouseMiddleButton,
             MouseButton.XButton1 => KeyId.MouseSideButton1,
             MouseButton.XButton2 => KeyId.MouseSideButton2,
-            _ => KeyId.UnKnow,
+            _ => KeyId.Unknown,
         };
     }
 
@@ -573,7 +573,7 @@ public enum KeyId
     None = 0x00,
 
     /// <summary>未知按键</summary>
-    UnKnow = 0xFF,
+    Unknown = 0xFF,
 
     #region 鼠标按键
 
