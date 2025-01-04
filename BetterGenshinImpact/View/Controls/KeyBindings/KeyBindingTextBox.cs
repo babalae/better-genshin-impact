@@ -110,7 +110,7 @@ public class KeyBindingTextBox:TextBox
             VK.VK_OEM_7 => "'",
             VK.VK_OEM_COMMA => ",",
             VK.VK_OEM_MINUS => "-",
-            VK.VK_OEM_PLUS => "+",
+            VK.VK_OEM_PLUS => "=",
             VK.VK_OEM_PERIOD => ".",
             VK.VK_OEM_2 => "/",
             VK.VK_0 => "0",
