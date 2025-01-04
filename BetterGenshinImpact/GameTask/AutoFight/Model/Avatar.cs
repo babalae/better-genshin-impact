@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -88,12 +89,59 @@ public class Avatar
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
 
+    /* 按键配置 - 开始*/
+    // NOTE: 该模块的普攻、冲刺不支持改键
+
+    private User32.VK _moveForwardKey = User32.VK.VK_W;
+
+    private User32.VK _moveBackwardKey = User32.VK.VK_S;
+
+    private User32.VK _moveLeftKey = User32.VK.VK_A;
+
+    private User32.VK _moveRightKey = User32.VK.VK_D;
+
+    private User32.VK _elementalSkillKey = User32.VK.VK_E;
+
+    private User32.VK _elementalBurstKey = User32.VK.VK_Q;
+
+    private User32.VK _jumpKey = User32.VK.VK_SPACE;
+
+    private User32.VK _openMapKey = User32.VK.VK_M;
+
+    private User32.VK _switchMember1Key = User32.VK.VK_1;
+
+    private User32.VK _switchMember2Key = User32.VK.VK_2;
+
+    private User32.VK _switchMember3Key = User32.VK.VK_3;
+
+    private User32.VK _switchMember4Key = User32.VK.VK_4;
+
+    private User32.VK _switchMember5Key = User32.VK.VK_5;
+
+    /* 按键配置 - 结束*/
+
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect)
     {
         CombatScenes = combatScenes;
         Name = name;
         Index = index;
         NameRect = nameRect;
+
+        // 加载按键配置
+        var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
+        _moveForwardKey = keyConfig.MoveForward.ToVK();
+        _moveBackwardKey = keyConfig.MoveBackward.ToVK();
+        _moveLeftKey = keyConfig.MoveLeft.ToVK();
+        _moveRightKey = keyConfig.MoveRight.ToVK();
+        _elementalSkillKey = keyConfig.ElementalSkill.ToVK();
+        _elementalBurstKey = keyConfig.ElementalBurst.ToVK();
+        _jumpKey = keyConfig.Jump.ToVK();
+        _openMapKey = keyConfig.OpenMap.ToVK();
+        _switchMember1Key = keyConfig.SwitchMember1.ToVK();
+        _switchMember2Key = keyConfig.SwitchMember2.ToVK();
+        _switchMember3Key = keyConfig.SwitchMember3.ToVK();
+        _switchMember4Key = keyConfig.SwitchMember4.ToVK();
+        _switchMember5Key = keyConfig.SwitchMember5.ToVK();
 
         var ca = DefaultAutoFightConfig.CombatAvatarMap[name];
         NameEn = ca.NameEn;
@@ -115,9 +163,9 @@ public class Avatar
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);    // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, Ct);
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
+            Simulation.SendInput.Keyboard.KeyPress(_openMapKey);
             // tp 到七天神像复活
             var tpTask = new TpTask(Ct);
             tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true).Wait(Ct);
@@ -148,7 +196,28 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            User32.VK switchKey = User32.VK.VK_NONAME;
+            switch (Index)
+            {
+                case 1:
+                    switchKey = _switchMember1Key;
+                    break;
+                case 2:
+                    switchKey = _switchMember2Key;
+                    break;
+                case 3:
+                    switchKey = _switchMember3Key;
+                    break;
+                case 4:
+                    switchKey = _switchMember4Key;
+                    break;
+                case 5:
+                    switchKey = _switchMember5Key;
+                    break;
+                default:
+                    break;
+            }
+            AutoFightContext.Instance.Simulator.KeyPress(switchKey);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -184,7 +253,28 @@ public class Avatar
                 return true;
             }
 
-            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            User32.VK switchKey = User32.VK.VK_NONAME;
+            switch (Index)
+            {
+                case 1:
+                    switchKey = _switchMember1Key;
+                    break;
+                case 2:
+                    switchKey = _switchMember2Key;
+                    break;
+                case 3:
+                    switchKey = _switchMember3Key;
+                    break;
+                case 4:
+                    switchKey = _switchMember4Key;
+                    break;
+                case 5:
+                    switchKey = _switchMember5Key;
+                    break;
+                default:
+                    break;
+            }
+            AutoFightContext.Instance.Simulator.KeyPress(switchKey);
 
             Sleep(250, Ct);
         }
@@ -209,7 +299,28 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+            User32.VK switchKey = User32.VK.VK_NONAME;
+            switch (Index)
+            {
+                case 1:
+                    switchKey = _switchMember1Key;
+                    break;
+                case 2:
+                    switchKey = _switchMember2Key;
+                    break;
+                case 3:
+                    switchKey = _switchMember3Key;
+                    break;
+                case 4:
+                    switchKey = _switchMember4Key;
+                    break;
+                case 5:
+                    switchKey = _switchMember5Key;
+                    break;
+                default:
+                    break;
+            }
+            AutoFightContext.Instance.Simulator.KeyPress(switchKey);
             Sleep(250);
         }
     }
@@ -326,7 +437,7 @@ public class Avatar
             {
                 if (Name == "纳西妲")
                 {
-                    AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.KeyDown(_elementalSkillKey);
                     Sleep(300, Ct);
                     for (int j = 0; j < 10; j++)
                     {
@@ -335,22 +446,22 @@ public class Avatar
                     }
 
                     Sleep(300); // 持续操作不应该被cts取消
-                    AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.KeyUp(_elementalSkillKey);
                 }
                 else if (Name == "坎蒂丝")
                 {
-                    AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.KeyDown(_elementalSkillKey);
                     Thread.Sleep(3000);
-                    AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.KeyUp(_elementalSkillKey);
                 }
                 else
                 {
-                    AutoFightContext.Instance.Simulator.LongKeyPress(User32.VK.VK_E);
+                    AutoFightContext.Instance.Simulator.LongKeyPress(_elementalSkillKey);
                 }
             }
             else
             {
-                AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_E);
+                AutoFightContext.Instance.Simulator.KeyPress(_elementalSkillKey);
             }
 
             Sleep(200, Ct);
@@ -394,7 +505,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
+            AutoFightContext.Instance.Simulator.KeyPress(_elementalBurstKey);
             Sleep(200, Ct);
 
             var region = CaptureToRectArea();
@@ -464,19 +575,19 @@ public class Avatar
         User32.VK vk = User32.VK.VK_NONAME;
         if (key == "w")
         {
-            vk = User32.VK.VK_W;
+            vk = _moveForwardKey;
         }
         else if (key == "s")
         {
-            vk = User32.VK.VK_S;
+            vk = _moveBackwardKey;
         }
         else if (key == "a")
         {
-            vk = User32.VK.VK_A;
+            vk = _moveLeftKey;
         }
         else if (key == "d")
         {
-            vk = User32.VK.VK_D;
+            vk = _moveRightKey;
         }
 
         if (vk == User32.VK.VK_NONAME)
@@ -513,7 +624,7 @@ public class Avatar
     /// </summary>
     public void Jump()
     {
-        AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_SPACE);
+        AutoFightContext.Instance.Simulator.KeyPress(_jumpKey);
     }
 
     /// <summary>
