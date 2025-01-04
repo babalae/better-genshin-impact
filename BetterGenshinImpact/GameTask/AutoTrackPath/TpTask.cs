@@ -157,6 +157,12 @@ public class TpTask(CancellationToken ct)
         var ra1 = CaptureToRectArea();
         if (!Bv.IsInBigMapUi(ra1))
         {
+            while (!Bv.IsInMainUi(ra1))
+            {
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(1000, ct);
+                ra1 = CaptureToRectArea();
+            }
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
             await Delay(1000, ct);
             for (int i = 0; i < 3; i++)
