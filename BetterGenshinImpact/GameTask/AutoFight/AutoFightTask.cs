@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -37,10 +38,6 @@ public class AutoFightTask : ISoloTask
     private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
-
-    private User32.VK _partySetupKey = User32.VK.VK_L;
-
-    private User32.VK _dropKey = User32.VK.VK_X;
 
 
     private class TaskFightFinishDetectConfig
@@ -192,8 +189,6 @@ public class AutoFightTask : ISoloTask
     {
         // 从KeyBindingsConfig中读取配置
         var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
-        _partySetupKey = keyConfig.OpenPartySetupScreen.ToVK();
-        _dropKey = keyConfig.Drop.ToVK();
 
         _ct = ct;
 
@@ -355,7 +350,7 @@ public class AutoFightTask : ISoloTask
                             }
                             kazuha.UseSkill(true);
                             await Task.Delay(100);
-                            Simulation.SendInput.Mouse.LeftButtonClick();
+                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
                             await Delay(1500, ct);
                        
                     }
@@ -430,7 +425,7 @@ public class AutoFightTask : ISoloTask
         await Delay(delayTime, _ct);
         Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束
-        Simulation.SendInput.Keyboard.KeyPress(_partySetupKey);
+        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(450, _ct);
         var ra = CaptureToRectArea();
         var b3 = ra.SrcMat.At<Vec3b>(50, 790);
@@ -438,11 +433,11 @@ public class AutoFightTask : ISoloTask
         if (AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance))
         {
             Logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.Keyboard.KeyPress(_dropKey);
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
             return true;
         }
 
-        Simulation.SendInput.Keyboard.KeyPress(_dropKey);
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
         Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
         _lastFightFlagTime = DateTime.Now;
         return false;
