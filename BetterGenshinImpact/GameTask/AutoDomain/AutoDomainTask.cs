@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -52,18 +53,6 @@ public class AutoDomainTask : ISoloTask
 
     private CancellationToken _ct;
 
-    private VK _moveForwardKey = VK.VK_W;
-
-    private VK _moveBackwardKey = VK.VK_S;
-
-    private VK _movLeftKey = VK.VK_A;
-
-    private VK _moveRightKey = VK.VK_D;
-
-    private VK _sprintKey = VK.VK_SHIFT;
-
-    private VK _useGadgetKey = VK.VK_Z;
-
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
@@ -83,12 +72,6 @@ public class AutoDomainTask : ISoloTask
     {
         // 从KeyBindingsConfig中读取配置
         var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
-        _moveForwardKey = keyConfig.MoveForward.ToVK();
-        _moveBackwardKey = keyConfig.MoveBackward.ToVK();
-        _movLeftKey = keyConfig.MoveLeft.ToVK();
-        _moveRightKey = keyConfig.MoveRight.ToVK();
-        _sprintKey = keyConfig.SprintKeyboard.ToVK();
-        _useGadgetKey = keyConfig.QuickUseGadget.ToVK();
 
         _ct = ct;
 
@@ -244,31 +227,31 @@ public class AutoDomainTask : ISoloTask
 
                 if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
                 {
-                    Simulation.SendInput.Keyboard.KeyDown(_moveBackwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
                     Thread.Sleep(3000);
-                    Simulation.SendInput.Keyboard.KeyUp(_moveBackwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
                 }
                 else if ("无妄引咎密宫".Equals(_taskParam.DomainName))
                 {
-                    Simulation.SendInput.Keyboard.KeyDown(_moveForwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     Thread.Sleep(500);
-                    Simulation.SendInput.Keyboard.KeyUp(_moveForwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                     Thread.Sleep(100);
-                    Simulation.SendInput.Keyboard.KeyDown(_movLeftKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
                     Thread.Sleep(1600);
-                    Simulation.SendInput.Keyboard.KeyUp(_movLeftKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
                 else if ("苍白的遗荣".Equals(_taskParam.DomainName))
                 {
-                    Simulation.SendInput.Keyboard.KeyDown(_moveForwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     Thread.Sleep(1000);
-                    Simulation.SendInput.Keyboard.KeyUp(_moveForwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
                 else
                 {
-                    Simulation.SendInput.Keyboard.KeyDown(_moveForwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     Thread.Sleep(3000);
-                    Simulation.SendInput.Keyboard.KeyUp(_moveForwardKey);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
 
                 await Delay(3000, _ct); // 站稳
@@ -373,12 +356,12 @@ public class AutoDomainTask : ISoloTask
 
         await Task.Run((Action)(() =>
         {
-            _simulator.KeyDown(_moveForwardKey);
+            _simulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Sleep(20);
             // 组合键好像不能直接用 postmessage
             if (!_config.WalkToF)
             {
-                Simulation.SendInput.Keyboard.KeyDown(_sprintKey);
+                Simulation.SendInput.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyDown);
             }
 
             try
@@ -400,11 +383,11 @@ public class AutoDomainTask : ISoloTask
             }
             finally
             {
-                _simulator.KeyUp(_moveForwardKey);
+                _simulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 Sleep(50);
                 if (!_config.WalkToF)
                 {
-                    Simulation.SendInput.Keyboard.KeyUp(_sprintKey);
+                    Simulation.SendInput.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyUp);
                 }
             }
         }), _ct);
@@ -540,7 +523,7 @@ public class AutoDomainTask : ISoloTask
                     if (Bv.CurrentAvatarIsLowHp(CaptureToRectArea()))
                     {
                         // 模拟按键 "Z"
-                        Simulation.SendInput.Keyboard.KeyPress(_useGadgetKey);
+                        Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                         Logger.LogInformation("检测到红血，按Z吃药");
                         // TODO 吃饱了会一直吃
                     }
@@ -590,12 +573,16 @@ public class AutoDomainTask : ISoloTask
     {
         return new Task(() =>
         {
+            var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
+            var moveLeftKey = keyConfig.MoveLeft.ToVK();
+            var moveRightKey = keyConfig.MoveRight.ToVK();
+            var moveForwardKey = keyConfig.MoveForward.ToVK();
             var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
             var middleX = captureArea.Width / 2;
             var leftKeyDown = false;
             var rightKeyDown = false;
             var noDetectCount = 0;
-            var prevKey = _movLeftKey;
+            var prevKey = moveLeftKey;
             var backwardsAndForwardsCount = 0;
             while (!_ct.IsCancellationRequested)
             {
@@ -611,13 +598,13 @@ public class AutoDomainTask : ISoloTask
                         if (rightKeyDown)
                         {
                             // 先松开D键
-                            _simulator.KeyUp(_moveRightKey);
+                            _simulator.KeyUp(moveRightKey);
                             rightKeyDown = false;
                         }
 
                         if (!leftKeyDown)
                         {
-                            _simulator.KeyDown(_movLeftKey);
+                            _simulator.KeyDown(moveLeftKey);
                             leftKeyDown = true;
                         }
                     }
@@ -629,13 +616,13 @@ public class AutoDomainTask : ISoloTask
                         if (leftKeyDown)
                         {
                             // 先松开A键
-                            _simulator.KeyUp(_movLeftKey);
+                            _simulator.KeyUp(moveLeftKey);
                             leftKeyDown = false;
                         }
 
                         if (!rightKeyDown)
                         {
-                            _simulator.KeyDown(_moveRightKey);
+                            _simulator.KeyDown(moveRightKey);
                             rightKeyDown = true;
                         }
                     }
@@ -644,42 +631,42 @@ public class AutoDomainTask : ISoloTask
                         // 树在中间 松开所有键
                         if (rightKeyDown)
                         {
-                            _simulator.KeyUp(_moveRightKey);
-                            prevKey = _moveRightKey;
+                            _simulator.KeyUp(moveRightKey);
+                            prevKey = moveRightKey;
                             rightKeyDown = false;
                         }
 
                         if (leftKeyDown)
                         {
-                            _simulator.KeyUp(_movLeftKey);
-                            prevKey = _movLeftKey;
+                            _simulator.KeyUp(moveLeftKey);
+                            prevKey = moveLeftKey;
                             leftKeyDown = false;
                         }
 
                         // 松开按键后使用小碎步移动
                         if (treeMiddleX < middleX)
                         {
-                            if (prevKey == _moveRightKey)
+                            if (prevKey == moveRightKey)
                             {
                                 backwardsAndForwardsCount++;
                             }
 
-                            _simulator.KeyPress(_movLeftKey, 60);
-                            prevKey = _movLeftKey;
+                            _simulator.KeyPress(moveLeftKey, 60);
+                            prevKey = moveLeftKey;
                         }
                         else if (treeMiddleX > middleX)
                         {
-                            if (prevKey == _movLeftKey)
+                            if (prevKey == moveLeftKey)
                             {
                                 backwardsAndForwardsCount++;
                             }
 
-                            _simulator.KeyPress(_moveRightKey, 60);
-                            prevKey = _moveRightKey;
+                            _simulator.KeyPress(moveRightKey, 60);
+                            prevKey = moveRightKey;
                         }
                         else
                         {
-                            _simulator.KeyPress(_moveForwardKey, 60);
+                            _simulator.KeyPress(moveForwardKey, 60);
                             Sleep(500, _ct);
                             treeCts.Cancel();
                             break;
@@ -695,13 +682,13 @@ public class AutoDomainTask : ISoloTask
                     {
                         if (leftKeyDown)
                         {
-                            _simulator.KeyUp(_movLeftKey);
+                            _simulator.KeyUp(moveLeftKey);
                             leftKeyDown = false;
                         }
 
                         if (!rightKeyDown)
                         {
-                            _simulator.KeyDown(_moveRightKey);
+                            _simulator.KeyDown(moveRightKey);
                             rightKeyDown = true;
                         }
                     }
@@ -709,13 +696,13 @@ public class AutoDomainTask : ISoloTask
                     {
                         if (rightKeyDown)
                         {
-                            _simulator.KeyUp(_moveRightKey);
+                            _simulator.KeyUp(moveRightKey);
                             rightKeyDown = false;
                         }
 
                         if (!leftKeyDown)
                         {
-                            _simulator.KeyDown(_movLeftKey);
+                            _simulator.KeyDown(moveLeftKey);
                             leftKeyDown = true;
                         }
                     }
@@ -724,7 +711,7 @@ public class AutoDomainTask : ISoloTask
                 if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
                 {
                     // 左右移动5次说明已经在树中心了
-                    _simulator.KeyPress(_moveForwardKey, 60);
+                    _simulator.KeyPress(moveForwardKey, 60);
                     Sleep(500, _ct);
                     treeCts.Cancel();
                     break;
