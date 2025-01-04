@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Video;
+using BetterGenshinImpact.Core.Video.obs;
 using NAudio.Wave;
 using SharpAvi;
 using Vanara.PInvoke;
@@ -82,6 +83,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         _videoRecorder = VideoRecorderFactory.Create(TaskContext.Instance().Config.CommonConfig.Recorder, fileName);
         _directInputMonitor = new DirectInputMonitor();
+        var recorderTmp = new KeyMouseRecorderJsonLine(fileName);
 
         // TaskTriggerDispatcher.Instance().StopTimer();
 
@@ -98,10 +100,26 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         }
 
 
-        var videoEnabled = _videoRecorder.Start();
-        
+        var tmpTime = DateTime.Now;
+
+        var sw = new Stopwatch();
+        sw.Start();
+        long current;
+
+
         _directInputMonitor.Start();
-        _recorder = new KeyMouseRecorderJsonLine(fileName);
+        _logger.LogInformation("从开始到directInput启动累计耗时ms：{Text}", sw.ElapsedMilliseconds);
+
+        var videoEnabled = _videoRecorder.Start();
+        _logger.LogInformation("从开始到视频录制启动累计耗时（OBS是WS通知完成耗时，并非实际录制时间）ms：{Text}", sw.ElapsedMilliseconds);
+
+        _recorder = recorderTmp.Start();
+        _recorder.AppendStartInfo();
+        _logger.LogInformation("从开始到键鼠录制启动累计耗时ms：{Text}", sw.ElapsedMilliseconds);
+
+        sw.Stop();
+
+        ObsLogFileProcessor.FindStartTime(fileName, tmpTime);
 
         Status = KeyMouseRecorderStatus.Recording;
 
@@ -115,13 +133,18 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
             throw new InvalidOperationException("未处于录制中状态，无法停止");
         }
 
+        var sw = new Stopwatch();
+        sw.Start();
         // var macro = _recorder?.ToJsonMacro() ?? string.Empty;
         _recorder = null;
         _directInputMonitor?.Stop();
         _directInputMonitor?.Dispose();
         _directInputMonitor = null;
+        _logger.LogInformation("从结束触发到键鼠录制关闭累计耗时ms：{Text}", sw.ElapsedMilliseconds);
 
         _videoRecorder?.Stop();
+        _logger.LogInformation("从结束触发到视频录制关闭累计耗时ms：{Text}", sw.ElapsedMilliseconds);
+
 
         if (_timer.Enabled)
         {
@@ -182,7 +205,6 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
     public void GlobalHookKeyUp(KeyEventArgsExt e)
     {
-
         if (_keyDownState.TryGetValue(e.KeyCode, out bool state) && state)
         {
             // Debug.WriteLine($"KeyUp: {e.KeyCode}");

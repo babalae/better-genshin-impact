@@ -324,7 +324,7 @@ public class GenshinGameSettings
             }
 
             var str = Encoding.UTF8.GetString(rawBytes);
-            Debug.WriteLine(str);
+            // Debug.WriteLine(str);
 
             return str;
         }

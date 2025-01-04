@@ -42,11 +42,12 @@ public class KeyMouseRecorderJsonLine
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    string _path;
+
     public KeyMouseRecorderJsonLine(string folderName)
     {
-        var path = Global.Absolute($@"User\KeyMouseScript\{folderName}\");
+        _path = Global.Absolute($@"User\KeyMouseScript\{folderName}\");
 
-        DateTime startTime = DateTime.Now;
         // var bootTime = EnvironmentUtil.LastBootUpTime();
         // if (bootTime == null)
         // {
@@ -65,14 +66,28 @@ public class KeyMouseRecorderJsonLine
             Width = rect.Width,
             Height = rect.Height,
             RecordDpi = TaskContext.Instance().DpiScale,
-            StartTime = $"{startTime:yyyy-MM-dd HH:mm:ss:ffff}",
-            StartTimeUnixTimestamp = (startTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"),
-            SysParams =  RecordContext.Instance.SysParams
+            SysParams = RecordContext.Instance.SysParams
         };
-        var infoJson = JsonSerializer.Serialize(Info, JsonOptions);
-        File.WriteAllText(Path.Combine(path, $"systemInfo.json"), infoJson);
 
-        _consumerTask = Task.Run(async () => await ConsumeEventsAsync(path));
+        _consumerTask = Task.Run(async () => await ConsumeEventsAsync(_path));
+    }
+    
+    public KeyMouseRecorderJsonLine Start()
+    {
+        StartTick = Kernel32.GetTickCount();
+        return this;
+    }
+
+    public void AppendStartInfo()
+    {
+        Task.Run(() =>
+        {
+            DateTime startTime = DateTime.Now;
+            Info.StartTime = $"{startTime:yyyy-MM-dd HH:mm:ss:ffff}";
+            Info.StartTimeUnixTimestamp = (startTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0");
+            var infoJson = JsonSerializer.Serialize(Info, JsonOptions);
+            File.WriteAllText(Path.Combine(_path, $"systemInfo.json"), infoJson);
+        });
     }
 
     private async Task ConsumeEventsAsync(string path)

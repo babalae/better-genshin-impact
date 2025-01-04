@@ -106,7 +106,7 @@ public class ObsRecorder : IVideoRecorder
                 {
                     obs.StartRecord();
                     _lastRecordTime = DateTime.Now;
-                    TaskControl.Logger.LogInformation("OBS: 开始录制，时间: {Time}", _lastRecordTime.ToString("yyyy-MM-dd HH:mm:ss:ffff"));
+                    TaskControl.Logger.LogInformation("OBS: ws请求开始录制，时间: {Time}", _lastRecordTime.ToString("yyyy-MM-dd HH:mm:ss.ffff"));
                     return true;
                 }
                 catch (ErrorResponseException ex)
@@ -118,7 +118,7 @@ public class ObsRecorder : IVideoRecorder
                     }
                     else
                     {
-                        TaskControl.Logger.LogError($"OBS: 开始录制失败: {ex.Message}");
+                        TaskControl.Logger.LogError($"OBS: ws请求开始录制失败: {ex.Message}");
                         throw;
                     }
                 }
@@ -187,7 +187,7 @@ public class ObsRecorder : IVideoRecorder
                     TaskControl.Logger.LogError("OBS: 未找到录制结果文件");
                 }
 
-                File.WriteAllText(Path.Combine(folderPath, "videoStartTime.txt"), (_lastRecordTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"));
+                // File.WriteAllText(Path.Combine(folderPath, "videoStartTime.txt"), (_lastRecordTime.ToUniversalTime() - new DateTime(1970, 1, 1)).TotalNanoseconds.ToString("F0"));
             }
             catch (Exception e)
             {
