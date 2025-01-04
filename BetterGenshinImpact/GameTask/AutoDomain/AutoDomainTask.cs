@@ -303,10 +303,10 @@ public class AutoDomainTask : ISoloTask
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
         // 进入秘境
-        using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
+        using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
         if (!fRectArea.IsEmpty())
         {
-            Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             Logger.LogInformation("自动秘境：{Text}", "进入秘境");
             // 秘境开门动画 5s
             await Delay(5000, _ct);
