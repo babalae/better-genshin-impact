@@ -25,7 +25,7 @@ public class UpDownGrabLeaf : IActionHandler
         // kbPress('w');  // 飞行
         while (i > 0 && !ct.IsCancellationRequested)
         {
-            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_T);
+            Simulation.SendInput.Keyboard.KeyDown(TaskContext.Instance().Config.KeyBindingsConfig.InteractionInSomeMode.ToVK());
             if (i % 10 == 0)
             {
                 y = -y;
