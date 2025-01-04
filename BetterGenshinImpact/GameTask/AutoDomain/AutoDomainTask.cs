@@ -364,7 +364,7 @@ public class AutoDomainTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.FRo);
+                    using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
                     if (fRectArea.IsEmpty())
                     {
                         Sleep(100, _ct);
@@ -372,7 +372,7 @@ public class AutoDomainTask : ISoloTask
                     else
                     {
                         Logger.LogInformation("检测到交互键");
-                        Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
+                        Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                         break;
                     }
                 }
