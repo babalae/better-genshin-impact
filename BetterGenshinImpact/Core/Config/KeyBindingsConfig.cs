@@ -107,7 +107,7 @@ namespace BetterGenshinImpact.Core.Config
         /// 特定玩法内交互操作
         /// </summary>
         [ObservableProperty]
-        private VK _interaction = VK.VK_T;
+        private VK _interactionInSomeMode = VK.VK_T;
 
         /// <summary>
         /// 开启任务追踪
@@ -291,7 +291,7 @@ namespace BetterGenshinImpact.Core.Config
         /// 隐藏主界面
         /// </summary>
         [ObservableProperty]
-        private VK _hideUI = VK.VK_DIVIDE;
+        private VK _hideUI = VK.VK_OEM_2;
 
         #endregion
 

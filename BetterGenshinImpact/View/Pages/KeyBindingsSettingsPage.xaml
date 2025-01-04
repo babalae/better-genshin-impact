@@ -32,11 +32,11 @@
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="此处的按键绑定设置对除自动拾取外的功能有效。"
+                      Text="此处的按键绑定设置对除自动拾取外的功能有效。请手动设置拾取按键、星之归还按键、隐藏主界面按键。"
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
-            <ui:Button Command="{Binding OpenScriptsFolderCommand}"
+            <ui:Button Command="{Binding FetchFromRegistryCommand}"
                        Content="从注册表读取"
                        Icon="{ui:SymbolIcon Notepad32}" />
         </StackPanel>
