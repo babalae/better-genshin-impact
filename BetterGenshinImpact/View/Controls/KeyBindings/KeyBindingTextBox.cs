@@ -73,8 +73,8 @@ public class KeyBindingTextBox:TextBox
     {
         var key = e.ChangedButton;
 
-        // 忽略鼠标左键
-        if (key is MouseButton.Left)
+        // 首次点击（未获得焦点）时，忽略一次鼠标左键的输入
+        if (key is MouseButton.Left && !IsFocused)
         {
             return;
         }
@@ -88,5 +88,17 @@ public class KeyBindingTextBox:TextBox
         {
             return;
         }
+    }
+
+    protected override void OnGotFocus(RoutedEventArgs e)
+    {
+        Text = "等待键入...";
+        base.OnGotFocus(e);
+    }
+
+    protected override void OnLostFocus(RoutedEventArgs e)
+    {
+        Text = KeyBinding.ToName();
+        base.OnLostFocus(e);
     }
 }
