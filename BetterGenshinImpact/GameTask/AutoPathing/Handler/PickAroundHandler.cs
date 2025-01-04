@@ -47,7 +47,7 @@ public class PickAroundHandler() : IActionHandler
 
     public async Task MoveCircle(double edgeT, int n)
     {
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
+        Simulation.SendInput.Keyboard.KeyDown(TaskContext.Instance().Config.KeyBindingsConfig.MoveLeft.ToVK());
         await Delay(30, _ct);
         while (n-- > 0)
         {
@@ -55,7 +55,7 @@ public class PickAroundHandler() : IActionHandler
             await Delay((int)Math.Round(edgeT), _ct);
         }
 
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
+        Simulation.SendInput.Keyboard.KeyUp(TaskContext.Instance().Config.KeyBindingsConfig.MoveLeft.ToVK());
         await Delay(200, _ct);
     }
 
@@ -67,9 +67,9 @@ public class PickAroundHandler() : IActionHandler
         await Delay(500, _ct);
         if (ms > 0)
         {
-            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+            Simulation.SendInput.Keyboard.KeyDown(TaskContext.Instance().Config.KeyBindingsConfig.MoveForward.ToVK());
             await Delay(ms, _ct);
-            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+            Simulation.SendInput.Keyboard.KeyUp(TaskContext.Instance().Config.KeyBindingsConfig.MoveForward.ToVK());
             await Delay(200, _ct);
         }
     }
@@ -80,8 +80,8 @@ public class PickAroundHandler() : IActionHandler
         double y = oldRadius * Math.Sin(angle);
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(500, _ct);
-        await MoveAfterTurn(User32.VK.VK_S, (int)Math.Round(y) + 200);
-        await MoveAfterTurn(User32.VK.VK_A, (int)Math.Round(x));
+        await MoveAfterTurn(TaskContext.Instance().Config.KeyBindingsConfig.MoveBackward.ToVK(), (int)Math.Round(y) + 200);
+        await MoveAfterTurn(TaskContext.Instance().Config.KeyBindingsConfig.MoveLeft.ToVK(), (int)Math.Round(x));
     }
 }
 
