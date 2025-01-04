@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
@@ -25,7 +26,7 @@ public class UpDownGrabLeaf : IActionHandler
         // kbPress('w');  // 飞行
         while (i > 0 && !ct.IsCancellationRequested)
         {
-            Simulation.SendInput.Keyboard.KeyDown(TaskContext.Instance().Config.KeyBindingsConfig.InteractionInSomeMode.ToVK());
+            Simulation.SendInput.SimulateAction(GIActions.InteractionInSomeMode, KeyType.KeyDown);
             if (i % 10 == 0)
             {
                 y = -y;
