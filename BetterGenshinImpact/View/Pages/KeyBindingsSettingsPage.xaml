@@ -1,0 +1,84 @@
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.KeyBindingsSettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:kb="clr-namespace:BetterGenshinImpact.View.Controls.KeyBindings"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:model="clr-namespace:BetterGenshinImpact.Model"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:KeyBindingsSettingsPageViewModel}"
+             d:DesignHeight="850"
+             d:DesignWidth="600"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+
+    <Grid Margin="42,16,42,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TextBlock Grid.Row="0"
+                      Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="按键绑定设置" />
+        <ui:TextBlock Grid.Row="1"
+                      Margin="0,0,0,8"
+                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                      Text="此处的按键绑定设置对除自动拾取外的功能有效。"
+                      TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
+            <ui:Button Command="{Binding OpenScriptsFolderCommand}"
+                       Content="从注册表读取"
+                       Icon="{ui:SymbolIcon Notepad32}" />
+        </StackPanel>
+
+        <ui:Border Grid.Row="3"
+                   Background="{DynamicResource CardBackground}"
+                   BorderBrush="{DynamicResource CardBorderBrush}"
+                   BorderThickness="1"
+                   CornerRadius="{DynamicResource ControlCornerRadius}">
+            <Grid Margin="4">
+                <ui:Grid ColumnDefinitions="*,135" Visibility="Hidden">
+                    <Grid x:Name="TreeColumnStar" Grid.Column="0" />
+                </ui:Grid>
+                <ui:TreeListView BorderThickness="0" ItemsSource="{Binding KeyBindingSettingModels}">
+                    <ui:TreeListView.Columns>
+                        <GridViewColumnCollection>
+                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="动作">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:TreeRowExpander Content="{Binding ActionName}" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Width="120" Header="按键绑定">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <kb:KeyBindingTextBox Padding="16,6,16,6"
+                                                              VerticalAlignment="Center"
+                                                              KeyBinding="{Binding KeyValue}"
+                                                              Style="{StaticResource DefaultTextBoxStyle}"
+                                                              TextAlignment="Center"
+                                                              Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                        </GridViewColumnCollection>
+                    </ui:TreeListView.Columns>
+                    <ui:TreeListView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+                    </ui:TreeListView.ItemTemplate>
+                </ui:TreeListView>
+            </Grid>
+        </ui:Border>
+    </Grid>
+</UserControl>
