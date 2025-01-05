@@ -50,12 +50,11 @@ public class GameSettingsChecker
         }
         catch (Exception e)
         {
-            MessageBox.Error(e.Message);
             if (path != null)
             {
                 File.WriteAllText(path, settingStr);
             }
-
+            MessageBox.Error(e.Message);
             return false;
         }
 

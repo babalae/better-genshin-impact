@@ -80,6 +80,7 @@ public class TosClientHelper
 
     public void UploadFile(string localFileName, string? objectKey = null)
     {
+        Debug.WriteLine($"Uploading file: {localFileName}, object key: {objectKey}");
         if (string.IsNullOrEmpty(_config.AccessKey) || string.IsNullOrEmpty(_config.SecretKey))
         {
             Debug.WriteLine("TOS credentials not configured");
@@ -125,6 +126,7 @@ public class TosClientHelper
     /// <param name="partSize">分片大小（字节），默认20MB</param>
     public void UploadLargeFile(string localFileName, string? objectKey = null, long partSize = 20 * 1024 * 1024, UploadProgressCallback? progressCallback = null)
     {
+        Debug.WriteLine($"Uploading file: {localFileName}, object key: {objectKey}");
         if (string.IsNullOrEmpty(_config.AccessKey) || string.IsNullOrEmpty(_config.SecretKey))
         {
             Debug.WriteLine("TOS credentials not configured");

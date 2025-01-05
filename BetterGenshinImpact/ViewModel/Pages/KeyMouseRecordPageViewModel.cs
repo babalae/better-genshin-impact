@@ -16,6 +16,8 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
@@ -25,6 +27,7 @@ using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
 using BetterGenshinImpact.Helpers.Upload;
+using Newtonsoft.Json;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -198,6 +201,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
 
             var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
 
+            // 结束时检查游戏设置
+            GameSettingsChecker.LoadGameSettingsAndCheck(Path.Combine(pcFolder, "gameSettings.json"));
+
             Task.Run(() =>
             {
                 try
@@ -214,11 +220,49 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 {
                     TaskControl.Logger.LogDebug("移动PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                 }
-            });
 
-            // 结束时检查游戏设置
-            GameSettingsChecker.LoadGameSettingsAndCheck(Path.Combine(pcFolder, "gameSettings.json"));
+                Thread.Sleep(5000);
+                for (int i = 0; i < 5; i++)
+                {
+                    Thread.Sleep(1000);
+                    try
+                    {
+                        // 记录 pcFolder 目录下所有文件的 hash 信息到 hashFolder 目录下的 hash.json 文件
+                        var hashFolder = Global.Absolute(@$"User/Common/Km/{fileName}");
+                        Directory.CreateDirectory(hashFolder);
+                        RecordFileHashes(pcFolder, hashFolder);
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        TaskControl.Logger.LogDebug("信息统计失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                        continue;
+                    }
+                }
+
+            });
         }
+    }
+
+
+    public void RecordFileHashes(string pcFolder, string hashFolder)
+    {
+        var fileHashes = new Dictionary<string, string>();
+
+        foreach (var filePath in Directory.GetFiles(pcFolder, "*.*", SearchOption.AllDirectories))
+        {
+            using (var stream = File.OpenRead(filePath))
+            {
+                var sha256 = SHA256.Create();
+                var hash = sha256.ComputeHash(stream);
+                var hashString = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                fileHashes[Path.GetFileName(filePath)] = hashString;
+            }
+        }
+
+        var hashFilePath = Path.Combine(hashFolder, "hash.json");
+        Directory.CreateDirectory(hashFolder);
+        File.WriteAllText(hashFilePath, JsonConvert.SerializeObject(fileHashes, Formatting.Indented));
     }
 
     [RelayCommand]
@@ -374,6 +418,14 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             return;
         }
 
+        var hashFolder = Global.Absolute(@$"User/Common/Km/{new DirectoryInfo(path).Name}");
+        // 先校验hash
+        if (!VerifyFileHashes(path, hashFolder))
+        {
+            await MessageBox.ErrorAsync("上传前文件校验失败，联系管理员");
+            return;
+        }
+
 
         await Task.Run(() =>
         {
@@ -392,19 +444,20 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             // UIDispatcherHelper.Invoke(() => { Toast.Information($"文件夹压缩完成：{zipPath}"); });
 
 
-            // 上传压缩包
+            // 上传
             try
             {
                 var tosClient = new TosClientHelper();
-                
+
                 // 循环 path 下的所有文件
                 var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
                 foreach (var file in files)
                 {
-                    var relativePath = file.Replace(path, "").TrimStart('\\');
+                    var relativePath = file.Replace(scriptPath, "").TrimStart('\\');
                     var needUploadFileName = Path.GetFileName(file);
-                    var remotePath = $"{DateTime.Now:yyyy_MM_dd}_{userName}_{uid}/{relativePath}/{needUploadFileName}";
-                    
+                    var remotePath = $"{DateTime.Now:yyyy_MM_dd}_{userName}_{uid}/{relativePath}";
+                    remotePath = remotePath.Replace(@"\", "/");
+
                     if (needUploadFileName == "video.mkv" || needUploadFileName == "video.mp4")
                     {
                         tosClient.UploadLargeFile(file, remotePath);
@@ -413,13 +466,57 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                     {
                         tosClient.UploadFile(file, remotePath);
                     }
-                    UIDispatcherHelper.Invoke(() => { Toast.Success($"文件{needUploadFileName}上传成功！"); });
+
+                    
                 }
+                UIDispatcherHelper.Invoke(() => { Toast.Success($"文件夹{new DirectoryInfo(path).Name}上传成功！"); });
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"上传过程中发生错误：{ex.Message}");
             }
         });
+    }
+
+
+    public bool VerifyFileHashes(string pcFolder, string hashFolder)
+    {
+        var hashFilePath = Path.Combine(hashFolder, "hash.json");
+        if (!File.Exists(hashFilePath))
+        {
+            // 无文件hash信息，直接返回true
+            _logger.LogDebug("Hash file not found");
+            return true;
+        }
+
+        var storedHashes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(hashFilePath));
+        if (storedHashes == null)
+        {
+            throw new InvalidOperationException("Failed to deserialize hash file");
+        }
+
+        foreach (var filePath in Directory.GetFiles(pcFolder, "*.*", SearchOption.AllDirectories))
+        {
+            using (var stream = File.OpenRead(filePath))
+            {
+                if (!storedHashes.TryGetValue(Path.GetFileName(filePath), out var storedHash))
+                {
+                    Debug.WriteLine($"Hash not found for {filePath}");
+                    continue;
+                }
+
+                var sha256 = SHA256.Create();
+                var hash = sha256.ComputeHash(stream);
+                var hashString = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+
+                if (storedHash != hashString)
+                {
+                    Debug.WriteLine($"Hash mismatch for {filePath}");
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }
