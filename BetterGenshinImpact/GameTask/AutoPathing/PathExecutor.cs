@@ -975,17 +975,7 @@ public class PathExecutor
             // 判断是否进入剧情
             await AutoSkip();
         }
-        
-        ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
-
-        var primogemRa = imageRegion.Find(AutoSkipAssets.Instance.PrimogemRo);
-        if (!primogemRa.IsExist())
-        {
-            Logger.LogInformation("未检测到派蒙，尝试使用ESC关闭界面");
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await Task.Delay(500, ct);
-        }
-        
+       
     }
 
     private async Task AutoSkip()
