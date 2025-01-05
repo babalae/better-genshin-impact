@@ -4,7 +4,6 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
-using Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
