@@ -232,31 +232,7 @@
                                          IsChecked="{Binding PathingConfig.OnlyInTeleportRecover, Mode=TwoWay}" />
 
                     </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="未知界面检查关闭"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="独立线程检查，每5秒检查一次未预期到的界面，并关掉该界面，此设置会影响路径追踪，现支持：烹饪，首页按ESC出的界面"
-                                      TextWrapping="Wrap" />
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         IsChecked="{Binding PathingConfig.CloseUnknownInterfaceCheck, Mode=TwoWay}" />
 
-                    </Grid>
 
                 </StackPanel>
             </ui:CardExpander>
