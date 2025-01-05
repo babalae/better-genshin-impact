@@ -435,8 +435,80 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
+        <!--  用户信息设置  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Person24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                 Grid.Column="0"
+                                 FontTypography="Body"
+                                 Text="用户信息"
+                                 TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                 Grid.Column="0"
+                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                 Text="设置用户名和UID"
+                                 TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                 Grid.Column="0"
+                                 FontTypography="Body"
+                                 Text="用户名"
+                                 TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                               Grid.Column="1"
+                               MinWidth="200"
+                               Margin="0,0,36,0"
+                               PlaceholderText="请输入用户名"
+                               Text="{Binding Config.CommonConfig.UserName, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                 Grid.Column="0"
+                                 FontTypography="Body"
+                                 Text="游戏内的UID"
+                                 TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                               Grid.Column="1"
+                               MinWidth="200"
+                               Margin="0,0,36,0"
+                               PlaceholderText="请输入UID"
+                               Text="{Binding Config.CommonConfig.Uid, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
+        <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
 
     </StackPanel>
 </Page>

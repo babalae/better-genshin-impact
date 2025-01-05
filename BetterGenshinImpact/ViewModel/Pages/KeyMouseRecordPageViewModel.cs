@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,6 +24,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Device;
+using BetterGenshinImpact.Helpers.Upload;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -140,7 +142,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                 var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
                 Directory.CreateDirectory(pcFolder);
                 // 移动PC信息
-                var src= Global.Absolute(@$"User/pc.json");
+                var src = Global.Absolute(@$"User/pc.json");
                 if (File.Exists(src))
                 {
                     File.Copy(Global.Absolute(@$"User/pc.json"), Path.Combine(pcFolder, "pc.json"), true);
@@ -193,16 +195,16 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             }
 
             SystemSettingsManager.RestoreSystemSettings();
-            
+
             var pcFolder = Global.Absolute(@$"User/KeyMouseScript/{fileName}");
-            
+
             Task.Run(() =>
             {
                 try
                 {
                     Directory.CreateDirectory(pcFolder);
                     // 移动PC信息
-                    var src= Global.Absolute(@$"User/pc.json");
+                    var src = Global.Absolute(@$"User/pc.json");
                     if (File.Exists(src))
                     {
                         File.Copy(Global.Absolute(@$"User/pc.json"), Path.Combine(pcFolder, "pc.json"), true);
@@ -213,7 +215,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
                     TaskControl.Logger.LogDebug("移动PC信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                 }
             });
-            
+
             // 结束时检查游戏设置
             GameSettingsChecker.LoadGameSettingsAndCheck(Path.Combine(pcFolder, "gameSettings.json"));
         }
@@ -353,5 +355,71 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+    }
+
+    [RelayCommand]
+    private async Task OnUploadScript(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+        {
+            await MessageBox.ErrorAsync($"文件夹不存在:{path}");
+            return;
+        }
+
+        var userName = TaskContext.Instance().Config.CommonConfig.UserName;
+        var uid = TaskContext.Instance().Config.CommonConfig.Uid;
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(uid))
+        {
+            await MessageBox.ErrorAsync("请先设置用户名和UID");
+            return;
+        }
+
+
+        await Task.Run(() =>
+        {
+            // // 先压缩整个文件夹
+            // var zipName = $"{Path.GetFileNameWithoutExtension(path)}.zip";
+            // var zipPath = Path.Combine(Path.GetTempPath(), zipName);
+            // // 删除旧的压缩包
+            // if (File.Exists(zipPath))
+            // {
+            //     File.Delete(zipPath);
+            // }
+            //
+            // ZipFile.CreateFromDirectory(path, zipPath, CompressionLevel.NoCompression, true);
+            //
+            //
+            // UIDispatcherHelper.Invoke(() => { Toast.Information($"文件夹压缩完成：{zipPath}"); });
+
+
+            // 上传压缩包
+            try
+            {
+                var tosClient = new TosClientHelper();
+                
+                // 循环 path 下的所有文件
+                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+                foreach (var file in files)
+                {
+                    var relativePath = file.Replace(path, "").TrimStart('\\');
+                    var needUploadFileName = Path.GetFileName(file);
+                    var remotePath = $"{DateTime.Now:yyyy_MM_dd}_{userName}_{uid}/{relativePath}/{needUploadFileName}";
+                    
+                    if (needUploadFileName == "video.mkv" || needUploadFileName == "video.mp4")
+                    {
+                        tosClient.UploadLargeFile(file, remotePath);
+                    }
+                    else
+                    {
+                        tosClient.UploadFile(file, remotePath);
+                    }
+                    UIDispatcherHelper.Invoke(() => { Toast.Success($"文件{needUploadFileName}上传成功！"); });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"上传过程中发生错误：{ex.Message}");
+            }
+        });
     }
 }

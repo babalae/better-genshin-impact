@@ -13,7 +13,9 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BetterGenshinImpact.Helpers.Upload;
 
-public class TosClientHelper : Singleton<TosClientHelper>
+public delegate void UploadProgressCallback(long uploadedBytes, long totalBytes, int percentage);
+
+public class TosClientHelper
 {
     private readonly string _configPath = Global.Absolute("User/tos.json");
     private TosConfig _config;
@@ -121,7 +123,7 @@ public class TosClientHelper : Singleton<TosClientHelper>
     /// <param name="localFileName">本地文件路径</param>
     /// <param name="objectKey">对象存储路径，如果为空则使用文件名</param>
     /// <param name="partSize">分片大小（字节），默认20MB</param>
-    public void UploadLargeFile(string localFileName, string? objectKey = null, long partSize = 20 * 1024 * 1024)
+    public void UploadLargeFile(string localFileName, string? objectKey = null, long partSize = 20 * 1024 * 1024, UploadProgressCallback? progressCallback = null)
     {
         if (string.IsNullOrEmpty(_config.AccessKey) || string.IsNullOrEmpty(_config.SecretKey))
         {
@@ -151,6 +153,7 @@ public class TosClientHelper : Singleton<TosClientHelper>
             var fileSize = fileInfo.Length;
             var partCount = (int)Math.Ceiling((double)fileSize / partSize);
             var parts = new UploadedPart[partCount];
+            long totalUploadedBytes = 0;
 
             // 3. 分片上传
             using (var fileStream = File.Open(localFileName, FileMode.Open, FileAccess.Read))
@@ -173,6 +176,12 @@ public class TosClientHelper : Singleton<TosClientHelper>
 
                     var uploadPartOutput = _client.UploadPart(uploadPartInput);
                     parts[i] = new UploadedPart { PartNumber = i + 1, ETag = uploadPartOutput.ETag };
+                    
+                    // 更新进度
+                    totalUploadedBytes += currentPartSize;
+                    var percentage = (int)((double)totalUploadedBytes / fileSize * 100);
+                    progressCallback?.Invoke(totalUploadedBytes, fileSize, percentage);
+                    
                     Debug.WriteLine($"UploadPart {i + 1}/{partCount} succeeded");
                 }
             }
@@ -279,13 +288,13 @@ public class TosClientHelper : Singleton<TosClientHelper>
     /// <param name="uploadID">分片上传ID</param>
     /// <param name="localFileName">本地文件路径</param>
     /// <param name="partSize">分片大小</param>
-    public void ResumableUpload(string objectKey, string uploadID, string localFileName, long partSize = 20 * 1024 * 1024)
+    public void ResumableUpload(string objectKey, string uploadID, string localFileName, long partSize = 20 * 1024 * 1024, UploadProgressCallback? progressCallback = null)
     {
         var existingParts = ListUploadedParts(objectKey, uploadID);
         if (existingParts == null)
         {
             Debug.WriteLine("Failed to get existing parts, starting new upload");
-            UploadLargeFile(localFileName, objectKey, partSize);
+            UploadLargeFile(localFileName, objectKey, partSize, progressCallback);
             return;
         }
 
@@ -295,12 +304,18 @@ public class TosClientHelper : Singleton<TosClientHelper>
             var fileSize = fileInfo.Length;
             var partCount = (int)Math.Ceiling((double)fileSize / partSize);
             var parts = new UploadedPart[partCount];
+            long totalUploadedBytes = 0;
 
-            // 复制已上传的分片信息
+            // 复制已上传的分片信息并计算已上传的字节数
             foreach (var part in existingParts)
             {
                 parts[part.PartNumber - 1] = part;
+                totalUploadedBytes += Math.Min(partSize, fileSize - (part.PartNumber - 1) * partSize);
             }
+
+            // 报告初始进度
+            var initialPercentage = (int)((double)totalUploadedBytes / fileSize * 100);
+            progressCallback?.Invoke(totalUploadedBytes, fileSize, initialPercentage);
 
             // 上传缺失的分片
             using (var fileStream = File.Open(localFileName, FileMode.Open, FileAccess.Read))
@@ -325,6 +340,12 @@ public class TosClientHelper : Singleton<TosClientHelper>
 
                     var uploadPartOutput = _client.UploadPart(uploadPartInput);
                     parts[i] = new UploadedPart { PartNumber = i + 1, ETag = uploadPartOutput.ETag };
+                    
+                    // 更新进度
+                    totalUploadedBytes += currentPartSize;
+                    var percentage = (int)((double)totalUploadedBytes / fileSize * 100);
+                    progressCallback?.Invoke(totalUploadedBytes, fileSize, percentage);
+                    
                     Debug.WriteLine($"UploadPart {i + 1}/{partCount} succeeded");
                 }
             }
