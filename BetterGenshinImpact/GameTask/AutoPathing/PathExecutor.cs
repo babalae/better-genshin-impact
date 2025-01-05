@@ -835,7 +835,7 @@ public class PathExecutor
             await Delay(20, ct);
         }
 
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
         // 到达目的地后停顿一秒
         await Delay(1000, ct);
