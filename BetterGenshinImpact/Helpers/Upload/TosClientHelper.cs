@@ -366,4 +366,84 @@ public class TosClientHelper
             Debug.WriteLine($"ResumableUpload failed: {ex.Message}");
         }
     }
+
+    public void DeleteObject(string objectKey)
+    {
+        if (string.IsNullOrEmpty(_config.AccessKey) || string.IsNullOrEmpty(_config.SecretKey))
+        {
+            Debug.WriteLine("TOS credentials not configured");
+            return;
+        }
+
+        try
+        {
+            var deleteObjectInput = new DeleteObjectInput
+            {
+                Bucket = _config.BucketName,
+                Key = objectKey
+            };
+
+            var deleteObjectOutput = _client.DeleteObject(deleteObjectInput);
+            Debug.WriteLine($"DeleteObject succeeded, request id: {deleteObjectOutput.RequestID}");
+        }
+        catch (TosServerException ex)
+        {
+            Debug.WriteLine($"DeleteObject failed, request id: {ex.RequestID}");
+            Debug.WriteLine($"Status code: {ex.StatusCode}, Error code: {ex.Code}");
+            Debug.WriteLine($"Error message: {ex.Message}");
+        }
+        catch (TosClientException ex)
+        {
+            Debug.WriteLine($"DeleteObject failed: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"DeleteObject failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 列举存储桶中的对象
+    /// </summary>
+    /// <param name="maxKeys">最大返回的对象数量，默认10个</param>
+    /// <returns>对象列表，如果发生错误则返回null</returns>
+    public ListedObject[] ListObjects(int maxKeys = 10)
+    {
+        if (string.IsNullOrEmpty(_config.AccessKey) || string.IsNullOrEmpty(_config.SecretKey))
+        {
+            Debug.WriteLine("TOS credentials not configured");
+            return [];
+        }
+
+        try
+        {
+            var listObjectsInput = new ListObjectsInput
+            {
+                Bucket = _config.BucketName,
+                MaxKeys = maxKeys
+            };
+
+            var listObjectsOutput = _client.ListObjects(listObjectsInput);
+           
+            
+
+            return listObjectsOutput.Contents;
+        }
+        catch (TosServerException ex)
+        {
+            Debug.WriteLine($"ListObjects failed, request id: {ex.RequestID}");
+            Debug.WriteLine($"Status code: {ex.StatusCode}, Error code: {ex.Code}");
+            Debug.WriteLine($"Error message: {ex.Message}");
+        }
+        catch (TosClientException ex)
+        {
+            Debug.WriteLine($"ListObjects failed: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ListObjects failed: {ex.Message}");
+        }
+
+        return [];
+    }
 }

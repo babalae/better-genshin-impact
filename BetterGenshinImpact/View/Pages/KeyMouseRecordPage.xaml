@@ -110,7 +110,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.StartPlayCommand}"
                                                CommandParameter="{Binding Path}"
-                                               Content="播放脚本"
+                                               Content="播放"
                                                Icon="{ui:SymbolIcon Play24}" />
                                     <Separator Width="5" Opacity="0" />
                                     <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.UploadScriptCommand}"
