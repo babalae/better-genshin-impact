@@ -20,7 +20,7 @@ public static class PostMessageSimulatorExtension
     /// <param name="type">按键类型</param>
     public static PostMessageSimulator SimulateAction(this PostMessageSimulator self, GIActions action, KeyType type = KeyType.KeyPress)
     {
-        var key = SimulateKeyHelper.GetActionKey(action);
+        var key = action.ToActionKey();
         switch (type)
         {
             case KeyType.KeyPress:
@@ -122,7 +122,7 @@ public static class PostMessageSimulatorExtension
     /// <param name="type">按键类型</param>
     public static PostMessageSimulator SimulateActionBackground(this PostMessageSimulator self, GIActions action, KeyType type = KeyType.KeyPress)
     {
-        var key = SimulateKeyHelper.GetActionKey(action);
+        var key = action.ToActionKey();
         switch (type)
         {
             case KeyType.KeyPress:

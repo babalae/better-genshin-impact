@@ -81,8 +81,8 @@ public class PickAroundHandler() : IActionHandler
         double y = oldRadius * Math.Sin(angle);
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(500, _ct);
-        await MoveAfterTurn(SimulateKeyHelper.GetActionKey(GIActions.MoveBackward).ToVK(), (int)Math.Round(y) + 200);
-        await MoveAfterTurn(SimulateKeyHelper.GetActionKey(GIActions.MoveLeft).ToVK(), (int)Math.Round(x));
+        await MoveAfterTurn(GIActions.MoveBackward.ToActionKey().ToVK(), (int)Math.Round(y) + 200);
+        await MoveAfterTurn(GIActions.MoveLeft.ToActionKey().ToVK(), (int)Math.Round(x));
     }
 }
 

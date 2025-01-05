@@ -21,7 +21,7 @@ public static class InputSimulatorExtension
     /// <param name="type">按键类型</param>
     public static void SimulateAction(this InputSimulator self, GIActions action, KeyType type = KeyType.KeyPress)
     {
-        var key = SimulateKeyHelper.GetActionKey(action);
+        var key = action.ToActionKey();
         switch (type)
         {
             case KeyType.KeyPress:

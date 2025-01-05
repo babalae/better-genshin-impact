@@ -524,19 +524,19 @@ public class Avatar
         User32.VK vk = User32.VK.VK_NONAME;
         if (key == "w")
         {
-            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveForward).ToVK();
+            vk = GIActions.MoveForward.ToActionKey().ToVK();
         }
         else if (key == "s")
         {
-            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveBackward).ToVK();
+            vk = GIActions.MoveBackward.ToActionKey().ToVK();
         }
         else if (key == "a")
         {
-            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveLeft).ToVK();
+            vk = GIActions.MoveLeft.ToActionKey().ToVK();
         }
         else if (key == "d")
         {
-            vk = SimulateKeyHelper.GetActionKey(GIActions.MoveRight).ToVK();
+            vk = GIActions.MoveRight.ToActionKey().ToVK();
         }
 
         if (vk == User32.VK.VK_NONAME)
