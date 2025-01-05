@@ -112,7 +112,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (_externalConfig is { ForceInteraction: true })
             {
                 LogPick(content, "直接拾取");
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                 return;
             }
 
