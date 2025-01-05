@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         Title="Test"
-        Width="120"
+        Width="240"
         Height="450"
         mc:Ignorable="d">
     <Canvas>
@@ -31,7 +31,7 @@
                 Width="100"
                 Height="23"
                 Click="DoMatchTest"
-                Content="特征匹配测试" />
+                Content="生成特征点" />
         <Button Canvas.Left="10"
                 Canvas.Top="130"
                 Width="100"
@@ -43,13 +43,21 @@
                 Width="100"
                 Height="23"
                 Click="MapDrawTeleportPoint"
-                Content="超大地图标点" />
+                Content="画传送点" />
         <Button Canvas.Left="10"
                 Canvas.Top="190"
                 Width="100"
                 Height="23"
                 Click="GenAvatarData"
-                Content="生成侧面头像数据集" />
+                Content="侧面头像数据集" />
+        <Button Canvas.Left="120"
+                Canvas.Top="190"
+                Width="100"
+                Height="23"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="GenAvatarDataT"
+                Content="透明头像数据集" />
         <Button Canvas.Left="10"
                 Canvas.Top="220"
                 Width="100"
@@ -62,5 +70,21 @@
                 Height="23"
                 Click="MapPathView"
                 Content="路线地图查看" />
+        <Button Canvas.Left="120"
+                Canvas.Top="10"
+                Width="100"
+                Height="23"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="ZoomOut"
+                Content="缩小地图到256" />
+        <Button Canvas.Left="120"
+                Canvas.Top="40"
+                Width="100"
+                Height="23"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="CameraTest"
+                Content="新视角识别测试" />
     </Canvas>
 </Window>

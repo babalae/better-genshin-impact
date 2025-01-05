@@ -61,15 +61,15 @@ public class GeniusInvokationControl
 
     public static bool OutputImageWhenError = true;
 
-    private CancellationTokenSource? _cts;
+    private CancellationToken _ct;
 
     private readonly AutoGeniusInvokationAssets _assets = AutoGeniusInvokationAssets.Instance;
 
     // private IGameCapture? _gameCapture;
 
-    public void Init(GeniusInvokationTaskParam taskParam)
+    public void Init(CancellationToken ct)
     {
-        _cts = taskParam.Cts;
+        _ct = ct;
         // _gameCapture = taskParam.Dispatcher.GameCapture;
     }
 
@@ -103,19 +103,20 @@ public class GeniusInvokationControl
     {
         NewRetry.Do(() =>
         {
-            if (_cts is { IsCancellationRequested: true })
+            if (_ct is { IsCancellationRequested: true })
             {
                 return;
             }
-
+            TaskControl.TrySuspend();
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
+           
         }, TimeSpan.FromSeconds(1), 100);
 
-        if (_cts is { IsCancellationRequested: true })
+        if (_ct is { IsCancellationRequested: true })
         {
             throw new TaskCanceledException("任务取消");
         }

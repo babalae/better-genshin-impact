@@ -20,6 +20,7 @@
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Visibility="{Binding IsVisible, Mode=TwoWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                 WindowBackdropType="Auto"
                  WindowStartupLocation="CenterScreen"
                  WindowState="{Binding WindowState, Mode=TwoWay}"
                  mc:Ignorable="d">
@@ -27,6 +28,9 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </Window.Resources>
     <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Activated">
+            <b:InvokeCommandAction Command="{Binding ActivatedCommand}" />
+        </b:EventTrigger>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
@@ -45,7 +49,7 @@
                            Grid.Row="1"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
-                           OpenPaneLength="150">
+                           OpenPaneLength="160">
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"
@@ -69,35 +73,64 @@
                         <ui:SymbolIcon Symbol="TaskListSquareLtr24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+
+                <!--<ui:NavigationViewItemSeparator />-->
+
+                <ui:NavigationViewItem Content="一条龙"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:OneDragonFlowPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="AnimalTurtle24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                
+                <ui:NavigationViewItem Content="全自动">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Bot24" />
+                    </ui:NavigationViewItem.Icon>
+                    <ui:NavigationViewItem.MenuItems>
+
+                        <!--<ui:NavigationViewItemSeparator />-->
+                        <!--  ConvertRange20  -->
+                        <ui:NavigationViewItem Content="调度器"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:ScriptControlPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="DeveloperBoard24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  WebAsset24 | DocumentJs16 | Script16  -->
+                        <ui:NavigationViewItem Content="JS 脚本"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:JsListPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="DocumentJs16" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  Map24  -->
+                        <ui:NavigationViewItem Content="地图追踪"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:MapPathingPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Map24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  Script16  -->
+                        <ui:NavigationViewItem Content="录制回放"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:KeyMouseRecordPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Record24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                    </ui:NavigationViewItem.MenuItems>
+                </ui:NavigationViewItem>
+                
                 <ui:NavigationViewItem Content="辅助操控"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:MacroSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="XboxController24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <!--<ui:NavigationViewItemSeparator />-->
-                <ui:NavigationViewItem Content="调度器"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:ScriptControlPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Bot24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <!--  WebAsset24 | DocumentJs16 | Script16  -->
-                <ui:NavigationViewItem Content="脚本编写"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:ScriptControlPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="DocumentJs16" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <!--  Script16  -->
-                <ui:NavigationViewItem Content="录制回放"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:KeyMouseRecordPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Record24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
@@ -108,13 +141,13 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="通知"
+                <!--<ui:NavigationViewItem Content="通知"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:NotificationSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
+                </ui:NavigationViewItem>-->
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"
@@ -135,7 +168,7 @@
 
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel>
@@ -153,7 +186,7 @@
 
         <tray:NotifyIcon Grid.Row="0"
                          FocusOnLeftClick="False"
-                         Icon="pack://application:,,,/Assets/logo.ico"
+                         Icon="pack://application:,,,/Assets/Images/logo.ico"
                          LeftDoubleClick="OnNotifyIconLeftDoubleClick"
                          MenuOnRightClick="True"
                          TooltipText="BetterGI">

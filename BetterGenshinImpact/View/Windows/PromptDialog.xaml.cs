@@ -43,6 +43,17 @@ public partial class PromptDialog
         return inst.DialogResult == true ? inst.ResponseText : defaultValue;
     }
 
+    public static string Prompt(string question, string title, UIElement uiElement, Size size)
+    {
+        var inst = new PromptDialog(question, title, uiElement, "")
+        {
+            Width = size.Width,
+            Height = size.Height
+        };
+        inst.ShowDialog();
+        return inst.DialogResult == true ? inst.ResponseText : "";
+    }
+
     public string ResponseText
     {
         get
@@ -55,7 +66,10 @@ public partial class PromptDialog
             {
                 return comboBox.Text;
             }
-            return string.Empty;
+            else
+            {
+                return "true";
+            }
         }
     }
 

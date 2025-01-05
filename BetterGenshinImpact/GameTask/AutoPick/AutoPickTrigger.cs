@@ -15,7 +15,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
@@ -41,11 +40,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 拾取白名单
     /// </summary>
     private List<string> _whiteList = [];
-
-    // 自定义拾取按键
-    private string _pickKeyName = "F";
-
-    private User32.VK _pickVk = User32.VK.VK_F;
+    
     private RecognitionObject _pickRo;
 
     // 外部配置
@@ -54,7 +49,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     public AutoPickTrigger()
     {
         _autoPickAssets = AutoPickAssets.Instance;
-        _pickRo = _autoPickAssets.FRo;
+        _pickRo = _autoPickAssets.PickRo;
     }
 
     public AutoPickTrigger(AutoPickExternalConfig? config) : this()
@@ -64,28 +59,6 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     public void Init()
     {
-        var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
-        if (!string.IsNullOrEmpty(keyName))
-        {
-            try
-            {
-                _pickRo = _autoPickAssets.LoadCustomPickKey(keyName);
-                _pickVk = User32Helper.ToVk(keyName);
-                _pickKeyName = keyName;
-            }
-            catch (Exception e)
-            {
-                _logger.LogDebug(e, "加载自定义拾取按键时发生异常");
-                _logger.LogError("加载自定义拾取按键失败，继续使用默认的F键");
-                TaskContext.Instance().Config.AutoPickConfig.PickKey = "F";
-                return;
-            }
-            if (_pickKeyName != "F")
-            {
-                _logger.LogInformation("自定义拾取按键：{Key}", _pickKeyName);
-            }
-        }
-
         IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
         try
         {
@@ -98,7 +71,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑名单失败");
-            MessageBox.Show("读取拾取黑名单失败，请确认修改后的拾取黑名单内容格式是否正确！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Error("读取拾取黑名单失败，请确认修改后的拾取黑名单内容格式是否正确！");
         }
 
         try
@@ -112,7 +85,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取白名单失败");
-            MessageBox.Show("读取拾取白名单失败，请确认修改后的拾取白名单内容格式是否正确！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Error("读取拾取白名单失败，请确认修改后的拾取白名单内容格式是否正确！");
         }
     }
 
@@ -134,7 +107,15 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         content.CaptureRectArea.Find(_pickRo, foundRectArea =>
         {
-            speedTimer.Record($"识别到 {_pickKeyName} 拾取键");
+            speedTimer.Record($"识别到拾取键");
+
+            if (_externalConfig is { ForceInteraction: true })
+            {
+                LogPick(content, "直接拾取");
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F);
+                return;
+            }
+
             var scale = TaskContext.Instance().SystemInfo.AssetScale;
             var config = TaskContext.Instance().Config.AutoPickConfig;
 
@@ -205,6 +186,11 @@ public partial class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
+                // 纳塔部落中文名特殊处理，不拾取
+                if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") || text.Contains("流泉")))
+                {
+                    return;
+                }
 
                 // 单个字符不拾取
                 if (text.Length <= 1)
@@ -215,7 +201,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 if (_whiteList.Contains(text))
                 {
                     LogPick(content, text);
-                    Simulation.SendInput.Keyboard.KeyPress(_pickVk);
+                    Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                     return;
                 }
 
@@ -235,7 +221,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 speedTimer.Record("黑名单判断");
 
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(_pickVk);
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             }
         });
         speedTimer.DebugPrint();

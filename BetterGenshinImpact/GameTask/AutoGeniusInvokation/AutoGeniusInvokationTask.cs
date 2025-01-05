@@ -1,15 +1,17 @@
-﻿using BetterGenshinImpact.Helpers.Extensions;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
-public class AutoGeniusInvokationTask
+public class AutoGeniusInvokationTask(GeniusInvokationTaskParam taskParam) : ISoloTask
 {
-    public static void Start(GeniusInvokationTaskParam taskParam)
+    public string Name => "自动七圣召唤";
+
+    public Task Start(CancellationToken ct)
     {
-        TaskTriggerDispatcher.Instance().StopTimer();
         // 读取策略信息
         var duel = ScriptParser.Parse(taskParam.StrategyContent);
-        SystemControl.ActivateWindow();
-        duel.RunAsync(taskParam).SafeForget();
+        duel.Run(ct);
+        return Task.CompletedTask;
     }
 }

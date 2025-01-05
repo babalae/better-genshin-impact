@@ -1,7 +1,10 @@
-﻿namespace BetterGenshinImpact.Core.Script.Dependence.Model;
+﻿using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
+using BetterGenshinImpact.Helpers;
+
+namespace BetterGenshinImpact.Core.Script.Dependence.Model;
 
 /// <summary>
-/// 实时任务计时器
+/// 实时任务触发器
 /// </summary>
 public class RealtimeTimer
 {
@@ -28,5 +31,14 @@ public class RealtimeTimer
     public RealtimeTimer(string name)
     {
         Name = name;
+    }
+
+    public RealtimeTimer(string name, dynamic config)
+    {
+        Name = name;
+        if (Name == "AutoPick")
+        {
+            Config = ScriptObjectConverter.ConvertTo<AutoPickExternalConfig>(config);
+        }
     }
 }

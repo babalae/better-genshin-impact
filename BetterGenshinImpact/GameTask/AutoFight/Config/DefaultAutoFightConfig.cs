@@ -18,7 +18,7 @@ public class DefaultAutoFightConfig
     static DefaultAutoFightConfig()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoFight\Assets\combat_avatar.json"));
-        var config = JsonSerializer.Deserialize<List<CombatAvatar>>(json, ConfigService.JsonOptions);
+        var config = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CombatAvatar>>(json);
         CombatAvatars = config ?? throw new Exception("combat_avatar.json deserialize failed");
         CombatAvatarNames = config.Select(x => x.Name).ToList();
         CombatAvatarMap = config.ToDictionary(x => x.Name);

@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -10,6 +11,7 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -20,7 +22,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.ViewModel.Pages.OneDragon;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact;
 
@@ -35,6 +41,10 @@ public partial class App : Application
         .CheckIntegration()
         .UseElevated()
         .UseSingleInstance("BetterGI")
+        .ConfigureLogging(builder =>
+        {
+            builder.ClearProviders();
+        })
         .ConfigureServices(
             (context, services) =>
             {
@@ -65,7 +75,6 @@ public partial class App : Application
 
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
-
                 // Page resolver service
                 services.AddSingleton<IPageService, PageService>();
 
@@ -85,15 +94,32 @@ public partial class App : Application
                 services.AddView<CommonSettingsPage, CommonSettingsPageViewModel>();
                 services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
-                services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
+                // services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
-                // services.AddView<DispatcherPage, DispatcherPageViewModel>();
+                services.AddView<JsListPage, JsListViewModel>();
+                services.AddView<MapPathingPage, MapPathingViewModel>();
+                services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
+                services.AddSingleton<PathingConfigViewModel>();
+                // services.AddView<PathingConfigView, PathingConfigViewModel>();
+
+                // 一条龙 ViewModels
+                // services.AddSingleton<CraftViewModel>();
+                // services.AddSingleton<DailyCommissionViewModel>();
+                // services.AddSingleton<DailyRewardViewModel>();
+                // services.AddSingleton<DomainViewModel>();
+                // services.AddSingleton<ForgingViewModel>();
+                // services.AddSingleton<LeyLineBlossomViewModel>();
+                // services.AddSingleton<MailViewModel>();
+                // services.AddSingleton<SereniteaPotViewModel>();
+                // services.AddSingleton<TcgViewModel>();
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
+                services.AddSingleton<IScriptService, ScriptService>();
+                services.AddSingleton<HutaoNamedPipe>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
@@ -238,7 +264,23 @@ public partial class App : Application
             e = e.InnerException;
         }
 
-        MessageBox.Show("程序异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        try
+        {
+            ExceptionReport.Show(e);
+        }
+        catch
+        {
+            // Fallback.
+            System.Windows.Forms.MessageBox.Show(
+                $"""
+                程序异常：{e.Source}
+                --
+                {e.StackTrace}
+                --
+                {e.Message}
+                """
+            );
+        }
 
         // log
         GetLogger<App>().LogDebug(e, "UnHandle Exception");

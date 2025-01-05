@@ -1,5 +1,12 @@
-﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
+﻿using System.Windows.Documents;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using OpenCvSharp;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -24,6 +31,7 @@ public static partial class Bv
             ra.Click();
             return true;
         }
+
         return false;
     }
 
@@ -40,6 +48,7 @@ public static partial class Bv
             ra.Click();
             return true;
         }
+
         return false;
     }
 
@@ -56,6 +65,7 @@ public static partial class Bv
             ra.Click();
             return true;
         }
+
         return false;
     }
 
@@ -72,6 +82,7 @@ public static partial class Bv
             ra.Click();
             return true;
         }
+
         return false;
     }
 
@@ -88,6 +99,7 @@ public static partial class Bv
             ra.Click();
             return true;
         }
+
         return false;
     }
 
@@ -104,6 +116,7 @@ public static partial class Bv
             ra.Click();
             return true;
         }
+
         return false;
     }
 
@@ -125,5 +138,64 @@ public static partial class Bv
     public static bool ClickCancelButton(ImageRegion captureRa)
     {
         return ClickBlackCancelButton(captureRa) || ClickWhiteCancelButton(captureRa) || ClickOnlineNoButton(captureRa);
+    }
+
+    /// <summary>
+    /// 找到交互按钮
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <param name="text"></param>
+    /// <returns></returns>
+    public static bool FindF(ImageRegion captureRa, params string[] text)
+    {
+        using var ra = captureRa.Find(AutoPickAssets.Instance.PickRo);
+        if (ra.IsExist())
+        {
+            if (text.Length == 0)
+            {
+                return true;
+            }
+
+            var scale = TaskContext.Instance().SystemInfo.AssetScale;
+            var config = TaskContext.Instance().Config.AutoPickConfig;
+            var textRect = new Rect(ra.X + (int)(config.ItemTextLeftOffset * scale), ra.Y,
+                (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), ra.Height);
+
+            var textRa = captureRa.DeriveCrop(textRect);
+            var list = textRa.FindMulti(RecognitionObject.OcrThis);
+
+            foreach (var item in list)
+            {
+                // 所有匹配成功才算成功
+                var success = true;
+                foreach (var t in text)
+                {
+                    if (!item.Text.Contains(t))
+                    {
+                        success = false;
+                    }
+                }
+                return success;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 找到交互按钮并点击
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <param name="text"></param>
+    /// <returns></returns>
+    public static bool FindFAndPress(ImageRegion captureRa, params string[] text)
+    {
+        if (FindF(captureRa, text))
+        {
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            return true;
+        }
+
+        return false;
     }
 }

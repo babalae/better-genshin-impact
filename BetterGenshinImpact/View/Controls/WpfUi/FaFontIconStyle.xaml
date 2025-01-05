@@ -12,4 +12,8 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <Style x:Key="FaFontIconStyleForOneDragon" TargetType="ui:FontIcon">
+        <Setter Property="FontFamily" Value="{StaticResource FgiIconFontFamily}" />
+    </Style>
 </ResourceDictionary>

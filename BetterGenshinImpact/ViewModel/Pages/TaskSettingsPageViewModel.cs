@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -13,12 +14,18 @@ using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+using Windows.System;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
-using MessageBox = System.Windows.MessageBox;
+using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.ViewModel.Pages.View;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -32,20 +39,71 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
 
-    [ObservableProperty] private string[] _strategyList;
-    [ObservableProperty] private string _switchAutoGeniusInvokationButtonText = "启动";
+    // [ObservableProperty]
+    // private string[] _strategyList;
 
-    [ObservableProperty] private int _autoWoodRoundNum;
-    [ObservableProperty] private int _autoWoodDailyMaxCount = 2000;
-    [ObservableProperty] private string _switchAutoWoodButtonText = "启动";
+    [ObservableProperty]
+    private bool _switchAutoGeniusInvokationEnabled;
 
-    [ObservableProperty] private string[] _combatStrategyList;
-    [ObservableProperty] private int _autoDomainRoundNum;
-    [ObservableProperty] private string _switchAutoDomainButtonText = "启动";
-    [ObservableProperty] private string _switchAutoFightButtonText = "启动";
-    [ObservableProperty] private string _switchAutoTrackButtonText = "启动";
-    [ObservableProperty] private string _switchAutoTrackPathButtonText = "启动";
-    [ObservableProperty] private string _switchAutoMusicGameButtonText = "启动";
+    [ObservableProperty]
+    private string _switchAutoGeniusInvokationButtonText = "启动";
+
+    [ObservableProperty]
+    private int _autoWoodRoundNum;
+
+    [ObservableProperty]
+    private int _autoWoodDailyMaxCount = 2000;
+
+    [ObservableProperty]
+    private bool _switchAutoWoodEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoWoodButtonText = "启动";
+
+    //[ObservableProperty]
+    //private string[] _combatStrategyList;
+
+    [ObservableProperty]
+    private int _autoDomainRoundNum;
+
+    [ObservableProperty]
+    private bool _switchAutoDomainEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoDomainButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoFightEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoFightButtonText = "启动";
+
+    [ObservableProperty]
+    private string _switchAutoTrackButtonText = "启动";
+
+    [ObservableProperty]
+    private string _switchAutoTrackPathButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoMusicGameEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoMusicGameButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoAlbumEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoAlbumButtonText = "启动";
+
+    [ObservableProperty]
+    private List<string> _domainNameList;
+
+    [ObservableProperty]
+    private List<string> _artifactSalvageStarList = ["4", "3", "2", "1"];
+
+    [ObservableProperty]
+    private AutoFightViewModel? _autoFightViewModel;
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -53,46 +111,30 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
 
-        _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
+        //_strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
 
-        _combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
+        //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
+
+        _domainNameList = MapLazyAssets.Instance.DomainNameList;
+        _autoFightViewModel = new AutoFightViewModel(Config);
     }
 
-    private string[] LoadCustomScript(string folder)
+    [RelayCommand]
+    private async Task OnStopSoloTask()
     {
-        var files = Directory.GetFiles(folder, "*.*",
-            SearchOption.AllDirectories);
-
-        var strategyList = new string[files.Length];
-        for (var i = 0; i < files.Length; i++)
-        {
-            if (files[i].EndsWith(".txt"))
-            {
-                var strategyName = files[i].Replace(folder, "").Replace(".txt", "");
-                if (strategyName.StartsWith('\\'))
-                {
-                    strategyName = strategyName[1..];
-                }
-                strategyList[i] = strategyName;
-            }
-        }
-
-        return strategyList;
+        CancellationContext.Instance.Cancel();
+        SwitchAutoGeniusInvokationEnabled = false;
+        SwitchAutoWoodEnabled = false;
+        SwitchAutoDomainEnabled = false;
+        SwitchAutoFightEnabled = false;
+        SwitchAutoMusicGameEnabled = false;
+        await Task.Delay(800);
     }
 
     [RelayCommand]
     private void OnStrategyDropDownOpened(string type)
     {
-        switch (type)
-        {
-            case "Combat":
-                CombatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
-                break;
-
-            case "GeniusInvocation":
-                StrategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
-                break;
-        }
+        _autoFightViewModel.OnStrategyDropDownOpened(type);
     }
 
     public void OnNavigatedTo()
@@ -110,353 +152,223 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public void OnSwitchAutoGeniusInvokation()
+    public async Task OnSwitchAutoGeniusInvokation()
     {
-        try
+        if (GetTcgStrategy(out var content))
         {
-            lock (_locker)
-            {
-                if (SwitchAutoGeniusInvokationButtonText == "启动")
-                {
-                    if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
-                    {
-                        MessageBox.Show("请先选择策略");
-                        return;
-                    }
-
-                    var path = Global.Absolute(@"User\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
-
-                    if (!File.Exists(path))
-                    {
-                        MessageBox.Show("策略文件不存在");
-                        return;
-                    }
-
-                    var content = File.ReadAllText(path);
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new GeniusInvokationTaskParam(_cts, content);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoGeniusInvokation, param);
-                    SwitchAutoGeniusInvokationButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoGeniusInvokationButtonText = "启动";
-                }
-            }
+            return;
         }
-        catch (System.Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
+
+        SwitchAutoGeniusInvokationEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)));
+        SwitchAutoGeniusInvokationEnabled = false;
     }
 
-    [RelayCommand]
-    public void OnGoToAutoGeniusInvokationUrl()
+    public bool GetTcgStrategy(out string content)
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4") { UseShellExecute = true });
-    }
-
-    [RelayCommand]
-    public void OnSwitchAutoWood()
-    {
-        try
+        content = string.Empty;
+        if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
         {
-            lock (_locker)
-            {
-                if (SwitchAutoWoodButtonText == "启动")
-                {
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new WoodTaskParam(_cts, AutoWoodRoundNum, AutoWoodDailyMaxCount);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoWood, param);
-                    SwitchAutoWoodButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoWoodButtonText = "启动";
-                }
-            }
-        }
-        catch (System.Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
-    }
-
-    [RelayCommand]
-    public void OnGoToAutoWoodUrl()
-    {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/felling.html") { UseShellExecute = true });
-    }
-
-    [RelayCommand]
-    public void OnSwitchAutoFight()
-    {
-        try
-        {
-            lock (_locker)
-            {
-                if (SwitchAutoFightButtonText == "启动")
-                {
-                    var path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
-                    if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
-                    {
-                        path = Global.Absolute(@"User\AutoFight\");
-                    }
-                    if (!File.Exists(path) && !Directory.Exists(path))
-                    {
-                        MessageBox.Show("战斗策略文件不存在");
-                        return;
-                    }
-
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new AutoFightParam(_cts, path);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoFight, param);
-                    SwitchAutoFightButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoFightButtonText = "启动";
-                }
-            }
-        }
-        catch (System.Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
-    }
-
-    [Obsolete]
-    private string? ReadFightStrategy(string strategyName)
-    {
-        if (string.IsNullOrEmpty(strategyName))
-        {
-            MessageBox.Show("请先选择战斗策略");
-            return null;
+            Toast.Warning("请先选择策略");
+            return true;
         }
 
-        var path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        var path = Global.Absolute(@"User\AutoGeniusInvokation\" + Config.AutoGeniusInvokationConfig.StrategyName + ".txt");
 
         if (!File.Exists(path))
         {
-            MessageBox.Show("战斗策略文件不存在");
-            return null;
+            Toast.Error("策略文件不存在");
+            return true;
         }
 
-        var content = File.ReadAllText(path);
-        return content;
+        content = File.ReadAllText(path);
+        return false;
     }
 
     [RelayCommand]
-    public void OnGoToAutoFightUrl()
+    public async Task OnGoToAutoGeniusInvokationUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/domain.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/tcg.html"));
     }
 
     [RelayCommand]
-    public void OnSwitchAutoDomain()
+    public async Task OnSwitchAutoWood()
     {
-        try
+        SwitchAutoWoodEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoWoodTask(new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount)));
+        SwitchAutoWoodEnabled = false;
+    }
+
+    [RelayCommand]
+    public async Task OnGoToAutoWoodUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/felling.html"));
+    }
+
+    [RelayCommand]
+    public async Task OnSwitchAutoFight()
+    {
+        if (GetFightStrategy(out var path))
         {
-            lock (_locker)
-            {
-                if (SwitchAutoDomainButtonText == "启动")
-                {
-                    var path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
-                    if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
-                    {
-                        path = Global.Absolute(@"User\AutoFight\");
-                    }
-                    if (!File.Exists(path) && !Directory.Exists(path))
-                    {
-                        MessageBox.Show("战斗策略文件不存在");
-                        return;
-                    }
+            return;
+        }
 
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new AutoDomainParam(_cts, AutoDomainRoundNum, path);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoDomain, param);
-                    SwitchAutoDomainButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoDomainButtonText = "启动";
-                }
-            }
-        }
-        catch (System.Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
+        var param = new AutoFightParam(path, Config.AutoFightConfig);
+
+        SwitchAutoFightEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
+            .RunSoloTaskAsync(new AutoFightTask(param));
+        SwitchAutoFightEnabled = false;
     }
 
     [RelayCommand]
-    public void OnGoToAutoDomainUrl()
+    public async Task OnGoToAutoFightUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/domain.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/domain.html"));
     }
 
+    [RelayCommand]
+    public async Task OnSwitchAutoDomain()
+    {
+        if (GetFightStrategy(out var path))
+        {
+            return;
+        }
+
+        SwitchAutoDomainEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
+            .RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
+        SwitchAutoDomainEnabled = false;
+    }
+
+    public bool GetFightStrategy(out string path)
+    {
+        path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
+        if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
+        {
+            path = Global.Absolute(@"User\AutoFight\");
+        }
+
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            Toast.Error("战斗策略文件不存在");
+            return true;
+        }
+
+        return false;
+    }
+
+    [RelayCommand]
+    public async Task OnGoToAutoDomainUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/domain.html"));
+    }
+
+    [RelayCommand]
+    public void OnOpenFightFolder()
+    {
+        _autoFightViewModel?.OnOpenFightFolder();
+    }
+
+    [Obsolete]
     [RelayCommand]
     public void OnSwitchAutoTrack()
     {
-        try
-        {
-            lock (_locker)
-            {
-                if (SwitchAutoTrackButtonText == "启动")
-                {
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new AutoTrackParam(_cts);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrack, param);
-                    SwitchAutoTrackButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoTrackButtonText = "启动";
-                }
-            }
-        }
-        catch (System.Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
+        // try
+        // {
+        //     lock (_locker)
+        //     {
+        //         if (SwitchAutoTrackButtonText == "启动")
+        //         {
+        //             _cts?.Cancel();
+        //             _cts = new CancellationTokenSource();
+        //             var param = new AutoTrackParam(_cts);
+        //             _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrack, param);
+        //             SwitchAutoTrackButtonText = "停止";
+        //         }
+        //         else
+        //         {
+        //             _cts?.Cancel();
+        //             SwitchAutoTrackButtonText = "启动";
+        //         }
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     MessageBox.Error(ex.Message);
+        // }
     }
 
     [RelayCommand]
-    public void OnGoToAutoTrackUrl()
+    public async Task OnGoToAutoTrackUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
     }
 
+    [Obsolete]
     [RelayCommand]
     public void OnSwitchAutoTrackPath()
     {
-        try
-        {
-            lock (_locker)
-            {
-                if (SwitchAutoTrackPathButtonText == "启动")
-                {
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new AutoTrackPathParam(_cts);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrackPath, param);
-                    SwitchAutoTrackPathButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoTrackPathButtonText = "启动";
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
+        // try
+        // {
+        //     lock (_locker)
+        //     {
+        //         if (SwitchAutoTrackPathButtonText == "启动")
+        //         {
+        //             _cts?.Cancel();
+        //             _cts = new CancellationTokenSource();
+        //             var param = new AutoTrackPathParam(_cts);
+        //             _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrackPath, param);
+        //             SwitchAutoTrackPathButtonText = "停止";
+        //         }
+        //         else
+        //         {
+        //             _cts?.Cancel();
+        //             SwitchAutoTrackPathButtonText = "启动";
+        //         }
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     MessageBox.Error(ex.Message);
+        // }
     }
 
     [RelayCommand]
-    public void OnGoToAutoTrackPathUrl()
+    public async Task OnGoToAutoTrackPathUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/track.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
     }
 
     [RelayCommand]
-    public void OnSwitchAutoMusicGame()
+    public async Task OnSwitchAutoMusicGame()
     {
-        try
-        {
-            lock (_locker)
-            {
-                if (SwitchAutoMusicGameButtonText == "启动")
-                {
-                    _cts?.Cancel();
-                    _cts = new CancellationTokenSource();
-                    var param = new AutoMusicGameParam(_cts);
-                    _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoMusicGame, param);
-                    SwitchAutoMusicGameButtonText = "停止";
-                }
-                else
-                {
-                    _cts?.Cancel();
-                    SwitchAutoMusicGameButtonText = "启动";
-                }
-            }
-        }
-        catch (System.Exception ex)
-        {
-            MessageBox.Show(ex.Message);
-        }
+        SwitchAutoMusicGameEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoMusicGameTask(new AutoMusicGameParam()));
+        SwitchAutoMusicGameEnabled = false;
     }
 
     [RelayCommand]
-    public void OnGoToAutoMusicGameUrl()
+    public async Task OnGoToAutoMusicGameUrlAsync()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/music.html") { UseShellExecute = true });
+        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/music.html"));
     }
 
-    public static void SetSwitchAutoTrackButtonText(bool running)
+    [RelayCommand]
+    public async Task OnSwitchAutoAlbum()
     {
-        var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null)
-        {
-            return;
-        }
-
-        instance.SwitchAutoTrackButtonText = running ? "停止" : "启动";
+        SwitchAutoAlbumEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
+        SwitchAutoAlbumEnabled = false;
     }
 
-    public static void SetSwitchAutoGeniusInvokationButtonText(bool running)
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
     {
-        var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null)
-        {
-            return;
-        }
-
-        instance.SwitchAutoGeniusInvokationButtonText = running ? "停止" : "启动";
-    }
-
-    public static void SetSwitchAutoWoodButtonText(bool running)
-    {
-        var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null)
-        {
-            return;
-        }
-
-        instance.SwitchAutoWoodButtonText = running ? "停止" : "启动";
-    }
-
-    public static void SetSwitchAutoDomainButtonText(bool running)
-    {
-        var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null)
-        {
-            return;
-        }
-
-        instance.SwitchAutoDomainButtonText = running ? "停止" : "启动";
-    }
-
-    public static void SetSwitchAutoFightButtonText(bool running)
-    {
-        var instance = App.GetService<TaskSettingsPageViewModel>();
-        if (instance == null)
-        {
-            return;
-        }
-
-        instance.SwitchAutoFightButtonText = running ? "停止" : "启动";
+        _autoFightViewModel.OnOpenLocalScriptRepo();
     }
 }

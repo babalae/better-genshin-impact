@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -7,8 +8,11 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -48,6 +52,11 @@ public class Avatar
     /// 长按元素战技CD
     /// </summary>
     public double SkillHoldCd { get; set; }
+    
+    /// <summary>
+    /// 最近一次使用元素战技的时间
+    /// </summary>
+    public DateTime LastSkillTime { get; set; }
 
     /// <summary>
     /// 元素爆发CD
@@ -72,7 +81,7 @@ public class Avatar
     /// <summary>
     /// 任务取消令牌
     /// </summary>
-    public CancellationTokenSource? Cts { get; set; }
+    public CancellationToken Ct { get; set; }
 
     /// <summary>
     /// 战斗场景
@@ -102,13 +111,18 @@ public class Avatar
     /// <returns></returns>
     public void ThrowWhenDefeated(ImageRegion region)
     {
-        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
-        if (!confirmRectArea.IsEmpty())
+        if (Bv.IsInRevivePrompt(region))
         {
+            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            // 先打开地图
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            Sleep(600, Cts);
+            Sleep(600, Ct);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
-            throw new Exception("存在角色被击败，按 M 键打开地图，并停止自动秘境。");
+            // tp 到七天神像复活
+            var tpTask = new TpTask(Ct);
+            tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true).Wait(Ct);
+
+            throw new Exception("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }
     }
 
@@ -120,7 +134,7 @@ public class Avatar
     {
         for (var i = 0; i < 30; i++)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
@@ -129,16 +143,53 @@ public class Avatar
             ThrowWhenDefeated(region);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == 3)
+            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
             {
                 return;
             }
 
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
             // Debug.WriteLine($"切换到{Index}号位");
-            // Cv2.ImWrite($"log/切换.png", content.CaptureRectArea.SrcMat);
-            Sleep(250, Cts);
+            // Cv2.ImWrite($"log/切换.png", region.SrcMat);
+            Sleep(250, Ct);
         }
+    }
+
+    /// <summary>
+    /// 尝试切换到本角色
+    /// </summary>
+    /// <param name="tryTimes"></param>
+    /// <param name="needLog"></param>
+    /// <returns></returns>
+    public bool TrySwitch(int tryTimes = 4, bool needLog = true)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            if (Ct is { IsCancellationRequested: true })
+            {
+                return false;
+            }
+
+            var region = CaptureToRectArea();
+            ThrowWhenDefeated(region);
+
+            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
+            {
+                if (needLog && i > 0)
+                {
+                    Logger.LogInformation("成功切换角色:{Name}", Name);
+                }
+
+                return true;
+            }
+
+            AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_1 + (byte)Index - 1);
+
+            Sleep(250, Ct);
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -248,14 +299,14 @@ public class Avatar
     {
         while (ms >= 0)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
 
             AutoFightContext.Instance.Simulator.LeftButtonClick();
             ms -= 200;
-            Sleep(200, Cts);
+            Sleep(200, Ct);
         }
     }
 
@@ -266,7 +317,7 @@ public class Avatar
     {
         for (var i = 0; i < 1; i++)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
@@ -276,7 +327,7 @@ public class Avatar
                 if (Name == "纳西妲")
                 {
                     AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
-                    Sleep(300, Cts);
+                    Sleep(300, Ct);
                     for (int j = 0; j < 10; j++)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
@@ -284,6 +335,12 @@ public class Avatar
                     }
 
                     Sleep(300); // 持续操作不应该被cts取消
+                    AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
+                }
+                else if (Name == "坎蒂丝")
+                {
+                    AutoFightContext.Instance.Simulator.KeyDown(User32.VK.VK_E);
+                    Thread.Sleep(3000);
                     AutoFightContext.Instance.Simulator.KeyUp(User32.VK.VK_E);
                 }
                 else
@@ -296,7 +353,7 @@ public class Avatar
                 AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_E);
             }
 
-            Sleep(200, Cts);
+            Sleep(200, Ct);
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
@@ -305,6 +362,7 @@ public class Avatar
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
                 // todo 把cd加入执行队列
+                LastSkillTime = DateTime.UtcNow;
                 return;
             }
         }
@@ -331,13 +389,13 @@ public class Avatar
         // var isBurstReleased = false;
         for (var i = 0; i < 10; i++)
         {
-            if (Cts is { IsCancellationRequested: true })
+            if (Ct is { IsCancellationRequested: true })
             {
                 return;
             }
 
             AutoFightContext.Instance.Simulator.KeyPress(User32.VK.VK_Q);
-            Sleep(200, Cts);
+            Sleep(200, Ct);
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region);
@@ -345,7 +403,7 @@ public class Avatar
             if (notActiveCount == 0)
             {
                 // isBurstReleased = true;
-                Sleep(1500, Cts);
+                Sleep(1500, Ct);
                 return;
             }
             // else
@@ -381,7 +439,7 @@ public class Avatar
     /// </summary>
     public void Dash(int ms = 0)
     {
-        if (Cts is { IsCancellationRequested: true })
+        if (Ct is { IsCancellationRequested: true })
         {
             return;
         }
@@ -398,7 +456,7 @@ public class Avatar
 
     public void Walk(string key, int ms)
     {
-        if (Cts is { IsCancellationRequested: true })
+        if (Ct is { IsCancellationRequested: true })
         {
             return;
         }
@@ -470,15 +528,16 @@ public class Avatar
 
         if (Name == "那维莱特")
         {
+            var dpi = TaskContext.Instance().DpiScale;
             AutoFightContext.Instance.Simulator.LeftButtonDown();
             while (ms >= 0)
             {
-                if (Cts is { IsCancellationRequested: true })
+                if (Ct is { IsCancellationRequested: true })
                 {
                     return;
                 }
 
-                Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                 ms -= 50;
                 Sleep(50); // 持续操作不应该被cts取消
             }

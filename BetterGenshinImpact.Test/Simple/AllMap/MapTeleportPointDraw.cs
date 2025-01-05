@@ -1,8 +1,11 @@
-﻿using BetterGenshinImpact.Service;
+﻿using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.Service;
 using OpenCvSharp;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 
@@ -10,24 +13,28 @@ public class MapTeleportPointDraw
 {
     public static void Draw()
     {
-        var pList = LoadTeleportPoint(@"E:\HuiTask\更好的原神\地图匹配\地图点位\Json_Integration\锚点&神像\");
-        var map = new Mat(@"E:\HuiTask\更好的原神\地图匹配\genshin_map_带标记.png");
-        DrawTeleportPoint(map, pList.ToArray());
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\genshin_map_带标记_传送点.png", map);
+        // var pList = LoadTeleportPoint(@"E:\HuiTask\更好的原神\地图匹配\地图点位\5.0");
+        // pList.AddRange(MapAssets.Instance.TpPositions);
+        var map = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\mainMap1024BlockColor.png");
+        DrawTeleportPoint(map, MapLazyAssets.Instance.TpPositions);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\传送点_1024_0.34.3.png", map);
     }
 
-    public static void DrawTeleportPoint(Mat map, Point[] points)
+    public static void DrawTeleportPoint(Mat map, List<GiWorldPosition> points)
     {
         foreach (var point in points)
         {
-            Cv2.Circle(map, new Point(point.X, point.Y), 10, Scalar.Red, 2);
+            var p = MapCoordinate.GameToMain1024(point.Position);
+            Cv2.Circle(map, p, 4, Scalar.Red, 2);
+            // 写文字
+            Cv2.PutText(map, $"[{point.X:F2},{point.Y:F2}]", new Point(p.X + 10, p.Y + 5), HersheyFonts.HersheySimplex, 1, Scalar.Red, 2);
         }
     }
 
-    public static List<Point> LoadTeleportPoint(string folderPath)
+    public static List<GiWorldPosition> LoadTeleportPoint(string folderPath)
     {
         string[] files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
-        List<Point> points = new();
+        List<GiWorldPosition> points = new();
         foreach (var file in files)
         {
             var gamePoint = JsonSerializer.Deserialize<GamePoint>(File.ReadAllText(file), ConfigService.JsonOptions);
@@ -48,17 +55,12 @@ public class MapTeleportPointDraw
     /// </summary>
     /// <param name="position">[a,b,c]</param>
     /// <returns></returns>
-    public static Point Transform(decimal[] position)
+    public static GiWorldPosition Transform(decimal[] position)
     {
-        // 四舍六入五取偶
-        var a = (int)Math.Round(position[0]); // 上
-        var c = (int)Math.Round(position[2]); // 左
-
-        // 转换1024区块坐标，大地图坐标系正轴是往左上方向的
-        // 这里写最左上角的区块坐标(m,n)/(上,左),截止4.5版本，最左上角的区块坐标是(5,7)
-
-        int m = 5, n = 7;
-        return new Point((n + 1) * 1024 - c, (m + 1) * 1024 - a);
+        return new GiWorldPosition
+        {
+            Position = position,
+        };
     }
 
     class GamePoint

@@ -1,0 +1,129 @@
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.MapPathingPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
+             d:DataContext="{d:DesignInstance Type=pages:MapPathingViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="42,16,42,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TextBlock Grid.Row="0"
+                      Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="路径追踪（实验功能）" />
+        <ui:TextBlock Grid.Row="1"
+                      Margin="0,0,0,8"
+                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                      TextWrapping="Wrap">
+            可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                点击查看地图追踪与录制使用教程
+            </Hyperlink>
+        </ui:TextBlock>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <ui:Button Command="{Binding OpenScriptsFolderCommand}"
+                       Content="打开任务目录"
+                       Icon="{ui:SymbolIcon FolderOpen24}" />
+            <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenLocalScriptRepoCommand}"
+                       Icon="{ui:SymbolIcon Archive24}">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <ui:TextBlock>脚本仓库</ui:TextBlock>
+                    <ui:InfoBadge Margin="0,-8,-14,0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Top"
+                                  Severity="Attention"
+                                  Style="{DynamicResource DotInfoBadgeStyle}"
+                                  Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </ui:Button>
+            <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenSettingsCommand}"
+                       Content="设置"
+                       Icon="{ui:SymbolIcon Settings24}" />
+            <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenMapViewerCommand}"
+                       Content="查看实时追踪地图" />
+            <ui:Button Margin="10,0,0,0"
+                       Command="{Binding OpenMapEditorCommand}"
+                       Content="录制编辑器" />
+        </StackPanel>
+
+        <Separator Grid.Row="3"
+                   Height="10"
+                   Opacity="0" />
+
+        <ui:Border Grid.Row="5"
+                   Background="{DynamicResource CardBackground}"
+                   BorderBrush="{DynamicResource CardBorderBrush}"
+                   BorderThickness="1"
+                   CornerRadius="{DynamicResource ControlCornerRadius}">
+            <Grid Margin="4">
+                <ui:Grid ColumnDefinitions="*,10" Visibility="Hidden">
+                    <Grid x:Name="TreeColumnStar" Grid.Column="0" />
+                </ui:Grid>
+                <ui:TreeListView BorderThickness="0"
+                                 ItemsSource="{Binding TreeList}"
+                                 SelectedItem="{Binding SelectNode, Mode=TwoWay}">
+                    <ui:TreeListView.Columns>
+                        <GridViewColumnCollection>
+                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="名称">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:TreeRowExpander>
+                                            <ui:TreeRowExpander.Content>
+                                                <ui:StackPanel Margin="8,0,0,0"
+                                                               Orientation="Horizontal"
+                                                               Spacing="8">
+                                                    <Image Height="16" Source="{Binding IconFilePath, Converter={x:Static vio:PathToIconConverter.Instance}}" />
+                                                    <TextBlock VerticalAlignment="Center" Text="{Binding FileName}" />
+                                                </ui:StackPanel>
+                                            </ui:TreeRowExpander.Content>
+                                        </ui:TreeRowExpander>
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                        </GridViewColumnCollection>
+                    </ui:TreeListView.Columns>
+                    <ui:TreeListView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+                    </ui:TreeListView.ItemTemplate>
+                    <ui:TreeListView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="{Binding StartCommand}" Header="执行任务" />
+                            <MenuItem Command="{Binding RefreshCommand}" Header="刷新" />
+                        </ContextMenu>
+                    </ui:TreeListView.ContextMenu>
+                </ui:TreeListView>
+            </Grid>
+        </ui:Border>
+    </Grid>
+</UserControl>

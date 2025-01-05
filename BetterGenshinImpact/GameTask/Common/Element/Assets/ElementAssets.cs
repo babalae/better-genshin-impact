@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -22,6 +23,23 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject XKey;
 
     public RecognitionObject FriendChat;
+
+    public RecognitionObject PartyBtnChooseView;
+    public RecognitionObject PartyBtnDelete;
+
+    public RecognitionObject CraftCondensedResin;
+
+    public RecognitionObject BagArtifactUnchecked;
+    public RecognitionObject BagArtifactChecked;
+    public RecognitionObject BtnArtifactSalvage;
+    public RecognitionObject BtnArtifactSalvageConfirm;
+
+    public RecognitionObject BtnClaimEncounterPointsRewards;
+    public RecognitionObject PrimogemRo;
+
+    public RecognitionObject EscMailReward;
+    public RecognitionObject CollectRo;
+
 
     private ElementAssets()
     {
@@ -107,7 +125,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "SpaceKey",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_space.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(130 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(130 * AssetScale), (int)(70 * AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(350 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(200 * AssetScale), (int)(70 * AssetScale)),
+
             DrawOnWindow = false
         }.InitTemplate();
         XKey = new RecognitionObject
@@ -115,7 +134,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "XKey",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_x.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(210 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(60 * AssetScale), (int)(70 * AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(350 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(200 * AssetScale), (int)(70 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -126,6 +145,107 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "friend_chat.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(70 * AssetScale), (int)(83 * AssetScale), (int)(70 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 队伍切换
+        PartyBtnChooseView = new RecognitionObject
+        {
+            Name = "PartyBtnChooseView",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "party_btn_choose_view.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(120 * AssetScale), CaptureRect.Width / 7, (int)(120 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        PartyBtnDelete = new RecognitionObject
+        {
+            Name = "PartyBtnDelete",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "party_btn_delete.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 4, CaptureRect.Height - (int)(120 * AssetScale), CaptureRect.Width / 2, (int)(120 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 合成树脂
+        CraftCondensedResin = new RecognitionObject
+        {
+            Name = "CraftCondensedResin",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "craft_condensed_resin.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width / 2, CaptureRect.Height / 3 * 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 分解圣遗物
+        BagArtifactUnchecked = new RecognitionObject
+        {
+            Name = "BagArtifactUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_artifact_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagArtifactChecked = new RecognitionObject
+        {
+            Name = "BagArtifactChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_artifact_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnArtifactSalvage = new RecognitionObject
+        {
+            Name = "BtnArtifactSalvage",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage.png"),
+            RegionOfInterest = CaptureRect.CutBottom(0.1),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnArtifactSalvageConfirm = new RecognitionObject
+        {
+            Name = "BtnArtifactSalvageConfirm",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage_confirm.png"),
+            RegionOfInterest = CaptureRect.CutBottom(0.1),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 历练点奖励
+        BtnClaimEncounterPointsRewards = new RecognitionObject
+        {
+            Name = "BtnClaimEncounterPointsRewards",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_claim_encounter_points_rewards.png"),
+            RegionOfInterest = CaptureRect.CutRightBottom(0.3, 0.5),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        PrimogemRo = new RecognitionObject
+        {
+            Name = "Primogem",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "primogem.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 3, CaptureRect.Width, CaptureRect.Height / 3),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 邮件
+        EscMailReward = new RecognitionObject
+        {
+            Name = "EscMailReward",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_mail_reward.png"),
+            RegionOfInterest = CaptureRect.CutLeftBottom(0.1, 0.5)
+        }.InitTemplate();
+
+        CollectRo = new RecognitionObject
+        {
+            Name = "Collect",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "collect.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - CaptureRect.Height / 3, CaptureRect.Width / 4, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
     }

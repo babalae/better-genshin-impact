@@ -1,42 +1,42 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.ScriptControlPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:dd="urn:gong-wpf-dragdrop"
-      xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      Title="HomePage"
-      d:DataContext="{d:DesignInstance Type=pages:ScriptControlViewModel}"
-      d:DesignHeight="850"
-      d:DesignWidth="800"
-      ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
-      ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      FontFamily="{StaticResource TextThemeFontFamily}"
-      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      mc:Ignorable="d">
-    <Page.Resources>
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.ScriptControlPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:ScriptControlViewModel}"
+             d:DesignHeight="850"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Page.Resources>
-    <Grid Margin="8,8,8,8">
+    </UserControl.Resources>
+    <Grid Margin="8,0,8,0">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="100" />
-            <ColumnDefinition Width="7" />
+            <ColumnDefinition Width="150" />
+            <ColumnDefinition Width="16" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!--  左侧栏  -->
-        <Grid Grid.Column="0">
+        <Grid Grid.Column="0" Margin="0,8,8,8">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Border Grid.Row="0"
                         BorderBrush="{DynamicResource ControlStrongFillColorDisabledBrush}"
@@ -49,6 +49,7 @@
                 <ui:ListView Grid.Row="1"
                              dd:DragDrop.IsDragSource="True"
                              dd:DragDrop.IsDropTarget="True"
+                             dd:DragDrop.UseDefaultDragAdorner="True"
                              ItemsSource="{Binding ScriptGroups, Mode=TwoWay}"
                              SelectedItem="{Binding SelectedScriptGroup, Mode=TwoWay}"
                              SelectionMode="Single">
@@ -63,20 +64,33 @@
                             <MenuItem Command="{Binding DeleteScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="删除组" />
+                            <MenuItem Command="{Binding RenameScriptGroupCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="重命名" />
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
+                <ui:Button Grid.Row="2"
+                           Margin="0,2,0,2"
+                           HorizontalAlignment="Stretch"
+                           Command="{Binding StartMultiScriptGroupCommand}"
+                           Content="连续执行" />
             </Grid>
         </Grid>
 
         <!--  分割  -->
+        <ui:FontIcon Grid.Column="1"
+                     HorizontalAlignment="Center" Glyph="&#xf7a5;" Style="{StaticResource FaFontIconStyle}" />
         <GridSplitter Grid.Column="1"
-                      Width="2"
+                      Width="12"
                       HorizontalAlignment="Stretch"
-                      Background="{DynamicResource ControlStrongFillColorDisabledBrush}" />
+                      Background="{DynamicResource ControlStrongFillColorDisabledBrush}"
+                      Focusable="False"
+                      Opacity="0.4" />
 
         <!--  右侧栏:无选中组  -->
         <Border Grid.Column="2"
+                Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
@@ -85,7 +99,9 @@
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible" />
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}" Value="True">
+                        <DataTrigger
+                            Binding="{Binding SelectedScriptGroup, Converter={StaticResource NotNullConverter}}"
+                            Value="True">
                             <Setter Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
                     </Style.Triggers>
@@ -96,16 +112,24 @@
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验中功能）请在左侧栏选择或新增配置组" />
+                                  Text="（实验功能）请在左侧栏选择或新增配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        左侧配置组栏目右键可以新增配置组，然后可以添加并配置软件内的脚本，并进行连续执行。脚本语言为 Javascript，<Hyperlink Command="{Binding GoToScriptGroupUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看配置组使用教程
+                        在左侧栏目右键可以新增/修改配置组，拖拽进行配置组排序。配置组内可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，
+                        <Hyperlink Command="{Binding GoToScriptGroupUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看调度器使用教程
                         </Hyperlink>
                     </ui:TextBlock>
-                    <!--  示例配置组  -->
                     <ui:TextBlock Margin="0,0,0,8"
+                                  FontTypography="BodyStrong"
+                                  Text="在左侧栏目右键可以新增配置组，或者直接点击下面按钮新增配置组" />
+                    <ui:Button Margin="0,0,0,12"
+                               Command="{Binding AddScriptGroupCommand}"
+                               Content="新增配置组" />
+                    <!--  示例配置组  -->
+                    <!--<ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="也可以直接点击导入下面的示例配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
@@ -116,13 +140,14 @@
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             导入自动晶蝶示例配置组
                         </Hyperlink>
-                    </ui:TextBlock>
+                    </ui:TextBlock>-->
                 </StackPanel>
             </Grid>
         </Border>
 
         <!--  右侧栏:选中组  -->
         <Border Grid.Column="2"
+                Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,1,1,1"
@@ -151,7 +176,7 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal">
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验中功能）配置组 - " />
+                                  Text="（实验功能）配置组 - " />
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="{Binding SelectedScriptGroup.Name}" />
@@ -161,26 +186,45 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序，支持 Javascript 编写的脚本，<Hyperlink Command="{Binding GoToScriptProjectUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
-                    </Hyperlink>
+                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序。支持 BetterGI 内的 Javascript 脚本、键鼠录制脚本等，通过调度器可以设置脚本执行次数、顺序等。
                 </ui:TextBlock>
 
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal">
                     <ui:Button Command="{Binding StartScriptGroupCommand}"
-                               Content="运行此组配置"
-                               Icon="{ui:SymbolIcon Play24}"
-                               IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}" />
+                               Content="运行"
+                               Icon="{ui:SymbolIcon Play24}" />
                     <Separator Width="10" Opacity="0" />
-                    <ui:Button Command="{Binding StopRecordCommand}"
-                               Content="停止运行"
-                               Icon="{ui:SymbolIcon Stop24}"
-                               IsEnabled="{Binding IsRecording}" />
+
+
+                    <ui:DropDownButton Content="添加" Icon="{ui:SymbolIcon Add24}">
+                        <ui:DropDownButton.Flyout>
+                            <ContextMenu> 
+                                <MenuItem Header="JS脚本" Command="{Binding AddJsScriptCommand}" />
+                                <MenuItem Header="路径追踪任务" Command="{Binding AddPathingCommand}" />
+                                <MenuItem Header="键鼠脚本" Command="{Binding AddKmScriptCommand}" />
+                            </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                    </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
-                    <ui:Button Command="{Binding OpenScriptFolderCommand}"
-                               Content="打开脚本目录"
-                               Icon="{ui:SymbolIcon FolderOpen24}" />
+                    <ui:DropDownButton Content="更多功能">
+                        <ui:DropDownButton.Flyout>
+                            <ContextMenu>
+                                <MenuItem Header="清空" Command="{Binding ClearTasksCommand}" />
+                                <!--<MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />-->
+                            </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                    </ui:DropDownButton>
+                    <Separator Width="10" Opacity="0" />
+                    <ui:Button Command="{Binding OpenScriptGroupSettingsCommand}"
+                               Content="设置"
+                               Icon="{ui:SymbolIcon Settings24}" />
+                    <!--<ui:TextBlock VerticalAlignment="Center"
+                                  FontSize="16"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        停止运行请配置并使用快捷键！
+                    </ui:TextBlock>-->
                 </StackPanel>
 
                 <Separator Grid.Row="3"
@@ -193,54 +237,96 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="80" />
-                        <ColumnDefinition Width="80" />
-                        <ColumnDefinition Width="80" />
                         <ColumnDefinition Width="20" />
                     </Grid.ColumnDefinitions>
                     <Grid x:Name="Col1" Grid.Column="0" />
                     <Grid x:Name="Col2" Grid.Column="1" />
                     <Grid x:Name="Col3" Grid.Column="2" />
                     <Grid x:Name="Col4" Grid.Column="3" />
-                    <Grid x:Name="Col5" Grid.Column="4" />
-                    <Grid x:Name="Col6" Grid.Column="5" />
                 </Grid>
                 <ui:ListView Grid.Row="5"
                              HorizontalAlignment="Stretch"
                              VerticalAlignment="Stretch"
                              dd:DragDrop.IsDragSource="True"
                              dd:DragDrop.IsDropTarget="True"
+                             dd:DragDrop.UseDefaultDragAdorner="True"
                              ItemsSource="{Binding SelectedScriptGroup.Projects, Mode=TwoWay}"
                              SelectionMode="Single">
+     
+                  
                     <ListView.View>
+
                         <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                             <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding Index}"
                                             Header="#" />
                             <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding Name}"
-                                            Header="名称" />
+                                  
+                                            Header="名称" >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" FontSize="14">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding NextFlag}" Value="True">
+                                                            <Setter Property="Foreground" Value="Green" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+
+                            </GridViewColumn>
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding Type}"
+                                            DisplayMemberBinding="{Binding TypeDesc}"
                                             Header="类型" />
-                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding ScheduleDesc}"
-                                            Header="执行周期" />
-                            <GridViewColumn Width="{Binding ElementName=Col5, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding RunNum}"
-                                            Header="执行次数" />
-                            <GridViewColumn Width="{Binding ElementName=Col6, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding StatusDesc}"
-                                            Header="启用状态" />
+                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="启用状态">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:ToggleSwitch
+                                            IsChecked="{Binding Status, Converter={StaticResource BooleanToEnableTextConverter}, Mode=TwoWay}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                         </GridView>
                     </ListView.View>
-                    <ListBox.ContextMenu>
+                    <ListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddScriptCommand}" Header="添加配置" />
+                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
+                            <MenuItem Command="{Binding AddPathingCommand}" Header="添加路径追踪任务" />
+                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
+                            <MenuItem Command="{Binding AddNextFlagCommand}" Header="下一次任务从此处执行"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      />
+                            
+                            <MenuItem Command="{Binding EditScriptCommonCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="修改通用配置" />
+                            <MenuItem Command="{Binding EditJsScriptSettingsCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="修改JS脚本自定义配置">
+                                <MenuItem.Style>
+                                    <Style TargetType="MenuItem">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}"
+                                                Value="Javascript">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </MenuItem.Style>
+                            </MenuItem>
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="移除配置" />
+                                      Header="移除" />
                         </ContextMenu>
-                    </ListBox.ContextMenu>
+                    </ListView.ContextMenu>
                     <ListView.Style>
                         <Style TargetType="{x:Type ListView}">
                             <Setter Property="BorderThickness" Value="0" />
@@ -251,4 +337,4 @@
             </Grid>
         </Border>
     </Grid>
-</Page>
+</UserControl>

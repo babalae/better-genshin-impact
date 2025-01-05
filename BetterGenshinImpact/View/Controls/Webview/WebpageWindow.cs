@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Media;
+using Microsoft.Web.WebView2.Wpf;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
 
 public class WebpageWindow : Window
 {
-    public WebpagePanel? Webview => Content as WebpagePanel;
+    public WebpagePanel? Panel => Content as WebpagePanel;
+
+    public WebView2 WebView => Panel!.WebView;
 
     public WebpageWindow()
     {
@@ -17,7 +20,7 @@ public class WebpageWindow : Window
         };
 
         Content = wp;
-        Background = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
+        // Background = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -43,11 +46,16 @@ public class WebpageWindow : Window
 
     public void NavigateToUri(Uri uri)
     {
-        Webview?.NavigateToUri(uri);
+        Panel?.NavigateToUri(uri);
     }
 
     public void NavigateToHtml(string html)
     {
-        Webview?.NavigateToHtml(html);
+        Panel?.NavigateToHtml(html);
+    }
+
+    public void NavigateToFile(string path)
+    {
+        Panel?.NavigateToFile(path);
     }
 }

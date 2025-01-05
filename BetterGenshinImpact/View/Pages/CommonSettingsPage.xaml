@@ -45,13 +45,21 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="实时生效，独占全屏模式下此模式不一定生效"
+                                  Text="重启后生效"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,24,0"
                                      IsChecked="{Binding Config.MaskWindowConfig.MaskEnabled, Mode=TwoWay}" />
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="Unchecked">
+                            <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                        </b:EventTrigger>
+                        <b:EventTrigger EventName="Checked">
+                            <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -72,8 +80,11 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在遮罩内显示日志窗口"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        在遮罩内显示日志窗口，<Hyperlink Command="{Binding GoToLogFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击打开日志文件夹
+                        </Hyperlink>
+                    </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -271,7 +282,7 @@
                 </Grid>
 
 
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -295,7 +306,7 @@
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.MaskWindowConfig.UseSubform, Mode=TwoWay}" />
-                </Grid>
+                </Grid>-->
             </StackPanel>
         </ui:CardExpander>
 
@@ -420,9 +431,110 @@
             </ui:CardControl.Header>
             <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
         </ui:CardControl>
+        
+        <ui:TextBlock Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="通知设置" />
+
+        <!--  Webhook  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon VirtualNetwork20}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用Webhook"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="Webhook相关设置"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.WebhookEnabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="Webhook端点"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="填写Webhook端点"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.WebhookEndpoint, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="测试"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="发送测试载荷"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               HorizontalAlignment="Right"
+                               Command="{Binding TestWebhookCommand}"
+                               Content="发送"
+                               IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="1"
+                                  Margin="0,0,36,0"
+                                  HorizontalAlignment="Right"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding WebhookStatus}"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
         <!--  地图  -->
-        <ui:CardControl Margin="0,0,0,12"
+        <!--<ui:CardControl Margin="0,0,0,12"
                         Icon="{ui:SymbolIcon Cursor24}"
                         Visibility="{markup:Converter Value={x:Static helpers:RuntimeHelper.IsDebuggerAttached},
                                                       Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -447,7 +559,7 @@
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看地图" />
-        </ui:CardControl>
+        </ui:CardControl>-->
 
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
             <ui:CardControl.Header>

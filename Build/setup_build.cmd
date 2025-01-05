@@ -6,16 +6,11 @@ mkdir dist\BetterGI
 for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "path=%path%;%%i\MSBuild\Current\Bin;%%i\Common7\IDE"
 
 @echo [prepare version]
-cd /d ..\BetterGenshinImpact\Core\Config
-set "script=Get-Content 'Global.cs' ^| Select-String -Pattern 'Version.*\"(.*)\"' ^| ForEach-Object { $_.Matches.Groups[1].Value }"
-
-for /f "usebackq delims=" %%i in (`powershell -NoLogo -NoProfile -Command ^"%script%^"`) do set version=%%i
-
-echo currnet version is %version%
-
-if "%b%"=="" (
-   set "b=%version%"
-)
+cd /d ..\BetterGenshinImpact
+set "script=Get-Content 'BetterGenshinImpact.csproj' | Select-String -Pattern 'AssemblyVersion\>(.*)\<\/AssemblyVersion' | ForEach-Object { $_.Matches.Groups[1].Value }"
+for /f "usebackq delims=" %%i in (`powershell -NoLogo -NoProfile -Command "%script%"`) do set version=%%i
+echo current version is %version%
+if "%b%"=="" ( set "b=%version%" )
 
 set "tmpfolder=%~dp0dist\BetterGI"
 set "archiveFile=BetterGI_v%b%.7z"
@@ -34,6 +29,13 @@ xcopy * "%tmpfolder%" /E /C /I /Y
 cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
 del /f /q %tmpfolder%\*ffmpeg*.dll
+
+:: 添加一些配置文件开始（大文件不适合放在Github）
+if exist "E:\HuiTask\BetterGIBuild\BetterGI" (
+    xcopy "E:\HuiTask\BetterGIBuild\BetterGI\*" "%tmpfolder%" /E /C /I /Y
+)
+:: 添加一些配置文件结束
+
 MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\ -t7z -mx=5 -mf=BCJ2 -r -y
 copy /y publish.7z .\MicaSetup\Resources\Setups\publish.7z
 if exist "%zipFile%" ( del /f /q "%zipfile%" )

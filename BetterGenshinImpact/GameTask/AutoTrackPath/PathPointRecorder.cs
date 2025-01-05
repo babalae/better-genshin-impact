@@ -20,6 +20,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
+[Obsolete]
 public class PathPointRecorder : Singleton<PathPointRecorder>
 {
     private readonly EntireMap _bigMap = EntireMap.Instance;
@@ -36,7 +37,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                 TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
 
                 _recordTaskCts = new CancellationTokenSource();
-                _recordTask = RecordTask(_recordTaskCts);
+                _recordTask = RecordTask(_recordTaskCts.Token);
                 _recordTask.Start();
             }
             else
@@ -57,17 +58,17 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
         }
     }
 
-    public Task RecordTask(CancellationTokenSource cts)
+    public Task RecordTask(CancellationToken ct)
     {
         return new Task(() =>
         {
             GiPath way = new();
 
-            while (!cts.Token.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    Sleep(10, cts);
+                    Sleep(10, ct);
                     var ra = CaptureToRectArea();
 
                     // 小地图匹配
@@ -75,7 +76,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                     var p = MatchTemplateHelper.MatchTemplate(ra.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
                     if (p.X == 0 || p.Y == 0)
                     {
-                        Sleep(50, cts);
+                        Sleep(50, ct);
                         continue;
                     }
 
@@ -87,7 +88,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                     }
                     else
                     {
-                        Sleep(50, cts);
+                        Sleep(50, ct);
                     }
                 }
                 catch (Exception e)
@@ -99,6 +100,6 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
             File.WriteAllText(Global.Absolute($@"log\way\{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.json"), JsonSerializer.Serialize(way, ConfigService.JsonOptions));
 #endif
             Logger.LogInformation("路线录制结束");
-        }, cts.Token);
+        }, ct);
     }
 }

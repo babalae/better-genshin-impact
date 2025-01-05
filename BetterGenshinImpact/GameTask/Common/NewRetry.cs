@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -22,7 +23,7 @@ public static class NewRetry
 
     public static T Do<T>(Func<T> action, TimeSpan retryInterval, int maxAttemptCount = 3)
     {
-        List<Exception> exceptions = [];
+        List<System.Exception> exceptions = [];
 
         for (int attempted = 0; attempted < maxAttemptCount; attempted++)
         {
@@ -46,5 +47,18 @@ public static class NewRetry
             throw exceptions.Last();
         }
         throw new AggregateException(exceptions);
+    }
+
+    public static async Task<bool> WaitForAction(Func<bool> action, CancellationToken ct, int retryTimes = 10, int delayMs = 1000)
+    {
+        for (var i = 0; i < retryTimes; i++)
+        {
+            await TaskControl.Delay(delayMs, ct);
+            if (action())
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -3,7 +3,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Windows;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask.QucikBuy;
 
@@ -13,7 +13,7 @@ public class QuickBuyTask
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            MessageBox.Show("请先启动");
+            Toast.Warning("请先启动");
             return;
         }
         if (!SystemControl.IsGenshinImpactActiveByProcess())

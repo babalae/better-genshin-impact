@@ -1,0 +1,60 @@
+{
+  "info": {
+    "name": "璃月凯瑟琳",
+    "type": "collect",
+    "author": "½",
+    "version": "1.0",
+    "description": "",
+    "bgiVersion": "0.35.1"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 267.958984375,
+      "y": -665.10888671875,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": 258.3662109375,
+      "y": -663.82177734375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": 246.689453125,
+      "y": -662.83740234375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 4,
+      "x": 233.8564453125,
+      "y": -661.95849609375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 5,
+      "x": 219.0625,
+      "y": -657.271484375,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 6,
+      "x": 203.84765625,
+      "y": -659.7158203125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

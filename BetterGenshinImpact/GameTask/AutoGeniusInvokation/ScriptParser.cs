@@ -95,7 +95,7 @@ public class ScriptParser
         catch (System.Exception ex)
         {
             MyLogger.LogError($"解析脚本错误，行号：{i + 1}，错误信息：{ex}");
-            MessageBox.Show($"解析脚本错误，行号：{i + 1}，错误信息：{ex}", "策略解析失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Error($"解析脚本错误，行号：{i + 1}，错误信息：{ex}", "策略解析失败");
             return default!;
         }
 

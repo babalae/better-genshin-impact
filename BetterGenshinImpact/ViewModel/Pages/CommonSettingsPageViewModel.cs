@@ -3,13 +3,16 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
-using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.View;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -20,11 +23,19 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;
+    
+    private readonly NotificationService _notificationService;
+    
+    [ObservableProperty] private bool _isLoading;
 
-    public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
+    [ObservableProperty] private string _webhookStatus = string.Empty;
+
+
+    public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService, NotificationService notificationService)
     {
         Config = configService.Get();
         _navigationService = navigationService;
+        _notificationService = notificationService;
     }
 
     public void OnNavigatedTo()
@@ -39,6 +50,19 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     public void OnRefreshMaskSettings()
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+    }
+    
+    [RelayCommand]
+    private void OnSwitchMaskEnabled()
+    {
+        // if (Config.MaskWindowConfig.MaskEnabled)
+        // {
+        //     MaskWindow.Instance().Show();
+        // }
+        // else
+        // {
+        //     MaskWindow.Instance().Hide();
+        // }
     }
 
     [RelayCommand]
@@ -72,8 +96,27 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    public void OnOpenMapViewer()
+    public void OnGoToLogFolder()
     {
-        new MapViewer().Show();
+        var path = Global.Absolute(@"log");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
+    }
+    
+    [RelayCommand]
+    private async Task OnTestWebhook()
+    {
+        IsLoading = true;
+        WebhookStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
+
+        WebhookStatus = res.Message;
+
+        IsLoading = false;
     }
 }

@@ -9,6 +9,10 @@ using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.Genshin.Paths;
 
+/// <summary>
+/// 已经弃用
+/// </summary>
+[Obsolete]
 internal partial class GameExePath
 {
     public static readonly FrozenSet<string> GameRegistryPaths = FrozenSet.ToFrozenSet(

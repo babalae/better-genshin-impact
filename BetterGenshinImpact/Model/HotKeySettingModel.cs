@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using Fischless.HotkeyCapture;
 using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -22,7 +23,18 @@ public partial class HotKeySettingModel : ObservableObject
 
     [ObservableProperty] private string _hotKeyTypeName;
 
+    [ObservableProperty]
+    private ObservableCollection<HotKeySettingModel> _children = [];
+
     public string FunctionName { get; set; }
+
+    public bool IsExpanded => true;
+
+    /// <summary>
+    /// 界面上显示是文件夹而不是快捷键
+    /// </summary>
+    [ObservableProperty]
+    private bool _isDirectory;
 
     public string ConfigPropertyName { get; set; }
 
@@ -48,6 +60,12 @@ public partial class HotKeySettingModel : ObservableObject
     /// 鼠标监听配置
     /// </summary>
     public MouseHook? MouseMonitorHook { get; set; }
+
+    public HotKeySettingModel(string functionName)
+    {
+        FunctionName = functionName;
+        IsDirectory = true;
+    }
 
     public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, string hotKeyTypeCode, Action<object?, KeyPressedEventArgs>? onKeyPressAction, bool isHold = false)
     {

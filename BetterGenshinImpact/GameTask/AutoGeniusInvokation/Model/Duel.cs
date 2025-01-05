@@ -4,7 +4,6 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -49,35 +48,22 @@ public class Duel
     /// </summary>
     public int CurrentDiceCount { get; set; } = 0;
 
-    public CancellationTokenSource Cts { get; set; } = default!;
-
     private int _keqingECount = 0;
 
-    public async Task RunAsync(GeniusInvokationTaskParam taskParam)
+    public async Task RunAsync(CancellationToken ct)
     {
-        await Task.Run(() => { Run(taskParam); });
+        await Task.Run(() => { Run(ct); }, ct);
     }
 
-    public void Run(GeniusInvokationTaskParam taskParam)
+    public void Run(CancellationToken ct)
     {
-        var hasLock = false;
-        Cts = taskParam.Cts;
         try
         {
             AutoGeniusInvokationAssets.DestroyInstance();
-            hasLock = TaskControl.TaskSemaphore.Wait(0);
-            if (!hasLock)
-            {
-                _logger.LogError("启动自动七圣召唤功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-                return;
-            }
 
             LogScreenResolution();
-            _logger.LogInformation("========================================");
-            _logger.LogInformation("→ {Text}", "全自动七圣召唤，启动！");
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().Build());
-            GeniusInvokationControl.GetInstance().Init(taskParam);
-            SystemControl.ActivateWindow();
+            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().Build()); // TODO 需要移动
+            GeniusInvokationControl.GetInstance().Init(ct);
 
             // 对局准备 选择初始手牌
             GeniusInvokationControl.GetInstance().CommonDuelPrepare();
@@ -302,36 +288,23 @@ public class Duel
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogInformation(ex.Message);
             NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Cancelled().Build());
+            throw;
         }
         catch (NormalEndException ex)
         {
-            _logger.LogInformation(ex.Message);
             _logger.LogInformation("对局结束");
             NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Success().Build());
+            throw;
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(ex.Message);
-            _logger.LogDebug(ex.StackTrace);
             if (TaskContext.Instance().Config.DetailedErrorLogs)
             {
                 _logger.LogError(ex.StackTrace);
             }
             NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Failure().Build());
-        }
-        finally
-        {
-            VisionContext.Instance().DrawContent.ClearAll();
-            TaskSettingsPageViewModel.SetSwitchAutoGeniusInvokationButtonText(false);
-            _logger.LogInformation("← {Text}", "退出全自动七圣召唤");
-            TaskTriggerDispatcher.Instance().StartTimer();
-
-            if (hasLock)
-            {
-                TaskControl.TaskSemaphore.Release();
-            }
+            throw;
         }
     }
 

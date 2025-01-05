@@ -1,10 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -41,6 +44,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     }
 
     [RelayCommand]
+    private async Task OnActivated()
+    {
+        await ScriptRepoUpdater.Instance.ImportScriptFromClipboard();
+    }
+
+    [RelayCommand]
     private void OnHide()
     {
         IsVisible = false;
@@ -66,17 +75,17 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             {
                 try
                 {
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute("Assets\\Model\\PaddleOCR\\test_ocr.png"), ImreadModes.Grayscale));
+                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png"), ImreadModes.Grayscale));
                     Debug.WriteLine("PaddleOcr预热结果:" + s);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                    _logger.LogError("PaddleOcr预热异常，解决方案：https://bgi.huiyadan.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError("PaddleOcr预热内部异常：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bgi.huiyadan.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
                         throw innerException;
                     }
                     else
@@ -88,7 +97,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            MessageBox.Show("PaddleOcr预热失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bgi.huiyadan.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
 
         try
@@ -100,6 +109,15 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             _logger.LogWarning("获取 BetterGI 最新版本信息失败");
         }
+
+        //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
+        if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
+        {
+            BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+        }
+
+        // 更新仓库
+        ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
     private async Task GetNewestInfoAsync()

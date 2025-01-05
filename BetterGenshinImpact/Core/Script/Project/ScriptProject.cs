@@ -5,6 +5,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Controls;
+using BetterGenshinImpact.Core.Script.Dependence;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -21,14 +23,38 @@ public class ScriptProject
     {
         FolderName = folderName;
         ProjectPath = Path.Combine(Global.ScriptPath(), folderName);
+        if (!Directory.Exists(ProjectPath))
+        {
+            throw new DirectoryNotFoundException("脚本文件夹不存在:" + ProjectPath);
+        }
         ManifestFile = Path.GetFullPath(Path.Combine(ProjectPath, "manifest.json"));
         if (!File.Exists(ManifestFile))
         {
-            throw new FileNotFoundException("manifest.json file not found.");
+            throw new FileNotFoundException("manifest.json文件不存在，请确认此脚本是JS脚本类型。" + ManifestFile);
         }
 
         Manifest = Manifest.FromJson(File.ReadAllText(ManifestFile));
         Manifest.Validate(ProjectPath);
+    }
+
+    public StackPanel? LoadSettingUi(dynamic context)
+    {
+        var settingItems = Manifest.LoadSettingItems(ProjectPath);
+        if (settingItems.Count == 0)
+        {
+            return null;
+        }
+        var stackPanel = new StackPanel();
+        foreach (var item in settingItems)
+        {
+            var controls = item.ToControl(context);
+            foreach (var control in controls)
+            {
+                stackPanel.Children.Add(control);
+            }
+        }
+
+        return stackPanel;
     }
 
     public IScriptEngine BuildScriptEngine()
@@ -38,10 +64,18 @@ public class ScriptProject
         return engine;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(dynamic? context = null)
     {
+        // 默认值
+        GlobalMethod.SetGameMetrics(1920, 1080);
+        // 加载代码
         var code = await LoadCode();
         var engine = BuildScriptEngine();
+        if (context != null)
+        {
+            // 写入配置的内容
+            engine.AddHostObject("settings", context);
+        }
         try
         {
             await (Task)engine.Evaluate(code);

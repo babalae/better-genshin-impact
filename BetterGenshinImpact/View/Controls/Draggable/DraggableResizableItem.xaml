@@ -3,12 +3,12 @@
                     xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls">
 
     <ResourceDictionary.MergedDictionaries>
-        <!-- SizeChrome 显示宽高的 -->
+        <!--  SizeChrome 显示宽高的  -->
         <!-- <ResourceDictionary Source="SizeChrome.xaml"/> -->
         <ResourceDictionary Source="ResizeRotateChrome.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- 可以拖拽调整大小的 -->
+    <!--  可以拖拽调整大小的  -->
     <ControlTemplate x:Key="MoveThumbTemplate" TargetType="{x:Type controls:MoveThumb}">
         <Rectangle Fill="Transparent" />
     </ControlTemplate>
@@ -23,8 +23,7 @@
                 <ControlTemplate TargetType="ContentControl">
                     <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
                         <controls:MoveThumb Cursor="SizeAll" Template="{StaticResource MoveThumbTemplate}" />
-                        <ContentPresenter Content="{TemplateBinding ContentControl.Content}"
-                                          Margin="{TemplateBinding Padding}" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" Content="{TemplateBinding ContentControl.Content}" />
                         <controls:DesignerItemDecorator x:Name="ItemDecorator" />
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -37,12 +36,12 @@
         </Setter>
     </Style>
 
-    <!-- 可以拖拽调整大小的 拖拽按钮在外面 -->
+    <!--  可以拖拽调整大小的 拖拽按钮在外面  -->
     <ControlTemplate x:Key="OuterMoveThumbTemplate" TargetType="{x:Type controls:MoveThumb}">
         <!--<Rectangle x:Name="DragHandle" Fill="Blue" >
-            
+
         </Rectangle>-->
-        <Image x:Name="DragHandle" Source="pack://application:,,,/BetterGenshinImpact;component/Assets/drag.png" />
+        <Image x:Name="DragHandle" Source="pack://application:,,,/BetterGI;component;component/Assets/Images/drag.png" />
 
         <!--<ControlTemplate.Triggers>
             <Trigger Property="Selector.IsSelected" Value="False">
@@ -60,11 +59,14 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContentControl">
                     <Grid DataContext="{Binding RelativeSource={RelativeSource TemplatedParent}}">
-                        <controls:MoveThumb Width="20" Height="20" Margin="0,-23,0,0" 
-                                     VerticalAlignment="Top" HorizontalAlignment="Left"
-                                     Cursor="SizeAll" Template="{StaticResource OuterMoveThumbTemplate}" />
-                        <ContentPresenter Content="{TemplateBinding ContentControl.Content}"
-                                          Margin="{TemplateBinding Padding}" />
+                        <controls:MoveThumb Width="20"
+                                            Height="20"
+                                            Margin="0,-23,0,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Cursor="SizeAll"
+                                            Template="{StaticResource OuterMoveThumbTemplate}" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" Content="{TemplateBinding ContentControl.Content}" />
                         <controls:DesignerItemDecorator x:Name="ItemDecorator" />
                     </Grid>
                     <ControlTemplate.Triggers>

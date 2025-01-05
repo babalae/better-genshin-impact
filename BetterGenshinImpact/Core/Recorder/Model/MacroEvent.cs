@@ -22,5 +22,6 @@ public enum MacroEventType
     MouseMoveTo,
     MouseMoveBy,
     MouseDown,
-    MouseUp
+    MouseUp,
+    MouseWheel
 }

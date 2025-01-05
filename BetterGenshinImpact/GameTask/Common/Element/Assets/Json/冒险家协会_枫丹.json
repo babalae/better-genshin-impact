@@ -1,0 +1,28 @@
+{
+  "info": {
+    "name": "冒险家协会_枫丹",
+    "type": "collect",
+    "author": "yemaxul",
+    "version": "2.0",
+    "description": "传送到枫丹冒险家协会",
+    "bgiVersion": "0.35.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 4508.97509765625,
+      "y": 3630.557373046875,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 2,
+      "x": 4495.0,
+      "y": 3638.0,
+      "type": "target",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

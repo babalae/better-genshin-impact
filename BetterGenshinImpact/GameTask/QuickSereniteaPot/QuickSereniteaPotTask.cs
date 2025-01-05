@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
+using Wpf.Ui.Violeta.Controls;
 using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.QuickSereniteaPot;
@@ -17,12 +18,12 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea().Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
+            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("背包未打开");
             }
-        }, TimeSpan.FromMilliseconds(500), 3);
+        }, TimeSpan.FromMilliseconds(500), 5);
     }
 
     private static void FindPotIcon()
@@ -30,7 +31,7 @@ public class QuickSereniteaPotTask
         NewRetry.Do(() =>
         {
             TaskControl.Sleep(1);
-            using var ra2 = TaskControl.CaptureToRectArea().Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
+            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
             if (ra2.IsEmpty())
             {
                 throw new RetryException("未检测到壶");
@@ -46,7 +47,7 @@ public class QuickSereniteaPotTask
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            System.Windows.MessageBox.Show("请先启动");
+            Toast.Warning("请先启动");
             return;
         }
 
@@ -80,6 +81,11 @@ public class QuickSereniteaPotTask
 
             // 按F进入
             Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
+            TaskControl.CheckAndSleep(200);
+            
+            // 点击进入尘歌壶
+            // 如果不是联机状态，此时玩家应已进入传送界面，本次点击不会影响实际功能
+            GameCaptureRegion.GameRegion1080PPosClick(1010, 760);
         }
         catch (Exception e)
         {

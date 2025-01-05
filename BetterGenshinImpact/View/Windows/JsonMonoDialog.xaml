@@ -9,11 +9,10 @@
                  Width="600"
                  Height="600"
                  d:Background="#D2D2D2"
-                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
-                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  Tag="JsonMonoDialog"
+                 WindowBackdropType="Mica"
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Window.Resources>
@@ -51,7 +50,7 @@
         </Grid>
         <ui:TitleBar Title="JSON 编辑器">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Kirara.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
     </Grid>

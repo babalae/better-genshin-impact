@@ -144,5 +144,28 @@ public class RecognitionObject
     /// </summary>
     public List<string> RegexMatchText { get; set; } = [];
 
+    public static RecognitionObject Ocr(double x, double y, double w, double h)
+    {
+        return new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h))
+        };
+    }
+
+    public static RecognitionObject Ocr(Rect rect)
+    {
+        return new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = rect
+        };
+    }
+
+    public static RecognitionObject OcrThis = new()
+    {
+        RecognitionType = RecognitionTypes.Ocr
+    };
+
     #endregion OCR文字识别
 }

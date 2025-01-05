@@ -1,11 +1,13 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Controls.Webview;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -15,7 +17,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
 using Wpf.Ui.Controls;
@@ -24,11 +29,14 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
 {
-    [ObservableProperty] private string[] _modeNames = GameCaptureFactory.ModeNames();
+    [ObservableProperty]
+    private string[] _modeNames = GameCaptureFactory.ModeNames();
 
-    [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
+    [ObservableProperty]
+    private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty] private bool _taskDispatcherEnabled = false;
+    [ObservableProperty]
+    private bool _taskDispatcherEnabled = false;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
@@ -152,7 +160,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         }
         else
         {
-            System.Windows.MessageBox.Show("选择的窗体句柄为空！");
+            MessageBox.Error("选择的窗体句柄为空！");
         }
     }
 
@@ -184,7 +192,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
             if (hWnd == IntPtr.Zero)
             {
-                System.Windows.MessageBox.Show("未找到原神窗口，请先启动原神！");
+                MessageBox.Error("未找到原神窗口，请先启动原神！");
                 return;
             }
         }
@@ -221,6 +229,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     {
         if (TaskDispatcherEnabled)
         {
+            CancellationContext.Instance.Cancel(); // 取消独立任务的运行
             _taskDispatcher.Stop();
             if (_maskWindow != null && _maskWindow.IsExist())
             {
@@ -231,6 +240,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                 _maskWindow?.Close();
                 _maskWindow = null;
             }
+
             TaskDispatcherEnabled = false;
             _mouseKeyMonitor.Unsubscribe();
         }
@@ -325,11 +335,44 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         // 检查用户是否配置了原神安装目录，如果没有，尝试从注册表中读取
         if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
         {
-            var path = GameExePath.GetWithoutCloud();
-            if (!string.IsNullOrEmpty(path))
+            Task.Run(async () =>
             {
-                Config.GenshinStartConfig.InstallPath = path;
-            }
+                var p1 = await UnityLogGameLocator.LocateSingleGamePathAsync();
+                if (!string.IsNullOrEmpty(p1))
+                {
+                    Config.GenshinStartConfig.InstallPath = p1;
+                }
+                else
+                {
+                    var p2 = RegistryGameLocator.GetDefaultGameInstallPath();
+                    if (!string.IsNullOrEmpty(p2))
+                    {
+                        Config.GenshinStartConfig.InstallPath = p2;
+                    }
+                }
+            });
         }
+    }
+
+    [RelayCommand]
+    private void OnOpenGameCommandLineDocument()
+    {
+        string md = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/gicli.md", Encoding.UTF8);
+
+        md = WebUtility.HtmlEncode(md);
+        string md2html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html", Encoding.UTF8);
+        var html = md2html.Replace("{{content}}", md);
+
+        WebpageWindow win = new()
+        {
+            Title = "启动参数说明",
+            Width = 800,
+            Height = 600,
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+
+        win.NavigateToHtml(html);
+        win.ShowDialog();
     }
 }

@@ -3,6 +3,7 @@ using SharpDX.DirectInput;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Monitor;
 
@@ -11,6 +12,8 @@ public class DirectInputMonitor : IDisposable
     private bool _isRunning = true;
 
     private readonly Mouse _mouse;
+    
+    public static int Interval = 5;
 
     public DirectInputMonitor()
     {
@@ -34,8 +37,8 @@ public class DirectInputMonitor : IDisposable
                 _mouse.Acquire();
                 MouseState state = _mouse.GetCurrentState();
                 // Debug.WriteLine($"{state.X} {state.Y} {state.Buttons[0]} {state.Buttons[1]}");
-                GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveBy(state);
-                Thread.Sleep(5); // 10ms, equivalent to CLOCKS_PER_SEC/100
+                GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveBy(state, Kernel32.GetTickCount());
+                Thread.Sleep(Interval); // 10ms, equivalent to CLOCKS_PER_SEC/100
             }
         });
     }

@@ -23,10 +23,20 @@ public class EntireMap : Singleton<EntireMap>
 
     public EntireMap()
     {
-        _featureMatcher = new FeatureMatcher(new Size(28672, 26624), new FeatureStorage("mainMap2048Block"));
+        _featureMatcher = new FeatureMatcher(new Size(MapCoordinate.Main2048Width, MapCoordinate.Main2048Height), new FeatureStorage("mainMap2048Block"));
+    }
+
+    public FeatureMatcher GetFeatureMatcher()
+    {
+        return _featureMatcher;
     }
 
     private int _failCnt = 0;
+
+    public void SetPrevPosition(float x, float y)
+    {
+        (_prevX, _prevY) = (x, y);
+    }
 
     /// <summary>
     /// 基于特征匹配获取地图位置

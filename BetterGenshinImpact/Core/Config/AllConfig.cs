@@ -12,8 +12,10 @@ using BetterGenshinImpact.Service.Notification;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Fischless.GameCapture;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -56,10 +58,25 @@ public partial class AllConfig : ObservableObject
     private bool _wgcUseBitmapCache = true;
 
     /// <summary>
+    /// 自动修复Win11下BitBlt截图方式不可用的问题
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoFixWin11BitBlt = true;
+
+    /// <summary>
     /// 推理使用的设备
     /// </summary>
     [ObservableProperty]
     private string _inferenceDevice = "CPU";
+
+    [ObservableProperty]
+    private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
+
+    /// <summary>
+    /// 一条龙选中使用的配置
+    /// </summary>
+    [ObservableProperty]
+    private string _selectedOneDragonFlowConfigName = string.Empty;
 
     /// <summary>
     ///     遮罩窗口配置
@@ -122,11 +139,21 @@ public partial class AllConfig : ObservableObject
     public AutoDomainConfig AutoDomainConfig { get; set; } = new();
 
     /// <summary>
-    ///     脚本类配置
+    ///     宏配置
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
 
     public RecordConfig RecordConfig { get; set; } = new();
+
+    /// <summary>
+    /// 脚本配置
+    /// </summary>
+    public ScriptConfig ScriptConfig { get; set; } = new();
+
+    /// <summary>
+    /// 路径追踪配置
+    /// </summary>
+    public PathingConditionConfig PathingConditionConfig { get; set; } = PathingConditionConfig.Default;
 
     /// <summary>
     ///     快捷键配置
@@ -160,6 +187,9 @@ public partial class AllConfig : ObservableObject
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
+
+        ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
+        PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

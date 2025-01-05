@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
@@ -12,7 +13,6 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -34,6 +34,7 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// 2. 所有涉及矩形运算的，优先转换为全地图坐标系
 /// 3. 所有涉及小地图视角角度运算的，优先转换为warpPolar所使用的度数标准
 /// </summary>
+[Obsolete]
 public class AutoTrackPathTask
 {
     private readonly AutoTrackPathParam _taskParam;
@@ -42,6 +43,8 @@ public class AutoTrackPathTask
 
     // 视角偏移移动单位
     private const int CharMovingUnit = 500;
+
+    private CancellationToken _ct;
 
     public AutoTrackPathTask(AutoTrackPathParam taskParam)
     {
@@ -63,6 +66,8 @@ public class AutoTrackPathTask
                 return;
             }
 
+            _ct = CancellationContext.Instance.Cts.Token;
+
             Init();
 
             // Tp(_tpPositions[260].X, _tpPositions[260].Y);
@@ -82,7 +87,6 @@ public class AutoTrackPathTask
         {
             VisionContext.Instance().DrawContent.ClearAll();
             TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
-            TaskSettingsPageViewModel.SetSwitchAutoFightButtonText(false);
             Logger.LogInformation("→ {Text}", "自动路线结束");
 
             if (hasLock)
@@ -97,19 +101,14 @@ public class AutoTrackPathTask
         SystemControl.ActivateWindow();
         Logger.LogInformation("→ {Text}", "自动路线，启动！");
         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _taskParam.Cts); // 等待缓存图像
-    }
-
-    public void Stop()
-    {
-        _taskParam.Cts.Cancel();
+        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _ct); // 等待缓存图像
     }
 
     public async Task DoTask()
     {
         // 1. 传送到最近的传送点
         var first = _way.WayPointList[0]; // 解析路线，第一个点为起点
-        await new TpTask(_taskParam.Cts).Tp(first.Pt.X, first.Pt.Y);
+        await new TpTask(_ct).Tp(first.Pt.X, first.Pt.Y);
 
         // 2. 等待传送完成
         Sleep(1000);
@@ -131,23 +130,23 @@ public class AutoTrackPathTask
         // 4. 针对点位进行直线追踪
 
         var trackCts = new CancellationTokenSource();
-        _taskParam.Cts.Token.Register(trackCts.Cancel);
+        _ct.Register(trackCts.Cancel);
         var trackTask = Track(_way.WayPointList, angleOffset, trackCts);
         trackTask.Start();
-        var refreshStatusTask = RefreshStatus(trackCts);
+        var refreshStatusTask = RefreshStatus(trackCts.Token);
         refreshStatusTask.Start();
-        var jumpTask = Jump(trackCts);
+        var jumpTask = Jump(trackCts.Token);
         jumpTask.Start();
         await Task.WhenAll(trackTask, refreshStatusTask, jumpTask);
     }
 
     private MotionStatus _motionStatus = MotionStatus.Normal;
 
-    public Task Jump(CancellationTokenSource trackCts)
+    public Task Jump(CancellationToken trackCt)
     {
         return new Task(() =>
         {
-            while (!_taskParam.Cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
+            while (!_ct.IsCancellationRequested && !trackCt.IsCancellationRequested)
             {
                 if (_motionStatus == MotionStatus.Normal)
                 {
@@ -173,11 +172,11 @@ public class AutoTrackPathTask
 
     private double _targetAngle = 0;
 
-    public Task RefreshStatus(CancellationTokenSource trackCts)
+    public Task RefreshStatus(CancellationToken trackCt)
     {
         return new Task(() =>
         {
-            while (!_taskParam.Cts.Token.IsCancellationRequested && !trackCts.Token.IsCancellationRequested)
+            while (!_ct.IsCancellationRequested && !trackCt.IsCancellationRequested)
             {
                 using var ra = CaptureToRectArea();
                 _motionStatus = Bv.GetMotionStatus(ra);
@@ -205,7 +204,7 @@ public class AutoTrackPathTask
         return new Task(() =>
         {
             var currIndex = 0;
-            while (!_taskParam.Cts.IsCancellationRequested)
+            while (!_ct.IsCancellationRequested)
             {
                 var ra = CaptureToRectArea();
                 var miniMapMat = GetMiniMapMat(ra) ?? throw new InvalidOperationException("当前不在主界面");

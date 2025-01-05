@@ -7,7 +7,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
+using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Recorder;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -57,6 +60,7 @@ public class TaskRunner
             SendNotification();
 
             CancellationContext.Instance.Set();
+            RunnerContext.Instance.Clear();
 
             await action();
         }
@@ -64,6 +68,21 @@ public class TaskRunner
         {
             _logger.LogInformation("任务中断:{Msg}", e.Message);
             SendNotification();
+            if (RunnerContext.Instance.IsContinuousRunGroup)
+            {
+                // 连续执行时，抛出异常，终止执行
+                throw;
+            }
+        }
+        catch (TaskCanceledException e)
+        {
+            _logger.LogInformation("任务中断:{Msg}", "任务被取消");
+            SendNotification();
+            if (RunnerContext.Instance.IsContinuousRunGroup)
+            {
+                // 连续执行时，抛出异常，终止执行
+                throw;
+            }
         }
         catch (Exception e)
         {
@@ -78,6 +97,7 @@ public class TaskRunner
             SendNotification();
 
             CancellationContext.Instance.Clear();
+            RunnerContext.Instance.Clear();
 
             // 释放锁
             if (hasLock)
@@ -92,8 +112,24 @@ public class TaskRunner
         Task.Run(() => RunAsync(action));
     }
 
+    public async Task RunThreadAsync(Func<Task> action)
+    {
+        await Task.Run(() => RunAsync(action));
+    }
+
+    public async Task RunSoloTaskAsync(ISoloTask soloTask)
+    {
+        await Task.Run(() => RunAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
+    }
+
     public void Init()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在启动页，启动截图器再使用本功能"); });
+            throw new NormalEndException("请先在启动页，启动截图器再使用本功能");
+        }
+
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();
         SystemControl.ActivateWindow();
@@ -123,6 +159,11 @@ public class TaskRunner
 
     public void End()
     {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            return;
+        }
+
         VisionContext.Instance().DrawContent.ClearAll();
         if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
         {

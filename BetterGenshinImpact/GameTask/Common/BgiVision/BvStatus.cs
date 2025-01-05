@@ -1,7 +1,17 @@
 ﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using OpenCvSharp;
 using System;
+using System.Linq;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight;
+using Vanara.PInvoke;
+using System.Threading;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.GameLoading.Assets;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -29,6 +39,58 @@ public static partial class Bv
     }
 
     /// <summary>
+    /// 等待主界面加载完成
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes"></param>
+    /// <returns></returns>
+    public static async Task<bool> WaitForMainUi(CancellationToken ct, int retryTimes = 10)
+    {
+        for (var i = 0; i < retryTimes; i++)
+        {
+            await TaskControl.Delay(1000, ct);
+            using var ra3 = TaskControl.CaptureToRectArea();
+            if (IsInMainUi(ra3))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 在任意可以关闭的UI界面（识别关闭按钮）
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInAnyClosableUi(ImageRegion captureRa)
+    {
+        return captureRa.Find(QuickTeleportAssets.Instance.MapCloseButtonRo).IsExist();
+    }
+
+    /// <summary>
+    /// 是否在队伍选择界面
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInPartyViewUi(ImageRegion captureRa)
+    {
+        return captureRa.Find(ElementAssets.Instance.PartyBtnChooseView).IsExist();
+    }
+
+    /// <summary>
+    /// 等待队伍选择界面加载完成
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes"></param>
+    /// <returns></returns>
+    public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 5)
+    {
+        return await NewRetry.WaitForAction(() => IsInPartyViewUi(TaskControl.CaptureToRectArea()), ct, retryTimes);
+    }
+
+    /// <summary>
     /// 是否在大地图界面
     /// </summary>
     /// <param name="captureRa"></param>
@@ -49,6 +111,22 @@ public static partial class Bv
         return captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo).IsExist();
     }
 
+    public static double GetBigMapScale(ImageRegion region)
+    {
+        var scaleRa = region.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        if (scaleRa.IsEmpty())
+        {
+            throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
+        }
+
+        // 452 ~ 627 间隔 35 和截图有关的，截图高24
+        var start = QuickTeleportAssets.MapScaleButton1080StartY;
+        var end = QuickTeleportAssets.MapScaleButton1080EndY;
+        var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
+
+        return (end * 1.0 - cur) / (end - start);
+    }
+
     public static MotionStatus GetMotionStatus(ImageRegion captureRa)
     {
         var spaceExist = captureRa.Find(ElementAssets.Instance.SpaceKey).IsExist();
@@ -61,6 +139,99 @@ public static partial class Bv
         {
             return MotionStatus.Normal;
         }
+    }
+
+    /// <summary>
+    /// 是否出现复苏提示
+    /// </summary>
+    /// <param name="region"></param>
+    /// <returns></returns>
+    public static bool IsInRevivePrompt(ImageRegion region)
+    {
+        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+        if (!confirmRectArea.IsEmpty())
+        {
+            var list = region.FindMulti(new RecognitionObject
+            {
+                RecognitionType = RecognitionTypes.Ocr,
+                RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
+            });
+            if (list.Any(r => r.Text.Contains("复苏")))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 是否出现全队死亡和复苏提示
+    /// </summary>
+    /// <param name="region"></param>
+    /// <returns></returns>
+    public static bool ClickIfInReviveModal(ImageRegion region)
+    {
+        var list = region.FindMulti(new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect(0, region.Height / 4 * 3, region.Width, region.Height / 4)
+        });
+        var r = list.FirstOrDefault(r => r.Text.Contains("复苏"));
+        if (r != null)
+        {
+            r.Click();
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 当前角色是否低血量
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool CurrentAvatarIsLowHp(ImageRegion captureRa)
+    {
+        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+
+        // 获取 (808, 1010) 位置的像素颜色
+        var pixelColor = captureRa.SrcMat.At<Vec3b>((int)(1010 * assetScale), (int)(808 * assetScale));
+
+        // 判断颜色是否是 (255, 90, 90)
+        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+    }
+
+    /// <summary>
+    /// 在空月祝福界面
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInBlessingOfTheWelkinMoon(ImageRegion captureRa)
+    {
+        return captureRa.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
+    }
+
+    /// <summary>
+    /// 是否在对话界面
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInTalkUi(ImageRegion captureRa)
+    {
+        return captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo).IsExist();
+    }
+
+    /// <summary>
+    /// 等到对话界面加载完成
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <param name="retryTimes"></param>
+    /// <returns></returns>
+    public static async Task<bool> WaitAndSkipForTalkUi(CancellationToken ct, int retryTimes = 5)
+    {
+        return await NewRetry.WaitForAction(() => IsInTalkUi(TaskControl.CaptureToRectArea()), ct, retryTimes, 500);
     }
 }
 

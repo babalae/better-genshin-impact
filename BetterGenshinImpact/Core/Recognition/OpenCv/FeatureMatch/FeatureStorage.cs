@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
 public class FeatureStorage(string name)
 {
-    private readonly string rootPath = Global.Absolute(@"User\Map\");
+    private readonly string rootPath = Global.Absolute(@"Assets\Map\");
 
     public void SetType(Feature2DType type)
     {

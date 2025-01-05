@@ -1,10 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -19,7 +19,6 @@ using System.Threading.Tasks;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
-using MessageBox = System.Windows.MessageBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -34,24 +33,28 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     [ObservableProperty]
     private bool _isRecording = false;
 
-    private ISnackbarService _snackbarService;
+    private readonly ISnackbarService _snackbarService;
 
-    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService)
+    public AllConfig Config { get; set; }
+
+    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService)
     {
         _snackbarService = snackbarService;
+        Config = configService.Get();
     }
 
     private void InitScriptListViewData()
     {
-        _scriptItems.Clear();
+        ScriptItems.Clear();
         var fileInfos = LoadScriptFiles(scriptPath)
             .OrderByDescending(f => f.CreationTime)
             .ToList();
         foreach (var f in fileInfos)
         {
-            _scriptItems.Add(new KeyMouseScriptItem
+            ScriptItems.Add(new KeyMouseScriptItem
             {
                 Name = f.Name,
+                Path = f.FullName,
                 CreateTime = f.CreationTime,
                 CreateTimeStr = f.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
             });
@@ -65,7 +68,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             Directory.CreateDirectory(folder);
         }
 
-        var files = Directory.GetFiles(folder, "*.*",
+        var files = Directory.GetFiles(folder, "*.json",
             SearchOption.AllDirectories);
 
         return files.Select(file => new FileInfo(file)).ToList();
@@ -118,12 +121,13 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    public async Task OnStartPlay(string name)
+    public async Task OnStartPlay(string path)
     {
+        string name = Path.GetFileName(path);
         _logger.LogInformation("重放开始：{Name}", name);
         try
         {
-            var s = await File.ReadAllTextAsync(Path.Combine(scriptPath, name));
+            var s = await File.ReadAllTextAsync(path);
 
             await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
                 .RunAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
@@ -157,11 +161,11 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             if (!string.IsNullOrEmpty(str))
             {
                 // 检查原始文件是否存在
-                var originalFilePath = Path.Combine(scriptPath, item.Name);
+                var originalFilePath = item.Path;
                 if (File.Exists(originalFilePath))
                 {
                     // 重命名文件
-                    File.Move(originalFilePath, Path.Combine(scriptPath, str));
+                    File.Move(originalFilePath, Path.Combine(Path.GetDirectoryName(originalFilePath)!, str + ".json"));
                     _snackbarService.Show(
                         "修改名称成功",
                         $"脚本名称 {item.Name} 修改为 {str}",
@@ -197,7 +201,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         }
         try
         {
-            File.Delete(Path.Combine(scriptPath, item.Name));
+            File.Delete(item.Path);
             _snackbarService.Show(
                 "删除成功",
                 $"{item.Name} 已经被删除",
@@ -220,5 +224,18 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             InitScriptListViewData();
         }
+    }
+
+    [RelayCommand]
+    public void OnGoToKmScriptUrl()
+    {
+        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/autos/kmscript.html") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
 }

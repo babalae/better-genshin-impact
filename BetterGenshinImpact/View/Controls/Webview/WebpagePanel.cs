@@ -1,4 +1,5 @@
-﻿using Microsoft.Web.WebView2.Core;
+﻿using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Diagnostics;
@@ -16,6 +17,12 @@ public class WebpagePanel : UserControl
     private WebView2 _webView = null!;
     private bool _initialized = false;
 
+    public WebView2 WebView => _webView;
+
+    public string? DownloadFolderPath { get; set; }
+
+    public Action? OnWebViewInitializedAction { get; set; }
+
     public WebpagePanel()
     {
         if (!IsWebView2Available())
@@ -29,7 +36,9 @@ public class WebpagePanel : UserControl
                 CreationProperties = new CoreWebView2CreationProperties
                 {
                     UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
-                    AdditionalBrowserArguments = "--enable-features=WebContentsForceDark"
+
+                    // TODO: change the theme from `md2html.html` to fit it firstly.
+                    // AdditionalBrowserArguments = "--enable-features=WebContentsForceDark"
                 }
             };
             _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
@@ -43,6 +52,12 @@ public class WebpagePanel : UserControl
         if (e.IsSuccess)
         {
             _initialized = true;
+            if (!string.IsNullOrEmpty(DownloadFolderPath))
+            {
+                WebView.CoreWebView2.Profile.DefaultDownloadFolderPath = DownloadFolderPath;
+            }
+            // 调用外部设置的 Action
+            OnWebViewInitializedAction?.Invoke();
         }
         else
         {

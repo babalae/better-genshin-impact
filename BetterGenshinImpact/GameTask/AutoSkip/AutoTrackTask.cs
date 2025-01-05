@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
@@ -12,13 +13,13 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -36,6 +37,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     /// </summary>
     private Rect _missionDistanceRect = Rect.Empty;
 
+    private CancellationToken _ct;
+
     public async void Start()
     {
         var hasLock = false;
@@ -51,6 +54,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             SystemControl.ActivateWindow();
 
             Logger.LogInformation("→ {Text}", "自动追踪，启动！");
+
+            _ct = CancellationContext.Instance.Cts.Token;
 
             TrackMission();
         }
@@ -68,7 +73,6 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskSettingsPageViewModel.SetSwitchAutoTrackButtonText(false);
             Logger.LogInformation("→ {Text}", "自动追踪结束");
 
             if (hasLock)
@@ -85,20 +89,20 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         var paimonMenuRa = ra.Find(ElementAssets.Instance.PaimonMenuRo);
         if (!paimonMenuRa.IsExist())
         {
-            Sleep(5000, param.Cts);
+            Sleep(5000, _ct);
             return;
         }
 
         // 任务文字有动效，等待2s重新截图
         Simulation.SendInput.Mouse.MoveMouseBy(0, 7000);
-        Sleep(2000, param.Cts);
+        Sleep(2000, _ct);
 
         // OCR 任务文字 在小地图下方
         var textRaList = OcrMissionTextRaList(paimonMenuRa);
         if (textRaList.Count == 0)
         {
             Logger.LogInformation("未找到任务文字");
-            Sleep(5000, param.Cts);
+            Sleep(5000, _ct);
             return;
         }
 
@@ -110,14 +114,14 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             // 距离大于150米，先传送到最近的传送点
             // J 打开任务 切换追踪打开地图 中心点就是任务点
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_J);
-            Sleep(800, param.Cts);
+            Sleep(800, _ct);
             // TODO 识别是否在任务界面
             // 切换追踪
             var btn = ra.Derive(CaptureRect.Width - 250, CaptureRect.Height - 60);
             btn.Click();
-            Sleep(200, param.Cts);
+            Sleep(200, _ct);
             btn.Click();
-            Sleep(1500, param.Cts);
+            Sleep(1500, _ct);
 
             // 寻找所有传送点
             ra = CaptureToRectArea();
@@ -141,7 +145,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
                 ra.Derive(nearestRect).Click();
                 // 等待自动传送完成
-                Sleep(2000, param.Cts);
+                Sleep(2000, _ct);
 
                 if (Bv.IsInBigMapUi(CaptureToRectArea()))
                 {
@@ -149,7 +153,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 }
                 else
                 {
-                    Sleep(500, param.Cts);
+                    Sleep(500, _ct);
                     NewRetry.Do(() =>
                     {
                         if (!Bv.IsInMainUi(CaptureToRectArea()))
@@ -176,7 +180,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     {
         // V键直接追踪
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_V);
-        Sleep(3000, param.Cts);
+        Sleep(3000, _ct);
 
         var ra = CaptureToRectArea();
         var blueTrackPointRa = ra.Find(ElementAssets.Instance.BlueTrackPoint);
@@ -199,7 +203,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         // {
         int prevMoveX = 0;
         bool wDown = false;
-        while (!param.Cts.Token.IsCancellationRequested)
+        while (!_ct.IsCancellationRequested)
         {
             var ra = CaptureToRectArea();
             var blueTrackPointRa = ra.Find(ElementAssets.Instance.BlueTrackPoint);

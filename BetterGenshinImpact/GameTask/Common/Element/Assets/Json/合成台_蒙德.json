@@ -1,0 +1,76 @@
+{
+  "info": {
+    "name": "蒙德合成台-凯瑟琳",
+    "type": "collect",
+    "author": "XS",
+    "version": "1.0",
+    "description": "",
+    "bgiVersion": "0.35.1"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -867.7041015625,
+      "y": 2281.378173828125
+    },
+    {
+      "id": 2,
+      "x": -874.3662109375,
+      "y": 2274.179931640625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 3,
+      "x": -886.1494140625,
+      "y": 2263.282958984375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 4,
+      "x": -888.1865234375,
+      "y": 2265.906005859375,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 5,
+      "x": -887.142578125,
+      "y": 2260.765625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 6,
+      "x": -892.3271484375,
+      "y": 2249.783203125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 7,
+      "x": -909.357421875,
+      "y": 2240.581298828125,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    },
+    {
+      "id": 8,
+      "x": -888.47,
+      "y": 2267.35,
+      "type": "path",
+      "move_mode": "walk",
+      "action": ""
+    }
+  ]
+}

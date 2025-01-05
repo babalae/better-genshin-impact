@@ -9,11 +9,11 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class GenshinStartConfig : ObservableObject
 {
-    /// <summary>
-    ///     自动点击月卡
-    /// </summary>
-    [ObservableProperty]
-    private bool _autoClickBlessingOfTheWelkinMoonEnabled;
+    // /// <summary>
+    // ///     自动点击月卡
+    // /// </summary>
+    // [ObservableProperty]
+    // private bool _autoClickBlessingOfTheWelkinMoonEnabled;
 
     /// <summary>
     ///     自动进入游戏（开门）

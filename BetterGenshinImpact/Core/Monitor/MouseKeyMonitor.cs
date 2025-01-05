@@ -46,6 +46,7 @@ public class MouseKeyMonitor
         _globalHook.MouseDownExt += GlobalHookMouseDownExt;
         _globalHook.MouseUpExt += GlobalHookMouseUpExt;
         _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+        _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _firstSpaceKeyDownTime = DateTime.MaxValue;
@@ -61,7 +62,7 @@ public class MouseKeyMonitor
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, Kernel32.GetTickCount());
 
         // 热键按下事件
         HotKeyDown(sender, e);
@@ -99,7 +100,7 @@ public class MouseKeyMonitor
     private void GlobalHookKeyUp(object? sender, KeyEventArgs e)
     {
         // Debug.WriteLine("KeyUp: \t{0}", e.KeyCode);
-        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e);
+        GlobalKeyMouseRecord.Instance.GlobalHookKeyUp(e, Kernel32.GetTickCount());
 
         // 热键松开事件
         HotKeyUp(sender, e);
@@ -166,6 +167,12 @@ public class MouseKeyMonitor
         // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t System Timestamp: {2}", e.Button, e.Location, e.Timestamp);
         GlobalKeyMouseRecord.Instance.GlobalHookMouseMoveTo(e);
     }
+    
+    private void GlobalHookMouseWheelExt(object? sender, MouseEventExtArgs e)
+    {
+        // Debug.WriteLine("MouseMove: {0}; \t Location: {1};\t Delta: {2};\t System Timestamp: {3}", e.Button, e.Location, e.Delta, e.Timestamp);
+        GlobalKeyMouseRecord.Instance.GlobalHookMouseWheel(e);
+    }
 
     public void Unsubscribe()
     {
@@ -176,6 +183,7 @@ public class MouseKeyMonitor
             _globalHook.MouseDownExt -= GlobalHookMouseDownExt;
             _globalHook.MouseUpExt -= GlobalHookMouseUpExt;
             _globalHook.MouseMoveExt -= GlobalHookMouseMoveExt;
+            _globalHook.MouseWheelExt -= GlobalHookMouseWheelExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
         }

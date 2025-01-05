@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Recorder;
 
@@ -16,7 +17,7 @@ public class KeyMouseRecorder
 {
     public List<MacroEvent> MacroEvents { get; } = [];
 
-    public DateTime StartTime { get; set; } = DateTime.UtcNow;
+    public uint StartTime { get; set; } = Kernel32.GetTickCount();
 
     public DateTime LastOrientationDetection { get; set; } = DateTime.UtcNow;
 
@@ -34,6 +35,11 @@ public class KeyMouseRecorder
 
     public string ToJsonMacro()
     {
+        // MacroEvents 需要以实际时间进行排序
+        MacroEvents.Sort((a, b) => a.Time.CompareTo(b.Time));
+        // 删除为负数的时间
+        MacroEvents.RemoveAll(m => m.Time < 0);
+        
         var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         // 合并鼠标移动事件
         var mergedMacroEvents = new List<MacroEvent>();
@@ -97,29 +103,30 @@ public class KeyMouseRecorder
                 X = rect.X,
                 Y = rect.Y,
                 Width = rect.Width,
-                Height = rect.Height
+                Height = rect.Height,
+                RecordDpi = TaskContext.Instance().DpiScale
             }
         };
         return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
     }
 
-    public void KeyDown(KeyEventArgs e)
+    public void KeyDown(KeyEventArgs e, uint time)
     {
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.KeyDown,
             KeyCode = e.KeyValue,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time - StartTime
         });
     }
 
-    public void KeyUp(KeyEventArgs e)
+    public void KeyUp(KeyEventArgs e, uint time)
     {
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.KeyUp,
             KeyCode = e.KeyValue,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = time - StartTime
         });
     }
 
@@ -131,7 +138,7 @@ public class KeyMouseRecorder
             MouseX = e.X,
             MouseY = e.Y,
             MouseButton = e.Button.ToString(),
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
         });
     }
 
@@ -143,7 +150,7 @@ public class KeyMouseRecorder
             MouseX = e.X,
             MouseY = e.Y,
             MouseButton = e.Button.ToString(),
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
         });
     }
 
@@ -154,28 +161,40 @@ public class KeyMouseRecorder
             Type = MacroEventType.MouseMoveTo,
             MouseX = e.X,
             MouseY = e.Y,
-            Time = (DateTime.UtcNow - StartTime).TotalMilliseconds
+            Time = e.Timestamp - StartTime
+        });
+    }
+    
+    public void MouseWheel(MouseEventExtArgs e)
+    {
+        MacroEvents.Add(new MacroEvent
+        {
+            Type = MacroEventType.MouseWheel,
+            MouseY = e.Delta, // 120 的倍率
+            Time = e.Timestamp - StartTime
         });
     }
 
-    public void MouseMoveBy(MouseState state)
+    public void MouseMoveBy(MouseState state, uint time)
     {
-        var now = DateTime.UtcNow;
+        
         int? cao = null;
         if (TaskContext.Instance().Config.RecordConfig.IsRecordCameraOrientation)
         {
+            var now = DateTime.UtcNow;
             if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
             {
                 LastOrientationDetection = now;
-                cao = CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcGreyMat);
+                cao = (int)Math.Round(CameraOrientation.Compute(TaskControl.CaptureToRectArea().SrcMat));
             }
         }
+        
         MacroEvents.Add(new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = (now - StartTime).TotalMilliseconds,
+            Time = time - 5 - StartTime,
             CameraOrientation = cao,
         });
     }

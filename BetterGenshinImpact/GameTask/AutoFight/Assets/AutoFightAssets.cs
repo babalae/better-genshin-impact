@@ -9,8 +9,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 {
     public Rect TeamRectNoIndex;
     public Rect TeamRect;
-    public List<Rect> AvatarSideIconRectList;
-    public List<Rect> AvatarIndexRectList;
+    public List<Rect> AvatarSideIconRectList; // 侧边栏角色头像 非联机状态下
+    public List<Rect> AvatarIndexRectList; // 侧边栏角色头像对应的白色块 非联机状态下
     public Rect ERect;
     public Rect QRect;
     public Rect EndTipsUpperRect; // 挑战达成提示
@@ -29,6 +29,16 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
     public Dictionary<string, string> AvatarCostumeMap;
 
+    // 联机
+    public RecognitionObject OnePRa;
+
+    public RecognitionObject PRa;
+    public Dictionary<string, List<Rect>> AvatarSideIconRectListMap; // 侧边栏角色头像 联机状态下
+    public Dictionary<string, List<Rect>> AvatarIndexRectListMap; // 侧边栏角色头像对应的白色块 联机状态下
+
+    // 小道具位置
+    public Rect GadgetRect;
+
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -39,6 +49,9 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             (int)(77 * AssetScale), (int)(77 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
+        // 小道具位置 1920-133,800,60,50
+        GadgetRect = new Rect(CaptureRect.Width - (int)(133 * AssetScale), (int)(800 * AssetScale),
+            (int)(60 * AssetScale), (int)(50 * AssetScale));
         // 结束提示从中间开始找相对位置
         EndTipsUpperRect = new Rect(CaptureRect.Width / 2 - (int)(100 * AssetScale), (int)(243 * AssetScale),
             (int)(200 * AssetScale), (int)(50 * AssetScale));
@@ -78,6 +91,78 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             { "Summertime", "闪耀协奏" },
             { "Sea", "海风之梦" },
         };
+
+        // 联机
+        // 1p_2 与 p_2 为同一位置
+        // 1p_4 与 p_4 为同一位置
+        AvatarSideIconRectListMap = new Dictionary<string, List<Rect>>
+        {
+            {
+                "1p_2", [
+                    new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(375 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+                    new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(470 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+                ]
+            },
+            {
+                "1p_3", [
+                    new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(375 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+                    new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(470 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+                ]
+            },
+            { "1p_4", [new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(515 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale))] },
+            {
+                "p_2", [
+                    new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(375 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+                    new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(470 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale)),
+                ]
+            },
+            { "p_3", [new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(475 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale))] },
+            { "p_4", [new Rect(CaptureRect.Width - (int)(155 * AssetScale), (int)(515 * AssetScale), (int)(76 * AssetScale), (int)(76 * AssetScale))] },
+        };
+
+        AvatarIndexRectListMap = new Dictionary<string, List<Rect>>
+        {
+            {
+                "1p_2", [
+                    new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(412 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+                    new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(508 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+                ]
+            },
+            {
+                "1p_3", [
+                    new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(459 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+                    new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(555 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+                ]
+            },
+            { "1p_4", [new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(552 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale))] },
+            {
+                "p_2", [
+                    new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(412 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+                    new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(508 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+                ]
+            },
+            { "p_3", [new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(412 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale))] },
+            { "p_4", [new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(507 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale))] },
+        };
+
+        // 左上角的 1P 图标
+        OnePRa = new RecognitionObject
+        {
+            Name = "1P",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "1p.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 7),
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 右侧联机的 P 图标
+        PRa = new RecognitionObject
+        {
+            Name = "P",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "p.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 7, CaptureRect.Height / 5, CaptureRect.Width / 7, CaptureRect.Height / 2 - CaptureRect.Width / 7),
+            DrawOnWindow = false
+        }.InitTemplate();
 
         WandererIconRa = new RecognitionObject
         {

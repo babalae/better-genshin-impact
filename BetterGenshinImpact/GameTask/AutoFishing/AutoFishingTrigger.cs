@@ -32,7 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         private readonly IOcrService _ocrService = OcrFactory.Paddle;
-        private readonly YoloV8Predictor _predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute("Assets\\Model\\Fish\\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
+        private readonly YoloV8Predictor _predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }
@@ -382,7 +382,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }.InitTemplate();
 
             // 截图
-            using var captureRegion = TaskControl.CaptureToRectArea();
+            using var captureRegion = TaskControl.CaptureToRectArea(forceNew: true);
             using var resRa = captureRegion.Find(ro);
             if (resRa.IsEmpty())
             {
@@ -425,7 +425,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             while (IsEnabled)
             {
                 // 截图
-                var ra = TaskControl.CaptureToRectArea();
+                var ra = TaskControl.CaptureToRectArea(forceNew: true);
 
                 // 找 鱼饵落点
                 using var memoryStream = new MemoryStream();
@@ -728,11 +728,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             NewRetry.Do(() =>
             {
+                TaskControl.TrySuspend();
                 if (IsEnabled && !SystemControl.IsGenshinImpactActiveByProcess())
                 {
                     _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
                     throw new RetryException("当前获取焦点的窗口不是原神");
                 }
+                
             }, TimeSpan.FromSeconds(1), 100);
             CheckFishingUserInterface(_currContent);
             Thread.Sleep(millisecondsTimeout);

@@ -4,7 +4,6 @@
     <br/>
     <a href="https://bgi.huiyadan.com/">BetterGI</a>
   </h1>
-  <h5>🎁 𝑴𝒂𝒌𝒆 𝑮𝒆𝒏𝒔𝒉𝒊𝒏 𝑰𝒎𝒑𝒂𝒄𝒕 𝑮𝒓𝒆𝒂𝒕 𝑨𝒈𝒂𝒊𝒏 🥂</h5>
   <a href="https://trendshift.io/repositories/5269" target="_blank"><img src="https://trendshift.io/api/badge/repositories/5269" alt="babalae%2Fbetter-genshin-impact | Trendshift" style="width: 200px; height: 46px;" width="250" height="46"/></a>
 </div>
 
@@ -44,7 +43,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 截图
 
-<img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN016wk5ZC1lhoEMzz04F_!!2042484851.gif"/>
+<img src="https://img.alicdn.com/imgextra/i3/2042484851/O1CN01yzhTp81lhoJ6DaG5K_!!2042484851.gif"/>
 
 
 ## 下载
@@ -54,7 +53,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 > 
 > 不知道下载哪个？第一次使用？请看：[快速上手](https://bgi.huiyadan.com/quickstart.html) ， 遇到问题请先看：[常见问题](https://bgi.huiyadan.com/faq.html)
 
-最新编译版本可以从自动构建中获取： [![Build status](https://ci.appveyor.com/api/projects/status/cklcy1oj9u66ul4j)](https://ci.appveyor.com/project/huiyadanli/better-genshin-impact/build/artifacts)
+最新编译版本(无地图特征数据)可以从自动构建中获取： [![Build status](https://ci.appveyor.com/api/projects/status/cklcy1oj9u66ul4j)](https://ci.appveyor.com/project/huiyadanli/better-genshin-impact/build/artifacts)
 
 ## 使用方法
 由于图像识别比较吃性能，低配置电脑可能无法正常使用部分功能。
@@ -94,6 +93,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 * [cvAutoTrack](https://github.com/GengGode/cvAutoTrack)
 * [genshin_impact_assistant](https://github.com/infstellar/genshin_impact_assistant)
 * [HutaoFisher](https://github.com/myHuTao-qwq/HutaoFisher)
+* [minimap](https://github.com/tignioj/minimap)
 
 另外特别感谢 [@Lightczx](https://github.com/Lightczx) 和 [@emako](https://github.com/emako) 对本项目的指导与贡献
 
@@ -107,4 +107,4 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[644939404](https://qm.qq.com/q/eG3QIodqiA)
+提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[783846140](https://qm.qq.com/q/lVzxCCKEko)

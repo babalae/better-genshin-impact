@@ -172,6 +172,13 @@ public partial class HotKeyConfig : ObservableObject
 
     // 路径记录开始
     [ObservableProperty]
+    private string _recBigMapPosHotkey = "";
+
+    [ObservableProperty]
+    private string _recBigMapPosHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 路径记录开始
+    [ObservableProperty]
     private string _pathRecorderHotkey = "";
 
     [ObservableProperty]
@@ -204,7 +211,12 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _keyMouseMacroRecordHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+    // 暂停
+    [ObservableProperty]
+    private string _suspendHotkey = "";
 
+    [ObservableProperty]
+    private string _suspendHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
     // 停止任意独立任务
     [ObservableProperty]
     private string _cancelTaskHotkey = "";

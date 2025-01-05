@@ -18,6 +18,9 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
 
     public RecognitionObject MapUndergroundSwitchButtonRo;
     public RecognitionObject MapUndergroundToGroundButtonRo;
+    
+    public const int MapScaleButton1080StartY = 452;
+    public const int MapScaleButton1080EndY = 627;
 
     private QuickTeleportAssets()
     {

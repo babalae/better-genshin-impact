@@ -5,17 +5,9 @@ VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BetterGenshinImpact", "BetterGenshinImpact\BetterGenshinImpact.csproj", "{75EC89E2-413D-4725-BCEA-AFAC57708F07}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vision.WindowCapture", "Vision.WindowCapture\Vision.WindowCapture.csproj", "{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BetterGenshinImpact.Win32", "BetterGenshinImpact.Win32\BetterGenshinImpact.Win32.csproj", "{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.GameCapture", "Fischless.GameCapture\Fischless.GameCapture.csproj", "{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vision.WindowCapture.Test", "Vision.WindowCapture.Test\Vision.WindowCapture.Test.csproj", "{D35CB953-C666-4E57-9A9A-3AAE5BF78402}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.HotkeyCapture", "Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj", "{08152E44-2564-46C5-B5B2-54DD43C01A79}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fischless.KeyboardCapture", "Fischless.KeyboardCapture\Fischless.KeyboardCapture.csproj", "{10A48327-7E58-4B51-B1FC-55506C703C8F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Deploy", "Deploy", "{458E1106-43A4-47E6-B11B-D243035D4C76}"
 EndProject
@@ -43,22 +35,6 @@ Global
 		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Release|Any CPU.Build.0 = Release|x64
 		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Release|x64.ActiveCfg = Release|x64
 		{75EC89E2-413D-4725-BCEA-AFAC57708F07}.Release|x64.Build.0 = Release|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Debug|Any CPU.Build.0 = Debug|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Debug|x64.ActiveCfg = Debug|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Debug|x64.Build.0 = Debug|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Release|Any CPU.ActiveCfg = Release|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Release|Any CPU.Build.0 = Release|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Release|x64.ActiveCfg = Release|x64
-		{C9080C1D-1B26-46CB-A494-A5E7FE3FCEBA}.Release|x64.Build.0 = Release|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Debug|Any CPU.Build.0 = Debug|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Debug|x64.ActiveCfg = Debug|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Debug|x64.Build.0 = Debug|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Release|Any CPU.ActiveCfg = Release|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Release|Any CPU.Build.0 = Release|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Release|x64.ActiveCfg = Release|x64
-		{75F4541B-9624-4AFB-BAEA-3EAFD3300EE1}.Release|x64.Build.0 = Release|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Debug|Any CPU.Build.0 = Debug|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Debug|x64.ActiveCfg = Debug|x64
@@ -67,14 +43,6 @@ Global
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Release|Any CPU.Build.0 = Release|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Release|x64.ActiveCfg = Release|x64
 		{6B0A3D96-D88D-48DD-8112-4CD5BA5D27CE}.Release|x64.Build.0 = Release|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|Any CPU.Build.0 = Debug|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|x64.ActiveCfg = Debug|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Debug|x64.Build.0 = Debug|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|Any CPU.ActiveCfg = Release|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|Any CPU.Build.0 = Release|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|x64.ActiveCfg = Release|x64
-		{D35CB953-C666-4E57-9A9A-3AAE5BF78402}.Release|x64.Build.0 = Release|x64
 		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Debug|Any CPU.Build.0 = Debug|x64
 		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Debug|x64.ActiveCfg = Debug|x64
@@ -83,14 +51,6 @@ Global
 		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Release|Any CPU.Build.0 = Release|x64
 		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Release|x64.ActiveCfg = Release|x64
 		{08152E44-2564-46C5-B5B2-54DD43C01A79}.Release|x64.Build.0 = Release|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Debug|Any CPU.Build.0 = Debug|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Debug|x64.ActiveCfg = Debug|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Debug|x64.Build.0 = Debug|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Release|Any CPU.ActiveCfg = Release|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Release|Any CPU.Build.0 = Release|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Release|x64.ActiveCfg = Release|x64
-		{10A48327-7E58-4B51-B1FC-55506C703C8F}.Release|x64.Build.0 = Release|x64
 		{AB85DA23-EB8F-4FBF-A7FA-35CE05B23C15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AB85DA23-EB8F-4FBF-A7FA-35CE05B23C15}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB85DA23-EB8F-4FBF-A7FA-35CE05B23C15}.Debug|x64.ActiveCfg = Debug|x64

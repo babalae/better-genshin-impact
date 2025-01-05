@@ -1,0 +1,44 @@
+{
+  "info": {
+    "name": "蒙德凯瑟琳",
+    "type": "collect",
+    "author": "½",
+    "version": "1.0",
+    "description": "",
+    "bgiVersion": "0.35.1"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -867.6884765625,
+      "y": 2281.365966796875,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": -882.1455078125,
+      "y": 2262.399658203125,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": -911.3125,
+      "y": 2240.5625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": -913.5625,
+      "y": 2233.5625,
+      "action": "",
+      "move_mode": "walk",
+      "type": "path"
+    }
+  ]
+}

@@ -143,7 +143,8 @@ namespace BetterGenshinImpact.GameTask
             GameCapture.Start(hWnd,
                 new Dictionary<string, object>()
                 {
-                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache }
+                    { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
+                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
                 }
             );
 
@@ -186,46 +187,9 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        /// <summary>
-        /// 启动独立任务
-        /// </summary>
-        public void StartIndependentTask(IndependentTaskEnum taskType, BaseTaskParam param)
+        public System.Timers.Timer GetTimer()
         {
-            if (!_timer.Enabled)
-            {
-                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
-            }
-
-            var maskWindow = MaskWindow.Instance();
-            maskWindow.Invoke(() => { maskWindow.Show(); });
-            if (taskType == IndependentTaskEnum.AutoGeniusInvokation)
-            {
-                AutoGeniusInvokationTask.Start((GeniusInvokationTaskParam)param);
-            }
-            else if (taskType == IndependentTaskEnum.AutoWood)
-            {
-                Task.Run(() => { new AutoWoodTask().Start((WoodTaskParam)param); });
-            }
-            else if (taskType == IndependentTaskEnum.AutoFight)
-            {
-                Task.Run(() => { new AutoFightTask((AutoFightParam)param).Start(); });
-            }
-            else if (taskType == IndependentTaskEnum.AutoDomain)
-            {
-                Task.Run(() => { new AutoDomainTask((AutoDomainParam)param).Start(); });
-            }
-            else if (taskType == IndependentTaskEnum.AutoTrack)
-            {
-                Task.Run(() => { new AutoTrackTask((AutoTrackParam)param).Start(); });
-            }
-            else if (taskType == IndependentTaskEnum.AutoTrackPath)
-            {
-                Task.Run(() => { new AutoTrackPathTask((AutoTrackPathParam)param).Start(); });
-            }
-            else if (taskType == IndependentTaskEnum.AutoMusicGame)
-            {
-                Task.Run(() => { new AutoMusicGameTask((AutoMusicGameParam)param).Start(); });
-            }
+            return _timer;
         }
 
         public void Dispose()
@@ -318,8 +282,8 @@ namespace BetterGenshinImpact.GameTask
                 {
                     if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
                     {
-                        if (!_prevGameActive)
-                        {
+                        // if (!_prevGameActive)
+                        // {
                             maskWindow.Invoke(() =>
                             {
                                 if (maskWindow.IsExist())
@@ -327,7 +291,7 @@ namespace BetterGenshinImpact.GameTask
                                     maskWindow.Show();
                                 }
                             });
-                        }
+                        // }
                     }
 
                     _prevGameActive = active;
@@ -504,10 +468,10 @@ namespace BetterGenshinImpact.GameTask
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
         }
 
-        public ImageRegion CaptureToRectArea()
+        public ImageRegion CaptureToRectArea(bool forceNew = false)
         {
             // 触发器启动的情况下优先使用触发器的截图
-            if (_timer.Enabled && _dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
+            if (!forceNew && _timer.Enabled && _dispatcherCacheCaptureMode is DispatcherCaptureModeEnum.OnlyCacheCapture or DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
             {
                 return GetLastCaptureContent().CaptureRectArea;
             }

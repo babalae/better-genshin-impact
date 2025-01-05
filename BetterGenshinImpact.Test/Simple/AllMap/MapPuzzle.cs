@@ -8,7 +8,6 @@ namespace BetterGenshinImpact.Test.Simple.AllMap;
 
 public class MapPuzzle
 {
-    public static readonly int block = 2048;
 
     public static List<string> PicWhiteHashList = new List<string>
     {
@@ -26,9 +25,26 @@ public class MapPuzzle
 
     public static MD5 Md5Service = MD5.Create();
 
-    public static void Put()
+    public static void PutAll()
     {
-        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map"; // 图片文件夹路径
+        // 保存2048大图
+        // var img2048 = Put(2048);
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_2048.png", img2048);
+        
+        // 保存1024
+        var img1024 = Put(1024);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_1024.png", img1024);
+        
+        // 保存256
+        // var grayImage = new Mat();
+        // Cv2.CvtColor(img1024.Resize(new Size(img1024.Width / 4, img1024.Height / 4), 0, 0, InterpolationFlags.Cubic), grayImage, ColorConversionCodes.BGR2GRAY);
+        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.2\map_52_256.png", grayImage);
+
+    }
+    
+    public static Mat Put(int block = 2048)
+    {
+        string folderPath = @"E:\HuiTask\更好的原神\地图匹配\UI_Map_5.2"; // 图片文件夹路径
         string pattern = @"UI_MapBack_([-+]?\d+)_([-+]?\d+)(.*)";
         var images = Directory.GetFiles(folderPath, "*.png", SearchOption.TopDirectoryOnly); // 获取所有图片文件路径
 
@@ -114,6 +130,7 @@ public class MapPuzzle
         // 计算大图的总宽度和高度
         var lenCol = maxCol - minCol;
         var lenRow = maxRow - minRow;
+        Debug.WriteLine($"列数X: {lenCol+1}, 行数Y: {lenRow+1}");
         int totalWidth = (lenCol + 1) * block;
         int totalHeight = (lenRow + 1) * block;
 
@@ -157,16 +174,43 @@ public class MapPuzzle
             Debug.WriteLine("");
         }
 
-        // 保存大图
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\map_46_2048.png", largeImage);
-        // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_sd4x.png", largeImage.Resize(new Size(largeImage.Width / 4, largeImage.Height / 4), 0, 0, InterpolationFlags.Cubic));
+        // 地图图片块
+        // SaveImagesAs1024X1024(arr, imageLocations, @"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\地图块", minRow, minCol);
+
+
         // Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\combined_image_small.png", largeImage.Resize(new Size(1400, 1300), 0, 0, InterpolationFlags.Cubic));
 
         // 释放资源
-        largeImage.Dispose();
-        foreach (var img in imageLocations.Values)
+        return largeImage;
+    }
+
+    public static void SaveImagesAs1024X1024(int[,] arr, Dictionary<(int row, int col), ImgInfo> imageLocations, string outputFolder, int minRow, int minCol)
+    {
+        if (!Directory.Exists(outputFolder))
         {
-            img.Img.Dispose();
+            Directory.CreateDirectory(outputFolder);
+        }
+
+        for (int row = 0; row < arr.GetLength(0); row++)
+        {
+            for (int col = 0; col < arr.GetLength(1); col++)
+            {
+                if (arr[row, col] == 1)
+                {
+                    var key = (row + minRow, col + minCol);
+                    if (imageLocations.TryGetValue(key, out var imgInfo))
+                    {
+                        var img = imgInfo.Img;
+                        if (img.Width != 1204 || img.Height != 1204)
+                        {
+                            img = imgInfo.Img.Resize(new Size(1024, 1024), 0, 0, InterpolationFlags.Nearest);
+                        }
+                        var outputPath = Path.Combine(outputFolder, $"{row}_{col}.png");
+                        Cv2.ImWrite(outputPath, img);
+                        img.Dispose();
+                    }
+                }
+            }
         }
     }
 

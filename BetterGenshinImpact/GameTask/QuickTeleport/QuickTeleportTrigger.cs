@@ -91,7 +91,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 if (hasMapChooseIcon)
                 {
                     TaskControl.Sleep(_config.WaitTeleportPanelDelay);
-                    CheckTeleportButton(TaskControl.CaptureToRectArea());
+                    CheckTeleportButton(TaskControl.CaptureToRectArea(forceNew: true));
                 }
             }
         });
@@ -133,9 +133,10 @@ internal class QuickTeleportTrigger : ITaskTrigger
             foreach (var iconRect in rResultList)
             {
                 // 200宽度的文字区域
-                using var ra = content.CaptureRectArea.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y, 200, iconRect.Height);
+                using var ra = content.CaptureRectArea.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y - 8, 200, iconRect.Height + 16);
                 using var textRegion = ra.Find(new RecognitionObject
                 {
+                    // RecognitionType = RecognitionTypes.Ocr,
                     RecognitionType = RecognitionTypes.ColorRangeAndOcr,
                     LowerColor = new Scalar(249, 249, 249),  // 只取白色文字
                     UpperColor = new Scalar(255, 255, 255),
@@ -147,7 +148,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
                 if ((DateTime.Now - _prevClickOptionButtonTime).TotalMilliseconds > 500)
                 {
-                    TaskControl.Logger.LogInformation("快速传送：点击 {Option}", textRegion.Text);
+                    TaskControl.Logger.LogInformation("快速传送：点击 {Option}", textRegion.Text.Replace(">", ""));
                 }
 
                 _prevClickOptionButtonTime = DateTime.Now;
