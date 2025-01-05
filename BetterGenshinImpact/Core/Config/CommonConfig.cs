@@ -46,4 +46,12 @@ public partial class CommonConfig : ObservableObject
     // 录制工具 ffmpeg/obs
     [ObservableProperty]
     private string _recorder = "obs";
+    
+    // 用户姓名
+    [ObservableProperty]
+    private string _userName = "";
+    
+    // 用户UID
+    [ObservableProperty]
+    private string _uid = "";
 }
