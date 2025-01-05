@@ -2,14 +2,20 @@
 using BetterGenshinImpact.GameTask;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace BetterGenshinImpact.Core.Simulator.Extensions;
 
-public class SimulateKeyHelper
+public static class SimulateKeyHelper
 {
 
     private static KeyBindingsConfig KeyConfig => TaskContext.Instance().Config.KeyBindingsConfig;
+
+    public static KeyId ToActionKey(this GIActions action)
+    {
+        return GetActionKey(action);
+    }
 
     /// <summary>
     /// 通过ActionId取得实际的键盘绑定
