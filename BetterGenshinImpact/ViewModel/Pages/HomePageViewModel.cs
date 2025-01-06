@@ -139,29 +139,42 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnStartCaptureTest()
     {
         var picker = new PickerWindow();
-        var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
-        if (hWnd != IntPtr.Zero)
+
+        if (picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle, out var hWnd))
         {
-            var captureWindow = new CaptureTestWindow();
-            captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
-            captureWindow.Show();
+            if (hWnd != IntPtr.Zero)
+            {
+                var captureWindow = new CaptureTestWindow();
+                captureWindow.StartCapture(hWnd, Config.CaptureMode.ToCaptureMode());
+                captureWindow.Show();
+            }
+            else
+            {
+                MessageBox.Error("选择的窗体句柄为空");
+            }
         }
+        
+
     }
 
     [RelayCommand]
     private void OnManualPickWindow()
     {
         var picker = new PickerWindow();
-        var hWnd = picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle);
-        if (hWnd != IntPtr.Zero)
+        if(picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle,out var hWnd))
         {
-            _hWnd = hWnd;
-            Start(hWnd);
+            if (hWnd != IntPtr.Zero)
+            {
+                _hWnd = hWnd;
+                Start(hWnd);
+            }
+            else
+            {
+                MessageBox.Error("选择的窗体句柄为空！");
+            }
+
         }
-        else
-        {
-            MessageBox.Error("选择的窗体句柄为空！");
-        }
+
     }
 
     [RelayCommand]
@@ -181,8 +194,13 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
-            if (Config.GenshinStartConfig.LinkedStartEnabled && !string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
+            if (Config.GenshinStartConfig.LinkedStartEnabled)
             {
+                if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
+                {
+                    MessageBox.Error("没有找到原神的安装路径");
+                    return;
+                }
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
                 if (hWnd != IntPtr.Zero)
                 {

@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fischless.GameCapture.BitBlt;
@@ -18,7 +19,9 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using Wpf.Ui;
+using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel;
 
@@ -34,6 +37,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     public WindowState _windowState = WindowState.Normal;
 
+    [ObservableProperty]
+    public WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+    
     public AllConfig Config { get; set; }
 
     public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
@@ -53,6 +59,24 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private void OnHide()
     {
         IsVisible = false;
+    }
+    [RelayCommand]
+    private void OnSwitchBackdrop()
+    {
+        CurrentBackdropType = CurrentBackdropType switch
+        {
+            WindowBackdropType.Auto => WindowBackdropType.Mica,
+            WindowBackdropType.Mica => WindowBackdropType.Acrylic,
+            WindowBackdropType.Acrylic => WindowBackdropType.Auto,
+            _ => WindowBackdropType.Auto
+        };
+
+        var mainWindow = Application.Current.MainWindow as MainWindow;
+        if (mainWindow != null)
+        {
+            mainWindow.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
+            WindowBackdrop.ApplyBackdrop(mainWindow, CurrentBackdropType);
+        }
     }
 
     [RelayCommand]
