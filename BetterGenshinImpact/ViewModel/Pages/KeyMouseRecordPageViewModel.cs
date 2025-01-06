@@ -429,21 +429,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
 
         await Task.Run(() =>
         {
-            // // 先压缩整个文件夹
-            // var zipName = $"{Path.GetFileNameWithoutExtension(path)}.zip";
-            // var zipPath = Path.Combine(Path.GetTempPath(), zipName);
-            // // 删除旧的压缩包
-            // if (File.Exists(zipPath))
-            // {
-            //     File.Delete(zipPath);
-            // }
-            //
-            // ZipFile.CreateFromDirectory(path, zipPath, CompressionLevel.NoCompression, true);
-            //
-            //
-            // UIDispatcherHelper.Invoke(() => { Toast.Information($"文件夹压缩完成：{zipPath}"); });
-
-
+            
             // 上传
             try
             {
