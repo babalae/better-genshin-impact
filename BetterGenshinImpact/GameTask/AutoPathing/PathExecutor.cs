@@ -144,7 +144,7 @@ public class PathExecutor
             return;
         }
 
-        
+
         try
         {
             InitializePathing(task);
@@ -242,26 +242,7 @@ public class PathExecutor
                         // 不管咋样，松开所有按键
                         Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                         Simulation.SendInput.Mouse.RightButtonUp();
-                       
                     }
-                }
-                catch (RetryException retryException)
-                {
-                    StartSkipOtherOperations();
-                    Logger.LogWarning(retryException.Message);
-                }
-                catch (RetryNoCountException retryException)
-                {
-                    //特殊情况下，重试不消耗次数
-                    i--;
-                    StartSkipOtherOperations();
-                    Logger.LogWarning(retryException.Message);
-                }
-                finally
-                {
-                    // 不管咋样，松开所有按键
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                 }
             }
         }
@@ -269,7 +250,6 @@ public class PathExecutor
         {
             _unknownInterfaceCheckingTask = false;
         }
-        
     }
 
     private async Task<bool> SwitchPartyBefore(PathingTask task)
@@ -315,52 +295,51 @@ public class PathExecutor
 
         return true;
     }
+
     bool _unknownInterfaceCheckingTask = false;
+
     private void UnknownInterfaceCheckingTaskStart()
     {
-        
         /*if (_partyConfig.Enabled && _partyConfig.CloseUnknownInterfaceCheck)
         {*/
-            _unknownInterfaceCheckingTask = true;
-            Task.Run(async () =>
+        _unknownInterfaceCheckingTask = true;
+        Task.Run(async () =>
+        {
+            Logger.LogInformation("开始未知界面检查");
+            while (_unknownInterfaceCheckingTask && !ct.IsCancellationRequested)
             {
+                ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
 
-                Logger.LogInformation("开始未知界面检查");
-                while (_unknownInterfaceCheckingTask && !ct.IsCancellationRequested)
+                var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
+                if (cookRa.IsExist())
                 {
-                    ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
-
-                    var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
-                    if (cookRa.IsExist())
-                    {
-                        Logger.LogInformation("检测到烹饪界面，使用ESC关闭界面");
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                    }
-                    var mainRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-                    if (mainRa2.IsExist())
-                    {
-                   
-                        Logger.LogInformation("检测到主界面，使用ESC关闭界面");
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                    }
-                    
-                    
-                    for (int i = 0; i < 5; i++)
-                    {
-                        if (!_unknownInterfaceCheckingTask || ct.IsCancellationRequested)
-                        {
-                            break;
-                        }
-                        await Task.Delay(1000,ct);
-                    }
-              
+                    Logger.LogInformation("检测到烹饪界面，使用ESC关闭界面");
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 }
-                Logger.LogInformation("关闭未知界面检查");
-            
-            },ct);
-        /*} */   
-    }
 
+                var mainRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
+                if (mainRa2.IsExist())
+                {
+                    Logger.LogInformation("检测到主界面，使用ESC关闭界面");
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                }
+
+
+                for (int i = 0; i < 5; i++)
+                {
+                    if (!_unknownInterfaceCheckingTask || ct.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(1000, ct);
+                }
+            }
+
+            Logger.LogInformation("关闭未知界面检查");
+        }, ct);
+        /*} */
+    }
 
 
     private void InitializePathing(PathingTask task)
@@ -997,7 +976,6 @@ public class PathExecutor
             // 判断是否进入剧情
             await AutoSkip();
         }
-       
     }
 
     private async Task AutoSkip()
