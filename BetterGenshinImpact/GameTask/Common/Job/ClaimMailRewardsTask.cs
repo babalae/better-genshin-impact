@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
@@ -37,7 +38,7 @@ public class ClaimMailRewardsTask
 
         await Delay(200, ct);
 
-        TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE); // ESC 
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenPaimonMenu); // ESC 
 
         await Delay(1300, ct);
 
