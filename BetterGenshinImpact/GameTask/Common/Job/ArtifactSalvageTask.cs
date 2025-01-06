@@ -10,6 +10,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -25,7 +26,7 @@ public class ArtifactSalvageTask
         await _returnMainUiTask.Start(ct);
 
         // B键打开背包
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_B);
+        Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
         await Delay(1000, ct);
 
         var openBagSuccess = await NewRetry.WaitForAction(() =>
@@ -51,7 +52,7 @@ public class ArtifactSalvageTask
             if (Bv.IsInMainUi(ra))
             {
                 Debug.WriteLine("背包打开失败,再次尝试打开背包");
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_B);
+                Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
             }
 
             return false;

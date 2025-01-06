@@ -101,6 +101,7 @@ public partial class App : Application
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
+                services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();

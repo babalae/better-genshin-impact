@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -319,7 +320,10 @@ public class AutoTrackPathTask
         var angle1 = GetCharacterOrientationAngle();
         Simulation.SendInput.Mouse.MoveMouseBy(CharMovingUnit, 0);
         Sleep(500);
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(100).KeyUp(User32.VK.VK_W);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        Sleep(100);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(100).KeyUp(User32.VK.VK_W);
         Sleep(1000);
         var angle2 = GetCharacterOrientationAngle();
         var angleOffset = angle2 - angle1;
