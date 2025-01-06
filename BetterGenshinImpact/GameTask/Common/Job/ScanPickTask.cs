@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
@@ -84,9 +85,9 @@ public class ScanPickTask
 
     private static async Task WalkForward(CancellationToken ct)
     {
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         await Delay(1000, ct);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
     }
 
     private void MoveCursorTo(Rect item, ImageRegion ra)

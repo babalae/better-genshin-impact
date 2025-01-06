@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
@@ -47,7 +48,7 @@ public class PickAroundHandler() : IActionHandler
 
     public async Task MoveCircle(double edgeT, int n)
     {
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
+        Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
         await Delay(30, _ct);
         while (n-- > 0)
         {
@@ -55,7 +56,7 @@ public class PickAroundHandler() : IActionHandler
             await Delay((int)Math.Round(edgeT), _ct);
         }
 
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
+        Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
         await Delay(200, _ct);
     }
 
@@ -67,9 +68,9 @@ public class PickAroundHandler() : IActionHandler
         await Delay(500, _ct);
         if (ms > 0)
         {
-            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             await Delay(ms, _ct);
-            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             await Delay(200, _ct);
         }
     }
@@ -80,8 +81,8 @@ public class PickAroundHandler() : IActionHandler
         double y = oldRadius * Math.Sin(angle);
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(500, _ct);
-        await MoveAfterTurn(User32.VK.VK_S, (int)Math.Round(y) + 200);
-        await MoveAfterTurn(User32.VK.VK_A, (int)Math.Round(x));
+        await MoveAfterTurn(GIActions.MoveBackward.ToActionKey().ToVK(), (int)Math.Round(y) + 200);
+        await MoveAfterTurn(GIActions.MoveLeft.ToActionKey().ToVK(), (int)Math.Round(x));
     }
 }
 

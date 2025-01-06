@@ -141,6 +141,13 @@
                         <ui:SymbolIcon Symbol="Flash24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="按键绑定"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:KeyBindingsSettingsPage}" Cursor="Hand">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="KeyboardMouse16" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <!--<ui:NavigationViewItem Content="通知"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:NotificationSettingsPage}">

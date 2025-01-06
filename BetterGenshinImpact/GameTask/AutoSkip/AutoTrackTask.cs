@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -113,7 +114,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         {
             // 距离大于150米，先传送到最近的传送点
             // J 打开任务 切换追踪打开地图 中心点就是任务点
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_J);
+            Simulation.SendInput.SimulateAction(GIActions.OpenQuestMenu);
             Sleep(800, _ct);
             // TODO 识别是否在任务界面
             // 切换追踪
@@ -179,7 +180,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     private void StartTrackPoint()
     {
         // V键直接追踪
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_V);
+        Simulation.SendInput.SimulateAction(GIActions.QuestNavigation);
         Sleep(3000, _ct);
 
         var ra = CaptureToRectArea();
@@ -216,7 +217,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
                     if (wDown)
                     {
-                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         wDown = false;
                     }
                     Debug.WriteLine("使追踪点位于俯视角上方");
@@ -242,7 +243,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (!wDown)
                     {
-                        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                         wDown = true;
                     }
                 }
@@ -251,7 +252,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (wDown)
                     {
-                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         wDown = false;
                     }
                     // 识别距离
