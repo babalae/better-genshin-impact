@@ -187,9 +187,6 @@ public class AutoFightTask : ISoloTask
     public List<string> checkNames = new();*/
     public async Task Start(CancellationToken ct)
     {
-        // 从KeyBindingsConfig中读取配置
-        var keyConfig = TaskContext.Instance().Config.KeyBindingsConfig;
-
         _ct = ct;
 
         LogScreenResolution();
