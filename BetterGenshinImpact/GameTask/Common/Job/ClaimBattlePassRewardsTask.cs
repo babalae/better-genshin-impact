@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -37,7 +38,7 @@ public class ClaimBattlePassRewardsTask
         await _returnMainUiTask.Start(ct);
 
         await Delay(200, ct);
-        TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_F4); // F4 开纪行
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenBattlePassScreen); // F4 开纪行
 
         // 领取战令1
         await Delay(500, ct);
