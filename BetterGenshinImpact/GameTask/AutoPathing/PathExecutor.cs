@@ -144,104 +144,111 @@ public class PathExecutor
             return;
         }
 
-        InitializePathing(task);
 
-        // 转换、按传送点分割路径
-        var waypointsList = ConvertWaypointsForTrack(task.Positions);
-
-        await Delay(100, ct);
-        Navigation.WarmUp(); // 提前加载地图特征点
-
-        foreach (var waypoints in waypointsList)
+        try
         {
-            CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
+            InitializePathing(task);
+            // 转换、按传送点分割路径
+            var waypointsList = ConvertWaypointsForTrack(task.Positions);
 
+            await Delay(100, ct);
+            Navigation.WarmUp(); // 提前加载地图特征点
 
-            for (var i = 0; i < RetryTimes; i++)
+            foreach (var waypoints in waypointsList)
             {
-                try
+                CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
+
+
+                for (var i = 0; i < RetryTimes; i++)
                 {
-                    await ResolveAnomalies(); // 异常场景处理
-                    foreach (var waypoint in waypoints)
+                    try
                     {
-                        CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
-                        TryCloseSkipOtherOperations();
-                        await RecoverWhenLowHp(waypoint); // 低血量恢复
-                        if (waypoint.Type == WaypointType.Teleport.Code)
+                        await ResolveAnomalies(); // 异常场景处理
+                        foreach (var waypoint in waypoints)
                         {
-                            await HandleTeleportWaypoint(waypoint);
+                            CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
+                            TryCloseSkipOtherOperations();
+                            await RecoverWhenLowHp(waypoint); // 低血量恢复
+                            if (waypoint.Type == WaypointType.Teleport.Code)
+                            {
+                                await HandleTeleportWaypoint(waypoint);
+                            }
+                            else
+                            {
+                                await BeforeMoveToTarget(waypoint);
+
+                                // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
+                                await MoveTo(waypoint);
+
+                                if (waypoint.Type == WaypointType.Target.Code
+                                    // 除了 fight mining 之外的 action 都需要接近
+                                    || (!string.IsNullOrEmpty(waypoint.Action)
+                                        && waypoint.Action != ActionEnum.NahidaCollect.Code
+                                        && waypoint.Action != ActionEnum.Fight.Code
+                                        && waypoint.Action != ActionEnum.CombatScript.Code
+                                        && waypoint.Action != ActionEnum.Mining.Code))
+                                {
+                                    await MoveCloseTo(waypoint);
+                                }
+
+                                //skipOtherOperations如果重试，则跳过相关操作
+                                if (!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations)
+                                {
+                                    // 执行 action
+                                    await AfterMoveToTarget(waypoint);
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                    catch (NormalEndException normalEndException)
+                    {
+                        Logger.LogInformation(normalEndException.Message);
+                        if (RunnerContext.Instance.IsContinuousRunGroup)
+                        {
+                            throw;
                         }
                         else
                         {
-                            await BeforeMoveToTarget(waypoint);
-
-                            // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
-                            await MoveTo(waypoint);
-
-                            if (waypoint.Type == WaypointType.Target.Code
-                                // 除了 fight mining 之外的 action 都需要接近
-                                || (!string.IsNullOrEmpty(waypoint.Action)
-                                    && waypoint.Action != ActionEnum.NahidaCollect.Code
-                                    && waypoint.Action != ActionEnum.Fight.Code
-                                    && waypoint.Action != ActionEnum.CombatScript.Code
-                                    && waypoint.Action != ActionEnum.Mining.Code))
-                            {
-                                await MoveCloseTo(waypoint);
-                            }
-
-                            //skipOtherOperations如果重试，则跳过相关操作
-                            if (!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations)
-                            {
-                                // 执行 action
-                                await AfterMoveToTarget(waypoint);
-                            }
+                            break;
                         }
                     }
-
-                    break;
-                }
-                catch (NormalEndException normalEndException)
-                {
-                    Logger.LogInformation(normalEndException.Message);
-                    if (RunnerContext.Instance.IsContinuousRunGroup)
+                    catch (TaskCanceledException e)
                     {
-                        throw;
+                        if (RunnerContext.Instance.IsContinuousRunGroup)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
-                    else
+                    catch (RetryException retryException)
                     {
-                        break;
+                        StartSkipOtherOperations();
+                        Logger.LogWarning(retryException.Message);
                     }
-                }
-                catch (TaskCanceledException e)
-                {
-                    if (RunnerContext.Instance.IsContinuousRunGroup)
+                    catch (RetryNoCountException retryException)
                     {
-                        throw;
+                        //特殊情况下，重试不消耗次数
+                        i--;
+                        StartSkipOtherOperations();
+                        Logger.LogWarning(retryException.Message);
                     }
-                    else
+                    finally
                     {
-                        break;
+                        // 不管咋样，松开所有按键
+                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                        Simulation.SendInput.Mouse.RightButtonUp();
                     }
-                }
-                catch (RetryException retryException)
-                {
-                    StartSkipOtherOperations();
-                    Logger.LogWarning(retryException.Message);
-                }
-                catch (RetryNoCountException retryException)
-                {
-                    //特殊情况下，重试不消耗次数
-                    i--;
-                    StartSkipOtherOperations();
-                    Logger.LogWarning(retryException.Message);
-                }
-                finally
-                {
-                    // 不管咋样，松开所有按键
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                 }
             }
+        }
+        finally
+        {
+            _unknownInterfaceCheckingTask = false;
         }
     }
 
@@ -289,11 +296,58 @@ public class PathExecutor
         return true;
     }
 
+    bool _unknownInterfaceCheckingTask = false;
+
+    private void UnknownInterfaceCheckingTaskStart()
+    {
+        /*if (_partyConfig.Enabled && _partyConfig.CloseUnknownInterfaceCheck)
+        {*/
+        _unknownInterfaceCheckingTask = true;
+        Task.Run(async () =>
+        {
+            Logger.LogInformation("开始未知界面检查");
+            while (_unknownInterfaceCheckingTask && !ct.IsCancellationRequested)
+            {
+                ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
+
+                var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
+                if (cookRa.IsExist())
+                {
+                    Logger.LogInformation("检测到烹饪界面，使用ESC关闭界面");
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                }
+
+                var mainRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
+                if (mainRa2.IsExist())
+                {
+                    Logger.LogInformation("检测到主界面，使用ESC关闭界面");
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                }
+
+
+                for (int i = 0; i < 5; i++)
+                {
+                    if (!_unknownInterfaceCheckingTask || ct.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(1000, ct);
+                }
+            }
+
+            Logger.LogInformation("关闭未知界面检查");
+        }, ct);
+        /*} */
+    }
+
+
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
+        UnknownInterfaceCheckingTaskStart();
     }
 
     private void LogScreenResolution()

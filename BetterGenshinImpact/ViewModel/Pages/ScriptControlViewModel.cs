@@ -29,6 +29,7 @@ using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 using StackPanel = Wpf.Ui.Controls.StackPanel;
 using System.Windows.Navigation;
+using BetterGenshinImpact.View.Controls.Webview;
 using Newtonsoft.Json.Linq;
 using static Vanara.PInvoke.User32;
 using TextBox = Wpf.Ui.Controls.TextBox;
@@ -57,6 +58,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     private ScriptGroup? _selectedScriptGroup;
 
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
+    public readonly string LogPath = Global.Absolute(@"log");
 
     public void OnNavigatedFrom()
     {
@@ -104,7 +106,112 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         SelectedScriptGroup.Projects.Clear();
         WriteScriptGroup(SelectedScriptGroup);
     }
+	[RelayCommand]
+    private async Task OpenLogParse()
+    {
 
+
+        // 创建 StackPanel
+        var stackPanel = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Margin = new Thickness(10)
+        };
+
+        // 创建 ComboBox
+        var rangeComboBox = new ComboBox
+        {
+            Width = 200,
+            Margin = new Thickness(0, 0, 0, 10),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var rangeComboBoxItems = new List<object>
+            {
+                new  { Text = "当前配置组", Value = "CurrentConfig" },
+                new  { Text = "所有", Value = "All" }
+            };
+        rangeComboBox.DisplayMemberPath = "Text";  // 显示的文本
+        rangeComboBox.SelectedValuePath = "Value"; // 绑定的值
+        rangeComboBox.ItemsSource = rangeComboBoxItems;
+        rangeComboBox.SelectedIndex = 0; // 默认选中第一个项
+        stackPanel.Children.Add(rangeComboBox);
+
+   
+        var dayRangeComboBox = new ComboBox
+        {
+            Width = 200,
+            Margin = new Thickness(0, 0, 0, 10),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        // 定义范围选项数据
+        var dayRangeComboBoxItems = new List<object>
+            {
+                new { Text = "3天", Value = "3" },
+                new { Text = "7天", Value = "7" },
+                new { Text = "所有", Value = "All" }
+            };
+        dayRangeComboBox.ItemsSource = dayRangeComboBoxItems;
+        dayRangeComboBox.DisplayMemberPath = "Text";  // 显示的文本
+        dayRangeComboBox.SelectedValuePath = "Value"; // 绑定的值
+        dayRangeComboBox.SelectedIndex = 0;
+        stackPanel.Children.Add(dayRangeComboBox);
+
+
+
+        //PrimaryButtonText
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "日志分析",
+            Content = stackPanel,
+            CloseButtonText = "取消",
+            PrimaryButtonText = "确定",
+            Owner = Application.Current.MainWindow,
+        };
+        Wpf.Ui.Controls.MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
+        
+        
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary) {
+            WebpageWindow win = new()
+            {
+                Title = "日志分析",
+                Width = 800,
+                Height = 600,
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            string rangeValue = ((dynamic)rangeComboBox.SelectedItem).Value;
+            string dayRangeValue = ((dynamic)dayRangeComboBox.SelectedItem).Value;
+
+
+            List<(string FileName, string Date)> fs = LogParse.LogParse.GetLogFiles(LogPath);
+            if (dayRangeValue != "All") {
+                int n = int.Parse(dayRangeValue);
+                if (n < fs.Count)
+                {
+                    fs = fs.GetRange(fs.Count - n, n);
+                }
+            }
+
+
+            var configGroupEntities = LogParse.LogParse.ParseFile(fs);
+            if (rangeValue == "CurrentConfig") {
+                //Toast.Success(_selectedScriptGroup.Name);
+                configGroupEntities =configGroupEntities.Where(item => _selectedScriptGroup.Name == item.Name).ToList();
+            }
+            if (configGroupEntities.Count == 0)
+            {
+                Toast.Warning("未解析出日志记录！");
+            }
+            else {
+                configGroupEntities.Reverse();
+                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities));
+                win.ShowDialog();
+            }
+
+        }
+
+
+    }
     private void UpdateTasks()
     {
         //PromptDialog.Prompt
