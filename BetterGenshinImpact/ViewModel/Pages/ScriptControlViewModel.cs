@@ -195,7 +195,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
             var configGroupEntities = LogParse.LogParse.ParseFile(fs);
             if (rangeValue == "CurrentConfig") {
-                Toast.Success(_selectedScriptGroup.Name);
+                //Toast.Success(_selectedScriptGroup.Name);
                 configGroupEntities =configGroupEntities.Where(item => _selectedScriptGroup.Name == item.Name).ToList();
             }
             if (configGroupEntities.Count == 0)
