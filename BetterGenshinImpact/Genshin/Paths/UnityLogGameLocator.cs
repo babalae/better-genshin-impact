@@ -23,15 +23,29 @@ public partial class UnityLogGameLocator
             string logFilePathOversea = Path.Combine(appDataPath, @"..\LocalLow\miHoYo\Genshin Impact\output_log.txt");
             string logFilePathChinese = Path.Combine(appDataPath, @"..\LocalLow\miHoYo\原神\output_log.txt");
 
-            // Fallback to the CN server.
-            string logFilePath = File.Exists(logFilePathChinese) ? logFilePathChinese : logFilePathOversea;
-            return await LocateGamePathAsync(logFilePath).ConfigureAwait(false);
+            if (File.Exists(logFilePathChinese))
+            {
+                var p1 = await LocateGamePathAsync(logFilePathChinese).ConfigureAwait(false);
+                if (p1 is not null && File.Exists(p1))
+                {
+                    return p1;
+                }
+            }
+            
+            if (File.Exists(logFilePathOversea))
+            {
+                var p2 = await LocateGamePathAsync(logFilePathOversea).ConfigureAwait(false);
+                if (p2 is not null && File.Exists(p2))
+                {
+                    return p2;
+                }
+            }
         }
         catch (Exception e)
         {
             TaskControl.Logger.LogDebug(e, "Failed to locate game path.");
-            return null;
         }
+        return null;
     }
 
     private static async ValueTask<string?> LocateGamePathAsync(string logFilePath)
