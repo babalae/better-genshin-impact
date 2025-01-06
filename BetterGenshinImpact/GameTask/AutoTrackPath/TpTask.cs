@@ -256,7 +256,7 @@ public class TpTask(CancellationToken ct)
                 // https://github.com/babalae/better-genshin-impact/issues/318
                 if (mouseDistance < tolerance && currentZoomLevel < 2.5)
                 {
-                    Logger.LogInformation($"移动 {iteration} 次鼠标后，已经接近目标点，不再进一步调整。");
+                    Logger.LogInformation("移动 {I} 次鼠标后，已经接近目标点，不再进一步调整。", iteration + 1);
                     break;
                 }
                 while (mouseDistance > 5 * tolerance && currentZoomLevel < 4)
@@ -274,6 +274,11 @@ public class TpTask(CancellationToken ct)
                     totalMoveMouseY *= (currentZoomLevel) / (currentZoomLevel - 1);
                     mouseDistance *= (currentZoomLevel) / (currentZoomLevel - 1);
                     currentZoomLevel--;
+                    if (mouseDistance < tolerance && currentZoomLevel < 2.5)
+                    {
+                        Logger.LogInformation("移动 {I} 次鼠标后，已经接近目标点，不再进一步调整。", iteration + 1);
+                        break;
+                    }
                 }
 
                 // 单次移动最大距离为 maxMouseMove
