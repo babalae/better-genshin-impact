@@ -426,42 +426,8 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             return;
         }
 
-
-        await Task.Run(() =>
-        {
-            
-            // 上传
-            try
-            {
-                var tosClient = new TosClientHelper();
-
-                // 循环 path 下的所有文件
-                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
-                foreach (var file in files)
-                {
-                    var relativePath = file.Replace(scriptPath, "").TrimStart('\\');
-                    var needUploadFileName = Path.GetFileName(file);
-                    var remotePath = $"{DateTime.Now:yyyy_MM_dd}_{userName}_{uid}/{relativePath}";
-                    remotePath = remotePath.Replace(@"\", "/");
-
-                    if (needUploadFileName == "video.mkv" || needUploadFileName == "video.mp4")
-                    {
-                        tosClient.UploadLargeFile(file, remotePath);
-                    }
-                    else
-                    {
-                        tosClient.UploadFile(file, remotePath);
-                    }
-
-                    
-                }
-                UIDispatcherHelper.Invoke(() => { Toast.Success($"文件夹{new DirectoryInfo(path).Name}上传成功！"); });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"上传过程中发生错误：{ex.Message}");
-            }
-        });
+        UploadDialog dialog = new UploadDialog(path);
+        dialog.ShowDialog();
     }
 
 

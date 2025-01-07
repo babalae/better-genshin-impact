@@ -67,6 +67,10 @@ public class StartEndSingleton : Singleton<StartEndSingleton>
         //     Environment.Exit(0);
         // }
         // TosClientHelper.Instance.Test(Global.Absolute(@$"User/config.json"));
+        
+        
+        // var tosClient = new TosClientHelper();
+        // tosClient.ListObjects();
 
     }
 

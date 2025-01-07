@@ -154,4 +154,19 @@
 	  <Folder Include="User\AutoPathing\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Page Update="View\Windows\UploadDialog.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	    <XamlRuntime>Wpf</XamlRuntime>
+	    <SubType>Designer</SubType>
+	  </Page>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="View\Windows\UploadDialog.xaml.cs">
+	    <SubType>Code</SubType>
+	    <DependentUpon>UploadDialog.xaml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+
 </Project>
