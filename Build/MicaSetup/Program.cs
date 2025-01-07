@@ -47,10 +47,10 @@ internal class Program
                 option.IsInstallCertificate = false;
                 option.OverlayInstallRemoveExt = "exe,dll,pdb";
                 option.UnpackingPassword = null!;
-                option.ExeName = @"BetterGI\BetterGI.exe";
+                option.ExeName = @"BetterGI.exe";
                 option.KeyName = "BetterGI";
                 option.DisplayName = "BetterGI";
-                option.DisplayIcon = @"BetterGI\BetterGI.exe";
+                option.DisplayIcon = @"BetterGI.exe";
                 option.DisplayVersion = "0.0.0.0";
                 option.Publisher = "babalae";
                 option.AppName = "BetterGI";

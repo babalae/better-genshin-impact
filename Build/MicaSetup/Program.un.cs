@@ -41,10 +41,10 @@ internal class Program
                 option.IsAllowFirewall = true;
                 option.IsRefreshExplorer = true;
                 option.IsInstallCertificate = false;
-                option.ExeName = @"BetterGI\BetterGI.exe";
+                option.ExeName = @"BetterGI.exe";
                 option.KeyName = "BetterGI";
                 option.DisplayName = "BetterGI";
-                option.DisplayIcon = @"BetterGI\BetterGI.exe";
+                option.DisplayIcon = @"BetterGI.exe";
                 option.DisplayVersion = "0.0.0.0";
                 option.Publisher = "babalae";
                 option.AppName = "BetterGI";
