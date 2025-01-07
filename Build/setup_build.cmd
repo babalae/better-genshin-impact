@@ -30,13 +30,13 @@ cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
 del /f /q %tmpfolder%\*ffmpeg*.dll
 
-:: Ìí¼ÓÒ»Ğ©ÅäÖÃÎÄ¼ş¿ªÊ¼£¨´óÎÄ¼ş²»ÊÊºÏ·ÅÔÚGithub£©
+:: æ·»åŠ ä¸€äº›é…ç½®æ–‡ä»¶å¼€å§‹ï¼ˆå¤§æ–‡ä»¶ä¸é€‚åˆæ”¾åœ¨Githubï¼‰
 if exist "E:\HuiTask\BetterGIBuild\BetterGI" (
     xcopy "E:\HuiTask\BetterGIBuild\BetterGI\*" "%tmpfolder%" /E /C /I /Y
 )
-:: Ìí¼ÓÒ»Ğ©ÅäÖÃÎÄ¼ş½áÊø
+:: æ·»åŠ ä¸€äº›é…ç½®æ–‡ä»¶ç»“æŸ
 
-MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\ -t7z -mx=5 -mf=BCJ2 -r -y
+MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\* -t7z -mx=5 -mf=BCJ2 -r -y
 copy /y publish.7z .\MicaSetup\Resources\Setups\publish.7z
 if exist "%zipFile%" ( del /f /q "%zipfile%" )
 rename publish.7z %archiveFile%
