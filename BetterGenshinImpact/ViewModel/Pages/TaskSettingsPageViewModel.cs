@@ -103,6 +103,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private List<string> _artifactSalvageStarList = ["4", "3", "2", "1"];
 
     [ObservableProperty]
+    private List<string> _autoMusicModelList = AutoMusicGameConfig.MusicModelList;
+
+    [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)

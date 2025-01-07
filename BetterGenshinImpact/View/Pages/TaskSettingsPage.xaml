@@ -1211,16 +1211,20 @@
         </ui:CardControl>
         
         <!--  自动音游专辑  -->
-        <ui:CardControl Margin="0,0,0,12">
-            <ui:CardControl.Icon>
+        <ui:CardExpander Margin="0,0,0,12">
+            <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf89f;" Style="{StaticResource FaFontIconStyle}" />
-            </ui:CardControl.Icon>
-            <ui:CardControl.Header>
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
@@ -1236,15 +1240,49 @@
                             点击查看使用教程
                         </Hyperlink>
                     </ui:TextBlock>
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoAlbumCommand}"
+                                             EnableContent="{Binding SwitchAutoAlbumButtonText}"
+                                             IsChecked="{Binding SwitchAutoAlbumEnabled}" />
                 </Grid>
-            </ui:CardControl.Header>
-            <controls:TwoStateButton Margin="0,0,36,0"
-                                     DisableCommand="{Binding StopSoloTaskCommand}"
-                                     DisableContent="停止"
-                                     EnableCommand="{Binding SwitchAutoAlbumCommand}"
-                                     EnableContent="{Binding SwitchAutoAlbumButtonText}"
-                                     IsChecked="{Binding SwitchAutoAlbumEnabled}" />
-        </ui:CardControl>
+            </ui:CardExpander.Header>
+            
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自定义模式"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="默认为只获取乐曲奖励即可，可以设置所有乐曲达成【大音天籁】"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="230"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding AutoMusicModelList}"
+                              SelectedItem="{Binding Config.AutoMusicGameConfig.ModeName, Mode=TwoWay}" 
+                              SelectedIndex="0" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
 
         <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Accessibility24}">
