@@ -71,17 +71,17 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     private void TryApplySystemBackdrop()
     {
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))  // 改用Acrylic效果
+        {
+            Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
+            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Acrylic);
+            return;
+        }
+
         if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
         {
             Background = new SolidColorBrush(Colors.Transparent);
             WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Mica);
-            return;
-        }
-
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Tabbed))
-        {
-            Background = new SolidColorBrush(Colors.Transparent);
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
             return;
         }
     }

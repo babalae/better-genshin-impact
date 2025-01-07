@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -35,7 +36,7 @@ public class SwitchPartyTask
                 await Delay(200, ct);
             }
 
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_L);
+            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
             await Delay(1000, ct); // 加载2s // 由于胡桃可以不等待直接进入，所以这里只等待1s
         }
 

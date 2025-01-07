@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.Model;
 using System;
 using Vanara.PInvoke;
@@ -15,7 +16,7 @@ public class MovementControl : Singleton<MovementControl>
         if (!_wDown)
         {
             _wDown = true;
-            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         }
     }
 
@@ -24,12 +25,12 @@ public class MovementControl : Singleton<MovementControl>
         if (_wDown)
         {
             _wDown = false;
-            Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         }
     }
 
     public void SpacePress()
     {
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
     }
 }

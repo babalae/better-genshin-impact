@@ -1,6 +1,6 @@
-﻿using Fischless.GameCapture.Graphics.Helpers;
+﻿using System.Diagnostics;
+using Fischless.GameCapture.Graphics.Helpers;
 using SharpDX.Direct3D11;
-using System.Diagnostics;
 using Vanara.PInvoke;
 using Windows.Foundation.Metadata;
 using Windows.Graphics.Capture;
@@ -55,7 +55,10 @@ public class GraphicsCapture : IGameCapture
         }
 
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
-        _captureSession.IsCursorCaptureEnabled = false;
+        if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsCursorCaptureEnabled"))
+        {
+            _captureSession.IsCursorCaptureEnabled = false;
+        }
         if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
         {
             _captureSession.IsBorderRequired = false;

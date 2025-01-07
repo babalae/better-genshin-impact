@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
@@ -151,13 +152,19 @@ public class TpTask(CancellationToken ct)
         return (clickX, clickY);
     }
 
-    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
+    private async Task checkInBigMapUi()
     {
         // M 打开地图识别当前位置，中心点为当前位置
         var ra1 = CaptureToRectArea();
         if (!Bv.IsInBigMapUi(ra1))
         {
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_M);
+            while (!Bv.IsInMainUi(ra1))
+            {
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(1000, ct);
+                ra1 = CaptureToRectArea();
+            }
+            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
             await Delay(1000, ct);
             for (int i = 0; i < 3; i++)
             {
@@ -167,8 +174,14 @@ public class TpTask(CancellationToken ct)
                     await Delay(500, ct);
                 }
             }
-        }        
+        }   
+    }
 
+    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
+    {
+     
+        await checkInBigMapUi();
+        
         for (var i = 0; i < 3; i++)
         {
             try
@@ -185,6 +198,7 @@ public class TpTask(CancellationToken ct)
             }
             catch (Exception e)
             {
+                await checkInBigMapUi();
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
                 Logger.LogDebug(e, "传送失败，重试 {I} 次", i + 1);
             }

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -40,7 +41,7 @@ public class TrapEscaper(CancellationToken ct)
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
 
         // 按下w，一直走
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         while (!ct.IsCancellationRequested)
         {
             var now = DateTime.UtcNow;
@@ -70,7 +71,7 @@ public class TrapEscaper(CancellationToken ct)
 
             //执行旋转
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
-            Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             //
             //这里是随机角度的归零逻辑，在脱困执行一秒后将randomAngle设为0以将实际角度重置为正面向点位的角度
             //其实就是在一段时间内进行角度的修改以实现自动避障
@@ -91,12 +92,12 @@ public class TrapEscaper(CancellationToken ct)
                 waypoint.MoveMode != MoveModeEnum.Fly.Code)
                 if (Bv.GetMotionStatus(screen) == MotionStatus.Climb)
                 {
-                    Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    Simulation.SendInput.SimulateAction(GIActions.Drop);
                     Sleep(75);
-                    Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
                     Sleep(700);
-                    Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
 
                     LastActionTime = DateTime.UtcNow;
 
@@ -117,17 +118,17 @@ public class TrapEscaper(CancellationToken ct)
         }
 
         // 抬起w键
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
     }
 
     public async Task RotateAndMove()
     {
         IncreaseRandomAngle();
         // 脱离攀爬状态
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
         await Delay(75, ct);
-        Simulation.SendInput.Mouse.LeftButtonClick();
+        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
         await Delay(500, ct);
 
         TimeSpan timeSinceLastAction = DateTime.UtcNow - LastActionTime;
@@ -166,30 +167,30 @@ public class TrapEscaper(CancellationToken ct)
 
     private void MoveBackward(int delay)
     {
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
+        Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
         Sleep(500);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
         Sleep(delay);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
+        Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
     }
 
     private void MoveLeft(int delay)
     {
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_A);
+        Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
         Sleep(300);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
         Sleep(delay);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_A);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
     }
 
     private void MoveRight(int delay)
     {
-        Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_D);
+        Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
         Sleep(300);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_SPACE);
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
         Sleep(delay);
-        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_D);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_X);
+        Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
     }
 }
