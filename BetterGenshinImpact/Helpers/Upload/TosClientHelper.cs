@@ -13,7 +13,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BetterGenshinImpact.Helpers.Upload;
 
-public delegate void UploadProgressCallback(long uploadedBytes, long totalBytes, int percentage);
+public delegate void UploadProgressCallback(long uploadedBytes, long totalBytes, double percentage);
 
 public class TosClientHelper
 {
@@ -181,7 +181,7 @@ public class TosClientHelper
                     
                     // 更新进度
                     totalUploadedBytes += currentPartSize;
-                    var percentage = (int)((double)totalUploadedBytes / fileSize * 100);
+                    var percentage = (double)totalUploadedBytes / fileSize * 100;
                     progressCallback?.Invoke(totalUploadedBytes, fileSize, percentage);
                     
                     Debug.WriteLine($"UploadPart {i + 1}/{partCount} succeeded");

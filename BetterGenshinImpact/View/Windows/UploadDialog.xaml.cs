@@ -37,8 +37,14 @@ public partial class UploadDialog
         if (_isUploading)
         {
             e.Cancel = true;
-            LogTextBox.AppendText("正在上传中，请等待上传完成...\n");
+            AppendLog("正在上传中，请等待上传完成...");
         }
+    }
+    
+    private void AppendLog(string message)
+    {
+        LogTextBox.AppendText(message + "\n");
+        LogTextBox.ScrollToEnd();
     }
     
     private async void BtnOkClick(object sender, RoutedEventArgs e)
@@ -52,7 +58,7 @@ public partial class UploadDialog
             BtnDelete.IsEnabled = false;
             BtnCancel.IsEnabled = false;
             UploadProgressBar.Value = 0;
-            LogTextBox.AppendText($"{dirName} 开始上传...请不要关闭此窗口！\n");
+            AppendLog($"{dirName} 开始上传...请不要关闭此窗口！");
             
             var userName = TaskContext.Instance().Config.CommonConfig.UserName;
             var uid = TaskContext.Instance().Config.CommonConfig.Uid;
@@ -71,7 +77,7 @@ public partial class UploadDialog
                     {
                         var relativePath = file.Replace(scriptPath, "").TrimStart('\\');
                         var needUploadFileName = Path.GetFileName(file);
-                        var remotePath = $"{DateTime.Now:yyyy_MM_dd}_{userName}_{uid}/{relativePath}";
+                        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
                         remotePath = remotePath.Replace(@"\", "/");
 
                         if (needUploadFileName == "video.mkv" || needUploadFileName == "video.mp4")
@@ -81,7 +87,7 @@ public partial class UploadDialog
                                 UIDispatcherHelper.Invoke(() =>
                                 {
                                     UploadProgressBar.Value = percentage;
-                                    LogTextBox.AppendText($"上传进度: {percentage}%\n");
+                                    AppendLog($"上传进度: {percentage:F}%");
                                 });
                             });
                         }
@@ -96,20 +102,23 @@ public partial class UploadDialog
                     UIDispatcherHelper.Invoke(() =>
                     {
                         UploadProgressBar.Value = 100;
-                        LogTextBox.AppendText($"{dirName} 上传完成\n");
+                        AppendLog($"{dirName} 上传完成");
                     });
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"上传过程中发生错误：{ex.Message}");
+                    UIDispatcherHelper.Invoke(() =>
+                    {
+                        AppendLog($"上传过程中发生错误：{ex.Message}");
+                    });
                 }
             });
             
         }
         catch (Exception ex)
         {
-            LogTextBox.AppendText($"上传出错: {ex.Message}\n");
-            TaskControl.Logger.LogDebug( "上传出错" + ex.Source + "\r\n--" + Environment.NewLine + ex.StackTrace + "\r\n---" + Environment.NewLine + ex.Message);
+            AppendLog($"上传出错: {ex.Message}");
+            TaskControl.Logger.LogDebug("上传出错" + ex.Source + "\r\n--" + Environment.NewLine + ex.StackTrace + "\r\n---" + Environment.NewLine + ex.Message);
         }
         finally
         {
@@ -136,7 +145,7 @@ public partial class UploadDialog
             BtnDelete.IsEnabled = false;
             BtnCancel.IsEnabled = false;
             UploadProgressBar.Value = 0;
-            LogTextBox.AppendText($"开始删除 {dirName} ...\n");
+            AppendLog($"开始删除 {dirName} ...");
             
             var userName = TaskContext.Instance().Config.CommonConfig.UserName;
             var uid = TaskContext.Instance().Config.CommonConfig.Uid;
@@ -153,38 +162,38 @@ public partial class UploadDialog
                     foreach (var file in files)
                     {
                         var relativePath = file.Replace(scriptPath, "").TrimStart('\\');
-                        var remotePath = $"{DateTime.Now:yyyy_MM_dd}_{userName}_{uid}/{relativePath}";
+                        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
                         remotePath = remotePath.Replace(@"\", "/");
                         
                         tosClient.DeleteObject(remotePath);
                         currentFile++;
                         
-                        var percentage = (int)((double)currentFile / totalFiles * 100);
+                        var percentage = (double)currentFile / totalFiles * 100;
                         UIDispatcherHelper.Invoke(() =>
                         {
                             UploadProgressBar.Value = percentage;
-                            LogTextBox.AppendText($"删除进度: {percentage}%\n");
+                            AppendLog($"删除进度: {percentage:F}%");
                         });
                     }
                     
                     UIDispatcherHelper.Invoke(() =>
                     {
                         UploadProgressBar.Value = 100;
-                        LogTextBox.AppendText($"{dirName} 删除完成\n");
+                        AppendLog($"{dirName} 删除完成");
                     });
                 }
                 catch (Exception ex)
                 {
                     UIDispatcherHelper.Invoke(() =>
                     {
-                        MessageBox.Show($"删除过程中发生错误：{ex.Message}");
+                        AppendLog($"删除过程中发生错误：{ex.Message}");
                     });
                 }
             });
         }
         catch (Exception ex)
         {
-            LogTextBox.AppendText($"删除出错: {ex.Message}\n");
+            AppendLog($"删除出错: {ex.Message}");
             TaskControl.Logger.LogDebug("删除出错" + ex.Source + "\r\n--" + Environment.NewLine + ex.StackTrace + "\r\n---" + Environment.NewLine + ex.Message);
         }
         finally
@@ -203,7 +212,7 @@ public partial class UploadDialog
         }
         else
         {
-            LogTextBox.AppendText("正在上传中，请不要关闭窗口！\n");
+            AppendLog("正在上传中，请不要关闭窗口！");
         }
     }
 }
