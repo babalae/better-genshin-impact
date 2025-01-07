@@ -195,6 +195,7 @@ public class TpTask(CancellationToken ct)
             }
             catch (Exception e)
             {
+                await checkInBigMapUi();
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
                 Logger.LogDebug(e, "传送失败，重试 {I} 次", i + 1);
             }
