@@ -174,14 +174,11 @@ public class TpTask(CancellationToken ct)
                     await Delay(500, ct);
                 }
             }
-        }   
+        }
     }
-
     public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
     {
-     
         await checkInBigMapUi();
-        
         for (var i = 0; i < 3; i++)
         {
             try
@@ -259,29 +256,33 @@ public class TpTask(CancellationToken ct)
                 double mouseDistance = Math.Sqrt(totalMoveMouseX * totalMoveMouseX + totalMoveMouseY * totalMoveMouseY);
                 // 调整地图缩放
                 // mapZoomLevel<5 才显示传送锚点和秘境;
-                // mapZoomLevel<3 是为了避免部分锚点过于接近导致选错锚点；
+                // mapZoomLevel<2.5 是为了避免部分锚点过于接近导致选错锚点；
                 // 风龙废墟无法避免，但是目前没有风龙废墟的脚本吧。:)
                 // https://github.com/babalae/better-genshin-impact/issues/318
-                if (mouseDistance < tolerance && currentZoomLevel < 2.5)
-                {
-                    Logger.LogInformation($"移动 {iteration} 次鼠标后，已经接近目标点，不再进一步调整。");
-                    break;
-                }
+
+                // 距离过远，缩小地图
                 while (mouseDistance > 5 * tolerance && currentZoomLevel < 4)
-                {   // 缩小地图
+                {   
                     await AdjustMapZoomLevel(false);
                     totalMoveMouseX *= (currentZoomLevel) / (currentZoomLevel + 1);
                     totalMoveMouseY *= (currentZoomLevel) / (currentZoomLevel + 1);
                     mouseDistance *= (currentZoomLevel) / (currentZoomLevel + 1);
                     currentZoomLevel++;
                 }
-                while (mouseDistance < 2 * tolerance && currentZoomLevel > 2)
-                {   // 放大地图
+                // 距离过近，放大地图
+                while (mouseDistance < 2 * tolerance && currentZoomLevel > 2.5)
+                {
                     await AdjustMapZoomLevel(true);
                     totalMoveMouseX *= (currentZoomLevel) / (currentZoomLevel - 1);
                     totalMoveMouseY *= (currentZoomLevel) / (currentZoomLevel - 1);
                     mouseDistance *= (currentZoomLevel) / (currentZoomLevel - 1);
                     currentZoomLevel--;
+                }
+                // 非常接近目标点，不再进一步调整
+                if (mouseDistance < tolerance)
+                {
+                    Logger.LogInformation("移动 {I} 次鼠标后，已经接近目标点，不再移动地图。", iteration + 1);
+                    break;
                 }
 
                 // 单次移动最大距离为 maxMouseMove
@@ -296,7 +297,6 @@ public class TpTask(CancellationToken ct)
             }
         }
     }
-
 
     /// <summary>
     /// 调整地图缩放级别以加速移动
@@ -473,8 +473,6 @@ public class TpTask(CancellationToken ct)
                 country = tpPosition.Country;
             }
         }
-
-        // todo: 识别当前国家
         return (recentX, recentY, country);
     }
 
