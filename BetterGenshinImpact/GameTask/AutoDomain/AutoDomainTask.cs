@@ -329,7 +329,7 @@ public class AutoDomainTask : ISoloTask
             await Delay(1000, _ct);
         }
 
-        await Delay(1500, _ct);
+        await Delay(2000, _ct);
     }
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
@@ -354,7 +354,7 @@ public class AutoDomainTask : ISoloTask
         await Task.Run((Action)(() =>
         {
             _simulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            Sleep(20);
+            Sleep(30, _ct);
             // 组合键好像不能直接用 postmessage
             if (!_config.WalkToF)
             {
