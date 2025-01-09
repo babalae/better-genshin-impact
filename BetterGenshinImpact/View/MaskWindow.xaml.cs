@@ -172,7 +172,7 @@ public partial class MaskWindow : Window
 
         if (width * 9 != height * 16)
         {
-            _logger.LogWarning("当前游戏分辨率不是16:9，部分功能可能无法正常使用");
+            _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
         }
 
         // 读取游戏注册表配置
