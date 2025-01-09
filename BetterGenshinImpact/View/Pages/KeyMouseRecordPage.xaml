@@ -108,15 +108,24 @@
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.StartPlayCommand}"
-                                               CommandParameter="{Binding Path}"
-                                               Content="播放"
-                                               Icon="{ui:SymbolIcon Play24}" />
-                                    <Separator Width="5" Opacity="0" />
-                                    <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.UploadScriptCommand}"
-                                               CommandParameter="{Binding Path}"
-                                               Content="上传"
-                                               Icon="{ui:SymbolIcon CloudArrowUp24}" />
+                                    <Grid>
+                                        <!-- 上传按钮和进度显示容器 -->
+                                        <ui:Button x:Name="UploadButton"
+                                                  Command="{Binding UploadCommand}"
+                                                  Content="上传"
+                                                  Icon="{ui:SymbolIcon CloudArrowUp24}"
+                                                  Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                        
+                                        <StackPanel Orientation="Horizontal"
+                                                   Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <ui:Button Command="{Binding StopUploadCommand}"
+                                                      Content="停止"
+                                                      Icon="{ui:SymbolIcon Stop24}" />
+                                            <ui:TextBlock Margin="5,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Text="{Binding UploadProgress, StringFormat={}{0:F1}%}" />
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>

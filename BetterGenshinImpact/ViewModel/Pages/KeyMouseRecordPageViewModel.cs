@@ -401,36 +401,6 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
 
-    [RelayCommand]
-    private async Task OnUploadScript(string? path)
-    {
-        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
-        {
-            await MessageBox.ErrorAsync($"文件夹不存在:{path}");
-            return;
-        }
-
-        var userName = TaskContext.Instance().Config.CommonConfig.UserName;
-        var uid = TaskContext.Instance().Config.CommonConfig.Uid;
-        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(uid))
-        {
-            await MessageBox.ErrorAsync("请先设置用户名和UID");
-            return;
-        }
-
-        var hashFolder = Global.Absolute(@$"User/Common/Km/{new DirectoryInfo(path).Name}");
-        // 先校验hash
-        if (!VerifyFileHashes(path, hashFolder))
-        {
-            await MessageBox.ErrorAsync("上传前文件校验失败，联系管理员");
-            return;
-        }
-
-        UploadDialog dialog = new UploadDialog(path);
-        dialog.ShowDialog();
-    }
-
-
     public bool VerifyFileHashes(string pcFolder, string hashFolder)
     {
         var hashFilePath = Path.Combine(hashFolder, "hash.json");
