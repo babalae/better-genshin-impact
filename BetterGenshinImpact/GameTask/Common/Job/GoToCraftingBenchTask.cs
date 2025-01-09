@@ -100,7 +100,8 @@ public class GoToCraftingBenchTask
             PartyConfig = new PathingPartyConfig
             {
                 Enabled = true,
-                AutoSkipEnabled = true
+                AutoSkipEnabled = true,
+                AutoRunEnabled = country != "枫丹" ,
             },
             EndAction = region => Bv.FindFAndPress(region, "合成")
         };

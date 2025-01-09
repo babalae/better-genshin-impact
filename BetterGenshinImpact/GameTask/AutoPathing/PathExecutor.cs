@@ -770,7 +770,7 @@ public class PathExecutor
                 }
 
                 // 自动疾跑
-                if (distance > 20)
+                if (distance > 20 && PartyConfig.AutoRunEnabled)
                 {
                     if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
                     {
