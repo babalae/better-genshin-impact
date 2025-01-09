@@ -29,8 +29,6 @@ public class GoToCraftingBenchTask
             try
             {
                 await DoOnce(country, ct);
-                // 合成完毕后领取奖励
-                await new ClaimEncounterPointsRewardsTask().Start(ct);
                 break;
             }
             catch (Exception e)
