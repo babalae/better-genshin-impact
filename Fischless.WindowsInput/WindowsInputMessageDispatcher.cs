@@ -21,7 +21,7 @@ internal class WindowsInputMessageDispatcher : IInputMessageDispatcher
 
         if (num != (ulong)(long)inputs.Length)
         {
-            throw new Exception("Some simulated input commands were not sent successfully. The most common reason for this happening are the security features of Windows including User Interface Privacy Isolation (UIPI). Your application can only send commands to applications of the same or lower elevation. Similarly certain commands are restricted to Accessibility/UIAutomation applications. Refer to the project home page and the code samples for more information.");
+            throw new Exception("模拟键鼠消息发送失败！常见原因：1.你未以管理员权限运行程序；2.存在安全软件拦截（比如360）");
         }
     }
 }

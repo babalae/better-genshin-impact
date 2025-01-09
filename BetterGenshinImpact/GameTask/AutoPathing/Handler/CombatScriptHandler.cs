@@ -15,7 +15,7 @@ public class CombatScriptHandler : IActionHandler
     {
         if (waypointForTrack is { CombatScript: not null })
         {
-            Logger.LogInformation("执行 {Text}", "战斗策略脚本");
+            Logger.LogInformation("执行 {Text}", "简易策略脚本");
             var combatScript = waypointForTrack.CombatScript;
             var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
             if (combatScenes == null)
@@ -41,7 +41,7 @@ public class CombatScriptHandler : IActionHandler
         }
         else
         {
-            Logger.LogError("战斗脚本action_params内容为空");
+            Logger.LogError("策略脚本action_params内容为空");
         }
     }
 
