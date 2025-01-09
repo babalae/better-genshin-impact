@@ -115,7 +115,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
-        _domainNameList = MapLazyAssets.Instance.DomainNameList;
+        _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
     }
 
@@ -251,7 +251,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
             path = string.Empty;
             return true;
         }
-        
+
         path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
         if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
         {
