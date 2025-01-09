@@ -327,7 +327,6 @@ public partial class AutoWoodTask : ISoloTask
                 // 分解 OCR 结果中的多个条目
                 var matches = _parseWoodStatisticsRegex().Matches(ocrResult);
                 var isFound = true;
-                var modifiedResult = "";
                 foreach (Match match in matches)
                 {
                     if (!match.Success)
@@ -337,21 +336,13 @@ public partial class AutoWoodTask : ISoloTask
                     }
                     var materialName = match.Groups[1].Value.Trim();
                     Debug.WriteLine($"第一次获取的木材名称：{materialName}");
-                    if (materialName == "般木" | materialName == "极木" | materialName == "殺木")
-                    {
-                        modifiedResult = ocrResult.Replace(materialName, "椴木");
-                        materialName = "椴木";
-                    }
                     if (!ExistWoods.Contains(materialName))
                     {
                         isFound = false;
                     }
                 }
 
-                if (isFound)
-                {
-                    return !string.IsNullOrEmpty(modifiedResult) ? modifiedResult : ocrResult;
-                }
+                if (isFound) return ocrResult;
             }
 
             // 如果没有找到匹配的结果
