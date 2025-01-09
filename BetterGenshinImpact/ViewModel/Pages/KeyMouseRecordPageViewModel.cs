@@ -60,19 +60,41 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
 
     private void InitScriptListViewData()
     {
-        _scriptItems.Clear();
         var directoryInfos = LoadScriptDirectories(scriptPath)
             .OrderByDescending(d => d.CreationTime)
             .ToList();
+
+        // 创建一个新的列表来存储更新后的项目
+        var updatedItems = new List<KeyMouseScriptItem>();
+        
         foreach (var d in directoryInfos)
         {
-            _scriptItems.Add(new KeyMouseScriptItem
+            // 尝试在现有集合中查找相同路径的项目
+            var existingItem = _scriptItems.FirstOrDefault(item => item.Path == d.FullName);
+            
+            if (existingItem != null)
             {
-                Name = d.Name,
-                Path = d.FullName,
-                CreateTime = d.CreationTime,
-                CreateTimeStr = d.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
-            });
+                // 如果找到现有项目，保留其状态
+                updatedItems.Add(existingItem);
+            }
+            else
+            {
+                // 如果是新项目，创建新的实例
+                updatedItems.Add(new KeyMouseScriptItem
+                {
+                    Name = d.Name,
+                    Path = d.FullName,
+                    CreateTime = d.CreationTime,
+                    CreateTimeStr = d.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+                });
+            }
+        }
+
+        // 清空并重新添加项目
+        _scriptItems.Clear();
+        foreach (var item in updatedItems)
+        {
+            _scriptItems.Add(item);
         }
     }
 

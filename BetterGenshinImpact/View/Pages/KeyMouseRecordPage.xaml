@@ -108,24 +108,33 @@
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <Grid>
-                                        <!-- 上传按钮和进度显示容器 -->
-                                        <ui:Button x:Name="UploadButton"
-                                                  Command="{Binding UploadCommand}"
-                                                  Content="上传"
-                                                  Icon="{ui:SymbolIcon CloudArrowUp24}"
-                                                  Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
-                                        
-                                        <StackPanel Orientation="Horizontal"
-                                                   Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <ui:Button Command="{Binding StopUploadCommand}"
-                                                      Content="停止"
-                                                      Icon="{ui:SymbolIcon Stop24}" />
-                                            <ui:TextBlock Margin="5,0,0,0"
-                                                        VerticalAlignment="Center"
-                                                        Text="{Binding UploadProgress, StringFormat={}{0:F1}%}" />
-                                        </StackPanel>
-                                    </Grid>
+                                    <ui:Button x:Name="UploadButton"
+                                             Command="{Binding UploadCommand}"
+                                             Content="上传"
+                                             Icon="{ui:SymbolIcon CloudArrowUp24}"
+                                             Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                    
+                                    <ui:Button Command="{Binding StopUploadCommand}"
+                                             Content="停止"
+                                             Icon="{ui:SymbolIcon Stop24}"
+                                             Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    
+                                    <ui:TextBlock Margin="5,0,0,0"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsUploadSuccess}" Value="True">
+                                                        <Setter Property="Text" Value="成功" />
+                                                        <Setter Property="Foreground" Value="Green" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsUploadSuccess}" Value="False">
+                                                        <Setter Property="Text" Value="{Binding UploadProgress, StringFormat={}{0:F1}%}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </ui:TextBlock>
                                 </StackPanel>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
