@@ -13,6 +13,7 @@ public static class TouchpadManager
     {
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
         public string dmDeviceName;
+
         public ushort dmSpecVersion;
         public ushort dmDriverVersion;
         public ushort dmSize;
@@ -27,8 +28,10 @@ public static class TouchpadManager
         public short dmYResolution;
         public short dmTTOption;
         public short dmCollate;
+
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
         public string dmFormName;
+
         public ushort dmLogPixels;
         public uint dmBitsPerPel;
         public uint dmPelsWidth;
@@ -82,7 +85,7 @@ public static class TouchpadManager
             Console.WriteLine("无法禁用触控板，错误代码: " + result);
         }
     }
-    
+
     [DllImport("user32.dll")]
     public static extern IntPtr GetSystemMetrics(Int32 nIndex);
 
@@ -100,26 +103,28 @@ public static class TouchpadManager
         return (digitizerStatus.ToInt32() & NID_INTEGRATED_TOUCH) != 0 ||
                (digitizerStatus.ToInt32() & NID_EXTERNAL_TOUCH) != 0;
     }
-    
+
     public static bool HasTouchInput()
     {
         bool hasTouchInput = false;
-        UIDispatcherHelper.Invoke(()=>
+        UIDispatcherHelper.Invoke(() =>
         {
             foreach (TabletDevice tabletDevice in Tablet.TabletDevices)
             {
                 //Only detect if it is a touch Screen not how many touches (i.e. Single touch or Multi-touch)
-                if(tabletDevice.Type == TabletDeviceType.Touch)
+                if (tabletDevice.Type == TabletDeviceType.Touch)
                 {
-                    hasTouchInput= true;
+                    hasTouchInput = true;
                 }
             }
         });
 
         return hasTouchInput;
     }
-    
-    
 
-    
+    public static bool HasTouchInput2()
+    {
+        IntPtr digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
+        return (digitizerStatus.ToInt32() & NID_READY) == 0;
+    }
 }

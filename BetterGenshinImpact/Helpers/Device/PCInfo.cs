@@ -134,4 +134,6 @@ https://learn.microsoft.com/zh-cn/windows/win32/cimwin32prov/win32-systemenclosu
     public bool 系统级触控板是否启用 { get; set; } = TouchpadSoft.Instance.QueryTouchpadStatus() == 1;
 
     public bool 是否存在触控屏 { get; set; } = TouchpadManager.HasTouchInput();
+    
+    public bool 是否存在触控屏2 { get; set; } = TouchpadManager.HasTouchInput2();
 }
