@@ -1,14 +1,19 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Upload;
 using System.IO;
+using System.Security.Cryptography;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
+using System.Windows;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Model;
 
@@ -38,9 +43,43 @@ public partial class KeyMouseScriptItem : ObservableObject
     [ObservableProperty]
     private bool _isUploadSuccess;
 
+    [ObservableProperty]
+    private bool _isDeleting;
+
+    [ObservableProperty]
+    private double _deleteProgress;
+
+    [ObservableProperty]
+    private bool _isDeleteSuccess;
+
+    private CancellationTokenSource? _deleteCts;
+
     [RelayCommand]
     private async Task Upload()
     {
+        
+        if (string.IsNullOrEmpty(Path) || !Directory.Exists(Path))
+        {
+            await MessageBox.ErrorAsync($"文件夹不存在:{Path}");
+            return;
+        }
+
+        var userName = TaskContext.Instance().Config.CommonConfig.UserName;
+        var uid = TaskContext.Instance().Config.CommonConfig.Uid;
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(uid))
+        {
+            await MessageBox.ErrorAsync("请先设置用户名和UID");
+            return;
+        }
+
+        var hashFolder = Global.Absolute(@$"User/Common/Km/{new DirectoryInfo(Path).Name}");
+        // 先校验hash
+        if (!VerifyFileHashes(Path, hashFolder))
+        {
+            await MessageBox.ErrorAsync("上传前文件校验失败，联系管理员");
+            return;
+        }
+        
         try
         {
             _uploadCts = new CancellationTokenSource();
@@ -51,8 +90,8 @@ public partial class KeyMouseScriptItem : ObservableObject
             var dirName = new DirectoryInfo(Path).Name;
             _logger.LogDebug($"{dirName} 开始上传...");
             
-            var userName = TaskContext.Instance().Config.CommonConfig.UserName;
-            var uid = TaskContext.Instance().Config.CommonConfig.Uid;
+            // var userName = TaskContext.Instance().Config.CommonConfig.UserName;
+            // var uid = TaskContext.Instance().Config.CommonConfig.Uid;
             
             await Task.Run(() =>
             {
@@ -66,13 +105,13 @@ public partial class KeyMouseScriptItem : ObservableObject
                     long uploadedSize = 0;
                     foreach (var file in files)
                     {
+                        _uploadCts.Token.ThrowIfCancellationRequested();
                         totalSize += new FileInfo(file).Length;
                     }
 
                     foreach (var file in files)
                     {
-                        if (_uploadCts.Token.IsCancellationRequested)
-                            break;
+                        _uploadCts.Token.ThrowIfCancellationRequested();
 
                         var relativePath = file.Replace(_scriptPath, "").TrimStart('\\');
                         var needUploadFileName = System.IO.Path.GetFileName(file);
@@ -84,9 +123,10 @@ public partial class KeyMouseScriptItem : ObservableObject
                         {
                             tosClient.UploadLargeFile(file, remotePath, 20 * 1024 * 1024, (bytes, totalBytes, percentage) => 
                             {
+                                _uploadCts.Token.ThrowIfCancellationRequested();
                                 var currentFileProgress = bytes;
                                 var overallProgress = ((double)(uploadedSize + currentFileProgress) / totalSize) * 100;
-                                UploadProgress = Math.Min(overallProgress, 99.9); // 保留最后0.1%给上传完成时
+                                UploadProgress = Math.Min(overallProgress, 99.9);
                                 _logger.LogDebug($"上传进度: {overallProgress:F}%");
                             });
                         }
@@ -138,5 +178,133 @@ public partial class KeyMouseScriptItem : ObservableObject
     private void StopUpload()
     {
         _uploadCts?.Cancel();
+    }
+
+    [RelayCommand]
+    private async Task DeleteUploadedFiles()
+    {
+        try
+        {
+            var dirName = new DirectoryInfo(Path).Name;
+            // 删除确认
+            var result = MessageBox.Show($"确定要清除已上传的 {dirName} 吗？", "确认清除", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _deleteCts = new CancellationTokenSource();
+            IsDeleting = true;
+            IsDeleteSuccess = false;
+            DeleteProgress = 0;
+            
+            _logger.LogDebug($"{dirName} 开始删除...");
+            
+            var userName = TaskContext.Instance().Config.CommonConfig.UserName;
+            var uid = TaskContext.Instance().Config.CommonConfig.Uid;
+            
+            await Task.Run(() =>
+            {
+                try
+                {
+                    var tosClient = new TosClientHelper();
+                    var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
+                    
+                    foreach (var file in files)
+                    {
+                        _deleteCts.Token.ThrowIfCancellationRequested();
+
+                        var relativePath = file.Replace(_scriptPath, "").TrimStart('\\');
+                        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
+                        remotePath = remotePath.Replace(@"\", "/");
+                        
+                        tosClient.DeleteObject(remotePath);
+                    }
+                    
+                    IsDeleteSuccess = true;
+                    _logger.LogDebug($"{dirName} 删除完成");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"删除过程中发生错误：{ex.Message}");
+                    IsDeleteSuccess = false;
+                    throw;
+                }
+            }, _deleteCts.Token);
+
+            // 删除成功提示
+            if (IsDeleteSuccess)
+            {
+                MessageBox.Show("清除成功", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else 
+            {
+                MessageBox.Show("清除失败", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("删除已取消");
+            IsDeleteSuccess = false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "删除出错");
+            IsDeleteSuccess = false;
+            MessageBox.Show($"清除失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsDeleting = false;
+            _deleteCts?.Dispose();
+            _deleteCts = null;
+        }
+    }
+
+    [RelayCommand]
+    private void StopDelete()
+    {
+        _deleteCts?.Cancel();
+    }
+    
+    public bool VerifyFileHashes(string pcFolder, string hashFolder)
+    {
+        var hashFilePath = System.IO.Path.Combine(hashFolder, "hash.json");
+        if (!File.Exists(hashFilePath))
+        {
+            // 无文件hash信息，直接返回true
+            _logger.LogDebug("Hash file not found");
+            return true;
+        }
+
+        var storedHashes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(hashFilePath));
+        if (storedHashes == null)
+        {
+            throw new InvalidOperationException("Failed to deserialize hash file");
+        }
+
+        foreach (var filePath in Directory.GetFiles(pcFolder, "*.*", SearchOption.AllDirectories))
+        {
+            using (var stream = File.OpenRead(filePath))
+            {
+                if (!storedHashes.TryGetValue(System.IO.Path.GetFileName(filePath), out var storedHash))
+                {
+                    Debug.WriteLine($"Hash not found for {filePath}");
+                    continue;
+                }
+
+                var sha256 = SHA256.Create();
+                var hash = sha256.ComputeHash(stream);
+                var hashString = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+
+                if (storedHash != hashString)
+                {
+                    Debug.WriteLine($"Hash mismatch for {filePath}");
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }

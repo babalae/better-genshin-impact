@@ -423,44 +423,5 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
 
-    public bool VerifyFileHashes(string pcFolder, string hashFolder)
-    {
-        var hashFilePath = Path.Combine(hashFolder, "hash.json");
-        if (!File.Exists(hashFilePath))
-        {
-            // 无文件hash信息，直接返回true
-            _logger.LogDebug("Hash file not found");
-            return true;
-        }
 
-        var storedHashes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(hashFilePath));
-        if (storedHashes == null)
-        {
-            throw new InvalidOperationException("Failed to deserialize hash file");
-        }
-
-        foreach (var filePath in Directory.GetFiles(pcFolder, "*.*", SearchOption.AllDirectories))
-        {
-            using (var stream = File.OpenRead(filePath))
-            {
-                if (!storedHashes.TryGetValue(Path.GetFileName(filePath), out var storedHash))
-                {
-                    Debug.WriteLine($"Hash not found for {filePath}");
-                    continue;
-                }
-
-                var sha256 = SHA256.Create();
-                var hash = sha256.ComputeHash(stream);
-                var hashString = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-
-                if (storedHash != hashString)
-                {
-                    Debug.WriteLine($"Hash mismatch for {filePath}");
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
 }

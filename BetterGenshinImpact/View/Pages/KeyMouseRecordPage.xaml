@@ -104,7 +104,7 @@
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding CreateTimeStr}"
                                     Header="创建时间" />
-                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="上传操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -119,6 +119,11 @@
                                              Icon="{ui:SymbolIcon Stop24}"
                                              Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     
+                                    <ui:Button Command="{Binding DeleteUploadedFilesCommand}"
+                                             Content="清除"
+                                             Icon="{ui:SymbolIcon Delete24}"
+                                             Margin="5,0,0,0" />
+                                    
                                     <ui:TextBlock Margin="5,0,0,0"
                                                VerticalAlignment="Center">
                                         <TextBlock.Style>
@@ -128,9 +133,16 @@
                                                         <Setter Property="Text" Value="成功" />
                                                         <Setter Property="Foreground" Value="Green" />
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsUploadSuccess}" Value="False">
+                                                    <DataTrigger Binding="{Binding IsUploading}" Value="True">
                                                         <Setter Property="Text" Value="{Binding UploadProgress, StringFormat={}{0:F1}%}" />
                                                     </DataTrigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsUploadSuccess}" Value="False" />
+                                                            <Condition Binding="{Binding UploadProgress}" Value="0" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="Text" Value="" />
+                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </TextBlock.Style>
