@@ -196,15 +196,20 @@ public class KeyMouseRecorderJsonLine
             Time = time
         });
     }
+    
 
     public void MouseMoveBy(MouseState state, uint tick, bool save = false)
     {
+        User32.GetCursorPos(out var p);
+        
         var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,
             MouseX = state.X,
             MouseY = state.Y,
-            Time = tick - 5 - StartTick
+            Time = tick - 5 - StartTick,
+            MouseAbsoluteX = p.X,
+            MouseAbsoluteY = p.Y
         };
         AddEvent(_mouseMoveByMacroEventsChannel, mEvent);
         if (save)

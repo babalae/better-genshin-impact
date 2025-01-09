@@ -46,7 +46,7 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding OpenScriptFolderCommand}"
-                       Content="打开脚本目录"
+                       Content="打开目录"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
             <Separator Width="10" Opacity="0" />
             <!--<ui:Button Command="{Binding OpenLocalScriptRepoCommand}" Icon="{ui:SymbolIcon Archive24}">
@@ -134,7 +134,14 @@
                                                         <Setter Property="Foreground" Value="Green" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsUploading}" Value="True">
-                                                        <Setter Property="Text" Value="{Binding UploadProgress, StringFormat={}{0:F1}%}" />
+                                                        <Setter Property="Text">
+                                                            <Setter.Value>
+                                                                <MultiBinding StringFormat="{}{0:F1}% {1}">
+                                                                    <Binding Path="UploadProgress" />
+                                                                    <Binding Path="UploadSpeed" />
+                                                                </MultiBinding>
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </DataTrigger>
                                                     <MultiDataTrigger>
                                                         <MultiDataTrigger.Conditions>

@@ -13,6 +13,9 @@ public class MacroEvent
     public string? MouseButton { get; set; }
     public double Time { get; set; }
     public int? CameraOrientation { get; set; }
+    
+    public int? MouseAbsoluteX { get; set; }
+    public int? MouseAbsoluteY { get; set; }
 }
 
 public enum MacroEventType
