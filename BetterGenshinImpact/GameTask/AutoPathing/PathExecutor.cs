@@ -188,7 +188,10 @@ public class PathExecutor
                                         && waypoint.Action != ActionEnum.CombatScript.Code
                                         && waypoint.Action != ActionEnum.Mining.Code))
                                 {
-                                    await MoveCloseTo(waypoint);
+                                    if (waypoint.Action != ActionEnum.Fight.Code) // 战斗时不需要接近
+                                    {
+                                        await MoveCloseTo(waypoint);
+                                    }
                                 }
 
                                 //skipOtherOperations如果重试，则跳过相关操作
