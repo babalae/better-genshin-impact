@@ -189,6 +189,7 @@ public class AutoDomainTask : ISoloTask
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
             Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率不是 16:9");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
