@@ -213,7 +213,7 @@ namespace LogParse
             }
 
             // 定义文件名匹配的正则表达式
-            string pattern = @"^better-genshin-impact(\d{8})\.log$";
+            string pattern = @"^better-genshin-impact(\d{8})(_\d{3})*\.log$";
             Regex regex = new Regex(pattern);
 
             // 遍历文件夹中的所有文件
