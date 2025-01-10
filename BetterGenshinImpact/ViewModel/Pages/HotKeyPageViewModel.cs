@@ -30,6 +30,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.View;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
@@ -567,9 +568,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                     // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
                     // Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
-
-                    GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
-                    Task.Run(async () => { await goToAdventurersGuildTask.Start("蒙德", new CancellationToken()); });
+                    //
+                    // GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
+                    // Task.Run(async () => { await goToAdventurersGuildTask.Start("蒙德", new CancellationToken()); });
 
                     // ArtifactSalvageTask artifactSalvageTask = new ArtifactSalvageTask();
                     // Task.Run(async () => { await artifactSalvageTask.Start(4, new CancellationToken()); });
@@ -592,6 +593,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
                     
                     // TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
+                    
+                    
+                    TaskControl.Logger.LogInformation($"尝试显示遮罩窗口");
+                    var maskWindow = MaskWindow.Instance();
+                    maskWindow.Invoke(() => { maskWindow.Hide(); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
@@ -601,8 +607,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
-                    Task.Run(async () => { await goToCraftingBenchTask.Start("稻妻", new CancellationToken()); });
+                    // GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
+                    // Task.Run(async () => { await goToCraftingBenchTask.Start("稻妻", new CancellationToken()); });
+                    
+                    var pName = SystemControl.GetActiveProcessName();
+                    Debug.WriteLine($"当前处于前台的程序：{pName}，原神是否位于前台：{SystemControl.IsGenshinImpactActive()}");
+                    TaskControl.Logger.LogInformation($"当前处于前台的程序：{pName}");
                 }
             ));
 
