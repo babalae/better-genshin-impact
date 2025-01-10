@@ -384,7 +384,7 @@ namespace LogParse
                 // 按时间分组，考虑每天凌晨4点为新的一天
                 var groupedByCustomDay = actionItems.GroupBy(item => GetCustomDay(item.Time))
                     .OrderBy(group => group.Key)
-                    .ToList();
+                    .Reverse().ToList();
 
                 html.AppendLine($"<h2>按日锄地摩拉统计</h2>");
                 html.AppendLine("<table>");
@@ -521,10 +521,10 @@ namespace LogParse
 
                     html.AppendLine(
                         $"        <td colspan=\"{colspan}\">锄地总计:{ ConcatenateStrings("小怪：", groupms.SmallMonsterStatistics.ToString()) +
-                                                                   ConcatenateStrings(",最后一只小怪挂于", groupms.LastSmallTime) +
+                                                                   /*ConcatenateStrings(",最后一只小怪挂于", groupms.LastSmallTime) +*/
                                                                    ConcatenateStrings(",精英怪数量：", groupms.EliteGameStatistics.ToString()) +
                                                                    ConcatenateStrings(",精英详细:", groupms.EliteDetails) +
-                                                                   ConcatenateStrings(",最后一只精英挂于", groupms.LastEliteTime) +
+                                                                   /*ConcatenateStrings(",最后一只精英挂于", groupms.LastEliteTime) +*/
                                                                    ConcatenateStrings(",合计锄地摩拉：", groupms.TotalMoraKillingMonstersMora.ToString())+
                                                                    ConcatenateStrings("，每秒摩拉", (groupms.TotalMoraKillingMonstersMora/(groupms.StatisticsEnd-groupms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2"))}");
                     html.AppendLine("    </tr>");
