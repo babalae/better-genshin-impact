@@ -116,10 +116,15 @@ namespace LogParse
                     }
                 }
 
-                //无论如何给个结束时间
-                if (configGroupEntity != null && configGroupEntity.EndDate == null)
+
+            }
+
+            //无论如何给个结束时间
+            if (configGroupEntity != null && configGroupEntity.EndDate == null)
+            {
+                if ( configGroupEntity.ConfigTaskList.Count>0)
                 {
-                    ConfigTask ct = configGroupEntity.ConfigTaskList.FindLast(item => true);
+                    ConfigTask ct = configGroupEntity.ConfigTaskList[^1];
                     if (ct != null)
                     {
                         configGroupEntity.EndDate = ct.EndDate;
@@ -129,13 +134,8 @@ namespace LogParse
                         }
                     }
                 }
+
             }
-
-            //if (configGroupEntity != null)
-            //{
-            //    configGroupEntities.Add(configGroupEntity);
-            //}
-
 
             return configGroupEntities;
         }
