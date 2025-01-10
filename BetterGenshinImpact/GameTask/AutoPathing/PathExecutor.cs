@@ -169,6 +169,10 @@ public class PathExecutor
                             CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
                             TryCloseSkipOtherOperations();
                             await RecoverWhenLowHp(waypoint); // 低血量恢复
+                            if (waypoint.Action == ActionEnum.LogOutput.Code)
+                            {
+                                Logger.LogInformation(waypoint.LogInfo);
+                            }
                             if (waypoint.Type == WaypointType.Teleport.Code)
                             {
                                 await HandleTeleportWaypoint(waypoint);
