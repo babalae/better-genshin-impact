@@ -188,7 +188,10 @@ public class PathExecutor
                                         && waypoint.Action != ActionEnum.CombatScript.Code
                                         && waypoint.Action != ActionEnum.Mining.Code))
                                 {
-                                    await MoveCloseTo(waypoint);
+                                    if (waypoint.Action != ActionEnum.Fight.Code) // 战斗时不需要接近
+                                    {
+                                        await MoveCloseTo(waypoint);
+                                    }
                                 }
 
                                 //skipOtherOperations如果重试，则跳过相关操作
@@ -770,7 +773,7 @@ public class PathExecutor
                 }
 
                 // 自动疾跑
-                if (distance > 20)
+                if (distance > 20 && PartyConfig.AutoRunEnabled)
                 {
                     if (Math.Abs((fastModeColdTime - now).TotalMilliseconds) > 2500) //冷却时间2.5s，回复体力用
                     {

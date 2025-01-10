@@ -22,7 +22,7 @@ internal class AutoFightHandler : IActionHandler
         TaskControl.Logger.LogInformation("执行 {Text}", "自动战斗");
         // 爷们要战斗
         AutoFightParam taskParams = null;
-        if (config != null && config is PathingPartyConfig patyConfig && patyConfig.AutoFightEabled)
+        if (config != null && config is PathingPartyConfig patyConfig && patyConfig.AutoFightEnabled)
         {
             //替换配置为路径追踪
 

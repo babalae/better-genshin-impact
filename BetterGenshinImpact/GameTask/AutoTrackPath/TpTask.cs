@@ -87,7 +87,7 @@ public class TpTask(CancellationToken ct)
         await ClickTpPoint(CaptureToRectArea());
 
         // 等待传送完成
-        for (var i = 0; i < 20; i++)
+        for (var i = 0; i < 50; i++)
         {
             await Delay(1200, ct);
             using var ra3 = CaptureToRectArea();

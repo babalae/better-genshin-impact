@@ -61,7 +61,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
     private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
 
     [ObservableProperty]
-    private List<string> _domainNameList = MapLazyAssets.Instance.DomainNameList;
+    private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
     public OneDragonFlowViewModel()
     {

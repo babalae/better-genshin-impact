@@ -29,8 +29,6 @@ public class GoToCraftingBenchTask
             try
             {
                 await DoOnce(country, ct);
-                // 合成完毕后领取奖励
-                await new ClaimEncounterPointsRewardsTask().Start(ct);
                 break;
             }
             catch (Exception e)
@@ -100,7 +98,8 @@ public class GoToCraftingBenchTask
             PartyConfig = new PathingPartyConfig
             {
                 Enabled = true,
-                AutoSkipEnabled = true
+                AutoSkipEnabled = true,
+                AutoRunEnabled = country != "枫丹" ,
             },
             EndAction = region => Bv.FindFAndPress(region, "合成")
         };

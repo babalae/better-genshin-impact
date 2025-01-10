@@ -852,6 +852,32 @@
                               SelectedItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}">
                     </ComboBox>
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="循环次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="循环秘境多少次，输入 0 则为用光所有树脂为止，优先使用浓缩树脂"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding AutoDomainRoundNum, Mode=TwoWay}" />
+                </Grid>
 
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1016,32 +1042,7 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.AutoDomainConfig.AutoEat, Mode=TwoWay}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="循环次数"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="循环秘境多少次，输入 0 则为用光所有树脂为止，优先使用浓缩树脂"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding AutoDomainRoundNum, Mode=TwoWay}" />
-                </Grid>
+
             </StackPanel>
         </ui:CardExpander>
 

@@ -93,7 +93,7 @@ public partial class OneDragonTaskItem : ObservableObject
             case "领取每日奖励":
                 Action = async () =>
                 {
-                    await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry, CancellationContext.Instance.Cts.Token);
+                    await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry, CancellationContext.Instance.Cts.Token, config.DailyRewardPartyName);
                     await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;

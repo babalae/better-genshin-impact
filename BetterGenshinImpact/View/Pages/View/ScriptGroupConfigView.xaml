@@ -268,7 +268,7 @@
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
                                          Margin="0,0,24,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightEabled, Mode=TwoWay}" />
+                                         IsChecked="{Binding PathingConfig.AutoFightEnabled, Mode=TwoWay}" />
                         <!---->
                     </Grid>
                 </ui:CardExpander.Header>

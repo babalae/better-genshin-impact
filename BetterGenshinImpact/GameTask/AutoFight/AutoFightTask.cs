@@ -42,22 +42,24 @@ public class AutoFightTask : ISoloTask
 
     private class TaskFightFinishDetectConfig
     {
-        public int DelayTime=1500;
+        public int DelayTime = 1500;
         public Dictionary<string, int> DelayTimes = new();
         public double CheckTime = 5;
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
+
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
-            FastCheckEnabled=finishDetectConfig.FastCheckEnabled;
-            ParseCheckTimeString(finishDetectConfig.FastCheckParams,out CheckTime,CheckNames);
-            ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay,out DelayTime,DelayTimes);
+            FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
+            ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
+            ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
             BattleEndProgressBarColor = ParseStringToTuple(finishDetectConfig.BattleEndProgressBarColor, (95, 235, 255));
             BattleEndProgressBarColorTolerance = ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
         }
 
-        public (int, int, int) BattleEndProgressBarColor{ get; }
-        public (int, int, int) BattleEndProgressBarColorTolerance{ get; }
+        public (int, int, int) BattleEndProgressBarColor { get; }
+        public (int, int, int) BattleEndProgressBarColorTolerance { get; }
+
         public static void ParseCheckTimeString(
             string input,
             out double checkTime,
@@ -68,6 +70,7 @@ public class AutoFightTask : ISoloTask
             {
                 return; // 直接返回
             }
+
             var uniqueNames = new HashSet<string>(); // 用于临时去重的集合
 
             // 按分号分割字符串
@@ -90,6 +93,7 @@ public class AutoFightTask : ISoloTask
 
             names.AddRange(uniqueNames); // 将集合转换为列表
         }
+
         public static void ParseFastCheckEndDelayString(
             string input,
             out int delayTime,
@@ -99,9 +103,9 @@ public class AutoFightTask : ISoloTask
 
             if (string.IsNullOrEmpty(input))
             {
-
                 return; // 直接返回
             }
+
             // 分割字符串，以分号为分隔符
             var segments = input.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -130,7 +134,7 @@ public class AutoFightTask : ISoloTask
             }
         }
 
-        
+
         static bool IsSingleNumber(string input, out int result)
         {
             return int.TryParse(input, out result);
@@ -162,10 +166,10 @@ public class AutoFightTask : ISoloTask
             // 如果解析失败，返回默认值
             return defaultValue;
         }
-        
     }
 
     private TaskFightFinishDetectConfig _finishDetectConfig;
+
     public AutoFightTask(AutoFightParam taskParam)
     {
         _taskParam = taskParam;
@@ -176,11 +180,11 @@ public class AutoFightTask : ISoloTask
             _predictor = BgiYoloV8PredictorFactory.GetPredictor(@"Assets\Model\World\bgi_world.onnx");
         }
 
-        _finishDetectConfig=new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
+        _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
 
     // 方法1：判断是否是单个数字
- 
+
     /*public int delayTime=1500;
     public Dictionary<string, int> delayTimes = new();
     public double checkTime = 5;
@@ -205,11 +209,11 @@ public class AutoFightTask : ISoloTask
         combatScenes.BeforeTask(cts2.Token);
         TimeSpan fightTimeout = TimeSpan.FromSeconds(_taskParam.Timeout); // 战斗超时时间
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
-        
+
         Stopwatch checkFightFinishStopwatch = Stopwatch.StartNew();
         TimeSpan checkFightFinishTime = TimeSpan.FromSeconds(_finishDetectConfig.CheckTime); //检查战斗超时时间的超时时间
 
-        
+
         //战斗前检查，可做成配置
 /*        if (await CheckFightFinish()) {
             return;
@@ -225,7 +229,6 @@ public class AutoFightTask : ISoloTask
             {
                 while (!cts2.Token.IsCancellationRequested)
                 {
-              
                     // 通用化战斗策略
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
@@ -245,18 +248,16 @@ public class AutoFightTask : ISoloTask
                         }
 
                         lastFighttName = command.Name;
-                        if (!fightEndFlag  && _taskParam is { FightFinishDetectEnabled: true } )
+                        if (!fightEndFlag && _taskParam is { FightFinishDetectEnabled: true })
                         {
-
                             //处于最后一个位置，或者当前执行人和下一个人名字不一样的情况，满足一定条件(开启快速检查，并且检查时间大于0或人名存在配置)检查战斗
-                            if (i==combatCommands.Count - 1 
+                            if (i == combatCommands.Count - 1
                                 || (
-                                    _finishDetectConfig.FastCheckEnabled  && command.Name!=combatCommands[i+1].Name &&
-                                        ((_finishDetectConfig.CheckTime>0 && checkFightFinishStopwatch.Elapsed>checkFightFinishTime)
-                                     ||  _finishDetectConfig.CheckNames.Contains(command.Name))   
-                                     ))
+                                    _finishDetectConfig.FastCheckEnabled && command.Name != combatCommands[i + 1].Name &&
+                                    ((_finishDetectConfig.CheckTime > 0 && checkFightFinishStopwatch.Elapsed > checkFightFinishTime)
+                                     || _finishDetectConfig.CheckNames.Contains(command.Name))
+                                ))
                             {
-                                
                                 checkFightFinishStopwatch.Restart();
                                 var delayTime = _finishDetectConfig.DelayTime;
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
@@ -276,12 +277,11 @@ public class AutoFightTask : ISoloTask
                                 fightEndFlag = await CheckFightFinish(delayTime);
                             }
                         }
-                        
+
                         if (fightEndFlag)
                         {
                             break;
                         }
-
                     }
 
 
@@ -341,29 +341,26 @@ public class AutoFightTask : ISoloTask
                 //当万叶cd大于3时或战斗人次少于2时（通常无怪物情况下），此时不再触发万叶拾取，
                 if (!(countFight < 2 || lastFighttName== "枫原万叶" && time.TotalSeconds>3))
                 {
-                
                     Logger.LogInformation("使用枫原万叶长E拾取掉落物");
                     await Delay(300, ct);
                     if (kazuha.TrySwitch())
                     {
-                            if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
-                            {
-                                Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s",time.TotalSeconds);
-                                await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
-                            }
-                            kazuha.UseSkill(true);
-                            await Task.Delay(100);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                            await Delay(1500, ct);
-                       
+                        if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
+                        {
+                            Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s", time.TotalSeconds);
+                            await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
+                        }
+
+                        kazuha.UseSkill(true);
+                        await Task.Delay(100);
+                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                        await Delay(1500, ct);
                     }
                 }
                 else
                 {
                     Logger.LogInformation((countFight < 2 ? "首个人出招就结束战斗，应该无怪物":"距最近一次万叶出招，时间过短")+"，跳过此次万叶拾取！");
                 }
-
-
             }
         }
 
@@ -379,7 +376,8 @@ public class AutoFightTask : ISoloTask
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogWarning("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏可能无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率不是 16:9");
         }
     }
 
@@ -391,7 +389,7 @@ public class AutoFightTask : ISoloTask
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
-    private async Task<bool> CheckFightFinish(int delayTime=1500)
+    private async Task<bool> CheckFightFinish(int delayTime = 1500)
     {
         //  YOLO 判断血条和怪物位置
         // if (HasFightFlagByYolo(CaptureToRectArea()))
@@ -424,7 +422,7 @@ public class AutoFightTask : ISoloTask
             }
         }
         **/
-  
+
         await Delay(delayTime, _ct);
         Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束

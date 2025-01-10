@@ -68,10 +68,14 @@ public partial class PathingPartyConfig : ObservableObject
     // 启用进入剧情自动脱离
     [ObservableProperty]
     private bool _autoSkipEnabled = true;
+    
+    // 自动冲刺启用
+    [ObservableProperty]
+    private bool _autoRunEnabled = true;
 
     //启用自动战斗配置
     [ObservableProperty]
-    private bool _autoFightEabled = false;
+    private bool _autoFightEnabled = false;
 
     [ObservableProperty]
     private AutoFightConfig _autoFightConfig = new();
