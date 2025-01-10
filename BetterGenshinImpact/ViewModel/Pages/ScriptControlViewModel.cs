@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,6 +35,7 @@ using StackPanel = Wpf.Ui.Controls.StackPanel;
 using TextBox = Wpf.Ui.Controls.TextBox;
 using Button = Wpf.Ui.Controls.Button;
 using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -348,12 +350,98 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
 
     }
-
-    private void UpdateTasks()
+    static string[] GetJsonFiles(string folderPath)
     {
-        //PromptDialog.Prompt
-        // SelectedScriptGroup.Projects.Clear();
-        // WriteScriptGroup(SelectedScriptGroup);
+        // 检查文件夹是否存在
+        if (!Directory.Exists(folderPath))
+        {
+            return new string[0];
+        }
+
+        // 获取所有 .json 文件
+        return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly);
+    }
+    [RelayCommand]
+    private async Task UpdateTasks()
+    {
+            List<ScriptGroupProject> projects = new();
+            List<ScriptGroupProject> oldProjects = new();
+            oldProjects.AddRange(SelectedScriptGroup?.Projects);
+            var oldcount = oldProjects.Count;
+            List<string> folderNames = new();
+            foreach (var project in oldProjects)
+            {
+                if (project.Type == "Pathing")
+                {
+                    if (!folderNames.Contains(project.FolderName))
+                    {
+                        folderNames.Add(project.FolderName);
+                        //根据文件夹更新
+                        var dirPath = $@"{MapPathingViewModel.PathJsonPath}\{project.FolderName}";
+                        foreach (var jsonFile in GetJsonFiles(dirPath))
+                        {
+                            var fileInfo = new FileInfo(jsonFile);
+                            var oldProject = oldProjects.FirstOrDefault(item => item.Name == fileInfo.Name);
+                            if (oldProject == null)
+                            {
+                                projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, project.FolderName));
+                            }
+                            else
+                            {
+                                projects.Add(oldProject);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    projects.Add(project);
+                }
+            }
+
+            SelectedScriptGroup.Projects.Clear();
+            foreach (var scriptGroupProject in projects)
+            {
+                SelectedScriptGroup?.AddProject(scriptGroupProject);
+            }
+
+            Toast.Success($"增加了{projects.Count - oldcount}个路径追踪任务");
+            WriteScriptGroup(SelectedScriptGroup);
+        
+    }
+    
+
+    [RelayCommand]
+    public void OnCopyScriptGroup(ScriptGroup? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", item.Name);
+        if (!string.IsNullOrEmpty(str))
+        {
+
+            // 检查是否已存在
+            if (ScriptGroups.Any(x => x.Name == str))
+            {
+                _snackbarService.Show(
+                    "配置组已存在",
+                    $"配置组 {str} 已经存在，复制失败",
+                    ControlAppearance.Caution,
+                    null,
+                    TimeSpan.FromSeconds(2)
+                );
+            }
+            else
+            {
+                var newScriptGroup =JsonSerializer.Deserialize<ScriptGroup>(JsonSerializer.Serialize(item)) ;
+                newScriptGroup.Name = str;
+                ScriptGroups.Add(newScriptGroup);
+                //WriteScriptGroup(newScriptGroup);
+            }
+        }
     }
 
     [RelayCommand]

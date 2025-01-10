@@ -67,6 +67,9 @@
                             <MenuItem Command="{Binding RenameScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="重命名" />
+                            <MenuItem Command="{Binding CopyScriptGroupCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="复制组" />
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
@@ -212,7 +215,7 @@
                             <ContextMenu>
                                 <MenuItem Header="清空" Command="{Binding ClearTasksCommand}" />
                                 <MenuItem Header="日志分析" Command="{Binding OpenLogParseCommand}" />
-                                <!--<MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />-->
+                                <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
