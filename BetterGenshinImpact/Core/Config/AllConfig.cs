@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
 using BetterGenshinImpact.GameTask.QuickTeleport;
 using BetterGenshinImpact.Service.Notification;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -132,6 +133,11 @@ public partial class AllConfig : ObservableObject
     ///     自动战斗配置
     /// </summary>
     public AutoFightConfig AutoFightConfig { get; set; } = new();
+    
+    /// <summary>
+    ///     自动乐曲配置 - 千音雅集
+    /// </summary>
+    public AutoMusicGameConfig AutoMusicGameConfig { get; set; } = new();
 
     /// <summary>
     ///     自动秘境配置
@@ -193,6 +199,7 @@ public partial class AllConfig : ObservableObject
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
 
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;

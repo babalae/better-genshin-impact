@@ -102,6 +102,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty]
     private List<string> _artifactSalvageStarList = ["4", "3", "2", "1"];
 
+    [ObservableProperty] 
+    private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
+
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
 
