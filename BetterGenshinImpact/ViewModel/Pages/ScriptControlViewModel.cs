@@ -336,7 +336,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 configGroupEntities.Reverse();
                 //realGameInfo
                 //小怪摩拉统计
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,hoeingStats ? gameInfo : null));
+                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,hoeingStats ? realGameInfo : null));
                 win.ShowDialog();
             }
 
