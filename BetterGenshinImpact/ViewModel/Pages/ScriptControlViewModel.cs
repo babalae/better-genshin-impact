@@ -160,6 +160,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 new { Text = "3天", Value = "3" },
                 new { Text = "7天", Value = "7" },
+                new { Text = "15天", Value = "15" },
+                new { Text = "31天", Value = "31" },
+                new { Text = "61天", Value = "61" },
+                new { Text = "92天", Value = "92" },
                 new { Text = "所有", Value = "All" }
             };
         dayRangeComboBox.ItemsSource = dayRangeComboBoxItems;
