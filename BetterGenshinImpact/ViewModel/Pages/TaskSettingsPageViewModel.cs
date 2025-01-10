@@ -102,6 +102,9 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty]
     private List<string> _artifactSalvageStarList = ["4", "3", "2", "1"];
 
+    [ObservableProperty] 
+    private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
+
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
 
@@ -115,7 +118,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
-        _domainNameList = MapLazyAssets.Instance.DomainNameList;
+        _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
     }
 
@@ -245,6 +248,13 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     public bool GetFightStrategy(out string path)
     {
+        if (string.IsNullOrEmpty(Config.AutoFightConfig.StrategyName))
+        {
+            Toast.Warning("请先在【独立任务——自动战斗】下拉列表配置中选择战斗策略！");
+            path = string.Empty;
+            return true;
+        }
+
         path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
         if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
         {
@@ -253,7 +263,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         if (!File.Exists(path) && !Directory.Exists(path))
         {
-            Toast.Error("战斗策略文件不存在");
+            Toast.Error("当前选择的自动战斗策略文件不存在");
             return true;
         }
 

@@ -220,6 +220,12 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
     private void Start(IntPtr hWnd)
     {
+        if (Config.TriggerInterval <= 0)
+        {
+            MessageBox.Error("触发器触发频率必须大于0");
+            return;
+        }
+        
         if (!TaskDispatcherEnabled)
         {
             _hWnd = hWnd;

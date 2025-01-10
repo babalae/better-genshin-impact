@@ -31,6 +31,9 @@ public class GoToAdventurersGuildTask
         {
             try
             {
+                // 合成完毕后领取奖励
+                await new ClaimEncounterPointsRewardsTask().Start(ct);
+                
                 // 如果有好感队伍名称，先切换到好感队伍
                 if (!string.IsNullOrEmpty(dailyRewardPartyName))
                 {
@@ -77,7 +80,7 @@ public class GoToAdventurersGuildTask
             await new ReturnMainUiTask().Start(ct);
 
             // 结束后重新打开
-            await Delay(200, ct);
+            await Delay(1000, ct);
             var ra = CaptureToRectArea();
             if (!Bv.FindFAndPress(ra, "凯瑟琳"))
             {
