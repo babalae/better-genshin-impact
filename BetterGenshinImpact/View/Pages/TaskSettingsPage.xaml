@@ -1208,20 +1208,20 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义模式"
+                                  Text="自定义难度等级，使该级别下所有乐曲达成【大音天籁】"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认为只获取乐曲奖励即可，可以设置所有乐曲达成【大音天籁】"
+                                  Text="默认为【传说】，【大师】即可获取所有奖励，【所有】即全部难度等级的所有乐曲达成【大音天籁】。"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Width="230"
+                              Width="80"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoMusicModelList}"
-                              SelectedItem="{Binding Config.AutoMusicGameConfig.ModeName, Mode=TwoWay}" 
+                              ItemsSource="{Binding AutoMusicLevelList}"
+                              SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}" 
                               SelectedIndex="0" />
                 </Grid>
             </StackPanel>

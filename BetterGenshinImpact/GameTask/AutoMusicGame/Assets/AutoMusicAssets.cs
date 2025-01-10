@@ -46,12 +46,13 @@ public class AutoMusicAssets : BaseAssets<AutoMusicAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "btn_list.png"),
             RegionOfInterest = CaptureRect.CutRightBottom(0.4, 0.2),
         }.InitTemplate();
-        
+
+        var musicCanorusTemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "music_canorus.png");
         MusicCanorusLevel1 = new RecognitionObject
         {
             Name = "MusicCanorusLevel1",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "music_canorus.png"),
+            TemplateImageMat = musicCanorusTemplateImageMat,
             RegionOfInterest = new Rect((int)(450 * AssetScale), (int)(430 * AssetScale), (int)(200 * AssetScale),
                 (int)(60 * AssetScale)),
         }.InitTemplate();
@@ -59,7 +60,7 @@ public class AutoMusicAssets : BaseAssets<AutoMusicAssets>
         {
             Name = "MusicCanorusLevel2",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "music_canorus.png"),
+            TemplateImageMat = musicCanorusTemplateImageMat,
             RegionOfInterest = new Rect((int)(450 * AssetScale), (int)(520 * AssetScale), (int)(200 * AssetScale),
                 (int)(60 * AssetScale)),
         }.InitTemplate();
@@ -67,7 +68,7 @@ public class AutoMusicAssets : BaseAssets<AutoMusicAssets>
         {
             Name = "MusicCanorusLevel3",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "music_canorus.png"),
+            TemplateImageMat = musicCanorusTemplateImageMat,
             RegionOfInterest = new Rect((int)(450 * AssetScale), (int)(610 * AssetScale), (int)(200 * AssetScale),
                 (int)(60 * AssetScale)),
         }.InitTemplate();
@@ -75,7 +76,7 @@ public class AutoMusicAssets : BaseAssets<AutoMusicAssets>
         {
             Name = "MusicCanorusLevel4",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "music_canorus.png"),
+            TemplateImageMat = musicCanorusTemplateImageMat,
             RegionOfInterest = new Rect((int)(450 * AssetScale), (int)(690 * AssetScale), (int)(200 * AssetScale),
                 (int)(60 * AssetScale)),
         }.InitTemplate();

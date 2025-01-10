@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoMusicGame.Assets;
@@ -40,27 +41,26 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             throw new Exception("当前未处于专辑界面，请在专辑界面运行本任务");
         }
 
-        var modeName = TaskContext.Instance().Config.AutoMusicGameConfig.ModeName;
-        if (string.IsNullOrEmpty(modeName))
+        var musicLevel = TaskContext.Instance().Config.AutoMusicGameConfig.MusicLevel;
+        if (string.IsNullOrEmpty(musicLevel))
         {
-            modeName = AutoMusicGameConfig.MusicModelList[0];
+            musicLevel = "传说";
         }
-        Logger.LogInformation("自动音游模式：{Text}", modeName);
+        Logger.LogInformation("自动音游乐曲难度等级：{Text}", musicLevel);
         
-        var difficultyLevels = new[]
+        // 遍历4个难度等级
+        var defaultDifficultyLevels = new[]
         {
-            ("大师", 1150, 600, AutoMusicAssets.Instance.MusicCanorusLevel3)
+            ("普通", 480, 600, AutoMusicAssets.Instance.MusicCanorusLevel1),
+            ("困难", 800, 600, AutoMusicAssets.Instance.MusicCanorusLevel2), 
+            ("大师", 1150, 600, AutoMusicAssets.Instance.MusicCanorusLevel3),
+            ("传说", 1400, 600, AutoMusicAssets.Instance.MusicCanorusLevel4)
         };
-        if (modeName == AutoMusicGameConfig.MusicModelList[1])
+
+        var difficultyLevels = defaultDifficultyLevels;
+        if (musicLevel != "所有")
         {
-            // 遍历4个难度等级
-            difficultyLevels =
-            [
-                ("普通", 480, 600, AutoMusicAssets.Instance.MusicCanorusLevel1),
-                ("困难", 800, 600, AutoMusicAssets.Instance.MusicCanorusLevel2), 
-                ("大师", 1150, 600, AutoMusicAssets.Instance.MusicCanorusLevel3),
-                ("传说", 1400, 600, AutoMusicAssets.Instance.MusicCanorusLevel4)
-            ];
+            difficultyLevels = [Array.Find(defaultDifficultyLevels, level => level.Item1 == musicLevel)];
         }
 
         foreach (var (difficultyName, xPos, yPos, canorusAsset) in difficultyLevels)
