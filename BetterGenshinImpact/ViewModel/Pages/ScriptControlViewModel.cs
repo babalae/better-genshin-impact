@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
@@ -360,6 +361,12 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
         // 获取所有 .json 文件
         return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly);
+    }
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
     [RelayCommand]
     private async Task UpdateTasks()

@@ -215,6 +215,7 @@
                             <ContextMenu>
                                 <MenuItem Header="清空" Command="{Binding ClearTasksCommand}" />
                                 <MenuItem Header="日志分析" Command="{Binding OpenLogParseCommand}" />
+                                <MenuItem Header="打开脚本仓库" Command="{Binding OpenLocalScriptRepoCommand}" />
                                 <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
