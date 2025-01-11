@@ -18,6 +18,7 @@ public class ActionEnum(string code, string msg)
     public static readonly ActionEnum CombatScript = new("combat_script", "战斗策略脚本"); // 这个必须要 action_params 里面有脚本
     
     public static readonly ActionEnum Mining = new("mining", "挖矿");
+    public static readonly ActionEnum LogOutput = new("log_output", "输出日志");
 
     // 还有要加入的其他动作
     // 滚轮F
