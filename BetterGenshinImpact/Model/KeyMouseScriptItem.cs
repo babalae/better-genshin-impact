@@ -304,28 +304,38 @@ public partial class KeyMouseScriptItem : ObservableObject
             
             _logger.LogDebug($"{dirName} 开始删除...");
             
-            var userName = TaskContext.Instance().Config.CommonConfig.UserName;
-            var uid = TaskContext.Instance().Config.CommonConfig.Uid;
-            
             await Task.Run(() =>
             {
                 try
                 {
                     var tosClient = new TosClientHelper();
                     var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
+                    var collection = DbLiteService.Instance.UserDb.GetCollection<FileUploadItem>("FileUploads");
                     
                     foreach (var file in files)
                     {
                         _deleteCts.Token.ThrowIfCancellationRequested();
 
-                        var relativePath = file.Replace(_scriptPath, "").TrimStart('\\');
-                        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
-                        remotePath = remotePath.Replace(@"\", "/");
-                        
-                        tosClient.DeleteObject(remotePath);
+                        try
+                        {
+                            var remotePath = GetRemotePath(file);
+                            
+                            // 删除对象存储中的文件
+                            tosClient.DeleteObject(remotePath);
+                            
+                            // 删除数据库中的记录
+                            collection.Delete(remotePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"删除文件失败：{ex.Message}");
+                        }
                     }
                     
                     IsDeleteSuccess = true;
+                    // 重置上传状态
+                    IsUploadSuccess = false;
+                    UploadProgress = 0;
                     _logger.LogDebug($"{dirName} 删除完成");
                 }
                 catch (Exception ex)
@@ -335,16 +345,6 @@ public partial class KeyMouseScriptItem : ObservableObject
                     throw;
                 }
             }, _deleteCts.Token);
-
-            // 删除成功提示
-            if (IsDeleteSuccess)
-            {
-                MessageBox.Show("清除成功", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else 
-            {
-                MessageBox.Show("清除失败", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
         catch (OperationCanceledException)
         {
@@ -355,7 +355,6 @@ public partial class KeyMouseScriptItem : ObservableObject
         {
             _logger.LogError(ex, "删除出错");
             IsDeleteSuccess = false;
-            MessageBox.Show($"清除失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
