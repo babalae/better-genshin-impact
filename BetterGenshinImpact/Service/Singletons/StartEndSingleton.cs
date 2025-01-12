@@ -32,6 +32,8 @@ public class StartEndSingleton : Singleton<StartEndSingleton>
     {
         TouchpadSoft.Instance.CheckAndRecordStatus();
         TouchpadSoft.Instance.DisableTouchpadWhenEnabledByHotKey();
+        
+        StickyKeysManager.DisableStickyKeysShortcut();
 
         if (TaskContext.Instance().Config.CommonConfig.ChangeResolutionOnStart && !RuntimeHelper.IsDebug)
         {
