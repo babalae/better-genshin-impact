@@ -135,5 +135,5 @@ https://learn.microsoft.com/zh-cn/windows/win32/cimwin32prov/win32-systemenclosu
 
     public bool 是否存在触控屏 { get; set; } = TouchpadManager.HasTouchInput();
     
-    public bool 是否存在触控屏2 { get; set; } = TouchpadManager.HasTouchInput2();
+    // public bool 是否存在触控屏2 { get; set; } = TouchpadManager.HasTouchInput2();
 }

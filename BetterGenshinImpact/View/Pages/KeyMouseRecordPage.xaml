@@ -130,7 +130,7 @@
                                             <Style TargetType="TextBlock">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsUploadSuccess}" Value="True">
-                                                        <Setter Property="Text" Value="成功" />
+                                                        <Setter Property="Text" Value="已上传" />
                                                         <Setter Property="Foreground" Value="Green" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsUploading}" Value="True">
