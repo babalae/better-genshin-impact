@@ -20,6 +20,7 @@ using OpenCvSharp;
 using Vanara;
 using Vanara.PInvoke;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -367,12 +368,7 @@ public class AutoFightTask : ISoloTask
 
     private void LogScreenResolution()
     {
-        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
-        {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率不是 16:9");
-        }
+        AssertUtils.CheckGameResolution("自动战斗");
     }
 
     static bool AreDifferencesWithinBounds((int, int, int) a, (int, int, int) b, (int, int, int) c)
