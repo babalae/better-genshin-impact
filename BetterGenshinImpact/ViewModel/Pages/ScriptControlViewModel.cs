@@ -1,17 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.Helpers.Ui;
-using BetterGenshinImpact.Model;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.View.Pages.View;
-using BetterGenshinImpact.View.Windows;
-using BetterGenshinImpact.View.Windows.Editable;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -20,20 +7,36 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls.Webview;
+using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.View.Windows.Editable;
+using BetterGenshinImpact.ViewModel.Pages.View;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using LogParse;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 using StackPanel = Wpf.Ui.Controls.StackPanel;
-using System.Windows.Navigation;
-using BetterGenshinImpact.View.Controls.Webview;
-using Newtonsoft.Json.Linq;
-using static Vanara.PInvoke.User32;
 using TextBox = Wpf.Ui.Controls.TextBox;
-using BetterGenshinImpact.ViewModel.Pages.View;
+using Button = Wpf.Ui.Controls.Button;
+using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -109,6 +112,18 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 	[RelayCommand]
     private async Task OpenLogParse()
     {
+        
+        GameInfo gameInfo = null;
+        var config = LogParse.LogParse.LoadConfig();
+        if (!string.IsNullOrEmpty(config.Cookie))
+        {
+            config.CookieDictionary.TryGetValue(config.Cookie, out gameInfo);
+        }
+        LogParseConfig.ScriptGroupLogParseConfig sgpc;
+        if (!config.ScriptGroupLogDictionary.TryGetValue(_selectedScriptGroup.Name,out sgpc))
+        {
+            sgpc=new LogParseConfig.ScriptGroupLogParseConfig();
+        }
 
 
         // 创建 StackPanel
@@ -148,6 +163,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             {
                 new { Text = "3天", Value = "3" },
                 new { Text = "7天", Value = "7" },
+                new { Text = "15天", Value = "15" },
+                new { Text = "31天", Value = "31" },
+                new { Text = "61天", Value = "61" },
+                new { Text = "92天", Value = "92" },
                 new { Text = "所有", Value = "All" }
             };
         dayRangeComboBox.ItemsSource = dayRangeComboBoxItems;
@@ -157,6 +176,44 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         stackPanel.Children.Add(dayRangeComboBox);
 
 
+        // 开关控件：ToggleButton 或 CheckBox
+        CheckBox hoeingStatsSwitch = new CheckBox
+        {
+            Content = "统计锄地摩拉怪物数",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        //firstRow.Children.Add(toggleSwitch);
+
+        // 将第一行添加到 StackPanel
+        stackPanel.Children.Add(hoeingStatsSwitch);
+        
+        // 第二行：文本框和“？”按钮
+        StackPanel secondRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+
+        // 文本框
+        TextBox cookieTextBox = new TextBox
+        {
+            Width = 200,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+        secondRow.Children.Add(cookieTextBox);
+
+        // “？”按钮
+        Button questionButton = new Button
+        {
+            Content = "?",
+            Width = 30,
+            Height = 30
+        };
+
+        secondRow.Children.Add(questionButton);
+
+        // 将第二行添加到 StackPanel
+        stackPanel.Children.Add(secondRow);
 
         //PrimaryButtonText
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
@@ -167,10 +224,48 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             PrimaryButtonText = "确定",
             Owner = Application.Current.MainWindow,
         };
-        Wpf.Ui.Controls.MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
+        questionButton.Click += (sender, args) =>
+        {
+
+            WebpageWindow cookieWin = new()
+            {
+                Title = "日志分析",
+                Width = 800,
+                Height = 600,
+                Owner = uiMessageBox,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            cookieWin.NavigateToHtml(TravelsDiaryDetailManager.generHtmlMessage());
+            cookieWin.Show();
+
+        };
+        
+        //对象赋值
+        rangeComboBox.SelectedValue = sgpc.RangeValue;
+        dayRangeComboBox.SelectedValue = sgpc.DayRangeValue;
+        cookieTextBox.Text = config.Cookie;
+        hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
         
         
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary) {
+        MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
+
+        
+        if (result == MessageBoxResult.Primary) {
+            string rangeValue = ((dynamic)rangeComboBox.SelectedItem).Value;
+            string dayRangeValue = ((dynamic)dayRangeComboBox.SelectedItem).Value;
+            string cookieValue =cookieTextBox.Text;
+            
+            //保存配置文件
+            sgpc.DayRangeValue=dayRangeValue;
+            sgpc.RangeValue = rangeValue;
+            sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
+            config.Cookie = cookieValue;
+            config.ScriptGroupLogDictionary[_selectedScriptGroup.Name]=sgpc;
+            
+            LogParse.LogParse.WriteConfigFile(config);
+            
+            
+            
             WebpageWindow win = new()
             {
                 Title = "日志分析",
@@ -179,8 +274,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 Owner = Application.Current.MainWindow,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
-            string rangeValue = ((dynamic)rangeComboBox.SelectedItem).Value;
-            string dayRangeValue = ((dynamic)dayRangeComboBox.SelectedItem).Value;
 
 
             List<(string FileName, string Date)> fs = LogParse.LogParse.GetLogFiles(LogPath);
@@ -191,8 +284,52 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     fs = fs.GetRange(fs.Count - n, n);
                 }
             }
+            
+            
+            //最终确定是否打开锄地开关
+            bool hoeingStats = false;
+            
+            if ((hoeingStatsSwitch.IsChecked ?? false) && string.IsNullOrEmpty(cookieValue))
+            {
+                Toast.Warning("未填写cookie，此次将不启用锄地统计！");
+            }
+            //真正存储的gameinfo
+            GameInfo realGameInfo = gameInfo;
+            //统计锄地开关打开，并且不为cookie不为空
+            if ((hoeingStatsSwitch.IsChecked ?? false) && !string.IsNullOrEmpty(cookieValue))
+            {
+                try
+                {
+                    Toast.Information("正在从米游社获取旅行札记数据，请耐心等待！");
+                    gameInfo = await TravelsDiaryDetailManager.UpdateTravelsDiaryDetailManager(cookieValue);
+                    Toast.Success($"米游社数据获取成功，开始进行解析，请耐心等待！");
+                    
+                }
+                catch (Exception e)
+                {
+                    if (realGameInfo!=null)
+                    {
+                        Toast.Warning("访问米游社接口异常，此次将锄地统计将不更新最新数据！");
+                    }
+                    else
+                    {
+                        Toast.Warning("访问米游社接口异常，此次将不启用锄地统计！");
+                    }
 
+                }
+            }
+            if (gameInfo != null)
+            {
+                realGameInfo=gameInfo;
+               
+                config.CookieDictionary[cookieValue] = realGameInfo;
+                LogParse.LogParse.WriteConfigFile(config);
+            }
 
+            if ((hoeingStatsSwitch.IsChecked ?? false) && realGameInfo!=null)
+            {
+                hoeingStats = true;
+            }
             var configGroupEntities = LogParse.LogParse.ParseFile(fs);
             if (rangeValue == "CurrentConfig") {
                 //Toast.Success(_selectedScriptGroup.Name);
@@ -204,7 +341,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
             else {
                 configGroupEntities.Reverse();
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities));
+                //realGameInfo
+                //小怪摩拉统计
+                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,hoeingStats ? realGameInfo : null));
                 win.ShowDialog();
             }
 
@@ -212,11 +351,104 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
 
     }
-    private void UpdateTasks()
+    static string[] GetJsonFiles(string folderPath)
     {
-        //PromptDialog.Prompt
-        // SelectedScriptGroup.Projects.Clear();
-        // WriteScriptGroup(SelectedScriptGroup);
+        // 检查文件夹是否存在
+        if (!Directory.Exists(folderPath))
+        {
+            return new string[0];
+        }
+
+        // 获取所有 .json 文件
+        return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly);
+    }
+    [RelayCommand]
+    public void OnOpenLocalScriptRepo()
+    {
+        TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+    }
+    [RelayCommand]
+    private async Task UpdateTasks()
+    {
+            List<ScriptGroupProject> projects = new();
+            List<ScriptGroupProject> oldProjects = new();
+            oldProjects.AddRange(SelectedScriptGroup?.Projects);
+            var oldcount = oldProjects.Count;
+            List<string> folderNames = new();
+            foreach (var project in oldProjects)
+            {
+                if (project.Type == "Pathing")
+                {
+                    if (!folderNames.Contains(project.FolderName))
+                    {
+                        folderNames.Add(project.FolderName);
+                        //根据文件夹更新
+                        var dirPath = $@"{MapPathingViewModel.PathJsonPath}\{project.FolderName}";
+                        foreach (var jsonFile in GetJsonFiles(dirPath))
+                        {
+                            var fileInfo = new FileInfo(jsonFile);
+                            var oldProject = oldProjects.FirstOrDefault(item => item.Name == fileInfo.Name);
+                            if (oldProject == null)
+                            {
+                                projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, project.FolderName));
+                            }
+                            else
+                            {
+                                projects.Add(oldProject);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    projects.Add(project);
+                }
+            }
+
+            SelectedScriptGroup.Projects.Clear();
+            foreach (var scriptGroupProject in projects)
+            {
+                SelectedScriptGroup?.AddProject(scriptGroupProject);
+            }
+
+            Toast.Success($"增加了{projects.Count - oldcount}个路径追踪任务");
+            WriteScriptGroup(SelectedScriptGroup);
+        
+    }
+    
+
+    [RelayCommand]
+    public void OnCopyScriptGroup(ScriptGroup? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", item.Name);
+        if (!string.IsNullOrEmpty(str))
+        {
+
+            // 检查是否已存在
+            if (ScriptGroups.Any(x => x.Name == str))
+            {
+                _snackbarService.Show(
+                    "配置组已存在",
+                    $"配置组 {str} 已经存在，复制失败",
+                    ControlAppearance.Caution,
+                    null,
+                    TimeSpan.FromSeconds(2)
+                );
+            }
+            else
+            {
+                var newScriptGroup =JsonSerializer.Deserialize<ScriptGroup>(JsonSerializer.Serialize(item)) ;
+                newScriptGroup.Name = str;
+                ScriptGroups.Add(newScriptGroup);
+                //WriteScriptGroup(newScriptGroup);
+            }
+        }
     }
 
     [RelayCommand]
@@ -678,6 +910,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
     }
 
+
+
     private void WriteScriptGroup(ScriptGroup scriptGroup)
     {
         try
@@ -967,7 +1201,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         };
 
         var result = await uiMessageBox.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        if (result == MessageBoxResult.Primary)
         {
             var selectedGroups = checkBoxes
                 .Where(kv => kv.Value.IsChecked == true)
