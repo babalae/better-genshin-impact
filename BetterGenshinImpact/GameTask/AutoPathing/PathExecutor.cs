@@ -318,14 +318,14 @@ public class PathExecutor
                 ImageRegion imageRegion = TaskTriggerDispatcher.Instance().CaptureToRectArea();
 
                 var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
-                if (cookRa.IsExist())
+                if (cookRa.IsExist()&&!pathExecutorSuspend.IsSuspended)
                 {
                     Logger.LogInformation("检测到烹饪界面，使用ESC关闭界面");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 }
 
                 var mainRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-                if (mainRa2.IsExist())
+                if (mainRa2.IsExist()&&!pathExecutorSuspend.IsSuspended)
                 {
                     Logger.LogInformation("检测到主界面，使用ESC关闭界面");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
