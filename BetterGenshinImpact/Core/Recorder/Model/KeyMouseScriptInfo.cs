@@ -30,4 +30,6 @@ public class KeyMouseScriptInfo
     public string StartTimeUnixTimestamp { get; set; } = string.Empty;
     
     public SysParams? SysParams { get; set; }
+    
+    public string VideoSize { get; set; } = string.Empty;
 }

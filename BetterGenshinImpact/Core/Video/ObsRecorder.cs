@@ -2,9 +2,12 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using OBSWebsocketDotNet;
@@ -173,6 +176,9 @@ public class ObsRecorder : IVideoRecorder
                             var targetPath = Path.Combine(folderPath, "video" + Path.GetExtension(videoPath));
                             File.Move(videoPath, targetPath);
                             TaskControl.Logger.LogInformation("OBS: 录制结果文件已移动到 {Path}", targetPath);
+                            
+                            UpdateSystemInfo(folderPath, targetPath);
+                            
                             break;
                         }
                     }
@@ -194,6 +200,23 @@ public class ObsRecorder : IVideoRecorder
                 TaskControl.Logger.LogError("移动录制结果文件时出现错误: {Error}", e.Message);
             }
         });
+    }
+    
+    private void UpdateSystemInfo(string folderPath, string  videoPath)
+    {
+        var jsonPath = Path.Combine(folderPath, $"systemInfo.json");
+        // 计算视频文件大小
+        var fileInfo = new FileInfo(videoPath);
+        var fileSize = fileInfo.Length;
+        // 读取json
+        var json = File.ReadAllText(jsonPath);
+        var info = JsonSerializer.Deserialize<KeyMouseScriptInfo>(json, KeyMouseRecorderJsonLine.JsonOptions);
+        if (info != null)
+        {
+            info.VideoSize = fileSize.ToString();
+            // 写入json
+            File.WriteAllText(jsonPath, JsonSerializer.Serialize(info, KeyMouseRecorderJsonLine.JsonOptions));
+        }
     }
 
     static bool IsFileLocked(string filePath)
