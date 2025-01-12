@@ -93,7 +93,7 @@ public class TosClientHelper
         try
         {
             objectKey ??= Path.GetFileName(localFileName);
-            
+
             // 检查是否已经上传成功
             // var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
             // var existingItem = collection.FindById(objectKey);
@@ -102,7 +102,7 @@ public class TosClientHelper
             //     Debug.WriteLine($"File {objectKey} already uploaded successfully");
             //     return;
             // }
-            
+
             var fileUploadItem = new FileUploadItem
             {
                 Id = objectKey,
@@ -110,7 +110,7 @@ public class TosClientHelper
                 ObjectKey = objectKey,
                 Status = UploadStatus.Uploading.ToString()
             };
-            
+
             _dbService.Upsert("FileUploads", fileUploadItem);
 
 
@@ -123,10 +123,9 @@ public class TosClientHelper
 
             var putObjectFromFileOutput = _client.PutObjectFromFile(putObjectFromFileInput);
             Debug.WriteLine($"Put object succeeded, request id: {putObjectFromFileOutput.RequestID}");
-            
+
             fileUploadItem.Status = UploadStatus.UploadSuccess.ToString();
             _dbService.Upsert("FileUploads", fileUploadItem);
-            
         }
         catch (TosServerException ex)
         {
@@ -161,17 +160,6 @@ public class TosClientHelper
         }
 
         objectKey ??= Path.GetFileName(localFileName);
-        
-        // 检查是否已经上传成功
-        // var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
-        // var existingItem = collection.FindById(objectKey);
-        // if (existingItem?.Status == UploadStatus.UploadSuccess.ToString())
-        // {
-        //     Debug.WriteLine($"File {objectKey} already uploaded successfully");
-        //     progressCallback?.Invoke(100, 100, 100);
-        //     return;
-        // }
-
         string uploadID = null;
 
         var fileUploadItem = new FileUploadItem
@@ -181,38 +169,74 @@ public class TosClientHelper
             ObjectKey = objectKey,
             Status = UploadStatus.Uploading.ToString()
         };
-        
-        _dbService.Upsert("FileUploads", fileUploadItem);
-        
+
+        // 检查是否有未完成的上传
+        var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
+        var existingItem = collection.FindById(objectKey);
+        if (existingItem?.UploadId != null)
+        {
+            uploadID = existingItem.UploadId;
+            Debug.WriteLine($"Found existing upload ID: {uploadID}");
+        }
+        else
+        {
+            _dbService.Upsert("FileUploads", fileUploadItem);
+        }
+
         try
         {
-            // 1. 初始化分片上传
-            var createMultipartUploadInput = new CreateMultipartUploadInput
-            {
-                Bucket = _config.BucketName,
-                Key = objectKey,
-                ACL = ACLType.ACLPrivate,
-                StorageClass = StorageClassType.StorageClassIa
-            };
-            var createMultipartUploadOutput = _client.CreateMultipartUpload(createMultipartUploadInput);
-            uploadID = createMultipartUploadOutput.UploadID;
-            Debug.WriteLine($"CreateMultipartUpload succeeded, upload id: {uploadID}");
-
-            fileUploadItem.UploadId = uploadID;
-            _dbService.Upsert("FileUploads", fileUploadItem);
-
-            // 2. 计算分片信息
             var fileInfo = new FileInfo(localFileName);
             var fileSize = fileInfo.Length;
             var partCount = (int)Math.Ceiling((double)fileSize / partSize);
             var parts = new UploadedPart[partCount];
             long totalUploadedBytes = 0;
 
-            // 3. 分片上传
+            // 如果有现有的上传ID，尝试获取已上传的分片
+            List<UploadedPart> existingParts = null;
+            if (!string.IsNullOrEmpty(uploadID))
+            {
+                existingParts = ListUploadedParts(objectKey, uploadID);
+                if (existingParts != null)
+                {
+                    // 复制已上传的分片信息并计算已上传的字节数
+                    foreach (var part in existingParts)
+                    {
+                        parts[part.PartNumber - 1] = part;
+                        totalUploadedBytes += Math.Min(partSize, fileSize - (part.PartNumber - 1) * partSize);
+                    }
+
+                    // 报告初始进度
+                    var initialPercentage = (double)totalUploadedBytes / fileSize * 100;
+                    progressCallback?.Invoke(totalUploadedBytes, fileSize, initialPercentage);
+                }
+            }
+
+            // 如果没有现有的上传ID或获取分片失败，创建新的上传
+            if (string.IsNullOrEmpty(uploadID) || existingParts == null)
+            {
+                var createMultipartUploadInput = new CreateMultipartUploadInput
+                {
+                    Bucket = _config.BucketName,
+                    Key = objectKey,
+                    ACL = ACLType.ACLPrivate,
+                    StorageClass = StorageClassType.StorageClassIa
+                };
+                var createMultipartUploadOutput = _client.CreateMultipartUpload(createMultipartUploadInput);
+                uploadID = createMultipartUploadOutput.UploadID;
+                Debug.WriteLine($"Created new upload ID: {uploadID}");
+
+                fileUploadItem.UploadId = uploadID;
+                _dbService.Upsert("FileUploads", fileUploadItem);
+                totalUploadedBytes = 0;
+            }
+
+            // 上传缺失的分片
             using (var fileStream = File.Open(localFileName, FileMode.Open, FileAccess.Read))
             {
                 for (var i = 0; i < partCount; i++)
                 {
+                    if (parts[i] != null) continue; // 跳过已上传的分片
+
                     var offset = partSize * i;
                     fileStream.Seek(offset, SeekOrigin.Begin);
                     var currentPartSize = Math.Min(partSize, fileSize - offset);
@@ -229,17 +253,17 @@ public class TosClientHelper
 
                     var uploadPartOutput = _client.UploadPart(uploadPartInput);
                     parts[i] = new UploadedPart { PartNumber = i + 1, ETag = uploadPartOutput.ETag };
-                    
+
                     // 更新进度
                     totalUploadedBytes += currentPartSize;
                     var percentage = (double)totalUploadedBytes / fileSize * 100;
                     progressCallback?.Invoke(totalUploadedBytes, fileSize, percentage);
-                    
+
                     Debug.WriteLine($"UploadPart {i + 1}/{partCount} succeeded");
                 }
             }
 
-            // 4. 完成分片上传
+            // 完成分片上传
             var completeMultipartUploadInput = new CompleteMultipartUploadInput
             {
                 Bucket = _config.BucketName,
@@ -364,9 +388,9 @@ public class TosClientHelper
             UploadId = uploadID,
             Status = UploadStatus.Uploading.ToString()
         };
-        
+
         _dbService.Upsert("FileUploads", fileUploadItem);
-        
+
         try
         {
             var existingParts = ListUploadedParts(objectKey, uploadID);
@@ -417,12 +441,12 @@ public class TosClientHelper
 
                     var uploadPartOutput = _client.UploadPart(uploadPartInput);
                     parts[i] = new UploadedPart { PartNumber = i + 1, ETag = uploadPartOutput.ETag };
-                    
+
                     // 更新进度
                     totalUploadedBytes += currentPartSize;
                     var percentage = (int)((double)totalUploadedBytes / fileSize * 100);
                     progressCallback?.Invoke(totalUploadedBytes, fileSize, percentage);
-                    
+
                     Debug.WriteLine($"UploadPart {i + 1}/{partCount} succeeded");
                 }
             }
@@ -504,8 +528,7 @@ public class TosClientHelper
             };
 
             var listObjectsOutput = _client.ListObjects(listObjectsInput);
-           
-            
+
 
             return listObjectsOutput.Contents;
         }

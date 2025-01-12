@@ -131,9 +131,10 @@
                                              Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     
                                     <ui:Button Command="{Binding DeleteUploadedFilesCommand}"
-                                             Content="清除"
+                                             Content="撤销上传"
                                              Icon="{ui:SymbolIcon Delete24}"
-                                             Margin="5,0,0,0" />
+                                             Margin="5,0,0,0"
+                                             IsEnabled="{Binding IsUploading, Converter={StaticResource InverseBooleanConverter}}" />
                                     
                                     <ui:TextBlock Margin="5,0,0,0"
                                                VerticalAlignment="Center">

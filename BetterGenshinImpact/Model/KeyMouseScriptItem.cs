@@ -270,9 +270,18 @@ public partial class KeyMouseScriptItem : ObservableObject
     }
 
     [RelayCommand]
-    private void StopUpload()
+    private async Task StopUpload()
     {
-        _uploadCts?.Cancel();
+        await _uploadCts?.CancelAsync()!;
+        await Task.Delay(500); // 等待上传线程结束
+        for (int i = 0; i < 100; i++)
+        {
+            if (!IsUploading)
+            {
+                break;
+            }
+            await Task.Delay(100);
+        }
     }
 
     [RelayCommand]
