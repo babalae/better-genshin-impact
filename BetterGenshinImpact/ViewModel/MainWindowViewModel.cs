@@ -124,15 +124,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bgi.huiyadan.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
 
-        try
-        {
-            await Task.Run(GetNewestInfoAsync);
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-            _logger.LogWarning("获取 BetterGI 最新版本信息失败");
-        }
+        await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
 
         //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
         if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
@@ -142,54 +134,5 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 更新仓库
         ScriptRepoUpdater.Instance.AutoUpdate();
-    }
-
-    private async Task GetNewestInfoAsync()
-    {
-        try
-        {
-            using var httpClient = new HttpClient();
-            var notice = await httpClient.GetFromJsonAsync<Notice>(@"https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json");
-            if (notice != null && !string.IsNullOrWhiteSpace(notice.Version))
-            {
-                if (Global.IsNewVersion(notice.Version))
-                {
-                    if (!string.IsNullOrEmpty(Config.NotShowNewVersionNoticeEndVersion)
-                        && !Global.IsNewVersion(Config.NotShowNewVersionNoticeEndVersion, notice.Version))
-                    {
-                        return;
-                    }
-
-                    await UIDispatcherHelper.Invoke(async () =>
-                    {
-                        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-                        {
-                            Title = "更新提示",
-                            Content = $"存在最新版本 {notice.Version}，点击确定前往下载页面下载最新版本",
-                            PrimaryButtonText = "确定",
-                            SecondaryButtonText = "不再提示",
-                            CloseButtonText = "取消",
-                            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                            Owner = Application.Current.MainWindow,
-                        };
-
-                        var result = await uiMessageBox.ShowDialogAsync();
-                        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-                        {
-                            Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/download.html") { UseShellExecute = true });
-                        }
-                        else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
-                        {
-                            Config.NotShowNewVersionNoticeEndVersion = notice.Version;
-                        }
-                    });
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-            _logger.LogWarning("获取 BetterGI 最新版本信息失败");
-        }
     }
 }
