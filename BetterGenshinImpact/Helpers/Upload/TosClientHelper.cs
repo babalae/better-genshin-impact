@@ -10,6 +10,8 @@ using TOS;
 using TOS.Error;
 using TOS.Model;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using BetterGenshinImpact.Model.TosUpload;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Helpers.Upload;
 
@@ -20,6 +22,7 @@ public class TosClientHelper
     private readonly string _configPath = Global.Absolute("User/tos.json");
     private TosConfig _config;
     private ITosClient _client;
+    private readonly DbLiteService _dbService = DbLiteService.Instance;
 
     private class TosConfig
     {
@@ -90,6 +93,17 @@ public class TosClientHelper
         try
         {
             objectKey ??= Path.GetFileName(localFileName);
+            
+            var fileUploadItem = new FileUploadItem
+            {
+                Id = objectKey,
+                FilePath = localFileName,
+                ObjectKey = objectKey,
+                Status = UploadStatus.Uploading.ToString()
+            };
+        
+            _dbService.Upsert("FileUploads", fileUploadItem);
+
 
             var putObjectFromFileInput = new PutObjectFromFileInput
             {
@@ -100,6 +114,10 @@ public class TosClientHelper
 
             var putObjectFromFileOutput = _client.PutObjectFromFile(putObjectFromFileInput);
             Debug.WriteLine($"Put object succeeded, request id: {putObjectFromFileOutput.RequestID}");
+            
+            fileUploadItem.Status = UploadStatus.UploadSuccess.ToString();
+            _dbService.Upsert("FileUploads", fileUploadItem);
+            
         }
         catch (TosServerException ex)
         {
@@ -136,6 +154,16 @@ public class TosClientHelper
         objectKey ??= Path.GetFileName(localFileName);
         string uploadID = null;
 
+        var fileUploadItem = new FileUploadItem
+        {
+            Id = objectKey,
+            FilePath = localFileName,
+            ObjectKey = objectKey,
+            Status = UploadStatus.Uploading.ToString()
+        };
+        
+        _dbService.Upsert("FileUploads", fileUploadItem);
+        
         try
         {
             // 1. 初始化分片上传
@@ -149,6 +177,9 @@ public class TosClientHelper
             var createMultipartUploadOutput = _client.CreateMultipartUpload(createMultipartUploadInput);
             uploadID = createMultipartUploadOutput.UploadID;
             Debug.WriteLine($"CreateMultipartUpload succeeded, upload id: {uploadID}");
+
+            fileUploadItem.UploadId = uploadID;
+            _dbService.Upsert("FileUploads", fileUploadItem);
 
             // 2. 计算分片信息
             var fileInfo = new FileInfo(localFileName);
@@ -198,6 +229,9 @@ public class TosClientHelper
             };
             var completeMultipartUploadOutput = _client.CompleteMultipartUpload(completeMultipartUploadInput);
             Debug.WriteLine($"CompleteMultipartUpload succeeded, request id: {completeMultipartUploadOutput.RequestID}");
+
+            fileUploadItem.Status = UploadStatus.UploadSuccess.ToString();
+            _dbService.Upsert("FileUploads", fileUploadItem);
         }
         catch (TosServerException ex)
         {
@@ -292,16 +326,27 @@ public class TosClientHelper
     /// <param name="partSize">分片大小</param>
     public void ResumableUpload(string objectKey, string uploadID, string localFileName, long partSize = 20 * 1024 * 1024, UploadProgressCallback? progressCallback = null)
     {
-        var existingParts = ListUploadedParts(objectKey, uploadID);
-        if (existingParts == null)
+        var fileUploadItem = new FileUploadItem
         {
-            Debug.WriteLine("Failed to get existing parts, starting new upload");
-            UploadLargeFile(localFileName, objectKey, partSize, progressCallback);
-            return;
-        }
-
+            Id = objectKey,
+            FilePath = localFileName,
+            ObjectKey = objectKey,
+            UploadId = uploadID,
+            Status = UploadStatus.Uploading.ToString()
+        };
+        
+        _dbService.Upsert("FileUploads", fileUploadItem);
+        
         try
         {
+            var existingParts = ListUploadedParts(objectKey, uploadID);
+            if (existingParts == null)
+            {
+                Debug.WriteLine("Failed to get existing parts, starting new upload");
+                UploadLargeFile(localFileName, objectKey, partSize, progressCallback);
+                return;
+            }
+
             var fileInfo = new FileInfo(localFileName);
             var fileSize = fileInfo.Length;
             var partCount = (int)Math.Ceiling((double)fileSize / partSize);
@@ -362,6 +407,9 @@ public class TosClientHelper
             };
             var completeMultipartUploadOutput = _client.CompleteMultipartUpload(completeMultipartUploadInput);
             Debug.WriteLine($"CompleteMultipartUpload succeeded, request id: {completeMultipartUploadOutput.RequestID}");
+
+            fileUploadItem.Status = UploadStatus.UploadSuccess.ToString();
+            _dbService.Upsert("FileUploads", fileUploadItem);
         }
         catch (Exception ex)
         {

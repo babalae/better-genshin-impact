@@ -2,13 +2,15 @@
 
 public class FileUploadItem
 {
+    // 与 ObjectKey 相同
+    public string? Id { get; set; }
     // 文件路径
     public string? FilePath { get; set; }
     
-    // 文件名
+    // 上传 ObjectKey
     public string? ObjectKey { get; set; }
     
-    // 上传ID+
+    // 上传ID
     public string? UploadId { get; set; }
     
     // 上传状态
