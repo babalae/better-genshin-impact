@@ -110,9 +110,20 @@
                                 <StackPanel Orientation="Horizontal">
                                     <ui:Button x:Name="UploadButton"
                                              Command="{Binding UploadCommand}"
-                                             Content="上传"
-                                             Icon="{ui:SymbolIcon CloudArrowUp24}"
-                                             Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                             Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Setter Property="Content" Value="上传" />
+                                                <Setter Property="Icon" Value="{ui:SymbolIcon CloudArrowUp24}" />
+                                                <Setter Property="IsEnabled" Value="True" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsUploadSuccess}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                    </ui:Button>
                                     
                                     <ui:Button Command="{Binding StopUploadCommand}"
                                              Content="停止"
@@ -143,13 +154,6 @@
                                                             </Setter.Value>
                                                         </Setter>
                                                     </DataTrigger>
-                                                    <MultiDataTrigger>
-                                                        <MultiDataTrigger.Conditions>
-                                                            <Condition Binding="{Binding IsUploadSuccess}" Value="False" />
-                                                            <Condition Binding="{Binding UploadProgress}" Value="0" />
-                                                        </MultiDataTrigger.Conditions>
-                                                        <Setter Property="Text" Value="" />
-                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </TextBlock.Style>

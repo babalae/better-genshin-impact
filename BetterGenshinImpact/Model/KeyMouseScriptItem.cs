@@ -14,6 +14,9 @@ using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using System.Windows;
 using Newtonsoft.Json;
+using LiteDB;
+using BetterGenshinImpact.Model.TosUpload;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Model;
 
@@ -73,19 +76,75 @@ public partial class KeyMouseScriptItem : ObservableObject
         return $"{bytesPerSecond:F0} B/s";
     }
 
+    private string GetRemotePath(string localFilePath)
+    {
+        var dirName = new DirectoryInfo(Path).Name;
+        var userName = TaskContext.Instance().Config.CommonConfig.UserName;
+        var uid = TaskContext.Instance().Config.CommonConfig.Uid;
+        
+        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(uid))
+        {
+            throw new InvalidOperationException("用户名或UID未设置");
+        }
+
+        var relativePath = localFilePath.Replace(_scriptPath, "").TrimStart('\\');
+        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
+        return remotePath.Replace(@"\", "/");
+    }
+
+    public void InitializeUploadStatus()
+    {
+        try
+        {
+            var collection = DbLiteService.Instance.UserDb.GetCollection<FileUploadItem>("FileUploads");
+            var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
+            
+            // 检查是否所有文件都已上传成功
+            var allFilesUploaded = true;
+            foreach (var file in files)
+            {
+                try
+                {
+                    var remotePath = GetRemotePath(file);
+                    var fileUploadItem = collection.FindById(remotePath);
+                    
+                    if (fileUploadItem == null || fileUploadItem.Status != UploadStatus.UploadSuccess.ToString())
+                    {
+                        allFilesUploaded = false;
+                        break;
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    IsUploadSuccess = false;
+                    return;
+                }
+            }
+            
+            IsUploadSuccess = allFilesUploaded;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "检查上传状态出错");
+            IsUploadSuccess = false;
+        }
+    }
+
     [RelayCommand]
     private async Task Upload()
     {
-        
         if (string.IsNullOrEmpty(Path) || !Directory.Exists(Path))
         {
             await MessageBox.ErrorAsync($"文件夹不存在:{Path}");
             return;
         }
 
-        var userName = TaskContext.Instance().Config.CommonConfig.UserName;
-        var uid = TaskContext.Instance().Config.CommonConfig.Uid;
-        if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(uid))
+        try
+        {
+            // 提前验证用户信息，避免开始上传后才发现问题
+            _ = GetRemotePath(Path);
+        }
+        catch (InvalidOperationException)
         {
             await MessageBox.ErrorAsync("请先设置用户名和UID");
             return;
@@ -98,7 +157,7 @@ public partial class KeyMouseScriptItem : ObservableObject
             await MessageBox.ErrorAsync("上传前文件校验失败，联系管理员");
             return;
         }
-        
+
         try
         {
             _uploadCts = new CancellationTokenSource();
@@ -108,9 +167,6 @@ public partial class KeyMouseScriptItem : ObservableObject
             
             var dirName = new DirectoryInfo(Path).Name;
             _logger.LogDebug($"{dirName} 开始上传...");
-            
-            // var userName = TaskContext.Instance().Config.CommonConfig.UserName;
-            // var uid = TaskContext.Instance().Config.CommonConfig.Uid;
             
             await Task.Run(() =>
             {
@@ -134,11 +190,9 @@ public partial class KeyMouseScriptItem : ObservableObject
                     foreach (var file in files)
                     {
                         _uploadCts.Token.ThrowIfCancellationRequested();
-
-                        var relativePath = file.Replace(_scriptPath, "").TrimStart('\\');
+                        var remotePath = GetRemotePath(file);
+                        
                         var needUploadFileName = System.IO.Path.GetFileName(file);
-                        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
-                        remotePath = remotePath.Replace(@"\", "/");
                         var fileSize = new FileInfo(file).Length;
 
                         if (needUploadFileName == "video.mkv" || needUploadFileName == "video.mp4")
@@ -178,6 +232,9 @@ public partial class KeyMouseScriptItem : ObservableObject
                     
                     UploadProgress = 100;
                     UploadSpeed = string.Empty; // 清空速度显示
+                    
+                    // 上传完成后，不需要额外的文件夹状态更新
+                    // FileUploadItem 的状态已经在 TosClientHelper 中更新
                     IsUploadSuccess = true;
                     _logger.LogDebug($"{dirName} 上传完成");
                 }

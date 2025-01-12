@@ -94,6 +94,15 @@ public class TosClientHelper
         {
             objectKey ??= Path.GetFileName(localFileName);
             
+            // 检查是否已经上传成功
+            // var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
+            // var existingItem = collection.FindById(objectKey);
+            // if (existingItem?.Status == UploadStatus.UploadSuccess.ToString())
+            // {
+            //     Debug.WriteLine($"File {objectKey} already uploaded successfully");
+            //     return;
+            // }
+            
             var fileUploadItem = new FileUploadItem
             {
                 Id = objectKey,
@@ -101,7 +110,7 @@ public class TosClientHelper
                 ObjectKey = objectKey,
                 Status = UploadStatus.Uploading.ToString()
             };
-        
+            
             _dbService.Upsert("FileUploads", fileUploadItem);
 
 
@@ -152,6 +161,17 @@ public class TosClientHelper
         }
 
         objectKey ??= Path.GetFileName(localFileName);
+        
+        // 检查是否已经上传成功
+        // var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
+        // var existingItem = collection.FindById(objectKey);
+        // if (existingItem?.Status == UploadStatus.UploadSuccess.ToString())
+        // {
+        //     Debug.WriteLine($"File {objectKey} already uploaded successfully");
+        //     progressCallback?.Invoke(100, 100, 100);
+        //     return;
+        // }
+
         string uploadID = null;
 
         var fileUploadItem = new FileUploadItem
@@ -326,6 +346,16 @@ public class TosClientHelper
     /// <param name="partSize">分片大小</param>
     public void ResumableUpload(string objectKey, string uploadID, string localFileName, long partSize = 20 * 1024 * 1024, UploadProgressCallback? progressCallback = null)
     {
+        // 检查是否已经上传成功
+        // var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
+        // var existingItem = collection.FindById(objectKey);
+        // if (existingItem?.Status == UploadStatus.UploadSuccess.ToString())
+        // {
+        //     Debug.WriteLine($"File {objectKey} already uploaded successfully");
+        //     progressCallback?.Invoke(100, 100, 100);
+        //     return;
+        // }
+
         var fileUploadItem = new FileUploadItem
         {
             Id = objectKey,

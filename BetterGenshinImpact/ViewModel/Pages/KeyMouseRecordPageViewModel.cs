@@ -80,13 +80,15 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             else
             {
                 // 如果是新项目，创建新的实例
-                updatedItems.Add(new KeyMouseScriptItem
+               var km = new KeyMouseScriptItem
                 {
                     Name = d.Name,
                     Path = d.FullName,
                     CreateTime = d.CreationTime,
                     CreateTimeStr = d.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
-                });
+                };
+                km.InitializeUploadStatus();
+                updatedItems.Add(km);
             }
         }
 
