@@ -30,21 +30,54 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TextBlock Grid.Row="0"
-                      Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="键鼠录制回放功能" />
-        <ui:TextBlock Grid.Row="1"
-                      Margin="0,0,0,8"
-                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      TextWrapping="Wrap">
-            建议在游戏内使用快捷键进行录制，
-        </ui:TextBlock>
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            
+            <ui:TextBlock Grid.Column="0"
+                          FontTypography="BodyStrong"
+                          Text="键鼠录制回放功能" />
+                  
+            <ui:TextBlock Grid.Column="1"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                          Text="建议在游戏内使用快捷键进行录制" />
+        </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal">
+        <!-- 用户信息配置 -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
+            <ui:TextBlock Grid.Column="0"
+                          VerticalAlignment="Center"
+                          Text="用户名：" />
+            <ui:TextBox Grid.Column="1"
+                        PlaceholderText="请输入用户名"
+                        Text="{Binding Config.CommonConfig.UserName, Mode=TwoWay}" />
+                        
+            <ui:TextBlock Grid.Column="3"
+                          VerticalAlignment="Center"
+                          Text="UID：" />
+            <ui:TextBox Grid.Column="4"
+                        PlaceholderText="请输入UID"
+                        Text="{Binding Config.CommonConfig.Uid, Mode=TwoWay}" />
+        </Grid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal">
             <ui:Button Command="{Binding OpenScriptFolderCommand}"
                        Content="打开目录"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
@@ -76,11 +109,11 @@
                 IsChecked="{Binding Config.RecordConfig.PaimonSwitchEnabled, Mode=TwoWay}" />
         </StackPanel>
 
-        <Separator Grid.Row="3"
+        <Separator Grid.Row="4"
                    Height="10"
                    Opacity="0" />
 
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="180" />
@@ -91,7 +124,7 @@
             <Grid x:Name="Col2" Grid.Column="1" />
             <Grid x:Name="Col3" Grid.Column="2" />
         </Grid>
-        <ui:ListView Grid.Row="5"
+        <ui:ListView Grid.Row="6"
                      HorizontalAlignment="Stretch"
                      VerticalAlignment="Stretch"
                      ItemsSource="{Binding ScriptItems}"
@@ -133,8 +166,22 @@
                                     <ui:Button Command="{Binding DeleteUploadedFilesCommand}"
                                              Content="撤销上传"
                                              Icon="{ui:SymbolIcon Delete24}"
-                                             Margin="5,0,0,0"
-                                             IsEnabled="{Binding IsUploading, Converter={StaticResource InverseBooleanConverter}}" />
+                                             Margin="5,0,0,0">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Style.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsUploading}" Value="False" />
+                                                            <Condition Binding="{Binding IsUploadSuccess}" Value="False" />
+                                                            <Condition Binding="{Binding IsPartiallyUploaded}" Value="False" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </MultiDataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                    </ui:Button>
                                     
                                     <ui:TextBlock Margin="5,0,0,0"
                                                VerticalAlignment="Center">

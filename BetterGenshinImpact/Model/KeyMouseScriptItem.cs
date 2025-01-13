@@ -63,6 +63,9 @@ public partial class KeyMouseScriptItem : ObservableObject
     private DateTime _lastProgressUpdateTime = DateTime.Now;
     private long _lastUploadedSize = 0;
 
+    [ObservableProperty]
+    private bool _isPartiallyUploaded;
+
     private string FormatSpeed(double bytesPerSecond)
     {
         if (bytesPerSecond >= 1024 * 1024) // MB/s
@@ -99,8 +102,9 @@ public partial class KeyMouseScriptItem : ObservableObject
             var collection = DbLiteService.Instance.UserDb.GetCollection<FileUploadItem>("FileUploads");
             var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
             
-            // 检查是否所有文件都已上传成功
+            var hasUploadedFiles = false;
             var allFilesUploaded = true;
+            
             foreach (var file in files)
             {
                 try
@@ -108,25 +112,31 @@ public partial class KeyMouseScriptItem : ObservableObject
                     var remotePath = GetRemotePath(file);
                     var fileUploadItem = collection.FindById(remotePath);
                     
-                    if (fileUploadItem == null || fileUploadItem.Status != UploadStatus.UploadSuccess.ToString())
+                    if (fileUploadItem?.Status == UploadStatus.UploadSuccess.ToString())
+                    {
+                        hasUploadedFiles = true;
+                    }
+                    else
                     {
                         allFilesUploaded = false;
-                        break;
                     }
                 }
                 catch (InvalidOperationException)
                 {
                     IsUploadSuccess = false;
+                    IsPartiallyUploaded = false;
                     return;
                 }
             }
             
             IsUploadSuccess = allFilesUploaded;
+            IsPartiallyUploaded = !allFilesUploaded && hasUploadedFiles;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "检查上传状态出错");
             IsUploadSuccess = false;
+            IsPartiallyUploaded = false;
         }
     }
 
@@ -287,6 +297,18 @@ public partial class KeyMouseScriptItem : ObservableObject
     [RelayCommand]
     private async Task DeleteUploadedFiles()
     {
+        
+        try
+        {
+            // 提前验证用户信息，避免开始上传后才发现问题
+            _ = GetRemotePath(Path);
+        }
+        catch (InvalidOperationException)
+        {
+            await MessageBox.ErrorAsync("请先设置用户名和UID");
+            return;
+        }
+        
         try
         {
             var dirName = new DirectoryInfo(Path).Name;
