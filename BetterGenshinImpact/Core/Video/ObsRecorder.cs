@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.GameTask.Common;
+using MediaInfo;
 using Microsoft.Extensions.Logging;
 using OBSWebsocketDotNet;
 using OBSWebsocketDotNet.Communication;
@@ -206,14 +207,18 @@ public class ObsRecorder : IVideoRecorder
     {
         var jsonPath = Path.Combine(folderPath, $"systemInfo.json");
         // 计算视频文件大小
-        var fileInfo = new FileInfo(videoPath);
-        var fileSize = fileInfo.Length;
+        MediaInfo.MediaInfo mediaInfo = new MediaInfo.MediaInfo();
+        mediaInfo.Open(videoPath);
+
+        string durationString = mediaInfo.Get(StreamKind.General, 0, "Duration");
+
+        Console.WriteLine($"视频时长: {durationString}");
         // 读取json
         var json = File.ReadAllText(jsonPath);
         var info = JsonSerializer.Deserialize<KeyMouseScriptInfo>(json, KeyMouseRecorderJsonLine.JsonOptions);
         if (info != null)
         {
-            info.VideoSize = fileSize.ToString();
+            info.VideoSize = durationString;
             // 写入json
             File.WriteAllText(jsonPath, JsonSerializer.Serialize(info, KeyMouseRecorderJsonLine.JsonOptions));
         }

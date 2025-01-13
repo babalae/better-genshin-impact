@@ -10,7 +10,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
-		<AssemblyVersion>10.39.1</AssemblyVersion>
+		<AssemblyVersion>10.39.2</AssemblyVersion>
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
@@ -43,6 +43,7 @@
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="LiteDB" Version="5.0.21" />
+		<PackageReference Include="MediaInfo.Wrapper.Core" Version="21.9.3" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />

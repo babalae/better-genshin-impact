@@ -66,16 +66,27 @@ public partial class KeyMouseScriptItem : ObservableObject
     [ObservableProperty]
     private bool _isPartiallyUploaded;
 
+    [ObservableProperty]
+    private string _selectedTask = "";
+
+    public List<string> TaskOptions { get; } =
+    [
+        "", "任务一", "任务二", "任务三", "任务四", "任务五",
+        "任务六", "任务七", "任务八", "任务九"
+    ];
+
     private string FormatSpeed(double bytesPerSecond)
     {
         if (bytesPerSecond >= 1024 * 1024) // MB/s
         {
             return $"{bytesPerSecond / (1024 * 1024):F1} MB/s";
         }
+
         if (bytesPerSecond >= 1024) // KB/s
         {
             return $"{bytesPerSecond / 1024:F1} KB/s";
         }
+
         return $"{bytesPerSecond:F0} B/s";
     }
 
@@ -84,14 +95,19 @@ public partial class KeyMouseScriptItem : ObservableObject
         var dirName = new DirectoryInfo(Path).Name;
         var userName = TaskContext.Instance().Config.CommonConfig.UserName;
         var uid = TaskContext.Instance().Config.CommonConfig.Uid;
-        
+
         if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(uid))
         {
-            throw new InvalidOperationException("用户名或UID未设置");
+            throw new InvalidOperationException("请先设置用户名和UID");
+        }
+
+        if (string.IsNullOrEmpty(SelectedTask))
+        {
+            throw new InvalidOperationException("请选择本条记录的任务");
         }
 
         var relativePath = localFilePath.Replace(_scriptPath, "").TrimStart('\\');
-        var remotePath = $"{dirName[..10]}_{userName}_{uid}/{relativePath}";
+        var remotePath = $"{dirName[..10]}_{userName}_{uid}_{SelectedTask}/{relativePath}";
         return remotePath.Replace(@"\", "/");
     }
 
@@ -101,17 +117,17 @@ public partial class KeyMouseScriptItem : ObservableObject
         {
             var collection = DbLiteService.Instance.UserDb.GetCollection<FileUploadItem>("FileUploads");
             var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
-            
+
             var hasUploadedFiles = false;
             var allFilesUploaded = true;
-            
+
             foreach (var file in files)
             {
                 try
                 {
                     var remotePath = GetRemotePath(file);
                     var fileUploadItem = collection.FindById(remotePath);
-                    
+
                     if (fileUploadItem?.Status == UploadStatus.UploadSuccess.ToString())
                     {
                         hasUploadedFiles = true;
@@ -128,7 +144,7 @@ public partial class KeyMouseScriptItem : ObservableObject
                     return;
                 }
             }
-            
+
             IsUploadSuccess = allFilesUploaded;
             IsPartiallyUploaded = !allFilesUploaded && hasUploadedFiles;
         }
@@ -174,23 +190,23 @@ public partial class KeyMouseScriptItem : ObservableObject
             IsUploading = true;
             IsUploadSuccess = false;
             UploadProgress = 0;
-            
+
             var dirName = new DirectoryInfo(Path).Name;
             _logger.LogDebug($"{dirName} 开始上传...");
-            
+
             await Task.Run(() =>
             {
                 try
                 {
                     var tosClient = new TosClientHelper();
                     var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
-                    
+
                     // 计算所有文件的总大小
                     long totalSize = 0;
                     long uploadedSize = 0;
                     _lastUploadedSize = 0;
                     _lastProgressUpdateTime = DateTime.Now;
-                    
+
                     foreach (var file in files)
                     {
                         _uploadCts.Token.ThrowIfCancellationRequested();
@@ -201,19 +217,19 @@ public partial class KeyMouseScriptItem : ObservableObject
                     {
                         _uploadCts.Token.ThrowIfCancellationRequested();
                         var remotePath = GetRemotePath(file);
-                        
+
                         var needUploadFileName = System.IO.Path.GetFileName(file);
                         var fileSize = new FileInfo(file).Length;
 
                         if (needUploadFileName == "video.mkv" || needUploadFileName == "video.mp4")
                         {
-                            tosClient.UploadLargeFile(file, remotePath, 20 * 1024 * 1024, (bytes, totalBytes, percentage) => 
+                            tosClient.UploadLargeFile(file, remotePath, 20 * 1024 * 1024, (bytes, totalBytes, percentage) =>
                             {
                                 _uploadCts.Token.ThrowIfCancellationRequested();
                                 var currentFileProgress = bytes;
                                 var overallProgress = ((double)(uploadedSize + currentFileProgress) / totalSize) * 100;
                                 UploadProgress = Math.Min(overallProgress, 99.9);
-                                
+
                                 // 计算速度
                                 var now = DateTime.Now;
                                 var timeDiff = (now - _lastProgressUpdateTime).TotalSeconds;
@@ -222,11 +238,11 @@ public partial class KeyMouseScriptItem : ObservableObject
                                     var sizeDiff = uploadedSize + currentFileProgress - _lastUploadedSize;
                                     var speed = sizeDiff / timeDiff;
                                     UploadSpeed = FormatSpeed(speed);
-                                    
+
                                     _lastProgressUpdateTime = now;
                                     _lastUploadedSize = uploadedSize + currentFileProgress;
                                 }
-                                
+
                                 _logger.LogDebug($"上传进度: {overallProgress:F}%");
                             });
                         }
@@ -234,15 +250,15 @@ public partial class KeyMouseScriptItem : ObservableObject
                         {
                             tosClient.UploadFile(file, remotePath);
                         }
-                        
+
                         uploadedSize += fileSize;
                         var progress = ((double)uploadedSize / totalSize) * 100;
                         UploadProgress = Math.Min(progress, 99.9);
                     }
-                    
+
                     UploadProgress = 100;
                     UploadSpeed = string.Empty; // 清空速度显示
-                    
+
                     // 上传完成后，不需要额外的文件夹状态更新
                     // FileUploadItem 的状态已经在 TosClientHelper 中更新
                     IsUploadSuccess = true;
@@ -274,6 +290,7 @@ public partial class KeyMouseScriptItem : ObservableObject
             {
                 UploadProgress = 0;
             }
+
             _uploadCts?.Dispose();
             _uploadCts = null;
         }
@@ -290,6 +307,7 @@ public partial class KeyMouseScriptItem : ObservableObject
             {
                 break;
             }
+
             await Task.Delay(100);
         }
     }
@@ -297,7 +315,6 @@ public partial class KeyMouseScriptItem : ObservableObject
     [RelayCommand]
     private async Task DeleteUploadedFiles()
     {
-        
         try
         {
             // 提前验证用户信息，避免开始上传后才发现问题
@@ -308,7 +325,7 @@ public partial class KeyMouseScriptItem : ObservableObject
             await MessageBox.ErrorAsync("请先设置用户名和UID");
             return;
         }
-        
+
         try
         {
             var dirName = new DirectoryInfo(Path).Name;
@@ -323,9 +340,9 @@ public partial class KeyMouseScriptItem : ObservableObject
             IsDeleting = true;
             IsDeleteSuccess = false;
             DeleteProgress = 0;
-            
+
             _logger.LogDebug($"{dirName} 开始删除...");
-            
+
             await Task.Run(() =>
             {
                 try
@@ -333,7 +350,7 @@ public partial class KeyMouseScriptItem : ObservableObject
                     var tosClient = new TosClientHelper();
                     var files = Directory.GetFiles(Path, "*.*", SearchOption.AllDirectories);
                     var collection = DbLiteService.Instance.UserDb.GetCollection<FileUploadItem>("FileUploads");
-                    
+
                     foreach (var file in files)
                     {
                         _deleteCts.Token.ThrowIfCancellationRequested();
@@ -341,10 +358,10 @@ public partial class KeyMouseScriptItem : ObservableObject
                         try
                         {
                             var remotePath = GetRemotePath(file);
-                            
+
                             // 删除对象存储中的文件
                             tosClient.DeleteObject(remotePath);
-                            
+
                             // 删除数据库中的记录
                             collection.Delete(remotePath);
                         }
@@ -353,7 +370,7 @@ public partial class KeyMouseScriptItem : ObservableObject
                             _logger.LogError($"删除文件失败：{ex.Message}");
                         }
                     }
-                    
+
                     IsDeleteSuccess = true;
                     // 重置上传状态
                     IsUploadSuccess = false;
@@ -391,7 +408,7 @@ public partial class KeyMouseScriptItem : ObservableObject
     {
         _deleteCts?.Cancel();
     }
-    
+
     public bool VerifyFileHashes(string pcFolder, string hashFolder)
     {
         var hashFilePath = System.IO.Path.Combine(hashFolder, "hash.json");

@@ -75,6 +75,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
             if (existingItem != null)
             {
                 // 如果找到现有项目，保留其状态
+                existingItem.InitializeUploadStatus();
                 updatedItems.Add(existingItem);
             }
             else

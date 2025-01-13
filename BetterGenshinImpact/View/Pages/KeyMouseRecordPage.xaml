@@ -115,14 +115,16 @@
 
         <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="170" />
+                <ColumnDefinition Width="120" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="20" />
             </Grid.ColumnDefinitions>
             <Grid x:Name="Col1" Grid.Column="0" />
             <Grid x:Name="Col2" Grid.Column="1" />
             <Grid x:Name="Col3" Grid.Column="2" />
+            <Grid x:Name="Col4" Grid.Column="3" />
         </Grid>
         <ui:ListView Grid.Row="6"
                      HorizontalAlignment="Stretch"
@@ -137,7 +139,39 @@
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding CreateTimeStr}"
                                     Header="创建时间" />
-                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="上传操作">
+                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="任务">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <ComboBox ItemsSource="{Binding TaskOptions}"
+                                          SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                                          Width="100">
+                                    <ComboBox.Resources>
+                                        <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsUploadSuccess}" Value="True" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsPartiallyUploaded}" Value="True" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                </MultiDataTrigger>
+                                                <DataTrigger Binding="{Binding IsUploading}" Value="True">
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.Resources>
+                                </ComboBox>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" 
+                                    Header="上传操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
