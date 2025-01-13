@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Upload;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
@@ -74,6 +75,22 @@ public partial class KeyMouseScriptItem : ObservableObject
         "", "任务一", "任务二", "任务三", "任务四", "任务五",
         "任务六", "任务七", "任务八", "任务九"
     ];
+    
+    public bool CanDelete
+    {
+        get
+        {
+            if (IsUploading)
+            {
+                return false;
+            }
+            if (IsUploadSuccess || IsPartiallyUploaded)
+            {
+                return true;
+            }
+            return false;
+        }
+    }
 
     private string FormatSpeed(double bytesPerSecond)
     {
@@ -125,9 +142,27 @@ public partial class KeyMouseScriptItem : ObservableObject
             {
                 try
                 {
-                    var remotePath = GetRemotePath(file);
-                    var fileUploadItem = collection.FindById(remotePath);
+                    // var remotePath = GetRemotePath(file);
 
+                    var fileUploadItem = collection.FindById(file);
+                    // var fileUploadItem = collection.FindOne(Query.EQ("FilePath", file));
+                    
+                    if (fileUploadItem == null)
+                    {
+                        allFilesUploaded = false;
+                        continue;
+                    }
+                    
+                    // 取出 ObjectKey 中的 SelectedTask
+                    // 匹配 "任务一" 到 "任务九" 的正则表达式
+                    string pattern = @"任务[一二三四五六七八九]";
+                    string text = "这是任务一的内容，任务二的内容...";
+                    Match match = Regex.Match(fileUploadItem.ObjectKey, pattern);
+                    if (match.Success)
+                    {
+                        SelectedTask = match.Value; // 例如: "任务一"
+                    }
+                    
                     if (fileUploadItem?.Status == UploadStatus.UploadSuccess.ToString())
                     {
                         hasUploadedFiles = true;
@@ -170,9 +205,9 @@ public partial class KeyMouseScriptItem : ObservableObject
             // 提前验证用户信息，避免开始上传后才发现问题
             _ = GetRemotePath(Path);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException e)
         {
-            await MessageBox.ErrorAsync("请先设置用户名和UID");
+            await MessageBox.ErrorAsync(e.Message);
             return;
         }
 
@@ -310,6 +345,8 @@ public partial class KeyMouseScriptItem : ObservableObject
 
             await Task.Delay(100);
         }
+        // 刷新上传状态
+        InitializeUploadStatus();
     }
 
     [RelayCommand]
@@ -320,9 +357,9 @@ public partial class KeyMouseScriptItem : ObservableObject
             // 提前验证用户信息，避免开始上传后才发现问题
             _ = GetRemotePath(Path);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException e)
         {
-            await MessageBox.ErrorAsync("请先设置用户名和UID");
+            await MessageBox.ErrorAsync(e.Message);
             return;
         }
 
@@ -363,7 +400,7 @@ public partial class KeyMouseScriptItem : ObservableObject
                             tosClient.DeleteObject(remotePath);
 
                             // 删除数据库中的记录
-                            collection.Delete(remotePath);
+                            collection.Delete(file);
                         }
                         catch (Exception ex)
                         {
@@ -375,6 +412,8 @@ public partial class KeyMouseScriptItem : ObservableObject
                     // 重置上传状态
                     IsUploadSuccess = false;
                     UploadProgress = 0;
+                    
+                    InitializeUploadStatus();
                     _logger.LogDebug($"{dirName} 删除完成");
                 }
                 catch (Exception ex)

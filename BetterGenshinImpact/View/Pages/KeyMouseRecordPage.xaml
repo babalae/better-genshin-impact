@@ -39,11 +39,11 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            
+
             <ui:TextBlock Grid.Column="0"
                           FontTypography="BodyStrong"
                           Text="键鼠录制回放功能" />
-                  
+
             <ui:TextBlock Grid.Column="1"
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"
@@ -61,14 +61,14 @@
                 <ColumnDefinition Width="200" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            
+
             <ui:TextBlock Grid.Column="0"
                           VerticalAlignment="Center"
                           Text="用户名：" />
             <ui:TextBox Grid.Column="1"
                         PlaceholderText="请输入用户名"
                         Text="{Binding Config.CommonConfig.UserName, Mode=TwoWay}" />
-                        
+
             <ui:TextBlock Grid.Column="3"
                           VerticalAlignment="Center"
                           Text="UID：" />
@@ -104,7 +104,7 @@
                        Icon="{ui:SymbolIcon Stop24}"
                        IsEnabled="{Binding IsRecording}" />
             <Separator Width="20" Opacity="0" />
-            <ui:ToggleSwitch 
+            <ui:ToggleSwitch
                 Content="主界面切换识别"
                 IsChecked="{Binding Config.RecordConfig.PaimonSwitchEnabled, Mode=TwoWay}" />
         </StackPanel>
@@ -170,14 +170,14 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" 
+                    <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
                                     Header="上传操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:Button x:Name="UploadButton"
-                                             Command="{Binding UploadCommand}"
-                                             Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                               Command="{Binding UploadCommand}"
+                                               Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                                         <ui:Button.Style>
                                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                                 <Setter Property="Content" Value="上传" />
@@ -191,19 +191,39 @@
                                             </Style>
                                         </ui:Button.Style>
                                     </ui:Button>
-                                    
+
                                     <ui:Button Command="{Binding StopUploadCommand}"
-                                             Content="停止"
-                                             Icon="{ui:SymbolIcon Stop24}"
-                                             Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    
+                                               Content="停止"
+                                               Icon="{ui:SymbolIcon Stop24}"
+                                               Visibility="{Binding IsUploading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
                                     <ui:Button Command="{Binding DeleteUploadedFilesCommand}"
-                                             Content="撤销上传"
-                                             Icon="{ui:SymbolIcon Delete24}"
-                                             Margin="5,0,0,0">
+                                               Content="撤销上传"
+                                               Icon="{ui:SymbolIcon Delete24}"
+                                               Margin="5,0,0,0">
                                         <ui:Button.Style>
                                             <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                                 <Style.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsUploading}" Value="True" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </MultiDataTrigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsUploading}" Value="False" />
+                                                            <Condition Binding="{Binding IsUploadSuccess}" Value="True" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="IsEnabled" Value="True" />
+                                                    </MultiDataTrigger>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding IsUploading}" Value="False" />
+                                                            <Condition Binding="{Binding IsPartiallyUploaded}" Value="True" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="IsEnabled" Value="True" />
+                                                    </MultiDataTrigger>
                                                     <MultiDataTrigger>
                                                         <MultiDataTrigger.Conditions>
                                                             <Condition Binding="{Binding IsUploading}" Value="False" />
@@ -216,9 +236,9 @@
                                             </Style>
                                         </ui:Button.Style>
                                     </ui:Button>
-                                    
+
                                     <ui:TextBlock Margin="5,0,0,0"
-                                               VerticalAlignment="Center">
+                                                  VerticalAlignment="Center">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Style.Triggers>

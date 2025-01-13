@@ -105,7 +105,7 @@ public class TosClientHelper
 
             var fileUploadItem = new FileUploadItem
             {
-                Id = objectKey,
+                Id = localFileName,
                 FilePath = localFileName,
                 ObjectKey = objectKey,
                 Status = UploadStatus.Uploading.ToString()
@@ -164,7 +164,7 @@ public class TosClientHelper
 
         var fileUploadItem = new FileUploadItem
         {
-            Id = objectKey,
+            Id = localFileName,
             FilePath = localFileName,
             ObjectKey = objectKey,
             Status = UploadStatus.Uploading.ToString()
@@ -172,7 +172,7 @@ public class TosClientHelper
 
         // 检查是否有未完成的上传
         var collection = _dbService.UserDb.GetCollection<FileUploadItem>("FileUploads");
-        var existingItem = collection.FindById(objectKey);
+        var existingItem = collection.FindById(localFileName);
         if (existingItem?.UploadId != null)
         {
             uploadID = existingItem.UploadId;
@@ -382,7 +382,7 @@ public class TosClientHelper
 
         var fileUploadItem = new FileUploadItem
         {
-            Id = objectKey,
+            Id = localFileName,
             FilePath = localFileName,
             ObjectKey = objectKey,
             UploadId = uploadID,
