@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Helpers.Device;
 
+[Serializable]
 public class PCInfo
 {
     public CPU[] CPU { get; set; }

@@ -50,7 +50,7 @@ public class StartEndSingleton : Singleton<StartEndSingleton>
         {
             try
             {
-                var json = GetPCInfo.GetJson();
+                var json = AllPcInfo.GetJson();
                 // 保存
                 File.WriteAllText(Global.Absolute(@$"User/pc.json"), json);
             }
