@@ -20,6 +20,8 @@ using OpenCvSharp;
 using Vanara;
 using Vanara.PInvoke;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -220,6 +222,8 @@ public class AutoFightTask : ISoloTask
         }*/
         var fightEndFlag = false;
         string lastFighttName = "";
+        //统计切换人打架次数
+        var countFight = 0;
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -239,7 +243,11 @@ public class AutoFightTask : ISoloTask
                         }
 
                         command.Execute(combatScenes);
-
+                        //统计战斗人次
+                        if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
+                        {
+                            countFight++;
+                        }
 
                         lastFighttName = command.Name;
                         if (!fightEndFlag && _taskParam is { FightFinishDetectEnabled: true })
@@ -332,8 +340,8 @@ public class AutoFightTask : ISoloTask
             if (kazuha != null)
             {
                 var time = DateTime.UtcNow - kazuha.LastSkillTime;
-                //当万叶最后一个出招，并且cd大于3时，此时不再触发万叶拾取
-                if (!(lastFighttName == "枫原万叶" && time.TotalSeconds > 3))
+                //当万叶cd大于3时或战斗人次少于2时（通常无怪物情况下），此时不再触发万叶拾取，
+                if (!(countFight < 2 || lastFighttName == "枫原万叶" && time.TotalSeconds > 3))
                 {
                     Logger.LogInformation("使用枫原万叶长E拾取掉落物");
                     await Delay(300, ct);
@@ -353,7 +361,7 @@ public class AutoFightTask : ISoloTask
                 }
                 else
                 {
-                    Logger.LogInformation("最后一次由万叶出招，不再重复拾取！");
+                    Logger.LogInformation((countFight < 2 ? "首个人出招就结束战斗，应该无怪物" : "距最近一次万叶出招，时间过短") + "，跳过此次万叶拾取！");
                 }
             }
         }
@@ -367,12 +375,7 @@ public class AutoFightTask : ISoloTask
 
     private void LogScreenResolution()
     {
-        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
-        {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动战斗功能 !", gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率不是 16:9");
-        }
+        AssertUtils.CheckGameResolution("自动战斗");
     }
 
     static bool AreDifferencesWithinBounds((int, int, int) a, (int, int, int) b, (int, int, int) c)
@@ -423,9 +426,9 @@ public class AutoFightTask : ISoloTask
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(450, _ct);
         var ra = CaptureToRectArea();
-        var b3 = ra.SrcMat.At<Vec3b>(50, 790);
-
-        if (AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance))
+        var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
+        var whiteTile = ra.SrcMat.At<Vec3b>(50, 772); //白块
+        if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
         {
             Logger.LogInformation("识别到战斗结束");
             Simulation.SendInput.SimulateAction(GIActions.Drop);
@@ -434,12 +437,38 @@ public class AutoFightTask : ISoloTask
 
         Simulation.SendInput.SimulateAction(GIActions.Drop);
         Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
+        
+        if (!Bv.IsInMainUi(ra))
+        {
+            // 如果不在主界面，说明异常，直接结束战斗继续下一步（路径追踪下一步会进入异常处理）
+            Logger.LogInformation("当前不在主界面，直接结束战斗！");
+            return true;
+        }
+        
         _lastFightFlagTime = DateTime.Now;
         return false;
 
         //  }
 
         return false;
+    }
+
+    bool IsYellow(int r, int g, int b)
+    {
+        //Logger.LogInformation($"IsYellow({r},{g},{b})");
+        // 黄色范围：R高，G高，B低
+        return (r >= 200 && r <= 255) &&
+               (g >= 200 && g <= 255) &&
+               (b >= 0 && b <= 100);
+    }
+
+    bool IsWhite(int r, int g, int b)
+    {
+        //Logger.LogInformation($"IsWhite({r},{g},{b})");
+        // 白色范围：R高，G高，B低
+        return (r >= 240 && r <= 255) &&
+               (g >= 240 && g <= 255) &&
+               (b >= 240 && b <= 255);
     }
 
     private bool HasFightFlagByYolo(ImageRegion imageRegion)

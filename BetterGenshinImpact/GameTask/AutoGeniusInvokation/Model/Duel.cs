@@ -57,11 +57,11 @@ public class Duel
 
     public void Run(CancellationToken ct)
     {
+        LogScreenResolution();
         try
         {
             AutoGeniusInvokationAssets.DestroyInstance();
 
-            LogScreenResolution();
             NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().Build()); // TODO 需要移动
             GeniusInvokationControl.GetInstance().Init(ct);
 
@@ -437,6 +437,7 @@ public class Duel
         if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
         {
             _logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动七圣召唤 !", gameScreenSize.Width, gameScreenSize.Height);
+            throw new System.Exception("游戏窗口分辨率不是 1920x1080");
         }
     }
 }

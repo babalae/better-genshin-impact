@@ -51,6 +51,7 @@ public class CombatScenes : IDisposable
     /// <param name="imageRegion">完整游戏画面的捕获截图</param>
     public CombatScenes InitializeTeam(ImageRegion imageRegion)
     {
+        AssertUtils.CheckGameResolution();
         // 优先取配置
         if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
         {
@@ -166,15 +167,15 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.51)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请确认您是否阅读了文档中的《快速上手》！");
             }
         }
         else
         {
-            if (result.TopClass.Confidence < 0.8)
+            if (result.TopClass.Confidence < 0.7)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence}，结果：{result.TopClass.Name.Name}");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请确认您是否阅读了文档中的《快速上手》！");
             }
         }
 

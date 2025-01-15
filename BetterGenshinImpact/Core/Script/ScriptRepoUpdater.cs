@@ -391,6 +391,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 else if (File.Exists(scriptPath))
                 {
+                    // 目标文件所在文件夹不存在时创建它
+                    Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                    
                     if (File.Exists(destPath))
                     {
                         File.Delete(destPath);

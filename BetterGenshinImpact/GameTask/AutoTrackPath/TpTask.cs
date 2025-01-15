@@ -20,6 +20,7 @@ using BetterGenshinImpact.GameTask.Common.Exceptions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common.Job;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
@@ -158,11 +159,19 @@ public class TpTask(CancellationToken ct)
         var ra1 = CaptureToRectArea();
         if (!Bv.IsInBigMapUi(ra1))
         {
-            while (!Bv.IsInMainUi(ra1))
+            // 不在主界面的情况下，先回到主界面
+            if (!Bv.IsInMainUi(ra1))
             {
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(1000, ct);
-                ra1 = CaptureToRectArea();
+                for (int i = 0; i < 5; i++)
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                    await Delay(1000, ct);
+                    ra1 = CaptureToRectArea();
+                    if (Bv.IsInMainUi(ra1))
+                    {
+                        break;
+                    }
+                }
             }
             Simulation.SendInput.SimulateAction(GIActions.OpenMap);
             await Delay(1000, ct);

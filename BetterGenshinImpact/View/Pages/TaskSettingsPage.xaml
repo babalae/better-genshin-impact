@@ -569,7 +569,7 @@
                                             MinWidth="120"
                                             Text="{Binding Config.AutoFightConfig.FinishDetectConfig.CheckEndDelay}" />
                             </Grid>
-                            <Grid Margin="16">
+                            <!--<Grid Margin="16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -618,7 +618,7 @@
                                             Grid.Column="1"
                                             MinWidth="120"
                                             Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance}" />
-                            </Grid>
+                            </Grid>-->
 
                         </StackPanel>
                     </ui:CardExpander>

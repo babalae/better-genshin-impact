@@ -14,18 +14,14 @@ public class BlessingOfTheWelkinMoonTask
 {
     public string Name => "自动点击空月祝福";
 
-    private DateTime _lastRunTime = DateTime.MinValue;
-
-    private bool _retry = false;
 
     public async Task Start(CancellationToken ct)
     {
         try
         {
-            // 4点分界线触发一次
-            if ((DateTime.Now.Hour == 4 && _lastRunTime.Date.Hour == 3) || _retry)
+            // 4点全程触发
+            if (DateTime.Now.Hour == 4)
             {
-                _retry = true;
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
                 {
@@ -49,8 +45,6 @@ public class BlessingOfTheWelkinMoonTask
                     TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                 }
             }
-
-            _lastRunTime = DateTime.Now;
         }
         catch (Exception e)
         {
