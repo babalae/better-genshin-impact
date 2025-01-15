@@ -63,7 +63,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
             }
             else
             {
-                Logger.LogError("切人失败,无法进行{Element}元素采集", elementalType.ToString());
+                Logger.LogError("切人失败,无法进行{Element}元素采集", elementalType.ToChinese());
             }
 
             break;
