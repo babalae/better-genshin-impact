@@ -426,13 +426,6 @@ public class AutoFightTask : ISoloTask
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(450, _ct);
         var ra = CaptureToRectArea();
-        if (!Bv.IsInMainUi(ra))
-        {
-            // 如果不在主界面，说明异常，直接结束战斗继续下一步（路径追踪下一步会进入异常处理）
-            Logger.LogInformation("当前不在主界面，直接结束战斗！");
-            return true;
-        }
-        
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 772); //白块
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
@@ -444,6 +437,14 @@ public class AutoFightTask : ISoloTask
 
         Simulation.SendInput.SimulateAction(GIActions.Drop);
         Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
+        
+        if (!Bv.IsInMainUi(ra))
+        {
+            // 如果不在主界面，说明异常，直接结束战斗继续下一步（路径追踪下一步会进入异常处理）
+            Logger.LogInformation("当前不在主界面，直接结束战斗！");
+            return true;
+        }
+        
         _lastFightFlagTime = DateTime.Now;
         return false;
 

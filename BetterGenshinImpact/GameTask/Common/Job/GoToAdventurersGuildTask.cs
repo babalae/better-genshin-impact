@@ -72,7 +72,7 @@ public class GoToAdventurersGuildTask
         if (res == TalkOptionRes.FoundAndClick)
         {
             Logger.LogInformation("▶ {Text}", "领取『每日委托』奖励！");
-            await Delay(200, ct);
+            await Delay(500, ct);
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
             await Bv.WaitUntilFound(ElementAssets.Instance.PaimonMenuRo, ct);
             await Delay(500, ct);

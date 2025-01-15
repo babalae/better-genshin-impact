@@ -63,7 +63,7 @@ public partial class ChooseTalkOptionTask
                 {
                     if (isOrange)
                     {
-                        region.DeriveCrop(optionRa.ToRect()).SrcMat.SaveImage(Global.Absolute($"log\\t{optionRa.Text}.png"));
+                        // region.DeriveCrop(optionRa.ToRect()).SrcMat.SaveImage(Global.Absolute($"log\\t{optionRa.Text}.png"));
                         if (!IsOrangeOption(region.DeriveCrop(optionRa.ToRect()).SrcMat))
                         {
                             return TalkOptionRes.FoundButNotOrange;
