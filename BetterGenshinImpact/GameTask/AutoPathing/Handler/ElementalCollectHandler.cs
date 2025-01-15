@@ -117,6 +117,7 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("琳妮特", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("温迪", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("琴", ElementalType.Anemo, false, true),
+        new ElementalCollectAvatar("早柚", ElementalType.Anemo, false, true),
     ];
 
     public static ElementalCollectAvatar? Get(string name, ElementalType type) => Lists.FirstOrDefault(x => x.Name == name && x.ElementalType == type);
