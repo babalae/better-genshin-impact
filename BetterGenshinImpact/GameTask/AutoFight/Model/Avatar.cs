@@ -124,7 +124,7 @@ public class Avatar
             Simulation.SendInput.SimulateAction(GIActions.OpenMap);
             // tp 到七天神像复活
             var tpTask = new TpTask(Ct);
-            tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true).Wait(Ct);
+            tpTask.TpToStatueOfTheSeven().Wait(Ct);
 
             throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }

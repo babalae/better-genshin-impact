@@ -35,23 +35,31 @@ public class TpTask(CancellationToken ct)
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
 
-    public static double ReviveStatueOfTheSevenPointX = 2296.4;
-    public static double ReviveStatueOfTheSevenPointY = -824.4;
+    private static double ReviveStatueOfTheSevenPointX = 2296.4;
+    private static double ReviveStatueOfTheSevenPointY = -824.4;
 
-    private const int zoomOutButtonY = 654; //  y-coordinate for zoom-out button
-    private const int zoomInButtonY = 428;  //  y-coordinate for zoom-in button
-    private const int zoomButtonX = 49; // x-coordinate for zoom button
-    private const int zoomStartY = 453; // y-coordinate for zoom start
-    private const int zoomEndY = 628; // y-coordinate for zoom end
+    private static int zoomOutButtonY = 654; //  y-coordinate for zoom-out button
+    private static int zoomInButtonY = 428;  //  y-coordinate for zoom-in button
+    private static int zoomButtonX = 49; // x-coordinate for zoom button
+    private static int zoomStartY = 453; // y-coordinate for zoom start
+    private static int zoomEndY = 628; // y-coordinate for zoom end
     private static bool _mapZoomEnabled = true;
     private static int _mapZoomOutDistance = 1000;
     private static int _mapZoomInDistance = 400;
+
     private static int _stepIntervalMilliseconds = 20;
 
     public static bool MapZoomEnabled
     {
         get => _mapZoomEnabled;
-        set => _mapZoomEnabled = value; // 用户可以直接启用或禁用缩放功能
+        set 
+        {
+            _mapZoomEnabled = value;
+            if(!value)
+            {
+                Logger.LogInformation("禁用了缩放功能，请自行调整合适的缩放，部分脚本可能会因为禁用缩放功能无法使用");
+            }
+        }
     }
 
     public static int MapZoomOutDistance
@@ -77,9 +85,13 @@ public class TpTask(CancellationToken ct)
         set
         {
             if (value < 200 || value > 1000) // 自动设置合理范围
+            {
                 _mapZoomInDistance = 400;
+            }
             if (value >= _mapZoomOutDistance)
+            {
                 _mapZoomInDistance = _mapZoomOutDistance / 2;
+            }
             _mapZoomInDistance = value;
         }
     }
@@ -89,9 +101,36 @@ public class TpTask(CancellationToken ct)
         get => _stepIntervalMilliseconds;
         set
         {
-            if (value < 10 || value > 100)
+            if (value < 5 || value > 100)
+            {
                 _stepIntervalMilliseconds = 20;
+            }
             _stepIntervalMilliseconds = value;
+        }
+    }
+
+    public async Task TpToStatueOfTheSeven()
+    {
+        await checkInBigMapUi();
+        if (_mapZoomEnabled)
+        {
+            double currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+            bool tempMapZoomEnable = _mapZoomEnabled;
+            _mapZoomEnabled = false; // 临时禁用缩放功能
+            if (currentZoomLevel > 4.5)
+            {
+                await AdjustMapZoomLevel(currentZoomLevel, 4.5);
+            }
+            else if (currentZoomLevel < 3)
+            {
+                await AdjustMapZoomLevel(currentZoomLevel, 3);
+            }
+            await Tp(ReviveStatueOfTheSevenPointX, ReviveStatueOfTheSevenPointY);
+            _mapZoomEnabled = tempMapZoomEnable;
+        }
+        else
+        {
+            await Tp(ReviveStatueOfTheSevenPointX, ReviveStatueOfTheSevenPointY);
         }
     }
     /// <summary>
@@ -116,17 +155,22 @@ public class TpTask(CancellationToken ct)
 
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
-        double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
-        if (zoomLevel > 4.5 && MapZoomEnabled)
+        if (_mapZoomEnabled)
         {
-            await AdjustMapZoomLevel(zoomLevel, 4.5);
-            Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.000}。", 4.5);
+            double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+            if (zoomLevel > 4.5)
+            {
+                // 显示传送锚点和秘境的缩放等级
+                await AdjustMapZoomLevel(zoomLevel, 4.5);
+                Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.000}", 4.5);
+            }
         }
-        while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y) || GetBigMapZoomLevel(CaptureToRectArea()) > 1.8) // 左上角 350x400也属于禁止点击区域
+        
+        while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y)) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
             Logger.LogInformation("传送点不在当前大地图范围内，继续移动");
-            await MoveMapTo(x, y, maxMouseMove:400);
+            await MoveMapTo(x, y, maxMouseMove: 400);
             await Delay(300, ct); // 等待地图移动完成
             bigMapInAllMapRect = GetBigMapRect();
         }
@@ -247,7 +291,7 @@ public class TpTask(CancellationToken ct)
         {
             try
             {
-                return await TpOnce(tpX, tpY, force);
+                return await TpOnce(tpX, tpY, force: force);
             }
             catch (TpPointNotActivate e)
             {
@@ -319,7 +363,7 @@ public class TpTask(CancellationToken ct)
                 totalMoveMouseY = Math.Abs(moveMouseY * yOffset / diffMapY);
                 double mouseDistance = Math.Sqrt(totalMoveMouseX * totalMoveMouseX + totalMoveMouseY * totalMoveMouseY);
 
-                if (MapZoomEnabled)
+                if (_mapZoomEnabled)
                 {
                     // 调整地图缩放
                     // mapZoomLevel<5 才显示传送锚点和秘境; mapZoomLevel>1.7 可以避免点错传送锚点
