@@ -117,7 +117,7 @@ public class TpTask(CancellationToken ct)
         // 计算坐标后点击
         var bigMapInAllMapRect = GetBigMapRect();
         double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
-        if (zoomLevel > 5.0 && MapZoomEnabled)
+        if (zoomLevel > 4.5 && MapZoomEnabled)
         {
             await AdjustMapZoomLevel(zoomLevel, 4.5);
             Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.000}。", 4.5);
