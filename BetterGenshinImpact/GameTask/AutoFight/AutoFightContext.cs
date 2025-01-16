@@ -12,7 +12,7 @@ public class AutoFightContext : Singleton<AutoFightContext>
 {
     private AutoFightContext()
     {
-        Simulator = Simulation.PostMessage(TaskContext.Instance().GameHandle);
+        Simulator = TaskContext.Instance().PostMessageSimulator;
     }
 
     /// <summary>

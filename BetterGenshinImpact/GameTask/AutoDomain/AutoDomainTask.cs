@@ -56,7 +56,8 @@ public class AutoDomainTask : ISoloTask
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
-        _simulator = AutoFightContext.Instance.Simulator;
+        AutoFightAssets.DestroyInstance();
+        _simulator = TaskContext.Instance().PostMessageSimulator;
 
         _predictor = YoloV8Builder.CreateDefaultBuilder()
             .UseOnnxModel(Global.Absolute(@"Assets\Model\Domain\bgi_tree.onnx"))
@@ -71,8 +72,7 @@ public class AutoDomainTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-
-        AutoFightAssets.DestroyInstance();
+        
         Init();
         NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
 
