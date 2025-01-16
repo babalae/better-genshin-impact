@@ -103,7 +103,8 @@ public partial class ScriptService : IScriptService
                         finally
                         {
                             stopwatch.Stop();
-                            var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);                            
+                            var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
+                            _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
                             _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
