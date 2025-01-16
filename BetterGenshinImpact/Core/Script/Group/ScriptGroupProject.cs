@@ -138,7 +138,14 @@ public partial class ScriptGroupProject : ObservableObject
                 throw new Exception("JS脚本未初始化");
             }
             JsScriptSettingsObject ??= new ExpandoObject();
-            await Project.ExecuteAsync(JsScriptSettingsObject);
+            
+            var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
+            if (!(pathingPartyConfig is {Enabled:true,JsScriptUseEnabled:true}))
+            {
+                pathingPartyConfig = null;
+            }
+
+            await Project.ExecuteAsync(JsScriptSettingsObject,pathingPartyConfig);
         }
         if (Type == "KeyMouse")
         {

@@ -61,6 +61,14 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
     
+    //允许在jsScript脚本中使用此路径追踪配置
+    [ObservableProperty]
+    private bool _jsScriptUseEnabled = false;
+    
+    //允许在此调度器中（一般在JS脚本中）调用自动战斗任务时，采用此追踪配置里的战斗策略
+    [ObservableProperty]
+    private bool _soloTaskUseFightEnabled = false;
+    
     // 使用小道具的间隔时间
     [ObservableProperty]
     private int _useGadgetIntervalMs = 0;

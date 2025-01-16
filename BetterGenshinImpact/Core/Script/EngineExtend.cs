@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -17,19 +18,19 @@ public class EngineExtend
     /// <param name="engine"></param>
     /// <param name="workDir"></param>
     /// <param name="searchPaths"></param>
-    public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths = null)
+    public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths = null, object? config = null)
     {
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
         // 添加我的自定义实例化对象
         engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir));
-        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir));
+        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir, config));
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
 
         // 任务调度器
-        engine.AddHostObject("dispatcher", new Dispatcher());
+        engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
 
