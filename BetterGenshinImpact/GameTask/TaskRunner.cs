@@ -39,7 +39,7 @@ public class TaskRunner
     /// </summary>
     /// <param name="action"></param>
     /// <returns></returns>
-    public async Task RunAsync(Func<Task> action)
+    public async Task RunCurrentAsync(Func<Task> action)
     {
         // 加锁
         var hasLock = await TaskSemaphore.WaitAsync(0);
@@ -109,17 +109,17 @@ public class TaskRunner
 
     public void FireAndForget(Func<Task> action)
     {
-        Task.Run(() => RunAsync(action));
+        Task.Run(() => RunCurrentAsync(action));
     }
 
     public async Task RunThreadAsync(Func<Task> action)
     {
-        await Task.Run(() => RunAsync(action));
+        await Task.Run(() => RunCurrentAsync(action));
     }
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
-        await Task.Run(() => RunAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
+        await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
 
     public void Init()

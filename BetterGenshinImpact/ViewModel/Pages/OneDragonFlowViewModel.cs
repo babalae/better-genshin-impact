@@ -202,7 +202,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         await ScriptService.StartGameTask();
 
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-            .RunAsync(async () =>
+            .RunThreadAsync(async () =>
             {
                 foreach (var task in TaskList)
                 {
