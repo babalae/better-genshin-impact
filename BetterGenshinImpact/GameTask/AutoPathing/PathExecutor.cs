@@ -182,14 +182,15 @@ public class PathExecutor
                             await MoveTo(waypoint);
 
                             if (waypoint.Type == WaypointType.Target.Code
-                                // 除了 fight mining 之外的 action 都需要接近
+                                // 除了 fight mining stop_flying 之外的 action 都需要接近
                                 || (!string.IsNullOrEmpty(waypoint.Action)
+                                    && waypoint.Action != ActionEnum.StopFlying.Code
                                     && waypoint.Action != ActionEnum.NahidaCollect.Code
                                     && waypoint.Action != ActionEnum.Fight.Code
                                     && waypoint.Action != ActionEnum.CombatScript.Code
                                     && waypoint.Action != ActionEnum.Mining.Code))
                             {
-                                if (waypoint.Action != ActionEnum.Fight.Code) // 战斗时不需要接近
+                                if (waypoint.Action != ActionEnum.Fight.Code) // 战斗action强制不接近
                                 {
                                     await MoveCloseTo(waypoint);
                                 }
