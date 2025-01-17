@@ -153,15 +153,13 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                 MessageBox.Error("选择的窗体句柄为空");
             }
         }
-        
-
     }
 
     [RelayCommand]
     private void OnManualPickWindow()
     {
         var picker = new PickerWindow();
-        if(picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle,out var hWnd))
+        if (picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle, out var hWnd))
         {
             if (hWnd != IntPtr.Zero)
             {
@@ -172,9 +170,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
             {
                 MessageBox.Error("选择的窗体句柄为空！");
             }
-
         }
-
     }
 
     [RelayCommand]
@@ -201,6 +197,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                     MessageBox.Error("没有找到原神的安装路径");
                     return;
                 }
+
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
                 if (hWnd != IntPtr.Zero)
                 {
@@ -210,7 +207,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
             if (hWnd == IntPtr.Zero)
             {
-                MessageBox.Error("未找到原神窗口，请先启动原神！");
+                await MessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
                 return;
             }
         }
@@ -220,24 +217,28 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
     private void Start(IntPtr hWnd)
     {
-        if (Config.TriggerInterval <= 0)
+        Debug.WriteLine($"原神启动句柄{hWnd}");
+        lock (this)
         {
-            MessageBox.Error("触发器触发频率必须大于0");
-            return;
-        }
-        
-        if (!TaskDispatcherEnabled)
-        {
-            _hWnd = hWnd;
-            _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
-            _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-            _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
-            _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
-            _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
-            _maskWindow ??= new MaskWindow();
-            _maskWindow.Show();
-            _mouseKeyMonitor.Subscribe(hWnd);
-            TaskDispatcherEnabled = true;
+            if (Config.TriggerInterval <= 0)
+            {
+                MessageBox.Error("触发器触发频率必须大于0");
+                return;
+            }
+
+            if (!TaskDispatcherEnabled)
+            {
+                _hWnd = hWnd;
+                _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+                _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
+                _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
+                _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
+                _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
+                _maskWindow ??= new MaskWindow();
+                _maskWindow.Show();
+                _mouseKeyMonitor.Subscribe(hWnd);
+                TaskDispatcherEnabled = true;
+            }
         }
     }
 
@@ -251,22 +252,25 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
     private void Stop()
     {
-        if (TaskDispatcherEnabled)
+        lock (this)
         {
-            CancellationContext.Instance.Cancel(); // 取消独立任务的运行
-            _taskDispatcher.Stop();
-            if (_maskWindow != null && _maskWindow.IsExist())
+            if (TaskDispatcherEnabled)
             {
-                _maskWindow?.Hide();
-            }
-            else
-            {
-                _maskWindow?.Close();
-                _maskWindow = null;
-            }
+                CancellationContext.Instance.Cancel(); // 取消独立任务的运行
+                _taskDispatcher.Stop();
+                if (_maskWindow != null && _maskWindow.IsExist())
+                {
+                    _maskWindow?.Hide();
+                }
+                else
+                {
+                    _maskWindow?.Close();
+                    _maskWindow = null;
+                }
 
-            TaskDispatcherEnabled = false;
-            _mouseKeyMonitor.Unsubscribe();
+                TaskDispatcherEnabled = false;
+                _mouseKeyMonitor.Unsubscribe();
+            }
         }
     }
 
