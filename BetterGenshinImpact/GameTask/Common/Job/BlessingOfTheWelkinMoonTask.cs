@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -26,6 +27,7 @@ public class BlessingOfTheWelkinMoonTask
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
                 {
                     Logger.LogInformation("检测到空月祝福界面，自动点击");
+                    GameCaptureRegion.GameRegion1080PPosMove(100,100);
                     TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                     await Delay(5000, ct);
 

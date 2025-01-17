@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -44,6 +45,7 @@ public class ClaimEncounterPointsRewardsTask
 
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
+        var earlyClaim = false; // 无需点击委托直接领取
         // 找委托按钮
         var f1Success = await NewRetry.WaitForAction(() =>
         {
@@ -55,6 +57,12 @@ public class ClaimEncounterPointsRewardsTask
 
             if (wt != null)
             {
+                if (ClickClaimBtn(CaptureToRectArea()))
+                {
+                    earlyClaim = true;
+                    return true;
+                }
+
                 wt.Click();
                 return true;
             }
@@ -68,24 +76,44 @@ public class ClaimEncounterPointsRewardsTask
             return;
         }
 
+        if (earlyClaim)
+        {
+            // 已经领取过
+            await Delay(1000, ct);
+
+            // TODO 截图并通知
+            return;
+        }
+
         await Delay(1000, ct);
 
         // 领取
-        using var ra2 = CaptureToRectArea();
+        if (ClickClaimBtn(CaptureToRectArea()))
+        {
+            await Delay(1000, ct);
+
+            // TODO 截图并通知
+        }
+
+        // 关闭
+        await _returnMainUiTask.Start(ct);
+    }
+
+    private static bool ClickClaimBtn(ImageRegion ra2)
+    {
         var claimBtn = ra2.Find(ElementAssets.Instance.BtnClaimEncounterPointsRewards);
         if (claimBtn.IsExist())
         {
             claimBtn.Click();
             Logger.LogInformation("{F}领取长效历练点奖励", "历练点：");
-            await Delay(1000, ct);
-            // TODO 截图并通知
+
+
+            return true;
         }
         else
         {
             Logger.LogInformation("{F}未找到领取历练点奖励按钮", "历练点：");
+            return false;
         }
-
-        // 关闭
-        await _returnMainUiTask.Start(ct);
     }
 }
