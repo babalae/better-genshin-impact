@@ -437,13 +437,13 @@ public class AutoFightTask : ISoloTask
 
         Simulation.SendInput.SimulateAction(GIActions.Drop);
         Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
-        
+        /**
         if (!Bv.IsInMainUi(ra))
         {
             // 如果不在主界面，说明异常，直接结束战斗继续下一步（路径追踪下一步会进入异常处理）
             Logger.LogInformation("当前不在主界面，直接结束战斗！");
             return true;
-        }
+        }**/
         
         _lastFightFlagTime = DateTime.Now;
         return false;
