@@ -195,8 +195,8 @@ public class PathExecutor
                                 }
                             }
 
-                            //skipOtherOperations如果重试，则跳过相关操作
-                            if (!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations)
+                            //skipOtherOperations如果重试，则跳过相关操作，
+                            if ((!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations) || waypoint.Action == ActionEnum.CombatScript.Code)
                             {
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
