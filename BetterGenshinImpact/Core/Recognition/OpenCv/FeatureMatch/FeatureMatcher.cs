@@ -7,7 +7,6 @@ using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
@@ -137,10 +136,10 @@ public class FeatureMatcher
     /// <summary>
     /// 合并邻近的特征点后匹配（临近特征）
     /// </summary>
-    /// <param name="queryMat">查询的图</param>
+    /// <param name="queryMat">查询图像的 Mat 对象。</param>
     /// <param name="prevX">上次匹配到的坐标x</param>
     /// <param name="prevY">上次匹配到的坐标y</param>
-    /// <param name="queryMatMask">查询Mask</param>
+    /// <param name="queryMatMask">查询图像的 Mask，用于限定检测特征的区域。</param>
     /// <returns></returns>
     public Point2f Match(Mat queryMat, float prevX, float prevY, Mat? queryMatMask = null)
     {
@@ -151,18 +150,17 @@ public class FeatureMatcher
             Debug.WriteLine($"---------切换到新的特征块({cellRow},{cellCol})，合并特征点--------");
             _lastMergedBlock = KeyPointFeatureBlockHelper.MergeNeighboringFeatures(_blocks, _trainDescriptors, cellRow, cellCol);
         }
-
         return Match(_lastMergedBlock.KeyPointArray, _lastMergedBlock.Descriptor!, queryMat, queryMatMask);
     }
 
     /// <summary>
-    /// 普通匹配
+    /// 用于从训练图像和查询图像中找到匹配的特征点，计算透视变换并确定查询图像的中心点在训练图像中的位置。
     /// </summary>
-    /// <param name="trainKeyPoints"></param>
-    /// <param name="trainDescriptors"></param>
-    /// <param name="queryMat"></param>
-    /// <param name="queryMatMask"></param>
-    /// <param name="matcherType"></param>
+    /// <param name="trainKeyPoints">训练图像中的关键点集合。</param>
+    /// <param name="trainDescriptors">训练图像的特征描述子。</param>
+    /// <param name="queryMat">查询图像的 Mat 对象。</param>
+    /// <param name="queryMatMask">查询图像的 Mask，用于限定检测特征的区域。</param>
+    /// <param name="matcherType">描述符匹配器的类型，默认为 DescriptorMatcherType.FlannBased</param>
     /// <returns></returns>
     public Point2f Match(KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
         DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)

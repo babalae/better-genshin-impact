@@ -335,7 +335,7 @@ public class PathExecutor
             if (!string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
             {
                 // 非空的情况下，先tp到安全位置（回血的七天神像）
-                await new TpTask(ct).Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true);
+                await new TpTask(ct).TpToStatueOfTheSeven();
             }
 
             var success = await new SwitchPartyTask().Start(partyName, ct);
@@ -550,7 +550,7 @@ public class PathExecutor
     {
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
-        await tpTask.Tp(TpTask.ReviveStatueOfTheSevenPointX, TpTask.ReviveStatueOfTheSevenPointY, true);
+        await tpTask.TpToStatueOfTheSeven();
         await Delay(3000, ct);
         Logger.LogInformation("HP恢复完成");
     }
