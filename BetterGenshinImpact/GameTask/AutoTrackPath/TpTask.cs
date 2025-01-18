@@ -111,7 +111,7 @@ public class TpTask(CancellationToken ct)
 
     public async Task TpToStatueOfTheSeven()
     {
-        await checkInBigMapUi();
+        await CheckInBigMapUi();
         if (_mapZoomEnabled)
         {
             double currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
@@ -252,7 +252,7 @@ public class TpTask(CancellationToken ct)
         return (clickX, clickY);
     }
 
-    private async Task checkInBigMapUi()
+    private async Task CheckInBigMapUi()
     {
         // M 打开地图识别当前位置，中心点为当前位置
         var ra1 = CaptureToRectArea();
@@ -286,7 +286,7 @@ public class TpTask(CancellationToken ct)
     }
     public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
     {
-        await checkInBigMapUi();
+        await CheckInBigMapUi();
         for (var i = 0; i < 3; i++)
         {
             try
@@ -303,7 +303,7 @@ public class TpTask(CancellationToken ct)
             }
             catch (Exception e)
             {
-                await checkInBigMapUi();
+                await CheckInBigMapUi();
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
                 Logger.LogDebug(e, "传送失败，重试 {I} 次", i + 1);
             }
