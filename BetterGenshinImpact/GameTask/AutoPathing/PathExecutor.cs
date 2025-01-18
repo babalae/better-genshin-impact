@@ -184,7 +184,6 @@ public class PathExecutor
                             if (waypoint.Type == WaypointType.Target.Code
                                 // 除了 fight mining stop_flying 之外的 action 都需要接近
                                 || (!string.IsNullOrEmpty(waypoint.Action)
-                                    && waypoint.Action != ActionEnum.StopFlying.Code
                                     && waypoint.Action != ActionEnum.NahidaCollect.Code
                                     && waypoint.Action != ActionEnum.Fight.Code
                                     && waypoint.Action != ActionEnum.CombatScript.Code
@@ -681,18 +680,13 @@ public class PathExecutor
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 20 != fastMode) // 距离大于30时可以使用疾跑/自由泳
+                if (distance > 25) // 距离大于25时可以使用疾跑
                 {
-                    if (fastMode)
+                    if (Math.Abs((fastModeColdTime - DateTime.UtcNow).TotalMilliseconds) > 1000) //冷却一会
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                        fastModeColdTime = DateTime.UtcNow;
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
                     }
-                    else
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
-                    }
-
-                    fastMode = !fastMode;
                 }
             }
             else if (waypoint.MoveMode != MoveModeEnum.Climb.Code) //否则自动短疾跑
@@ -806,6 +800,7 @@ public class PathExecutor
             Logger.LogInformation("动作：下落攻击");
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
             await Delay(1000, ct);
+            return;
         }
 
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
