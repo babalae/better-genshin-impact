@@ -73,12 +73,20 @@ public class SwitchPartyTask
             partyViewBtn.Click();
             await Delay(500, ct);
 
-            using var switchRa = CaptureToRectArea();
-            var partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
-            if (!partyDeleteBtn.IsExist())
+            ImageRegion? switchRa = null;
+            Region? partyDeleteBtn = null;
+            var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
+            {
+                switchRa = CaptureToRectArea();
+                partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
+                return partyDeleteBtn.IsExist();
+            }, ct, 5);
+            
+            if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
             {
                 throw new Exception("未能打开队伍选择界面");
             }
+
 
             var nextX = partyDeleteBtn.Left;
             var nextY = partyDeleteBtn.Top - partyDeleteBtn.Height * 2;
