@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.Helpers.Ui;
 using Microsoft.Web.WebView2.Wpf;
 using Wpf.Ui.Controls;
 
@@ -14,10 +15,7 @@ public class WebpageWindow : Window
 
     public WebpageWindow()
     {
-        WebpagePanel wp = new()
-        {
-            Margin = new(8, 8, 0, 8)
-        };
+        WebpagePanel wp = new();
 
         Content = wp;
         // Background = new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
@@ -26,22 +24,7 @@ public class WebpageWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        TryApplySystemBackdrop();
-    }
-
-    private void TryApplySystemBackdrop()
-    {
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
-        {
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Mica);
-            return;
-        }
-
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Tabbed))
-        {
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Tabbed);
-            return;
-        }
+        WindowHelper.TryApplySystemBackdrop(this);
     }
 
     public void NavigateToUri(Uri uri)

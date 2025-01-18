@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers.Ui;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Tray.Controls;
@@ -36,7 +38,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        TryApplySystemBackdrop();
+        WindowHelper.TryApplySystemBackdrop(this);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -68,21 +70,4 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     public void ShowWindow() => Show();
 
     public void CloseWindow() => Close();
-
-    private void TryApplySystemBackdrop()
-    {
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))  // 改用Acrylic效果
-        {
-            Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Acrylic);
-            return;
-        }
-
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
-        {
-            Background = new SolidColorBrush(Colors.Transparent);
-            WindowBackdrop.ApplyBackdrop(this, WindowBackdropType.Mica);
-            return;
-        }
-    }
 }

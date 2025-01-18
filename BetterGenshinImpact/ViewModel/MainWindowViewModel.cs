@@ -67,14 +67,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             WindowBackdropType.Auto => WindowBackdropType.Mica,
             WindowBackdropType.Mica => WindowBackdropType.Acrylic,
-            WindowBackdropType.Acrylic => WindowBackdropType.Auto,
+            WindowBackdropType.Acrylic => WindowBackdropType.Tabbed,
+            WindowBackdropType.Tabbed => WindowBackdropType.Auto,
             _ => WindowBackdropType.Auto
         };
 
-        var mainWindow = Application.Current.MainWindow as MainWindow;
-        if (mainWindow != null)
+        Config.CommonConfig.CurrentBackdropType = CurrentBackdropType;
+
+        if (Application.Current.MainWindow is MainWindow mainWindow)
         {
-            mainWindow.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
+            mainWindow.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));;
             WindowBackdrop.ApplyBackdrop(mainWindow, CurrentBackdropType);
         }
     }

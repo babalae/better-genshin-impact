@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -26,4 +27,10 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _exitToTray;
+    
+    /// <summary>
+    /// 主题
+    /// </summary>
+    [ObservableProperty]
+    private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
 }
