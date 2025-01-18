@@ -12,6 +12,15 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 internal class AutoFightHandler : IActionHandler
 {
+    public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
+    {
+        if (!(config != null && config is PathingPartyConfig patyConfig && patyConfig is {AutoFightEnabled:true,JsScriptUseEnabled:true,SoloTaskUseFightEnabled:true}  ))
+        {
+            config = null;
+        }
+        await StartFight(ct, config);
+    }
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         await StartFight(ct, config);

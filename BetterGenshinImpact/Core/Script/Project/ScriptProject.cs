@@ -57,20 +57,20 @@ public class ScriptProject
         return stackPanel;
     }
 
-    public IScriptEngine BuildScriptEngine()
+    public IScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig = null)
     {
         IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
-        EngineExtend.InitHost(engine, ProjectPath, Manifest.Library);
+        EngineExtend.InitHost(engine, ProjectPath, Manifest.Library,partyConfig);
         return engine;
     }
 
-    public async Task ExecuteAsync(dynamic? context = null)
+    public async Task ExecuteAsync(dynamic? context = null, PathingPartyConfig? partyConfig=null)
     {
         // 默认值
         GlobalMethod.SetGameMetrics(1920, 1080);
         // 加载代码
         var code = await LoadCode();
-        var engine = BuildScriptEngine();
+        var engine = BuildScriptEngine(partyConfig);
         if (context != null)
         {
             // 写入配置的内容

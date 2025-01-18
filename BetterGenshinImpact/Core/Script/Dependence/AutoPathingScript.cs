@@ -5,17 +5,29 @@ using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
-public class AutoPathingScript(string rootPath)
+public class AutoPathingScript
 {
+   private  object? _config = null;
+    private string _rootPath;
+    public AutoPathingScript(string rootPath, object? config) {
+
+        _config = config;
+        _rootPath = rootPath;
+    }
+    
     public async Task Run(string json)
     {
         var task = PathingTask.BuildFromJson(json);
-        await new PathExecutor(CancellationContext.Instance.Cts.Token).Pathing(task);
+        var pathExecutor = new  PathExecutor(CancellationContext.Instance.Cts.Token);
+        if (_config != null && _config is PathingPartyConfig patyConfig ) {
+            pathExecutor.PartyConfig = patyConfig;
+        }
+        await pathExecutor.Pathing(task);
     }
 
     public async Task RunFile(string path)
     {
-        var json = await new LimitedFile(rootPath).ReadText(path);
+        var json = await new LimitedFile(_rootPath).ReadText(path);
         await Run(json);
     }
     

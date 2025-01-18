@@ -8,11 +8,17 @@ using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Dispatcher
 {
+    private object _config=null;
+    public  Dispatcher(object config)
+    {
+        _config = config;
+    }
     public void RunTask()
     {
     }
@@ -77,13 +83,15 @@ public class Dispatcher
                 break;
 
             case "AutoFight":
-                if (taskSettingsPageViewModel.GetFightStrategy(out var path1))
+                
+                /*if (taskSettingsPageViewModel.GetFightStrategy(out var path1))
                 {
                     return;
                 }
                 var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
                 var param = new AutoFightParam(path1, autoFightConfig);
-                await new AutoFightTask(param).Start(CancellationContext.Instance.Cts.Token);
+                await new AutoFightTask(param).Start(CancellationContext.Instance.Cts.Token);*/
+                await new AutoFightHandler().RunAsyncByScript(CancellationContext.Instance.Cts.Token, null,_config);
                 break;
 
             case "AutoDomain":
