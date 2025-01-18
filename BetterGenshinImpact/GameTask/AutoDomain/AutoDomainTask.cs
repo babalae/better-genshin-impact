@@ -248,10 +248,11 @@ public class AutoDomainTask : ISoloTask
                 else
                 {
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    Thread.Sleep(3000);
+                    Thread.Sleep(2000);
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
 
+                Simulation.SendInput.SimulateAction(GIActions.Drop, KeyType.KeyUp); // 可能爬上去了，X键下来
                 await Delay(3000, _ct); // 站稳
             }
             else
@@ -284,14 +285,22 @@ public class AutoDomainTask : ISoloTask
         var fightAssets = AutoFightContext.Instance.FightAssets;
 
         // 进入秘境
-        using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
-        if (!fRectArea.IsEmpty())
+        for (int i = 0; i < 3; i++)  // 3次重试 有时候会拾取晶蝶
         {
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
-            Logger.LogInformation("自动秘境：{Text}", "进入秘境");
-            // 秘境开门动画 5s
-            await Delay(5000, _ct);
+            using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
+            if (!fRectArea.IsEmpty())
+            {
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                Logger.LogInformation("自动秘境：{Text}", "进入秘境");
+                // 秘境开门动画 5s
+                await Delay(5000, _ct);
+            } 
+            else
+            { 
+                await Delay(800, _ct);
+            }
         }
+
 
         int retryTimes = 0, clickCount = 0;
         while (retryTimes < 20 && clickCount < 2)
