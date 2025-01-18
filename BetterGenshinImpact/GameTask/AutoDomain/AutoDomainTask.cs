@@ -245,6 +245,11 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(1000);
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
+                else if ("太山府".Equals(_taskParam.DomainName))
+                {
+                    // 直接F即可
+                    // nothing to do
+                }
                 else
                 {
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
