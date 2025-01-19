@@ -107,6 +107,10 @@
             <ui:ToggleSwitch
                 Content="主界面切换识别"
                 IsChecked="{Binding Config.RecordConfig.PaimonSwitchEnabled, Mode=TwoWay}" />
+            <Separator Width="20" Opacity="0" />
+            <ui:ToggleSwitch
+                Content="使用桌面音频"
+                IsChecked="{Binding Config.RecordConfig.UseDesktopEnabled, Mode=TwoWay}" />
         </StackPanel>
 
         <Separator Grid.Row="4"

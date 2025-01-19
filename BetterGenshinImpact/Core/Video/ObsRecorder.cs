@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Recorder.Model;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using MediaInfo;
 using Microsoft.Extensions.Logging;
@@ -108,6 +109,8 @@ public class ObsRecorder : IVideoRecorder
             {
                 try
                 {
+                    // 链接后立即变更状态
+                    SetDefaultMixerState(TaskContext.Instance().Config.RecordConfig.UseDesktopEnabled);
                     obs.StartRecord();
                     _lastRecordTime = DateTime.Now;
                     TaskControl.Logger.LogInformation("OBS: ws请求开始录制，时间: {Time}", _lastRecordTime.ToString("yyyy-MM-dd HH:mm:ss.ffff"));
@@ -251,6 +254,8 @@ public class ObsRecorder : IVideoRecorder
     {
         isConnected = true;
         TaskControl.Logger.LogInformation("OBS: 成功连接");
+                
+
     }
 
     private void OnDisconnected(object? sender, ObsDisconnectionInfo e)
@@ -272,6 +277,55 @@ public class ObsRecorder : IVideoRecorder
         if (obs.IsConnected)
         {
             obs.Disconnect();
+        }
+    }
+    
+    
+    // 预设混音器状态
+    public void SetDefaultMixerState(bool useDesktopSound)
+    {
+        if (useDesktopSound)
+        {
+            ChangeMixerState("桌面音频", true);
+            ChangeMixerState("采集原神", false);
+        }
+        else
+        {
+            ChangeMixerState("桌面音频", false);
+            ChangeMixerState("采集原神", true);
+        }
+    }
+
+    public void ChangeMixerState(string mixerName, bool state)
+    {
+        state = !state; // 转换成静音标识
+        if (!obs.IsConnected)
+        {
+            TaskControl.Logger.LogError("OBS: 未连接，无法切换混音器状态");
+            return;
+        }
+
+        try
+        {
+            bool isMute = obs.GetInputMute(mixerName);
+            if (isMute == state)
+            {
+                TaskControl.Logger.LogDebug("OBS: 混音器 {MixerName} 状态已经是 {State}", mixerName, state ? "静音" : "非静音");
+                return;
+            }
+            // 切换混音器状态
+            obs.SetInputMute(mixerName, state);
+            TaskControl.Logger.LogInformation("OBS: 混音器 {MixerName} 状态已切换为 {State}", mixerName, state ? "静音" : "非静音");
+        }
+        catch (ErrorResponseException ex)
+        {
+            TaskControl.Logger.LogError($"OBS: 切换混音器状态失败: {ex.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError($"OBS: 切换混音器状态时出现错误: {ex.Message}");
+            throw;
         }
     }
 }

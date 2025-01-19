@@ -30,4 +30,10 @@ public partial class RecordConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _paimonSwitchEnabled = false;
+        
+    /// <summary>
+    /// 使用桌面音频
+    /// </summary>
+    [ObservableProperty]
+    private bool _useDesktopEnabled = false;
 }
