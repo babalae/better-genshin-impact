@@ -25,6 +25,13 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _fightFinishDetectEnabled = true;
+    /// <summary>
+    /// 根据技能CD优化出招人员
+    /// 根据填入人或人和cd，来决定当此人元素战技cd未结束时，跳过此人出招，来优化战斗流程，可填入人名或人名数字（用逗号分隔），
+    /// 多种用分号分隔，例如:白术;钟离,12;，如果人名，则用内置cd检查，如果是人名和数字，则把数字当做出招cd(秒)。
+    /// </summary>
+    [ObservableProperty] private string _actionSchedulerByCd = "";
+    
     [Serializable]
     public partial class FightFinishDetectConfig : ObservableObject
     {

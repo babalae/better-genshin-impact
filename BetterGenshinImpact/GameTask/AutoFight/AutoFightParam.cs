@@ -26,6 +26,7 @@ public class AutoFightParam : BaseTaskParam
         FightFinishDetectEnabled = autoFightConfig.FightFinishDetectEnabled;
         PickDropsAfterFightEnabled = autoFightConfig.PickDropsAfterFightEnabled;
         KazuhaPickupEnabled = autoFightConfig.KazuhaPickupEnabled;
+        ActionSchedulerByCd = autoFightConfig.ActionSchedulerByCd;
        
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
@@ -47,6 +48,7 @@ public class AutoFightParam : BaseTaskParam
     public int Timeout { get; set; } = 120;
 
     public bool KazuhaPickupEnabled = true;
+    public string ActionSchedulerByCd = "";
 
 
 }
