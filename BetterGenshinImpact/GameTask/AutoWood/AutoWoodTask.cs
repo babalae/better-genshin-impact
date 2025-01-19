@@ -16,6 +16,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
@@ -38,7 +39,7 @@ public partial class AutoWoodTask : ISoloTask
 
     private readonly Login3rdParty _login3rdParty;
 
-    private VK _zKey = VK.VK_Z;
+    // private VK _zKey = VK.VK_Z;
 
     private readonly WoodTaskParam _taskParam;
 
@@ -70,20 +71,20 @@ public partial class AutoWoodTask : ISoloTask
                 Logger.LogInformation("自动伐木启用B服模式");
             }
 
-            SettingsContainer settingsContainer = new();
-
-            if (settingsContainer.OverrideController?.KeyboardMap?.ActionElementMap.Where(item => item.ActionId == ActionId.Gadget).FirstOrDefault()?.ElementIdentifierId is ElementIdentifierId key)
-            {
-                if (key != ElementIdentifierId.Z)
-                {
-                    _zKey = key.ToVK();
-                    Logger.LogInformation($"自动伐木检测到用户改键 {ElementIdentifierId.Z.ToName()} 改为 {key.ToName()}");
-                    if (key == ElementIdentifierId.LeftShift || key == ElementIdentifierId.RightShift)
-                    {
-                        Logger.LogInformation($"用户改键 {key.ToName()} 可能不受模拟支持，若使用正常则忽略");
-                    }
-                }
-            }
+            // SettingsContainer settingsContainer = new();
+            //
+            // if (settingsContainer.OverrideController?.KeyboardMap?.ActionElementMap.Where(item => item.ActionId == ActionId.Gadget).FirstOrDefault()?.ElementIdentifierId is ElementIdentifierId key)
+            // {
+            //     if (key != ElementIdentifierId.Z)
+            //     {
+            //         _zKey = key.ToVK();
+            //         Logger.LogInformation($"自动伐木检测到用户改键 {ElementIdentifierId.Z.ToName()} 改为 {key.ToName()}");
+            //         if (key == ElementIdentifierId.LeftShift || key == ElementIdentifierId.RightShift)
+            //         {
+            //             Logger.LogInformation($"用户改键 {key.ToName()} 可能不受模拟支持，若使用正常则忽略");
+            //         }
+            //     }
+            // }
 
             SystemControl.ActivateWindow();
             // 伐木开始计时
@@ -417,14 +418,14 @@ public partial class AutoWoodTask : ISoloTask
                 throw new NormalEndException("请先装备小道具「王树瑞佑」！");
 #else
                 System.Threading.Thread.Sleep(2000);
-                Simulation.SendInput.Keyboard.KeyPress(_zKey);
+                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
 #endif
             }
             else
             {
-                Simulation.SendInput.Keyboard.KeyPress(_zKey);
+                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
             }
@@ -445,7 +446,7 @@ public partial class AutoWoodTask : ISoloTask
 #endif
                 }
 
-                Simulation.SendInput.Keyboard.KeyPress(_zKey);
+                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
                 Sleep(500, _ct);
             }, TimeSpan.FromSeconds(1), 120);

@@ -21,6 +21,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.ViewModel.Pages;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -101,6 +102,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 预热OCR
         await OcrPreheating();
+        
+        // 首次运行自动初始化绑定
+        InitKeyBinding();
 
         // 检查更新
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
@@ -115,6 +119,28 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
+    
+    private void InitKeyBinding()
+    {
+        if (Config.CommonConfig.IsFirstRun)
+        {
+            try
+            {
+                var kbVm = App.GetService<KeyBindingsSettingsPageViewModel>();
+                if (kbVm != null)
+                {
+                    kbVm.FetchFromRegistryCommand.Execute(null);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+
+                MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
+            }
+
+        }
+    } 
 
     /**
      * 不同的安装目录处理
