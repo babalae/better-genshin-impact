@@ -72,7 +72,7 @@ public class KeyMouseRecorderJsonLine
 
         _consumerTask = Task.Run(async () => await ConsumeEventsAsync(_path));
     }
-    
+
     public KeyMouseRecorderJsonLine Start()
     {
         StartTick = Kernel32.GetTickCount();
@@ -124,6 +124,11 @@ public class KeyMouseRecorderJsonLine
     public void KeyDown(KeyEventArgsExt e)
     {
         var time = e.Timestamp - StartTick;
+        if (e.KeyCode == Keys.F)
+        {
+            TaskControl.Logger.LogInformation($"{DateTime.Now:HH:mm:ss.ffff}按下F");
+        }
+
         AddEvent(_macroEventsChannel, new MacroEvent
         {
             Type = MacroEventType.KeyDown,
@@ -196,12 +201,12 @@ public class KeyMouseRecorderJsonLine
             Time = time
         });
     }
-    
+
 
     public void MouseMoveBy(MouseState state, uint tick, bool save = false)
     {
         User32.GetCursorPos(out var p);
-        
+
         var mEvent = new MacroEvent
         {
             Type = MacroEventType.MouseMoveBy,

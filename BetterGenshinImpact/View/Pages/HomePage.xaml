@@ -510,5 +510,8 @@
 
         <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
 
+        <TextBlock Name="ClockStartBlock">启动时间</TextBlock>
+        <TextBlock Name="ClockBlock">当前时间</TextBlock>
+        <TextBlock Name="TickBlock">tickCount</TextBlock>
     </StackPanel>
 </Page>
