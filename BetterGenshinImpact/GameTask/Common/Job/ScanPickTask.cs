@@ -64,7 +64,6 @@ public class ScanPickTask
 
                 if (pickItems.Count > 0)
                 {
-                    Logger.LogInformation("PickItems: {PickItems}", pickItems);
                     hasDrops = true;
                     await MoveTowardsFirstDrop(ct, 300 * _dpi);
                     break;
@@ -91,14 +90,11 @@ public class ScanPickTask
 
     private async Task MoveTowardsFirstDrop(CancellationToken ct, double step)
     {
-        //通过每次微调之前的一半来缩小范围，可能有一定开销
+        //通过每次缩小之前的步长来定位，可能有一定开销
         var decayFactor = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.DecayFactor;
         var calibrationTimes = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.CalibrationTimes;
 
         var found = false;
-        Logger.LogInformation("MoveTowards:step: {step}", step);
-        Logger.LogInformation("MoveTowards:decayFactor: {decayFactor}", decayFactor);
-        Logger.LogInformation("MoveTowards:calibrationTimes: {calibrationTimes}", calibrationTimes);
         for (var i = 0; i < calibrationTimes; i++)
         {
             var ra = CaptureToRectArea();
@@ -112,7 +108,6 @@ public class ScanPickTask
                 //只关心横坐标
                 var centerX = (pickItems.First().Left + pickItems.First().Right) / 2;
                 var dx = centerX - ra.Width / 2;
-                Logger.LogInformation("MoveTowards:dx: {dx}", dx);
                 if (dx > 0)
                     Simulation.SendInput.Mouse.MoveMouseBy((int)step, 0);
                 else if (dx < 0)
@@ -125,9 +120,9 @@ public class ScanPickTask
                 break;
             }
         }
-        if (found) //仅在找到物品时前进（有时会误判进入该函数）
+        if (found) //仅在找到物品时前进（在误判进入该函数时避免远离原地）
         {
-            Logger.LogInformation("MoveTowards:Forward");
+            Logger.LogInformation("前进采集");
             var forwardms = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.ForwardSeconds * 1000;
             if (forwardms == 0)
                 forwardms = new Random().Next(1000, 3000);
