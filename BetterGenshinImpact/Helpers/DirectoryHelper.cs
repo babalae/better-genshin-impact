@@ -80,4 +80,24 @@ public class DirectoryHelper
             RemoveReadOnlyAttribute(subDirectory);
         }
     }
+    
+    public static void CopyDirectory(string sourceDir, string destDir)
+    {
+        // 创建目标目录
+        Directory.CreateDirectory(destDir);
+
+        // 获取源目录中的所有文件
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var destFile = Path.Combine(destDir, Path.GetFileName(file));
+            File.Copy(file, destFile, true); // 覆盖同名文件
+        }
+
+        // 获取源目录中的所有子目录
+        foreach (var subDir in Directory.GetDirectories(sourceDir))
+        {
+            var destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+            CopyDirectory(subDir, destSubDir); // 递归拷贝子目录
+        }
+    }
 }
