@@ -107,8 +107,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
+    
+    private HomePageViewModel _homePageViewModel;
 
-    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher, HomePageViewModel homePageViewModel)
     {
         Config = configService.Get();
         _navigationService = navigationService;
@@ -120,6 +122,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
+        _homePageViewModel = homePageViewModel;
     }
 
     [RelayCommand]
@@ -196,9 +199,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public async Task OnSwitchAutoWood()
+    private async Task OnSwitchAutoWood()
     {
         SwitchAutoWoodEnabled = true;
+        await _homePageViewModel.OnStartTriggerAsync();
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunSoloTaskAsync(new AutoWoodTask(new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount)));
         SwitchAutoWoodEnabled = false;
@@ -221,6 +225,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
+        await _homePageViewModel.OnStartTriggerAsync();
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
             .RunSoloTaskAsync(new AutoFightTask(param));
         SwitchAutoFightEnabled = false;
@@ -241,6 +246,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
         }
 
         SwitchAutoDomainEnabled = true;
+        await _homePageViewModel.OnStartTriggerAsync();
         await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
             .RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
         SwitchAutoDomainEnabled = false;
