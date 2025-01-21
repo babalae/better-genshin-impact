@@ -31,14 +31,14 @@ public class GoToAdventurersGuildTask
         {
             try
             {
-                // 合成完毕后领取奖励
-                await new ClaimEncounterPointsRewardsTask().Start(ct);
-                
                 // 如果有好感队伍名称，先切换到好感队伍
                 if (!string.IsNullOrEmpty(dailyRewardPartyName))
                 {
                     await new SwitchPartyTask().Start(dailyRewardPartyName, ct);
                 }
+                
+                // F1领取奖励
+                await new ClaimEncounterPointsRewardsTask().Start(ct);
 
                 await DoOnce(country, ct);
                 break;

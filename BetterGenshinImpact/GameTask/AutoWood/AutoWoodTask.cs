@@ -31,7 +31,7 @@ public partial class AutoWoodTask : ISoloTask
 {
     public string Name => "自动伐木";
 
-    private readonly AutoWoodAssets _assets;
+    private AutoWoodAssets _assets;
 
     private bool _first = true;
 
@@ -50,12 +50,13 @@ public partial class AutoWoodTask : ISoloTask
         this._taskParam = taskParam;
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
-        _assets = AutoWoodAssets.Instance;
+
         _printer = new WoodStatisticsPrinter(_assets);
     }
 
     public Task Start(CancellationToken ct)
     {
+        _assets = AutoWoodAssets.Instance;
         var runTimeWatch = new Stopwatch();
         _ct = ct;
         _printer.Ct = _ct;
@@ -169,6 +170,7 @@ public partial class AutoWoodTask : ISoloTask
                     TaskContext.Instance().Config.AutoWoodConfig.WoodCountOcrEnabled = false;
                     throw new NormalEndException("首次伐木就未识别到木材数据，已经自动关闭【OCR识别并累计木材数】的功能，请重新启动【自动伐木】功能！");
                 }
+
                 return;
             }
 
@@ -211,6 +213,7 @@ public partial class AutoWoodTask : ISoloTask
                     return _firstWoodOcrText;
                 }
             }
+
             stopwatch.Stop(); // 停止计时
             _firstWoodOcrText = FindBestOcrResult(firstOcrResultList);
             return _firstWoodOcrText;
@@ -235,6 +238,7 @@ public partial class AutoWoodTask : ISoloTask
                 return !string.IsNullOrEmpty(recognizedText) &&
                        recognizedText.Contains("获得");
             }
+
             return !string.IsNullOrEmpty(recognizedText) &&
                    recognizedText.Contains("获得") &&
                    (recognizedText.Contains('×') || recognizedText.Contains('x'));
@@ -292,6 +296,7 @@ public partial class AutoWoodTask : ISoloTask
                 Logger.LogWarning("未知的木材名：{woodName}，数量{Cnt}", materialName, quantity);
                 return;
             }
+
             WoodTotalDict.AddOrUpdate(
                 key: materialName,
                 addValue: quantity,
@@ -335,6 +340,7 @@ public partial class AutoWoodTask : ISoloTask
                         isFound = false;
                         continue;
                     }
+
                     var materialName = match.Groups[1].Value.Trim();
                     Debug.WriteLine($"第一次获取的木材名称：{materialName}");
                     if (!ExistWoods.Contains(materialName))

@@ -44,13 +44,15 @@ public class ScanPickTask
 
     public async Task DoOnce(CancellationToken ct)
     {
-        await ResetCamera(ct);
-        
-        for (int n = 0; n < 5; n++) // 最多跑5次
+        var forwardTimes = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.ForwardTimes;
+        for (int n = 0; n < forwardTimes; n++) // 直走次数
         {
+            await ResetCamera(ct);
             var hasDrops = false;
 
             // 旋转视角
+            var step = 300 * _dpi; // TODO:把300换成一个更加普适的值
+            step = n % 2 == 0 ? step : -step;
             for (var i = 0; i < 20; i++)
             {
                 var ra = CaptureToRectArea();
@@ -63,18 +65,14 @@ public class ScanPickTask
                 if (pickItems.Count > 0)
                 {
                     hasDrops = true;
-                    // 把鼠标位置和物品位置重合
-                    MoveCursorTo(pickItems.First(), ra);
-                    await Delay(100, ct);
-                    // 物体越小，距离越远
-                    await WalkForward(ct);
+                    await MoveTowardsFirstDrop(ct, 300 * _dpi);
                     break;
                 }
 
-                Simulation.SendInput.Mouse.MoveMouseBy((int)(300 * _dpi), 0);
+                Simulation.SendInput.Mouse.MoveMouseBy((int)step, 0);
                 await Delay(100, ct);
             }
-            
+
             if (!hasDrops)
             {
                 break;
@@ -83,11 +81,54 @@ public class ScanPickTask
 
     }
 
-    private static async Task WalkForward(CancellationToken ct)
+    private static async Task WalkForward(CancellationToken ct, int ms = 1000)
     {
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-        await Delay(1000, ct);
+        await Delay(ms, ct);
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+    }
+
+    private async Task MoveTowardsFirstDrop(CancellationToken ct, double step)
+    {
+        //通过每次缩小之前的步长来定位，可能有一定开销
+        var decayFactor = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.DecayFactor;
+        var calibrationTimes = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.CalibrationTimes;
+
+        var found = false;
+        for (var i = 0; i < calibrationTimes; i++)
+        {
+            var ra = CaptureToRectArea();
+            var resultDic = _predictor.Detect(ra);
+            var pickItems = resultDic.Where(x => x.Key is "drops" or "ore")
+                .SelectMany(x => x.Value).ToList();
+            if (pickItems.Count > 0)
+            {
+                step *= decayFactor;
+                found = true;
+                //只关心横坐标
+                var centerX = (pickItems.First().Left + pickItems.First().Right) / 2;
+                var dx = centerX - ra.Width / 2;
+                if (dx > 0)
+                    Simulation.SendInput.Mouse.MoveMouseBy((int)step, 0);
+                else if (dx < 0)
+                    Simulation.SendInput.Mouse.MoveMouseBy(-(int)step, 0);
+                await Delay(100, ct);
+            }
+            else
+            {
+                //也许已经对准，被人物挡住
+                break;
+            }
+        }
+        if (found) //仅在找到物品时前进（在误判进入该函数时避免远离原地）
+        {
+            Logger.LogInformation("前进采集");
+            var forwardms = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.ForwardSeconds * 1000;
+            if (forwardms == 0)
+                forwardms = new Random().Next(1000, 3000);
+
+            await WalkForward(ct, forwardms);
+        }
     }
 
     private void MoveCursorTo(Rect item, ImageRegion ra)
@@ -103,8 +144,8 @@ public class ScanPickTask
     // 回正 并下移视角
     private async Task ResetCamera(CancellationToken ct)
     {
-        // Simulation.SendInput.Keyboard.Mouse.MiddleButtonClick();
-        // await Delay(500, ct);
+        Simulation.SendInput.Keyboard.Mouse.MiddleButtonClick();
+        await Delay(500, ct);
         Simulation.SendInput.Keyboard.Mouse.MoveMouseBy(0, (int)(500 * _dpi));
         await Delay(100, ct);
     }

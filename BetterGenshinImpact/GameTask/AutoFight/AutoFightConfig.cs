@@ -79,6 +79,40 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private bool _pickDropsAfterFightEnabled = true;
 
+    [Serializable]
+    public partial class PickDropsAfterFightConfig : ObservableObject
+    {
+        /// <summary>
+        /// 前进次数
+        /// </summary>
+        [ObservableProperty]
+        private int _forwardTimes = 6;
+
+        /// <summary>
+        /// 校准次数
+        /// </summary>
+        [ObservableProperty]
+        private int _calibrationTimes = 15;
+
+        /// <summary>
+        /// 衰减因子
+        /// </summary>
+        [ObservableProperty]
+        private double _decayFactor = 0.7;
+
+        /// <summary>
+        /// 前进量（秒），设置为0时在[1,3]中随机
+        /// </summary>
+        [ObservableProperty]
+        private int _forwardSeconds = 2;
+
+    }
+    /// <summary>
+    /// 掉落寻物相关配置
+    /// </summary>   
+    [ObservableProperty]
+    private PickDropsAfterFightConfig _pickDropsConfig = new();
+
     /// <summary>
     /// 战斗结束后，如果存在枫原万叶，则使用该角色捡材料
     /// </summary>
