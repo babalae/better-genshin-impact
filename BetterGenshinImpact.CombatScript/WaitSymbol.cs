@@ -5,8 +5,8 @@ namespace BetterGenshinImpact.CombatScript;
 
 public class WaitSymbol : InstructionSymbol, IInstructionSymbolHasDuration
 {
-    public WaitSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("wait", parameterList, trivia)
+    public WaitSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("wait", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [1]);

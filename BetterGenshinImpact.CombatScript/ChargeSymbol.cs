@@ -5,8 +5,8 @@ namespace BetterGenshinImpact.CombatScript;
 
 public class ChargeSymbol : InstructionSymbol, IInstructionSymbolHasDuration
 {
-    public ChargeSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("charge", parameterList, trivia)
+    public ChargeSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("charge", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [0, 1]);
@@ -20,8 +20,8 @@ public class ChargeSymbol : InstructionSymbol, IInstructionSymbolHasDuration
         }
     }
 
-    public ChargeSymbol(ImmutableArray<TriviaSymbol> trivia)
-        : base("charge", trivia)
+    public ChargeSymbol(ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("charge", leadingTriviaList, tailingTrivia)
     {
     }
 

@@ -4,8 +4,8 @@ namespace BetterGenshinImpact.CombatScript;
 
 public class JumpSymbol : InstructionSymbol, IInstructionSymbolHasAlias
 {
-    public JumpSymbol(bool isAlias, ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("jump", parameterList, trivia)
+    public JumpSymbol(bool isAlias, ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("jump", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [0]);
@@ -13,8 +13,8 @@ public class JumpSymbol : InstructionSymbol, IInstructionSymbolHasAlias
         IsAlias = isAlias;
     }
 
-    public JumpSymbol(bool isAlias, ImmutableArray<TriviaSymbol> trivia)
-        : base("jump", trivia)
+    public JumpSymbol(bool isAlias, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("jump", leadingTriviaList, tailingTrivia)
     {
         IsAlias = isAlias;
     }

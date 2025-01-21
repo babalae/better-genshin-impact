@@ -5,8 +5,8 @@ namespace BetterGenshinImpact.CombatScript;
 
 public class DashSymbol : InstructionSymbol, IInstructionSymbolHasDuration
 {
-    public DashSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("dash", parameterList, trivia)
+    public DashSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("dash", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [0, 1]);
@@ -20,8 +20,8 @@ public class DashSymbol : InstructionSymbol, IInstructionSymbolHasDuration
         }
     }
 
-    public DashSymbol(ImmutableArray<TriviaSymbol> trivia)
-        : base("dash", trivia)
+    public DashSymbol(ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("dash", leadingTriviaList, tailingTrivia)
     {
     }
 

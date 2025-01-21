@@ -4,19 +4,21 @@ namespace BetterGenshinImpact.CombatScript;
 
 public abstract class InstructionSymbol : BaseSymbol
 {
-    protected InstructionSymbol(string name, ImmutableArray<TriviaSymbol> trivia)
+    protected InstructionSymbol(string name, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
     {
         Name = name;
         HasParameterList = false;
-        TriviaList = trivia;
+        LeadingTriviaList = leadingTriviaList;
+        TailingTrivia = tailingTrivia;
     }
 
-    protected InstructionSymbol(string name, ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
+    protected InstructionSymbol(string name, ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
     {
         Name = name;
         HasParameterList = true;
         ParameterList = parameterList;
-        TriviaList = trivia;
+        LeadingTriviaList = leadingTriviaList;
+        TailingTrivia = tailingTrivia;
     }
 
     public string Name { get; }
@@ -25,10 +27,14 @@ public abstract class InstructionSymbol : BaseSymbol
 
     public ImmutableArray<IParameterSymbol> ParameterList { get; }
 
-    public ImmutableArray<TriviaSymbol> TriviaList { get; }
+    public ImmutableArray<TriviaSymbol> LeadingTriviaList { get; }
+
+    public TriviaSymbol? TailingTrivia { get; set; }
 
     public override void Emit(ISymbolEmitter emitter)
     {
+        emitter.Append(LeadingTriviaList);
+        
         if (this is IInstructionSymbolHasAlias {IsAlias: true } hasAlias)
         {
             emitter.Append(hasAlias.AliasName);
@@ -45,6 +51,9 @@ public abstract class InstructionSymbol : BaseSymbol
             emitter.Append(')');
         }
 
-        emitter.Append(TriviaList);
+        if (TailingTrivia is not null)
+        {
+            emitter.Append(TailingTrivia);
+        }
     }
 }

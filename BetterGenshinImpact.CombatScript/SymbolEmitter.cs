@@ -2,7 +2,7 @@
 
 namespace BetterGenshinImpact.CombatScript;
 
-public sealed class DefaultSymbolEmitter : ISymbolEmitter
+public sealed class SymbolEmitter : ISymbolEmitter
 {
     private readonly StringBuilder builder = new();
 
@@ -14,6 +14,12 @@ public sealed class DefaultSymbolEmitter : ISymbolEmitter
     public ISymbolEmitter Append(char value)
     {
         builder.Append(value);
+        return this;
+    }
+    
+    public ISymbolEmitter Append(char value, int repeatCount)
+    {
+        builder.Append(value, repeatCount);
         return this;
     }
 

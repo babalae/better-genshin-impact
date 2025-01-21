@@ -5,8 +5,8 @@ namespace BetterGenshinImpact.CombatScript;
 
 public class WalkSymbol : InstructionSymbol, IInstructionSymbolHasAlias, IInstructionSymbolHasDuration, IParameterSymbol
 {
-    public WalkSymbol(WalkDirection direction, ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("walk", parameterList, trivia)
+    public WalkSymbol(WalkDirection direction, ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("walk", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [1]);
@@ -22,15 +22,15 @@ public class WalkSymbol : InstructionSymbol, IInstructionSymbolHasAlias, IInstru
     }
 
     // Used for parameter
-    public WalkSymbol(WalkDirection direction, ImmutableArray<TriviaSymbol> trivia)
-        : base("walk", trivia)
+    public WalkSymbol(WalkDirection direction, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("walk", leadingTriviaList, tailingTrivia)
     {
         Direction = direction;
         IsAlias = true;
     }
 
-    public WalkSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("walk", parameterList, trivia)
+    public WalkSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("walk", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [2]);

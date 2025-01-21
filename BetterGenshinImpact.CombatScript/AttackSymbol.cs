@@ -5,8 +5,8 @@ namespace BetterGenshinImpact.CombatScript;
 
 public class AttackSymbol : InstructionSymbol, IInstructionSymbolHasDuration
 {
-    public AttackSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> trivia)
-        : base("attack", parameterList, trivia)
+    public AttackSymbol(ImmutableArray<IParameterSymbol> parameterList, ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("attack", parameterList, leadingTriviaList, tailingTrivia)
     {
         InstructionThrowHelper.ThrowIfParameterListIsDefault(parameterList);
         InstructionThrowHelper.ThrowIfParameterListCountNotCorrect(parameterList, [0, 1]);
@@ -20,8 +20,8 @@ public class AttackSymbol : InstructionSymbol, IInstructionSymbolHasDuration
         }
     }
 
-    public AttackSymbol(ImmutableArray<TriviaSymbol> trivia)
-        : base("attack", trivia)
+    public AttackSymbol(ImmutableArray<TriviaSymbol> leadingTriviaList, TriviaSymbol? tailingTrivia)
+        : base("attack", leadingTriviaList, tailingTrivia)
     {
     }
 
