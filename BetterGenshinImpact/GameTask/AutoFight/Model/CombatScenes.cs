@@ -31,7 +31,7 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 当前配队
     /// </summary>
-    public Avatar[] Avatars { get; set; } = Array.Empty<Avatar>();
+    public Avatar[] Avatars { get; set; } = [];
 
     public Dictionary<string, Avatar> AvatarMap { get; set; } = [];
 
