@@ -50,8 +50,8 @@ public class TravelsDiaryDetailManager
                 var _temp = JsonSerializer.Deserialize<ApiResponse<ActionItem>>(File.ReadAllText(tddfile));
                 if (_temp != null)
                 {
-                    //只统计杀怪的
-                    actionItems.AddRange(_temp.Data.List.Where(item => item.ActionId == 37));
+                    //统计杀怪或突发事件奖励
+                    actionItems.AddRange(_temp.Data.List.Where(item => item.ActionId == 37 || item.ActionId == 28));
                 }
             }
         }

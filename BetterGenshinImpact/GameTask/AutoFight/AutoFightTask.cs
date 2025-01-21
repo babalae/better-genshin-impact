@@ -202,6 +202,7 @@ public class AutoFightTask : ISoloTask
             throw new Exception("识别队伍角色失败");
         }
 
+        var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);
         var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
 
         // 新的取消token
@@ -221,7 +222,8 @@ public class AutoFightTask : ISoloTask
             return;
         }*/
         var fightEndFlag = false;
-        string lastFighttName = "";
+        string lastFightName = "";
+        string skipFightName = "";
         //统计切换人打架次数
         var countFight = 0;
         // 战斗操作
@@ -242,6 +244,30 @@ public class AutoFightTask : ISoloTask
                             break;
                         }
 
+                        //根据元素技能冷却事件优化出招流程，只有当人物切换后才会触发检查
+                        double skillCd;
+                        if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name,out skillCd))
+                        {
+                            var avatar = combatScenes.Avatars.FirstOrDefault(a => a.Name == command.Name);
+                            if (skillCd < 0)
+                            {
+                                skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);
+                            }
+                            var dif=(DateTime.UtcNow - avatar.LastSkillTime);
+                            //当技能未冷却时，跳过此次出招
+                            if ((DateTime.UtcNow -avatar.LastSkillTime).TotalSeconds < skillCd)
+                            {
+                                if (skipFightName != command.Name)
+                                {
+                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd-dif.TotalSeconds}秒,跳过此次行动");
+                                }
+                                skipFightName = command.Name;
+                                continue;
+                            }
+                        }
+
+                        
+                        
                         command.Execute(combatScenes);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
@@ -249,7 +275,7 @@ public class AutoFightTask : ISoloTask
                             countFight++;
                         }
 
-                        lastFighttName = command.Name;
+                        lastFightName = command.Name;
                         if (!fightEndFlag && _taskParam is { FightFinishDetectEnabled: true })
                         {
                             //处于最后一个位置，或者当前执行人和下一个人名字不一样的情况，满足一定条件(开启快速检查，并且检查时间大于0或人名存在配置)检查战斗
@@ -341,7 +367,7 @@ public class AutoFightTask : ISoloTask
             {
                 var time = DateTime.UtcNow - kazuha.LastSkillTime;
                 //当万叶cd大于3时或战斗人次少于2时（通常无怪物情况下），此时不再触发万叶拾取，
-                if (!(countFight < 2 || lastFighttName == "枫原万叶" && time.TotalSeconds > 3))
+                if (!(countFight < 2 || lastFightName == "枫原万叶" && time.TotalSeconds > 3))
                 {
                     Logger.LogInformation("使用枫原万叶长E拾取掉落物");
                     await Delay(300, ct);
@@ -469,6 +495,53 @@ public class AutoFightTask : ISoloTask
         return (r >= 240 && r <= 255) &&
                (g >= 240 && g <= 255) &&
                (b >= 240 && b <= 255);
+    }
+    static double FindMax(double[] numbers)
+    {
+        if (numbers == null || numbers.Length == 0)
+        {
+            throw new ArgumentException("The array is empty or null.");
+        }
+
+        double max = numbers[0]>10000 ? 0 : numbers[0];
+        foreach (var num in numbers)
+        {
+            var cpnum = numbers[0]>10000 ? 0 : num;
+            max = Math.Max(max, num);
+        }
+
+        return max;
+    }
+    private static Dictionary<string, double> ParseStringToDictionary(string input,double defaultValue=-1)
+    {
+        var dictionary = new Dictionary<string, double>();
+
+        if (string.IsNullOrEmpty(input))
+        {
+            return dictionary; // 返回空字典
+        }
+
+        string[] pairs = input.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var pair in pairs)
+        {
+            var parts = pair.Split(',', StringSplitOptions.TrimEntries);
+
+            if (parts.Length > 0)
+            {
+                string name = parts[0];
+                double value = defaultValue;
+
+                if (parts.Length > 1 && double.TryParse(parts[1], out var parsedValue))
+                {
+                    value = parsedValue;
+                }
+
+                dictionary[name] = value;
+            }
+        }
+
+        return dictionary;
     }
 
     private bool HasFightFlagByYolo(ImageRegion imageRegion)
