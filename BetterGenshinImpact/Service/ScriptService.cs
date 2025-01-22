@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.Service.Notification;
 
 namespace BetterGenshinImpact.Service;
 
@@ -22,6 +23,7 @@ public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
 
+    private readonly ScriptNotificationBuilderFactory NBFactory = new();
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
         groupName ??= "默认";
@@ -73,8 +75,10 @@ public partial class ScriptService : IScriptService
 
                     for (var i = 0; i < project.RunNum; i++)
                     {
+                        bool isSuccess = false;
                         try
                         {
+                            NotificationHelper.Notify(NBFactory.CreateWithScript(project).Started().Build());
                             if (hasTimer)
                             {
                                 TaskTriggerDispatcher.Instance().ClearTriggers();
@@ -85,20 +89,24 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
+                            isSuccess = true;
                         }
                         catch (NormalEndException e)
                         {
+                            NotificationHelper.Notify(NBFactory.CreateWithScript(project).Exception(e.Message).Build());
                             throw;
                         }
                         catch (TaskCanceledException e)
                         {
                             _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
+                            NotificationHelper.Notify(NBFactory.CreateWithScript(project).Exception("取消执行配置组: " + e.Message).Build());
                             throw;
                         }
                         catch (Exception e)
                         {
                             _logger.LogDebug(e, "执行脚本时发生异常");
                             _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                            NotificationHelper.Notify(NBFactory.CreateWithScript(project).Exception("执行脚本时发生异常: " + e.Message).Build());
                         }
                         finally
                         {
@@ -108,6 +116,14 @@ public partial class ScriptService : IScriptService
                             _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
+                            if (isSuccess)
+                            {
+                                NotificationHelper.Notify(NBFactory.CreateWithScript(project).Success().Build());
+                            }
+                            else
+                            {
+                                NotificationHelper.Notify(NBFactory.CreateWithScript(project).Failure().Build());
+                            }
                         }
 
                         await Task.Delay(2000);

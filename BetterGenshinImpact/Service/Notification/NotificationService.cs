@@ -20,7 +20,7 @@ public class NotificationService : IHostedService
 
     private static readonly HttpClient _httpClient = new();
     private readonly NotifierManager _notifierManager;
-    private AllConfig Config { get; set; }
+    public AllConfig Config { get; set; } //TODO:除了public以外还能怎么获取这个Config？
 
     public NotificationService(IConfigService configService, NotifierManager notifierManager)
     {
@@ -83,7 +83,7 @@ public class NotificationService : IHostedService
             {
                 return NotificationTestResult.Error("通知类型未启用");
             }
-            await notifier.SendNotificationAsync(TransformData(LifecycleNotificationData.Test()));
+            await notifier.SendNotificationAsync(TransformData(new TestNotificationData()));
             return NotificationTestResult.Success();
         }
         catch (NotifierException ex)

@@ -6,7 +6,6 @@ using BetterGenshinImpact.Service.Notification.Model.Base;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
-public class TaskNotificationData : INotificationData
+public class TestNotificationData : INotificationData
 {
-    public TaskDetails? Task { get; set; }
 }

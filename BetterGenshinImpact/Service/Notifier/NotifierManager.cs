@@ -46,8 +46,7 @@ public class NotifierManager
         }
         catch (System.Exception ex)
         {
-            Logger.LogError("{name} 通知发送失败", notifier.Name);
-            Debug.WriteLine(ex);
+            Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
         }
     }
 

@@ -1,14 +1,14 @@
-﻿using BetterGenshinImpact.Service.Notification.Model.Enum;
-using System.Text.Json.Serialization;
-using System.Drawing;
 using BetterGenshinImpact.Service.Notification.Converter;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
+using System.Drawing;
+using System.Text.Json.Serialization;
 
-namespace BetterGenshinImpact.Service.Notification.Model;
+namespace BetterGenshinImpact.Service.Notification.Model.Event;
 
-public abstract class INotificationData
+public abstract class BaseEvent
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public NotificationEvent Event { get; set; }
+    public NotificationEvent EventType { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public NotificationAction Action { get; set; }
@@ -18,6 +18,4 @@ public abstract class INotificationData
 
     [JsonConverter(typeof(ImageToBase64Converter))]
     public Image? Screenshot { get; set; }
-
-    public string? Message { get; set; }
-}
+} 

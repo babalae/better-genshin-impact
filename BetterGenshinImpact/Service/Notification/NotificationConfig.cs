@@ -20,4 +20,10 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _webhookEndpoint = string.Empty;
+
+    /// <summary>
+    /// 是否包含截图
+    /// </summary>
+    [ObservableProperty]
+    private bool _includeScreenShot = false;
 }
