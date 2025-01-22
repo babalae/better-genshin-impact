@@ -20,4 +20,9 @@ public abstract class INotificationData
     public Image? Screenshot { get; set; }
 
     public string? Message { get; set; }
+
+    public void Send()
+    {
+        NotificationHelper.Notify(this);
+    }
 }

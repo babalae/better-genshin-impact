@@ -77,7 +77,7 @@ public partial class ScriptService : IScriptService
                         bool isSuccess = false;
                         try
                         {
-                            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(project).Started().Build());
+                            NotificationBuilderFactory.CreateWith(project).Started().Build().Send();
                             if (hasTimer)
                             {
                                 TaskTriggerDispatcher.Instance().ClearTriggers();
@@ -92,20 +92,20 @@ public partial class ScriptService : IScriptService
                         }
                         catch (NormalEndException e)
                         {
-                            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(project).Exception(e.Message).Build());
+                            NotificationBuilderFactory.CreateWith(project).Exception(e.Message).Build().Send();
                             throw;
                         }
                         catch (TaskCanceledException e)
                         {
                             _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
-                            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(project).Exception("取消执行配置组: " + e.Message).Build());
+                            NotificationBuilderFactory.CreateWith(project).Exception("取消执行配置组: " + e.Message).Build().Send();
                             throw;
                         }
                         catch (Exception e)
                         {
                             _logger.LogDebug(e, "执行脚本时发生异常");
                             _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
-                            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(project).Exception("执行脚本时发生异常: " + e.Message).Build());
+                            NotificationBuilderFactory.CreateWith(project).Exception("执行脚本时发生异常: " + e.Message).Build().Send();
                         }
                         finally
                         {
@@ -117,11 +117,11 @@ public partial class ScriptService : IScriptService
                             _logger.LogInformation("------------------------------");
                             if (isSuccess)
                             {
-                                NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(project).Success().Build());
+                                NotificationBuilderFactory.CreateWith(project).Success().Build().Send();
                             }
                             else
                             {
-                                NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(project).Failure().Build());
+                                NotificationBuilderFactory.CreateWith(project).Failure().Build().Send();
                             }
                         }
 

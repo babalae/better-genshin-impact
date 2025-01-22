@@ -75,7 +75,7 @@ public class AutoDomainTask : ISoloTask
 
         Init();
         // TODO: 使用exception逻辑让started必有对应的completed
-        NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(_taskParam).Started().Build());
+        NotificationBuilderFactory.CreateWith(_taskParam).Started().Build().Send();
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -163,10 +163,10 @@ public class AutoDomainTask : ISoloTask
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
 
-                NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(_taskParam).Success().Build());
+                NotificationBuilderFactory.CreateWith(_taskParam).Success().Build().Send();
                 break;
             }
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(_taskParam).InProgress().Build());
+            NotificationBuilderFactory.CreateWith(_taskParam).InProgress().Build().Send();
         }
     }
 

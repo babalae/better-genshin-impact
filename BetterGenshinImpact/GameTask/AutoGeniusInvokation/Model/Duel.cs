@@ -62,7 +62,7 @@ public class Duel
         {
             AutoGeniusInvokationAssets.DestroyInstance();
 
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Started().Build());
+            NotificationBuilderFactory.CreateWith(this).Started().Build().Send();
             GeniusInvokationControl.GetInstance().Init(ct);
 
             // 对局准备 选择初始手牌
@@ -288,14 +288,14 @@ public class Duel
         }
         catch (TaskCanceledException ex)
         {
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Exception(ex.Message).Build());
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Failure().Build());
+            NotificationBuilderFactory.CreateWith(this).Exception(ex.Message).Build().Send();
+            NotificationBuilderFactory.CreateWith(this).Failure().Build().Send();
             throw;
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation("对局结束");
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Success().Build());
+            NotificationBuilderFactory.CreateWith(this).Success().Build().Send();
             throw;
         }
         catch (System.Exception ex)
@@ -304,8 +304,8 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Exception(ex.Message).Build());
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Failure().Build());
+            NotificationBuilderFactory.CreateWith(this).Exception(ex.Message).Build().Send();
+            NotificationBuilderFactory.CreateWith(this).Failure().Build().Send();
             throw;
         }
     }

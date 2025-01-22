@@ -52,7 +52,7 @@ public class TaskRunner
             return;
         }
         bool isSuccess = false;
-        NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(taskDetails).Started().Build());
+        NotificationBuilderFactory.CreateWith(taskDetails).Started().Build().Send();
         try
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
@@ -70,7 +70,7 @@ public class TaskRunner
         }
         catch (NormalEndException e)
         {
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(taskDetails).Exception("任务中断:" + e.Message).Build());
+            NotificationBuilderFactory.CreateWith(taskDetails).Exception("任务中断:" + e.Message).Build().Send();
             _logger.LogInformation("任务中断:{Msg}", e.Message);
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
@@ -81,7 +81,7 @@ public class TaskRunner
         catch (TaskCanceledException e)
         {
             _logger.LogInformation("任务中断:{Msg}", "任务被取消");
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(taskDetails).Exception("任务被取消").Build());
+            NotificationBuilderFactory.CreateWith(taskDetails).Exception("任务被取消").Build().Send();
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -92,7 +92,7 @@ public class TaskRunner
         {
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
-            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(taskDetails).Exception(e.Message).Build());
+            NotificationBuilderFactory.CreateWith(taskDetails).Exception(e.Message).Build().Send();
         }
         finally
         {
@@ -100,11 +100,11 @@ public class TaskRunner
             _logger.LogInformation("→ {Text}", _name + "任务结束");
             if (isSuccess)
             {
-                NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(taskDetails).Success().Build());
+                NotificationBuilderFactory.CreateWith(taskDetails).Success().Build().Send();
             }
             else
             {
-                NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(taskDetails).Failure().Build());
+                NotificationBuilderFactory.CreateWith(taskDetails).Failure().Build().Send();
             }
 
             CancellationContext.Instance.Clear();
