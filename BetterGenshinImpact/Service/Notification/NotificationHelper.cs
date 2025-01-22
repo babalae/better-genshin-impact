@@ -24,35 +24,25 @@ public class NotificationHelper
     }
 }
 
-public class ScriptNotificationBuilderFactory
+public class NotificationBuilderFactory
 {
-    public ScriptNotificationBuilder CreateWithScript(ScriptGroupProject script)
+    public static ScriptNotificationBuilder CreateWith(ScriptGroupProject script)
     {
         return new ScriptNotificationBuilder().WithEvent(NotificationEvent.Script).WithScript(script);
     }
-}
 
-public class TaskNotificationBuilderFactory
-{
-    public TaskNotificationBuilder CreateWithTask(TaskDetails task)
+    public static TaskNotificationBuilder CreateWith(TaskDetails task)
     {
         return new TaskNotificationBuilder().WithEvent(NotificationEvent.Task).WithTask(task);
     }
-}
 
-public class GeniusInvocationNotificationBuilderFactory
-{
-    public GeniusInvocationNotificationBuilder CreateWithGeniusInvocation(Duel geniusInvocation)
+    public static GeniusInvocationNotificationBuilder CreateWith(Duel geniusInvocation)
     {
         return new GeniusInvocationNotificationBuilder().WithEvent(NotificationEvent.GeniusInvocation).WithGeniusInvocation(geniusInvocation);
     }
-}
 
-public class DomainNotificationBuilderFactory
-{
-    public DomainNotificationBuilder CreateWithDomain(AutoDomainParam domain)
+    public static DomainNotificationBuilder CreateWith(AutoDomainParam domain)
     {
         return new DomainNotificationBuilder().WithEvent(NotificationEvent.Domain).WithDomain(domain);
     }
 }
-

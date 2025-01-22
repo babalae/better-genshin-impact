@@ -50,8 +50,6 @@ public class Duel
 
     private int _keqingECount = 0;
 
-    private readonly GeniusInvocationNotificationBuilderFactory NBFactory = new();
-
     public async Task RunAsync(CancellationToken ct)
     {
         await Task.Run(() => { Run(ct); }, ct);
@@ -64,7 +62,7 @@ public class Duel
         {
             AutoGeniusInvokationAssets.DestroyInstance();
 
-            NotificationHelper.Notify(NBFactory.CreateWithGeniusInvocation(this).Started().Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Started().Build());
             GeniusInvokationControl.GetInstance().Init(ct);
 
             // 对局准备 选择初始手牌
@@ -290,14 +288,14 @@ public class Duel
         }
         catch (TaskCanceledException ex)
         {
-            NotificationHelper.Notify(NBFactory.CreateWithGeniusInvocation(this).Exception(ex.Message).Build());
-            NotificationHelper.Notify(NBFactory.CreateWithGeniusInvocation(this).Failure().Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Exception(ex.Message).Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Failure().Build());
             throw;
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation("对局结束");
-            NotificationHelper.Notify(NBFactory.CreateWithGeniusInvocation(this).Success().Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Success().Build());
             throw;
         }
         catch (System.Exception ex)
@@ -306,8 +304,8 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
-            NotificationHelper.Notify(NBFactory.CreateWithGeniusInvocation(this).Exception(ex.Message).Build());
-            NotificationHelper.Notify(NBFactory.CreateWithGeniusInvocation(this).Failure().Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Exception(ex.Message).Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(this).Failure().Build());
             throw;
         }
     }

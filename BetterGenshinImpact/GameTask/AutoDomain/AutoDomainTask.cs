@@ -53,8 +53,6 @@ public class AutoDomainTask : ISoloTask
 
     private CancellationToken _ct;
 
-    private readonly DomainNotificationBuilderFactory NBFactory = new();
-
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         _taskParam = taskParam;
@@ -77,7 +75,7 @@ public class AutoDomainTask : ISoloTask
 
         Init();
         // TODO: 使用exception逻辑让started必有对应的completed
-        NotificationHelper.Notify(NBFactory.CreateWithDomain(_taskParam).Started().Build());
+        NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(_taskParam).Started().Build());
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -165,10 +163,10 @@ public class AutoDomainTask : ISoloTask
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
 
-                NotificationHelper.Notify(NBFactory.CreateWithDomain(_taskParam).Success().Build());
+                NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(_taskParam).Success().Build());
                 break;
             }
-            NotificationHelper.Notify(NBFactory.CreateWithDomain(_taskParam).InProgress().Build());
+            NotificationHelper.Notify(NotificationBuilderFactory.CreateWith(_taskParam).InProgress().Build());
         }
     }
 
