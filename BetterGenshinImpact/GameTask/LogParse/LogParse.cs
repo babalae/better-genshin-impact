@@ -102,6 +102,33 @@ namespace LogParse
 
                     if (configTask != null)
                     {
+
+                        //前往七天神像复活
+                        if (logstr.EndsWith("前往七天神像复活"))
+                        {
+                            configTask.Fault.ReviveCount++;
+                        }
+                        //传送失败，重试 n 次
+                        result = parseBgiLine($@"传送失败，重试 (\d+) 次", logstr);
+                        if (result.Item1)
+                        {
+                            configTask.Fault.TeleportFailCount = int.Parse(result.Item2[1]);
+               
+                        }
+                        //战斗超时结束
+                        if (logstr == "战斗超时结束")
+                        {
+                            configTask.Fault.BattleTimeoutCount ++;
+                        }                
+                        
+                        //重试一次路线或放弃此路线！
+                        if (logstr.EndsWith("重试一次路线或放弃此路线！"))
+                        {
+                            configTask.Fault.ReviveCount++;
+                        }
+                       
+                        
+                        
                         if (logstr.StartsWith("→ 脚本执行结束: \"" + configTask.Name + "\""))
                         {
                             configTask.EndDate = parsePreDataTime(logLines, i - 1, logrq);
@@ -182,6 +209,8 @@ namespace LogParse
             //配置人物列表xxx.json
             public List<ConfigTask> ConfigTaskList { get; } = new();
 
+
+
             public class ConfigTask
             {
                 public string Name { get; set; }
@@ -204,6 +233,21 @@ namespace LogParse
 
                     Picks[val] = Picks[val] + 1;
                 }
+                public FaultScenario Fault { get; set; } = new();
+            
+                public class FaultScenario
+                {
+                    //复活次数
+                    public int ReviveCount { get; set; } = 0;
+                    //传送失败次数
+                    public int TeleportFailCount { get; set; } = 0;
+                    //重试次数
+                    public int RetryCount { get; set; } = 0;
+                    //战斗超时
+                    public int BattleTimeoutCount { get; set; } = 0;
+                
+                }
+                
             }
         }
 
@@ -307,7 +351,24 @@ namespace LogParse
             return customDayStart;
         }
 
-        public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, GameInfo gameInfo)
+        public static string FormatNumberWithStyle(int a, int b=3)
+        {
+            if (a== 0)
+            {
+                return "";
+            }
+            // Determine the style based on the condition
+            string colorStyle = a >= b ? "color:red;" : string.Empty;
+
+            // Return the formatted HTML string
+            return $"<span style=\"font-weight:bold;{colorStyle}\">{a}</span>";
+        }
+        public static string GetNumberOrEmptyString(int number)
+        {
+            // 如果数字为0，返回空字符串，否则返回数字的字符串形式
+            return number == 0 ? string.Empty : number.ToString();
+        }
+        public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, GameInfo gameInfo,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
             (string name, Func<ConfigTask, string> value)[] colConfigs =
             [
@@ -316,20 +377,28 @@ namespace LogParse
                 (name: "结束日期", value: task => task.EndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""),
                 (name: "耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0))
             ];
-            
-            
+            List<(string name, Func<ConfigTask, string> value)> colConfigList = new();
+            colConfigList.AddRange(colConfigs);
+            if (scriptGroupLogParseConfig.FaultStatsSwitch)
+            {
+                colConfigList.Add((name: "复活次数", value: task => FormatNumberWithStyle(task.Fault.ReviveCount)));
+                colConfigList.Add((name: "重试次数", value: task => FormatNumberWithStyle(task.Fault.RetryCount)));
+                colConfigList.Add((name: "战斗超时次数", value: task => FormatNumberWithStyle(task.Fault.BattleTimeoutCount)));
+                colConfigList.Add((name: "传送失败次数", value: task => FormatNumberWithStyle(task.Fault.TeleportFailCount)));
+            }
+
             
             (string name, Func<MoraStatistics, string> value)[] msColConfigs =
             [
-                (name: "日期", value: ms => ms.Name), (name: "小怪", value: ms => ms.SmallMonsterStatistics.ToString()),
+                (name: "日期", value: ms => ms.Name), (name: "小怪", value: ms => GetNumberOrEmptyString(ms.SmallMonsterStatistics)),
                 (name: "最后小怪日期", value: ms => ms.LastSmallTime),
-                (name: "精英", value: ms => ms.EliteGameStatistics.ToString()),
+                (name: "精英", value: ms => GetNumberOrEmptyString(ms.EliteGameStatistics)),
                 (name: "精英详细", value: ms => ms.EliteDetails), (name: "最后精英日期", value: ms => ms.LastEliteTime),
                 (name: "总计锄地摩拉", value: ms => ms.TotalMoraKillingMonstersMora.ToString()),
                 (name: "突发事件获取摩拉", value: ms => ms.EmergencyBonus)
             ];
             //锄地部分新曾字段
-            (string name, Func<MoraStatistics, string> value)[] col2Configs=[..msColConfigs.ToList().Where(item=>item.name!="日期" && item.name!="最后小怪日期" && item.name!="最后精英日期"),
+            (string name, Func<MoraStatistics, string> value)[] col2Configs=[..msColConfigs.ToList().Where(item=>item.name!="日期" && item.name!="最后小怪日期" && item.name!="最后精英日期" && item.name!="突发事件获取摩拉"),
                 (name: "摩拉（每秒）", value: ms => (ms.TotalMoraKillingMonstersMora/(ms.StatisticsEnd-ms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2")),
             ];
                 
@@ -344,7 +413,7 @@ namespace LogParse
                 actionItems = TravelsDiaryDetailManager.loadAllActionItems(gameInfo, configGroups);
             }
 
-            return GenerHtmlByConfigGroupEntity(configGroups, "日志分析", colConfigs,col2Configs, actionItems, msColConfigs);
+            return GenerHtmlByConfigGroupEntity(configGroups, "日志分析", colConfigList.ToArray(),col2Configs, actionItems, msColConfigs);
         }
         public static string ConcatenateStrings(string a, string b)
         {

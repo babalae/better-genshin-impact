@@ -14,5 +14,6 @@ public partial class LogParseConfig : ObservableObject
         [ObservableProperty] private string _rangeValue = "CurrentConfig";
         [ObservableProperty] private string _dayRangeValue = "7";
         [ObservableProperty] private bool _hoeingStatsSwitch = false;
+        [ObservableProperty] private bool _faultStatsSwitch = false;
     }
 }
