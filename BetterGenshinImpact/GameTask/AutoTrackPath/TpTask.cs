@@ -152,9 +152,7 @@ public class TpTask(CancellationToken ct)
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
         await SwitchRecentlyCountryMap(x, y, country);
-
-        // 计算坐标后点击
-        var bigMapInAllMapRect = GetBigMapRect();
+        
         if (_mapZoomEnabled)
         {
             double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
@@ -165,7 +163,7 @@ public class TpTask(CancellationToken ct)
                 Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.000}", 4.5);
             }
         }
-        
+        var bigMapInAllMapRect = GetBigMapRect();
         while (!IsPointInBigMapWindow(bigMapInAllMapRect, x, y)) // 左上角 350x400也属于禁止点击区域
         {
             Debug.WriteLine($"({x},{y}) 不在 {bigMapInAllMapRect} 内，继续移动");
