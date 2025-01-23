@@ -442,6 +442,8 @@ namespace LogParse
             html.AppendLine("        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }");
             html.AppendLine("        th, td { border: 1px solid black; padding: 8px; text-align: left; }");
             html.AppendLine("        th { background-color: #f2f2f2; }");
+            html.AppendLine("    tr:nth-child(odd) {   background-color: #eaeaea; /* 奇数行颜色 */    }");
+            html.AppendLine("    tr:nth-child(even) { background-color: #f9f9f9; /* 偶数行颜色 */}");
             html.AppendLine("    </style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
