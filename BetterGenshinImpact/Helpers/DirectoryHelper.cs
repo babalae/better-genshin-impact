@@ -33,6 +33,15 @@ public class DirectoryHelper
 
     private static void DeleteDirectory(DirectoryInfo directoryInfo)
     {
+        
+        //通过软链接生成的目录，直接删除该链接目录，而不涉及其文件本体
+        var attributes = directoryInfo.Attributes;
+        if ((attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+        {
+            directoryInfo.Delete();
+            return;
+        }
+
         // 递归处理子目录
         foreach (var subDirectory in directoryInfo.GetDirectories())
         {
