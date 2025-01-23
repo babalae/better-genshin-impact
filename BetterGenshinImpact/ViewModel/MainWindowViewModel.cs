@@ -66,12 +66,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private void OnSwitchBackdrop()
     {
+        if (!OsVersionHelper.IsWindows11_22523_OrGreater)
+        {
+            return; // win10 不支持切换主题
+        }
+        
         CurrentBackdropType = CurrentBackdropType switch
         {
             WindowBackdropType.Mica => WindowBackdropType.Acrylic,
-            WindowBackdropType.Acrylic => WindowBackdropType.Tabbed,
-            WindowBackdropType.Tabbed => WindowBackdropType.Mica,
-            _ => WindowBackdropType.Mica
+            WindowBackdropType.Acrylic => WindowBackdropType.Mica,
+            _ => WindowBackdropType.Acrylic
         };
 
         Config.CommonConfig.CurrentBackdropType = CurrentBackdropType;
@@ -79,7 +83,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         if (Application.Current.MainWindow is MainWindow mainWindow)
         {
             mainWindow.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
-            ;
             WindowBackdrop.ApplyBackdrop(mainWindow, CurrentBackdropType);
         }
     }

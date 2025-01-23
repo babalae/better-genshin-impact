@@ -436,6 +436,7 @@ public class AutoDomainTask : ISoloTask
             finally
             {
                 Logger.LogInformation("自动战斗线程结束");
+                combatScenes.AfterTask();
             }
         }, cts.Token);
 
