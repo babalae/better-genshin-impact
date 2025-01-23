@@ -124,7 +124,7 @@ namespace LogParse
                         //重试一次路线或放弃此路线！
                         if (logstr.EndsWith("重试一次路线或放弃此路线！"))
                         {
-                            configTask.Fault.ReviveCount++;
+                            configTask.Fault.RetryCount++;
                         }
                        
                         
