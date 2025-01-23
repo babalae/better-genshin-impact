@@ -19,20 +19,20 @@ public class WindowHelper
             {
                 window.Background = new SolidColorBrush(Colors.Transparent);
             }
-        
+
             WindowBackdrop.ApplyBackdrop(window, TaskContext.Instance().Config.CommonConfig.CurrentBackdropType);
             return;
         }
 
-        if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
-        {
-             window.Background = new SolidColorBrush(Colors.Transparent);
-            WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.Mica);
-        }
-        else if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))
+        if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))
         {
             window.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
             WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.Acrylic);
+        }
+        else if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
+        {
+            window.Background = new SolidColorBrush(Colors.Transparent);
+            WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.Mica);
         }
     }
 }
