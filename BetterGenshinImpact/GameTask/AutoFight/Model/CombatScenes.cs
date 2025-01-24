@@ -70,6 +70,7 @@ public class CombatScenes : IDisposable
             {
                 throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
             }
+
             // 联机状态下判断
             var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
             var p = "p";
@@ -243,6 +244,21 @@ public class CombatScenes : IDisposable
         for (var i = 0; i < AvatarCount; i++)
         {
             Avatars[i].Ct = ct;
+        }
+    }
+
+    public void AfterTask()
+    {
+        var mwk = SelectAvatar("玛薇卡");
+        if (mwk != null)
+        {
+            foreach (var avatar in Avatars)
+            {
+                if (avatar.Name != "玛薇卡")
+                {
+                    avatar.Switch();
+                }
+            }
         }
     }
 
