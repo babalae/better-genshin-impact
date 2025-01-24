@@ -156,14 +156,14 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             && Directory.Exists(Global.Absolute("BetterGI/User"))
             )
         {
-            var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI", System.Windows.MessageBoxButton.YesNo);
+            var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res == System.Windows.MessageBoxResult.Yes)
             {
                 var dir = Global.Absolute("BetterGI/User");
                 // 迁移配置，拷贝整个目录并覆盖
                 DirectoryHelper.CopyDirectory(dir, Global.Absolute("User"));
                 // 删除旧目录
-                Directory.Delete(Global.Absolute("BetterGI"));
+                DirectoryHelper.DeleteDirectoryRecursively(Global.Absolute("BetterGI"));
             }
 
         }
