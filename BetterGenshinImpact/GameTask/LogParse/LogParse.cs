@@ -434,7 +434,6 @@ namespace LogParse
                     foreach (var actionItem in actionItems)
                     {
                         actionItem.Time = SubtractFiveSeconds(actionItem.Time,hoeingDelay);
-                        Console.WriteLine();
                     }
                 }
                 
