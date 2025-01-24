@@ -109,4 +109,34 @@ public class DirectoryHelper
             CopyDirectory(subDir, destSubDir); // 递归拷贝子目录
         }
     }
+    
+    /// <summary>
+    /// 递归删除指定目录及其所有子目录和文件
+    /// </summary>
+    /// <param name="directoryPath">要删除的目录的路径</param>
+    public static void DeleteDirectoryRecursively(string directoryPath)
+    {
+        // 检查目录是否存在
+        if (Directory.Exists(directoryPath))
+        {
+            // 获取目录中的所有子目录
+            string[] subDirectories = Directory.GetDirectories(directoryPath);
+            foreach (string subDirectory in subDirectories)
+            {
+                // 递归调用删除子目录
+                DeleteDirectoryRecursively(subDirectory);
+            }
+
+            // 获取目录中的所有文件
+            string[] files = Directory.GetFiles(directoryPath);
+            foreach (string file in files)
+            {
+                // 删除文件
+                File.Delete(file);
+            }
+
+            // 删除空目录
+            Directory.Delete(directoryPath);
+        }
+    }
 }
