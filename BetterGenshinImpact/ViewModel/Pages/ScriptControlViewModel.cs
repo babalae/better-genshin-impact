@@ -223,9 +223,39 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
         secondRow.Children.Add(questionButton);
 
+        StackPanel threeRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        
+        // 创建一个 TextBlock
+        TextBlock hoeingDelayBlock = new TextBlock
+        {
+            Text = "锄地延时(秒)：",
+            VerticalAlignment = VerticalAlignment.Center,
+            FontSize = 16,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+
+        
+        TextBox hoeingDelayTextBox = new TextBox
+        {
+            Width = 100,
+            FontSize = 16,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+  
+        threeRow.Children.Add(hoeingDelayBlock);
+        threeRow.Children.Add(hoeingDelayTextBox);
+        
+        
+        
+        
+        
         // 将第二行添加到 StackPanel
         stackPanel.Children.Add(secondRow);
-
+        stackPanel.Children.Add(threeRow);
         //PrimaryButtonText
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
@@ -257,6 +287,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         cookieTextBox.Text = config.Cookie;
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
+        hoeingDelayTextBox.Text = sgpc.HoeingDelay;
         
         MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
 
@@ -271,6 +302,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             sgpc.RangeValue = rangeValue;
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
             sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
+            sgpc.HoeingDelay = hoeingDelayTextBox.Text;
+
             config.Cookie = cookieValue;
             config.ScriptGroupLogDictionary[_selectedScriptGroup.Name]=sgpc;
             

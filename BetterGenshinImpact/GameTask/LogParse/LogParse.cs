@@ -368,6 +368,24 @@ namespace LogParse
             // 如果数字为0，返回空字符串，否则返回数字的字符串形式
             return number == 0 ? string.Empty : number.ToString();
         }
+        public static string SubtractFiveSeconds(string inputTime,int seconds)
+        {
+            try
+            {
+                // 将输入的字符串解析为 DateTime
+                DateTime parsedTime = DateTime.ParseExact(inputTime, "yyyy-MM-dd HH:mm:ss", null);
+            
+                // 减去 5 秒
+                DateTime resultTime = parsedTime.AddSeconds(-seconds);
+            
+                // 转换回指定格式的字符串并返回
+                return resultTime.ToString("yyyy-MM-dd HH:mm:ss");
+            }
+            catch (FormatException)
+            {
+                return "Invalid input time format. Please use 'yyyy-MM-dd HH:mm:ss'.";
+            }
+        }
         public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, GameInfo gameInfo,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
             (string name, Func<ConfigTask, string> value)[] colConfigs =
@@ -409,8 +427,17 @@ namespace LogParse
             List<ActionItem> actionItems = new();
             if (gameInfo != null)
             {
-
                 actionItems = TravelsDiaryDetailManager.loadAllActionItems(gameInfo, configGroups);
+                int hoeingDelay;
+                if (int.TryParse(scriptGroupLogParseConfig.HoeingDelay, out hoeingDelay))
+                {
+                    foreach (var actionItem in actionItems)
+                    {
+                        actionItem.Time = SubtractFiveSeconds(actionItem.Time,hoeingDelay);
+                        Console.WriteLine();
+                    }
+                }
+                
             }
 
             return GenerHtmlByConfigGroupEntity(configGroups, "日志分析", colConfigList.ToArray(),col2Configs, actionItems, msColConfigs);
