@@ -6,6 +6,7 @@ public class MoveModeEnum(string code, string msg)
 {
     public static readonly MoveModeEnum Walk = new("walk", "步行");
     public static readonly MoveModeEnum Run = new("run", "奔跑");
+    public static readonly MoveModeEnum Dash = new("dash", "持续冲刺");
     public static readonly MoveModeEnum Climb = new("climb", "攀爬");
     public static readonly MoveModeEnum Fly = new("fly", "飞行");
     public static readonly MoveModeEnum Jump = new("jump", "跳跃");
