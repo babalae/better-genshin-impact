@@ -1,7 +1,4 @@
-﻿using BehaviourTree;
-using BehaviourTree.FluentBuilder;
-using BehaviourTree.Composites;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -28,7 +25,6 @@ using static Vanara.PInvoke.User32;
 using Color = System.Drawing.Color;
 using Pen = System.Drawing.Pen;
 using Point = OpenCvSharp.Point;
-using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -51,8 +47,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private readonly AutoFishingAssets _autoFishingAssets;
 
-        private IBehaviour<CaptureContent> BehaviourTree { get; set; }
-
         public AutoFishingTrigger()
         {
             _autoFishingAssets = AutoFishingAssets.Instance;
@@ -70,32 +64,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _noFishActionContinuouslyFrameNum = 0;
             _isThrowRod = false;
             _selectedBaitName = string.Empty;
-
-            BehaviourTree = FluentBuilder.Create<CaptureContent>()
-                .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                    .Do("检查开关", ctx => TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled ? BehaviourStatus.Running : BehaviourStatus.Failed)
-                    .UntilSuccess("钓鱼")
-                        .Sequence("从选鱼饵开始")
-                            .Do("抛竿前准备", ThrowRod)
-                            .Do("打开换饵界面", OpenChooseBaitUI)
-                            .PushLeaf(() => new ChooseBait("选择鱼饵", this))
-                            .UntilSuccess("重复预抛竿")
-                                .Sequence("从预抛竿开始")
-                                    .Do("长按预抛竿", ApproachFishAndThrowRod0)
-                                    .Do("抛竿", ApproachFishAndThrowRod1)
-                                .End()
-                            .End()
-                            .Do("跳转-抛竿缺鱼检查", NoTargetFishCheck)
-                            .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
-                                .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
-                                .Do("自动提竿", FishBite)
-                            .End()
-                            .Do("等待拉条出现", Wait4FishBoxAreaAppear)
-                            .Do("钓鱼拉条", Fishing)
-                        .End()
-                    .End()
-                .End()
-                .Build();
         }
 
         private Rect _fishBoxRect = Rect.Empty;
@@ -122,11 +90,27 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                BehaviourTree.Tick(content);
-                if (BehaviourTree.Status == BehaviourStatus.Failed)
+                // 自动抛竿
+                ThrowRod(content);
+                // 上钩判断
+                FishBite(content);
+                // 进入钓鱼界面先尝试获取钓鱼框的位置
+                if (_fishBoxRect.Width == 0)
                 {
-                    _logger.LogInformation("BehaviourStatus.Failed 退出独占模式");
+                    if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
+                    {
+                        return;
+                    }
+
+                    _prevExecute = DateTime.Now;
+
+                    _fishBoxRect = GetFishBoxArea(content.CaptureRectArea);
                     CheckFishingUserInterface(content);
+                }
+                else
+                {
+                    // 钓鱼拉条
+                    Fishing(content, new Mat(content.CaptureRectArea.SrcMat, _fishBoxRect));
                 }
             }
         }
@@ -245,480 +229,375 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 3.
         /// </summary>
         /// <param name="content"></param>
-        private BehaviourStatus ThrowRod(CaptureContent content)
+        private void ThrowRod(CaptureContent content)
         {
             // 没有拉条和提竿的时候，自动抛竿
-            //if (!_isFishingProcess && _biteTipsExitCount == 0 && TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
-            //{
-            var baitRectArea = content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo);
-            var waitBiteArea = content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo);
-            if (!baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
+            if (!_isFishingProcess && _biteTipsExitCount == 0 && TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
             {
-                _switchBaitContinuouslyFrameNum++;
+                var baitRectArea = content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo);
+                var waitBiteArea = content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo);
+                if (!baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
+                {
+                    _switchBaitContinuouslyFrameNum++;
+                    _waitBiteContinuouslyFrameNum = 0;
+                    _noFishActionContinuouslyFrameNum = 0;
+
+                    if (_switchBaitContinuouslyFrameNum >= content.FrameRate)
+                    {
+                        _isThrowRod = false;
+                        _switchBaitContinuouslyFrameNum = 0;
+                        _logger.LogInformation("当前处于未抛竿状态");
+                    }
+
+                    if (!_isThrowRod)
+                    {
+                        // 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
+                        using var memoryStream = new MemoryStream();
+                        content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+                        memoryStream.Seek(0, SeekOrigin.Begin);
+                        var result = _predictor.Detect(memoryStream);
+                        Debug.WriteLine($"YOLOv8识别: {result.Speed}");
+                        var fishpond = new Fishpond(result);
+                        if (fishpond.FishpondRect == Rect.Empty)
+                        {
+                            Sleep(500);
+                            return;
+                        }
+                        else
+                        {
+                            var centerX = content.CaptureRectArea.SrcBitmap.Width / 2;
+                            var centerY = content.CaptureRectArea.SrcBitmap.Height / 2;
+                            // 往左移动是正数，往右移动是负数
+                            if (fishpond.FishpondRect.Left > centerX)
+                            {
+                                Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                            }
+
+                            if (fishpond.FishpondRect.Right < centerX)
+                            {
+                                Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
+                            }
+
+                            // 鱼塘尽量在上半屏幕
+                            if (fishpond.FishpondRect.Bottom > centerY)
+                            {
+                                Simulation.SendInput.Mouse.MoveMouseBy(0, -100);
+                            }
+
+                            if ((fishpond.FishpondRect.Left < centerX && fishpond.FishpondRect.Right > centerX && fishpond.FishpondRect.Bottom >= centerY) || fishpond.FishpondRect.Width < content.CaptureRectArea.SrcBitmap.Width / 4)
+                            {
+                                // 鱼塘在中心，选择鱼饵
+                                if (string.IsNullOrEmpty(_selectedBaitName))
+                                {
+                                    _selectedBaitName = ChooseBait(content, fishpond);
+                                }
+
+                                // 抛竿
+                                Sleep(2000);
+                                ApproachFishAndThrowRod(content);
+                                Sleep(2000);
+                            }
+                        }
+                    }
+                }
+
+                if (baitRectArea.IsEmpty() && !waitBiteArea.IsEmpty() && _isThrowRod)
+                {
+                    _switchBaitContinuouslyFrameNum = 0;
+                    _waitBiteContinuouslyFrameNum++;
+                    _noFishActionContinuouslyFrameNum = 0;
+                    _throwRodWaitFrameNum++;
+
+                    if (_waitBiteContinuouslyFrameNum >= content.FrameRate)
+                    {
+                        _isThrowRod = true;
+                        _waitBiteContinuouslyFrameNum = 0;
+                    }
+
+                    if (_isThrowRod)
+                    {
+                        // 30s 没有上钩，重新抛竿
+                        if (_throwRodWaitFrameNum >= content.FrameRate * TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut)
+                        {
+                            Simulation.SendInput.Mouse.LeftButtonClick();
+                            _throwRodWaitFrameNum = 0;
+                            _waitBiteContinuouslyFrameNum = 0;
+                            Debug.WriteLine("超时自动收竿");
+                            Sleep(2000);
+                            _isThrowRod = false;
+                        }
+                    }
+                }
+
+                if (baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
+                {
+                    _switchBaitContinuouslyFrameNum = 0;
+                    _waitBiteContinuouslyFrameNum = 0;
+                    _noFishActionContinuouslyFrameNum++;
+                    if (_noFishActionContinuouslyFrameNum > content.FrameRate)
+                    {
+                        CheckFishingUserInterface(content);
+                    }
+                }
+            }
+            else
+            {
+                _switchBaitContinuouslyFrameNum = 0;
                 _waitBiteContinuouslyFrameNum = 0;
                 _noFishActionContinuouslyFrameNum = 0;
-
-                if (_switchBaitContinuouslyFrameNum >= content.FrameRate)
-                {
-                    _isThrowRod = false;
-                    _switchBaitContinuouslyFrameNum = 0;
-                    _logger.LogInformation("当前处于未抛竿状态");
-                }
-
-                if (!_isThrowRod)
-                {
-                    // 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
-                    using var memoryStream = new MemoryStream();
-                    content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    var result = _predictor.Detect(memoryStream);
-                    Debug.WriteLine($"YOLOv8识别: {result.Speed}");
-                    var fishpond = new Fishpond(result);
-                    if (fishpond.FishpondRect == Rect.Empty)
-                    {
-                        Sleep(500);
-                        return BehaviourStatus.Running;
-                    }
-                    else
-                    {
-                        var centerX = content.CaptureRectArea.SrcBitmap.Width / 2;
-                        var centerY = content.CaptureRectArea.SrcBitmap.Height / 2;
-                        // 往左移动是正数，往右移动是负数
-                        if (fishpond.FishpondRect.Left > centerX)
-                        {
-                            Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
-                        }
-
-                        if (fishpond.FishpondRect.Right < centerX)
-                        {
-                            Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
-                        }
-
-                        // 鱼塘尽量在上半屏幕
-                        if (fishpond.FishpondRect.Bottom > centerY)
-                        {
-                            Simulation.SendInput.Mouse.MoveMouseBy(0, -100);
-                        }
-
-                        if ((fishpond.FishpondRect.Left < centerX && fishpond.FishpondRect.Right > centerX && fishpond.FishpondRect.Bottom >= centerY) || fishpond.FishpondRect.Width < content.CaptureRectArea.SrcBitmap.Width / 4)
-                        {
-                            // 鱼塘在中心，选择鱼饵
-                            //if (string.IsNullOrEmpty(_selectedBaitName))
-                            //{
-                            this.fishpond = fishpond;
-                            _logger.LogInformation("定位到鱼塘" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
-
-                            return BehaviourStatus.Succeeded;
-                            //}
-                        }
-                    }
-                }
+                _throwRodWaitFrameNum = 0;
+                _isThrowRod = false;
             }
-            //}
-            //else
-            //{
-            //    _switchBaitContinuouslyFrameNum = 0;
-            //    _waitBiteContinuouslyFrameNum = 0;
-            //    _noFishActionContinuouslyFrameNum = 0;
-            //    _throwRodWaitFrameNum = 0;
-            //    _isThrowRod = false;
-            //}
-
-            return BehaviourStatus.Running;
-        }
-
-        private class FishBiteTimeout : BaseBehaviour<CaptureContent>
-        {
-            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-            private DateTime? waitFishBiteTimeout;
-            private int _seconds;
-
-            /// <summary>
-            /// 如果未超时返回运行中，超时返回失败
-            /// </summary>
-            /// <param name="name"></param>
-            /// <param name="seconds"></param>
-            public FishBiteTimeout(string name, int seconds) : base(name)
-            {
-                _seconds = seconds;
-            }
-            protected override void OnInitialize()
-            {
-                waitFishBiteTimeout = DateTime.Now.AddSeconds(_seconds);
-            }
-            protected override BehaviourStatus Update(CaptureContent context)
-            {
-                if (DateTime.Now >= waitFishBiteTimeout)
-                {
-                    _logger.LogInformation($"{_seconds}秒没有咬杆，本次收杆");
-                    Simulation.SendInput.Mouse.LeftButtonClick();
-                    Thread.Sleep(1000);
-                    return BehaviourStatus.Failed;
-                }
-                else
-                {
-                    return BehaviourStatus.Running;
-                }
-            }
-        }
-
-        private BehaviourStatus ThrowRod2(CaptureContent content)
-        {
-            //var baitRectArea = content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo);
-            //var waitBiteArea = content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo);
-            //if (baitRectArea.IsEmpty() && !waitBiteArea.IsEmpty() && _isThrowRod)
-            //{
-            //    _switchBaitContinuouslyFrameNum = 0;
-            //    _waitBiteContinuouslyFrameNum++;
-            //    _noFishActionContinuouslyFrameNum = 0;
-            //    _throwRodWaitFrameNum++;
-
-            //    if (_waitBiteContinuouslyFrameNum >= content.FrameRate)
-            //    {
-            //        _isThrowRod = true;
-            //        _waitBiteContinuouslyFrameNum = 0;
-            //    }
-
-            //    if (_isThrowRod)
-            //    {
-            //        // 30s 没有上钩，重新抛竿
-            //        if (_throwRodWaitFrameNum >= content.FrameRate * TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut)
-            //        {
-            //            Simulation.SendInput.Mouse.LeftButtonClick();
-            //            _throwRodWaitFrameNum = 0;
-            //            _waitBiteContinuouslyFrameNum = 0;
-            //            Debug.WriteLine("超时自动收竿");
-            //            Sleep(2000);
-            //            _isThrowRod = false;
-            //            return BehaviourStatus.Failed;
-            //        }
-            //        return BehaviourStatus.Succeeded;
-            //    }
-            //}
-
-            //if (baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
-            //{
-            //    _switchBaitContinuouslyFrameNum = 0;
-            //    _waitBiteContinuouslyFrameNum = 0;
-            //    _noFishActionContinuouslyFrameNum++;
-            //    if (_noFishActionContinuouslyFrameNum > content.FrameRate)
-            //    {
-            //        CheckFishingUserInterface(content);
-            //    }
-            //    return BehaviourStatus.Failed;
-            //}
-            return BehaviourStatus.Succeeded;
-        }
-
-        /// <summary>
-        /// 打开换饵界面
-        /// </summary>
-        /// <param name="content"></param>
-        /// <returns></returns>
-        private BehaviourStatus OpenChooseBaitUI(CaptureContent content)
-        {
-            _logger.LogInformation("打开换饵界面");
-            Simulation.SendInput.Mouse.RightButtonClick();
-            Sleep(100);
-            Simulation.SendInput.Mouse.MoveMouseBy(0, 200); // 鼠标移走，防止干扰
-            Sleep(100);
-            return BehaviourStatus.Succeeded;
         }
 
         private string _selectedBaitName = string.Empty;
-        private Fishpond fishpond;
-        private DateTime? ChooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现的结束时间
 
         /// <summary>
         /// 选择鱼饵
         /// </summary>
-        private class ChooseBait : BaseBehaviour<CaptureContent>
+        /// <param name="content"></param>
+        /// <param name="fishpond"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private string ChooseBait(CaptureContent content, Fishpond fishpond)
         {
-            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-            private readonly AutoFishingTrigger _autoFishingTrigger;
+            // 打开换饵界面
+            Simulation.SendInput.Mouse.RightButtonClick();
+            Sleep(100);
+            Simulation.SendInput.Mouse.MoveMouseBy(0, 200); // 鼠标移走，防止干扰
+            Sleep(500);
 
-            /// <summary>
-            /// 选择鱼饵
-            /// </summary>
-            /// <param name="name"></param>
-            /// <param name="autoFishingTrigger"></param>
-            public ChooseBait(string name, AutoFishingTrigger autoFishingTrigger) : base(name)
+            _selectedBaitName = fishpond.Fishes[0].FishType.BaitName; // 选择最多鱼吃的饵料
+            _logger.LogInformation("选择鱼饵 {Text}", BaitType.FromName(_selectedBaitName).ChineseName);
+
+            // 寻找鱼饵
+            var ro = new RecognitionObject
             {
-                _autoFishingTrigger = autoFishingTrigger;
+                Name = "ChooseBait",
+                RecognitionType = RecognitionTypes.TemplateMatch,
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{_selectedBaitName}.png"),
+                Threshold = 0.8,
+                Use3Channels = true,
+                DrawOnWindow = false
+            }.InitTemplate();
+
+            // 截图
+            using var captureRegion = TaskControl.CaptureToRectArea(forceNew: true);
+            using var resRa = captureRegion.Find(ro);
+            if (resRa.IsEmpty())
+            {
+                _logger.LogWarning("没有找到目标鱼饵");
+                _selectedBaitName = string.Empty;
+                throw new Exception("没有找到目标鱼饵");
+            }
+            else
+            {
+                resRa.Click();
+                Sleep(700);
+                // 可能重复点击，所以固定界面点击下
+                captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d));
+                Sleep(200);
+                // 点击确定
+                Bv.ClickWhiteConfirmButton(captureRegion);
+                Sleep(500); // 等待界面切换
             }
 
-            protected override void OnInitialize()
-            {
-                _autoFishingTrigger.ChooseBaitUIOpenWaitEndTime = DateTime.Now.AddSeconds(5);
-            }
-
-            protected override BehaviourStatus Update(CaptureContent content)
-            {
-                if (this.Status == BehaviourStatus.Ready)
-                {
-                    return BehaviourStatus.Running;
-                }
-
-                _autoFishingTrigger._selectedBaitName = _autoFishingTrigger.fishpond.Fishes[0].FishType.BaitName; // 选择最多鱼吃的饵料
-                _logger.LogInformation("选择鱼饵 {Text}", BaitType.FromName(_autoFishingTrigger._selectedBaitName).ChineseName);
-
-                // 寻找鱼饵
-                var ro = new RecognitionObject
-                {
-                    Name = "ChooseBait",
-                    RecognitionType = RecognitionTypes.TemplateMatch,
-                    TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{_autoFishingTrigger._selectedBaitName}.png"),
-                    Threshold = 0.8,
-                    Use3Channels = true,
-                    DrawOnWindow = false
-                }.InitTemplate();
-
-                var captureRegion = content.CaptureRectArea;
-                using var resRa = captureRegion.Find(ro);
-                if (resRa.IsEmpty())
-                {
-                    if (DateTime.Now >= _autoFishingTrigger.ChooseBaitUIOpenWaitEndTime)
-                    {
-                        _logger.LogWarning("没有找到目标鱼饵");
-                        _autoFishingTrigger._selectedBaitName = string.Empty;
-                        throw new Exception("没有找到目标鱼饵");
-                    }
-                    else
-                    {
-                        return BehaviourStatus.Running;
-                    }
-                }
-                else
-                {
-                    resRa.Click();
-                    _autoFishingTrigger.Sleep(700);
-                    // 可能重复点击，所以固定界面点击下
-                    captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d));
-                    _autoFishingTrigger.Sleep(200);
-                    // 点击确定
-                    Bv.ClickWhiteConfirmButton(captureRegion);
-                    _autoFishingTrigger.Sleep(500); // 等待界面切换
-                }
-
-                return BehaviourStatus.Succeeded;
-            }
+            return _selectedBaitName;
         }
 
         private readonly Random _rd = new();
 
         /// <summary>
-        /// 长按预抛竿
+        /// 抛竿
         /// </summary>
         /// <param name="content"></param>
-        private BehaviourStatus ApproachFishAndThrowRod0(CaptureContent content)
+        private void ApproachFishAndThrowRod(CaptureContent content)
         {
-            noPlacementTimes = 0;
-            noTargetFishTimes = 0;
-
+            // 预抛竿
             Simulation.SendInput.Mouse.LeftButtonDown();
             _logger.LogInformation("长按预抛竿");
             Sleep(3000);
 
-            return BehaviourStatus.Succeeded;
-        }
-
-        private bool noTargetFish;
-
-        private int noPlacementTimes; // 没有落点的次数
-        private int noTargetFishTimes; // 没有目标鱼的次数
-        /// <summary>
-        /// 抛竿
-        /// </summary>
-        /// <param name="content"></param>
-        private BehaviourStatus ApproachFishAndThrowRod1(CaptureContent content)
-        {
-            noTargetFish = false;
+            var noPlacementTimes = 0; // 没有落点的次数
+            var noTargetFishTimes = 0; // 没有目标鱼的次数
             var prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
 
-            var ra = content.CaptureRectArea;
-
-            // 找 鱼饵落点
-            using var memoryStream = new MemoryStream();
-            ra.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = _predictor.Detect(memoryStream);
-            Debug.WriteLine($"YOLOv8识别: {result.Speed}");
-            var fishpond = new Fishpond(result);
-            if (fishpond.TargetRect == Rect.Empty)
+            while (IsEnabled)
             {
-                noPlacementTimes++;
-                Sleep(50);
-                Debug.WriteLine("历次未找到鱼饵落点");
+                // 截图
+                var ra = TaskControl.CaptureToRectArea(forceNew: true);
 
-                var cX = ra.SrcBitmap.Width / 2;
-                var cY = ra.SrcBitmap.Height / 2;
-                var rdX = _rd.Next(0, ra.SrcBitmap.Width);
-                var rdY = _rd.Next(0, ra.SrcBitmap.Height);
-
-                var moveX = 100 * (cX - rdX) / ra.SrcBitmap.Width;
-                var moveY = 100 * (cY - rdY) / ra.SrcBitmap.Height;
-
-                Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
-
-                if (noPlacementTimes > 25)
+                // 找 鱼饵落点
+                using var memoryStream = new MemoryStream();
+                ra.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                var result = _predictor.Detect(memoryStream);
+                Debug.WriteLine($"YOLOv8识别: {result.Speed}");
+                var fishpond = new Fishpond(result);
+                if (fishpond.TargetRect == Rect.Empty)
                 {
-                    _logger.LogInformation("未找到鱼饵落点，重试");
-                    // Simulation.SendInputEx.Mouse.LeftButtonUp();
-                    // // Sleep(2000);
-                    // // Simulation.SendInputEx.Mouse.LeftButtonClick();
-                    // _selectedBaitName = string.Empty;
-                    // _isThrowRod = false;
-                    // // Sleep(2000);
-                    // // MoveViewpointDown();
-                    // Sleep(300);
-                    return BehaviourStatus.Failed;
-                }
+                    noPlacementTimes++;
+                    Sleep(50);
+                    Debug.WriteLine("历次未找到鱼饵落点");
 
-                return BehaviourStatus.Running;
-            }
+                    var cX = ra.SrcBitmap.Width / 2;
+                    var cY = ra.SrcBitmap.Height / 2;
+                    var rdX = _rd.Next(0, ra.SrcBitmap.Width);
+                    var rdY = _rd.Next(0, ra.SrcBitmap.Height);
 
-            // 找到落点最近的鱼
-            OneFish? currentFish = null;
-            if (prevTargetFishRect == Rect.Empty)
-            {
-                var list = fishpond.FilterByBaitName(_selectedBaitName);
-                if (list.Count > 0)
-                {
-                    currentFish = list[0];
-                    prevTargetFishRect = currentFish.Rect;
-                }
-            }
-            else
-            {
-                currentFish = fishpond.FilterByBaitNameAndRecently(_selectedBaitName, prevTargetFishRect);
-                if (currentFish != null)
-                {
-                    prevTargetFishRect = currentFish.Rect;
-                }
-            }
+                    var moveX = 100 * (cX - rdX) / ra.SrcBitmap.Width;
+                    var moveY = 100 * (cY - rdY) / ra.SrcBitmap.Height;
 
-            if (currentFish == null)
-            {
-                Debug.WriteLine("无目标鱼");
-                noTargetFishTimes++;
-                //if (noTargetFishTimes == 30)
-                //{
-                //    Simulation.SendInputEx.Mouse.MoveMouseBy(0, 100);
-                //}
-
-                if (noTargetFishTimes > 10)
-                {
-                    // 没有找到目标鱼，重新选择鱼饵
-                    _logger.LogInformation("没有找到目标鱼，1.直接抛竿");
-                    Simulation.SendInput.Mouse.LeftButtonUp();
-                    Sleep(1500);
-                    _logger.LogInformation("没有找到目标鱼，2.收杆");
-                    Simulation.SendInput.Mouse.LeftButtonClick();
-                    Sleep(800);
-                    _logger.LogInformation("没有找到目标鱼，3.准备重新选择鱼饵");
-                    _selectedBaitName = string.Empty;
-                    _isThrowRod = false;
-                    MoveViewpointDown();
-                    Sleep(300);
-
-                    noTargetFish = true;
-                    return BehaviourStatus.Succeeded;
-                }
-
-                return BehaviourStatus.Running;
-            }
-            else
-            {
-                noTargetFishTimes = 0;
-                _currContent.CaptureRectArea.DrawRect(fishpond.TargetRect, "Target");
-                _currContent.CaptureRectArea.Derive(currentFish.Rect).DrawSelf("Fish");
-
-                // VisionContext.Instance().DrawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
-                // VisionContext.Instance().DrawContent.PutRect("Fish", currentFish.Rect.ToRectDrawable());
-
-                // var min = MoveMouseToFish(fishpond.TargetRect, currentFish.Rect);
-                // // 因为视角是斜着看向鱼的，所以Y轴抛竿距离要近一点
-                // if ((_selectedBaitName != "fruit paste bait" && min is { Item1: <= 50, Item2: <= 25 })
-                //     || _selectedBaitName == "fruit paste bait" && min is { Item1: <= 40, Item2: <= 25 })
-                // {
-                //     Sleep(100);
-                //     Simulation.SendInputEx.Mouse.LeftButtonUp();
-                //     _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
-                //     _isThrowRod = true;
-                //     VisionContext.Instance().DrawContent.RemoveRect("Target");
-                //     VisionContext.Instance().DrawContent.RemoveRect("Fish");
-                //     break;
-                // }
-
-                // 来自 HutaoFisher 的抛竿技术
-                var rod = fishpond.TargetRect;
-                var fish = currentFish.Rect;
-                var dx = NormalizeXTo1024(fish.Left + fish.Right - rod.Left - rod.Right) / 2.0;
-                var dy = NormalizeYTo576(fish.Top + fish.Bottom - rod.Top - rod.Bottom) / 2.0;
-                var state = RodNet.GetRodState(new RodInput
-                {
-                    rod_x1 = NormalizeXTo1024(rod.Left),
-                    rod_x2 = NormalizeXTo1024(rod.Right),
-                    rod_y1 = NormalizeYTo576(rod.Top),
-                    rod_y2 = NormalizeYTo576(rod.Bottom),
-                    fish_x1 = NormalizeXTo1024(fish.Left),
-                    fish_x2 = NormalizeXTo1024(fish.Right),
-                    fish_y1 = NormalizeYTo576(fish.Top),
-                    fish_y2 = NormalizeYTo576(fish.Bottom),
-                    fish_label = BigFishType.GetIndex(currentFish.FishType)
-                });
-                if (state == -1)
-                {
-                    // 失败 随机移动鼠标
-                    var cX = content.CaptureRectArea.SrcBitmap.Width / 2;
-                    var cY = content.CaptureRectArea.SrcBitmap.Height / 2;
-                    var rdX = _rd.Next(0, content.CaptureRectArea.SrcBitmap.Width);
-                    var rdY = _rd.Next(0, content.CaptureRectArea.SrcBitmap.Height);
-
-                    var moveX = 100 * (cX - rdX) / content.CaptureRectArea.SrcBitmap.Width;
-                    var moveY = 100 * (cY - rdY) / content.CaptureRectArea.SrcBitmap.Height;
-
-                    _logger.LogInformation("失败 随机移动 {DX}, {DY}", moveX, moveY);
                     Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
-                }
-                else if (state == 0)
-                {
-                    // 成功 抛竿
-                    Simulation.SendInput.Mouse.LeftButtonUp();
-                    _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
-                    _isThrowRod = true;
-                    VisionContext.Instance().DrawContent.RemoveRect("Target");
-                    VisionContext.Instance().DrawContent.RemoveRect("Fish");
-                    return BehaviourStatus.Succeeded;
-                }
-                else if (state == 1)
-                {
-                    // 太近
-                    var dl = Math.Sqrt(dx * dx + dy * dy);
-                    // set a minimum step
-                    dx = dx / dl * 30;
-                    dy = dy / dl * 30;
-                    // _logger.LogInformation("太近 移动 {DX}, {DY}", dx, dy);
-                    Simulation.SendInput.Mouse.MoveMouseBy((int)(-dx / 1.5), (int)(-dy * 1.5));
-                }
-                else if (state == 2)
-                {
-                    // 太远
-                    // _logger.LogInformation("太远 移动 {DX}, {DY}", dx, dy);
-                    Simulation.SendInput.Mouse.MoveMouseBy((int)(dx / 1.5), (int)(dy * 1.5));
-                }
-            }
-            Sleep(50);
-            return BehaviourStatus.Running;
-        }
 
-        /// <summary>
-        /// 缺鱼检查
-        /// </summary>
-        /// <param name="content"></param>
-        private BehaviourStatus NoTargetFishCheck(CaptureContent content)
-        {
-            return noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded;
+                    if (noPlacementTimes > 25)
+                    {
+                        _logger.LogInformation("未找到鱼饵落点，重试");
+                        // Simulation.SendInputEx.Mouse.LeftButtonUp();
+                        // // Sleep(2000);
+                        // // Simulation.SendInputEx.Mouse.LeftButtonClick();
+                        // _selectedBaitName = string.Empty;
+                        // _isThrowRod = false;
+                        // // Sleep(2000);
+                        // // MoveViewpointDown();
+                        // Sleep(300);
+                        break;
+                    }
+
+                    continue;
+                }
+
+                // 找到落点最近的鱼
+                OneFish? currentFish = null;
+                if (prevTargetFishRect == Rect.Empty)
+                {
+                    var list = fishpond.FilterByBaitName(_selectedBaitName);
+                    if (list.Count > 0)
+                    {
+                        currentFish = list[0];
+                        prevTargetFishRect = currentFish.Rect;
+                    }
+                }
+                else
+                {
+                    currentFish = fishpond.FilterByBaitNameAndRecently(_selectedBaitName, prevTargetFishRect);
+                    if (currentFish != null)
+                    {
+                        prevTargetFishRect = currentFish.Rect;
+                    }
+                }
+
+                if (currentFish == null)
+                {
+                    Debug.WriteLine("无目标鱼");
+                    noTargetFishTimes++;
+                    //if (noTargetFishTimes == 30)
+                    //{
+                    //    Simulation.SendInputEx.Mouse.MoveMouseBy(0, 100);
+                    //}
+
+                    if (noTargetFishTimes > 10)
+                    {
+                        // 没有找到目标鱼，重新选择鱼饵
+                        _logger.LogInformation("没有找到目标鱼，1.直接抛竿");
+                        Simulation.SendInput.Mouse.LeftButtonUp();
+                        Sleep(1500);
+                        _logger.LogInformation("没有找到目标鱼，2.收杆");
+                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        Sleep(800);
+                        _logger.LogInformation("没有找到目标鱼，3.准备重新选择鱼饵");
+                        _selectedBaitName = string.Empty;
+                        _isThrowRod = false;
+                        MoveViewpointDown();
+                        Sleep(300);
+                        break;
+                    }
+
+                    continue;
+                }
+                else
+                {
+                    noTargetFishTimes = 0;
+                    _currContent.CaptureRectArea.DrawRect(fishpond.TargetRect, "Target");
+                    _currContent.CaptureRectArea.Derive(currentFish.Rect).DrawSelf("Fish");
+                    // VisionContext.Instance().DrawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
+                    // VisionContext.Instance().DrawContent.PutRect("Fish", currentFish.Rect.ToRectDrawable());
+
+                    // var min = MoveMouseToFish(fishpond.TargetRect, currentFish.Rect);
+                    // // 因为视角是斜着看向鱼的，所以Y轴抛竿距离要近一点
+                    // if ((_selectedBaitName != "fruit paste bait" && min is { Item1: <= 50, Item2: <= 25 })
+                    //     || _selectedBaitName == "fruit paste bait" && min is { Item1: <= 40, Item2: <= 25 })
+                    // {
+                    //     Sleep(100);
+                    //     Simulation.SendInputEx.Mouse.LeftButtonUp();
+                    //     _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
+                    //     _isThrowRod = true;
+                    //     VisionContext.Instance().DrawContent.RemoveRect("Target");
+                    //     VisionContext.Instance().DrawContent.RemoveRect("Fish");
+                    //     break;
+                    // }
+
+                    // 来自 HutaoFisher 的抛竿技术
+                    var rod = fishpond.TargetRect;
+                    var fish = currentFish.Rect;
+                    var dx = NormalizeXTo1024(fish.Left + fish.Right - rod.Left - rod.Right) / 2.0;
+                    var dy = NormalizeYTo576(fish.Top + fish.Bottom - rod.Top - rod.Bottom) / 2.0;
+                    var state = RodNet.GetRodState(new RodInput
+                    {
+                        rod_x1 = NormalizeXTo1024(rod.Left),
+                        rod_x2 = NormalizeXTo1024(rod.Right),
+                        rod_y1 = NormalizeYTo576(rod.Top),
+                        rod_y2 = NormalizeYTo576(rod.Bottom),
+                        fish_x1 = NormalizeXTo1024(fish.Left),
+                        fish_x2 = NormalizeXTo1024(fish.Right),
+                        fish_y1 = NormalizeYTo576(fish.Top),
+                        fish_y2 = NormalizeYTo576(fish.Bottom),
+                        fish_label = BigFishType.GetIndex(currentFish.FishType)
+                    });
+                    if (state == -1)
+                    {
+                        // 失败 随机移动鼠标
+                        var cX = content.CaptureRectArea.SrcBitmap.Width / 2;
+                        var cY = content.CaptureRectArea.SrcBitmap.Height / 2;
+                        var rdX = _rd.Next(0, content.CaptureRectArea.SrcBitmap.Width);
+                        var rdY = _rd.Next(0, content.CaptureRectArea.SrcBitmap.Height);
+
+                        var moveX = 100 * (cX - rdX) / content.CaptureRectArea.SrcBitmap.Width;
+                        var moveY = 100 * (cY - rdY) / content.CaptureRectArea.SrcBitmap.Height;
+
+                        _logger.LogInformation("失败 随机移动 {DX}, {DY}", moveX, moveY);
+                        Simulation.SendInput.Mouse.MoveMouseBy(moveX, moveY);
+                    }
+                    else if (state == 0)
+                    {
+                        // 成功 抛竿
+                        Simulation.SendInput.Mouse.LeftButtonUp();
+                        _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
+                        _isThrowRod = true;
+                        VisionContext.Instance().DrawContent.RemoveRect("Target");
+                        VisionContext.Instance().DrawContent.RemoveRect("Fish");
+                        break;
+                    }
+                    else if (state == 1)
+                    {
+                        // 太近
+                        var dl = Math.Sqrt(dx * dx + dy * dy);
+                        // set a minimum step
+                        dx = dx / dl * 30;
+                        dy = dy / dl * 30;
+                        // _logger.LogInformation("太近 移动 {DX}, {DY}", dx, dy);
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(-dx / 1.5), (int)(-dy * 1.5));
+                    }
+                    else if (state == 2)
+                    {
+                        // 太远
+                        // _logger.LogInformation("太远 移动 {DX}, {DY}", dx, dy);
+                        Simulation.SendInput.Mouse.MoveMouseBy((int)(dx / 1.5), (int)(dy * 1.5));
+                    }
+                }
+
+                Sleep(20);
+            }
         }
 
         private double NormalizeXTo1024(int x)
@@ -855,7 +734,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
                     throw new RetryException("当前获取焦点的窗口不是原神");
                 }
-
+                
             }, TimeSpan.FromSeconds(1), 100);
             CheckFishingUserInterface(_currContent);
             Thread.Sleep(millisecondsTimeout);
@@ -923,9 +802,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 自动提竿
         /// </summary>
         /// <param name="content"></param>
-        private BehaviourStatus FishBite(CaptureContent content)
+        private void FishBite(CaptureContent content)
         {
-            _logger.LogInformation("等待提竿");
+            if (_isFishingProcess)
+            {
+                return;
+            }
+
             // 自动识别的钓鱼框向下延伸到屏幕中间
             //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
             //    fishBoxRect.Width, content.CaptureRectArea.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
@@ -969,7 +852,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                 _biteTipsExitCount = 0;
                                 _baseBiteTips = Rect.Empty;
                                 VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                                return BehaviourStatus.Succeeded;
+                                return;
                             }
 
                             // OCR 提竿判断
@@ -986,7 +869,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                 _biteTipsExitCount = 0;
                                 _baseBiteTips = Rect.Empty;
                                 VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                                return BehaviourStatus.Succeeded;
                             }
                         }
                     }
@@ -1006,33 +888,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _biteTipsExitCount = 0;
                         _baseBiteTips = Rect.Empty;
                         VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                        return BehaviourStatus.Succeeded;
                     }
                 }
             }
-
-            return BehaviourStatus.Running;
-        }
-
-        /// <summary>
-        /// 进入钓鱼界面先尝试获取钓鱼框的位置
-        /// </summary>
-        /// <param name="content"></param>
-        /// <returns></returns>
-        private BehaviourStatus Wait4FishBoxAreaAppear(CaptureContent content)
-        {
-            _logger.LogInformation("寻找拉条中");
-            if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
-            {
-                return BehaviourStatus.Running;
-            }
-
-            _prevExecute = DateTime.Now;
-
-            _fishBoxRect = GetFishBoxArea(content.CaptureRectArea);
-            CheckFishingUserInterface(content);
-
-            return _fishBoxRect == Rect.Empty ? BehaviourStatus.Running : BehaviourStatus.Succeeded;
         }
 
         private int _noRectsCount = 0;
@@ -1045,9 +903,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         /// <param name="content"></param>
         /// <param name="fishBarMat"></param>
-        private BehaviourStatus Fishing(CaptureContent content)
+        private void Fishing(CaptureContent content, Mat fishBarMat)
         {
-            var fishBarMat = new Mat(content.CaptureRectArea.SrcMat, _fishBoxRect);
             var simulator = Simulation.SendInput;
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
@@ -1157,8 +1014,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     MoveViewpointDown();
                     Sleep(500);
-
-                    return BehaviourStatus.Succeeded;
                 }
 
                 CheckFishingUserInterface(content);
@@ -1181,15 +1036,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 _notFishingAfterBiteCount = 0;
             }
-
-            return BehaviourStatus.Running;
         }
 
         /// <summary>
         /// 检查是否退出钓鱼界面
         /// </summary>
         /// <param name="content"></param>
-        private BehaviourStatus CheckFishingUserInterface(CaptureContent content)
+        private void CheckFishingUserInterface(CaptureContent content)
         {
             var prevIsExclusive = IsExclusive;
             IsExclusive = FindButtonForExclusive(content);
@@ -1207,8 +1060,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _noFishActionContinuouslyFrameNum = 0;
                 _isThrowRod = false;
                 _selectedBaitName = string.Empty;
-
-                return BehaviourStatus.Succeeded;
             }
             else if (prevIsExclusive && !IsExclusive)
             {
@@ -1216,12 +1067,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _isThrowRod = false;
                 _fishBoxRect = Rect.Empty;
                 VisionContext.Instance().DrawContent.ClearAll();
-
-                return BehaviourStatus.Failed;
-            }
-            else
-            {
-                return BehaviourStatus.Running;
             }
         }
 
@@ -1265,115 +1110,5 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         //{
         //    ClearDraw();
         //}
-
-    }
-
-    /// <summary>
-    /// MySimpleParallel
-    /// 和SimpleParallel的区别是，任一子行为返回失败则返回失败
-    /// </summary>
-    /// <typeparam name="TContext"></typeparam>
-    public class MySimpleParallel<TContext> : CompositeBehaviour<TContext>
-    {
-        private readonly IBehaviour<TContext> _first;
-
-        private readonly IBehaviour<TContext> _second;
-
-        private BehaviourStatus _firstStatus;
-
-        private BehaviourStatus _secondStatus;
-
-        private readonly Func<TContext, BehaviourStatus> _behave;
-
-        public readonly SimpleParallelPolicy Policy;
-
-        public MySimpleParallel(SimpleParallelPolicy policy, IBehaviour<TContext> first, IBehaviour<TContext> second)
-            : this("SimpleParallel", policy, first, second)
-        {
-        }
-
-        public MySimpleParallel(string name, SimpleParallelPolicy policy, IBehaviour<TContext> first, IBehaviour<TContext> second)
-            : base(name, new IBehaviour<TContext>[2] { first, second })
-        {
-            Policy = policy;
-            _first = first;
-            _second = second;
-            _behave = ((policy == SimpleParallelPolicy.BothMustSucceed) ? new Func<TContext, BehaviourStatus>(BothMustSucceedBehaviour) : new Func<TContext, BehaviourStatus>(OnlyOneMustSucceedBehaviour));
-        }
-
-        private BehaviourStatus OnlyOneMustSucceedBehaviour(TContext context)
-        {
-            if (_firstStatus == BehaviourStatus.Succeeded || _secondStatus == BehaviourStatus.Succeeded)
-            {
-                return BehaviourStatus.Succeeded;
-            }
-
-            if (_firstStatus == BehaviourStatus.Failed && _secondStatus == BehaviourStatus.Failed)
-            {
-                return BehaviourStatus.Failed;
-            }
-
-            return BehaviourStatus.Running;
-        }
-
-        private BehaviourStatus BothMustSucceedBehaviour(TContext context)
-        {
-            if (_firstStatus == BehaviourStatus.Succeeded && _secondStatus == BehaviourStatus.Succeeded)
-            {
-                return BehaviourStatus.Succeeded;
-            }
-
-            if (_firstStatus == BehaviourStatus.Failed || _secondStatus == BehaviourStatus.Failed)
-            {
-                return BehaviourStatus.Failed;
-            }
-
-            return BehaviourStatus.Running;
-        }
-
-        protected override BehaviourStatus Update(TContext context)
-        {
-            if (base.Status != BehaviourStatus.Running)
-            {
-                _firstStatus = _first.Tick(context);
-                _secondStatus = _second.Tick(context);
-            }
-            else
-            {
-                if (_firstStatus == BehaviourStatus.Ready || _firstStatus == BehaviourStatus.Running)
-                {
-                    _firstStatus = _first.Tick(context);
-                }
-
-                if (_secondStatus == BehaviourStatus.Ready || _secondStatus == BehaviourStatus.Running)
-                {
-                    _secondStatus = _second.Tick(context);
-                }
-            }
-
-            if (_firstStatus == BehaviourStatus.Failed || _secondStatus == BehaviourStatus.Failed)
-            {
-                return BehaviourStatus.Failed;
-            }
-            else
-            {
-                return _behave(context);
-            }
-        }
-
-        protected override void DoReset(BehaviourStatus status)
-        {
-            _firstStatus = BehaviourStatus.Ready;
-            _secondStatus = BehaviourStatus.Ready;
-            base.DoReset(status);
-        }
-    }
-
-    public static class FluentBuilderExtensions
-    {
-        public static FluentBuilder<TContext> MySimpleParallel<TContext>(this FluentBuilder<TContext> builder, string name, SimpleParallelPolicy policy = SimpleParallelPolicy.BothMustSucceed)
-        {
-            return builder.PushComposite((IBehaviour<TContext>[] children) => new MySimpleParallel<TContext>(name, policy, children[0], children[1]));
-        }
     }
 }
