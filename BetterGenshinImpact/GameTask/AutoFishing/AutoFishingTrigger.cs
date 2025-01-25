@@ -306,7 +306,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             //if (string.IsNullOrEmpty(_selectedBaitName))
                             //{
                             this.fishpond = fishpond;
-                            _logger.LogInformation("定位到鱼塘" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
+                            _logger.LogInformation("定位到鱼塘：" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
 
                             return BehaviourStatus.Succeeded;
                             //}
@@ -427,7 +427,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private string _selectedBaitName = string.Empty;
         private Fishpond fishpond;
-        private DateTime? ChooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现的结束时间
 
         /// <summary>
         /// 选择鱼饵
@@ -436,6 +435,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
             private readonly AutoFishingTrigger _autoFishingTrigger;
+            private DateTime? chooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现的结束时间
 
             /// <summary>
             /// 选择鱼饵
@@ -449,7 +449,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             protected override void OnInitialize()
             {
-                _autoFishingTrigger.ChooseBaitUIOpenWaitEndTime = DateTime.Now.AddSeconds(5);
+                chooseBaitUIOpenWaitEndTime = DateTime.Now.AddSeconds(3);
             }
 
             protected override BehaviourStatus Update(CaptureContent content)
@@ -477,11 +477,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 using var resRa = captureRegion.Find(ro);
                 if (resRa.IsEmpty())
                 {
-                    if (DateTime.Now >= _autoFishingTrigger.ChooseBaitUIOpenWaitEndTime)
+                    if (DateTime.Now >= chooseBaitUIOpenWaitEndTime)
                     {
+                        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
                         _logger.LogWarning("没有找到目标鱼饵");
                         _autoFishingTrigger._selectedBaitName = string.Empty;
-                        throw new Exception("没有找到目标鱼饵");
+                        return BehaviourStatus.Failed;
                     }
                     else
                     {
@@ -667,6 +668,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     fish_y2 = NormalizeYTo576(fish.Bottom),
                     fish_label = BigFishType.GetIndex(currentFish.FishType)
                 });
+
+                //// 如果hutao钓鱼暂时没有更新导致报错，可以先用这段凑合
+                //int state;
+                //System.Drawing.Rectangle rod3XRectangle = new System.Drawing.Rectangle(rod.Left - rod.Width, rod.Top - rod.Height, rod.Width * 3, rod.Height * 3);
+                //System.Drawing.Rectangle rod5XRectangle = new System.Drawing.Rectangle(rod.Left - rod.Width * 2, rod.Top - rod.Height * 2, rod.Width * 5, rod.Height * 5);
+                //System.Drawing.Rectangle fishRectangle = new System.Drawing.Rectangle(fish.Left, fish.Top, fish.Width, fish.Height);
+                //if (rod3XRectangle.IntersectsWith(fishRectangle))
+                //{
+                //    state = 1;
+                //}
+                //else if (rod5XRectangle.IntersectsWith(fishRectangle))
+                //{
+                //    state = 0;
+                //}
+                //else
+                //{
+                //    state = 2;
+                //}
+
                 if (state == -1)
                 {
                     // 失败 随机移动鼠标
@@ -738,11 +758,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             if (TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
             {
+                _logger.LogInformation("MoveViewpointDown");
                 // 下移视角方便看鱼
                 Simulation.SendInput.Mouse.MoveMouseBy(0, 400);
                 Sleep(500);
-                Simulation.SendInput.Mouse.MoveMouseBy(0, 500);
-                Sleep(500);
+                //Simulation.SendInput.Mouse.MoveMouseBy(0, 500);
+                //Sleep(500);
             }
         }
 
@@ -925,7 +946,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <param name="content"></param>
         private BehaviourStatus FishBite(CaptureContent content)
         {
-            _logger.LogInformation("等待提竿");
+            //_logger.LogInformation("等待提竿");
             // 自动识别的钓鱼框向下延伸到屏幕中间
             //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
             //    fishBoxRect.Width, content.CaptureRectArea.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
@@ -1021,7 +1042,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <returns></returns>
         private BehaviourStatus Wait4FishBoxAreaAppear(CaptureContent content)
         {
-            _logger.LogInformation("寻找拉条中");
+            //_logger.LogInformation("寻找拉条中");
             if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
             {
                 return BehaviourStatus.Running;
@@ -1143,6 +1164,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 2s 没有矩形视为已经完成钓鱼
                 if (_noRectsCount >= content.FrameRate * 2 && _prevMouseEvent != 0x0)
                 {
+                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                     _findFishBoxTips = false;
                     _isFishingProcess = false;
                     _isThrowRod = false;
