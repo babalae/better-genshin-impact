@@ -218,7 +218,7 @@ public partial class ScriptService : IScriptService
     private static partial Regex DispatcherAddTimerRegex();
 
 
-    public static async Task StartGameTask()
+    public static async Task StartGameTask(bool waitForMainUi = true)
     {
         // 没启动时候，启动截图器
         var homePageViewModel = App.GetService<HomePageViewModel>();
@@ -226,29 +226,33 @@ public partial class ScriptService : IScriptService
         {
             await homePageViewModel.OnStartTriggerAsync();
 
-            await Task.Run(() =>
+            if (waitForMainUi)
             {
-                var first = true;
-                while (true)
+                await Task.Run(() =>
                 {
-                    if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                    var first = true;
+                    while (true)
                     {
-                        continue;
-                    }
+                        if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                        {
+                            continue;
+                        }
 
-                    var content = TaskControl.CaptureToRectArea();
-                    if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
-                    {
-                        return;
-                    }
+                        var content = TaskControl.CaptureToRectArea();
+                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
+                        {
+                            return;
+                        }
 
-                    if (first)
-                    {
-                        first = false;
-                        TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                        if (first)
+                        {
+                            first = false;
+                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），使当前任务能够继续运行！");
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 }

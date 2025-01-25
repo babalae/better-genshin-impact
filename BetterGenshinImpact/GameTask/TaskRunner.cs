@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -120,7 +122,8 @@ public class TaskRunner
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
         // 没启动的时候先启动
-        await ScriptService.StartGameTask();
+        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游");
+        await ScriptService.StartGameTask(waitForMainUi);
         await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
 
