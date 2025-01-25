@@ -100,11 +100,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnLoaded()
     {
-        // 自动处理目录配置
-        await Patch1();
-
         // 预热OCR
         await OcrPreheating();
+        
+        if (Environment.GetCommandLineArgs().Length > 1)
+        {
+            return;
+        }
+        
+        // 自动处理目录配置
+        await Patch1();
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
