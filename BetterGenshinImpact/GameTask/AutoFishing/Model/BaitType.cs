@@ -12,8 +12,6 @@ public class BaitType
     public static readonly BaitType SugardewBait = new("sugardew bait", "甘露饵");
     public static readonly BaitType SourBait = new("sour bait", "酸桔饵");
     public static readonly BaitType FlashingMaintenanceMekBait = new("flashing maintenance mek bait", "维护机关频闪诱饵");
-    public static readonly BaitType SpinelgrainBait = new("spinelgrain bait", "澄晶果粒饵");
-    public static readonly BaitType EmberglowBait = new("emberglow bait", "温火饵");
 
     public static IEnumerable<BaitType> Values
     {
@@ -26,8 +24,6 @@ public class BaitType
             yield return SugardewBait;
             yield return SourBait;
             yield return FlashingMaintenanceMekBait;
-            yield return SpinelgrainBait;
-            yield return EmberglowBait;
         }
     }
     public string Name { get; private set; }
