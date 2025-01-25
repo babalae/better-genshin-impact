@@ -1038,14 +1038,14 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可以选择要分解到圣遗物的最高星级"
+                                  Text="需要分解圣遗物的最高星级"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Width="80"
                               Margin="0,0,10,0"
-                              ItemsSource="{Binding ArtifactSalvageStarList, Mode=TwoWay}"
+                              ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
                               SelectedItem="{Binding Config.AutoDomainConfig.MaxArtifactStar, Mode=TwoWay}">
                     </ComboBox>
                     <ui:ToggleSwitch Grid.Row="0"

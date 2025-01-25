@@ -70,7 +70,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             return; // win10 不支持切换主题
         }
-        
+
         CurrentBackdropType = CurrentBackdropType switch
         {
             WindowBackdropType.Mica => WindowBackdropType.Acrylic,
@@ -100,14 +100,25 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnLoaded()
     {
-        // 自动处理目录配置
-        await Patch1();
-
         // 预热OCR
         await OcrPreheating();
         
-        // 首次运行自动初始化绑定
-        InitKeyBinding();
+        if (Environment.GetCommandLineArgs().Length > 1)
+        {
+            return;
+        }
+        
+        // 自动处理目录配置
+        await Patch1();
+
+        // 首次运行
+        if (Config.CommonConfig.IsFirstRun)
+        {
+            // 自动初始化键位绑定
+            InitKeyBinding();
+            Config.AutoFightConfig.TeamNames = ""; // 此配置以后无用
+            Config.CommonConfig.IsFirstRun = false;
+        }
 
         // 检查更新
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
@@ -122,28 +133,24 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
-    
+
     private void InitKeyBinding()
     {
-        if (Config.CommonConfig.IsFirstRun)
+        try
         {
-            try
+            var kbVm = App.GetService<KeyBindingsSettingsPageViewModel>();
+            if (kbVm != null)
             {
-                var kbVm = App.GetService<KeyBindingsSettingsPageViewModel>();
-                if (kbVm != null)
-                {
-                    kbVm.FetchFromRegistryCommand.Execute(null);
-                }
+                kbVm.FetchFromRegistryCommand.Execute(null);
             }
-            catch (Exception e)
-            {
-                _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-
-                MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
-            }
-
         }
-    } 
+        catch (Exception e)
+        {
+            _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+
+            MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
+        }
+    }
 
     /**
      * 不同的安装目录处理
@@ -151,10 +158,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
      */
     private async Task Patch1()
     {
-        if (Directory.Exists(Global.Absolute("BetterGI")) 
+        if (Directory.Exists(Global.Absolute("BetterGI"))
             // && File.Exists(Global.Absolute("BetterGI/BetterGI.exe"))
             && Directory.Exists(Global.Absolute("BetterGI/User"))
-            )
+           )
         {
             var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res == System.Windows.MessageBoxResult.Yes)
@@ -165,7 +172,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 // 删除旧目录
                 DirectoryHelper.DeleteDirectoryRecursively(Global.Absolute("BetterGI"));
             }
-
         }
     }
 
