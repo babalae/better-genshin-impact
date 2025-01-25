@@ -85,6 +85,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                 }
             }
         };
+        InitConfigList();
     }
 
     public void OnNavigatedTo()
