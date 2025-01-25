@@ -65,7 +65,7 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        public SettingsContainer? GameSettings { get; set; }
+        // public SettingsContainer? GameSettings { get; set; }
 
         /// <summary>
         /// 关联启动原神的时间

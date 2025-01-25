@@ -1,4 +1,5 @@
-﻿using System.Windows.Media;
+﻿using System.Diagnostics;
+using System.Windows.Media;
 using BetterGenshinImpact.GameTask;
 using Wpf.Ui.Controls;
 
@@ -8,13 +9,15 @@ public class WindowHelper
 {
     public static void TryApplySystemBackdrop(System.Windows.Window window)
     {
-        window.Background = new SolidColorBrush(Colors.Transparent);
-
         if (WindowBackdrop.IsSupported(TaskContext.Instance().Config.CommonConfig.CurrentBackdropType))
         {
             if (TaskContext.Instance().Config.CommonConfig.CurrentBackdropType == WindowBackdropType.Acrylic)
             {
                 window.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
+            }
+            else
+            {
+                window.Background = new SolidColorBrush(Colors.Transparent);
             }
 
             WindowBackdrop.ApplyBackdrop(window, TaskContext.Instance().Config.CommonConfig.CurrentBackdropType);
@@ -24,14 +27,12 @@ public class WindowHelper
 
         if (WindowBackdrop.IsSupported(WindowBackdropType.Mica))
         {
+            window.Background = new SolidColorBrush(Colors.Transparent);
             WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.Mica);
-        }
-        else if (WindowBackdrop.IsSupported(WindowBackdropType.Tabbed))
-        {
-            WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.Tabbed);
         }
         else if (WindowBackdrop.IsSupported(WindowBackdropType.Acrylic))
         {
+            window.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
             WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.Acrylic);
         }
     }

@@ -325,7 +325,8 @@ namespace LogParse
                 (name: "最后小怪日期", value: ms => ms.LastSmallTime),
                 (name: "精英", value: ms => ms.EliteGameStatistics.ToString()),
                 (name: "精英详细", value: ms => ms.EliteDetails), (name: "最后精英日期", value: ms => ms.LastEliteTime),
-                (name: "总计锄地摩拉", value: ms => ms.TotalMoraKillingMonstersMora.ToString())
+                (name: "总计锄地摩拉", value: ms => ms.TotalMoraKillingMonstersMora.ToString()),
+                (name: "突发事件获取摩拉", value: ms => ms.EmergencyBonus)
             ];
             //锄地部分新曾字段
             (string name, Func<MoraStatistics, string> value)[] col2Configs=[..msColConfigs.ToList().Where(item=>item.name!="日期" && item.name!="最后小怪日期" && item.name!="最后精英日期"),
@@ -386,7 +387,7 @@ namespace LogParse
                     .OrderBy(group => group.Key)
                     .Reverse().ToList();
 
-                html.AppendLine($"<h2>按日锄地摩拉统计</h2>");
+                html.AppendLine($"<h2>按日摩拉收益统计</h2>");
                 html.AppendLine("<table>");
                 
                 html.AppendLine("    <tr>");

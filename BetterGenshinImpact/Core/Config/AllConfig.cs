@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -175,7 +176,11 @@ public partial class AllConfig : ObservableObject
     /// 原神按键绑定配置
     /// </summary>
     public KeyBindingsConfig KeyBindingsConfig { get; set; } = new();
-
+    
+    /// <summary>
+    /// 传送相关配置
+    /// </summary>
+    public TpConfig TpConfig { get; set; } = new();
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -188,7 +193,6 @@ public partial class AllConfig : ObservableObject
         NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
         NotificationConfig.PropertyChanged += OnNotificationPropertyChanged;
         KeyBindingsConfig.PropertyChanged += OnAnyPropertyChanged;
-
         AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
@@ -200,7 +204,7 @@ public partial class AllConfig : ObservableObject
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
-
+        TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
     }

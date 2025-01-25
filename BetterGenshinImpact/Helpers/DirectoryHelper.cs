@@ -33,6 +33,15 @@ public class DirectoryHelper
 
     private static void DeleteDirectory(DirectoryInfo directoryInfo)
     {
+        
+        //通过软链接生成的目录，直接删除该链接目录，而不涉及其文件本体
+        var attributes = directoryInfo.Attributes;
+        if ((attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+        {
+            directoryInfo.Delete();
+            return;
+        }
+
         // 递归处理子目录
         foreach (var subDirectory in directoryInfo.GetDirectories())
         {
@@ -78,6 +87,56 @@ public class DirectoryHelper
         foreach (var subDirectory in directoryInfo.GetDirectories())
         {
             RemoveReadOnlyAttribute(subDirectory);
+        }
+    }
+    
+    public static void CopyDirectory(string sourceDir, string destDir)
+    {
+        // 创建目标目录
+        Directory.CreateDirectory(destDir);
+
+        // 获取源目录中的所有文件
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var destFile = Path.Combine(destDir, Path.GetFileName(file));
+            File.Copy(file, destFile, true); // 覆盖同名文件
+        }
+
+        // 获取源目录中的所有子目录
+        foreach (var subDir in Directory.GetDirectories(sourceDir))
+        {
+            var destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+            CopyDirectory(subDir, destSubDir); // 递归拷贝子目录
+        }
+    }
+    
+    /// <summary>
+    /// 递归删除指定目录及其所有子目录和文件
+    /// </summary>
+    /// <param name="directoryPath">要删除的目录的路径</param>
+    public static void DeleteDirectoryRecursively(string directoryPath)
+    {
+        // 检查目录是否存在
+        if (Directory.Exists(directoryPath))
+        {
+            // 获取目录中的所有子目录
+            string[] subDirectories = Directory.GetDirectories(directoryPath);
+            foreach (string subDirectory in subDirectories)
+            {
+                // 递归调用删除子目录
+                DeleteDirectoryRecursively(subDirectory);
+            }
+
+            // 获取目录中的所有文件
+            string[] files = Directory.GetFiles(directoryPath);
+            foreach (string file in files)
+            {
+                // 删除文件
+                File.Delete(file);
+            }
+
+            // 删除空目录
+            Directory.Delete(directoryPath);
         }
     }
 }

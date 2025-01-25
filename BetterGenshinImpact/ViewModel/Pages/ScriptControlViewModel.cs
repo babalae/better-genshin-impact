@@ -702,6 +702,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     private List<ScriptProject> LoadAllJsScriptProjects()
     {
         var path = Global.ScriptPath();
+        Directory.CreateDirectory(path);
         // 获取所有脚本项目
         var projects = Directory.GetDirectories(path)
             .Select(x => new ScriptProject(Path.GetFileName(x)))

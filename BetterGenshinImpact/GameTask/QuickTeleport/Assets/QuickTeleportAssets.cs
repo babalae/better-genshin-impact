@@ -34,6 +34,7 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             BuildMapChooseIconRo("StatueOfTheSeven.png"),
             BuildMapChooseIconRo("Domain.png"),
             BuildMapChooseIconRo("Domain2.png"),
+            BuildMapChooseIconRo("ObsidianTotemPole.png"),
             BuildMapChooseIconRo("PortableWaypoint.png"),
             BuildMapChooseIconRo("Mansion.png"),
             BuildMapChooseIconRo("SubSpaceWaypoint.png"),
@@ -140,7 +141,6 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
     /// <returns></returns>
     public RecognitionObject BuildMapChooseIconRo(string name)
     {
-        var info = TaskContext.Instance().SystemInfo;
         var ro = new RecognitionObject
         {
             Name = name + "MapChooseIcon",

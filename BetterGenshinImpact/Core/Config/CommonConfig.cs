@@ -32,5 +32,11 @@ public partial class CommonConfig : ObservableObject
     /// 主题
     /// </summary>
     [ObservableProperty]
-    private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+    private WindowBackdropType _currentBackdropType = WindowBackdropType.Mica;
+    
+    /// <summary>
+    /// 是否是第一次运行
+    /// </summary>
+    [ObservableProperty]
+    private bool _isFirstRun = true;
 }

@@ -93,14 +93,14 @@ public class UpdateService : IUpdateService
                         case CheckUpdateWindow.CheckUpdateWindowButton.Update:
                             {
                                 // 唤起更新程序
-                                string updaterExePath = Global.Absolute("updater.exe");
+                                string updaterExePath = Global.Absolute("BetterGI.update.exe");
                                 if (!File.Exists(updaterExePath))
                                 {
                                     await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
                                     return;
                                 }
                                 // 启动
-                                Process.Start(updaterExePath);
+                                Process.Start(updaterExePath, "-I");
                                 
                                 // 退出程序
                                 Application.Current.Shutdown();

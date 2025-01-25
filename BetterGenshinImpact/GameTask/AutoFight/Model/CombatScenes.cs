@@ -31,7 +31,7 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 当前配队
     /// </summary>
-    public Avatar[] Avatars { get; set; } = Array.Empty<Avatar>();
+    public Avatar[] Avatars { get; set; } = [];
 
     public Dictionary<string, Avatar> AvatarMap { get; set; } = [];
 
@@ -70,6 +70,7 @@ public class CombatScenes : IDisposable
             {
                 throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
             }
+
             // 联机状态下判断
             var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
             var p = "p";
@@ -167,7 +168,7 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.51)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请确认您是否阅读了文档中的《快速上手》！");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读了文档中的《快速上手》！");
             }
         }
         else
@@ -175,7 +176,7 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.7)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请确认您是否阅读了文档中的《快速上手》！");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读了文档中的《快速上手》！");
             }
         }
 
@@ -243,6 +244,21 @@ public class CombatScenes : IDisposable
         for (var i = 0; i < AvatarCount; i++)
         {
             Avatars[i].Ct = ct;
+        }
+    }
+
+    public void AfterTask()
+    {
+        var mwk = SelectAvatar("玛薇卡");
+        if (mwk != null)
+        {
+            foreach (var avatar in Avatars)
+            {
+                if (avatar.Name != "玛薇卡")
+                {
+                    avatar.Switch();
+                }
+            }
         }
     }
 

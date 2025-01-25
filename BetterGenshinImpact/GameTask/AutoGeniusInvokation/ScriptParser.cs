@@ -117,7 +117,7 @@ public class ScriptParser
         var characterAndSkill = line.Split('{');
 
         var parts = characterAndSkill[0].Split('=');
-        character.Index = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(parts[0], ""));
+        character.Index = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(parts[0].Trim(), ""));
         MyAssert(character.Index >= 1 && character.Index <= 3, "角色序号必须在1-3之间");
 
         if (parts[1].Contains('|'))

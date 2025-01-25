@@ -25,6 +25,16 @@ namespace LogParse
 
         public List<ActionItem> SmallMonsterActionItems =>
             this.MonsterActionItems.Except(EliteMonsterActionItems).ToList();
+        public string EmergencyBonus
+        {
+            get
+            {
+                var ls = this.ActionItems.Where(item => item.ActionId == 28).ToList();
+                var count = ls.Count();
+                return ls.Sum(item=>item.Num)+((count==0 || count>=10)?"":$"({count}/10)");
+            }
+        }
+        
 
         public string LastEliteTime => EliteMonsterActionItems.MaxBy(item => item?.Time)?.Time ?? null;
         public string LastSmallTime => SmallMonsterActionItems.MaxBy(item => item?.Time)?.Time ?? null;

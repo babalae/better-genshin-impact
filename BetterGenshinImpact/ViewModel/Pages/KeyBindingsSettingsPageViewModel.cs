@@ -372,7 +372,7 @@ public partial class KeyBindingsSettingsPageViewModel : ObservableObject, INavig
         {
             foreach (var item in keySetting)
             {
-                if (item.ElementIdentifierId is ElementIdentifierId keyId)
+                if (item.ElementIdentifierId is { } keyId)
                 {
                     // 跳过无法识别的按键
                     if (keyId.ToName() == "Unknown" || keyId.ToName() == "None")

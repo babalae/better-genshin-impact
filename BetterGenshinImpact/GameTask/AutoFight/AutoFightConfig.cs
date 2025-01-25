@@ -25,6 +25,13 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _fightFinishDetectEnabled = true;
+    /// <summary>
+    /// 根据技能CD优化出招人员
+    /// 根据填入人或人和cd，来决定当此人元素战技cd未结束时，跳过此人出招，来优化战斗流程，可填入人名或人名数字（用逗号分隔），
+    /// 多种用分号分隔，例如:白术;钟离,12;，如果人名，则用内置cd检查，如果是人名和数字，则把数字当做出招cd(秒)。
+    /// </summary>
+    [ObservableProperty] private string _actionSchedulerByCd = "";
+    
     [Serializable]
     public partial class FightFinishDetectConfig : ObservableObject
     {
@@ -71,6 +78,40 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _pickDropsAfterFightEnabled = true;
+
+    [Serializable]
+    public partial class PickDropsAfterFightConfig : ObservableObject
+    {
+        /// <summary>
+        /// 前进次数
+        /// </summary>
+        [ObservableProperty]
+        private int _forwardTimes = 6;
+
+        /// <summary>
+        /// 校准次数
+        /// </summary>
+        [ObservableProperty]
+        private int _calibrationTimes = 15;
+
+        /// <summary>
+        /// 衰减因子
+        /// </summary>
+        [ObservableProperty]
+        private double _decayFactor = 0.7;
+
+        /// <summary>
+        /// 前进量（秒），设置为0时在[1,3]中随机
+        /// </summary>
+        [ObservableProperty]
+        private int _forwardSeconds = 2;
+
+    }
+    /// <summary>
+    /// 掉落寻物相关配置
+    /// </summary>   
+    [ObservableProperty]
+    private PickDropsAfterFightConfig _pickDropsConfig = new();
 
     /// <summary>
     /// 战斗结束后，如果存在枫原万叶，则使用该角色捡材料
