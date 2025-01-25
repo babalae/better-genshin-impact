@@ -461,7 +461,16 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             WriteScriptGroup(SelectedScriptGroup);
         
     }
-    
+
+    [RelayCommand]
+    private void ReverseTaskOrder()
+    {
+        List<ScriptGroupProject> projects = new();
+        projects.AddRange(SelectedScriptGroup?.Projects.Reverse());
+        SelectedScriptGroup.Projects.Clear();
+        projects.ForEach(item=>SelectedScriptGroup.Projects.Add(item));
+        WriteScriptGroup(SelectedScriptGroup);
+    }
 
     [RelayCommand]
     public void OnCopyScriptGroup(ScriptGroup? item)

@@ -69,6 +69,10 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _soloTaskUseFightEnabled = false;
     
+    //不在某时执行
+    [ObservableProperty] 
+    private string _skipDuring = "";
+    
     // 使用小道具的间隔时间
     [ObservableProperty]
     private int _useGadgetIntervalMs = 0;
