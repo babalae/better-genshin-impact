@@ -112,6 +112,7 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("鹿野院平藏", ElementalType.Anemo, true, true),
         new ElementalCollectAvatar("流浪者", ElementalType.Anemo, true, false),
         new ElementalCollectAvatar("闲云", ElementalType.Anemo, true, false),
+        new ElementalCollectAvatar("蓝砚", ElementalType.Anemo, true, false),
         new ElementalCollectAvatar("枫原万叶", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("珐露珊", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("琳妮特", ElementalType.Anemo, false, true),
