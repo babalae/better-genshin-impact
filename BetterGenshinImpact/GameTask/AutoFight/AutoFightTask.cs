@@ -249,21 +249,30 @@ public class AutoFightTask : ISoloTask
                         if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name,out skillCd))
                         {
                             var avatar = combatScenes.Avatars.FirstOrDefault(a => a.Name == command.Name);
-                            if (skillCd < 0)
+                            if (avatar!=null)
                             {
-                                skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);
-                            }
-                            var dif=(DateTime.UtcNow - avatar.LastSkillTime);
-                            //当技能未冷却时，跳过此次出招
-                            if ((DateTime.UtcNow -avatar.LastSkillTime).TotalSeconds < skillCd)
-                            {
-                                if (skipFightName != command.Name)
+                                if (skillCd < 0)
                                 {
-                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd-dif.TotalSeconds}秒,跳过此次行动");
+                                    skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);
                                 }
-                                skipFightName = command.Name;
+                                var dif=(DateTime.UtcNow - avatar.LastSkillTime);
+                                //当技能未冷却时，跳过此次出招
+                                if ((DateTime.UtcNow -avatar.LastSkillTime).TotalSeconds < skillCd)
+                                {
+                                    if (skipFightName != command.Name)
+                                    {
+                                        Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd-dif.TotalSeconds}秒,跳过此次行动");
+                                    }
+                                    skipFightName = command.Name;
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                Logger.LogInformation($"{command.Name}未在队伍中找到，跳过此次出手！");
                                 continue;
                             }
+
                         }
 
                         
