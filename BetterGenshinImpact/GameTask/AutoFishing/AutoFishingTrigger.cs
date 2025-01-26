@@ -90,7 +90,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                     .Do("抛竿", ApproachFishAndThrowRod1)
                                 .End()
                             .End()
-                            .Do("跳转-抛竿缺鱼检查", NoTargetFishCheck)
+                            .Do("冒泡-抛竿-缺鱼检查", ctx => noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                            .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
                             .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                                 .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
                                 .Do("自动提竿", FishBite)
@@ -745,13 +746,46 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
 
         /// <summary>
-        /// 缺鱼检查
+        /// 检查抛竿结果
+        /// 避免往红色靶点抛竿导致失败
         /// </summary>
         /// <param name="content"></param>
-        private BehaviourStatus NoTargetFishCheck(CaptureContent content)
+        private class CheckThrowRod : BaseBehaviour<CaptureContent>
         {
-            _logger.LogDebug("NoTargetFishCheck");
-            return noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded;
+            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+            private DateTime? timeDelay;
+
+            /// <summary>
+            /// 检查抛竿结果
+            /// </summary>
+            /// <param name="name"></param>
+            public CheckThrowRod(string name) : base(name)
+            {
+            }
+
+            protected override void OnInitialize()
+            {
+                timeDelay = DateTime.Now.AddSeconds(3);
+            }
+
+            protected override BehaviourStatus Update(CaptureContent content)
+            {
+                if (DateTime.Now < timeDelay)
+                {
+                    return BehaviourStatus.Running;
+                }
+
+                Region baitRectArea = content.CaptureRectArea.Find(AutoFishingAssets.Instance.BaitButtonRo);
+                if (baitRectArea.IsEmpty())
+                {
+                    return BehaviourStatus.Succeeded;
+                }
+                else
+                {
+                    _logger.LogInformation("抛竿失败");
+                    return BehaviourStatus.Failed;
+                }
+            }
         }
 
         private double NormalizeXTo1024(int x)
