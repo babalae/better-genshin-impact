@@ -21,7 +21,24 @@ namespace BetterGenshinImpact.Service;
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
+    private static bool IsCurrentHourEqual(string input)
+    {
+        // 尝试将输入字符串转换为整数
+        if (int.TryParse(input, out int hour))
+        {
+            // 验证小时是否在合法范围内（0-23）
+            if (hour >= 0 && hour <= 23)
+            {
+                // 获取当前小时数
+                int currentHour = DateTime.Now.Hour;
+                // 判断是否相等
+                return currentHour == hour;
+            }
+        }
 
+        // 如果输入非数字或不合法，返回 false
+        return false;
+    }
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
         groupName ??= "默认";
@@ -59,6 +76,13 @@ public partial class ScriptService : IScriptService
 
                 foreach (var project in list)
                 {
+                    
+                    if (project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                    {
+                        _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                        continue;
+                    }
+                    
                     if (project.Status != "Enabled")
                     {
                         _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
@@ -85,6 +109,14 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
+                            
+                            //多次执行时及时中断
+                            if (project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                            {
+                                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                                break;
+                            }
+                            
                         }
                         catch (NormalEndException e)
                         {
@@ -175,6 +207,7 @@ public partial class ScriptService : IScriptService
 
     private async Task ExecuteProject(ScriptGroupProject project)
     {
+       
         if (project.Type == "Javascript")
         {
             if (project.Project == null)

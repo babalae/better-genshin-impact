@@ -31,7 +31,12 @@ namespace LogParse
             {
                 var ls = this.ActionItems.Where(item => item.ActionId == 28).ToList();
                 var count = ls.Count();
-                return ls.Sum(item=>item.Num)+((count==0 || count>=10)?"":$"({count}/10)");
+                if (count == 0)
+                {
+                    return "";
+                }
+
+                return ls.Sum(item=>item.Num)+(count>=10?"":$"({count}/10)");
             }
         }
         

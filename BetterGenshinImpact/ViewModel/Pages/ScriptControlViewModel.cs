@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
@@ -174,6 +175,16 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         dayRangeComboBox.SelectedValuePath = "Value"; // 绑定的值
         dayRangeComboBox.SelectedIndex = 0;
         stackPanel.Children.Add(dayRangeComboBox);
+        
+        // 开关控件：ToggleButton 或 CheckBox
+        CheckBox faultStatsSwitch = new CheckBox
+        {
+            Content = "异常情况统计",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stackPanel.Children.Add(faultStatsSwitch);       
+
+        
 
 
         // 开关控件：ToggleButton 或 CheckBox
@@ -212,9 +223,39 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
         secondRow.Children.Add(questionButton);
 
+        StackPanel threeRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        
+        // 创建一个 TextBlock
+        TextBlock hoeingDelayBlock = new TextBlock
+        {
+            Text = "锄地延时(秒)：",
+            VerticalAlignment = VerticalAlignment.Center,
+            FontSize = 16,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+
+        
+        TextBox hoeingDelayTextBox = new TextBox
+        {
+            Width = 100,
+            FontSize = 16,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+  
+        threeRow.Children.Add(hoeingDelayBlock);
+        threeRow.Children.Add(hoeingDelayTextBox);
+        
+        
+        
+        
+        
         // 将第二行添加到 StackPanel
         stackPanel.Children.Add(secondRow);
-
+        stackPanel.Children.Add(threeRow);
         //PrimaryButtonText
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
@@ -245,7 +286,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         dayRangeComboBox.SelectedValue = sgpc.DayRangeValue;
         cookieTextBox.Text = config.Cookie;
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
-        
+        faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
+        hoeingDelayTextBox.Text = sgpc.HoeingDelay;
         
         MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
 
@@ -259,6 +301,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             sgpc.DayRangeValue=dayRangeValue;
             sgpc.RangeValue = rangeValue;
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
+            sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
+            sgpc.HoeingDelay = hoeingDelayTextBox.Text;
+
             config.Cookie = cookieValue;
             config.ScriptGroupLogDictionary[_selectedScriptGroup.Name]=sgpc;
             
@@ -343,7 +388,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 configGroupEntities.Reverse();
                 //realGameInfo
                 //小怪摩拉统计
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,hoeingStats ? realGameInfo : null));
+                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,hoeingStats ? realGameInfo : null,sgpc));
                 win.ShowDialog();
             }
 
@@ -416,7 +461,16 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             WriteScriptGroup(SelectedScriptGroup);
         
     }
-    
+
+    [RelayCommand]
+    private void ReverseTaskOrder()
+    {
+        List<ScriptGroupProject> projects = new();
+        projects.AddRange(SelectedScriptGroup?.Projects.Reverse());
+        SelectedScriptGroup.Projects.Clear();
+        projects.ForEach(item=>SelectedScriptGroup.Projects.Add(item));
+        WriteScriptGroup(SelectedScriptGroup);
+    }
 
     [RelayCommand]
     public void OnCopyScriptGroup(ScriptGroup? item)
