@@ -249,30 +249,21 @@ public class AutoFightTask : ISoloTask
                         if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name,out skillCd))
                         {
                             var avatar = combatScenes.Avatars.FirstOrDefault(a => a.Name == command.Name);
-                            if (avatar!=null)
+                            if (skillCd < 0)
                             {
-                                if (skillCd < 0)
-                                {
-                                    skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);
-                                }
-                                var dif=(DateTime.UtcNow - avatar.LastSkillTime);
-                                //当技能未冷却时，跳过此次出招
-                                if ((DateTime.UtcNow -avatar.LastSkillTime).TotalSeconds < skillCd)
-                                {
-                                    if (skipFightName != command.Name)
-                                    {
-                                        Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd-dif.TotalSeconds}秒,跳过此次行动");
-                                    }
-                                    skipFightName = command.Name;
-                                    continue;
-                                }
+                                skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);
                             }
-                            else
+                            var dif=(DateTime.UtcNow - avatar.LastSkillTime);
+                            //当技能未冷却时，跳过此次出招
+                            if ((DateTime.UtcNow -avatar.LastSkillTime).TotalSeconds < skillCd)
                             {
-                                Logger.LogInformation($"{command.Name}未在队伍中找到，跳过此次出手！");
+                                if (skipFightName != command.Name)
+                                {
+                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd-dif.TotalSeconds}秒,跳过此次行动");
+                                }
+                                skipFightName = command.Name;
                                 continue;
                             }
-
                         }
 
                         
