@@ -34,16 +34,5 @@ copy /y publish.7z .\MicaSetup\Resources\Setups\publish.7z
 if exist "%zipFile%" ( del /f /q "%zipfile%" )
 rename publish.7z %archiveFile%
 
-@echo [build uninst using vs2022]
-msbuild MicaSetup\MicaSetup.Uninst.csproj /t:Rebuild /p:Configuration=Release /p:DeployOnBuild=true /p:PublishProfile=FolderProfile /restore
-
-@echo [build setup using vs2022]
-copy /y .\MicaSetup\bin\Release\net472\MicaSetup.exe .\MicaSetup\Resources\Setups\Uninst.exe
-msbuild MicaSetup\MicaSetup.csproj /t:Build /p:Configuration=Release /p:DeployOnBuild=true /p:PublishProfile=FolderProfile /restore
-
-@echo [finish]
-del /f /q MicaSetup.exe
-copy /y .\MicaSetup\bin\Release\net472\MicaSetup.exe .\
-rename MicaSetup.exe %setupFile%
 rd /s /q dist\BetterGI
 
