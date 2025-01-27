@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -21,6 +22,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Log = Serilog.Log;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
@@ -62,27 +64,45 @@ public class TpTask(CancellationToken ct)
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
     private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
     {
-        var (x, y) = (tpX, tpY);
-        
-        string? country = null;
-        if (!force)
-        {
-            // 获取最近的传送点位置
-            (x, y, country) = GetRecentlyTpPoint(tpX, tpY);
-            Logger.LogDebug("({TpX},{TpY}) 最近的传送点位置 ({X},{Y})", $"{tpX:F1}", $"{tpY:F1}", $"{x:F1}", $"{y:F1}");
-        }
+        // 传送前的计算准备
+        var nTpPoints = GetNearestNTpPoints(tpX, tpY, 2);
+        var (x, y) = force ? (tpX, tpY) : (nTpPoints[0].x, nTpPoints[0].y);
+        var country = force ? null : nTpPoints[0].country;
+        double disBetweenTpPoints = Math.Sqrt((nTpPoints[0].x - nTpPoints[1].x) * (nTpPoints[0].x - nTpPoints[1].x)
+                                       + (nTpPoints[0].y - nTpPoints[1].y) * (nTpPoints[0].y - nTpPoints[1].y));
+        double minZoomLevel = Math.Max(disBetweenTpPoints / 20, 1);
+
 
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
         await SwitchRecentlyCountryMap(x, y, country);
-        
+        double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
         if (_tpConfig.MapZoomEnabled)
         {
-            double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
             if (zoomLevel > 4.5)
             {
                 // 显示传送锚点和秘境的缩放等级
                 await AdjustMapZoomLevel(zoomLevel, 4.5);
+                zoomLevel = 4.5;
                 Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.00}", 4.5);
+            }
+        }
+        if (zoomLevel > minZoomLevel)
+        {
+            if (_tpConfig.MapZoomEnabled)
+            {
+                Logger.LogInformation("目标传送点有相近传送点，到目标传送点附近将缩放到{zoomLevel:0.00}", minZoomLevel);
+                await MoveMapTo(x, y, minZoomLevel);
+                await Delay(300, ct); // 等待地图移动完成
+            }
+            else
+            {
+                Logger.LogInformation("目标传送点有相近传送点，可能传送失败。如果失败请到设置-大地图地图传送设置开启地图缩放。");
+                // TODO 部分无法区分点位强制缩放 即使没有zoomEnabled。
+                // await AdjustMapZoomLevel(zoomLevel, minZoomLevel); // 临时修改缩放
+                // await Delay(300, ct); // 等待缩放修改完成
+                await MoveMapTo(x, y); // 移动地图
+                await Delay(300, ct); // 等待地图移动完成
+                // await AdjustMapZoomLevel(minZoomLevel, zoomLevel); // 恢复修改的缩放
             }
         }
         var bigMapInAllMapRect = GetBigMapRect();
@@ -238,11 +258,12 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="x">目标x坐标</param>
     /// <param name="y">目标y坐标</param>
-
-    private async Task MoveMapTo(double x, double y)
+    /// <param name="minZoomLevel">到达目标点的最小缩放等级，只在 MapZoomEnabled 为 True 生效</param>
+    private async Task MoveMapTo(double x, double y, double minZoomLevel = 2)
     {
         // 获取当前地图中心点并计算到目标传送点的初始偏移
         // await AdjustMapZoomLevel(mapZoomLevel);
+        minZoomLevel = Math.Min(minZoomLevel, _tpConfig.MinZoomLevel);
         var bigMapCenterPoint = GetPositionFromBigMap();  // 初始中心
         var newBigMapCenterPoint = bigMapCenterPoint;
         var (xOffset, yOffset) = (x - bigMapCenterPoint.X, y - bigMapCenterPoint.Y);
@@ -271,49 +292,66 @@ public class TpTask(CancellationToken ct)
             // 本次移动的距离
             double diffMapX = Math.Abs(newBigMapCenterPoint.X - bigMapCenterPoint.X);
             double diffMapY = Math.Abs(newBigMapCenterPoint.Y - bigMapCenterPoint.Y);
-
             double moveDistance = Math.Sqrt(diffMapX * diffMapX + diffMapY * diffMapY);
-
             if (moveDistance > 10) // 移动距离大于10认为本次移动成功
             {
                 (xOffset, yOffset) = (x - newBigMapCenterPoint.X, y - newBigMapCenterPoint.Y); // 更新目标偏移量
-                totalMoveMouseX = Math.Abs(moveMouseX * xOffset / diffMapX);
-                totalMoveMouseY = Math.Abs(moveMouseY * yOffset / diffMapY);
+                // totalMoveMouseX = Math.Abs(moveMouseX * xOffset / diffMapX);
+                // totalMoveMouseY = Math.Abs(moveMouseY * yOffset / diffMapY);
+                double currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+                totalMoveMouseX = _tpConfig.MapScaleFactor * Math.Abs(xOffset) / currentZoomLevel;
+                totalMoveMouseY = _tpConfig.MapScaleFactor * Math.Abs(yOffset) / currentZoomLevel;
                 double mouseDistance = Math.Sqrt(totalMoveMouseX * totalMoveMouseX + totalMoveMouseY * totalMoveMouseY);
 
                 if (_tpConfig.MapZoomEnabled)
                 {
                     // 调整地图缩放
                     // mapZoomLevel<5 才显示传送锚点和秘境; mapZoomLevel>1.7 可以避免点错传送锚点
-                    double currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+                    currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
                     double oldZoomLevel = currentZoomLevel;
 
                     while (mouseDistance > _tpConfig.MapZoomOutDistance || mouseDistance < _tpConfig.MapZoomInDistance)
                     {
-                        bool zoomOut = mouseDistance > _tpConfig.MapZoomOutDistance;
                         bool zoomIn = mouseDistance <  _tpConfig.MapZoomInDistance;
-                        if (zoomOut && currentZoomLevel < _tpConfig.MaxZoomLevel - 1.0 
-                            || zoomIn && currentZoomLevel > _tpConfig.MinZoomLevel + 1.0)
+                        if (zoomIn)
                         {
-                            await AdjustMapZoomLevel(zoomIn);
-                            await Delay(50, ct);
-                            currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
-                            totalMoveMouseX *= oldZoomLevel / currentZoomLevel;
-                            totalMoveMouseY *= oldZoomLevel / currentZoomLevel;
-                            mouseDistance *= oldZoomLevel / currentZoomLevel;
-                            oldZoomLevel = currentZoomLevel;
-                        }
-                        else
-                        {
-                            double targetZoom = zoomIn ? _tpConfig.MinZoomLevel : _tpConfig.MaxZoomLevel;
-                            // 考虑调整和识别误差，所以相差0.05就不再调整。
-                            if (currentZoomLevel > _tpConfig.MaxZoomLevel - 0.05 || currentZoomLevel < _tpConfig.MinZoomLevel + 0.05)
+                            if (currentZoomLevel > _tpConfig.MinZoomLevel + 1.0)
+                            {
+                                await AdjustMapZoomLevel(zoomIn);
+                                await Delay(50, ct);
+                            }
+                            else if(currentZoomLevel < minZoomLevel + 0.05)
                             {
                                 break;
                             }
-                            await AdjustMapZoomLevel(currentZoomLevel, targetZoom);
-                            break;
+                            else
+                            {
+                                await AdjustMapZoomLevel(currentZoomLevel, minZoomLevel);
+                                break;
+                            }
                         }
+                        else
+                        {
+                            if (currentZoomLevel < _tpConfig.MaxZoomLevel - 1.0)
+                            {
+                                await AdjustMapZoomLevel(zoomIn);
+                                await Delay(50, ct);
+                            }
+                            else if (currentZoomLevel > _tpConfig.MaxZoomLevel - 0.05)
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                await AdjustMapZoomLevel(currentZoomLevel, _tpConfig.MaxZoomLevel);
+                                break;
+                            }
+                        }
+                        currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+                        totalMoveMouseX *= oldZoomLevel / currentZoomLevel;
+                        totalMoveMouseY *= oldZoomLevel / currentZoomLevel;
+                        mouseDistance *= oldZoomLevel / currentZoomLevel;
+                        oldZoomLevel = currentZoomLevel;
                     }
                 }
 
@@ -448,7 +486,6 @@ public class TpTask(CancellationToken ct)
         GlobalMethod.LeftButtonUp();
     }
 
-
     public Point2f GetPositionFromBigMap()
     {
         return GetBigMapCenterPoint();
@@ -529,6 +566,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
+    [Obsolete]
     public (double x, double y, string? country) GetRecentlyTpPoint(double x, double y)
     {
         double recentX = 0;
@@ -547,6 +585,40 @@ public class TpTask(CancellationToken ct)
             }
         }
         return (recentX, recentY, country);
+    }
+    
+    /// <summary>
+    /// 获取最接近的N个传送点坐标和所处区域
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="n">获取最近的 n 个传送点</param>
+    /// <returns></returns>
+    public List<(double x, double y, string? country)> GetNearestNTpPoints(double x, double y, int n = 1)
+    {
+        // 检查 n 的合法性
+        if (n < 1)
+        {
+            throw new ArgumentException("The value of n must be greater than or equal to 1.", nameof(n));
+        }
+
+        // 按距离排序并选择前 n 个点
+        var sortedTpPositions = MapLazyAssets.Instance.TpPositions
+            .Select(tpPosition => new
+            {
+                tpPosition.X,
+                tpPosition.Y,
+                tpPosition.Country,
+                Distance = Math.Sqrt(Math.Pow(tpPosition.X - x, 2) + Math.Pow(tpPosition.Y - y, 2))
+            })
+            .OrderBy(tp => tp.Distance)
+            .Take(n) // 取前 n 个点
+            .ToList();
+
+        // 将结果转换为 List<(x, y, country)>
+        return sortedTpPositions
+            .Select(tp => (tp.X, tp.Y, tp.Country))
+            .ToList();
     }
 
     public async Task<bool> SwitchRecentlyCountryMap(double x, double y, string? forceCountry = null)
