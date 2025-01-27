@@ -76,13 +76,12 @@ public partial class ScriptService : IScriptService
 
                 foreach (var project in list)
                 {
-     
-                    if (project.GroupInfo!=null && project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                    
+                    if (project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
                     {
                         _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                         continue;
                     }
-          
                     
                     if (project.Status != "Enabled")
                     {
@@ -110,9 +109,9 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
-
+                            
                             //多次执行时及时中断
-                            if (project.GroupInfo!=null && project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                            if (project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
                             {
                                 _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                                 break;
