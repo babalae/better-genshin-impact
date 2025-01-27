@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -53,7 +54,7 @@ public class NotificationService : IHostedService
         // using object type here so it serializes the interface correctly
         var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         });
 
         return new StringContent(serializedData, Encoding.UTF8, "application/json");
@@ -82,7 +83,13 @@ public class NotificationService : IHostedService
             {
                 return NotificationTestResult.Error("通知类型未启用");
             }
-            await notifier.SendNotificationAsync(TransformData(new TestNotificationData()));
+            await notifier.SendNotificationAsync(TransformData(new TestNotificationData
+            {
+                Event = NotificationEvent.Test,
+                Action = NotificationAction.Started,
+                Conclusion = NotificationConclusion.Success,
+                Message = "测试通知"
+            }));
             return NotificationTestResult.Success();
         }
         catch (NotifierException ex)
