@@ -559,7 +559,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于地图追踪、自动秘境、一条龙灯功能中传送功能的配置"
+                                  Text="用于地图追踪、自动秘境、一条龙等功能中传送功能的配置"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardExpander.Header>
