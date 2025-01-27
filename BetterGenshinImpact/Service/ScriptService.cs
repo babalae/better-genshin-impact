@@ -27,7 +27,7 @@ public partial class ScriptService : IScriptService
         if (int.TryParse(input, out int hour))
         {
             // 验证小时是否在合法范围内（0-23）
-            if (hour >= 0 && hour <= 23)
+            if (hour is >= 0 and <= 23)
             {
                 // 获取当前小时数
                 int currentHour = DateTime.Now.Hour;
@@ -77,7 +77,7 @@ public partial class ScriptService : IScriptService
                 foreach (var project in list)
                 {
                     
-                    if (project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                    if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
                     {
                         _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                         continue;
@@ -111,7 +111,7 @@ public partial class ScriptService : IScriptService
                             await ExecuteProject(project);
                             
                             //多次执行时及时中断
-                            if (project.GroupInfo.Config.PathingConfig.Enabled && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                            if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
                             {
                                 _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                                 break;
