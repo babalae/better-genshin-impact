@@ -26,7 +26,6 @@ public class UpdateService : IUpdateService
     private readonly ILogger<UpdateService> _logger;
     private readonly IConfigService _configService;
 
-    private const string HashUrl = "https://raw.githubusercontent.com/bettergi/bettergi-installation-data/refs/heads/main/hash.json";
     private const string NoticeUrl = "https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json";
     private const string DownloadPageUrl = "https://bgi.huiyadan.com/download.html";
 
@@ -61,16 +60,22 @@ public class UpdateService : IUpdateService
 
             if (!Global.IsNewVersion(newVersion))
             {
+                if (option.Trigger == UpdateTrigger.Manual)
+                {
+                    await MessageBox.InformationAsync("当前已是最新版本！");
+                }
+                
                 return;
             }
 
             if (!string.IsNullOrEmpty(Config.NotShowNewVersionNoticeEndVersion)
-                && !Global.IsNewVersion(Config.NotShowNewVersionNoticeEndVersion, newVersion))
+                && !Global.IsNewVersion(Config.NotShowNewVersionNoticeEndVersion, newVersion)
+                && option.Trigger == UpdateTrigger.Auto)
             {
                 return;
             }
 
-            CheckUpdateWindow win = new()
+            CheckUpdateWindow win = new(option)
             {
                 Owner = Application.Current.MainWindow,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -78,7 +83,6 @@ public class UpdateService : IUpdateService
                 UserInteraction = async (sender, button) =>
                 {
                     CheckUpdateWindow win = (CheckUpdateWindow)sender;
-                    CancellationTokenSource? tokenSource = new();
 
                     switch (button)
                     {
@@ -114,20 +118,8 @@ public class UpdateService : IUpdateService
                             break;
 
                         case CheckUpdateWindow.CheckUpdateWindowButton.Cancel:
-                            if (tokenSource != null)
-                            {
-                                if (MessageBox.Question("正在更新中，确定要取消更新吗？") == MessageBoxResult.Yes)
-                                {
-                                    win.ShowUpdateStatus = false;
-                                    tokenSource?.Cancel();
-                                    win.Close();
-                                }
-                            }
-                            else
-                            {
-                                win.ShowUpdateStatus = false;
-                                win.Close();
-                            }
+                            win.ShowUpdateStatus = false;
+                            win.Close();
                             break;
                     }
                 }
