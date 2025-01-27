@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Windows;
+using BetterGenshinImpact.Model;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -18,10 +20,15 @@ public partial class CheckUpdateWindow : FluentWindow
     [ObservableProperty]
     private string updateStatusMessage = string.Empty;
 
-    public CheckUpdateWindow()
+    public CheckUpdateWindow(UpdateOption option)
     {
         DataContext = this;
         InitializeComponent();
+
+        if (option.Trigger == UpdateTrigger.Manual)
+        {
+            IgnoreButton.Visibility = Visibility.Collapsed;
+        }
 
         Closing += OnClosing;
     }
