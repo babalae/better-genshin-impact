@@ -168,7 +168,7 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.51)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读了文档中的《快速上手》！");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
         else
@@ -176,7 +176,7 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.7)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读了文档中的《快速上手》！");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
 
