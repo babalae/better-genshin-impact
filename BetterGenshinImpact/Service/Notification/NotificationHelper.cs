@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -15,7 +16,7 @@ public class NotificationHelper
 {
     public static void Notify(INotificationData notificationData)
     {
-        if (NotificationService.Instance().Config.NotificationConfig.IncludeScreenShot)// TODO: 这个获取方式是否合理？
+        if (TaskContext.Instance().Config.NotificationConfig.IncludeScreenShot)
         {
             var screenShot = (Bitmap)TaskControl.CaptureToRectArea().SrcBitmap.Clone();
             notificationData.Screenshot = screenShot;

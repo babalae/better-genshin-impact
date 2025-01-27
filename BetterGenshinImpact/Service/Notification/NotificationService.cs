@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -18,13 +19,11 @@ public class NotificationService : IHostedService
 {
     private static NotificationService? _instance;
 
-    private static readonly HttpClient _httpClient = new();
+    private static readonly HttpClient NotifyHttpClient = new();
     private readonly NotifierManager _notifierManager;
-    public AllConfig Config { get; set; } //TODO:除了public以外还能怎么获取这个Config？
 
-    public NotificationService(IConfigService configService, NotifierManager notifierManager)
+    public NotificationService(NotifierManager notifierManager)
     {
-        Config = configService.Get();
         _notifierManager = notifierManager;
         _instance = this;
         InitializeNotifiers();
@@ -62,9 +61,9 @@ public class NotificationService : IHostedService
 
     private void InitializeNotifiers()
     {
-        if (Config.NotificationConfig.WebhookEnabled)
+        if (TaskContext.Instance().Config.NotificationConfig.WebhookEnabled)
         {
-            _notifierManager.RegisterNotifier(new WebhookNotifier(_httpClient, Config.NotificationConfig.WebhookEndpoint));
+            _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
         }
     }
 
