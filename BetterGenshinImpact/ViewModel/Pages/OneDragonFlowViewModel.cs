@@ -62,6 +62,8 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty]
     private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
+    
+    public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
     {
@@ -83,6 +85,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                 }
             }
         };
+        InitConfigList();
     }
 
     public void OnNavigatedTo()

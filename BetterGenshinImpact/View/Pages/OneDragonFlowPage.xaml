@@ -18,9 +18,9 @@
              FontFamily="{StaticResource TextThemeFontFamily}"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
-    <Grid Margin="22,16,22,12">
+    <Grid Margin="22,16,8,12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" MaxWidth="300" />
             <ColumnDefinition Width="2*" />
         </Grid.ColumnDefinitions>
 
@@ -156,10 +156,9 @@
         </ContentControl>-->
 
         <!--  右侧配置  -->
-        <DockPanel Grid.Column="1" Margin="20,0,0,0">
+        <DockPanel Grid.Column="1" Margin="16,0,0,0">
             <StackPanel Margin="0,0,0,10" DockPanel.Dock="Top">
-
-                <Grid>
+                <Grid Margin="0,0,9,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -199,7 +198,7 @@
             </StackPanel>
 
             <ScrollViewer>
-                <StackPanel>
+                <StackPanel Margin="0,0,18,0">
                     <!--  合成树脂  -->
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
@@ -267,7 +266,7 @@
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
-                                                 Margin="0,0,36,0"
+                                                 Margin="0,0,20,0"
                                                  IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}" />
                             </Grid>
                         </ui:CardExpander.Header>
@@ -361,7 +360,7 @@
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
-                                                 Margin="0,0,36,0"
+                                                 Margin="0,0,20,0"
                                                  IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}" />
                             </Grid>
                         </ui:CardExpander.Header>
@@ -472,6 +471,41 @@
                         </StackPanel>
                     </ui:CardExpander>
 
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf68a;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="结束后自动分解圣遗物"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="需要分解圣遗物的最高星级"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox 
+                                      Width="80"
+                                      Margin="0,0,10,0"
+                                      ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
+                                      SelectedItem="{Binding Config.AutoDomainConfig.MaxArtifactStar, Mode=TwoWay}">
+                            </ComboBox>
+                            <ui:ToggleSwitch 
+                                             Margin="0,0,36,0"
+                                             IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+                        </StackPanel>
+                    </ui:CardControl>
+
                     <!--  领取奖励  -->
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
@@ -504,10 +538,10 @@
                                   SelectedItem="{Binding SelectedConfig.AdventurersGuildCountry, Mode=TwoWay}"
                                   ItemsSource="{Binding AdventurersGuildCountry}" />
                     </ui:CardControl>
-                    
+
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
-                            <ui:FontIcon Glyph="&#xf14e;" Style="{StaticResource FaFontIconStyle}" />
+                            <ui:FontIcon Glyph="&#xf4c7;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardControl.Icon>
                         <ui:CardControl.Header>
                             <Grid>
@@ -527,13 +561,13 @@
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
-                        <ui:TextBox 
-                                    MinWidth="150"
-                                    MaxWidth="800"
-                                    Margin="0,0,28,0"
-                                    Text="{Binding SelectedConfig.DailyRewardPartyName, Mode=TwoWay}"
-                                    PlaceholderText="填写好感队名称"
-                                    TextWrapping="Wrap" />
+                        <ui:TextBox
+                            MinWidth="150"
+                            MaxWidth="800"
+                            Margin="0,0,28,0"
+                            Text="{Binding SelectedConfig.DailyRewardPartyName, Mode=TwoWay}"
+                            PlaceholderText="填写好感队名称"
+                            TextWrapping="Wrap" />
                     </ui:CardControl>
 
                     <!--  可以继续添加其他设置项  -->

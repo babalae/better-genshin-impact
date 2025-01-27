@@ -1038,14 +1038,14 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可以选择要分解到圣遗物的最高星级"
+                                  Text="需要分解圣遗物的最高星级"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Width="80"
                               Margin="0,0,10,0"
-                              ItemsSource="{Binding ArtifactSalvageStarList, Mode=TwoWay}"
+                              ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
                               SelectedItem="{Binding Config.AutoDomainConfig.MaxArtifactStar, Mode=TwoWay}">
                     </ComboBox>
                     <ui:ToggleSwitch Grid.Row="0"
@@ -1287,7 +1287,7 @@
                     </ui:TextBlock>
                 </Grid>
             </ui:CardControl.Header>
-            <controls:TwoStateButton Margin="0,0,36,0"
+            <controls:TwoStateButton Margin="0,0,40,0"
                                      DisableCommand="{Binding StopSoloTaskCommand}"
                                      DisableContent="停止"
                                      EnableCommand="{Binding SwitchAutoMusicGameCommand}"
@@ -1296,7 +1296,7 @@
         </ui:CardControl>
         
         <!--  自动音游专辑  -->
-        <ui:CardExpander Margin="0,0,0,12">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf89f;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
@@ -1350,12 +1350,37 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义难度等级，使该级别下所有乐曲达成【大音天籁】"
+                                  Text="自动演奏未达成【大音天籁】的乐曲"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认为【传说】，【大师】即可获取所有奖励，【所有】即全部难度等级的所有乐曲达成【大音天籁】。"
+                                  Text="关闭时，奖励已经领取就会跳过乐曲。开启时，达成了【大音天籁】才会跳过乐曲"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoMusicGameConfig.MustCanorusLevel, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动演奏的目标难度选择"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="设置为【传说】，【大师】即可获取所有奖励，设置【所有】则会对乐曲的所有难度进行自动演奏"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"

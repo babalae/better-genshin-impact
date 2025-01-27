@@ -66,12 +66,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private void OnSwitchBackdrop()
     {
+        if (!OsVersionHelper.IsWindows11_22523_OrGreater)
+        {
+            return; // win10 不支持切换主题
+        }
+
         CurrentBackdropType = CurrentBackdropType switch
         {
             WindowBackdropType.Mica => WindowBackdropType.Acrylic,
-            WindowBackdropType.Acrylic => WindowBackdropType.Tabbed,
-            WindowBackdropType.Tabbed => WindowBackdropType.Mica,
-            _ => WindowBackdropType.Mica
+            WindowBackdropType.Acrylic => WindowBackdropType.Mica,
+            _ => WindowBackdropType.Acrylic
         };
 
         Config.CommonConfig.CurrentBackdropType = CurrentBackdropType;
@@ -79,7 +83,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         if (Application.Current.MainWindow is MainWindow mainWindow)
         {
             mainWindow.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
-            ;
             WindowBackdrop.ApplyBackdrop(mainWindow, CurrentBackdropType);
         }
     }
@@ -97,14 +100,25 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnLoaded()
     {
+        // 预热OCR
+        await OcrPreheating();
+
+        if (Environment.GetCommandLineArgs().Length > 1)
+        {
+            return;
+        }
+
         // 自动处理目录配置
         await Patch1();
 
-        // 预热OCR
-        await OcrPreheating();
-        
-        // 首次运行自动初始化绑定
-        InitKeyBinding();
+        // 首次运行
+        if (Config.CommonConfig.IsFirstRun)
+        {
+            // 自动初始化键位绑定
+            InitKeyBinding();
+            Config.AutoFightConfig.TeamNames = ""; // 此配置以后无用
+            Config.CommonConfig.IsFirstRun = false;
+        }
 
         // 检查更新
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
@@ -119,28 +133,24 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
-    
+
     private void InitKeyBinding()
     {
-        if (Config.CommonConfig.IsFirstRun)
+        try
         {
-            try
+            var kbVm = App.GetService<KeyBindingsSettingsPageViewModel>();
+            if (kbVm != null)
             {
-                var kbVm = App.GetService<KeyBindingsSettingsPageViewModel>();
-                if (kbVm != null)
-                {
-                    kbVm.FetchFromRegistryCommand.Execute(null);
-                }
+                kbVm.FetchFromRegistryCommand.Execute(null);
             }
-            catch (Exception e)
-            {
-                _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-
-                MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
-            }
-
         }
-    } 
+        catch (Exception e)
+        {
+            _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+
+            MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
+        }
+    }
 
     /**
      * 不同的安装目录处理
@@ -148,21 +158,29 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
      */
     private async Task Patch1()
     {
-        if (Directory.Exists(Global.Absolute("BetterGI")) 
-            // && File.Exists(Global.Absolute("BetterGI/BetterGI.exe"))
-            && Directory.Exists(Global.Absolute("BetterGI/User"))
-            )
+        var embeddedPath = Global.Absolute("BetterGI");
+        var embeddedUserPath = Global.Absolute("BetterGI/User");
+        var exePath = Global.Absolute("BetterGI/BetterGI.exe");
+        if (Directory.Exists(embeddedPath)
+            && File.Exists(exePath)
+            && Directory.Exists(embeddedUserPath)
+           )
         {
-            var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI", System.Windows.MessageBoxButton.YesNo);
-            if (res == System.Windows.MessageBoxResult.Yes)
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(exePath);
+            // 低版本才需要迁移
+            if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var dir = Global.Absolute("BetterGI/User");
-                // 迁移配置，拷贝整个目录并覆盖
-                DirectoryHelper.CopyDirectory(dir, Global.Absolute("User"));
-                // 删除旧目录
-                Directory.Delete(Global.Absolute("BetterGI"));
+                var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (res == System.Windows.MessageBoxResult.Yes)
+                {
+                    // 迁移配置，拷贝整个目录并覆盖
+                    DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
+                    // 删除旧目录
+                    DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
+                    await MessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
+                    Application.Current.Shutdown();
+                }
             }
-
         }
     }
 

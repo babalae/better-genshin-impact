@@ -248,7 +248,11 @@ public class AutoFightTask : ISoloTask
                         double skillCd;
                         if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name,out skillCd))
                         {
-                            var avatar = combatScenes.Avatars.FirstOrDefault(a => a.Name == command.Name);
+                            var avatar = combatScenes.SelectAvatar(command.Name);
+                            if (avatar == null)
+                            {
+                                continue;
+                            }
                             if (skillCd < 0)
                             {
                                 skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);

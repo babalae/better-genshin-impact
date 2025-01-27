@@ -94,21 +94,26 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
                 }
             }
         });
-
-        var args = Environment.GetCommandLineArgs();
-        if (args.Length > 1)
-        {
-            if (args[1].Contains("start"))
-            {
-                _ = OnStartTriggerAsync();
-            }
-        }
     }
 
     [RelayCommand]
     private void OnLoaded()
     {
         // OnTest();
+        
+        var args = Environment.GetCommandLineArgs();
+        if (args.Length > 1)
+        {
+            if (args[1].Equals("start"))
+            {
+                _ = OnStartTriggerAsync();
+            }
+            else if (args[1].Equals("startOneDragon"))
+            {
+                var odVm = App.GetService<OneDragonFlowViewModel>();
+                odVm?.OneKeyExecuteCommand.Execute(null);
+            }
+        }
     }
 
     private void OnClosed()

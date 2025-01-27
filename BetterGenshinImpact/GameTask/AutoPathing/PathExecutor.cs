@@ -680,7 +680,23 @@ public class PathExecutor
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                if (distance > 25) // 距离大于25时可以使用疾跑
+                if (distance > 20 != fastMode) // 距离大于20时可以使用疾跑/自由泳
+                {
+                    if (fastMode)
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                    }
+                    else
+                    {
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                    }
+
+                    fastMode = !fastMode;
+                }
+            }
+            else if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
+            {
+                if (distance > 20) // 距离大于25时可以使用疾跑
                 {
                     if (Math.Abs((fastModeColdTime - DateTime.UtcNow).TotalMilliseconds) > 1000) //冷却一会
                     {
