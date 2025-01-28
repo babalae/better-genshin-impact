@@ -15,6 +15,7 @@ using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -23,12 +24,14 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;
-    
-    private readonly NotificationService _notificationService;
-    
-    [ObservableProperty] private bool _isLoading;
 
-    [ObservableProperty] private string _webhookStatus = string.Empty;
+    private readonly NotificationService _notificationService;
+
+    [ObservableProperty]
+    private bool _isLoading;
+
+    [ObservableProperty]
+    private string _webhookStatus = string.Empty;
 
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService, NotificationService notificationService)
@@ -51,7 +54,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
-    
+
     [RelayCommand]
     private void OnSwitchMaskEnabled()
     {
@@ -106,7 +109,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
 
         Process.Start("explorer.exe", path);
     }
-    
+
     [RelayCommand]
     private async Task OnTestWebhook()
     {
@@ -118,5 +121,19 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         WebhookStatus = res.Message;
 
         IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnTestWindowsUwpNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<WindowsUwpNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
     }
 }

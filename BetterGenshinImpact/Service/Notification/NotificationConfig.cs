@@ -26,4 +26,11 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _includeScreenShot = false;
+    
+    /// <summary>
+    /// windows uwp 通知是否启用
+    /// </summary>
+    [ObservableProperty]
+    private bool _windowsUwpNotificationEnabled = false;
+
 }

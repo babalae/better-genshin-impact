@@ -6,11 +6,13 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Drawing;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 
@@ -56,6 +58,10 @@ public class NotificationService : IHostedService
         {
             _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
         }
+        if (TaskContext.Instance().Config.NotificationConfig.WindowsUwpNotificationEnabled)
+        {
+            _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
+        }
     }
 
     public void RefreshNotifiers()
@@ -73,12 +79,13 @@ public class NotificationService : IHostedService
             {
                 return NotificationTestResult.Error("通知类型未启用");
             }
-            await notifier.SendNotificationAsync(new TestNotificationData
+            await notifier.SendAsync(new TestNotificationData
             {
                 Event = NotificationEvent.Test,
                 Action = NotificationAction.Started,
                 Conclusion = NotificationConclusion.Success,
-                Message = "测试通知"
+                Message = "测试通知",
+                // Screenshot = 
             });
             return NotificationTestResult.Success();
         }

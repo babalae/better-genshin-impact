@@ -15,6 +15,11 @@ public class WebhookNotifier : INotifier
     public string Endpoint { get; set; }
 
     private readonly HttpClient _httpClient;
+    
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+    };
 
     public WebhookNotifier(HttpClient httpClient, string endpoint = "")
     {
@@ -22,7 +27,7 @@ public class WebhookNotifier : INotifier
         Endpoint = endpoint;
     }
 
-    public async Task SendNotificationAsync(INotificationData content)
+    public async Task SendAsync(INotificationData content)
     {
         try
         {
@@ -47,10 +52,7 @@ public class WebhookNotifier : INotifier
     private StringContent TransformData(INotificationData notificationData)
     {
         // using object type here so it serializes the interface correctly
-        var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        });
+        var serializedData = JsonSerializer.Serialize<object>(notificationData, _jsonSerializerOptions);
 
         return new StringContent(serializedData, Encoding.UTF8, "application/json");
     }

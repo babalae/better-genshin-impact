@@ -8,5 +8,5 @@ public interface INotifier
 {
     string Name { get; }
 
-    Task SendNotificationAsync(INotificationData content);
+    Task SendAsync(INotificationData data);
 }

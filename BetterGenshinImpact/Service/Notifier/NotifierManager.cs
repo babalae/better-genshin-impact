@@ -41,7 +41,7 @@ public class NotifierManager
     {
         try
         {
-            await notifier.SendNotificationAsync(content);
+            await notifier.SendAsync(content);
         }
         catch (System.Exception ex)
         {
