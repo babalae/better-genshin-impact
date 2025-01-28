@@ -51,7 +51,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private readonly AutoFishingAssets _autoFishingAssets;
 
-        private IBehaviour<CaptureContent> BehaviourTree { get; set; }
+        internal IBehaviour<CaptureContent> BehaviourTree { get; set; }
 
         /// <summary>
         /// 辣条（误）
@@ -122,7 +122,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public void OnCapture(CaptureContent content)
         {
-            if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 100)
+            if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 67)
             {
                 return;
             }
@@ -1005,77 +1005,77 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
             if (currentBiteWordsTips != Rect.Empty)
             {
-                if (_baseBiteTips == Rect.Empty)
+                //if (_baseBiteTips == Rect.Empty)
+                //{
+                Rect _baseBiteTips = currentBiteWordsTips;
+                //}
+                //else
+                //{
+                if (Math.Abs(_baseBiteTips.X - currentBiteWordsTips.X) < 10
+                    && Math.Abs(_baseBiteTips.Y - currentBiteWordsTips.Y) < 10
+                    && Math.Abs(_baseBiteTips.Width - currentBiteWordsTips.Width) < 10
+                    && Math.Abs(_baseBiteTips.Height - currentBiteWordsTips.Height) < 10)
                 {
-                    _baseBiteTips = currentBiteWordsTips;
-                }
-                else
-                {
-                    if (Math.Abs(_baseBiteTips.X - currentBiteWordsTips.X) < 10
-                        && Math.Abs(_baseBiteTips.Y - currentBiteWordsTips.Y) < 10
-                        && Math.Abs(_baseBiteTips.Width - currentBiteWordsTips.Width) < 10
-                        && Math.Abs(_baseBiteTips.Height - currentBiteWordsTips.Height) < 10)
-                    {
-                        _biteTipsExitCount++;
-                        // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
-                        //     currentBiteWordsTips
-                        //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
-                        //         .ToRectDrawable());
-                        using var tipsRa = content.CaptureRectArea.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
-                        tipsRa.DrawSelf("FishBiteTips");
+                    _biteTipsExitCount++;
+                    // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
+                    //     currentBiteWordsTips
+                    //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
+                    //         .ToRectDrawable());
+                    using var tipsRa = content.CaptureRectArea.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
+                    tipsRa.DrawSelf("FishBiteTips");
 
-                        if (_biteTipsExitCount >= content.FrameRate / 4d)
-                        {
-                            // 图像提竿判断
-                            using var liftRodButtonRa = content.CaptureRectArea.Find(_autoFishingAssets.LiftRodButtonRo);
-                            if (!liftRodButtonRa.IsEmpty())
-                            {
-                                Simulation.SendInput.Mouse.LeftButtonClick();
-                                _logger.LogInformation(@"┌------------------------┐");
-                                _logger.LogInformation("  自动提竿(图像识别)");
-                                _isFishingProcess = true;
-                                _biteTipsExitCount = 0;
-                                _baseBiteTips = Rect.Empty;
-                                VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                                return BehaviourStatus.Succeeded;
-                            }
-
-                            // OCR 提竿判断
-                            var text = _ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat,
-                                new Rect(currentBiteWordsTips.X + liftingWordsAreaRect.X,
-                                    currentBiteWordsTips.Y + liftingWordsAreaRect.Y,
-                                    currentBiteWordsTips.Width, currentBiteWordsTips.Height)));
-                            if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
-                            {
-                                Simulation.SendInput.Mouse.LeftButtonClick();
-                                _logger.LogInformation(@"┌------------------------┐");
-                                _logger.LogInformation("  自动提竿(OCR)");
-                                _isFishingProcess = true;
-                                _biteTipsExitCount = 0;
-                                _baseBiteTips = Rect.Empty;
-                                VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                                return BehaviourStatus.Succeeded;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        _biteTipsExitCount = 0;
-                        _baseBiteTips = currentBiteWordsTips;
-                        VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                    }
-
-                    if (_biteTipsExitCount >= content.FrameRate / 2d)
+                    //if (_biteTipsExitCount >= content.FrameRate / 4d)
+                    //{
+                    // 图像提竿判断
+                    using var liftRodButtonRa = content.CaptureRectArea.Find(_autoFishingAssets.LiftRodButtonRo);
+                    if (!liftRodButtonRa.IsEmpty())
                     {
                         Simulation.SendInput.Mouse.LeftButtonClick();
                         _logger.LogInformation(@"┌------------------------┐");
-                        _logger.LogInformation("  自动提竿(文字块)");
+                        _logger.LogInformation("  自动提竿(图像识别)");
                         _isFishingProcess = true;
                         _biteTipsExitCount = 0;
                         _baseBiteTips = Rect.Empty;
                         VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
                         return BehaviourStatus.Succeeded;
                     }
+
+                    // OCR 提竿判断
+                    var text = _ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat,
+                        new Rect(currentBiteWordsTips.X + liftingWordsAreaRect.X,
+                            currentBiteWordsTips.Y + liftingWordsAreaRect.Y,
+                            currentBiteWordsTips.Width, currentBiteWordsTips.Height)));
+                    if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
+                    {
+                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        _logger.LogInformation(@"┌------------------------┐");
+                        _logger.LogInformation("  自动提竿(OCR)");
+                        _isFishingProcess = true;
+                        _biteTipsExitCount = 0;
+                        _baseBiteTips = Rect.Empty;
+                        VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                        return BehaviourStatus.Succeeded;
+                    }
+                    //}
+                    //}
+                    //else
+                    //{
+                    //    _biteTipsExitCount = 0;
+                    //    _baseBiteTips = currentBiteWordsTips;
+                    //    VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                    //}
+
+                    //if (_biteTipsExitCount >= content.FrameRate / 2d)
+                    //{
+                    Simulation.SendInput.Mouse.LeftButtonClick();
+                    _logger.LogInformation(@"┌------------------------┐");
+                    _logger.LogInformation("  自动提竿(文字块)");
+                    _isFishingProcess = true;
+                    _biteTipsExitCount = 0;
+                    _baseBiteTips = Rect.Empty;
+                    VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                    return BehaviourStatus.Succeeded;
+                    //}
                 }
             }
 
@@ -1228,23 +1228,23 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 //CheckFishingUserInterface(content);
             }
 
-            // 提竿后没有钓鱼的情况
-            if (_isFishingProcess && !_findFishBoxTips)
-            {
-                _notFishingAfterBiteCount++;
-                if (_notFishingAfterBiteCount >= decimal.ToDouble(content.FrameRate) * 2)
-                {
-                    _isFishingProcess = false;
-                    _isThrowRod = false;
-                    _notFishingAfterBiteCount = 0;
-                    _logger.LogInformation("  X 提竿后没有钓鱼，重置!");
-                    _logger.LogInformation(@"└------------------------┘");
-                }
-            }
-            else
-            {
-                _notFishingAfterBiteCount = 0;
-            }
+            //// 提竿后没有钓鱼的情况
+            //if (_isFishingProcess && !_findFishBoxTips)
+            //{
+            //    _notFishingAfterBiteCount++;
+            //    if (_notFishingAfterBiteCount >= decimal.ToDouble(content.FrameRate) * 2)
+            //    {
+            //        _isFishingProcess = false;
+            //        _isThrowRod = false;
+            //        _notFishingAfterBiteCount = 0;
+            //        _logger.LogInformation("  X 提竿后没有钓鱼，重置!");
+            //        _logger.LogInformation(@"└------------------------┘");
+            //    }
+            //}
+            //else
+            //{
+            //    _notFishingAfterBiteCount = 0;
+            //}
 
             return BehaviourStatus.Running;
         }
