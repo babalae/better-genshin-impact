@@ -1,10 +1,9 @@
 ﻿using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Notification.Model;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -38,11 +37,11 @@ public class NotifierManager
         return _notifiers.FirstOrDefault(o => o is T);
     }
 
-    public async Task SendNotificationAsync(INotifier notifier, HttpContent httpContent)
+    public async Task SendNotificationAsync(INotifier notifier, INotificationData content)
     {
         try
         {
-            await notifier.SendNotificationAsync(httpContent);
+            await notifier.SendNotificationAsync(content);
         }
         catch (System.Exception ex)
         {
@@ -50,18 +49,18 @@ public class NotifierManager
         }
     }
 
-    public async Task SendNotificationAsync<T>(HttpContent httpContent) where T : INotifier
+    public async Task SendNotificationAsync<T>(INotificationData content) where T : INotifier
     {
         var notifier = _notifiers.FirstOrDefault(o => o is T);
 
         if (notifier != null)
         {
-            await SendNotificationAsync(notifier, httpContent);
+            await SendNotificationAsync(notifier, content);
         }
     }
 
-    public async Task SendNotificationToAllAsync(HttpContent httpContent)
+    public async Task SendNotificationToAllAsync(INotificationData content)
     {
-        await Task.WhenAll(_notifiers.Select(notifier => SendNotificationAsync(notifier, httpContent)));
+        await Task.WhenAll(_notifiers.Select(notifier => SendNotificationAsync(notifier, content)));
     }
 }

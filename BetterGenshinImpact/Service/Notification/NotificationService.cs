@@ -49,16 +49,6 @@ public class NotificationService : IHostedService
         return Task.CompletedTask;
     }
 
-    private StringContent TransformData(INotificationData notificationData)
-    {
-        // using object type here so it serializes the interface correctly
-        var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        });
-
-        return new StringContent(serializedData, Encoding.UTF8, "application/json");
-    }
 
     private void InitializeNotifiers()
     {
@@ -83,13 +73,13 @@ public class NotificationService : IHostedService
             {
                 return NotificationTestResult.Error("通知类型未启用");
             }
-            await notifier.SendNotificationAsync(TransformData(new TestNotificationData
+            await notifier.SendNotificationAsync(new TestNotificationData
             {
                 Event = NotificationEvent.Test,
                 Action = NotificationAction.Started,
                 Conclusion = NotificationConclusion.Success,
                 Message = "测试通知"
-            }));
+            });
             return NotificationTestResult.Success();
         }
         catch (NotifierException ex)
@@ -100,7 +90,7 @@ public class NotificationService : IHostedService
 
     public async Task NotifyAllNotifiersAsync(INotificationData notificationData)
     {
-        await _notifierManager.SendNotificationToAllAsync(TransformData(notificationData));
+        await _notifierManager.SendNotificationToAllAsync(notificationData);
     }
 
     public void NotifyAllNotifiers(INotificationData notificationData)

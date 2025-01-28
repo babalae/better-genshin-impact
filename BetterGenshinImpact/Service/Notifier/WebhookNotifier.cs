@@ -1,7 +1,10 @@
 ﻿using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Notification.Model;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -19,11 +22,11 @@ public class WebhookNotifier : INotifier
         Endpoint = endpoint;
     }
 
-    public async Task SendNotificationAsync(HttpContent content)
+    public async Task SendNotificationAsync(INotificationData content)
     {
         try
         {
-            var response = await _httpClient.PostAsync(Endpoint, content);
+            var response = await _httpClient.PostAsync(Endpoint, TransformData(content));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -38,5 +41,17 @@ public class WebhookNotifier : INotifier
         {
             throw new NotifierException($"Error sending webhook: {ex.Message}");
         }
+    }
+
+
+    private StringContent TransformData(INotificationData notificationData)
+    {
+        // using object type here so it serializes the interface correctly
+        var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        });
+
+        return new StringContent(serializedData, Encoding.UTF8, "application/json");
     }
 }
