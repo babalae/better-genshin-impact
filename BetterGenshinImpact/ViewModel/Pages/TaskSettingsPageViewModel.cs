@@ -20,6 +20,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.System;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using Wpf.Ui;
@@ -106,6 +107,13 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
+    
+    [ObservableProperty]
+    private bool _switchAutoFishingEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoFishingButtonText = "启动";
+
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -346,13 +354,13 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public async Task OnGoToAutoTrackPathUrlAsync()
+    private async Task OnGoToAutoTrackPathUrlAsync()
     {
         await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
     }
 
     [RelayCommand]
-    public async Task OnSwitchAutoMusicGame()
+    private async Task OnSwitchAutoMusicGame()
     {
         SwitchAutoMusicGameEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
@@ -361,22 +369,37 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     }
 
     [RelayCommand]
-    public async Task OnGoToAutoMusicGameUrlAsync()
+    private async Task OnGoToAutoMusicGameUrlAsync()
     {
         await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/music.html"));
     }
 
     [RelayCommand]
-    public async Task OnSwitchAutoAlbum()
+    private async Task OnSwitchAutoAlbum()
     {
         SwitchAutoAlbumEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
         SwitchAutoAlbumEnabled = false;
     }
+    
+    [RelayCommand]
+    private async Task OnSwitchAutoFishing()
+    {
+        SwitchAutoFishingEnabled = true;
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoFishingTask());
+        SwitchAutoFishingEnabled = false;
+    }
 
     [RelayCommand]
-    public void OnOpenLocalScriptRepo()
+    private async Task OnGoToAutoFishingUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/timer/fish.html"));
+    }
+
+    [RelayCommand]
+    private void OnOpenLocalScriptRepo()
     {
         _autoFightViewModel.OnOpenLocalScriptRepo();
     }
