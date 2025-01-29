@@ -34,6 +34,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         internal Rect fishBoxRect = Rect.Empty;
 
+        /// <summary>
+        /// 是否正在选鱼饵界面
+        /// 此时有阴影遮罩，OpenCv的图像匹配会受干扰
+        /// </summary>
+        internal bool chooseBaitUIOpening = false;
+
         #region 分层暂放
         internal static readonly YoloV8Predictor predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
         internal Action<int> Sleep { get; set; }
