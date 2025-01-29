@@ -67,14 +67,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
             IsExclusive = false;
 
-            // 钓鱼变量初始化
-            //_findFishBoxTips = false;
-            _switchBaitContinuouslyFrameNum = 0;
-            _waitBiteContinuouslyFrameNum = 0;
-            _noFishActionContinuouslyFrameNum = 0;
-            _isThrowRod = false;
-            //_selectedBaitName = string.Empty;
-
             BehaviourTree = FluentBuilder.Create<CaptureContent>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
@@ -236,26 +228,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return !content.CaptureRectArea.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty();
         }
 
-        private int _throwRodWaitFrameNum = 0; // 抛竿等待的时间(帧数)
-        private int _switchBaitContinuouslyFrameNum = 0; // 切换鱼饵按钮图标的持续时间(帧数)
-        private int _waitBiteContinuouslyFrameNum = 0; // 等待上钩的持续时间(帧数)
-        private int _noFishActionContinuouslyFrameNum = 0; // 无钓鱼三种场景的持续时间(帧数)
-        private bool _isThrowRod = false; // 是否已经抛竿
-
         /// <summary>
         /// 钓鱼有3种场景
         /// 1. 未抛竿 BaitButtonRo存在 && WaitBiteButtonRo不存在
         /// 2. 抛竿后未拉条 WaitBiteButtonRo存在 && BaitButtonRo不存在
-        /// 3. 上钩拉条 _isFishingProcess && _biteTipsExitCount > 0
+        /// 3. 上钩拉条
         ///
         /// 新AI钓鱼
         /// 前提：必须要正面面对鱼塘，没有识别到鱼的时候不会自动抛竿
         /// 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
         /// 2. 根据第一步的观察结果，提前选择鱼饵
-        /// 3.
         /// </summary>
-        /// <param name="content"></param>
-        /// 
 
         public class ThrowRod : BaseBehaviour<CaptureContent>
         {
@@ -270,23 +253,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 _logger.LogDebug("ThrowRod");
                 // 没有拉条和提竿的时候，自动抛竿
-                //if (!_isFishingProcess && _biteTipsExitCount == 0 && TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
-                //{
                 var baitRectArea = content.CaptureRectArea.Find(AutoFishingAssets.Instance.BaitButtonRo);
                 var waitBiteArea = content.CaptureRectArea.Find(AutoFishingAssets.Instance.WaitBiteButtonRo);
                 if (!baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
                 {
-                    //_switchBaitContinuouslyFrameNum++;
-                    //_waitBiteContinuouslyFrameNum = 0;
-                    //_noFishActionContinuouslyFrameNum = 0;
-
-                    //if (_switchBaitContinuouslyFrameNum >= content.FrameRate)
-                    //{
-                    //    _isThrowRod = false;
-                    //    _switchBaitContinuouslyFrameNum = 0;
-                    //    _logger.LogInformation("当前处于未抛竿状态");
-                    //}
-
                     // 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
                     using var memoryStream = new MemoryStream();
                     content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
@@ -329,15 +299,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         }
                     }
                 }
-                //}
-                //else
-                //{
-                //    _switchBaitContinuouslyFrameNum = 0;
-                //    _waitBiteContinuouslyFrameNum = 0;
-                //    _noFishActionContinuouslyFrameNum = 0;
-                //    _throwRodWaitFrameNum = 0;
-                //    _isThrowRod = false;
-                //}
 
                 return BehaviourStatus.Running;
             }
@@ -377,57 +338,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
             }
         }
-
-        private BehaviourStatus ThrowRod2(CaptureContent content)
-        {
-            //var baitRectArea = content.CaptureRectArea.Find(_autoFishingAssets.BaitButtonRo);
-            //var waitBiteArea = content.CaptureRectArea.Find(_autoFishingAssets.WaitBiteButtonRo);
-            //if (baitRectArea.IsEmpty() && !waitBiteArea.IsEmpty() && _isThrowRod)
-            //{
-            //    _switchBaitContinuouslyFrameNum = 0;
-            //    _waitBiteContinuouslyFrameNum++;
-            //    _noFishActionContinuouslyFrameNum = 0;
-            //    _throwRodWaitFrameNum++;
-
-            //    if (_waitBiteContinuouslyFrameNum >= content.FrameRate)
-            //    {
-            //        _isThrowRod = true;
-            //        _waitBiteContinuouslyFrameNum = 0;
-            //    }
-
-            //    if (_isThrowRod)
-            //    {
-            //        // 30s 没有上钩，重新抛竿
-            //        if (_throwRodWaitFrameNum >= content.FrameRate * TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut)
-            //        {
-            //            Simulation.SendInput.Mouse.LeftButtonClick();
-            //            _throwRodWaitFrameNum = 0;
-            //            _waitBiteContinuouslyFrameNum = 0;
-            //            Debug.WriteLine("超时自动收竿");
-            //            Sleep(2000);
-            //            _isThrowRod = false;
-            //            return BehaviourStatus.Failed;
-            //        }
-            //        return BehaviourStatus.Succeeded;
-            //    }
-            //}
-
-            //if (baitRectArea.IsEmpty() && waitBiteArea.IsEmpty())
-            //{
-            //    _switchBaitContinuouslyFrameNum = 0;
-            //    _waitBiteContinuouslyFrameNum = 0;
-            //    _noFishActionContinuouslyFrameNum++;
-            //    if (_noFishActionContinuouslyFrameNum > content.FrameRate)
-            //    {
-            //        CheckFishingUserInterface(content);
-            //    }
-            //    return BehaviourStatus.Failed;
-            //}
-            return BehaviourStatus.Succeeded;
-        }
-
-        //private string _selectedBaitName = string.Empty;
-        //private Fishpond fishpond;
 
         /// <summary>
         /// 选择鱼饵
@@ -621,7 +531,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         blackboard.Sleep(500);
                         _logger.LogInformation("没有找到目标鱼，3.准备重新选择鱼饵");
                         blackboard.selectedBaitName = string.Empty;
-                        //_isThrowRod = false;
                         blackboard.MoveViewpointDown();
                         blackboard.Sleep(300);
 
@@ -639,20 +548,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     // VisionContext.Instance().DrawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
                     // VisionContext.Instance().DrawContent.PutRect("Fish", currentFish.Rect.ToRectDrawable());
-
-                    // var min = MoveMouseToFish(fishpond.TargetRect, currentFish.Rect);
-                    // // 因为视角是斜着看向鱼的，所以Y轴抛竿距离要近一点
-                    // if ((_selectedBaitName != "fruit paste bait" && min is { Item1: <= 50, Item2: <= 25 })
-                    //     || _selectedBaitName == "fruit paste bait" && min is { Item1: <= 40, Item2: <= 25 })
-                    // {
-                    //     Sleep(100);
-                    //     Simulation.SendInputEx.Mouse.LeftButtonUp();
-                    //     _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
-                    //     _isThrowRod = true;
-                    //     VisionContext.Instance().DrawContent.RemoveRect("Target");
-                    //     VisionContext.Instance().DrawContent.RemoveRect("Fish");
-                    //     break;
-                    // }
 
                     // 来自 HutaoFisher 的抛竿技术
                     var rod = fishpondTargetRect;
@@ -709,7 +604,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         // 成功 抛竿
                         Simulation.SendInput.Mouse.LeftButtonUp();
                         _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
-                        //_isThrowRod = true;
                         VisionContext.Instance().DrawContent.RemoveRect("Target");
                         VisionContext.Instance().DrawContent.RemoveRect("Fish");
                         return BehaviourStatus.Succeeded;
@@ -920,11 +814,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Thread.Sleep(millisecondsTimeout);
         }
 
-        private bool _isFishingProcess = false; // 提杆后会设置为true
-        private int _biteTipsExitCount = 0; // 钓鱼提示持续时间
-        private int _notFishingAfterBiteCount = 0; // 提竿后没有钓鱼的时间
-        private Rect _baseBiteTips = Rect.Empty;
-
         /// <summary>
         /// 自动提竿
         /// </summary>
@@ -949,78 +838,43 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
                 if (currentBiteWordsTips != Rect.Empty)
                 {
-                    //if (_baseBiteTips == Rect.Empty)
-                    //{
-                    Rect _baseBiteTips = currentBiteWordsTips;
-                    //}
-                    //else
-                    //{
-                    if (Math.Abs(_baseBiteTips.X - currentBiteWordsTips.X) < 10
-                        && Math.Abs(_baseBiteTips.Y - currentBiteWordsTips.Y) < 10
-                        && Math.Abs(_baseBiteTips.Width - currentBiteWordsTips.Width) < 10
-                        && Math.Abs(_baseBiteTips.Height - currentBiteWordsTips.Height) < 10)
+                    // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
+                    //     currentBiteWordsTips
+                    //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
+                    //         .ToRectDrawable());
+                    using var tipsRa = content.CaptureRectArea.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
+                    tipsRa.DrawSelf("FishBiteTips");
+
+                    // 图像提竿判断
+                    using var liftRodButtonRa = content.CaptureRectArea.Find(AutoFishingAssets.Instance.LiftRodButtonRo);
+                    if (!liftRodButtonRa.IsEmpty())
                     {
-                        //_biteTipsExitCount++;
-                        // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
-                        //     currentBiteWordsTips
-                        //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
-                        //         .ToRectDrawable());
-                        using var tipsRa = content.CaptureRectArea.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
-                        tipsRa.DrawSelf("FishBiteTips");
-
-                        //if (_biteTipsExitCount >= content.FrameRate / 4d)
-                        //{
-                        // 图像提竿判断
-                        using var liftRodButtonRa = content.CaptureRectArea.Find(AutoFishingAssets.Instance.LiftRodButtonRo);
-                        if (!liftRodButtonRa.IsEmpty())
-                        {
-                            Simulation.SendInput.Mouse.LeftButtonClick();
-                            _logger.LogInformation(@"┌------------------------┐");
-                            _logger.LogInformation("  自动提竿(图像识别)");
-                            //_isFishingProcess = true;
-                            //_biteTipsExitCount = 0;
-                            _baseBiteTips = Rect.Empty;
-                            VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                            return BehaviourStatus.Succeeded;
-                        }
-
-                        // OCR 提竿判断
-                        var text = ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat,
-                            new Rect(currentBiteWordsTips.X + liftingWordsAreaRect.X,
-                                currentBiteWordsTips.Y + liftingWordsAreaRect.Y,
-                                currentBiteWordsTips.Width, currentBiteWordsTips.Height)));
-                        if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
-                        {
-                            Simulation.SendInput.Mouse.LeftButtonClick();
-                            _logger.LogInformation(@"┌------------------------┐");
-                            _logger.LogInformation("  自动提竿(OCR)");
-                            //_isFishingProcess = true;
-                            //_biteTipsExitCount = 0;
-                            _baseBiteTips = Rect.Empty;
-                            VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                            return BehaviourStatus.Succeeded;
-                        }
-                        //}
-                        //}
-                        //else
-                        //{
-                        //    _biteTipsExitCount = 0;
-                        //    _baseBiteTips = currentBiteWordsTips;
-                        //    VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
-                        //}
-
-                        //if (_biteTipsExitCount >= content.FrameRate / 2d)
-                        //{
                         Simulation.SendInput.Mouse.LeftButtonClick();
                         _logger.LogInformation(@"┌------------------------┐");
-                        _logger.LogInformation("  自动提竿(文字块)");
-                        //_isFishingProcess = true;
-                        //_biteTipsExitCount = 0;
-                        _baseBiteTips = Rect.Empty;
+                        _logger.LogInformation("  自动提竿(图像识别)");
                         VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
                         return BehaviourStatus.Succeeded;
-                        //}
                     }
+
+                    // OCR 提竿判断
+                    var text = ocrService.Ocr(new Mat(content.CaptureRectArea.SrcGreyMat,
+                        new Rect(currentBiteWordsTips.X + liftingWordsAreaRect.X,
+                            currentBiteWordsTips.Y + liftingWordsAreaRect.Y,
+                            currentBiteWordsTips.Width, currentBiteWordsTips.Height)));
+                    if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains("上钩"))
+                    {
+                        Simulation.SendInput.Mouse.LeftButtonClick();
+                        _logger.LogInformation(@"┌------------------------┐");
+                        _logger.LogInformation("  自动提竿(OCR)");
+                        VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                        return BehaviourStatus.Succeeded;
+                    }
+
+                    Simulation.SendInput.Mouse.LeftButtonClick();
+                    _logger.LogInformation(@"┌------------------------┐");
+                    _logger.LogInformation("  自动提竿(文字块)");
+                    VisionContext.Instance().DrawContent.RemoveRect("FishBiteTips");
+                    return BehaviourStatus.Succeeded;
                 }
 
                 return BehaviourStatus.Running;
@@ -1104,7 +958,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 this.blackboard = blackboard;
             }
 
-            //private int _noRectsCount = 0;
             private MOUSEEVENTF _prevMouseEvent = 0x0;
             private bool _findFishBoxTips;
 
@@ -1204,14 +1057,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 else
                 {
                     PutRects(content, new Rect(), new Rect(), new Rect());
-                    //_noRectsCount++;
                     // 没有矩形视为已经完成钓鱼
-                    //if (_noRectsCount >= content.FrameRate * 2 && _prevMouseEvent != 0x0)
-                    //{
                     VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                     _findFishBoxTips = false;
-                    //_isFishingProcess = false;
-                    //_isThrowRod = false;
                     _prevMouseEvent = 0x0;
                     _logger.LogInformation("  钓鱼结束");
                     _logger.LogInformation(@"└------------------------┘");
@@ -1225,28 +1073,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     blackboard.Sleep(5000);
 
                     return BehaviourStatus.Succeeded;
-                    //}
 
                     //CheckFishingUserInterface(content);
                 }
-
-                //// 提竿后没有钓鱼的情况
-                //if (_isFishingProcess && !_findFishBoxTips)
-                //{
-                //    _notFishingAfterBiteCount++;
-                //    if (_notFishingAfterBiteCount >= decimal.ToDouble(content.FrameRate) * 2)
-                //    {
-                //        _isFishingProcess = false;
-                //        _isThrowRod = false;
-                //        _notFishingAfterBiteCount = 0;
-                //        _logger.LogInformation("  X 提竿后没有钓鱼，重置!");
-                //        _logger.LogInformation(@"└------------------------┘");
-                //    }
-                //}
-                //else
-                //{
-                //    _notFishingAfterBiteCount = 0;
-                //}
 
                 return BehaviourStatus.Running;
             }
@@ -1285,10 +1114,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
                     _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled.ToChinese());
-                    _switchBaitContinuouslyFrameNum = 0;
-                    _waitBiteContinuouslyFrameNum = 0;
-                    _noFishActionContinuouslyFrameNum = 0;
-                    _isThrowRod = false;
                 }
 
                 return BehaviourStatus.Running;
@@ -1298,7 +1123,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (prevIsExclusive)
                 {
                     _logger.LogInformation("← {Text}", "退出钓鱼界面");
-                    _isThrowRod = false;
                     //_fishBoxRect = Rect.Empty;
                     VisionContext.Instance().DrawContent.ClearAll();
                 }
@@ -1328,114 +1152,5 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         //    ClearDraw();
         //}
 
-    }
-
-    /// <summary>
-    /// MySimpleParallel
-    /// 和SimpleParallel的区别是，任一子行为返回失败则返回失败
-    /// </summary>
-    /// <typeparam name="TContext"></typeparam>
-    public class MySimpleParallel<TContext> : CompositeBehaviour<TContext>
-    {
-        private readonly IBehaviour<TContext> _first;
-
-        private readonly IBehaviour<TContext> _second;
-
-        private BehaviourStatus _firstStatus;
-
-        private BehaviourStatus _secondStatus;
-
-        private readonly Func<TContext, BehaviourStatus> _behave;
-
-        public readonly SimpleParallelPolicy Policy;
-
-        public MySimpleParallel(SimpleParallelPolicy policy, IBehaviour<TContext> first, IBehaviour<TContext> second)
-            : this("SimpleParallel", policy, first, second)
-        {
-        }
-
-        public MySimpleParallel(string name, SimpleParallelPolicy policy, IBehaviour<TContext> first, IBehaviour<TContext> second)
-            : base(name, new IBehaviour<TContext>[2] { first, second })
-        {
-            Policy = policy;
-            _first = first;
-            _second = second;
-            _behave = ((policy == SimpleParallelPolicy.BothMustSucceed) ? new Func<TContext, BehaviourStatus>(BothMustSucceedBehaviour) : new Func<TContext, BehaviourStatus>(OnlyOneMustSucceedBehaviour));
-        }
-
-        private BehaviourStatus OnlyOneMustSucceedBehaviour(TContext context)
-        {
-            if (_firstStatus == BehaviourStatus.Succeeded || _secondStatus == BehaviourStatus.Succeeded)
-            {
-                return BehaviourStatus.Succeeded;
-            }
-
-            if (_firstStatus == BehaviourStatus.Failed && _secondStatus == BehaviourStatus.Failed)
-            {
-                return BehaviourStatus.Failed;
-            }
-
-            return BehaviourStatus.Running;
-        }
-
-        private BehaviourStatus BothMustSucceedBehaviour(TContext context)
-        {
-            if (_firstStatus == BehaviourStatus.Succeeded && _secondStatus == BehaviourStatus.Succeeded)
-            {
-                return BehaviourStatus.Succeeded;
-            }
-
-            if (_firstStatus == BehaviourStatus.Failed || _secondStatus == BehaviourStatus.Failed)
-            {
-                return BehaviourStatus.Failed;
-            }
-
-            return BehaviourStatus.Running;
-        }
-
-        protected override BehaviourStatus Update(TContext context)
-        {
-            if (base.Status != BehaviourStatus.Running)
-            {
-                _firstStatus = _first.Tick(context);
-                _secondStatus = _second.Tick(context);
-            }
-            else
-            {
-                if (_firstStatus == BehaviourStatus.Ready || _firstStatus == BehaviourStatus.Running)
-                {
-                    _firstStatus = _first.Tick(context);
-                }
-
-                if (_secondStatus == BehaviourStatus.Ready || _secondStatus == BehaviourStatus.Running)
-                {
-                    _secondStatus = _second.Tick(context);
-                }
-            }
-
-            if (_firstStatus == BehaviourStatus.Failed || _secondStatus == BehaviourStatus.Failed)
-            {
-                return BehaviourStatus.Failed;
-            }
-            else
-            {
-                return _behave(context);
-            }
-        }
-
-        protected override void DoReset(BehaviourStatus status)
-        {
-            _firstStatus = BehaviourStatus.Ready;
-            _secondStatus = BehaviourStatus.Ready;
-            base.DoReset(status);
-        }
-    }
-
-    public static class FluentBuilderExtensions
-    {
-        public static FluentBuilder<TContext> MySimpleParallel<TContext>(this FluentBuilder<TContext> builder, string name, SimpleParallelPolicy policy = SimpleParallelPolicy.BothMustSucceed)
-        {
-            return builder.PushComposite((IBehaviour<TContext>[] children) => new MySimpleParallel<TContext>(name, policy, children[0], children[1]));
-        }
     }
 }
