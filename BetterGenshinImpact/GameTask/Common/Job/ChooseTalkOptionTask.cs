@@ -44,7 +44,7 @@ public partial class ChooseTalkOptionTask
             return TalkOptionRes.NotFound;
         }
 
-        await Task.Delay(200, ct);
+        await Task.Delay(500, ct);
 
         for (var i = 0; i < skipTimes; i++) // 重试3次
         {
@@ -71,7 +71,7 @@ public partial class ChooseTalkOptionTask
                     }
 
                     ClickOcrRegion(optionRa);
-                    await Task.Delay(200, ct);
+                    await Task.Delay(300, ct);
                     return TalkOptionRes.FoundAndClick;
                 }
             }
@@ -196,6 +196,21 @@ public partial class ChooseTalkOptionTask
     }
 
     private bool IsOrangeOption(Mat textMat)
+    {
+        // 只提取橙色
+        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(200, 165, 45), new Scalar(255, 205, 55));
+        var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
+        var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
+        Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
+        if (rate > 0.06)
+        {
+            return true;
+        }
+
+        return false;
+    }
+    
+    private bool IsOrangeOption2(Mat textMat)
     {
         // 只提取橙色
         using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(200, 165, 45), new Scalar(255, 205, 55));
