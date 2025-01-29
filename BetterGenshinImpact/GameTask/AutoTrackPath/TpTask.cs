@@ -206,7 +206,10 @@ public class TpTask(CancellationToken ct)
         if (await TryToOpenBigMapUi())
         {
             await new ReturnMainUiTask().Start(ct);
-            await TryToOpenBigMapUi();
+            if (!await TryToOpenBigMapUi())
+            {
+                throw new RetryException("尝试打开大地图失败，请确认你的打开地图按键是否是 M 键？");
+            }
         }
     }
 
@@ -233,13 +236,12 @@ public class TpTask(CancellationToken ct)
                     return true;
                 }
             }
+            return false;
         }
         else
         {
             return true;
         }
-
-        return false;
     }
 
 
