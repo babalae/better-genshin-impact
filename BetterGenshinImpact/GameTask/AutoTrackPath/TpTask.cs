@@ -203,7 +203,7 @@ public class TpTask(CancellationToken ct)
     private async Task CheckInBigMapUi()
     {
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
-        if (await TryToOpenBigMapUi())
+        if (!await TryToOpenBigMapUi())
         {
             await new ReturnMainUiTask().Start(ct);
             if (!await TryToOpenBigMapUi())
