@@ -23,18 +23,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             this.ct = ct;
 
-            var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"GameTask\Common\Element\Assets\Json\冒险家协会_蒙德.json"));   // todo 制作一些钓点的json
-            var pathingTask = new PathExecutor(ct)
-            {
-                PartyConfig = new PathingPartyConfig
-                {
-                    Enabled = true,
-                    AutoSkipEnabled = true
-                },
-                EndAction = region => Bv.FindFAndPress(region, "钓鱼")
-            };
-            pathingTask.Pathing(task).Wait();
-
             AutoFishingTrigger trigger = new AutoFishingTrigger();  // todo 试试能不能通过复用BehaviourTree的形式来做
             trigger.Init();
             while (true)
