@@ -198,31 +198,13 @@ public partial class ChooseTalkOptionTask
     private bool IsOrangeOption(Mat textMat)
     {
         // 只提取橙色
-        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(200, 165, 45), new Scalar(255, 205, 55));
-        var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
-        var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
+        Scalar lowerOrange = new Scalar(10, 150, 150);
+        Scalar upperOrange = new Scalar(25, 255, 255);
+        var mask = OpenCvCommonHelper.InRangeHsv(textMat, lowerOrange, upperOrange);
+        int highConfidencePixels = Cv2.CountNonZero(mask);
+        double rate = highConfidencePixels * 1.0 / (mask.Width * mask.Height);
         Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
-        if (rate > 0.06)
-        {
-            return true;
-        }
-
-        return false;
-    }
-    
-    private bool IsOrangeOption2(Mat textMat)
-    {
-        // 只提取橙色
-        using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(200, 165, 45), new Scalar(255, 205, 55));
-        var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
-        var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
-        Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
-        if (rate > 0.06)
-        {
-            return true;
-        }
-
-        return false;
+        return rate > 0.15;
     }
 }
 
