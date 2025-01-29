@@ -300,7 +300,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     [RelayCommand]
     public void OnGoToWikiUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bettergi.com/doc.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

@@ -1063,7 +1063,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     public void OnGoToScriptGroupUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/autos/dispatcher.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/dispatcher.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

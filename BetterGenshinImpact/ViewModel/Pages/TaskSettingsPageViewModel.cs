@@ -192,7 +192,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoGeniusInvokationUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/tcg.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/tcg.html"));
     }
 
     [RelayCommand]
@@ -207,7 +207,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoWoodUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/felling.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/felling.html"));
     }
 
     [RelayCommand]
@@ -229,7 +229,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoFightUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/domain.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
     }
 
     [RelayCommand]
@@ -273,7 +273,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoDomainUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/domain.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
     }
 
     [RelayCommand]
@@ -314,7 +314,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoTrackUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
     }
 
     [Obsolete]
@@ -349,7 +349,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoTrackPathUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
     }
 
     [RelayCommand]
@@ -364,7 +364,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoMusicGameUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/music.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/music.html"));
     }
 
     [RelayCommand]
