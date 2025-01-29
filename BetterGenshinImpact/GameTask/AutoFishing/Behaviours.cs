@@ -206,6 +206,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 Reset();
             }
+            if (status != BehaviourStatus.Running)
+            {
+                VisionContext.Instance().DrawContent.RemoveRect("Target");
+                VisionContext.Instance().DrawContent.RemoveRect("Fish");
+            }
         }
 
         protected override BehaviourStatus Update(CaptureContent content)
@@ -370,8 +375,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     // 成功 抛竿
                     Simulation.SendInput.Mouse.LeftButtonUp();
                     _logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
-                    VisionContext.Instance().DrawContent.RemoveRect("Target");
-                    VisionContext.Instance().DrawContent.RemoveRect("Fish");
                     return BehaviourStatus.Succeeded;
                 }
                 else if (state == 1)
@@ -578,7 +581,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (Math.Abs(rects[0].Height - rects[1].Height) > 10)
                 {
                     TaskControl.Logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
-                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                     return BehaviourStatus.Running;
                 }
 
@@ -601,7 +603,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     || !(_left.X < topMat.Width / 2 && _left.X + _left.Width > topMat.Width / 2) // left肯定穿过游戏中轴线
                    )
                 {
-                    VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                     return BehaviourStatus.Running;
                 }
 
@@ -614,7 +615,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return BehaviourStatus.Succeeded;
             }
 
-            VisionContext.Instance().DrawContent.RemoveRect("FishBox");
             return BehaviourStatus.Running;
 
             //CheckFishingUserInterface(content);

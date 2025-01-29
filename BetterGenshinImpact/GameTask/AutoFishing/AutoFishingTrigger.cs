@@ -377,8 +377,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (prevIsExclusive)
                 {
                     _logger.LogInformation("← {Text}", "退出钓鱼界面");
-                    //_fishBoxRect = Rect.Empty;
-                    VisionContext.Instance().DrawContent.ClearAll();
                 }
 
                 return BehaviourStatus.Failed;
