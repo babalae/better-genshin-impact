@@ -852,7 +852,7 @@ public class PathExecutor
         await Delay(1000, ct);
     }
 
-    private async Task BeforeMoveToTarget(WaypointForTrack waypoint)
+    private async Task BeforeMoveCloseToTarget(WaypointForTrack waypoint)
     {
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
@@ -863,7 +863,7 @@ public class PathExecutor
         }
     }
 
-    private async Task BeforeMoveCloseToTarget(WaypointForTrack waypoint)
+    private async Task BeforeMoveToTarget(WaypointForTrack waypoint)
     {
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
