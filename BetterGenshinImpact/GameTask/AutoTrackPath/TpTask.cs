@@ -208,7 +208,7 @@ public class TpTask(CancellationToken ct)
             await new ReturnMainUiTask().Start(ct);
             if (!await TryToOpenBigMapUi())
             {
-                throw new RetryException("尝试打开大地图失败，请确认你的打开地图按键是否是 M 键？");
+                throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
             }
         }
     }

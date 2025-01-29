@@ -115,7 +115,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         if (Config.CommonConfig.IsFirstRun)
         {
             // 自动初始化键位绑定
-            InitKeyBinding();
+            // InitKeyBinding();
             Config.AutoFightConfig.TeamNames = ""; // 此配置以后无用
             Config.CommonConfig.IsFirstRun = false;
         }
@@ -134,6 +134,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     }
 
 
+    /*
     private void InitKeyBinding()
     {
         try
@@ -151,6 +152,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
         }
     }
+    */
 
     /**
      * 不同的安装目录处理
