@@ -338,7 +338,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     fish_label = BigFishType.GetIndex(currentFish.FishType)
                 });
 
-                //// 如果hutao钓鱼暂时没有更新导致报错，可以先用这段凑合
+                // 如果hutao钓鱼暂时没有更新导致报错，可以先用这段凑合
                 //int state;
                 //System.Drawing.Rectangle rod3XRectangle = new System.Drawing.Rectangle(rod.Left - rod.Width, rod.Top - rod.Height, rod.Width * 3, rod.Height * 3);
                 //System.Drawing.Rectangle rod5XRectangle = new System.Drawing.Rectangle(rod.Left - rod.Width * 2, rod.Top - rod.Height * 2, rod.Width * 5, rod.Height * 5);
@@ -479,7 +479,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 _logger.LogInformation($"{_seconds}秒没有咬杆，本次收杆");
                 Simulation.SendInput.Mouse.LeftButtonClick();
-                Thread.Sleep(1000);
+                TaskControl.Sleep(1000);
                 return BehaviourStatus.Failed;
             }
             else

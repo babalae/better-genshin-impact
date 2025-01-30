@@ -59,7 +59,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
                     .UntilSuccess("钓鱼循环")
-                        .Sequence("从选鱼饵开始")
+                        .Sequence("从找鱼开始")
                             .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
                             .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
                             .UntilSuccess("重复抛竿")

@@ -18,6 +18,13 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using Vanara.PInvoke;
+using System.Runtime.InteropServices;
+using Compunet.YoloV8;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
+using BetterGenshinImpact.GameTask.AutoFishing.Model;
+using System.Drawing;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -30,15 +37,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private Blackboard blackboard;
 
-        public AutoFishingTask()
-        {
-            this.blackboard = new Blackboard()
-            {
-                Sleep = this.Sleep,
-                MoveViewpointDown = this.MoveViewpointDown
-            };
-        }
-
         public class Blackboard : AutoFishing.Blackboard
         {
             public bool noFish = false;
@@ -48,31 +46,45 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             this.ct = ct;
 
+            this.blackboard = new Blackboard()
+            {
+                Sleep = this.Sleep,
+                MoveViewpointDown = this.MoveViewpointDown
+            };
+
             var BehaviourTree = FluentBuilder.Create<CaptureContent>()
-                .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                    .Do("各种检查", VariousCheck)
-                    .UntilSuccess("钓鱼循环")
-                        .Sequence("从选鱼饵开始")
-                            .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                                .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard))
-                                .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
+                    .Sequence("调整视角并钓鱼")
+                        .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                            .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
+                            .PushLeaf(() => new ChangeView("调整视角"))
+                        .End()
+                        .MySimpleParallel("全部钓完", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                            .Do("各种检查", VariousCheck)
+                            .UntilSuccess("钓鱼循环")
+                                .AlwaysFail("钓鱼循环1")
+                                    .Sequence("从找鱼开始")
+                                        .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                            .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard))
+                                            .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
+                                        .End()
+                                        .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
+                                        .UntilSuccess("重复抛竿")
+                                            .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
+                                        .End()
+                                        .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                        .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
+                                        .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
+                                            .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
+                                            .PushLeaf(() => new FishBite("自动提竿"))
+                                        .End()
+                                        .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
+                                        .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
+                                    .End()
+                                .End()
                             .End()
-                            .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
-                            .UntilSuccess("重复抛竿")
-                                .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
-                            .End()
-                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
-                            .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
-                            .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
-                                .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
-                                .PushLeaf(() => new FishBite("自动提竿"))
-                            .End()
-                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
-                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
                         .End()
                     .End()
-                .End()
-                .Build();
+                    .Build();
 
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
 
@@ -178,6 +190,48 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     return BehaviourStatus.Running;
                 }
+            }
+        }
+
+        private class ChangeView : BaseBehaviour<CaptureContent>
+        {
+            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+            public ChangeView(string name) : base(name)
+            {
+            }
+
+            private double theta = 0;
+
+            private readonly Pen pen = new(Color.Red, 1);
+            protected override BehaviourStatus Update(CaptureContent content)
+            {
+                using var memoryStream = new MemoryStream();
+                content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                var result = Blackboard.predictor.Detect(memoryStream);
+                if (result.Boxes.Any())
+                {
+                    Fishpond fishpond = new Fishpond(result);
+                    int i = 0;
+                    foreach (var fish in fishpond.Fishes)
+                    {
+                        content.CaptureRectArea.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i}", pen);
+                    }
+                    TaskControl.Sleep(1000);
+                    VisionContext.Instance().DrawContent.ClearAll();
+
+                    _logger.LogInformation("视角调整完毕");
+                    return BehaviourStatus.Succeeded;
+                }
+
+                theta += Math.PI / 6;
+                _logger.LogInformation(theta.ToString());
+                double r = 30 + 1 * theta;
+                int x = (int)(r * Math.Cos(theta));
+                int y = (int)(2 * r * Math.Sin(theta));
+                Simulation.SendInput.Mouse.MoveMouseBy(x, y);
+
+                return BehaviourStatus.Running;
             }
         }
     }
