@@ -34,13 +34,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty]
-    public bool _isVisible = true;
+    private bool _isVisible = true;
 
     [ObservableProperty]
-    public WindowState _windowState = WindowState.Normal;
+    private WindowState _windowState = WindowState.Normal;
 
     [ObservableProperty]
-    public WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+    private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+    
+    [ObservableProperty]
+    private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
 
     public AllConfig Config { get; set; }
 
