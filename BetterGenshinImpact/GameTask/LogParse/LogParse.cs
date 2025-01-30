@@ -386,7 +386,7 @@ namespace LogParse
                 return "Invalid input time format. Please use 'yyyy-MM-dd HH:mm:ss'.";
             }
         }
-        public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, GameInfo gameInfo,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
+        public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, GameInfo? gameInfo,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
             (string name, Func<ConfigTask, string> value)[] colConfigs =
             [
