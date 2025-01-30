@@ -56,7 +56,7 @@ public class Avatar
     /// 长按元素战技CD
     /// </summary>
     public double SkillHoldCd { get; set; }
-    
+
     /// <summary>
     /// 最近一次使用元素战技的时间
     /// </summary>
@@ -120,7 +120,7 @@ public class Avatar
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);    // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, Ct);
             Simulation.SendInput.SimulateAction(GIActions.OpenMap);
             // tp 到七天神像复活
@@ -173,6 +173,7 @@ public class Avatar
                 default:
                     break;
             }
+
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -272,6 +273,7 @@ public class Avatar
                 default:
                     break;
             }
+
             Sleep(250);
         }
     }
@@ -437,8 +439,9 @@ public class Avatar
     /// </summary>
     public double GetSkillCurrentCd(ImageRegion imageRegion)
     {
-        var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ERect);
-        var text = OcrFactory.Paddle.Ocr(eRa.SrcGreyMat);
+        var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+        var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         return StringUtils.TryParseDouble(text);
     }
 

@@ -28,9 +28,13 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View;
+using OpenCvSharp;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
@@ -595,9 +599,20 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
                     
                     
-                    TaskControl.Logger.LogInformation($"尝试显示遮罩窗口");
-                    var maskWindow = MaskWindow.Instance();
-                    maskWindow.Invoke(() => { maskWindow.Hide(); });
+                    // TaskControl.Logger.LogInformation($"尝试显示遮罩窗口");
+                    // var maskWindow = MaskWindow.Instance();
+                    // maskWindow.Invoke(() => { maskWindow.Show(); });
+                    Task.Run(async () => { 
+                        for (int i = 0; i < 100; i++)
+                        {
+                            var  imageRegion = TaskControl.CaptureToRectArea();
+                            var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+                            var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+                            var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
+                            TaskControl.Logger.LogInformation("冷却时间 {Num}", StringUtils.TryParseDouble(text));
+                            await Task.Delay(10);
+                        }
+                    });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
