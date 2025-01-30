@@ -58,6 +58,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
                             .PushLeaf(() => new ChangeView("调整视角"))
                         .End()
+                        .Do("进入钓鱼模式", EnterFishingMode)
                         .MySimpleParallel("全部钓完", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                             .Do("各种检查", VariousCheck)
                             .UntilSuccess("钓鱼循环")
@@ -233,6 +234,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 return BehaviourStatus.Running;
             }
+        }
+
+        private BehaviourStatus EnterFishingMode(CaptureContent content)
+        {
+            if (Bv.FindFAndPress(content.CaptureRectArea, "钓鱼"))
+            {
+                Sleep(1000);
+                return BehaviourStatus.Running;
+            }
+            if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
+            {
+                Sleep(1000);
+                return BehaviourStatus.Running;
+            }
+            return BehaviourStatus.Succeeded;
         }
     }
 }
