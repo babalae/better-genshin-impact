@@ -1,7 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.Common;
+﻿using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,13 +9,10 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
 using BehaviourTree;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using Vanara.PInvoke;
-using System.Runtime.InteropServices;
 using Compunet.YoloV8;
 using System.Drawing.Imaging;
 using System.IO;
@@ -143,7 +137,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 if (content.CaptureRectArea.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
                 {
-                    _logger.LogInformation("← {Text}", "退出钓鱼界面");
+                    _logger.LogInformation("← {Text}", "退出钓鱼界面");   // todo：误退出有点多
 
                     return BehaviourStatus.Failed;
                 }
@@ -204,6 +198,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private double theta = 0;
 
             private readonly Pen pen = new(Color.Red, 1);
+
+            private bool mouseMovedHorizontally = false;
             protected override BehaviourStatus Update(CaptureContent content)
             {
                 using var memoryStream = new MemoryStream();
@@ -221,12 +217,43 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     TaskControl.Sleep(1000);
                     VisionContext.Instance().DrawContent.ClearAll();
 
+                    var oneFourthX = content.CaptureRectArea.SrcBitmap.Width / 4;
+                    var threeFourthX = content.CaptureRectArea.SrcBitmap.Width * 3 / 4;
+                    var centerY = content.CaptureRectArea.SrcBitmap.Height / 2;
+                    if (fishpond.FishpondRect.Left > threeFourthX)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                        mouseMovedHorizontally = true;
+                        TaskControl.Sleep(100);
+                        return BehaviourStatus.Running;
+                    }
+                    else if (fishpond.FishpondRect.Right < oneFourthX)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
+                        mouseMovedHorizontally = true;
+                        TaskControl.Sleep(100);
+                        return BehaviourStatus.Running;
+                    }
+
+                    // 鱼塘尽量在上半屏幕
+                    if (fishpond.FishpondRect.Bottom > centerY)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy(0, -100);
+                    }
+
+                    if (mouseMovedHorizontally)
+                    {
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
+                        TaskControl.Sleep(500);
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
+                        TaskControl.Sleep(500);
+                    }
+
                     _logger.LogInformation("视角调整完毕");
                     return BehaviourStatus.Succeeded;
                 }
 
                 theta += Math.PI / 6;
-                _logger.LogInformation(theta.ToString());
                 double r = 30 + 1 * theta;
                 int x = (int)(r * Math.Cos(theta));
                 int y = (int)(2 * r * Math.Sin(theta));
@@ -245,7 +272,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
             {
-                Sleep(1000);
+                Sleep(2000);    // 这里要多等一会儿界面遮罩消退
                 return BehaviourStatus.Running;
             }
             return BehaviourStatus.Succeeded;
