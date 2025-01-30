@@ -19,6 +19,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -249,6 +250,9 @@ public class CombatScenes : IDisposable
 
     public void AfterTask()
     {
+        // 释放所有按键
+        Simulation.ReleaseAllKey();
+        
         var mwk = SelectAvatar("玛薇卡");
         if (mwk != null)
         {
