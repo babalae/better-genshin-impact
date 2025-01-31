@@ -178,24 +178,34 @@ public class PathExecutor
                         {
                             await BeforeMoveToTarget(waypoint);
 
-                            // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
-                            await MoveTo(waypoint);
+                            if (waypoint.Type == WaypointType.Orientation.Code)
+                                // 方位点，只需要朝向
+                                await FaceTo(waypoint);
+                            else
+                                // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
+                                await MoveTo(waypoint);
 
                             await BeforeMoveCloseToTarget(waypoint);
 
-                            if (waypoint.Type == WaypointType.Target.Code
-                                // 除了 fight mining stop_flying 之外的 action 都需要接近
-                                || (!string.IsNullOrEmpty(waypoint.Action)
-                                    && waypoint.Action != ActionEnum.StopFlying.Code
-                                    && waypoint.Action != ActionEnum.NahidaCollect.Code
-                                    && waypoint.Action != ActionEnum.Fight.Code
-                                    && waypoint.Action != ActionEnum.CombatScript.Code
-                                    && waypoint.Action != ActionEnum.Mining.Code))
+                            if (
+                                waypoint.Type != WaypointType.Orientation.Code // 方位点不需要接近
+                                && waypoint.Action != ActionEnum.Fight.Code // 战斗action强制不接近
+                                && (
+                                        waypoint.Type == WaypointType.Target.Code
+                                        || (
+                                                !string.IsNullOrEmpty(waypoint.Action)
+                                                && waypoint.Action != ActionEnum.StopFlying.Code
+                                                && waypoint.Action != ActionEnum.NahidaCollect.Code
+                                                && waypoint.Action != ActionEnum.CombatScript.Code
+                                                && waypoint.Action != ActionEnum.Mining.Code
+                                            // 除了上述之外的actions都强制接近，即时类型是Path（真的需要这样吗？）
+                                            // force_tp, up_down_grab_leaf, log_output, 这几个不需要接近；
+                                            // pick_around, hydro_collect, electro_collect, anemo_collect, 这几个现存脚本中没有用target？
+                                            )
+                                    )
+                                )
                             {
-                                if (waypoint.Action != ActionEnum.Fight.Code) // 战斗action强制不接近
-                                {
-                                    await MoveCloseTo(waypoint);
-                                }
+                                await MoveCloseTo(waypoint);
                             }
 
                             //skipOtherOperations如果重试，则跳过相关操作，
@@ -565,6 +575,16 @@ public class PathExecutor
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
+    }
+
+    private async Task FaceTo(WaypointForTrack waypoint)
+    {
+        var screen = CaptureToRectArea();
+        var position = await GetPosition(screen);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        Logger.LogInformation("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+        await Delay(500, ct);
     }
 
     private async Task MoveTo(WaypointForTrack waypoint)
