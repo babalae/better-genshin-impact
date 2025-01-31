@@ -809,12 +809,11 @@ public class PathExecutor
 
     private async Task MoveCloseTo(WaypointForTrack waypoint)
     {
-        var screen = CaptureToRectArea();
-        var position = await GetPosition(screen);
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        ImageRegion screen;
+        Point2f position;
+        int targetOrientation;
         Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
 
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         var stepsTaken = 0;
         while (!ct.IsCancellationRequested)
         {
