@@ -15,9 +15,6 @@ public class ProxySpeedTester
         "{0}",
         "https://mirror.ghproxy.com/{0}",
         "https://hub.gitmirror.com/{0}",
-        "https://ghproxy.cc/{0}",
-        "https://www.ghproxy.cc/{0}",
-        "https://ghproxy.cn/{0}",
         "https://ghproxy.net/{0}"
     ];
 
@@ -70,7 +67,8 @@ public class ProxySpeedTester
             // 模拟代理测试请求
             var response = await _httpClient.GetAsync(string.Format(proxyAddress, target), cancellationToken);
             response.EnsureSuccessStatusCode();
-            return (proxyAddress, await response.Content.ReadAsStringAsync(cancellationToken), true);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            return (proxyAddress, content, true);
         }
         catch (Exception e)
         {
