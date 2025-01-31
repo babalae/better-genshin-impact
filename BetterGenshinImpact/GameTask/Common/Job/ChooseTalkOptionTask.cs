@@ -63,7 +63,7 @@ public partial class ChooseTalkOptionTask
                 {
                     if (isOrange)
                     {
-                        // region.DeriveCrop(optionRa.ToRect()).SrcMat.SaveImage(Global.Absolute($"log\\t{optionRa.Text}.png"));
+                        region.DeriveCrop(optionRa.ToRect()).SrcMat.SaveImage(Global.Absolute($"log\\t{optionRa.Text}.png"));
                         if (!IsOrangeOption(region.DeriveCrop(optionRa.ToRect()).SrcMat))
                         {
                             return TalkOptionRes.FoundButNotOrange;
@@ -204,7 +204,8 @@ public partial class ChooseTalkOptionTask
         int highConfidencePixels = Cv2.CountNonZero(mask);
         double rate = highConfidencePixels * 1.0 / (mask.Width * mask.Height);
         Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
-        return rate > 0.15;
+        _logger.LogInformation($"识别到橙色文字区域占比:{rate}");
+        return rate > 0.1;
     }
 }
 
