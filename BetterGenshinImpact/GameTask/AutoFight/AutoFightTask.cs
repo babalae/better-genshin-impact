@@ -457,7 +457,7 @@ public class AutoFightTask : ISoloTask
         await Delay(450, _ct);
         var ra = CaptureToRectArea();
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
-        var whiteTile = ra.SrcMat.At<Vec3b>(50, 772); //白块
+        var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
         {
             Logger.LogInformation("识别到战斗结束");
@@ -466,7 +466,8 @@ public class AutoFightTask : ISoloTask
         }
 
         Simulation.SendInput.SimulateAction(GIActions.Drop);
-        Logger.LogInformation($"未识别到战斗结束{b3.Item0},{b3.Item1},{b3.Item2}");
+        Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
+        Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
         /**
         if (!Bv.IsInMainUi(ra))
         {
@@ -476,10 +477,6 @@ public class AutoFightTask : ISoloTask
         }**/
         
         _lastFightFlagTime = DateTime.Now;
-        return false;
-
-        //  }
-
         return false;
     }
 
