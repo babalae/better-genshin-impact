@@ -60,7 +60,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     .UntilSuccess("钓鱼循环")
                         .Sequence("从找鱼开始")
                             .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
-                            .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
+                            .PushLeaf(() => new GetFishpond("检测鱼群", blackboard))
                             .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
                             .UntilSuccess("重复抛竿")
                                 .Sequence("重复抛竿序列")

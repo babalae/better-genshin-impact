@@ -25,21 +25,20 @@ using System.Linq;
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     /// <summary>
-    /// 抛竿前准备
+    /// 检测鱼群
     /// </summary>
-    public class ThrowRod : BaseBehaviour<CaptureContent>
+    public class GetFishpond : BaseBehaviour<CaptureContent>
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         private readonly Blackboard blackboard;
-        public ThrowRod(string name, Blackboard blackboard) : base(name)
+        public GetFishpond(string name, Blackboard blackboard) : base(name)
         {
             this.blackboard = blackboard;
         }
 
         protected override BehaviourStatus Update(CaptureContent content)
         {
-            _logger.LogDebug("ThrowRod");
-            // 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
+            _logger.LogDebug("GetFishpond");
             using var memoryStream = new MemoryStream();
             content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
@@ -53,35 +52,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                var centerX = content.CaptureRectArea.SrcBitmap.Width / 2;
-                var centerY = content.CaptureRectArea.SrcBitmap.Height / 2;
-                // 往左移动是正数，往右移动是负数
-                if (fishpond.FishpondRect.Left > centerX)
-                {
-                    Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
-                }
+                blackboard.fishpond = fishpond;
+                _logger.LogInformation("定位到鱼塘：" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
 
-                if (fishpond.FishpondRect.Right < centerX)
-                {
-                    Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
-                }
-
-                // 鱼塘尽量在上半屏幕
-                if (fishpond.FishpondRect.Bottom > centerY)
-                {
-                    Simulation.SendInput.Mouse.MoveMouseBy(0, -100);
-                }
-
-                if ((fishpond.FishpondRect.Left < centerX && fishpond.FishpondRect.Right > centerX && fishpond.FishpondRect.Bottom >= centerY) || fishpond.FishpondRect.Width < content.CaptureRectArea.SrcBitmap.Width / 4)
-                {
-                    blackboard.fishpond = fishpond;
-                    _logger.LogInformation("定位到鱼塘：" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
-
-                    return BehaviourStatus.Succeeded;
-                }
+                return BehaviourStatus.Succeeded;
             }
-
-            return BehaviourStatus.Running;
         }
     }
 

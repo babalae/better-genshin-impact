@@ -60,7 +60,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                         .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                                         .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                                             .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard))
-                                            .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
+                                            .PushLeaf(() => new GetFishpond("检测鱼群", blackboard))
                                         .End()
                                         .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
                                         .UntilSuccess("重复抛竿")
