@@ -100,18 +100,21 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnLoaded()
     {
         // OnTest();
-        
+
         var args = Environment.GetCommandLineArgs();
+
+        // url protocol
+        // BetterGI.dll bettergi://start/
         if (args.Length > 1)
         {
-            if (args[1].Equals("start"))
-            {
-                _ = OnStartTriggerAsync();
-            }
-            else if (args[1].Equals("startOneDragon"))
+            if (args[1].Contains("startOneDragon"))
             {
                 var odVm = App.GetService<OneDragonFlowViewModel>();
                 odVm?.OneKeyExecuteCommand.Execute(null);
+            }
+            else if (args[1].Contains("start"))
+            {
+                _ = OnStartTriggerAsync();
             }
         }
     }
