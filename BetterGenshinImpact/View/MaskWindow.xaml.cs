@@ -19,6 +19,7 @@ using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.Genshin.Settings2;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -178,7 +179,7 @@ public partial class MaskWindow : Window
         AfterburnerWarning();
 
         // 读取游戏注册表配置
-        // ReadGameSettings();
+        GameSettingsChecker.LoadGameSettingsAndCheck();
     }
     
     /**
