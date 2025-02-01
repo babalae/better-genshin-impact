@@ -41,7 +41,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     [ObservableProperty]
     private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
-    
+
     [ObservableProperty]
     private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
 
@@ -113,6 +113,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 自动处理目录配置
         await Patch1();
+        
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
@@ -121,6 +122,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // InitKeyBinding();
             Config.AutoFightConfig.TeamNames = ""; // 此配置以后无用
             Config.CommonConfig.IsFirstRun = false;
+
+        }
+        // 版本是否运行过
+        if (Config.CommonConfig.RunForVersion != Global.Version)
+        {
+            ModifyFolderSecurity();
+            Config.CommonConfig.RunForVersion = Global.Version;
         }
 
         // 检查更新
@@ -136,6 +144,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         ScriptRepoUpdater.Instance.AutoUpdate();
     }
 
+
+    private void ModifyFolderSecurity()
+    {
+        // 检查程序是否位于C盘
+        if (Global.StartUpPath.StartsWith(@"C:", StringComparison.OrdinalIgnoreCase))
+        {
+            // 修改文件夹权限
+            SecurityControlHelper.AllowFullFolderSecurity(Global.StartUpPath);
+        }
+    }
 
     /*
     private void InitKeyBinding()
