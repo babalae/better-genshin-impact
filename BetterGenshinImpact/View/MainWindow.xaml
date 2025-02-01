@@ -83,7 +83,7 @@
                         <ui:SymbolIcon Symbol="AnimalTurtle24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                
+
                 <ui:NavigationViewItem Content="全自动">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Bot24" />
@@ -125,7 +125,7 @@
                         </ui:NavigationViewItem>
                     </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
-                
+
                 <ui:NavigationViewItem Content="辅助操控"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:MacroSettingsPage}">
@@ -180,13 +180,14 @@
             <ui:TitleBar.Header>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
                     <ui:Button Width="46"
-                                Height="32"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                Command="{Binding SwitchBackdropCommand}"
-                                CornerRadius="0"
-                                Icon="{ui:SymbolIcon Blur24}"
-                                ToolTip="{Binding CurrentBackdropType}" />
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               Command="{Binding SwitchBackdropCommand}"
+                               CornerRadius="0"
+                               Icon="{ui:SymbolIcon Blur24}"
+                               ToolTip="切换毛玻璃效果"
+                               Visibility="{Binding IsWin11Later, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
                     <ui:Button Width="46"
                                Height="32"
                                Background="Transparent"

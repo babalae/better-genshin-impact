@@ -19,6 +19,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -168,7 +169,7 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.51)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读了文档中的《快速上手》！");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
         else
@@ -176,7 +177,7 @@ public class CombatScenes : IDisposable
             if (result.TopClass.Confidence < 0.7)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
-                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读了文档中的《快速上手》！");
+                throw new Exception($"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
 
@@ -217,7 +218,7 @@ public class CombatScenes : IDisposable
     {
         if (avatarIndexRectList == null && ExpectedTeamAvatarNum == 4)
         {
-            avatarIndexRectList = AutoFightContext.Instance.FightAssets.AvatarIndexRectList;
+            avatarIndexRectList = AutoFightAssets.Instance.AvatarIndexRectList;
         }
 
         if (avatarIndexRectList == null)
@@ -249,6 +250,9 @@ public class CombatScenes : IDisposable
 
     public void AfterTask()
     {
+        // 释放所有按键
+        Simulation.ReleaseAllKey();
+        
         var mwk = SelectAvatar("玛薇卡");
         if (mwk != null)
         {
@@ -284,7 +288,7 @@ public class CombatScenes : IDisposable
         }
 
         // 剪裁出队伍区域
-        var teamRa = content.CaptureRectArea.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRectNoIndex);
+        var teamRa = content.CaptureRectArea.DeriveCrop(AutoFightAssets.Instance.TeamRectNoIndex);
         // 过滤出白色
         var hsvFilterMat = OpenCvCommonHelper.InRangeHsv(teamRa.SrcMat, new Scalar(0, 0, 210), new Scalar(255, 30, 255));
 
@@ -319,10 +323,10 @@ public class CombatScenes : IDisposable
         {
             // 流浪者特殊处理
             // 4人以上的队伍，不支持流浪者的识别
-            var wanderer = rectArea.Find(AutoFightContext.Instance.FightAssets.WandererIconRa);
+            var wanderer = rectArea.Find(AutoFightAssets.Instance.WandererIconRa);
             if (wanderer.IsEmpty())
             {
-                wanderer = rectArea.Find(AutoFightContext.Instance.FightAssets.WandererIconNoActiveRa);
+                wanderer = rectArea.Find(AutoFightAssets.Instance.WandererIconNoActiveRa);
             }
 
             if (wanderer.IsEmpty())

@@ -10,6 +10,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight;
 using Vanara.PInvoke;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
 
@@ -148,7 +149,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInRevivePrompt(ImageRegion region)
     {
-        using var confirmRectArea = region.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+        using var confirmRectArea = region.Find(AutoFightAssets.Instance.ConfirmRa);
         if (!confirmRectArea.IsEmpty())
         {
             var list = region.FindMulti(new RecognitionObject

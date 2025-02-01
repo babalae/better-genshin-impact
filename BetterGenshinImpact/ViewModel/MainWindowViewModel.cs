@@ -34,13 +34,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty]
-    public bool _isVisible = true;
+    private bool _isVisible = true;
 
     [ObservableProperty]
-    public WindowState _windowState = WindowState.Normal;
+    private WindowState _windowState = WindowState.Normal;
 
     [ObservableProperty]
-    public WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+    private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+
+    [ObservableProperty]
+    private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
 
     public AllConfig Config { get; set; }
 
@@ -110,14 +113,22 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 自动处理目录配置
         await Patch1();
+        
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
         {
             // 自动初始化键位绑定
-            InitKeyBinding();
+            // InitKeyBinding();
             Config.AutoFightConfig.TeamNames = ""; // 此配置以后无用
             Config.CommonConfig.IsFirstRun = false;
+
+        }
+        // 版本是否运行过
+        if (Config.CommonConfig.RunForVersion != Global.Version)
+        {
+            ModifyFolderSecurity();
+            Config.CommonConfig.RunForVersion = Global.Version;
         }
 
         // 检查更新
@@ -137,6 +148,17 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     }
 
 
+    private void ModifyFolderSecurity()
+    {
+        // 检查程序是否位于C盘
+        if (Global.StartUpPath.StartsWith(@"C:", StringComparison.OrdinalIgnoreCase))
+        {
+            // 修改文件夹权限
+            SecurityControlHelper.AllowFullFolderSecurity(Global.StartUpPath);
+        }
+    }
+
+    /*
     private void InitKeyBinding()
     {
         try
@@ -154,6 +176,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
         }
     }
+    */
 
     /**
      * 不同的安装目录处理
@@ -201,11 +224,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常，解决方案：https://bgi.huiyadan.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                    _logger.LogError("PaddleOcr预热异常，解决方案：https://bettergi.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bgi.huiyadan.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bettergi.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
                         throw innerException;
                     }
                     else
@@ -217,7 +240,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bgi.huiyadan.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bettergi.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
     }
 }

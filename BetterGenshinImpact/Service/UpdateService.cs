@@ -27,7 +27,7 @@ public class UpdateService : IUpdateService
     private readonly IConfigService _configService;
 
     private const string NoticeUrl = "https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json";
-    private const string DownloadPageUrl = "https://bgi.huiyadan.com/download.html";
+    private const string DownloadPageUrl = "https://bettergi.com/download.html";
 
     public AllConfig Config { get; set; }
 

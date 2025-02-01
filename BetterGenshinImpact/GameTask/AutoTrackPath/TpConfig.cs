@@ -10,7 +10,7 @@ public partial class TpConfig : ObservableObject
     private bool _mapZoomEnabled = true; // 地图缩放开关
 
     [ObservableProperty]
-    private int _mapZoomOutDistance = 2000; // 地图缩小的最小距离，单位：像素
+    private int _mapZoomOutDistance = 1000; // 地图缩小的最小距离，单位：像素
 
     [ObservableProperty]
     private int _mapZoomInDistance = 400; // 地图放大的最大距离，单位：像素
@@ -22,7 +22,7 @@ public partial class TpConfig : ObservableObject
     private double _maxZoomLevel = 5.0; // 最大缩放等级
 
     [ObservableProperty]
-    private double _minZoomLevel = 1.7; // 最小缩放等级
+    private double _minZoomLevel = 2.0; // 最小缩放等级
 
     [ObservableProperty]
     private double _reviveStatueOfTheSevenPointX = 2296.4; // 七天神像点位X坐标
@@ -58,4 +58,7 @@ public partial class TpConfig : ObservableObject
 
     [ObservableProperty]
     private int _maxMouseMove = 300; // 单次移动最大距离
+    
+    [ObservableProperty]
+    private double _mapScaleFactor = 2.661;  // 游戏坐标和 mapZoomLevel=1 时的像素比例因子。
 }

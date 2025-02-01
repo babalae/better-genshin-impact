@@ -92,6 +92,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 解析信息
         var fastProxyUrl = res.Item1;
         var jsonString = res.Item2;
+        if (string.IsNullOrEmpty(jsonString))
+        {
+            throw new Exception("获取仓库信息失败");
+        }
+        
         var (time, url, file) = ParseJson(jsonString);
 
         var updated = false;

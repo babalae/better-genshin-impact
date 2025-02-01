@@ -19,6 +19,7 @@ using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.Genshin.Settings2;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -174,9 +175,22 @@ public partial class MaskWindow : Window
         {
             _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
         }
+        
+        AfterburnerWarning();
 
         // 读取游戏注册表配置
-        // ReadGameSettings();
+        GameSettingsChecker.LoadGameSettingsAndCheck();
+    }
+    
+    /**
+     * MSIAfterburner.exe 在左上角会导致识别失败
+     */
+    private void AfterburnerWarning()
+    {
+        if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
+        {
+            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于左上角会遮盖一些图像识别要素导致识别失败，请关闭 MSI Afterburner 或者调整信息位置后重试！");
+        }
     }
 
     // private void ReadGameSettings()

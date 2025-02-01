@@ -12,6 +12,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public List<Rect> AvatarSideIconRectList; // 侧边栏角色头像 非联机状态下
     public List<Rect> AvatarIndexRectList; // 侧边栏角色头像对应的白色块 非联机状态下
     public Rect ERect;
+    public Rect ECooldownRect;
     public Rect QRect;
     public Rect EndTipsUpperRect; // 挑战达成提示
     public Rect EndTipsRect;
@@ -47,6 +48,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             (int)(355 * AssetScale), (int)(465 * AssetScale));
         ERect = new Rect(CaptureRect.Width - (int)(267 * AssetScale), CaptureRect.Height - (int)(132 * AssetScale),
             (int)(77 * AssetScale), (int)(77 * AssetScale));
+        ECooldownRect = new Rect(CaptureRect.Width - (int)(241 * AssetScale), CaptureRect.Height - (int)(97 * AssetScale),
+            (int)(41 * AssetScale), (int)(18 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
         // 小道具位置 1920-133,800,60,50

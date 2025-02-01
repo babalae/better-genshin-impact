@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using Windows.System;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -98,10 +99,10 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
     [ObservableProperty]
     private List<string> _domainNameList;
-    
+
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
 
-    [ObservableProperty] 
+    [ObservableProperty]
     private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
 
     [ObservableProperty]
@@ -191,7 +192,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoGeniusInvokationUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/tcg.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/tcg.html"));
     }
 
     [RelayCommand]
@@ -206,7 +207,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoWoodUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/felling.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/felling.html"));
     }
 
     [RelayCommand]
@@ -228,7 +229,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoFightUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/domain.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
     }
 
     [RelayCommand]
@@ -249,7 +250,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         if (string.IsNullOrEmpty(Config.AutoFightConfig.StrategyName))
         {
-            Toast.Warning("请先在【独立任务——自动战斗】下拉列表配置中选择战斗策略！");
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在【独立任务——自动战斗】下拉列表配置中选择战斗策略！"); });
             path = string.Empty;
             return true;
         }
@@ -262,7 +263,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
 
         if (!File.Exists(path) && !Directory.Exists(path))
         {
-            Toast.Error("当前选择的自动战斗策略文件不存在");
+            UIDispatcherHelper.Invoke(() => { Toast.Error("当前选择的自动战斗策略文件不存在"); });
             return true;
         }
 
@@ -272,7 +273,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoDomainUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/domain.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
     }
 
     [RelayCommand]
@@ -313,7 +314,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoTrackUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
     }
 
     [Obsolete]
@@ -348,7 +349,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoTrackPathUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/track.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
     }
 
     [RelayCommand]
@@ -363,7 +364,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     public async Task OnGoToAutoMusicGameUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bgi.huiyadan.com/feats/task/music.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/music.html"));
     }
 
     [RelayCommand]
