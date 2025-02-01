@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Helpers.Http;
 
@@ -68,6 +69,7 @@ public class ProxySpeedTester
             var response = await _httpClient.GetAsync(string.Format(proxyAddress, target), cancellationToken);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var json = JObject.Parse(content);
             return (proxyAddress, content, true);
         }
         catch (Exception e)
