@@ -40,10 +40,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         internal bool chooseBaitUIOpening = false;
 
+        /// <summary>
+        /// 镜头俯仰是否被行为重置
+        /// 进入钓鱼模式后、以及提竿后，镜头的俯仰会被重置。进行相关动作前须优化俯仰角，避免鱼塘被脚下的悬崖遮挡。
+        /// </summary>
+        internal bool pitchReset = false;
+
         #region 分层暂放
         internal static readonly YoloV8Predictor predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
         internal Action<int> Sleep { get; set; }
-        internal Action MoveViewpointDown { get; set; }
         #endregion
     }
 }

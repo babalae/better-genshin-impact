@@ -189,16 +189,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             noTargetFishTimes = 0;
 
             Simulation.SendInput.Mouse.LeftButtonDown();
+            blackboard.pitchReset = true;
             _logger.LogInformation("长按预抛竿");
             blackboard.Sleep(3000);
         }
 
         protected override void OnTerminate(BehaviourStatus status)
         {
-            if (status == BehaviourStatus.Failed)
-            {
-                Reset();
-            }
             if (status != BehaviourStatus.Running)
             {
                 VisionContext.Instance().DrawContent.RemoveRect("Target");
@@ -226,7 +223,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 noPlacementTimes++;
                 blackboard.Sleep(50);
-                Debug.WriteLine("历次未找到鱼饵落点");
+                Debug.WriteLine($"{noPlacementTimes}次未找到鱼饵落点");
 
                 var cX = ra.SrcBitmap.Width / 2;
                 var cY = ra.SrcBitmap.Height / 2;
@@ -244,9 +241,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     Simulation.SendInput.Mouse.LeftButtonUp();
                     blackboard.Sleep(2000);
                     Simulation.SendInput.Mouse.LeftButtonClick();
-                    blackboard.Sleep(500);
-                    blackboard.MoveViewpointDown();
-                    blackboard.Sleep(1000);    //此处需要久一点
+                    blackboard.Sleep(2000);    //此处需要久一点
                     return BehaviourStatus.Failed;
                 }
 
@@ -287,16 +282,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (noTargetFishTimes > 10)
                 {
                     // 没有找到目标鱼，重新选择鱼饵
+                    blackboard.selectedBaitName = string.Empty;
                     _logger.LogInformation("没有找到目标鱼，1.直接抛竿");
                     Simulation.SendInput.Mouse.LeftButtonUp();
                     blackboard.Sleep(2000);
                     _logger.LogInformation("没有找到目标鱼，2.收杆");
                     Simulation.SendInput.Mouse.LeftButtonClick();
-                    blackboard.Sleep(500);
-                    _logger.LogInformation("没有找到目标鱼，3.准备重新选择鱼饵");
-                    blackboard.selectedBaitName = string.Empty;
-                    blackboard.MoveViewpointDown();
-                    blackboard.Sleep(300);
+                    blackboard.Sleep(800);
 
                     blackboard.noTargetFish = true;
                     return BehaviourStatus.Succeeded;
@@ -451,7 +443,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         private DateTime? waitFishBiteTimeout;
-        private int _seconds;
+        private int seconds;
 
         /// <summary>
         /// 如果未超时返回运行中，超时返回失败
@@ -460,17 +452,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <param name="seconds"></param>
         public FishBiteTimeout(string name, int seconds) : base(name)
         {
-            _seconds = seconds;
+            this.seconds = seconds;
         }
         protected override void OnInitialize()
         {
-            waitFishBiteTimeout = DateTime.Now.AddSeconds(_seconds);
+            waitFishBiteTimeout = DateTime.Now.AddSeconds(seconds);
         }
         protected override BehaviourStatus Update(CaptureContent context)
         {
             if (DateTime.Now >= waitFishBiteTimeout)
             {
-                _logger.LogInformation($"{_seconds}秒没有咬杆，本次收杆");
+                _logger.LogInformation($"{seconds}秒没有咬杆，本次收杆");
                 Simulation.SendInput.Mouse.LeftButtonClick();
                 TaskControl.Sleep(1000);
                 return BehaviourStatus.Failed;
@@ -735,10 +727,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 保证鼠标松开
                 simulator.Mouse.LeftButtonUp();
 
-                blackboard.Sleep(1000);
-
-                blackboard.MoveViewpointDown();
-                blackboard.Sleep(5000);
+                blackboard.Sleep(7000);
 
                 return BehaviourStatus.Succeeded;
 
@@ -766,5 +755,33 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }.Where(r => r.Rect.Height != 0).ToList();
             VisionContext.Instance().DrawContent.PutOrRemoveRectList("FishingBarAll", list);
         }
+    }
+
+    /// <summary>
+    /// 如果视角被其他行为重置过，则调整视角至俯视
+    /// </summary>
+    public class MoveViewpointDown : BaseBehaviour<CaptureContent>
+    {
+        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly Blackboard blackboard;
+        public MoveViewpointDown(string name, Blackboard blackboard) : base(name)
+        {
+            this.blackboard = blackboard;
+        }
+
+        protected override BehaviourStatus Update(CaptureContent context)
+        {
+            if (blackboard.pitchReset)
+            {
+                _logger.LogInformation("调整视角至俯视");
+                blackboard.pitchReset = false;
+                // 下移视角方便看鱼
+                Simulation.SendInput.Mouse.MoveMouseBy(0, 400);
+                blackboard.Sleep(100);
+                return BehaviourStatus.Running;
+            }
+            return BehaviourStatus.Succeeded;
+        }
+
     }
 }

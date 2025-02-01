@@ -42,15 +42,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             this.blackboard = new Blackboard()
             {
-                Sleep = this.Sleep,
-                MoveViewpointDown = this.MoveViewpointDown
+                Sleep = this.Sleep
             };
 
             var BehaviourTree = FluentBuilder.Create<CaptureContent>()
                     .Sequence("调整视角并钓鱼")
                         .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                             .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
-                            .PushLeaf(() => new ChangeView("调整视角"))
+                            .PushLeaf(() => new ChangeView("转圈圈调整视角"))
                         .End()
                         .Do("进入钓鱼模式", EnterFishingMode)
                         .MySimpleParallel("全部钓完", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
@@ -58,13 +57,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             .UntilSuccess("钓鱼循环")
                                 .AlwaysFail("钓鱼循环1")
                                     .Sequence("从找鱼开始")
+                                        .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                                         .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                                             .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard))
                                             .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
                                         .End()
                                         .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
                                         .UntilSuccess("重复抛竿")
-                                            .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
+                                            .Sequence("重复抛竿序列")
+                                                .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
+                                                .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
+                                            .End()
                                         .End()
                                         .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                                         .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
@@ -111,16 +114,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public void Sleep(int millisecondsTimeout)
         {
             TaskControl.Sleep(millisecondsTimeout, ct);
-        }
-
-        /// <summary>
-        /// 向下移动视角
-        /// </summary>
-        private void MoveViewpointDown()
-        {
-            // 下移视角方便看鱼
-            Simulation.SendInput.Mouse.MoveMouseBy(0, 400);
-            Sleep(500);
         }
 
         /// <summary>
@@ -199,7 +192,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             private readonly Pen pen = new(Color.Red, 1);
 
-            private bool mouseMovedHorizontally = false;
             protected override BehaviourStatus Update(CaptureContent content)
             {
                 using var memoryStream = new MemoryStream();
@@ -223,31 +215,22 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     if (fishpond.FishpondRect.Left > threeFourthX)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
-                        mouseMovedHorizontally = true;
                         TaskControl.Sleep(100);
                         return BehaviourStatus.Running;
                     }
                     else if (fishpond.FishpondRect.Right < oneFourthX)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
-                        mouseMovedHorizontally = true;
                         TaskControl.Sleep(100);
                         return BehaviourStatus.Running;
                     }
 
-                    // 鱼塘尽量在上半屏幕
-                    if (fishpond.FishpondRect.Bottom > centerY)
-                    {
-                        Simulation.SendInput.Mouse.MoveMouseBy(0, -100);
-                    }
-
-                    if (mouseMovedHorizontally)
-                    {
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
-                        TaskControl.Sleep(500);
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
-                        TaskControl.Sleep(500);
-                    }
+                    #region 1、使人物朝向和镜头方向一致；2、打断角色待机动作，避免钓鱼F交互键被吞
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
+                    TaskControl.Sleep(500);
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
+                    TaskControl.Sleep(500);
+                    #endregion
 
                     _logger.LogInformation("视角调整完毕");
                     return BehaviourStatus.Succeeded;
@@ -270,11 +253,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 Sleep(1000);
                 return BehaviourStatus.Running;
             }
-            if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
+            else if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
             {
+                this.blackboard.pitchReset = true;
+
                 Sleep(2000);    // 这里要多等一会儿界面遮罩消退
+
                 return BehaviourStatus.Running;
             }
+
             return BehaviourStatus.Succeeded;
         }
     }

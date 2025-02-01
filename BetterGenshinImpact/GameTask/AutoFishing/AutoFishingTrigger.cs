@@ -45,8 +45,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             this.blackboard = new Blackboard()
             {
-                Sleep = this.Sleep,
-                MoveViewpointDown = this.MoveViewpointDown
+                Sleep = this.Sleep
             };
         }
 
@@ -60,10 +59,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
                     .UntilSuccess("钓鱼循环")
                         .Sequence("从找鱼开始")
+                            .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                             .PushLeaf(() => new ThrowRod("抛竿前准备", blackboard))
                             .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
                             .UntilSuccess("重复抛竿")
-                                .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
+                                .Sequence("重复抛竿序列")
+                                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
+                                    .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
+                                .End()
                             .End()
                             .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                             .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
@@ -216,21 +219,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 2. 根据第一步的观察结果，提前选择鱼饵
         /// </summary>
 
-        /// <summary>
-        /// 向下移动视角
-        /// </summary>
-        private void MoveViewpointDown()
-        {
-            if (TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
-            {
-                // 下移视角方便看鱼
-                Simulation.SendInput.Mouse.MoveMouseBy(0, 400);
-                Sleep(500);
-                //Simulation.SendInput.Mouse.MoveMouseBy(0, 500);
-                //Sleep(500);
-            }
-        }
-
         [Obsolete]
         private (int, int) MoveMouseToFish(Rect rect1, Rect rect2)
         {
@@ -356,7 +344,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private BehaviourStatus CheckFishingUserInterface(CaptureContent content)
         {
             if (blackboard.chooseBaitUIOpening)
-            { 
+            {
                 return BehaviourStatus.Running;
             }
 
