@@ -185,6 +185,8 @@ public partial class App : Application
     protected override async void OnExit(ExitEventArgs e)
     {
         base.OnExit(e);
+        
+        TempManager.CleanUp();
 
         await _host.StopAsync();
         _host.Dispose();

@@ -6,11 +6,15 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Drawing;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -18,13 +22,11 @@ public class NotificationService : IHostedService
 {
     private static NotificationService? _instance;
 
-    private static readonly HttpClient _httpClient = new();
+    private static readonly HttpClient NotifyHttpClient = new();
     private readonly NotifierManager _notifierManager;
-    private AllConfig Config { get; set; }
 
-    public NotificationService(IConfigService configService, NotifierManager notifierManager)
+    public NotificationService(NotifierManager notifierManager)
     {
-        Config = configService.Get();
         _notifierManager = notifierManager;
         _instance = this;
         InitializeNotifiers();
@@ -49,22 +51,16 @@ public class NotificationService : IHostedService
         return Task.CompletedTask;
     }
 
-    private StringContent TransformData(INotificationData notificationData)
-    {
-        // using object type here so it serializes the interface correctly
-        var serializedData = JsonSerializer.Serialize<object>(notificationData, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-
-        return new StringContent(serializedData, Encoding.UTF8, "application/json");
-    }
 
     private void InitializeNotifiers()
     {
-        if (Config.NotificationConfig.WebhookEnabled)
+        if (TaskContext.Instance().Config.NotificationConfig.WebhookEnabled)
         {
-            _notifierManager.RegisterNotifier(new WebhookNotifier(_httpClient, Config.NotificationConfig.WebhookEndpoint));
+            _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
+        }
+        if (TaskContext.Instance().Config.NotificationConfig.WindowsUwpNotificationEnabled)
+        {
+            _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
         }
     }
 
@@ -83,7 +79,14 @@ public class NotificationService : IHostedService
             {
                 return NotificationTestResult.Error("通知类型未启用");
             }
-            await notifier.SendNotificationAsync(TransformData(LifecycleNotificationData.Test()));
+            await notifier.SendAsync(new TestNotificationData
+            {
+                Event = NotificationEvent.Test,
+                Action = NotificationAction.Started,
+                Conclusion = NotificationConclusion.Success,
+                Message = "测试通知",
+                // Screenshot = 
+            });
             return NotificationTestResult.Success();
         }
         catch (NotifierException ex)
@@ -94,7 +97,7 @@ public class NotificationService : IHostedService
 
     public async Task NotifyAllNotifiersAsync(INotificationData notificationData)
     {
-        await _notifierManager.SendNotificationToAllAsync(TransformData(notificationData));
+        await _notifierManager.SendNotificationToAllAsync(notificationData);
     }
 
     public void NotifyAllNotifiers(INotificationData notificationData)

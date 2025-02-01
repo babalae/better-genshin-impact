@@ -13,6 +13,8 @@ using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Base;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -44,13 +46,15 @@ public class TaskRunner
     public async Task RunCurrentAsync(Func<Task> action)
     {
         // 加锁
+        TaskDetails taskDetails = new();
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
             return;
         }
-
+        bool isSuccess = false;
+        NotificationBuilderFactory.CreateWith(taskDetails).Started().Build().Send();
         try
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
@@ -59,17 +63,17 @@ public class TaskRunner
             Init();
 
             // 发送运行任务通知
-            SendNotification();
 
             CancellationContext.Instance.Set();
             RunnerContext.Instance.Clear();
 
             await action();
+            isSuccess = true;
         }
         catch (NormalEndException e)
         {
+            NotificationBuilderFactory.CreateWith(taskDetails).Exception("任务中断:" + e.Message).Build().Send();
             _logger.LogInformation("任务中断:{Msg}", e.Message);
-            SendNotification();
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -79,7 +83,7 @@ public class TaskRunner
         catch (TaskCanceledException e)
         {
             _logger.LogInformation("任务中断:{Msg}", "任务被取消");
-            SendNotification();
+            NotificationBuilderFactory.CreateWith(taskDetails).Exception("任务被取消").Build().Send();
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -90,13 +94,20 @@ public class TaskRunner
         {
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
-            SendNotification();
+            NotificationBuilderFactory.CreateWith(taskDetails).Exception(e.Message).Build().Send();
         }
         finally
         {
             End();
             _logger.LogInformation("→ {Text}", _name + "任务结束");
-            SendNotification();
+            if (isSuccess)
+            {
+                NotificationBuilderFactory.CreateWith(taskDetails).Success().Build().Send();
+            }
+            else
+            {
+                NotificationBuilderFactory.CreateWith(taskDetails).Failure().Build().Send();
+            }
 
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
@@ -193,7 +204,4 @@ public class TaskRunner
         }
     }
 
-    public void SendNotification()
-    {
-    }
 }

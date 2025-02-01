@@ -68,9 +68,10 @@ public class AutoDomainTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-        
+
         Init();
-        NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
+        // TODO: 使用exception逻辑让started必有对应的completed
+        NotificationBuilderFactory.CreateWith(_taskParam).Started().Build().Send();
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -158,11 +159,10 @@ public class AutoDomainTask : ISoloTask
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
 
-                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
+                NotificationBuilderFactory.CreateWith(_taskParam).Success().Build().Send();
                 break;
             }
-
-            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
+            NotificationBuilderFactory.CreateWith(_taskParam).InProgress().Build().Send();
         }
     }
 
@@ -295,9 +295,9 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogInformation("自动秘境：{Text}", "进入秘境");
                 // 秘境开门动画 5s
                 await Delay(5000, _ct);
-            } 
+            }
             else
-            { 
+            {
                 await Delay(800, _ct);
             }
         }
