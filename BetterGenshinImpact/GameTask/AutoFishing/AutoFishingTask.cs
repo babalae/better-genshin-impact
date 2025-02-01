@@ -51,11 +51,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
                             .PushLeaf(() => new ChangeView("转圈圈调整视角"))
                         .End()
-                        .Do("进入钓鱼模式", EnterFishingMode)
-                        .MySimpleParallel("全部钓完", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                            .Do("各种检查", VariousCheck)
-                            .UntilSuccess("钓鱼循环")
-                                .AlwaysFail("钓鱼循环1")
+                        .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard))
+                        .UntilFailed("钓鱼循环")
+                            .MySimpleParallel("全部钓完", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                .Do("各种检查", VariousCheck)
+                                .AlwaysSucceed("钓鱼循环辅助")
                                     .Sequence("从找鱼开始")
                                         .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                                         .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
@@ -91,7 +91,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var ra = TaskControl.CaptureToRectArea(forceNew: true);
                 BehaviourTree.Tick(new CaptureContent(ra.SrcBitmap, 0, 0));
 
-                if (BehaviourTree.Status == BehaviourStatus.Failed)
+                if (BehaviourTree.Status != BehaviourStatus.Running)
                 {
                     _logger.LogInformation("→ 钓鱼任务结束");
 
@@ -246,23 +246,50 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-        private BehaviourStatus EnterFishingMode(CaptureContent content)
+        private class EnterFishingMode : BaseBehaviour<CaptureContent>
         {
-            if (Bv.FindFAndPress(content.CaptureRectArea, "钓鱼"))
+            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+            private readonly Blackboard blackboard;
+            public EnterFishingMode(string name, Blackboard blackboard) : base(name)
             {
-                Sleep(1000);
-                return BehaviourStatus.Running;
-            }
-            else if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
-            {
-                this.blackboard.pitchReset = true;
-
-                Sleep(2000);    // 这里要多等一会儿界面遮罩消退
-
-                return BehaviourStatus.Running;
+                this.blackboard = blackboard;
             }
 
-            return BehaviourStatus.Succeeded;
+            protected override BehaviourStatus Update(CaptureContent content)
+            {
+                if (Status == BehaviourStatus.Ready)
+                {
+                    return BehaviourStatus.Running;
+                }
+
+                if (Bv.FindFAndPress(content.CaptureRectArea, "钓鱼"))
+                {
+                    _logger.LogInformation("按下钓鱼键");
+                    blackboard.Sleep(1000);
+                    return BehaviourStatus.Running;
+                }
+                else if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
+                {
+                    _logger.LogInformation("点击开始钓鱼");
+
+                    this.blackboard.pitchReset = true;
+
+                    blackboard.Sleep(2000);    // 这里要多等一会儿界面遮罩消退
+
+                    return BehaviourStatus.Running;
+                }
+
+                if (content.CaptureRectArea.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
+                {
+                    _logger.LogInformation("进入钓鱼模式失败");
+                    return BehaviourStatus.Failed;
+                }
+                else
+                {
+                    _logger.LogInformation("进入钓鱼模式");
+                    return BehaviourStatus.Succeeded;
+                }
+            }
         }
     }
 }
