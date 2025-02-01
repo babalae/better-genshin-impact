@@ -6,17 +6,18 @@ namespace BetterGenshinImpact.Helpers;
 
 public class TempManager
 {
-    public static readonly string TempDirectory = Global.Absolute("User/Temp");
-    static TempManager()
+    public static string GetTempDirectory()
     {
-        Directory.CreateDirectory(TempDirectory);
+        var tmp = Global.Absolute("User/Temp");
+        Directory.CreateDirectory(tmp);
+        return tmp;
     }
 
     public static void CleanUp()
     {
         try
         {
-            DirectoryHelper.DeleteDirectoryRecursively(TempDirectory);
+            DirectoryHelper.DeleteDirectoryRecursively(GetTempDirectory());
         }
         catch
         {

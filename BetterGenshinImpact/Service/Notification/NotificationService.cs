@@ -1,19 +1,14 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.Service.Notification.Model;
+﻿using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Drawing;
 using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.Service.Notification;
@@ -38,6 +33,7 @@ public class NotificationService : IHostedService
         {
             throw new Exception("Not instantiated");
         }
+
         return _instance;
     }
 
@@ -58,6 +54,7 @@ public class NotificationService : IHostedService
         {
             _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
         }
+
         if (TaskContext.Instance().Config.NotificationConfig.WindowsUwpNotificationEnabled)
         {
             _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
@@ -79,14 +76,20 @@ public class NotificationService : IHostedService
             {
                 return NotificationTestResult.Error("通知类型未启用");
             }
-            await notifier.SendAsync(new TestNotificationData
+
+            var testData = new TestNotificationData
             {
                 Event = NotificationEvent.Test,
                 Action = NotificationAction.Started,
                 Conclusion = NotificationConclusion.Success,
-                Message = "测试通知",
-                // Screenshot = 
-            });
+                Message = "这是一条测试通知信息",
+            };
+            if (TaskContext.Instance().IsInitialized)
+            {
+                testData.Screenshot = TaskControl.CaptureToRectArea().SrcBitmap;
+            }
+
+            await notifier.SendAsync(testData);
             return NotificationTestResult.Success();
         }
         catch (NotifierException ex)

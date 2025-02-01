@@ -14,13 +14,12 @@ public class WindowsUwpNotifier : INotifier
 
     public Task SendAsync(INotificationData data)
     {
-        var toastBuilder = new ToastContentBuilder()
-            .AddHeader("BetterGI", "BetterGI", "action=click");
+        var toastBuilder = new ToastContentBuilder();
 
         if (data.Screenshot != null)
         {
             string uniqueFileName = $"notification_image_{Guid.NewGuid()}.png";
-            string imagePath = Path.Combine(TempManager.TempDirectory, uniqueFileName);
+            string imagePath = Path.Combine(TempManager.GetTempDirectory(), uniqueFileName);
             data.Screenshot.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
             toastBuilder.AddHeroImage(new Uri(imagePath));
         }
