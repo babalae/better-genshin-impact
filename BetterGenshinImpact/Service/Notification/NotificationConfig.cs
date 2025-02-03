@@ -20,6 +20,10 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _webhookEndpoint = string.Empty;
+    
+    
+    // [ObservableProperty]
+    // private string _webhookEventSubscribe = string.Empty;
 
     /// <summary>
     /// 是否包含截图
@@ -32,5 +36,22 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _windowsUwpNotificationEnabled = false;
+    
+    
+    // 飞书通知
+    /// <summary>
+    /// 飞书通知是否启用
+    /// </summary>
+    [ObservableProperty]
+    private bool _feishuNotificationEnabled = false;
+    
+    
+    /// <summary>
+    /// 飞书通知地址
+    /// </summary>
+    [ObservableProperty]
+    private string _feishuWebhookUrl = string.Empty;
+    
+    
 
 }

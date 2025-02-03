@@ -59,6 +59,11 @@ public class NotificationService : IHostedService
         {
             _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
         }
+        
+        if (TaskContext.Instance().Config.NotificationConfig.FeishuNotificationEnabled)
+        {
+            _notifierManager.RegisterNotifier(new FeishuNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.FeishuWebhookUrl));
+        }
     }
 
     public void RefreshNotifiers()

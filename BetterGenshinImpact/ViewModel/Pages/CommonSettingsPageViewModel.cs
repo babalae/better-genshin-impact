@@ -136,4 +136,18 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
             Toast.Error(res.Message);
         }
     }
+    
+    [RelayCommand]
+    private async Task OnTestFeishuNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<FeishuNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
 }

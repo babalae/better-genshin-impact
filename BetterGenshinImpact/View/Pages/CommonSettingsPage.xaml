@@ -81,7 +81,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在遮罩内显示日志窗口，<Hyperlink Command="{Binding GoToLogFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        在遮罩内显示日志窗口，
+                        <Hyperlink Command="{Binding GoToLogFolderCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击打开日志文件夹
                         </Hyperlink>
                     </ui:TextBlock>
@@ -333,7 +335,9 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        可以通过快捷键保存截图，文件保存在<Hyperlink Command="{Binding GoToFolderCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        可以通过快捷键保存截图，文件保存在
+                        <Hyperlink Command="{Binding GoToFolderCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             log/screenshot
                         </Hyperlink>
                     </ui:TextBlock>
@@ -431,10 +435,70 @@
             </ui:CardControl.Header>
             <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
         </ui:CardControl>
-        
+
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="通知设置" />
+
+        <!--  全局通知设置  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Alert24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="全局通知设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="影响下方所有通知的设置"
+                                  TextWrapping="Wrap" />
+                    <!--<ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.WebhookEnabled, Mode=TwoWay}" />-->
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="通知时包含截图"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="总是在通知中包含截图"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.NotificationConfig.IncludeScreenShot, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
         <!--  Webhook  -->
         <ui:CardExpander Margin="0,0,0,12"
@@ -530,34 +594,9 @@
                                   Text="{Binding WebhookStatus}"
                                   TextWrapping="Wrap" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="包含截图"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="总是在通知中包含截图"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.NotificationConfig.IncludeScreenShot, Mode=TwoWay}" />
-                </Grid>
             </StackPanel>
         </ui:CardExpander>
-        
+
         <!-- Windows 通知 -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
@@ -580,7 +619,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启用或禁用 Windows 通知"
+                                  Text="Windows 通知别与游戏界面重叠，否则易误点通知"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -589,7 +628,7 @@
                                      IsChecked="{Binding Config.NotificationConfig.WindowsUwpNotificationEnabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
-             <StackPanel>
+            <StackPanel>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -614,6 +653,94 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWindowsUwpNotificationCommand}"
+                               Content="发送" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon CommentArrowLeft24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用飞书通知"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="飞书通知相关设置"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.FeishuNotificationEnabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="飞书通知地址"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="填写飞书通知地址"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.FeishuWebhookUrl, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="测试飞书通知"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="发送测试通知"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding TestFeishuNotificationCommand}"
                                Content="发送" />
                 </Grid>
             </StackPanel>
