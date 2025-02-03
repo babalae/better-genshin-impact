@@ -37,7 +37,7 @@ public class NotifierManager
         return _notifiers.FirstOrDefault(o => o is T);
     }
 
-    public async Task SendNotificationAsync(INotifier notifier, INotificationData content)
+    public async Task SendNotificationAsync(INotifier notifier, BaseNotificationData content)
     {
         try
         {
@@ -49,7 +49,7 @@ public class NotifierManager
         }
     }
 
-    public async Task SendNotificationAsync<T>(INotificationData content) where T : INotifier
+    public async Task SendNotificationAsync<T>(BaseNotificationData content) where T : INotifier
     {
         var notifier = _notifiers.FirstOrDefault(o => o is T);
 
@@ -59,7 +59,7 @@ public class NotifierManager
         }
     }
 
-    public async Task SendNotificationToAllAsync(INotificationData content)
+    public async Task SendNotificationToAllAsync(BaseNotificationData content)
     {
         await Task.WhenAll(_notifiers.Select(notifier => SendNotificationAsync(notifier, content)));
     }

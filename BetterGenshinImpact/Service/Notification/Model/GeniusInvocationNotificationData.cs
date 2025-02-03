@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
-public class GeniusInvocationNotificationData : INotificationData
+public class GeniusInvocationNotificationData : BaseNotificationData
 {
     public Duel? GeniusInvocation { get; set; }
 }

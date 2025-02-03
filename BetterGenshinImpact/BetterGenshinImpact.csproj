@@ -148,6 +148,7 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\OneDragon\" />
+	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />
 	</ItemGroup>
 

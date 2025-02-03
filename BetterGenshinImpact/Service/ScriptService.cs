@@ -69,7 +69,9 @@ public partial class ScriptService : IScriptService
         }
 
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-
+        
+        Notify.Event("group.start").Success($"配置组{groupName}启动");
+        
         await new TaskRunner(timerOperation)
             .RunThreadAsync(async () =>
             {
@@ -98,10 +100,8 @@ public partial class ScriptService : IScriptService
 
                     for (var i = 0; i < project.RunNum; i++)
                     {
-                        bool isSuccess = false;
                         try
                         {
-                            NotificationBuilderFactory.CreateWith(project).Started().Build().Send();
                             if (hasTimer)
                             {
                                 TaskTriggerDispatcher.Instance().ClearTriggers();
@@ -112,7 +112,6 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
-                            isSuccess = true;
                             
                             //多次执行时及时中断
                             if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
@@ -124,37 +123,27 @@ public partial class ScriptService : IScriptService
                         }
                         catch (NormalEndException e)
                         {
-                            NotificationBuilderFactory.CreateWith(project).Exception(e.Message).Build().Send();
                             throw;
                         }
                         catch (TaskCanceledException e)
                         {
                             _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
-                            NotificationBuilderFactory.CreateWith(project).Exception("取消执行配置组: " + e.Message).Build().Send();
                             throw;
                         }
                         catch (Exception e)
                         {
                             _logger.LogDebug(e, "执行脚本时发生异常");
                             _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
-                            NotificationBuilderFactory.CreateWith(project).Exception("执行脚本时发生异常: " + e.Message).Build().Send();
                         }
                         finally
                         {
                             stopwatch.Stop();
                             var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
-                            _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
+                            // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
                             _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
-                            if (isSuccess)
-                            {
-                                NotificationBuilderFactory.CreateWith(project).Success().Build().Send();
-                            }
-                            else
-                            {
-                                NotificationBuilderFactory.CreateWith(project).Failure().Build().Send();
-                            }
+
                         }
 
                         await Task.Delay(2000);
@@ -166,6 +155,7 @@ public partial class ScriptService : IScriptService
         {
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
+        Notify.Event("group.end").Success($"配置组{groupName}结束");
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList, ref bool hasTimer)

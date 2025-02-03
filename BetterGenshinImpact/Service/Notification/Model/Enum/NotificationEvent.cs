@@ -1,10 +1,12 @@
 ﻿namespace BetterGenshinImpact.Service.Notification.Model.Enum;
 
-public enum NotificationEvent
+public class NotificationEvent(string code, string msg)
 {
-    Test, //测试
-    GeniusInvocation, //七圣召唤
-    Domain, //副本
-    Script, //路径追踪脚本
-    Task, //宏观上的任务
+    public static NotificationEvent Test = new("notify.test", "测试通知");
+    
+    
+    public static NotificationEvent DomainReward = new("domain.reward", "测试通知");
+    
+    public string Code { get; private set; } = code;
+    public string Msg { get; private set; } = msg;
 }

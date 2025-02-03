@@ -77,11 +77,10 @@ public class NotificationService : IHostedService
                 return NotificationTestResult.Error("通知类型未启用");
             }
 
-            var testData = new TestNotificationData
+            var testData = new BaseNotificationData
             {
-                Event = NotificationEvent.Test,
-                Action = NotificationAction.Started,
-                Conclusion = NotificationConclusion.Success,
+                Event = NotificationEvent.Test.Code,
+                Result = NotificationEventResult.Success,
                 Message = "这是一条测试通知信息",
             };
             if (TaskContext.Instance().IsInitialized)
@@ -98,12 +97,12 @@ public class NotificationService : IHostedService
         }
     }
 
-    public async Task NotifyAllNotifiersAsync(INotificationData notificationData)
+    public async Task NotifyAllNotifiersAsync(BaseNotificationData notificationData)
     {
         await _notifierManager.SendNotificationToAllAsync(notificationData);
     }
 
-    public void NotifyAllNotifiers(INotificationData notificationData)
+    public void NotifyAllNotifiers(BaseNotificationData notificationData)
     {
         Task.Run(() => NotifyAllNotifiersAsync(notificationData));
     }

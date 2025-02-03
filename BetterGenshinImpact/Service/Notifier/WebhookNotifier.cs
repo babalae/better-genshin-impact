@@ -27,7 +27,7 @@ public class WebhookNotifier : INotifier
         Endpoint = endpoint;
     }
 
-    public async Task SendAsync(INotificationData content)
+    public async Task SendAsync(BaseNotificationData content)
     {
         try
         {
@@ -49,7 +49,7 @@ public class WebhookNotifier : INotifier
     }
 
 
-    private StringContent TransformData(INotificationData notificationData)
+    private StringContent TransformData(BaseNotificationData notificationData)
     {
         // using object type here so it serializes the interface correctly
         var serializedData = JsonSerializer.Serialize<object>(notificationData, _jsonSerializerOptions);

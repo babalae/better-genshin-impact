@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
-public class DomainNotificationData : INotificationData
+public class DomainNotificationData : BaseNotificationData
 {
     public AutoDomainParam? Domain { get; set; }
 } 

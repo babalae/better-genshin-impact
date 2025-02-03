@@ -1,8 +1,8 @@
 ﻿namespace BetterGenshinImpact.Service.Notification.Model.Enum;
 
-public enum NotificationConclusion
+public enum NotificationEventResult
 {
     Success,
-    Failure,
+    Fail,
     PartialSuccess, // 还没想好怎么用，先放在这里
 }

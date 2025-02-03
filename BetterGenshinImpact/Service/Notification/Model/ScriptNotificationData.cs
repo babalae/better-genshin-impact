@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
-public class ScriptNotificationData : INotificationData
+public class ScriptNotificationData : BaseNotificationData
 {
     public ScriptGroupProject? Script { get; set; }
 } 

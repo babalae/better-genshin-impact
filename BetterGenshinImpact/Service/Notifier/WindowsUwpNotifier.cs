@@ -12,7 +12,7 @@ public class WindowsUwpNotifier : INotifier
 {
     public string Name => "Windows通知";
 
-    public Task SendAsync(INotificationData data)
+    public Task SendAsync(BaseNotificationData data)
     {
         var toastBuilder = new ToastContentBuilder();
 

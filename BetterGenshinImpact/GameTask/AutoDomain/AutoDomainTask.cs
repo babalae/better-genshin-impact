@@ -30,6 +30,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
@@ -70,8 +71,7 @@ public class AutoDomainTask : ISoloTask
         _ct = ct;
 
         Init();
-        // TODO: 使用exception逻辑让started必有对应的completed
-        NotificationBuilderFactory.CreateWith(_taskParam).Started().Build().Send();
+        Notify.Event("domain.start").Success("自动秘境启动");
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -88,6 +88,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
                     await Delay(2000, ct);
+                    Notify.Event("domain.retry").Error("存在角色死亡，复活后重试秘境...");
                     continue;
                 }
                 else
@@ -103,6 +104,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(2000, ct);
 
         await ArtifactSalvage();
+        Notify.Event("domain.end").Success("自动秘境结束");
     }
 
     private async Task DoDomain()
@@ -158,11 +160,10 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
-
-                NotificationBuilderFactory.CreateWith(_taskParam).Success().Build().Send();
+                
                 break;
             }
-            NotificationBuilderFactory.CreateWith(_taskParam).InProgress().Build().Send();
+            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
         }
     }
 
