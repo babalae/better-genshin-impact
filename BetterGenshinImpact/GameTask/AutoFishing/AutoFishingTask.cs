@@ -47,9 +47,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             var BehaviourTree = FluentBuilder.Create<CaptureContent>()
                     .Sequence("调整视角并钓鱼")
+                        .Do($"设置变量{nameof(blackboard.pitchReset)}", _ =>
+                        {
+                            blackboard.pitchReset = true;
+                            return BehaviourStatus.Succeeded;
+                        })
+                        .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                         .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                             .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
-                            .PushLeaf(() => new ChangeView("转圈圈调整视角"))
+                            .Do("转圈圈调整视角", TurnAround)
                         .End()
                         .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard))
                         .UntilFailed("钓鱼循环")
@@ -181,69 +187,53 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-        private class ChangeView : BaseBehaviour<CaptureContent>
+        private BehaviourStatus TurnAround(CaptureContent content)
         {
-            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
-            public ChangeView(string name) : base(name)
+            using var memoryStream = new MemoryStream();
+            content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            var result = Blackboard.predictor.Detect(memoryStream);
+            if (result.Boxes.Any())
             {
-            }
-
-            private double theta = 0;
-
-            private readonly Pen pen = new(Color.Red, 1);
-
-            protected override BehaviourStatus Update(CaptureContent content)
-            {
-                using var memoryStream = new MemoryStream();
-                content.CaptureRectArea.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                var result = Blackboard.predictor.Detect(memoryStream);
-                if (result.Boxes.Any())
+                Fishpond fishpond = new Fishpond(result);
+                int i = 0;
+                foreach (var fish in fishpond.Fishes)
                 {
-                    Fishpond fishpond = new Fishpond(result);
-                    int i = 0;
-                    foreach (var fish in fishpond.Fishes)
-                    {
-                        content.CaptureRectArea.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i}", pen);
-                    }
-                    TaskControl.Sleep(1000);
-                    VisionContext.Instance().DrawContent.ClearAll();
+                    content.CaptureRectArea.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i}");
+                }
+                Sleep(1000);
+                VisionContext.Instance().DrawContent.ClearAll();
 
-                    var oneFourthX = content.CaptureRectArea.SrcBitmap.Width / 4;
-                    var threeFourthX = content.CaptureRectArea.SrcBitmap.Width * 3 / 4;
-                    var centerY = content.CaptureRectArea.SrcBitmap.Height / 2;
-                    if (fishpond.FishpondRect.Left > threeFourthX)
-                    {
-                        Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
-                        TaskControl.Sleep(100);
-                        return BehaviourStatus.Running;
-                    }
-                    else if (fishpond.FishpondRect.Right < oneFourthX)
-                    {
-                        Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
-                        TaskControl.Sleep(100);
-                        return BehaviourStatus.Running;
-                    }
-
-                    #region 1、使人物朝向和镜头方向一致；2、打断角色待机动作，避免钓鱼F交互键被吞
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
-                    TaskControl.Sleep(500);
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
-                    TaskControl.Sleep(500);
-                    #endregion
-
-                    _logger.LogInformation("视角调整完毕");
-                    return BehaviourStatus.Succeeded;
+                var oneFourthX = content.CaptureRectArea.SrcBitmap.Width / 4;
+                var threeFourthX = content.CaptureRectArea.SrcBitmap.Width * 3 / 4;
+                var centerY = content.CaptureRectArea.SrcBitmap.Height / 2;
+                if (fishpond.FishpondRect.Left > threeFourthX)
+                {
+                    Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                    Sleep(100);
+                    return BehaviourStatus.Running;
+                }
+                else if (fishpond.FishpondRect.Right < oneFourthX)
+                {
+                    Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
+                    Sleep(100);
+                    return BehaviourStatus.Running;
                 }
 
-                theta += Math.PI / 6;
-                double r = 30 + 1 * theta;
-                int x = (int)(r * Math.Cos(theta));
-                int y = (int)(2 * r * Math.Sin(theta));
-                Simulation.SendInput.Mouse.MoveMouseBy(x, y);
+                #region 1、使人物朝向和镜头方向一致；2、打断角色待机动作，避免钓鱼F交互键被吞
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
+                Sleep(500);
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
+                Sleep(500);
+                #endregion
 
-                return BehaviourStatus.Running;
+                _logger.LogInformation("视角调整完毕");
+                return BehaviourStatus.Succeeded;
             }
+
+            Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+
+            return BehaviourStatus.Running;
         }
 
         private class EnterFishingMode : BaseBehaviour<CaptureContent>
@@ -265,7 +255,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (Bv.FindFAndPress(content.CaptureRectArea, "钓鱼"))
                 {
                     _logger.LogInformation("按下钓鱼键");
-                    blackboard.Sleep(1000);
+                    blackboard.Sleep(2000);
                     return BehaviourStatus.Running;
                 }
                 else if (Bv.ClickWhiteConfirmButton(content.CaptureRectArea))
