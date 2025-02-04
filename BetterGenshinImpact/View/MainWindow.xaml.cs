@@ -7,18 +7,19 @@ using System.Windows.Media;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Ui;
 using Wpf.Ui;
+using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
-public partial class MainWindow : FluentWindow, INavigationWindow
+public partial class MainWindow : IWindow
 {
     private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
 
     public MainWindowViewModel ViewModel { get; }
 
-    public MainWindow(MainWindowViewModel viewModel, IPageService pageService, INavigationService navigationService, ISnackbarService snackbarService)
+    public MainWindow(MainWindowViewModel viewModel, INavigationService navigationService, ISnackbarService snackbarService)
     {
         _logger.LogDebug("主窗体实例化");
         DataContext = ViewModel = viewModel;
@@ -26,7 +27,6 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         InitializeComponent();
         this.InitializeDpiAwareness();
 
-        SetPageService(pageService);
         snackbarService.SetSnackbarPresenter(SnackbarPresenter);
         navigationService.SetNavigationControl(RootNavigation);
 
@@ -61,12 +61,6 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     {
         throw new NotImplementedException();
     }
-
-    public void SetPageService(IPageService pageService)
-    {
-        RootNavigation.SetPageService(pageService);
-    }
-
     public void ShowWindow() => Show();
 
     public void CloseWindow() => Close();

@@ -22,7 +22,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class KeyMouseRecordPageViewModel : ViewModel
 {
     private readonly ILogger<KeyMouseRecordPageViewModel> _logger = App.GetLogger<KeyMouseRecordPageViewModel>();
     private readonly string scriptPath = Global.Absolute(@"User\KeyMouseScript");

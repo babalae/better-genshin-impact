@@ -76,7 +76,7 @@ public partial class App : Application
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
-                services.AddSingleton<IPageService, PageService>();
+                services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<IUpdateService, UpdateService>();
 
                 // Service containing navigation, same as INavigationWindow... but without window
@@ -84,7 +84,7 @@ public partial class App : Application
                 services.AddSingleton<ISnackbarService, SnackbarService>();
 
                 // Main window with navigation
-                services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
+                services.AddView<IWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
 
                 // Views

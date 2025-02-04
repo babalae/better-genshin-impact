@@ -27,7 +27,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class HomePageViewModel : ViewModel
 {
     [ObservableProperty]
     private string[] _modeNames = GameCaptureFactory.ModeNames();

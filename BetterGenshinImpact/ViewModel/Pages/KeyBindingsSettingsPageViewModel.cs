@@ -16,7 +16,7 @@ using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class KeyBindingsSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class KeyBindingsSettingsPageViewModel : ViewModel
 {
     private readonly ILogger<KeyBindingsSettingsPageViewModel> _logger;
 

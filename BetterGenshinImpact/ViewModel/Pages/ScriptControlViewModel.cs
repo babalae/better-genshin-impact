@@ -41,7 +41,7 @@ using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class ScriptControlViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class ScriptControlViewModel : ViewModel
 {
     private readonly ISnackbarService _snackbarService;
 

@@ -30,7 +30,7 @@ using BetterGenshinImpact.ViewModel.Pages.View;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class TaskSettingsPageViewModel : ViewModel
 {
     public AllConfig Config { get; set; }
 

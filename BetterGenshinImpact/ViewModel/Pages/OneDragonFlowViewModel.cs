@@ -24,7 +24,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class OneDragonFlowViewModel : ViewModel
 {
     private readonly ILogger<OneDragonFlowViewModel> _logger = App.GetLogger<OneDragonFlowViewModel>();
 
