@@ -13,7 +13,7 @@ using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
-public partial class MainWindow : IWindow
+public partial class MainWindow : INavigationWindow
 {
     private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
 
@@ -61,6 +61,10 @@ public partial class MainWindow : IWindow
     {
         throw new NotImplementedException();
     }
+
+    public void SetPageService(INavigationViewPageProvider navigationViewPageProvider) =>
+        RootNavigation.SetPageProviderService(navigationViewPageProvider);
+
     public void ShowWindow() => Show();
 
     public void CloseWindow() => Close();

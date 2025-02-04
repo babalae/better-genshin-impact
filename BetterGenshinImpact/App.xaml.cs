@@ -11,7 +11,6 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -22,10 +21,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.View.Pages.View;
-using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui;
+using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact;
@@ -73,6 +71,7 @@ public partial class App : Application
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
 
+                services.AddNavigationViewPageProvider();
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
@@ -84,7 +83,7 @@ public partial class App : Application
                 services.AddSingleton<ISnackbarService, SnackbarService>();
 
                 // Main window with navigation
-                services.AddView<IWindow, MainWindow, MainWindowViewModel>();
+                services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
 
                 // Views
