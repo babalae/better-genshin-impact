@@ -278,6 +278,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
                 TaskDispatcherEnabled = false;
                 _mouseKeyMonitor.Unsubscribe();
+                TaskContext.Instance().IsInitialized = false;
             }
         }
     }

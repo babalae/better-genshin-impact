@@ -30,6 +30,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
@@ -68,9 +69,9 @@ public class AutoDomainTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-        
+
         Init();
-        NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
+        Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -87,6 +88,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
                     await Delay(2000, ct);
+                    Notify.Event(NotificationEvent.DomainRetry).Error("存在角色死亡，复活后重试秘境...");
                     continue;
                 }
                 else
@@ -102,6 +104,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(2000, ct);
 
         await ArtifactSalvage();
+        Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
     }
 
     private async Task DoDomain()
@@ -157,12 +160,10 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
-
-                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
+                
                 break;
             }
-
-            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
+            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
         }
     }
 
@@ -295,9 +296,9 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogInformation("自动秘境：{Text}", "进入秘境");
                 // 秘境开门动画 5s
                 await Delay(5000, _ct);
-            } 
+            }
             else
-            { 
+            {
                 await Delay(800, _ct);
             }
         }

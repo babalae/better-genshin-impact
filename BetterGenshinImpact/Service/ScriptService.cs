@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.Service;
 
@@ -68,7 +70,9 @@ public partial class ScriptService : IScriptService
         }
 
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-
+        
+        Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+        
         await new TaskRunner(timerOperation)
             .RunThreadAsync(async () =>
             {
@@ -136,10 +140,11 @@ public partial class ScriptService : IScriptService
                         {
                             stopwatch.Stop();
                             var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
-                            _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
+                            // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
                             _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
+
                         }
 
                         await Task.Delay(2000);
@@ -151,6 +156,7 @@ public partial class ScriptService : IScriptService
         {
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
+        Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList, ref bool hasTimer)

@@ -8,20 +8,15 @@ using BetterGenshinImpact.Service.Notification.Model;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
-public class WebhookNotifier : INotifier
+public class FeishuNotifier : INotifier
 {
-    public string Name { get; set; } = "Webhook";
+    public string Name { get; set; } = "Feishu";
 
     public string Endpoint { get; set; }
 
     private readonly HttpClient _httpClient;
     
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-    };
-
-    public WebhookNotifier(HttpClient httpClient, string endpoint = "")
+    public FeishuNotifier(HttpClient httpClient, string endpoint = "")
     {
         _httpClient = httpClient;
         Endpoint = endpoint;
@@ -31,7 +26,7 @@ public class WebhookNotifier : INotifier
     {
         if (string.IsNullOrEmpty(Endpoint))
         {
-            throw new NotifierException("Webhook 地址为空");
+            throw new NotifierException("Feishu webhook endpoint is not set");
         }
         
         try
@@ -40,7 +35,7 @@ public class WebhookNotifier : INotifier
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new NotifierException($"Webhook call failed with code: {response.StatusCode}");
+                throw new NotifierException($"Feishu webhook call failed with code: {response.StatusCode}");
             }
         }
         catch (NotifierException)
@@ -49,15 +44,22 @@ public class WebhookNotifier : INotifier
         }
         catch (System.Exception ex)
         {
-            throw new NotifierException($"Error sending webhook: {ex.Message}");
+            throw new NotifierException($"Error sending Feishu webhook: {ex.Message}");
         }
     }
 
-
     private StringContent TransformData(BaseNotificationData notificationData)
     {
-        // using object type here so it serializes the interface correctly
-        var serializedData = JsonSerializer.Serialize<object>(notificationData, _jsonSerializerOptions);
+        var feishuMessage = new
+        {
+            msg_type = "text",
+            content = new
+            {
+                text = notificationData.Message
+            }
+        };
+
+        var serializedData = JsonSerializer.Serialize(feishuMessage);
 
         return new StringContent(serializedData, Encoding.UTF8, "application/json");
     }

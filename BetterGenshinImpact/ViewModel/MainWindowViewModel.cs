@@ -142,6 +142,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 更新仓库
         ScriptRepoUpdater.Instance.AutoUpdate();
+        
+        // 清理临时目录
+        TempManager.CleanUp();
     }
 
 

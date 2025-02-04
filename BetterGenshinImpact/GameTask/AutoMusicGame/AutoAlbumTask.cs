@@ -8,6 +8,8 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoMusicGame.Assets;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -27,8 +29,10 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
         try
         {
             AutoMusicGameTask.Init();
+            Notify.Event(NotificationEvent.AlbumStart).Success("自动音游专辑启动");
             Logger.LogInformation("开始自动演奏整个专辑未完成的音乐");
             await StartOneAlbum(ct);
+            Notify.Event(NotificationEvent.AlbumEnd).Success("自动音游专辑结束");
         }
         catch (NormalEndException e)
         {
@@ -37,6 +41,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
         catch (Exception e)
         {
             Logger.LogError("自动音乐专辑任务异常:{Msg}", e.Message);
+            Notify.Event(NotificationEvent.AlbumError).Error("自动音游专辑异常", e);
         }
     }
 
@@ -98,7 +103,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                         await Delay(800, ct);
                         continue;
                     }
-                    
+
                     Logger.LogInformation("第{Num}首{Difficulty}难度的乐曲：{Message}", i + 1, difficultyName, "没有完成【大音天籁】");
                 }
                 else
@@ -114,7 +119,6 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
 
                     Logger.LogInformation("当前乐曲{Num}存在未领取奖励，前往演奏", i + 1);
                 }
-
 
 
                 // 点击确认按钮
