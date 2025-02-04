@@ -42,14 +42,6 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
     }
 
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
-    }
-
     [RelayCommand]
     private void OnEditBlacklist()
     {

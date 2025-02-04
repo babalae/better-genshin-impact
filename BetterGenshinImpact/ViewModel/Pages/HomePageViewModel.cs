@@ -293,14 +293,6 @@ public partial class HomePageViewModel : ViewModel
         UIDispatcherHelper.Invoke(() => Start(_hWnd));
     }
 
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
-    }
-
     [RelayCommand]
     public void OnGoToWikiUrl()
     {

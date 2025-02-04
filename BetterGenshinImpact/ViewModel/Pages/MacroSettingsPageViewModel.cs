@@ -25,15 +25,7 @@ public partial class MacroSettingsPageViewModel : ViewModel
         Config = configService.Get();
         _navigationService = navigationService;
     }
-
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
-    }
-
+    
     [RelayCommand]
     public void OnGoToHotKeyPage()
     {

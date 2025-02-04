@@ -74,13 +74,9 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         return files.Select(file => new FileInfo(file)).ToList();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitScriptListViewData();
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]

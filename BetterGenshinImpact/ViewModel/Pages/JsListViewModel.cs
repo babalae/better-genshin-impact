@@ -71,13 +71,9 @@ public partial class JsListViewModel : ViewModel
         return di.GetDirectories();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitScriptListViewData();
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]

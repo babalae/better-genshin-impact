@@ -63,12 +63,9 @@ public partial class ScriptControlViewModel : ViewModel
 
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     public readonly string LogPath = Global.Absolute(@"log");
+    
 
-    public void OnNavigatedFrom()
-    {
-    }
-
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         ReadScriptGroup();
     }

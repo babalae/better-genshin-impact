@@ -41,14 +41,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _notificationService = notificationService;
     }
 
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
-    }
-
     [RelayCommand]
     public void OnRefreshMaskSettings()
     {

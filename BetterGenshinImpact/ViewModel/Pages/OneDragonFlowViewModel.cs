@@ -90,7 +90,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         InitConfigList();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitConfigList();
     }

@@ -140,14 +140,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _autoFightViewModel.OnStrategyDropDownOpened(type);
     }
 
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
-    }
-
     [RelayCommand]
     public void OnGoToHotKeyPage()
     {

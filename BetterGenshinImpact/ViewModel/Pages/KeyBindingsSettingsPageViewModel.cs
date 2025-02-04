@@ -28,14 +28,6 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private ObservableCollection<KeyBindingSettingModel> _keyBindingSettingModels = [];
 
-    public void OnNavigatedFrom()
-    {
-    }
-
-    public void OnNavigatedTo()
-    {
-    }
-
     public KeyBindingsSettingsPageViewModel(IConfigService configService, ILogger<KeyBindingsSettingsPageViewModel> logger)
     {
         _logger = logger;
