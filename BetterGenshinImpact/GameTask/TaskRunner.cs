@@ -12,6 +12,7 @@ using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -63,7 +64,7 @@ public class TaskRunner
         }
         catch (NormalEndException e)
         {
-            Notify.Event("task.cancel").Success("任务手动取消，或正常结束");
+            Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
             _logger.LogInformation("任务中断:{Msg}", e.Message);
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
@@ -73,7 +74,7 @@ public class TaskRunner
         }
         catch (TaskCanceledException e)
         {
-            Notify.Event("task.cancel").Success("任务被手动取消");
+            Notify.Event(NotificationEvent.TaskCancel).Success("任务被手动取消");
             _logger.LogInformation("任务中断:{Msg}", "任务被取消");
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
@@ -83,7 +84,7 @@ public class TaskRunner
         }
         catch (Exception e)
         {
-            Notify.Event("task.error").Error("任务执行异常", e);
+            Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
         }

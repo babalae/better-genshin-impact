@@ -29,6 +29,11 @@ public class WebhookNotifier : INotifier
 
     public async Task SendAsync(BaseNotificationData content)
     {
+        if (string.IsNullOrEmpty(Endpoint))
+        {
+            throw new NotifierException("Webhook 地址为空");
+        }
+        
         try
         {
             var response = await _httpClient.PostAsync(Endpoint, TransformData(content));

@@ -71,7 +71,7 @@ public class AutoDomainTask : ISoloTask
         _ct = ct;
 
         Init();
-        Notify.Event("domain.start").Success("自动秘境启动");
+        Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -88,7 +88,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
                     await Delay(2000, ct);
-                    Notify.Event("domain.retry").Error("存在角色死亡，复活后重试秘境...");
+                    Notify.Event(NotificationEvent.DomainRetry).Error("存在角色死亡，复活后重试秘境...");
                     continue;
                 }
                 else
@@ -104,7 +104,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(2000, ct);
 
         await ArtifactSalvage();
-        Notify.Event("domain.end").Success("自动秘境结束");
+        Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
     }
 
     private async Task DoDomain()

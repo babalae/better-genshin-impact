@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
@@ -208,7 +209,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
             .RunThreadAsync(async () =>
             {
-                Notify.Event("dragon.start").Success("一条龙启动");
+                Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
                 foreach (var task in TaskList)
                 {
                     if (task is { IsEnabled: true, Action: not null })
@@ -217,7 +218,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                         await Task.Delay(1000);
                     }
                 }
-                Notify.Event("dragon.end").Success("一条龙结束");
+                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙结束");
             });
     }
 

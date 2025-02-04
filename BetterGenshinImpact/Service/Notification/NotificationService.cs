@@ -59,7 +59,7 @@ public class NotificationService : IHostedService
         {
             _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
         }
-        
+
         if (TaskContext.Instance().Config.NotificationConfig.FeishuNotificationEnabled)
         {
             _notifierManager.RegisterNotifier(new FeishuNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.FeishuWebhookUrl));
@@ -104,6 +104,15 @@ public class NotificationService : IHostedService
 
     public async Task NotifyAllNotifiersAsync(BaseNotificationData notificationData)
     {
+        var subscribeEventStr = TaskContext.Instance().Config.NotificationConfig.NotificationEventSubscribe;
+        if (!string.IsNullOrEmpty(subscribeEventStr))
+        {
+            if (!subscribeEventStr.Contains(notificationData.Event))
+            {
+                return;
+            }
+        }
+
         await _notifierManager.SendNotificationToAllAsync(notificationData);
     }
 

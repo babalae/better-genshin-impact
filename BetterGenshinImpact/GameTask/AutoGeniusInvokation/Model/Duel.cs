@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
@@ -60,7 +61,7 @@ public class Duel
         LogScreenResolution();
         try
         {
-            Notify.Event("tcg.start").Success("自动七胜召唤启动");
+            Notify.Event(NotificationEvent.TcgStart).Success("自动七胜召唤启动");
             
             AutoGeniusInvokationAssets.DestroyInstance();
             
@@ -305,7 +306,7 @@ public class Duel
             throw;
         }
         
-        Notify.Event("tcg.end").Success("自动七胜召唤结束");
+        Notify.Event(NotificationEvent.TcgEnd).Success("自动七胜召唤结束");
     }
 
     private HashSet<ElementalType> PredictionDiceType()
