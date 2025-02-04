@@ -96,7 +96,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             throw new Exception("获取仓库信息失败");
         }
-        
+
         var (time, url, file) = ParseJson(jsonString);
 
         var updated = false;
@@ -115,6 +115,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             needDownload = true;
         }
+
         if (needDownload)
         {
             await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url));
@@ -251,6 +252,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Content = $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
                     CloseButtonText = "关闭",
                     PrimaryButtonText = "确认导入",
+                    Owner = Application.Current.MainWindow,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
 
@@ -398,7 +400,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 {
                     // 目标文件所在文件夹不存在时创建它
                     Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-                    
+
                     if (File.Exists(destPath))
                     {
                         File.Delete(destPath);

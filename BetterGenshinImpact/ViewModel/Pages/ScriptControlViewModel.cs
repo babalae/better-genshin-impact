@@ -1324,6 +1324,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             },
             CloseButtonText = "关闭",
             PrimaryButtonText = "确认执行",
+            Owner =  Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
