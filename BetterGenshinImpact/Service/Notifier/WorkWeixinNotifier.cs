@@ -53,9 +53,9 @@ public class WorkWeixinNotifier : INotifier
         var workweixinMessage = new
         {
             msgtype = "text",
-            content = new
+            text = new
             {
-                text = notificationData.Message
+                content = notificationData.Message
             }
         };
 
