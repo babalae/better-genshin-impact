@@ -251,7 +251,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Content = $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
                     CloseButtonText = "关闭",
                     PrimaryButtonText = "确认导入",
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    WindowStartupLocation = WindowStartupLocation.Manual,
                 };
 
                 var result = await uiMessageBox.ShowDialogAsync();
