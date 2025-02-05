@@ -15,13 +15,32 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.Service;
 
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
+    private static bool IsCurrentHourEqual(string input)
+    {
+        // 尝试将输入字符串转换为整数
+        if (int.TryParse(input, out int hour))
+        {
+            // 验证小时是否在合法范围内（0-23）
+            if (hour is >= 0 and <= 23)
+            {
+                // 获取当前小时数
+                int currentHour = DateTime.Now.Hour;
+                // 判断是否相等
+                return currentHour == hour;
+            }
+        }
 
+        // 如果输入非数字或不合法，返回 false
+        return false;
+    }
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
         groupName ??= "默认";
@@ -51,7 +70,9 @@ public partial class ScriptService : IScriptService
         }
 
         var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-
+        
+        Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+        
         await new TaskRunner(timerOperation)
             .RunThreadAsync(async () =>
             {
@@ -59,6 +80,13 @@ public partial class ScriptService : IScriptService
 
                 foreach (var project in list)
                 {
+                    
+                    if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                    {
+                        _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                        continue;
+                    }
+                    
                     if (project.Status != "Enabled")
                     {
                         _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
@@ -85,6 +113,14 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
+                            
+                            //多次执行时及时中断
+                            if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                            {
+                                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                                break;
+                            }
+                            
                         }
                         catch (NormalEndException e)
                         {
@@ -104,10 +140,11 @@ public partial class ScriptService : IScriptService
                         {
                             stopwatch.Stop();
                             var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
-                            _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
+                            // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
                             _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
+
                         }
 
                         await Task.Delay(2000);
@@ -119,6 +156,7 @@ public partial class ScriptService : IScriptService
         {
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
+        Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList, ref bool hasTimer)
@@ -175,6 +213,7 @@ public partial class ScriptService : IScriptService
 
     private async Task ExecuteProject(ScriptGroupProject project)
     {
+       
         if (project.Type == "Javascript")
         {
             if (project.Project == null)
@@ -218,7 +257,7 @@ public partial class ScriptService : IScriptService
     private static partial Regex DispatcherAddTimerRegex();
 
 
-    public static async Task StartGameTask()
+    public static async Task StartGameTask(bool waitForMainUi = true)
     {
         // 没启动时候，启动截图器
         var homePageViewModel = App.GetService<HomePageViewModel>();
@@ -226,29 +265,33 @@ public partial class ScriptService : IScriptService
         {
             await homePageViewModel.OnStartTriggerAsync();
 
-            await Task.Run(() =>
+            if (waitForMainUi)
             {
-                var first = true;
-                while (true)
+                await Task.Run(() =>
                 {
-                    if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                    var first = true;
+                    while (true)
                     {
-                        continue;
-                    }
+                        if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                        {
+                            continue;
+                        }
 
-                    var content = TaskControl.CaptureToRectArea();
-                    if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
-                    {
-                        return;
-                    }
+                        var content = TaskControl.CaptureToRectArea();
+                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
+                        {
+                            return;
+                        }
 
-                    if (first)
-                    {
-                        first = false;
-                        TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                        if (first)
+                        {
+                            first = false;
+                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），使当前任务能够继续运行！");
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 }

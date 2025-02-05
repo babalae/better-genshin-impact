@@ -4,6 +4,7 @@ using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security.AccessControl;
 using System.Text;
 using System.Threading;
 using System.Windows;
@@ -31,6 +32,7 @@ public class WebpagePanel : UserControl
         }
         else
         {
+            EnsureWebView2DataFolder();
             _webView = new WebView2()
             {
                 CreationProperties = new CoreWebView2CreationProperties
@@ -155,4 +157,19 @@ public class WebpagePanel : UserControl
 
         return button;
     }
+
+    private void EnsureWebView2DataFolder()
+    {
+        try
+        {
+            string folder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\");
+            Directory.CreateDirectory(folder);
+            DirectoryInfo info = new DirectoryInfo(folder);
+            DirectorySecurity access = info.GetAccessControl();
+            access.AddAccessRule(new FileSystemAccessRule("Everyone", FileSystemRights.FullControl, AccessControlType.Allow));
+            info.SetAccessControl(access);
+        }
+        catch { }
+    }
+
 }

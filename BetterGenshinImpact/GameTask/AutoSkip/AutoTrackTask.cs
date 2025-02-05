@@ -63,13 +63,11 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         catch (NormalEndException e)
         {
             Logger.LogInformation("自动追踪中断:" + e.Message);
-            // NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Cancelled().Build());
         }
         catch (Exception e)
         {
             Logger.LogError(e.Message);
             Logger.LogDebug(e.StackTrace);
-            // NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Failure().Build());
         }
         finally
         {

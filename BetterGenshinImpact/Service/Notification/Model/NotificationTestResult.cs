@@ -7,7 +7,7 @@ public class NotificationTestResult
 
     public static NotificationTestResult Success()
     {
-        return new NotificationTestResult { IsSuccess = true, Message = "成功" };
+        return new NotificationTestResult { IsSuccess = true, Message = "通知成功" };
     }
 
     public static NotificationTestResult Error(string message)

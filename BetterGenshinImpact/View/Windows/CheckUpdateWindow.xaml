@@ -51,7 +51,8 @@
                            Appearance="Success"
                            Command="{Binding UpdateCommand}"
                            Content="立即更新" />
-                <ui:Button Grid.Column="2"
+                <ui:Button Name="IgnoreButton"
+                    Grid.Column="2"
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding IgnoreCommand}"

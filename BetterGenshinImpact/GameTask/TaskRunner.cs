@@ -11,6 +11,8 @@ using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -48,17 +50,13 @@ public class TaskRunner
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
             return;
         }
-
         try
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
 
             // 初始化
             Init();
-
-            // 发送运行任务通知
-            SendNotification();
-
+            
             CancellationContext.Instance.Set();
             RunnerContext.Instance.Clear();
 
@@ -66,8 +64,8 @@ public class TaskRunner
         }
         catch (NormalEndException e)
         {
+            Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
             _logger.LogInformation("任务中断:{Msg}", e.Message);
-            SendNotification();
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -76,8 +74,8 @@ public class TaskRunner
         }
         catch (TaskCanceledException e)
         {
+            Notify.Event(NotificationEvent.TaskCancel).Success("任务被手动取消");
             _logger.LogInformation("任务中断:{Msg}", "任务被取消");
-            SendNotification();
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -86,15 +84,14 @@ public class TaskRunner
         }
         catch (Exception e)
         {
+            Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
-            SendNotification();
         }
         finally
         {
             End();
             _logger.LogInformation("→ {Text}", _name + "任务结束");
-            SendNotification();
 
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
@@ -120,7 +117,8 @@ public class TaskRunner
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
         // 没启动的时候先启动
-        await ScriptService.StartGameTask();
+        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游");
+        await ScriptService.StartGameTask(waitForMainUi);
         await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
 
@@ -190,7 +188,4 @@ public class TaskRunner
         }
     }
 
-    public void SendNotification()
-    {
-    }
 }

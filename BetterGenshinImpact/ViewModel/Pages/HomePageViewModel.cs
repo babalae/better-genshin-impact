@@ -100,18 +100,21 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnLoaded()
     {
         // OnTest();
-        
+
         var args = Environment.GetCommandLineArgs();
+
+        // url protocol
+        // BetterGI.dll bettergi://start/
         if (args.Length > 1)
         {
-            if (args[1].Equals("start"))
-            {
-                _ = OnStartTriggerAsync();
-            }
-            else if (args[1].Equals("startOneDragon"))
+            if (args[1].Contains("startOneDragon"))
             {
                 var odVm = App.GetService<OneDragonFlowViewModel>();
                 odVm?.OneKeyExecuteCommand.Execute(null);
+            }
+            else if (args[1].Contains("start"))
+            {
+                _ = OnStartTriggerAsync();
             }
         }
     }
@@ -275,6 +278,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
                 TaskDispatcherEnabled = false;
                 _mouseKeyMonitor.Unsubscribe();
+                TaskContext.Instance().IsInitialized = false;
             }
         }
     }
@@ -300,7 +304,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     [RelayCommand]
     public void OnGoToWikiUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/doc.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bettergi.com/doc.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

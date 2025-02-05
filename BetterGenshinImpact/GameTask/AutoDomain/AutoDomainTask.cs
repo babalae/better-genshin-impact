@@ -30,6 +30,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
@@ -43,8 +44,6 @@ public class AutoDomainTask : ISoloTask
 
     private readonly AutoDomainParam _taskParam;
 
-    private readonly PostMessageSimulator _simulator;
-
     private readonly YoloV8Predictor _predictor;
 
     private readonly AutoDomainConfig _config;
@@ -55,10 +54,8 @@ public class AutoDomainTask : ISoloTask
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
-        _taskParam = taskParam;
         AutoFightAssets.DestroyInstance();
-        _simulator = TaskContext.Instance().PostMessageSimulator;
-
+        _taskParam = taskParam;
         _predictor = YoloV8Builder.CreateDefaultBuilder()
             .UseOnnxModel(Global.Absolute(@"Assets\Model\Domain\bgi_tree.onnx"))
             .WithSessionOptions(BgiSessionOption.Instance.Options)
@@ -72,9 +69,9 @@ public class AutoDomainTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         _ct = ct;
-        
+
         Init();
-        NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Started().Build()); // TODO: 通知后续需要删除迁移
+        Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
         // 3次复活重试
         for (int i = 0; i < 3; i++)
@@ -91,6 +88,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
                     await Delay(2000, ct);
+                    Notify.Event(NotificationEvent.DomainRetry).Error("存在角色死亡，复活后重试秘境...");
                     continue;
                 }
                 else
@@ -106,6 +104,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(2000, ct);
 
         await ArtifactSalvage();
+        Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
     }
 
     private async Task DoDomain()
@@ -161,12 +160,10 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
-
-                NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Success().Build());
+                
                 break;
             }
-
-            NotificationHelper.SendTaskNotificationWithScreenshotUsing(b => b.Domain().Progress().Build());
+            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
         }
     }
 
@@ -287,7 +284,7 @@ public class AutoDomainTask : ISoloTask
 
     private async Task EnterDomain()
     {
-        var fightAssets = AutoFightContext.Instance.FightAssets;
+        var fightAssets = AutoFightAssets.Instance;
 
         // 进入秘境
         for (int i = 0; i < 3; i++)  // 3次重试 有时候会拾取晶蝶
@@ -299,9 +296,9 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogInformation("自动秘境：{Text}", "进入秘境");
                 // 秘境开门动画 5s
                 await Delay(5000, _ct);
-            } 
+            }
             else
-            { 
+            {
                 await Delay(800, _ct);
             }
         }
@@ -332,7 +329,7 @@ public class AutoDomainTask : ISoloTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            using var cactRectArea = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.ClickAnyCloseTipRa);
+            using var cactRectArea = CaptureToRectArea().Find(AutoFightAssets.Instance.ClickAnyCloseTipRa);
             if (!cactRectArea.IsEmpty())
             {
                 await Delay(1000, _ct);
@@ -368,7 +365,7 @@ public class AutoDomainTask : ISoloTask
 
         await Task.Run((Action)(() =>
         {
-            _simulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Sleep(30, _ct);
             // 组合键好像不能直接用 postmessage
             if (!_config.WalkToF)
@@ -395,7 +392,7 @@ public class AutoDomainTask : ISoloTask
             }
             finally
             {
-                _simulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 Sleep(50);
                 if (!_config.WalkToF)
                 {
@@ -495,7 +492,7 @@ public class AutoDomainTask : ISoloTask
     {
         using var ra = CaptureToRectArea();
 
-        var endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsUpperRect);
+        var endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("挑战") || text.Contains("达成"))
         {
@@ -503,7 +500,7 @@ public class AutoDomainTask : ISoloTask
             return true;
         }
 
-        endTipsRect = ra.DeriveCrop(AutoFightContext.Instance.FightAssets.EndTipsRect);
+        endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsRect);
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
         if (text.Contains("自动") || text.Contains("退出"))
         {
@@ -611,13 +608,13 @@ public class AutoDomainTask : ISoloTask
                         if (rightKeyDown)
                         {
                             // 先松开D键
-                            _simulator.KeyUp(moveRightKey);
+                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
                             rightKeyDown = false;
                         }
 
                         if (!leftKeyDown)
                         {
-                            _simulator.KeyDown(moveLeftKey);
+                            Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
                             leftKeyDown = true;
                         }
                     }
@@ -629,13 +626,13 @@ public class AutoDomainTask : ISoloTask
                         if (leftKeyDown)
                         {
                             // 先松开A键
-                            _simulator.KeyUp(moveLeftKey);
+                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
                             leftKeyDown = false;
                         }
 
                         if (!rightKeyDown)
                         {
-                            _simulator.KeyDown(moveRightKey);
+                            Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
                             rightKeyDown = true;
                         }
                     }
@@ -644,14 +641,14 @@ public class AutoDomainTask : ISoloTask
                         // 树在中间 松开所有键
                         if (rightKeyDown)
                         {
-                            _simulator.KeyUp(moveRightKey);
+                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
                             prevKey = moveRightKey;
                             rightKeyDown = false;
                         }
 
                         if (leftKeyDown)
                         {
-                            _simulator.KeyUp(moveLeftKey);
+                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
                             prevKey = moveLeftKey;
                             leftKeyDown = false;
                         }
@@ -664,7 +661,9 @@ public class AutoDomainTask : ISoloTask
                                 backwardsAndForwardsCount++;
                             }
 
-                            _simulator.KeyPress(moveLeftKey, 60);
+                            Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
+                            Sleep(60); 
+                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
                             prevKey = moveLeftKey;
                         }
                         else if (treeMiddleX > middleX)
@@ -674,12 +673,16 @@ public class AutoDomainTask : ISoloTask
                                 backwardsAndForwardsCount++;
                             }
 
-                            _simulator.KeyPress(moveRightKey, 60);
+                            Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
+                            Sleep(60); 
+                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
                             prevKey = moveRightKey;
                         }
                         else
                         {
-                            _simulator.KeyPress(moveForwardKey, 60);
+                            Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
+                            Sleep(60); 
+                            Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
                             Sleep(500, _ct);
                             treeCts.Cancel();
                             break;
@@ -695,13 +698,13 @@ public class AutoDomainTask : ISoloTask
                     {
                         if (leftKeyDown)
                         {
-                            _simulator.KeyUp(moveLeftKey);
+                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
                             leftKeyDown = false;
                         }
 
                         if (!rightKeyDown)
                         {
-                            _simulator.KeyDown(moveRightKey);
+                            Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
                             rightKeyDown = true;
                         }
                     }
@@ -709,13 +712,13 @@ public class AutoDomainTask : ISoloTask
                     {
                         if (rightKeyDown)
                         {
-                            _simulator.KeyUp(moveRightKey);
+                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
                             rightKeyDown = false;
                         }
 
                         if (!leftKeyDown)
                         {
-                            _simulator.KeyDown(moveLeftKey);
+                            Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
                             leftKeyDown = true;
                         }
                     }
@@ -724,7 +727,9 @@ public class AutoDomainTask : ISoloTask
                 if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
                 {
                     // 左右移动5次说明已经在树中心了
-                    _simulator.KeyPress(moveForwardKey, 60);
+                    Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
+                    Sleep(60); 
+                    Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
                     Sleep(500, _ct);
                     treeCts.Cancel();
                     break;
@@ -843,7 +848,7 @@ public class AutoDomainTask : ISoloTask
                 break;
             }
 
-            var useCondensedResinRa = CaptureToRectArea().Find(AutoFightContext.Instance.FightAssets.UseCondensedResinRa);
+            var useCondensedResinRa = CaptureToRectArea().Find(AutoFightAssets.Instance.UseCondensedResinRa);
             if (!useCondensedResinRa.IsEmpty())
             {
                 useCondensedResinRa.Click();
@@ -883,13 +888,13 @@ public class AutoDomainTask : ISoloTask
 
 
             // 优先点击继续
-            using var confirmRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ConfirmRa);
+            using var confirmRectArea = ra.Find(AutoFightAssets.Instance.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 if (isLastTurn)
                 {
                     // 最后一回合 退出
-                    var exitRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ExitRa);
+                    var exitRectArea = ra.Find(AutoFightAssets.Instance.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.Click();
@@ -907,7 +912,7 @@ public class AutoDomainTask : ISoloTask
                 if (condensedResinCount == 0 && fragileResinCount < 20)
                 {
                     // 没有体力了退出
-                    var exitRectArea = ra.Find(AutoFightContext.Instance.FightAssets.ExitRa);
+                    var exitRectArea = ra.Find(AutoFightAssets.Instance.ExitRa);
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.Click();
@@ -938,7 +943,7 @@ public class AutoDomainTask : ISoloTask
 
         var ra = CaptureToRectArea();
         // 浓缩树脂
-        var condensedResinCountRa = ra.Find(AutoFightContext.Instance.FightAssets.CondensedResinCountRa);
+        var condensedResinCountRa = ra.Find(AutoFightAssets.Instance.CondensedResinCountRa);
         if (!condensedResinCountRa.IsEmpty())
         {
             // 图像右侧就是浓缩树脂数量
@@ -949,7 +954,7 @@ public class AutoDomainTask : ISoloTask
         }
 
         // 脆弱树脂
-        var fragileResinCountRa = ra.Find(AutoFightContext.Instance.FightAssets.FragileResinCountRa);
+        var fragileResinCountRa = ra.Find(AutoFightAssets.Instance.FragileResinCountRa);
         if (!fragileResinCountRa.IsEmpty())
         {
             // 图像右侧就是脆弱树脂数量

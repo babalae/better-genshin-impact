@@ -473,7 +473,7 @@
 
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
-                            <ui:FontIcon Glyph="&#xf14e;" Style="{StaticResource FaFontIconStyle}" />
+                            <ui:FontIcon Glyph="&#xf68a;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardControl.Icon>
                         <ui:CardControl.Header>
                             <Grid>
@@ -541,7 +541,7 @@
 
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
-                            <ui:FontIcon Glyph="&#xf14e;" Style="{StaticResource FaFontIconStyle}" />
+                            <ui:FontIcon Glyph="&#xf4c7;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardControl.Icon>
                         <ui:CardControl.Header>
                             <Grid>

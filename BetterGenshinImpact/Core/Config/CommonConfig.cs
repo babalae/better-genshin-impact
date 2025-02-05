@@ -39,4 +39,10 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isFirstRun = true;
+    
+    /// <summary>
+    /// 这个版本是否运行过
+    /// </summary>
+    [ObservableProperty]
+    private string _runForVersion = string.Empty;
 }
