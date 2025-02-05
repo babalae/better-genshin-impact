@@ -148,7 +148,7 @@ public class SwitchPartyTask
         {
             if (textRegion.Text == partyName)
             {
-                page.ClickTo(textRegion.Right, textRegion.Bottom + textRegion.Height * 2);
+                page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
                 await Delay(200, ct);
                 Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
                 await ConfirmParty(page, ct);
