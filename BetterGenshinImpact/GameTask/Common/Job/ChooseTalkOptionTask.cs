@@ -46,15 +46,25 @@ public partial class ChooseTalkOptionTask
 
         await Task.Delay(500, ct);
 
-        for (var i = 0; i < skipTimes; i++) // 重试3次
+        bool firstOcrOption = true;
+        for (var i = 0; i < skipTimes; i++) // 重试N次
         {
             var region = CaptureToRectArea();
             var optionRegions = RecognizeOption(region, ct);
             if (optionRegions == null)
             {
                 TaskContext.Instance().PostMessageSimulator.KeyPressBackground(User32.VK.VK_SPACE);
-                await Delay(200, ct);
+                await Delay(500, ct);
                 continue; // retry
+            }
+            else
+            {
+                // 首次识别到文字，延迟1s重新识别一次，保证文字已经完全展示
+                if (firstOcrOption)
+                {
+                    await Delay(1000, ct);
+                    firstOcrOption = false;
+                }
             }
 
             foreach (var optionRa in optionRegions)
