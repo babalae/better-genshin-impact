@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Helpers.Http;
 
@@ -15,9 +16,6 @@ public class ProxySpeedTester
         "{0}",
         "https://mirror.ghproxy.com/{0}",
         "https://hub.gitmirror.com/{0}",
-        "https://ghproxy.cc/{0}",
-        "https://www.ghproxy.cc/{0}",
-        "https://ghproxy.cn/{0}",
         "https://ghproxy.net/{0}"
     ];
 
@@ -70,7 +68,9 @@ public class ProxySpeedTester
             // 模拟代理测试请求
             var response = await _httpClient.GetAsync(string.Format(proxyAddress, target), cancellationToken);
             response.EnsureSuccessStatusCode();
-            return (proxyAddress, await response.Content.ReadAsStringAsync(cancellationToken), true);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var json = JObject.Parse(content);
+            return (proxyAddress, content, true);
         }
         catch (Exception e)
         {

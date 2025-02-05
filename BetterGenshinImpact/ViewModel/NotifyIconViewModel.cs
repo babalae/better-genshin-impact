@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using BetterGenshinImpact.Model;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -44,40 +45,11 @@ public partial class NotifyIconViewModel : ObservableObject
     [RelayCommand]
     public async Task CheckUpdateAsync()
     {
-        try
+        // 检查更新
+        await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
         {
-            using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-            string jsonString = await httpClient.GetStringAsync(@"https://api.github.com/repos/babalae/better-genshin-impact/releases/latest");
-            var jsonDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
-
-            if (jsonDict != null)
-            {
-                string? name = jsonDict["name"] as string;
-                string? body = jsonDict["body"] as string;
-                string md = $"# {name}{new string('\n', 2)}{body}";
-
-                md = WebUtility.HtmlEncode(md);
-                string md2html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html", Encoding.UTF8);
-                var html = md2html.Replace("{{content}}", md);
-
-                WebpageWindow win = new()
-                {
-                    Title = "更新日志",
-                    Width = 800,
-                    Height = 600,
-                    Owner = Application.Current.MainWindow,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-
-                win.NavigateToHtml(html);
-                win.ShowDialog();
-            }
-        }
-        catch (Exception e)
-        {
-            _ = e;
-        }
+            Trigger = UpdateTrigger.Manual
+        });
     }
 }
 
@@ -100,6 +72,7 @@ file static class WindowBacktray
             {
                 window.Visibility = Visibility.Visible;
             }
+
             if (window.WindowState == WindowState.Minimized)
             {
                 nint hWnd = new WindowInteropHelper(Application.Current.MainWindow).Handle;

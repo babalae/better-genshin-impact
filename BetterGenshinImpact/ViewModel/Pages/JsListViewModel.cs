@@ -118,7 +118,7 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
     [RelayCommand]
     public void OnGoToJsScriptUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bgi.huiyadan.com/feats/autos/jsscript.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/jsscript.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

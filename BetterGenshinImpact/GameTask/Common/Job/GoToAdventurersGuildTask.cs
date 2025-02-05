@@ -80,7 +80,7 @@ public class GoToAdventurersGuildTask
             await new ReturnMainUiTask().Start(ct);
 
             // 结束后重新打开
-            await Delay(1000, ct);
+            await Delay(1200, ct);
             var ra = CaptureToRectArea();
             if (!Bv.FindFAndPress(ra, "凯瑟琳"))
             {

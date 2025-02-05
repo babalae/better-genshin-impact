@@ -143,7 +143,7 @@ public class PathExecutor
         {
             return;
         }
-        
+
         InitializePathing(task);
         // 转换、按传送点分割路径
         var waypointsList = ConvertWaypointsForTrack(task.Positions);
@@ -154,13 +154,13 @@ public class PathExecutor
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
-            
+
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
                 {
                     await ResolveAnomalies(); // 异常场景处理
-                    foreach (var waypoint in waypoints)   // 一条路径
+                    foreach (var waypoint in waypoints) // 一条路径
                     {
                         CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
                         TryCloseSkipOtherOperations();
@@ -179,20 +179,22 @@ public class PathExecutor
                             await BeforeMoveToTarget(waypoint);
 
                             // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
-                            await MoveTo(waypoint);
-
-                            if (waypoint.Type == WaypointType.Target.Code
-                                // 除了 fight mining stop_flying 之外的 action 都需要接近
-                                || (!string.IsNullOrEmpty(waypoint.Action)
-                                    && waypoint.Action != ActionEnum.NahidaCollect.Code
-                                    && waypoint.Action != ActionEnum.Fight.Code
-                                    && waypoint.Action != ActionEnum.CombatScript.Code
-                                    && waypoint.Action != ActionEnum.Mining.Code))
+                            if (waypoint.Type == WaypointType.Orientation.Code)
                             {
-                                if (waypoint.Action != ActionEnum.Fight.Code) // 战斗action强制不接近
-                                {
-                                    await MoveCloseTo(waypoint);
-                                }
+                                // 方位点，只需要朝向
+                                // 考虑到方位点大概率是作为执行action的最后一个点，所以放在此处处理，不和传送点一样单独处理
+                                await FaceTo(waypoint);
+                            }
+                            else
+                            {
+                                await MoveTo(waypoint);
+                            }
+
+                            await BeforeMoveCloseToTarget(waypoint);
+
+                            if (IsTargetPoint(waypoint))
+                            {
+                                await MoveCloseTo(waypoint);
                             }
 
                             //skipOtherOperations如果重试，则跳过相关操作，
@@ -249,6 +251,25 @@ public class PathExecutor
                 }
             }
         }
+    }
+
+    private bool IsTargetPoint(WaypointForTrack waypoint)
+    {
+        // 方位点不需要接近
+        if (waypoint.Type == WaypointType.Orientation.Code)
+        {
+            return false;
+        }
+        
+        var action = ActionEnum.GetEnumByCode(waypoint.Action);
+        if (action is not null && action.UseWaypointTypeEnum != ActionUseWaypointTypeEnum.Custom)
+        {
+            // 强制点位类型的 action，以 action 为准
+            return action.UseWaypointTypeEnum == ActionUseWaypointTypeEnum.Target;
+        }
+
+        // 其余情况和没有action的情况以点位类型为准
+        return waypoint.Type == WaypointType.Target.Code;
     }
 
     private async Task<bool> SwitchPartyBefore(PathingTask task)
@@ -564,6 +585,16 @@ public class PathExecutor
         await Delay(500, ct); // 多等一会
     }
 
+    private async Task FaceTo(WaypointForTrack waypoint)
+    {
+        var screen = CaptureToRectArea();
+        var position = await GetPosition(screen);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        Logger.LogInformation("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+        await Delay(500, ct);
+    }
+
     private async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
@@ -806,20 +837,11 @@ public class PathExecutor
 
     private async Task MoveCloseTo(WaypointForTrack waypoint)
     {
-        var screen = CaptureToRectArea();
-        var position = await GetPosition(screen);
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        ImageRegion screen;
+        Point2f position;
+        int targetOrientation;
         Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
-        {
-            //下落攻击接近目的地
-            Logger.LogInformation("动作：下落攻击");
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-            await Delay(1000, ct);
-            return;
-        }
 
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         var stepsTaken = 0;
         while (!ct.IsCancellationRequested)
         {
@@ -855,6 +877,17 @@ public class PathExecutor
 
         // 到达目的地后停顿一秒
         await Delay(1000, ct);
+    }
+
+    private async Task BeforeMoveCloseToTarget(WaypointForTrack waypoint)
+    {
+        if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
+        {
+            //下落攻击接近目的地
+            Logger.LogInformation("动作：下落攻击");
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            await Delay(1000, ct);
+        }
     }
 
     private async Task BeforeMoveToTarget(WaypointForTrack waypoint)
@@ -968,6 +1001,8 @@ public class PathExecutor
             {
                 _autoSkipTrigger = new AutoSkipTrigger(new AutoSkipConfig
                 {
+                    QuicklySkipConversationsEnabled = true, // 快速点击过剧情
+                    ClosePopupPagedEnabled = true,
                     ClickChatOption = "优先选择最后一个选项",
                 });
                 _autoSkipTrigger.Init();

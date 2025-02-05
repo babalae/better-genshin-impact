@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -55,7 +56,7 @@ public class Avatar
     /// 长按元素战技CD
     /// </summary>
     public double SkillHoldCd { get; set; }
-    
+
     /// <summary>
     /// 最近一次使用元素战技的时间
     /// </summary>
@@ -119,7 +120,7 @@ public class Avatar
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);    // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, Ct);
             Simulation.SendInput.SimulateAction(GIActions.OpenMap);
             // tp 到七天神像复活
@@ -155,23 +156,24 @@ public class Avatar
             switch (Index)
             {
                 case 1:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember1);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
                     break;
                 case 2:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember2);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
                     break;
                 case 3:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember3);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
                     break;
                 case 4:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember4);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
                     break;
                 case 5:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember5);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
                     break;
                 default:
                     break;
             }
+
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -210,19 +212,19 @@ public class Avatar
             switch (Index)
             {
                 case 1:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember1);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
                     break;
                 case 2:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember2);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
                     break;
                 case 3:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember3);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
                     break;
                 case 4:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember4);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
                     break;
                 case 5:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember5);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
                     break;
                 default:
                     break;
@@ -254,23 +256,24 @@ public class Avatar
             switch (Index)
             {
                 case 1:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember1);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
                     break;
                 case 2:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember2);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
                     break;
                 case 3:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember3);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
                     break;
                 case 4:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember4);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
                     break;
                 case 5:
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SwitchMember5);
+                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
                     break;
                 default:
                     break;
             }
+
             Sleep(250);
         }
     }
@@ -314,7 +317,7 @@ public class Avatar
         {
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // 剪裁出队伍区域
-            var teamRa = region.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var block = teamRa.DeriveCrop(new Rect(blockX, NameRect.Y, teamRa.Width - blockX, NameRect.Height * 2));
             // Cv2.ImWrite($"block_{Name}.png", block.SrcMat);
@@ -337,7 +340,7 @@ public class Avatar
         else
         {
             // 剪裁出IndexRect区域
-            var teamRa = region.DeriveCrop(AutoFightContext.Instance.FightAssets.TeamRect);
+            var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
             var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
@@ -365,7 +368,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack);
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
             ms -= 200;
             Sleep(200, Ct);
         }
@@ -387,7 +390,7 @@ public class Avatar
             {
                 if (Name == "纳西妲")
                 {
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Sleep(300, Ct);
                     for (int j = 0; j < 10; j++)
                     {
@@ -396,22 +399,22 @@ public class Avatar
                     }
 
                     Sleep(300); // 持续操作不应该被cts取消
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                 }
                 else if (Name == "坎蒂丝")
                 {
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Thread.Sleep(3000);
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                 }
                 else
                 {
-                    AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
+                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
                 }
             }
             else
             {
-                AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalSkill, KeyType.KeyPress);
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyPress);
             }
 
             Sleep(200, Ct);
@@ -436,8 +439,9 @@ public class Avatar
     /// </summary>
     public double GetSkillCurrentCd(ImageRegion imageRegion)
     {
-        var eRa = imageRegion.DeriveCrop(AutoFightContext.Instance.FightAssets.ERect);
-        var text = OcrFactory.Paddle.Ocr(eRa.SrcGreyMat);
+        var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+        var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         return StringUtils.TryParseDouble(text);
     }
 
@@ -455,7 +459,7 @@ public class Avatar
                 return;
             }
 
-            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.ElementalBurst);
+            Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
             Sleep(200, Ct);
 
             var region = CaptureToRectArea();
@@ -490,7 +494,7 @@ public class Avatar
     // /// </summary>
     // public double GetBurstCurrentCd(CaptureContent content)
     // {
-    //     var qRa = content.CaptureRectArea.Crop(AutoFightContext.Instance.FightAssets.QRect);
+    //     var qRa = content.CaptureRectArea.Crop(AutoFightAssets.Instance.QRect);
     //     var text = OcrFactory.Paddle.Ocr(qRa.SrcGreyMat);
     //     return StringUtils.TryParseDouble(text);
     // }
@@ -510,9 +514,9 @@ public class Avatar
             ms = 200;
         }
 
-        AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
         Sleep(ms); // 冲刺不能被cts取消
-        AutoFightContext.Instance.Simulator.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
     }
 
     public void Walk(string key, int ms)
@@ -545,9 +549,9 @@ public class Avatar
             return;
         }
 
-        AutoFightContext.Instance.Simulator.KeyDown(vk);
+        Simulation.SendInput.Keyboard.KeyDown(vk);
         Sleep(ms); // 行走不能被cts取消
-        AutoFightContext.Instance.Simulator.KeyUp(vk);
+        Simulation.SendInput.Keyboard.KeyUp(vk);
     }
 
     /// <summary>
@@ -574,7 +578,7 @@ public class Avatar
     /// </summary>
     public void Jump()
     {
-        AutoFightContext.Instance.Simulator.SimulateAction(GIActions.Jump);
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
     }
 
     /// <summary>
@@ -590,7 +594,7 @@ public class Avatar
         if (Name == "那维莱特")
         {
             var dpi = TaskContext.Instance().DpiScale;
-            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
             while (ms >= 0)
             {
                 if (Ct is { IsCancellationRequested: true })
@@ -603,13 +607,13 @@ public class Avatar
                 Sleep(50); // 持续操作不应该被cts取消
             }
 
-            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
         else
         {
-            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
             Sleep(ms); // 持续操作不应该被cts取消
-            AutoFightContext.Instance.Simulator.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
     }
 
@@ -618,11 +622,11 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            AutoFightContext.Instance.Simulator.LeftButtonDown();
+            Simulation.SendInput.Mouse.LeftButtonDown();
         }
         else if (key == "right")
         {
-            AutoFightContext.Instance.Simulator.RightButtonDown();
+            Simulation.SendInput.Mouse.RightButtonDown();
         }
         else if (key == "middle")
         {
@@ -635,11 +639,11 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            AutoFightContext.Instance.Simulator.LeftButtonUp();
+            Simulation.SendInput.Mouse.LeftButtonUp();
         }
         else if (key == "right")
         {
-            AutoFightContext.Instance.Simulator.RightButtonUp();
+            Simulation.SendInput.Mouse.RightButtonUp();
         }
         else if (key == "middle")
         {
@@ -652,11 +656,11 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            AutoFightContext.Instance.Simulator.LeftButtonClick();
+            Simulation.SendInput.Mouse.LeftButtonClick();
         }
         else if (key == "right")
         {
-            AutoFightContext.Instance.Simulator.RightButtonClick();
+            Simulation.SendInput.Mouse.RightButtonClick();
         }
         else if (key == "middle")
         {
@@ -672,18 +676,18 @@ public class Avatar
     public void KeyDown(string key)
     {
         var vk = User32Helper.ToVk(key);
-        AutoFightContext.Instance.Simulator.KeyDown(vk);
+        Simulation.SendInput.Keyboard.KeyDown(vk);
     }
 
     public void KeyUp(string key)
     {
         var vk = User32Helper.ToVk(key);
-        AutoFightContext.Instance.Simulator.KeyUp(vk);
+        Simulation.SendInput.Keyboard.KeyUp(vk);
     }
 
     public void KeyPress(string key)
     {
         var vk = User32Helper.ToVk(key);
-        AutoFightContext.Instance.Simulator.KeyPress(vk);
+        Simulation.SendInput.Keyboard.KeyPress(vk);
     }
 }

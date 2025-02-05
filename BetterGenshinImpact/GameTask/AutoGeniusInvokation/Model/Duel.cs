@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
@@ -60,9 +61,10 @@ public class Duel
         LogScreenResolution();
         try
         {
+            Notify.Event(NotificationEvent.TcgStart).Success("自动七胜召唤启动");
+            
             AutoGeniusInvokationAssets.DestroyInstance();
-
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Started().Build()); // TODO 需要移动
+            
             GeniusInvokationControl.GetInstance().Init(ct);
 
             // 对局准备 选择初始手牌
@@ -288,14 +290,12 @@ public class Duel
         }
         catch (TaskCanceledException ex)
         {
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Cancelled().Build());
             throw;
         }
         catch (NormalEndException ex)
         {
             _logger.LogInformation("对局结束");
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Success().Build());
-            throw;
+            // throw;
         }
         catch (System.Exception ex)
         {
@@ -303,9 +303,10 @@ public class Duel
             {
                 _logger.LogError(ex.StackTrace);
             }
-            NotificationHelper.SendTaskNotificationUsing(b => b.GeniusInvocation().Failure().Build());
             throw;
         }
+        
+        Notify.Event(NotificationEvent.TcgEnd).Success("自动七胜召唤结束");
     }
 
     private HashSet<ElementalType> PredictionDiceType()

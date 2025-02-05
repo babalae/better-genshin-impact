@@ -11,11 +11,11 @@ public class ImageToBase64Converter : JsonConverter<Image>
 {
     public override Image? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.GetString() is string base64)
+        if (reader.GetString() is { } base64)
         {
             return Image.FromStream(new MemoryStream(Convert.FromBase64String(base64)));
         }
-        return default;
+        return null;
     }
 
     public override void Write(Utf8JsonWriter writer, Image value, JsonSerializerOptions options)
