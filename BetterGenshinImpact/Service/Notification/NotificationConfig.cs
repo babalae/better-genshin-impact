@@ -56,5 +56,17 @@ public partial class NotificationConfig : ObservableObject
     private string _feishuWebhookUrl = string.Empty;
     
     
-
+    // 企业微信通知
+    /// <summary>
+    /// 企业微信通知是否启用
+    /// </summary>
+    [ObservableProperty]
+    private bool _workweixinNotificationEnabled = false;
+    
+    
+    /// <summary>
+    /// 企业微信通知通知地址
+    /// </summary>
+    [ObservableProperty]
+    private string _workweixinWebhookUrl = string.Empty;
 }

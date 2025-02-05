@@ -64,6 +64,11 @@ public class NotificationService : IHostedService
         {
             _notifierManager.RegisterNotifier(new FeishuNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.FeishuWebhookUrl));
         }
+
+        if (TaskContext.Instance().Config.NotificationConfig.WorkweixinNotificationEnabled)
+        {
+            _notifierManager.RegisterNotifier(new WorkWeixinNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WorkweixinWebhookUrl));
+        }
     }
 
     public void RefreshNotifiers()
