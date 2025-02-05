@@ -35,7 +35,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
 
     // 中央仓库信息地址
-    public static readonly string CenterRepoInfoUrl = "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json";
+    public static readonly List<string> CenterRepoInfoUrls = 
+    [
+        "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json",
+        "https://r2-script.bettergi.com/github_mirror/repo.json",
+    ];
 
     // 中央仓库解压后文件夹名
     public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-main";
@@ -88,10 +92,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public async Task<(string, bool)> UpdateCenterRepo()
     {
         // 测速并获取信息
-        var res = await ProxySpeedTester.GetFastestProxyAsync(CenterRepoInfoUrl);
-        // 解析信息
-        var fastProxyUrl = res.Item1;
-        var jsonString = res.Item2;
+        var (fastUrl, jsonString) = await ProxySpeedTester.GetFastestUrlAsync(CenterRepoInfoUrls);
         if (string.IsNullOrEmpty(jsonString))
         {
             throw new Exception("从互联网下载最新的仓库信息失败");
@@ -118,7 +119,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         if (needDownload)
         {
-            await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url));
+            await DownloadRepoAndUnzip(url);
             updated = true;
         }
 
@@ -134,7 +135,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 检查是否需要更新
         if (long.Parse(time) > long.Parse(time2))
         {
-            await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url2));
+            await DownloadRepoAndUnzip(url2);
             updated = true;
         }
 
