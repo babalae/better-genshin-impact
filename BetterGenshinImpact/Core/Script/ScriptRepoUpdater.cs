@@ -94,7 +94,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var jsonString = res.Item2;
         if (string.IsNullOrEmpty(jsonString))
         {
-            throw new Exception("获取仓库信息失败");
+            throw new Exception("从互联网下载最新的仓库信息失败");
         }
 
         var (time, url, file) = ParseJson(jsonString);
@@ -323,7 +323,31 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         Toast.Information("获取最新仓库信息中...");
 
         // 更新仓库
-        var (repoPath, _) = await Task.Run(UpdateCenterRepo);
+        string repoPath;
+        try
+        {
+            (repoPath, _) = await Task.Run(UpdateCenterRepo);
+        }
+        catch (Exception e)
+        {
+            Toast.Warning("获取最新仓库信息失败，尝试使用本地已有仓库信息");
+            try
+            {
+                repoPath = FindCenterRepoPath();
+            }
+            catch
+            {
+                await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+                return;
+            }
+        }
+
+        if (string.IsNullOrEmpty(repoPath))
+        {
+            await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+            return;
+        }
+
 
         // // 收集将被覆盖的文件和文件夹
         // var filesToOverwrite = new List<string>();

@@ -6,6 +6,7 @@ using System.Security.Policy;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -21,39 +22,32 @@ public class RepoWebBridge
     {
         try
         {
-            // var needUpdate = false;
-            // string? localRepoJsonPath = null;
-            // if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-            // {
-            //     localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-            //     if (localRepoJsonPath is null)
-            //     {
-            //         needUpdate = true;
-            //     }
-            // }
-            // else
-            // {
-            //     needUpdate = true;
-            // }
-            //
-            // if (needUpdate)
-            // {
-            //     await ScriptRepoUpdater.Instance.UpdateCenterRepo();
-            // }
-
             await ScriptRepoUpdater.Instance.UpdateCenterRepo();
+        }
+        catch (Exception e)
+        {
+            Toast.Warning($"更新仓库信息失败：{e.Message}");
+        }
+
+        try
+        {
+            if (!Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            {
+                throw new Exception("仓库文件夹不存在，请至少成功更新一次仓库！");
+            }
 
             var localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
             if (localRepoJsonPath is null)
             {
-                throw new Exception("repo.json 不存在，可能是更新仓库信息失败！");
+                throw new Exception("repo.json 仓库索引文件不存在，请至少成功更新一次仓库！");
             }
+
             var json = await File.ReadAllTextAsync(localRepoJsonPath);
             return json;
         }
         catch (Exception e)
         {
-            await MessageBox.ShowAsync(e.Message, "获取仓库信息失败！");
+            await MessageBox.ShowAsync(e.Message, "获取仓库信息失败");
             return "";
         }
     }
