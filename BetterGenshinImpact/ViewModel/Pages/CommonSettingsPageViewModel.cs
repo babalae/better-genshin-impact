@@ -9,7 +9,10 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
@@ -162,6 +165,39 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         else
         {
             Toast.Error(res.Message);
+        }
+    }
+    
+    [RelayCommand]
+    private void ImportLocalScriptsRepoZip()
+    {
+        Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "Zip Files (*.zip)|*.zip",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var zipPath = dialog.FileName;
+            // 删除旧文件夹
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            {
+                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
+            }
+            ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
+            
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            {
+                MessageBox.Information("脚本仓库离线包导入成功！");
+            }
+            else
+            {
+                MessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
+            }
         }
     }
 }
