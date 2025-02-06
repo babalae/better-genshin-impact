@@ -69,7 +69,7 @@ public class TpTask(CancellationToken ct)
     {
         // 先确认在地图界面
         await CheckInBigMapUi();
-        
+
         // 传送前的计算准备
         var nTpPoints = GetNearestNTpPoints(tpX, tpY, 2);
         var (x, y) = force ? (tpX, tpY) : (nTpPoints[0].x, nTpPoints[0].y);
@@ -236,6 +236,7 @@ public class TpTask(CancellationToken ct)
                     return true;
                 }
             }
+
             return false;
         }
         else
@@ -498,14 +499,14 @@ public class TpTask(CancellationToken ct)
             (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6),
                 rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
 
-        GlobalMethod.LeftButtonDown();
+        Simulation.SendInput.Mouse.LeftButtonDown();
         for (var i = 0; i < steps; i++)
         {
-            GlobalMethod.MoveMouseBy(stepX[i], stepY[i]);
+            Simulation.SendInput.Mouse.MoveMouseBy(stepX[i], stepY[i]);
             await Delay(_tpConfig.StepIntervalMilliseconds, ct);
         }
 
-        GlobalMethod.LeftButtonUp();
+        Simulation.SendInput.Mouse.LeftButtonUp();
     }
 
     public Point2f GetPositionFromBigMap()
