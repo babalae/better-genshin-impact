@@ -336,7 +336,7 @@ public class TpTask(CancellationToken ct)
                         bool zoomIn = mouseDistance < _tpConfig.MapZoomInDistance;
                         if (zoomIn)
                         {
-                            if (currentZoomLevel > _tpConfig.MinZoomLevel + 1.0)
+                            if (currentZoomLevel > minZoomLevel + 1.0)
                             {
                                 await AdjustMapZoomLevel(zoomIn);
                                 await Delay(50, ct);
