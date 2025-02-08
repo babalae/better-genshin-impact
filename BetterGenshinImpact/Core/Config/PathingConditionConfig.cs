@@ -43,6 +43,13 @@ public partial class PathingConditionConfig : ObservableObject
                 Subject = "队伍中角色",
                 Object = ["钟离"],
                 Result = "循环长E"
+            },
+
+            new Condition
+            {
+                Subject = "队伍中角色",
+                Object = ["迪希雅"],
+                Result = "作为主要行走角色"
             }
         ]
     };
