@@ -6,6 +6,7 @@ using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
+using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -20,17 +21,77 @@ public class GlobalMethod
 
     public static void KeyDown(string key)
     {
-        Simulation.SendInput.Keyboard.KeyDown(ToVk(key));
+        switch (key)
+        {
+            case "VK_LBUTTON":
+                Simulation.SendInput.Mouse.LeftButtonDown();
+                break;
+            case "VK_RBUTTON":
+                Simulation.SendInput.Mouse.RightButtonDown();
+                break;
+            case "VK_MBUTTON":
+                Simulation.SendInput.Mouse.MiddleButtonDown();
+                break;
+            case "VK_XBUTTON1":
+                Simulation.SendInput.Mouse.XButtonDown(0x0001);
+                break;
+            case "VK_XBUTTON2":
+                Simulation.SendInput.Mouse.XButtonDown(0x0001);
+                break;
+            default:
+                Simulation.SendInput.Keyboard.KeyDown(ToVk(key));
+                break;
+        }
     }
 
     public static void KeyUp(string key)
     {
-        Simulation.SendInput.Keyboard.KeyUp(ToVk(key));
+        switch (key)
+        {
+            case "VK_LBUTTON":
+                Simulation.SendInput.Mouse.LeftButtonUp();
+                break;
+            case "VK_RBUTTON":
+                Simulation.SendInput.Mouse.RightButtonUp();
+                break;
+            case "VK_MBUTTON":
+                Simulation.SendInput.Mouse.MiddleButtonUp();
+                break;
+            case "VK_XBUTTON1":
+                Simulation.SendInput.Mouse.XButtonUp(0x0001);
+                break;
+            case "VK_XBUTTON2":
+                Simulation.SendInput.Mouse.XButtonUp(0x0001);
+                break;
+            default:
+                Simulation.SendInput.Keyboard.KeyUp(ToVk(key));
+                break;
+        }
     }
 
     public static void KeyPress(string key)
     {
-        Simulation.SendInput.Keyboard.KeyPress(ToVk(key));
+        switch (key)
+        {
+            case "VK_LBUTTON":
+                Simulation.SendInput.Mouse.LeftButtonClick();
+                break;
+            case "VK_RBUTTON":
+                Simulation.SendInput.Mouse.RightButtonClick();
+                break;
+            case "VK_MBUTTON":
+                Simulation.SendInput.Mouse.MiddleButtonClick();
+                break;
+            case "VK_XBUTTON1":
+                Simulation.SendInput.Mouse.XButtonClick(0x0001);
+                break;
+            case "VK_XBUTTON2":
+                Simulation.SendInput.Mouse.XButtonClick(0x0001);
+                break;
+            default:
+                Simulation.SendInput.Keyboard.KeyPress(ToVk(key));
+                break;
+        }
     }
 
     private static User32.VK ToVk(string key)
