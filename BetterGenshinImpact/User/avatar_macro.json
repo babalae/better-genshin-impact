@@ -321,5 +321,69 @@
   {
     "name": "闲云",
     "scriptContent1": ""
+    },
+  {
+    "name": "千织",
+    "scriptContent1": ""
+  },
+  {
+    "name": "希格雯",
+    "scriptContent1": ""
+  },
+  {
+    "name": "阿蕾奇诺",
+    "scriptContent1": ""
+  },
+  {
+    "name": "赛索斯",
+    "scriptContent1": ""
+  },
+  {
+    "name": "克洛琳德",
+    "scriptContent1": ""
+  },
+  {
+    "name": "艾梅莉埃",
+    "scriptContent1": ""
+  },
+  {
+    "name": "卡齐娜",
+    "scriptContent1": ""
+  },
+  {
+    "name": "基尼奇",
+    "scriptContent1": ""
+  },
+  {
+    "name": "玛拉妮",
+    "scriptContent1": ""
+  },
+  {
+    "name": "希诺宁",
+    "scriptContent1": ""
+  },
+  {
+    "name": "恰斯卡",
+    "scriptContent1": ""
+  },
+  {
+    "name": "欧洛伦",
+    "scriptContent1": ""
+  },
+  {
+    "name": "玛薇卡",
+    "scriptContent1": "keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(1.3)"
+  },
+  {
+    "name": "茜特菈莉",
+    "scriptContent1": ""
+  },
+  {
+    "name": "蓝砚",
+    "scriptContent1": ""
+  },
+  {
+    "name": "梦见月瑞希",
+    "scriptContent1": ""
   }
 ]
