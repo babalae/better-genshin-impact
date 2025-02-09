@@ -1001,6 +1001,7 @@ public class PathExecutor
             {
                 _autoSkipTrigger = new AutoSkipTrigger(new AutoSkipConfig
                 {
+                    Enabled = true,
                     QuicklySkipConversationsEnabled = true, // 快速点击过剧情
                     ClosePopupPagedEnabled = true,
                     ClickChatOption = "优先选择最后一个选项",
