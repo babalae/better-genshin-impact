@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
+using BetterGenshinImpact.GameTask.AutoFishing;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -143,5 +144,14 @@ public class Genshin
     public async Task ReturnMainUi()
     {
         await new ReturnMainUiTask().Start(CancellationContext.Instance.Cts.Token);
+    }
+
+    /// <summary>
+    /// 钓鱼
+    /// </summary>
+    /// <returns></returns>
+    public async Task AutoFishing()
+    {
+        await new AutoFishingTask().Start(CancellationContext.Instance.Cts.Token);
     }
 }

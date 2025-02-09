@@ -13,6 +13,7 @@ public class BigFishType
     public static readonly BigFishType LargeMedaka = new("large medaka", "fruit paste bait", "大花鳉", 1);
     public static readonly BigFishType Stickleback = new("stickleback", "redrot bait", "棘鱼", 2);
     public static readonly BigFishType Koi = new("koi", "fake fly bait", "假龙", 3);
+    public static readonly BigFishType KoiHead = new("koi head", "fake fly bait", "假龙头", 3);
     public static readonly BigFishType Butterflyfish = new("butterflyfish", "false worm bait", "蝶鱼", 4);
     public static readonly BigFishType Pufferfish = new("pufferfish", "fake fly bait", "炮鲀", 5);
 
@@ -39,6 +40,7 @@ public class BigFishType
             yield return LargeMedaka;
             yield return Stickleback;
             yield return Koi;
+            yield return KoiHead;
             yield return Butterflyfish;
             yield return Pufferfish;
             yield return Ray;
