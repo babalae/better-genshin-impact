@@ -32,23 +32,23 @@ public partial class TpConfig : ObservableObject
 
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomOutButtonY = 654; //  y-coordinate for zoom-out button
+    private int _zoomOutButtonY = 635; //  y-coordinate for zoom-out button
 
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomInButtonY = 428; //  y-coordinate for zoom-in button
+    private int _zoomInButtonY = 443; //  y-coordinate for zoom-in button
 
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomButtonX = 49; // x-coordinate for zoom button
+    private int _zoomButtonX = 47; // x-coordinate for zoom button
 
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomStartY = 453; // y-coordinate for zoom start
+    private int _zoomStartY = 467; // y-coordinate for zoom start
 
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomEndY = 628; // y-coordinate for zoom end
+    private int _zoomEndY = 611; // y-coordinate for zoom end
 
     [ObservableProperty]
     private double _tolerance = 200; // 允许的移动误差
