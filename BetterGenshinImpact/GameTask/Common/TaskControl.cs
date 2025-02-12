@@ -199,6 +199,11 @@ public class TaskControl
             return bitmap;
         }
     }
+    
+    public static Bitmap? CaptureGameBitmapNoRetry(IGameCapture? gameCapture)
+    {
+        return gameCapture?.Capture();
+    }
 
     // private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
     // {
