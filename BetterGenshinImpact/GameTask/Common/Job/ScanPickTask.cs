@@ -47,6 +47,7 @@ public class ScanPickTask
         var forwardTimes = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.ForwardTimes;
         for (int n = 0; n < forwardTimes; n++) // 直走次数
         {
+            Simulation.SendInput.SimulateAction(GIActions.Drop);//取消爬墙状态
             await ResetCamera(ct);
             var hasDrops = false;
 
