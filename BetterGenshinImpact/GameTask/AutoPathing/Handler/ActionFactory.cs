@@ -24,6 +24,7 @@ public class ActionFactory
                 "anemo_collect" => new ElementalCollectHandler(ElementalType.Anemo),
                 "combat_script" => new CombatScriptHandler(),
                 "mining" => new MiningHandler(),
+                "fishing" => new FishingHandler(),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });

@@ -17,26 +17,32 @@ public class Fishpond
     /// <summary>
     /// 抛竿落点位置
     /// </summary>
-    public Rect TargetRect { get; set; }
+    public Rect? TargetRect { get; set; }
 
     /// <summary>
     /// 鱼池中的鱼
     /// </summary>
     public List<OneFish> Fishes { get; set; } = [];
 
-    public Fishpond(DetectionResult result)
+    /// <summary>
+    /// </summary>
+    /// <param name="result"></param>
+    /// <param name="includeTarget">是否包含抛竿落点</param>
+    public Fishpond(DetectionResult result, bool includeTarget = false)
     {
         foreach (var box in result.Boxes)
         {
-            if (box.Class.Name == "rod")
+            if (box.Class.Name == "rod" || box.Class.Name == "err rod")
             {
                 TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
                 continue;
             }
-            else if (box.Class.Name == "err rod")
+            if (includeTarget)
             {
-                TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-                continue;
+                if (box.Class.Name == "koi")    //进入抛竿的时候只看koihead
+                {
+                    continue;
+                }
             }
 
             var fish = new OneFish(box.Class.Name, new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height), box.Confidence);

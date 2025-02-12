@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -105,6 +106,10 @@ public class Dispatcher
             // case "AutoMusicGame":
             //     taskSettingsPageViewModel.SwitchAutoMusicGameCommand.Execute(null);
             //     break;
+            
+            case "AutoFishing":
+                await new AutoFishingTask().Start(CancellationContext.Instance.Cts.Token);
+                break;
 
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
