@@ -451,6 +451,7 @@ public class AutoFightTask : ISoloTask
         }
         **/
 
+        Simulation.SendInput.SimulateAction(GIActions.Drop);//在换队前取消爬墙状态
         await Delay(delayTime, _ct);
         Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束
@@ -462,11 +463,9 @@ public class AutoFightTask : ISoloTask
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
         {
             Logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
             return true;
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
         Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
         /**
