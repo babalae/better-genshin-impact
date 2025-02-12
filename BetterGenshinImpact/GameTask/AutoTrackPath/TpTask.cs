@@ -38,6 +38,15 @@ public class TpTask(CancellationToken ct)
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     /// <summary>
+    /// 直接通过缩放比例按钮计算放大按钮的Y坐标
+    /// </summary>
+    private readonly int _zoomInButtonY = TaskContext.Instance().Config.TpConfig.ZoomStartY - 24; //  y-coordinate for zoom-in button  = _zoomStartY - 24
+    /// <summary>
+    /// 直接通过缩放比例按钮计算缩小按钮的Y坐标
+    /// </summary>
+    private readonly int _zoomOutButtonY = TaskContext.Instance().Config.TpConfig.ZoomEndY + 24; //  y-coordinate for zoom-out button = _zoomEndY + 24
+
+    /// <summary>
     /// 传送到须弥七天神像
     /// </summary>
     public async Task TpToStatueOfTheSeven()
@@ -423,11 +432,11 @@ public class TpTask(CancellationToken ct)
     {
         if (zoomIn)
         {
-            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _tpConfig.ZoomInButtonY * scale));
+            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _zoomInButtonY * scale));
         }
         else
         {
-            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _tpConfig.ZoomOutButtonY * scale));
+            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _zoomOutButtonY * scale));
         }
 
         await Delay(50, ct);

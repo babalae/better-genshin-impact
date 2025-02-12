@@ -29,26 +29,29 @@ public partial class TpConfig : ObservableObject
 
     [ObservableProperty]
     private double _reviveStatueOfTheSevenPointY = -824.4; // 七天神像点位Y坐标
-
+    
+    // 地图缩放程度的按钮 间隔 35 和截图有关的，按钮高2
+    
+    /// <summary>
+    /// 缩放比例按钮的最上 y 坐标（地图最大化时、且坐标是按钮中心）
+    /// </summary>
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomOutButtonY = 635; //  y-coordinate for zoom-out button
+    private int _zoomStartY = 468; // y-coordinate for zoom start
 
+    /// <summary>
+    /// 缩放比例按钮的最下 y 坐标（地图最小化时、且坐标是按钮中心）
+    /// </summary>
     [ObservableProperty]
     [property: JsonIgnore]
-    private int _zoomInButtonY = 443; //  y-coordinate for zoom-in button
+    private int _zoomEndY = 612; // y-coordinate for zoom end
 
+    /// <summary>
+    /// 缩放比例按钮的 x 坐标
+    /// </summary>
     [ObservableProperty]
     [property: JsonIgnore]
     private int _zoomButtonX = 47; // x-coordinate for zoom button
-
-    [ObservableProperty]
-    [property: JsonIgnore]
-    private int _zoomStartY = 467; // y-coordinate for zoom start
-
-    [ObservableProperty]
-    [property: JsonIgnore]
-    private int _zoomEndY = 611; // y-coordinate for zoom end
 
     [ObservableProperty]
     private double _tolerance = 200; // 允许的移动误差
