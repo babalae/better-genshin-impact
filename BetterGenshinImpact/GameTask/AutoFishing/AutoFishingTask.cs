@@ -18,7 +18,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
-using System.Drawing;
+using BetterGenshinImpact.GameTask.Common.Job;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -34,6 +34,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public class Blackboard : AutoFishing.Blackboard
         {
             public bool noFish = false;
+
+            internal override void Reset()
+            {
+                base.Reset();
+                noFish = false;
+            }
         }
 
         public Task Start(CancellationToken ct)
@@ -54,8 +60,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     })
                     .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                     .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                        .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
                         .Do("转圈圈调整视角", TurnAround)
+                        .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard))
                     .End()
                     .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard))
                     .UntilFailed(@"\")
@@ -64,8 +70,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                 .Sequence("从找鱼开始")
                                     .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
                                     .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                                        .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard))
                                         .PushLeaf(() => new GetFishpond("检测鱼群", blackboard))
+                                        .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard))
                                     .End()
                                     .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
                                     .UntilSuccess("重复抛竿")
@@ -77,8 +83,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                     .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                                     .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
                                     .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
-                                        .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
                                         .PushLeaf(() => new FishBite("自动提竿"))
+                                        .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
                                     .End()
                                     .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
                                     .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
@@ -92,34 +98,43 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
 
-            while (!ct.IsCancellationRequested)
+            SetTimeTask setTimeTask = new SetTimeTask();
+            foreach (int hour in new int[] { 7, 19 })
             {
-                if (!SystemControl.IsGenshinImpactActiveByProcess())
+                setTimeTask.Start(hour, 0, ct).Wait();
+
+                this.blackboard.Reset();
+
+                while (!ct.IsCancellationRequested)
                 {
-                    _logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
-                    break;
-                }
-
-                var ra = TaskControl.CaptureToRectArea(forceNew: true);
-                BehaviourTree.Tick(new CaptureContent(ra.SrcBitmap, 0, 0));
-
-                if (BehaviourTree.Status != BehaviourStatus.Running)
-                {
-                    _logger.LogInformation("→ 钓鱼任务结束");
-
-                    if (!ra.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
+                    if (!SystemControl.IsGenshinImpactActiveByProcess())
                     {
-                        _logger.LogInformation("← {Text}", "退出钓鱼界面");
-                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                        Sleep(1000);
-                        ra = TaskControl.CaptureToRectArea(forceNew: true);
-                        Bv.ClickBlackConfirmButton(ra);
-                        Sleep(1000);
+                        _logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
+                        break;
                     }
-                    break;
+
+                    var ra = TaskControl.CaptureToRectArea(forceNew: true);
+                    BehaviourTree.Tick(new CaptureContent(ra.SrcBitmap, 0, 0));
+
+                    if (BehaviourTree.Status != BehaviourStatus.Running)
+                    {
+                        _logger.LogInformation("钓鱼结束");
+
+                        if (!ra.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
+                        {
+                            _logger.LogInformation("← {Text}", "退出钓鱼界面");
+                            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                            Sleep(1000);
+                            ra = TaskControl.CaptureToRectArea(forceNew: true);
+                            Bv.ClickBlackConfirmButton(ra);
+                            Sleep(1000);
+                        }
+                        break;
+                    }
                 }
             }
 
+            _logger.LogInformation("→ 钓鱼任务结束");
 
             return Task.CompletedTask;  // todo 这个行为树库不支持异步编程。。。
         }
@@ -199,10 +214,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 #region 1、使人物朝向和镜头方向一致；2、打断角色待机动作，避免钓鱼F交互键被吞
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_S);
-                Sleep(500);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_W);
-                Sleep(500);
+                // 加入昼夜切换后，使用KeyPress按S键被莫名吞掉了
+                // 并且发现如果原地空格跳跃后紧跟按一下S键，角色会向侧后方走去
+                // 于是使用“按一段时间”来代替KeyPress的“按一瞬间”，以求稳定的表现
+                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
+                Sleep(100);
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
+                Sleep(400);
+                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+                Sleep(100);
+                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                Sleep(400);
+                Sleep(300);
                 #endregion
 
                 _logger.LogInformation("视角调整完毕");
@@ -210,6 +233,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+            Sleep(100);
 
             return BehaviourStatus.Running;
         }

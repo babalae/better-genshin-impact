@@ -696,7 +696,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 VisionContext.Instance().DrawContent.RemoveRect("FishBox");
                 _findFishBoxTips = false;
                 _prevMouseEvent = 0x0;
-                _logger.LogInformation("  钓鱼结束");
+                _logger.LogInformation("  拉扯结束");
                 _logger.LogInformation(@"└------------------------┘");
 
                 // 保证鼠标松开
