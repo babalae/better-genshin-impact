@@ -596,6 +596,31 @@
                                             MinWidth="120"
                                             Text="{Binding Config.AutoFightConfig.FinishDetectConfig.CheckEndDelay}" />
                             </Grid>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="按键触发后检查延时"
+                                              TextWrapping="Wrap"/>
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值。确保这个延时不会真的把队伍配置界面切出来。"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            MinWidth="120"
+                                            Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BeforeDetectDelay}" />
+                            </Grid>
                             <!--<Grid Margin="16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />

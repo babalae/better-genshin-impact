@@ -66,6 +66,12 @@ public partial class AutoFightConfig : ObservableObject
         [ObservableProperty]
         private string _checkEndDelay = "";
 
+        /// <summary>
+        /// 按下切换队伍后去检查屏幕色块的延迟，默认为0.45秒。若频繁误判可以适当提高这个值。确保这个延迟不会真的把队伍配置界面切出来。
+        /// </summary>
+        [ObservableProperty]
+        private string _beforeDetectDelay = "";
+
     }
     /// <summary>
     /// 战斗结束相关配置
