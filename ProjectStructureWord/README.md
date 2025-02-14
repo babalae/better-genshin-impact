@@ -1,3 +1,6 @@
+# BetterGI项目结构图
+贡献者：https://github.com/Because66666
+下面为完整的项目结构图，截止2025.2.12下午3点。对代码的摘要理解在`BetterGI项目结构图.md`中。
 ```
 BetterGenshinImpact/
 ├── App.xaml.cs
