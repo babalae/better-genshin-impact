@@ -107,8 +107,8 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 开发者
 
-格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；
-项目结构图：
+格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；<br>
+项目结构图：[README.md](.\ProjectStructureWord\README.md)
 
 ## 许可证
 
