@@ -1,3 +1,4 @@
+```
 BetterGenshinImpact/
 ├── App.xaml.cs
 ├── AssemblyInfo.cs
@@ -636,3 +637,4 @@ BetterGenshinImpact/
 │   │   ├── FormViewModel.cs
 │   │   ├── JsonMonoViewModel.cs
 │   │   └── MapViewerViewModel.cs
+```
