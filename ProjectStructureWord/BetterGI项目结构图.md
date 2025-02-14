@@ -1,6 +1,7 @@
 # BetterGI项目结构图
 贡献者：https://github.com/Because66666
 ### 分析结果
+```
 BetterGenshinImpact/
 ├── App.xaml.cs:这段代码是一个C#应用程序的主类，它使用.NETGenericHost来创建一个具有依赖注入、配置、日志记录和其他服务的应用程序宿主。它配置了多个服务和视图模型，用于构建一个名为“BetterGenshinImpact”的桌面应用程序，该应用程序可能是一个用于辅助《原神》游戏的功能增强工具。总结来说，这份代码的功能是构建一个用于辅助《原神》游戏的桌面应用程序。
 ├── AssemblyInfo.cs:这段C#代码使用了几个特性（attributes）来配置Windows应用程序的DPI感知和主题信息。-`usingSystem.Windows;`和`usingSystem.Windows.Media;`是命名空间导入，它们允许代码使用Windows客户端UI框架（WPF）和媒体框架中的类。-`[assembly:DisableDpiAwareness]`特性用于指示应用程序不启用DPI（dotsperinch，每英寸点数）感知。这意味着应用程序的UI元素不会根据显示器的分辨率自动缩放，这可能会导致在高清显示器上显示的UI元素过于小。-`[assembly:ThemeInfo(ResourceDictionaryLocation.None,ResourceDictionaryLocation.SourceAssembly)]`特性用于指定应用程序的主题资源字典的位置。`ResourceDictionaryLocation.None`表示主题资源字典不包含在应用程序的资源中，而`ResourceDictionaryLocation.SourceAssembly`表示主题资源字典位于应用程序的源代码所在的程序集内。总结这句话概括这份代码的功能是：这段代码配置了一个Windows应用程序，禁用了DPI感知并指定了主题资源字典的位置。
@@ -639,7 +640,7 @@ BetterGenshinImpact/
 │   │   ├── FormViewModel.cs:这段C#代码定义了一个抽象类`FormViewModel<T>`，它使用了CommunityToolkit库中的MVVM（Model-View-ViewModel）模式。这个类包含一个泛型`ObservableCollection<T>`属性，用于存储列表数据，并提供了一系列方法来添加、移除、编辑和保存列表中的项。概括总结这份代码的功能是：实现了一个基于MVVM模式的泛型数据列表管理视图模型。
 │   │   ├── JsonMonoViewModel.cs:这段代码是一个C#的ViewModel，用于处理与JSON文件相关的操作，包括读取、保存和关闭窗口。具体功能包括：-读取指定路径的JSON文件内容并显示在界面上。-提供保存按钮，用于将编辑后的JSON内容写回文件。-提供关闭按钮，用于关闭当前窗口。总结：该代码的功能是提供一个用于编辑和保存JSON配置文件的视图模型。
 │   │   └── MapViewerViewModel.cs:这段代码是一个C#的ViewModel，用于在WPF应用程序中显示和更新一个游戏地图的视图。它使用OpenCvSharp库来处理图像和路径绘制，并响应来自其他组件的消息来更新地图显示。
-
+```
 ### 分析版本2025.2.12 下午15.31.20
 分析仓库时，当时最新的一次提交日志：
 Author: 郝凯阳 <kaiyanghao@gmail.com>
