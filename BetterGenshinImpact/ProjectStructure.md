@@ -1,5 +1,6 @@
 # BetterGI项目结构图
 贡献者：https://github.com/Because66666
+
 ### 分析结果
 ```
 BetterGenshinImpact/
@@ -641,11 +642,3 @@ BetterGenshinImpact/
 │   │   ├── JsonMonoViewModel.cs:这段代码是一个C#的ViewModel，用于处理与JSON文件相关的操作，包括读取、保存和关闭窗口。具体功能包括：-读取指定路径的JSON文件内容并显示在界面上。-提供保存按钮，用于将编辑后的JSON内容写回文件。-提供关闭按钮，用于关闭当前窗口。总结：该代码的功能是提供一个用于编辑和保存JSON配置文件的视图模型。
 │   │   └── MapViewerViewModel.cs:这段代码是一个C#的ViewModel，用于在WPF应用程序中显示和更新一个游戏地图的视图。它使用OpenCvSharp库来处理图像和路径绘制，并响应来自其他组件的消息来更新地图显示。
 ```
-### 分析版本2025.2.12 下午15.31.20
-分析仓库时，当时最新的一次提交日志：
-Author: 郝凯阳 <kaiyanghao@gmail.com>
-Date:   Wed Feb 12 15:31:20 2025 +0800
-
-    auto tcg: update character card config to v5.4 (#1148)
-
-    Co-authored-by: haokaiyang <haokaiyang@cmcm.com>
