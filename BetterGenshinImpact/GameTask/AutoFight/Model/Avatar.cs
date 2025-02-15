@@ -188,7 +188,7 @@ public class Avatar
     /// <returns></returns>
     public bool TrySwitch(int tryTimes = 4, bool needLog = true)
     {
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
             {
@@ -208,7 +208,7 @@ public class Avatar
 
                 return true;
             }
-
+            Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
             switch (Index)
             {
                 case 1:
