@@ -109,7 +109,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 格式化：[CodeMaid.config](CodeMaid.config)、[Settings.XamlStyler](Settings.XamlStyler)；<br>
 
-[如何编译项目？](BetterGenshinImpact/ProjectStructure.md)
+[如何编译项目？](BetterGenshinImpact/README.md)
 
 ## 许可证
 
