@@ -38,4 +38,10 @@ public partial class GenshinStartConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _linkedStartEnabled = true;
+
+    /// <summary>
+    ///     使用Starward同步记录时间
+    /// </summary>
+    [ObservableProperty]
+    private bool _recordGameTimeEnabled = false;
 }
