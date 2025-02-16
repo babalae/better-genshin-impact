@@ -14,6 +14,12 @@ namespace BetterGenshinImpact.Core.Config;
 public partial class KeyBindingsConfig:ObservableObject
 {
 
+    /// <summary>
+    /// 是否启用全局按键映射
+    /// </summary>
+    [ObservableProperty]
+    private bool _globalKeyMappingEnabled = false;
+
     #region Actions（操作）
 
     /// <summary>
