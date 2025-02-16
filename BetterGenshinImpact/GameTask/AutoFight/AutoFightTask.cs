@@ -455,7 +455,7 @@ public class AutoFightTask : ISoloTask
         Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(450, _ct);
+        await Delay(750, _ct);
         var ra = CaptureToRectArea();
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
