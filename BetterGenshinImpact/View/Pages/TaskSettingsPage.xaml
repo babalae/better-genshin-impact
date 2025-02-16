@@ -613,7 +613,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值。确保这个延时不会真的把队伍配置界面切出来。"
+                                              Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
