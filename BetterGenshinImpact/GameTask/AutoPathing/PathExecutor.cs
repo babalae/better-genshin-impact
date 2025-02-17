@@ -165,10 +165,6 @@ public class PathExecutor
                         CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
                         TryCloseSkipOtherOperations();
                         await RecoverWhenLowHp(waypoint); // 低血量恢复
-                        if (waypoint.Action == ActionEnum.LogOutput.Code)
-                        {
-                            Logger.LogInformation(waypoint.LogInfo);
-                        }
 
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
@@ -260,7 +256,7 @@ public class PathExecutor
         {
             return false;
         }
-        
+
         var action = ActionEnum.GetEnumByCode(waypoint.Action);
         if (action is not null && action.UseWaypointTypeEnum != ActionUseWaypointTypeEnum.Custom)
         {
@@ -895,8 +891,12 @@ public class PathExecutor
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
-            await handler.RunAsync(ct);
+            await handler.RunAsync(ct, waypoint);
             await Delay(800, ct);
+        }
+        else if (waypoint.Action == ActionEnum.LogOutput.Code)
+        {
+            Logger.LogInformation(waypoint.LogInfo);
         }
     }
 
@@ -908,7 +908,9 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.HydroCollect.Code
             || waypoint.Action == ActionEnum.ElectroCollect.Code
             || waypoint.Action == ActionEnum.AnemoCollect.Code
-            || waypoint.Action == ActionEnum.CombatScript.Code)
+            || waypoint.Action == ActionEnum.CombatScript.Code
+            || waypoint.Action == ActionEnum.Mining.Code
+            || waypoint.Action == ActionEnum.Fishing.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
@@ -1001,6 +1003,7 @@ public class PathExecutor
             {
                 _autoSkipTrigger = new AutoSkipTrigger(new AutoSkipConfig
                 {
+                    Enabled = true,
                     QuicklySkipConversationsEnabled = true, // 快速点击过剧情
                     ClosePopupPagedEnabled = true,
                     ClickChatOption = "优先选择最后一个选项",

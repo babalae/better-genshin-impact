@@ -120,9 +120,9 @@ public static partial class Bv
             throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
         }
 
-        // 452 ~ 627 间隔 35 和截图有关的，截图高24
-        var start = QuickTeleportAssets.MapScaleButton1080StartY;
-        var end = QuickTeleportAssets.MapScaleButton1080EndY;
+        // 原先这里的起止区间和config里写死的值差1
+        var start = TaskContext.Instance().Config.TpConfig.ZoomStartY;
+        var end = TaskContext.Instance().Config.TpConfig.ZoomEndY;
         var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
 
         return (end * 1.0 - cur) / (end - start);

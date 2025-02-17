@@ -38,6 +38,17 @@ public class TpTask(CancellationToken ct)
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     /// <summary>
+    /// 直接通过缩放比例按钮计算放大按钮的Y坐标
+    /// </summary>
+    private readonly int _zoomInButtonY = TaskContext.Instance().Config.TpConfig.ZoomStartY - 24; //  y-coordinate for zoom-in button  = _zoomStartY - 24
+    /// <summary>
+    /// 直接通过缩放比例按钮计算缩小按钮的Y坐标
+    /// </summary>
+    private readonly int _zoomOutButtonY = TaskContext.Instance().Config.TpConfig.ZoomEndY + 24; //  y-coordinate for zoom-out button = _zoomEndY + 24
+    
+    private const double DisplayTpPonitRatio = 4.4; // 传送点显示的时候的地图比例
+
+    /// <summary>
     /// 传送到须弥七天神像
     /// </summary>
     public async Task TpToStatueOfTheSeven()
@@ -46,9 +57,9 @@ public class TpTask(CancellationToken ct)
         if (_tpConfig.MapZoomEnabled)
         {
             double currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
-            if (currentZoomLevel > 4.5)
+            if (currentZoomLevel > DisplayTpPonitRatio)
             {
-                await AdjustMapZoomLevel(currentZoomLevel, 4.5);
+                await AdjustMapZoomLevel(currentZoomLevel, DisplayTpPonitRatio);
             }
             else if (currentZoomLevel < 3)
             {
@@ -84,12 +95,12 @@ public class TpTask(CancellationToken ct)
         double zoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
         if (_tpConfig.MapZoomEnabled)
         {
-            if (zoomLevel > 4.5)
+            if (zoomLevel > DisplayTpPonitRatio)
             {
                 // 显示传送锚点和秘境的缩放等级
-                await AdjustMapZoomLevel(zoomLevel, 4.5);
-                zoomLevel = 4.5;
-                Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.00}", 4.5);
+                await AdjustMapZoomLevel(zoomLevel, DisplayTpPonitRatio);
+                zoomLevel = DisplayTpPonitRatio;
+                Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.00}", DisplayTpPonitRatio);
             }
         }
 
@@ -165,8 +176,8 @@ public class TpTask(CancellationToken ct)
         }
 
         var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
-        // 屏蔽左上角350x400区域
-        if (clickX < 350 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
+        // 屏蔽左上角360x400区域
+        if (clickX < 360 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
         {
             return false;
         }
@@ -423,11 +434,11 @@ public class TpTask(CancellationToken ct)
     {
         if (zoomIn)
         {
-            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _tpConfig.ZoomInButtonY * scale));
+            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _zoomInButtonY * scale));
         }
         else
         {
-            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _tpConfig.ZoomOutButtonY * scale));
+            GameCaptureRegion.GameRegionClick((rect, scale) => (_tpConfig.ZoomButtonX * scale, _zoomOutButtonY * scale));
         }
 
         await Delay(50, ct);

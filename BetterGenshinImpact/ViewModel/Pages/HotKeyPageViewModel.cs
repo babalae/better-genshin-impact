@@ -595,17 +595,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     // Thread.Sleep(500);
                     // // TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
                     // Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
-                    
+
                     // TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
-                    
-                    
+
+
                     // TaskControl.Logger.LogInformation($"尝试显示遮罩窗口");
                     // var maskWindow = MaskWindow.Instance();
                     // maskWindow.Invoke(() => { maskWindow.Show(); });
-                    Task.Run(async () => { 
+                    Task.Run(async () =>
+                    {
                         for (int i = 0; i < 100; i++)
                         {
-                            var  imageRegion = TaskControl.CaptureToRectArea();
+                            var imageRegion = TaskControl.CaptureToRectArea();
                             var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
                             var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
                             var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
@@ -622,12 +623,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    // GoToCraftingBenchTask goToCraftingBenchTask = new GoToCraftingBenchTask();
-                    // Task.Run(async () => { await goToCraftingBenchTask.Start("稻妻", new CancellationToken()); });
-                    
-                    var pName = SystemControl.GetActiveProcessName();
-                    Debug.WriteLine($"当前处于前台的程序：{pName}，原神是否位于前台：{SystemControl.IsGenshinImpactActive()}");
-                    TaskControl.Logger.LogInformation($"当前处于前台的程序：{pName}");
+                    SetTimeTask setTimeTask = new SetTimeTask();
+                    Task.Run(async () => { await setTimeTask.Start(12, 05, new CancellationToken()); });
+
+                    // var pName = SystemControl.GetActiveProcessName();
+                    // Debug.WriteLine($"当前处于前台的程序：{pName}，原神是否位于前台：{SystemControl.IsGenshinImpactActive()}");
+                    // TaskControl.Logger.LogInformation($"当前处于前台的程序：{pName}");
                 }
             ));
 

@@ -49,18 +49,6 @@ public class BaseNotificationData
     {
         try
         {
-            if (TaskContext.Instance().Config.NotificationConfig.IncludeScreenShot)
-            {
-                Screenshot = (Bitmap)TaskControl.CaptureToRectArea().SrcBitmap.Clone();
-            }
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e, "补充通知截图失败");
-        }
-        
-        try
-        {
             NotificationService.Instance().NotifyAllNotifiers(this);
         }
         catch (Exception e)

@@ -188,7 +188,7 @@ public class Avatar
     /// <returns></returns>
     public bool TrySwitch(int tryTimes = 4, bool needLog = true)
     {
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
             {
@@ -208,7 +208,7 @@ public class Avatar
 
                 return true;
             }
-
+            Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
             switch (Index)
             {
                 case 1:
@@ -605,6 +605,28 @@ public class Avatar
                 Simulation.SendInput.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                 ms -= 50;
                 Sleep(50); // 持续操作不应该被cts取消
+            }
+
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+        }
+        else if (Name == "恰斯卡")
+        {
+            var dpi = TaskContext.Instance().DpiScale;
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+            int cnt = 0;
+            while (ms >= 0)
+            {
+                if (Ct is { IsCancellationRequested: true })
+                {
+                    return;
+                }
+
+                // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
+                double rate = cnt % 10 < 5 ? 0 : 4.5;//每500ms做一轮上下移动。
+                cnt++;
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
+                ms -= 50;
+                Sleep(50);
             }
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
