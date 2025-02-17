@@ -27,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         public string Name => "钓鱼独立任务";
 
-        private CancellationToken ct;
+        private CancellationToken _ct;
 
         private Blackboard blackboard;
 
@@ -44,14 +44,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public Task Start(CancellationToken ct)
         {
-            this.ct = ct;
+            this._ct = ct;
 
             this.blackboard = new Blackboard()
             {
                 Sleep = this.Sleep
             };
 
-            var BehaviourTree = FluentBuilder.Create<CaptureContent>()
+            var behaviourTree = FluentBuilder.Create<CaptureContent>()
                 .Sequence("调整视角并钓鱼")
                     .Do($"设置变量{nameof(blackboard.pitchReset)}", _ =>
                     {
@@ -113,13 +113,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         break;
                     }
 
-                    var ra = TaskControl.CaptureToRectArea(forceNew: true);
-                    BehaviourTree.Tick(new CaptureContent(ra.SrcBitmap, 0, 0));
+                    var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.Instance().GameCapture);
+                    if (bitmap == null)
+                    {
+                        _logger.LogWarning("截图失败");
+                        continue;
+                    }
+                    var content = new CaptureContent(bitmap, 0, 0);
+                    behaviourTree.Tick(content);
 
-                    if (BehaviourTree.Status != BehaviourStatus.Running)
+                    if (behaviourTree.Status != BehaviourStatus.Running)
                     {
                         _logger.LogInformation("钓鱼结束");
 
+                        
+                        var ra = content.CaptureRectArea;
                         if (!ra.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
                         {
                             _logger.LogInformation("← {Text}", "退出钓鱼界面");
@@ -141,7 +149,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public void Sleep(int millisecondsTimeout)
         {
-            TaskControl.Sleep(millisecondsTimeout, ct);
+            TaskControl.Sleep(millisecondsTimeout, _ct);
         }
 
         public class FindFishTimeout : BaseBehaviour<CaptureContent>
