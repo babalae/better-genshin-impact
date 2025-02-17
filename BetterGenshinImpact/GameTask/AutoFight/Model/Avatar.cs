@@ -609,6 +609,28 @@ public class Avatar
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
+        else if (Name == "恰斯卡")
+        {
+            var dpi = TaskContext.Instance().DpiScale;
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+            int cnt = 0;
+            while (ms >= 0)
+            {
+                if (Ct is { IsCancellationRequested: true })
+                {
+                    return;
+                }
+
+                // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
+                double rate = cnt % 10 < 5 ? 0 : 4.5;//每500ms做一轮上下移动。
+                cnt++;
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
+                ms -= 50;
+                Sleep(50);
+            }
+
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+        }
         else
         {
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
