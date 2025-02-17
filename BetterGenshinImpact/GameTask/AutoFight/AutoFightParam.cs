@@ -17,6 +17,7 @@ public class AutoFightParam : BaseTaskParam
         public bool FastCheckEnabled = false;
         public string FastCheckParams = "";
         public string CheckEndDelay = "";
+        public string BeforeDetectDelay = "";
     }
     
     public AutoFightParam(string path, AutoFightConfig autoFightConfig)
@@ -31,6 +32,7 @@ public class AutoFightParam : BaseTaskParam
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
+        FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         
         //下面参数固定，只取自动战斗里面的
         FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
