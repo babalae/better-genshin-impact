@@ -225,7 +225,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
 
     internal void Start(IntPtr hWnd)
     {
-        Debug.WriteLine($"原神启动句柄{hWnd}");
+        Debug.WriteLine($"原神启动句柄 {hWnd}");
         lock (this)
         {
             if (Config.TriggerInterval <= 0)
@@ -258,7 +258,7 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
         Stop();
     }
 
-    private void Stop()
+    internal void Stop()
     {
         lock (this)
         {

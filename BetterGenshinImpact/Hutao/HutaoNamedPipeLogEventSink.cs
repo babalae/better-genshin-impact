@@ -30,6 +30,7 @@ internal sealed class HutaoNamedPipeLogEventSink : ILogEventSink
     public void Emit(LogEvent logEvent)
     {
         textFormatter.Format(logEvent, writer);
+        writer.Flush();
         buffer.Position = 0;
         NamedPipe.TryRedirectLog(reader.ReadToEnd());
         buffer.SetLength(0);

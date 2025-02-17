@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO.Pipes;
 using System.Text;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.Hutao;
 
@@ -18,18 +19,7 @@ internal sealed partial class HutaoNamedPipe : IDisposable
     {
         this.serviceProvider = serviceProvider;
 
-        isSupported = new(() =>
-        {
-            try
-            {
-                clientStream.Connect(TimeSpan.Zero);
-                return true;
-            }
-            catch (TimeoutException)
-            {
-                return false;
-            }
-        });
+        isSupported = new(clientStream.TryConnectOnce);
     }
 
     public bool IsSupported
@@ -44,9 +34,23 @@ internal sealed partial class HutaoNamedPipe : IDisposable
             return false;
         }
 
-        byte[] buffer = Encoding.UTF8.GetBytes(log);
-        clientStream.Write(buffer, 0, buffer.Length);
-        return true;
+        if (!clientStream.TryConnectOnce())
+        {
+            return false;
+        }
+
+        try
+        {
+            PipeRequest<string> logRequest = new() { Kind = PipeRequestKind.Log, Data = log, };
+            clientStream.WritePacketWithJsonContent(Version, PipePacketType.Request, PipePacketCommand.BetterGenshinImpactToSnapHutaoRequest, logRequest);
+            clientStream.ReadPacket(out _, out PipeResponse<JsonElement>? _);
+            return true;
+        }
+        finally
+        {
+            clientStream.WritePacket(Version, PipePacketType.SessionTermination, PipePacketCommand.None);
+            clientStream.Flush();
+        }
     }
 
     public void Dispose()

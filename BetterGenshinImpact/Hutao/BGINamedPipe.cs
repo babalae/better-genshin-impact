@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,9 +6,9 @@ using System;
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Wpf.Ui;
 
 namespace BetterGenshinImpact.Hutao;
 
@@ -86,7 +85,7 @@ internal sealed partial class BGINamedPipe : IDisposable
             switch ((header.Type, header.Command))
             {
                 case (PipePacketType.Request, PipePacketCommand.SnapHutaoToBetterGenshinImpactRequest):
-                    if (serverStream.ReadJsonContent<HutaoRequest>(in header) is { } request)
+                    if (serverStream.ReadJsonContent<PipeRequest<JsonElement>>(in header) is { } request)
                     {
                         DispatchHutaoRequest(request);
                     }
@@ -100,14 +99,43 @@ internal sealed partial class BGINamedPipe : IDisposable
         }
     }
 
-    private void DispatchHutaoRequest(HutaoRequest request)
+    private void DispatchHutaoRequest(PipeRequest<JsonElement> request)
     {
         switch (request.Kind)
         {
-            case HutaoRequestKind.StartCapture:
-                HomePageViewModel home = serviceProvider.GetRequiredService<HomePageViewModel>();
-                home.Start((nint)request.Data.GetInt64());
+            case PipeRequestKind.GetContractVersion:
+                {
+                    PipeResponse<uint> response = new() { Kind = PipeResponseKind.Number, Data = Version };
+                    serverStream.WritePacketWithJsonContent(Version, PipePacketType.Response, PipePacketCommand.BetterGenshinImpactToSnapHutaoResponse, response);
+                    serverStream.Flush();
+                }
+
                 break;
+
+            case PipeRequestKind.StartCapture:
+                {
+                    HomePageViewModel home = serviceProvider.GetRequiredService<HomePageViewModel>();
+                    home.Start((nint)request.Data.GetInt64());
+                }
+
+                break;
+
+            case PipeRequestKind.StopCapture:
+                {
+                    HomePageViewModel home = serviceProvider.GetRequiredService<HomePageViewModel>();
+                    home.Stop();
+                }
+
+                break;
+
+            case PipeRequestKind.QueryTaskArray:
+                throw new NotImplementedException();
+
+            case PipeRequestKind.StartTask:
+                throw new NotImplementedException();
+
+            case PipeRequestKind.EndSwitchToNextGameAccount:
+                throw new NotImplementedException();
         }
     }
 }
