@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Interop;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using Vanara.PInvoke;
@@ -25,11 +27,7 @@ public class TaskControl
     public static void CheckAndSleep(int millisecondsTimeout)
     {
         TrySuspend();
-        if (!SystemControl.IsGenshinImpactActiveByProcess())
-        {
-            Logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
-            throw new NormalEndException("当前获取焦点的窗口不是原神");
-        }
+        CheckAndActivateGameWindow();
         
         Thread.Sleep(millisecondsTimeout);
     }
@@ -39,11 +37,7 @@ public class TaskControl
         NewRetry.Do(() =>
         {
             TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
+            CheckAndActivateGameWindow();
             
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
@@ -98,6 +92,34 @@ public class TaskControl
         }
     }
 
+    public static void CheckAndActivateGameWindow()
+    {
+        var count = 0;
+        //未激活则尝试恢复窗口
+        while (!SystemControl.IsGenshinImpactActiveByProcess())
+        {
+           
+            if (count>=10 && count%10==0)
+            {
+                Logger.LogInformation("多次尝试未恢复，尝试最小化后激活窗口！");
+                SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+            }
+            else
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，尝试恢复窗口");
+                SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+            }
+            count++;
+            Thread.Sleep(1000);
+        }
+
+        /*if (!SystemControl.IsGenshinImpactActiveByProcess())
+        {
+            Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+            throw new RetryException("当前获取焦点的窗口不是原神");
+        }*/
+    }
+
     public static void Sleep(int millisecondsTimeout, CancellationToken ct)
     {
         if (ct.IsCancellationRequested)
@@ -117,11 +139,8 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
             TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
+            CheckAndActivateGameWindow();
+
             
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
@@ -150,12 +169,8 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
             TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
-            
+            CheckAndActivateGameWindow();
+
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);
         if (ct is { IsCancellationRequested: true })
