@@ -463,6 +463,7 @@ public class AutoFightTask : ISoloTask
         var ra = CaptureToRectArea();
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
         {
             Logger.LogInformation("识别到战斗结束");
