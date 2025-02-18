@@ -1,16 +1,12 @@
-﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Model.Area;
-using Fischless.GameCapture;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Interop;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Fischless.GameCapture;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -207,7 +203,7 @@ public class TaskControl
                 Sleep(30);
             }
 
-            throw new System.Exception("尝试多次后,截图失败!");
+            throw new Exception("尝试多次后,截图失败!");
         }
         else
         {
