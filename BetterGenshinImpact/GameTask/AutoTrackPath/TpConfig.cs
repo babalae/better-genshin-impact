@@ -64,4 +64,9 @@ public partial class TpConfig : ObservableObject
     
     [ObservableProperty]
     private double _mapScaleFactor = 2.661;  // 游戏坐标和 mapZoomLevel=1 时的像素比例因子。
+    
+    [ObservableProperty]
+    [property: JsonIgnore]
+    private double _precisionThreshold = 0.05;
+    
 }
