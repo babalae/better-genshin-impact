@@ -348,9 +348,13 @@ public class PathExecutor
             {
                 return true;
             }
-            
-            await new TpTask(ct).TpToStatueOfTheSeven();
 
+            if (PartyConfig.IsVisitStatueBeforeSwitchParty)
+            {
+                await new TpTask(ct).TpToStatueOfTheSeven();
+                await Delay(500, ct);
+            }
+            
             var success = await new SwitchPartyTask().Start(partyName, ct);
             if (success)
             {
