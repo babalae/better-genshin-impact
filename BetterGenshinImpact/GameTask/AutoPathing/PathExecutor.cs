@@ -348,12 +348,8 @@ public class PathExecutor
             {
                 return true;
             }
-
-            if (!string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
-            {
-                // 非空的情况下，先tp到安全位置（回血的七天神像）
-                await new TpTask(ct).TpToStatueOfTheSeven();
-            }
+            
+            await new TpTask(ct).TpToStatueOfTheSeven();
 
             var success = await new SwitchPartyTask().Start(partyName, ct);
             if (success)
