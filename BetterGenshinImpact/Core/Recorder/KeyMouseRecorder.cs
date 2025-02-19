@@ -95,6 +95,10 @@ public class KeyMouseRecorder
                     break;
             }
         }
+        if (currentMerge != null)
+        {
+            mergedMacroEvents.Add(currentMerge);
+        }
         KeyMouseScript keyMouseScript = new()
         {
             MacroEvents = mergedMacroEvents,
