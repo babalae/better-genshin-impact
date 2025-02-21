@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
-using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -200,7 +196,13 @@ public class SystemControl
             _ = User32.SetActiveWindow(hWnd);
         }
     }
-
+    public static void MinimizeAndActivateWindow(nint hWnd)
+    {
+        HWND hShell = User32.FindWindow("Shell_TrayWnd", null);
+        User32.SendMessage(hShell, 0x0111, (IntPtr)419, IntPtr.Zero);
+        Thread.Sleep(500);
+        FocusWindow(hWnd);
+    }
     public static void RestoreWindow(nint hWnd)
     {
         if (User32.IsWindow(hWnd))
