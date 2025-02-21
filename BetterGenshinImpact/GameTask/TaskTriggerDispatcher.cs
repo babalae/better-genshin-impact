@@ -336,6 +336,7 @@ namespace BetterGenshinImpact.GameTask
                     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                     if (exclusiveTrigger != null)
                     {
+                        
                         exclusiveTrigger.OnCapture(content);
                         speedTimer.Record(exclusiveTrigger.Name);
                     }
@@ -349,12 +350,13 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in runningTriggers)
                         {
+                            
                             trigger.OnCapture(content);
                             speedTimer.Record(trigger.Name);
                         }
                     }
                 }
-
+                
                 speedTimer.DebugPrint();
                 content.Dispose();
             }
