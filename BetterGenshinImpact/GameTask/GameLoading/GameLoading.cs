@@ -68,9 +68,8 @@ public class GameLoadingTrigger : ITaskTrigger
         // }
         if (_config.RecordGameTimeEnabled)
         {
-            Debug.WriteLine("[GameLoading] 使用Starward记录时间");
-
-
+            
+            
 
             FileName = Path.GetFileName(_config.InstallPath);
             if (FileName == "GenshinImpact.exe") {
@@ -98,7 +97,6 @@ public class GameLoadingTrigger : ITaskTrigger
                 {
                 }
 
-                // Regular expression pattern to capture "channel" under [General]
                 
 
                 
@@ -114,28 +112,79 @@ public class GameLoadingTrigger : ITaskTrigger
                 {
                     GameServer = "hk4e_bilibili";
                 }
-                
-                try
-                {
-                    Debug.WriteLine($"[GameLoading] 服务器：{GameServer}");
-                    if (IsStarwardProtocolRegistered()) { 
-                    Process.Start(new ProcessStartInfo($"starward://playtime/{GameServer}") { UseShellExecute = true });
-                    }
-                    else
-                    {
-                        Debug.WriteLine("[GameLoading] 没有检测到Starward协议注册");
-                    }
-                }
-                catch (Exception ex) { 
-                    
-                    
-                    Debug.WriteLine("[GameLoading] Starward记录时间失败");
-                }
 
+
+
+                Debug.WriteLine($"[GameLoading] 从文件读取到游戏区服：{GameServer}");
+                // 这里注册表的优先级要比读取文件低，因为使用starward安装原神不会写入注册表
+                if (GameServer == null)
+                {
+                    GameServer = GetGameServerRegistry();
+                    Debug.WriteLine($"[GameLoading] 从注册表读取到游戏区服：{GameServer}");
+                    StartStarward();
+                }
+                
+            }
+        } }
+    public bool StartStarward()
+    {
+        try
+        {
+            Debug.WriteLine($"[GameLoading] 服务器：{GameServer}");
+            if (IsStarwardProtocolRegistered())
+            {
+                Process.Start(new ProcessStartInfo($"starward://playtime/{GameServer}") { UseShellExecute = true });
+                return true;
+            }
+            else
+            {
+                TaskControl.Logger.LogWarning("没有检测到 Starward 协议注册，请查看帮助文档！");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+
+
+            Debug.WriteLine("[GameLoading] Starward记录时间失败");
+            return false;
+        }
+    }
+    public string GetGameServerRegistry()
+    {
+        try
+        {
+            var cn = Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\1_1\hk4e_cn", "GameInstallPath", null) as string;
+            if (!string.IsNullOrEmpty(cn))
+            {
+                var filePath = Path.Combine(cn, "YuanShen.exe");
+                GameServer = "hk4e_cn";
+                return GameServer;
+            }
+
+            var global = Registry.GetValue($@"HKEY_CURRENT_USER\Software\Cognosphere\HYP\1_0\hk4e_global", "GameInstallPath", null) as string;
+            if (!string.IsNullOrEmpty(global))
+            {
+                var filePath = Path.Combine(global, "GenshinImpact.exe");
+                GameServer = "hk4e_global";
+                return GameServer;
+            }
+
+            var bilibili = Registry.GetValue($@"HKEY_CURRENT_USER\Software\miHoYo\HYP\standalone\14_0\hk4e_cn\umfgRO5gh5\hk4e_cn", "GameInstallPath", null) as string;
+            if (!string.IsNullOrEmpty(bilibili))
+            {
+                var filePath = Path.Combine(bilibili, "YuanShen.exe");
+                GameServer = "hk4e_bilibili";
+                return GameServer;
 
             }
-            else { Debug.WriteLine("[GameLoading] 不使用Starward记录时间"); }
-        } }
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "获取服务器失败");
+        }
+        return "";
+    }
     public bool IsStarwardProtocolRegistered()
     {
         try
