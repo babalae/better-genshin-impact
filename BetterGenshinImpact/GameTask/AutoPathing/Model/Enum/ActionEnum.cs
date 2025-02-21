@@ -19,6 +19,9 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
 
     public static readonly ActionEnum Mining = new("mining", "挖矿", ActionUseWaypointTypeEnum.Custom);
     public static readonly ActionEnum LogOutput = new("log_output", "输出日志", ActionUseWaypointTypeEnum.Custom);
+    
+    public static readonly ActionEnum Fishing = new("fishing", "钓鱼", ActionUseWaypointTypeEnum.Custom);
+
 
     // 还有要加入的其他动作
     // 滚轮F
