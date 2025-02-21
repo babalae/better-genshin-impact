@@ -9,6 +9,12 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Genshin.Paths;
 using System.IO;
+using System.Text.RegularExpressions;
+using System.Threading.Channels;
+using Microsoft.Win32;
+using System.Windows.Documents;
+
+
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
 
@@ -28,6 +34,7 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
 
+
     // private int _enterGameClickCount = 0;
     // private int _welkinMoonClickCount = 0;
     // private int _noneClickCount, _wmNoneClickCount;
@@ -38,8 +45,9 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private string GameServer = "";
 
+    private string channelValue = "";
+
     private string FileName = "";
-    private string iniPath = "";
 
     public GameLoadingTrigger()
     {
@@ -49,7 +57,10 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public void Init()
     {
+        
+
         IsEnabled = _config.AutoEnterGameEnabled;
+
         // // 前面没有联动启动原神，这个任务也不用启动
         // if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
         // {
@@ -58,10 +69,7 @@ public class GameLoadingTrigger : ITaskTrigger
         if (_config.RecordGameTimeEnabled)
         {
             Debug.WriteLine("[GameLoading] 使用Starward记录时间");
-            // 直接从RegistryGameLocator获取到服务器
-            if (!string.IsNullOrEmpty(RegistryGameLocator.GameServer)) {
-                GameServer = RegistryGameLocator.GameServer;
-            }
+
 
 
             FileName = Path.GetFileName(_config.InstallPath);
@@ -71,48 +79,31 @@ public class GameLoadingTrigger : ITaskTrigger
             if (FileName == "YuanShen.exe")
             {
 
-                iniPath = Path.GetDirectoryName(_config.InstallPath) + "//config.ini";
-                // 读取 ini 文件内容
-                string[] lines = File.ReadAllLines(iniPath);
+                string iniPath = Path.GetDirectoryName(_config.InstallPath) + "//config.ini";
+                string iniContent;
+                string pattern = @"
+            ^\s*\[General\]\s*$
+            (?:(?!\[).|\r?\n)*
+            ^\s*channel=(\S+)
+        ";
 
-                bool inGeneralSection = false;
-                string channelValue = null;
-
-                foreach (string line in lines)
+                try
                 {
-                    // 去除行首和行尾的空白字符
-                    string trimmedLine = line.Trim();
-
-
-
-                    // 检查是否进入 [General] 节
-                    if (trimmedLine.Equals("[General]", StringComparison.OrdinalIgnoreCase))
-                    {
-                        inGeneralSection = true;
-                        continue;
-                    }
-
-                    // 检查是否离开 [General] 节
-                    if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
-                    {
-                        inGeneralSection = false;
-                        continue;
-                    }
-
-                    // 如果在 [General] 节内，检查 channel 键
-                    if (inGeneralSection && trimmedLine.Contains("="))
-                    {
-                        string[] parts = trimmedLine.Split(new[] { '=' }, 2);
-                        string key = parts[0].Trim();
-                        string value = parts[1].Trim();
-
-                        if (key.Equals("channel", StringComparison.OrdinalIgnoreCase))
-                        {
-                            channelValue = value;
-                            break;
-                        }
-                    }
+                    iniContent = File.ReadAllText(iniPath);
+                    Regex regex = new Regex(pattern, RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase);
+                    Match match = regex.Match(iniContent);
+                    channelValue = match.Success ? match.Groups[1].Value : "";
                 }
+                catch (Exception e)
+                {
+                }
+
+                // Regular expression pattern to capture "channel" under [General]
+                
+
+                
+
+
                 // channelValue = 1 ： 官服
                 // channelValue = 14 ： B服
                 if (channelValue == "1")
@@ -123,10 +114,17 @@ public class GameLoadingTrigger : ITaskTrigger
                 {
                     GameServer = "hk4e_bilibili";
                 }
-
+                
                 try
                 {
+                    Debug.WriteLine($"[GameLoading] 服务器：{GameServer}");
+                    if (IsStarwardProtocolRegistered()) { 
                     Process.Start(new ProcessStartInfo($"starward://playtime/{GameServer}") { UseShellExecute = true });
+                    }
+                    else
+                    {
+                        Debug.WriteLine("[GameLoading] 没有检测到Starward协议注册");
+                    }
                 }
                 catch (Exception ex) { 
                     
@@ -138,7 +136,34 @@ public class GameLoadingTrigger : ITaskTrigger
             }
             else { Debug.WriteLine("[GameLoading] 不使用Starward记录时间"); }
         } }
-
+    public bool IsStarwardProtocolRegistered()
+    {
+        try
+        {
+            // 打开注册表路径 HKEY_CLASSES_ROOT\starward
+            using (RegistryKey key = Registry.ClassesRoot.OpenSubKey("starward"))
+            {
+                // 如果键存在
+                if (key != null)
+                {
+                    // 检查是否存在 URL Protocol 值
+                    object urlProtocol = key.GetValue("URL Protocol");
+                    // 如果 URL Protocol 存在且值为空字符串（标准配置），认为协议已注册
+                    if (urlProtocol != null && urlProtocol.ToString() == "")
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // 如果访问注册表时发生错误，记录调试信息
+            Debug.WriteLine($"[GameLoading] 检查 Starward 协议时发生错误: {ex.Message}");
+        }
+        // 如果键不存在或不符合条件，返回 false
+        return false;
+    }
     public void OnCapture(CaptureContent content)
     {
         // 2s 一次

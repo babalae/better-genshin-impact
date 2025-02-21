@@ -11,7 +11,6 @@ namespace BetterGenshinImpact.Genshin.Paths;
 /// </summary>
 public class RegistryGameLocator
 {
-    public static string GameServer = "";
     public static string? GetDefaultGameInstallPath()
     {
         try
@@ -20,7 +19,6 @@ public class RegistryGameLocator
             if (!string.IsNullOrEmpty(cn))
             {
                 var filePath = Path.Combine(cn, "YuanShen.exe");
-                GameServer = "hk4e_cn";
                 if (File.Exists(filePath))
                 {
                     return filePath;
@@ -31,7 +29,6 @@ public class RegistryGameLocator
             if (!string.IsNullOrEmpty(global))
             {
                 var filePath = Path.Combine(global, "GenshinImpact.exe");
-                GameServer = "hk4e_global";
                 if (File.Exists(filePath))
                 {
                     return filePath;
@@ -42,7 +39,6 @@ public class RegistryGameLocator
             if (!string.IsNullOrEmpty(bilibili))
             {
                 var filePath = Path.Combine(bilibili, "YuanShen.exe");
-                GameServer = "hk4e_bilibili";
                 if (File.Exists(filePath))
                 {
                     return filePath;
