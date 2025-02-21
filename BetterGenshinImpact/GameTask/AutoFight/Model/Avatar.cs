@@ -153,6 +153,7 @@ public class Avatar
                 return;
             }
 
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
             switch (Index)
             {
                 case 1:
@@ -208,6 +209,7 @@ public class Avatar
 
                 return true;
             }
+
             Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
             switch (Index)
             {
@@ -253,6 +255,7 @@ public class Avatar
                 return;
             }
 
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
             switch (Index)
             {
                 case 1:
