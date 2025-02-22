@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -24,6 +25,14 @@ public class CombatScriptHandler : IActionHandler
                 return;
             }
 
+            
+            // 提前校验是否存在策略要求的角色
+            bool hasAvatar = combatScenes.Avatars.Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
+            if (!hasAvatar)
+            {
+                Logger.LogError("简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：{AvatarNames}", string.Join(", ", combatScript.AvatarNames));
+                return;
+            }
 
             try
             {
