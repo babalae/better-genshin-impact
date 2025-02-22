@@ -74,6 +74,7 @@ public class GameLoadingTrigger : ITaskTrigger
             FileName = Path.GetFileName(_config.InstallPath);
             if (FileName == "GenshinImpact.exe") {
                 GameServer = "hk4e_global";
+                StartStarward();
             }
             if (FileName == "YuanShen.exe")
             {
@@ -107,12 +108,14 @@ public class GameLoadingTrigger : ITaskTrigger
                 if (channelValue == "1")
                 {
                     GameServer = "hk4e_cn";
+                    StartStarward();
                 }
                 if (channelValue == "14")
                 {
                     GameServer = "hk4e_bilibili";
+                    StartStarward();
                 }
-
+                
 
 
                 Debug.WriteLine($"[GameLoading] 从文件读取到游戏区服：{GameServer}");
