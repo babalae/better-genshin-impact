@@ -35,7 +35,6 @@ public class SwitchPartyTask
                 await _returnMainUiTask.Start(ct);
                 await Delay(200, ct);
             }
-
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
             await Delay(1000, ct); // 加载2s // 由于胡桃可以不等待直接进入，所以这里只等待1s
         }

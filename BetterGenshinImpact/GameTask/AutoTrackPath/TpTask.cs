@@ -138,7 +138,7 @@ public class TpTask(CancellationToken ct)
             if (retryCount++ >= 5) // 防止死循环
             {
                 Logger.LogWarning("多次尝试未移动到目标传送点，传送失败");
-                break;
+                throw new Exception("多次尝试未移动到目标传送点，传送失败");
             }
 
             Logger.LogInformation("传送点不在当前大地图范围内，重新调整地图位置");
