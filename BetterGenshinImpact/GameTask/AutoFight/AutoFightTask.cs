@@ -453,8 +453,7 @@ public class AutoFightTask : ISoloTask
             }
         }
         **/
-
-        Simulation.SendInput.SimulateAction(GIActions.Drop);//在换队前取消爬墙状态
+        //Simulation.SendInput.SimulateAction(GIActions.Drop);//在换队前取消爬墙状态
         await Delay(delayTime, _ct);
         Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
         // 最终方案确认战斗结束
