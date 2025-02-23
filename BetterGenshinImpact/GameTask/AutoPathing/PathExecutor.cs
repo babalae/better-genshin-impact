@@ -569,7 +569,7 @@ public class PathExecutor
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
         await tpTask.TpToStatueOfTheSeven();
-        await Delay(3000, ct);
+        await Delay(5000, ct);
         Logger.LogInformation("HP恢复完成");
     }
 
