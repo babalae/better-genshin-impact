@@ -31,6 +31,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -974,7 +975,7 @@ public class PathExecutor
         // 一些异常界面处理
         var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
         var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-        var closeRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo);
+        var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
         if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
         {
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");

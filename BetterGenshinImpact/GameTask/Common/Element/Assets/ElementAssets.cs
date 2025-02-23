@@ -39,6 +39,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject EscMailReward;
     public RecognitionObject CollectRo;
+    
+    public RecognitionObject PageCloseWhiteRo;
 
 
     private ElementAssets()
@@ -247,6 +249,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "collect.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height - CaptureRect.Height / 3, CaptureRect.Width / 4, CaptureRect.Height / 3),
             DrawOnWindow = false
+        }.InitTemplate();
+        
+        PageCloseWhiteRo = new RecognitionObject
+        {
+            Name = "PageCloseWhite",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "page_close_white.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 8, 0, CaptureRect.Width / 8, CaptureRect.Height / 8),
+            DrawOnWindow = true
         }.InitTemplate();
     }
 }

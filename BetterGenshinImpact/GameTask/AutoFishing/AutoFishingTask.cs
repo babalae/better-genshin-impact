@@ -99,6 +99,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 .Build();
 
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
+            TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
+            _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");
+
 
             SetTimeTask setTimeTask = new SetTimeTask();
             foreach (int hour in new int[] { 7, 19 })
