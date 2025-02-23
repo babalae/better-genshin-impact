@@ -1,222 +1,291 @@
-﻿using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoCook;
-using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
-using BetterGenshinImpact.GameTask.AutoPick;
-using BetterGenshinImpact.GameTask.AutoSkip;
-using BetterGenshinImpact.GameTask.AutoWood;
-using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.QuickTeleport;
-using BetterGenshinImpact.Service.Notification;
-using CommunityToolkit.Mvvm.ComponentModel;
-using Fischless.GameCapture;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
+using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace BetterGenshinImpact.Core.Config;
-
-/// <summary>
-///     更好的原神配置
-/// </summary>
-[Serializable]
-public partial class AllConfig : ObservableObject
+namespace BetterGenshinImpact.Core.Config
 {
     /// <summary>
-    ///     窗口捕获的方式
+    /// 通知配置
     /// </summary>
-    [ObservableProperty]
-    private string _captureMode = CaptureModes.BitBlt.ToString();
-
-    /// <summary>
-    ///     详细的错误日志
-    /// </summary>
-    [ObservableProperty]
-    private bool _detailedErrorLogs;
-
-    /// <summary>
-    ///     不展示新版本提示的最新版本
-    /// </summary>
-    [ObservableProperty]
-    private string _notShowNewVersionNoticeEndVersion = "";
-
-    /// <summary>
-    ///     触发器触发频率(ms)
-    /// </summary>
-    [ObservableProperty]
-    private int _triggerInterval = 50;
-
-    /// <summary>
-    ///     WGC使用位图缓存
-    ///     高帧率情况下，可能会导致卡顿
-    ///     云原神可能会出现黑屏
-    /// </summary>
-    [ObservableProperty]
-    private bool _wgcUseBitmapCache = true;
-
-    /// <summary>
-    /// 自动修复Win11下BitBlt截图方式不可用的问题
-    /// </summary>
-    [ObservableProperty]
-    private bool _autoFixWin11BitBlt = true;
-
-    /// <summary>
-    /// 推理使用的设备
-    /// </summary>
-    [ObservableProperty]
-    private string _inferenceDevice = "CPU";
-
-    [ObservableProperty]
-    private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
-
-    /// <summary>
-    /// 一条龙选中使用的配置
-    /// </summary>
-    [ObservableProperty]
-    private string _selectedOneDragonFlowConfigName = string.Empty;
-
-    /// <summary>
-    ///     遮罩窗口配置
-    /// </summary>
-    public MaskWindowConfig MaskWindowConfig { get; set; } = new();
-
-    /// <summary>
-    ///     通用配置
-    /// </summary>
-    public CommonConfig CommonConfig { get; set; } = new();
-
-    /// <summary>
-    ///     原神启动配置
-    /// </summary>
-    public GenshinStartConfig GenshinStartConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动拾取配置
-    /// </summary>
-    public AutoPickConfig AutoPickConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动剧情配置
-    /// </summary>
-    public AutoSkipConfig AutoSkipConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动钓鱼配置
-    /// </summary>
-    public AutoFishingConfig AutoFishingConfig { get; set; } = new();
-
-    /// <summary>
-    ///     快速传送配置
-    /// </summary>
-    public QuickTeleportConfig QuickTeleportConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动烹饪配置
-    /// </summary>
-    public AutoCookConfig AutoCookConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动打牌配置
-    /// </summary>
-    public AutoGeniusInvokationConfig AutoGeniusInvokationConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动伐木配置
-    /// </summary>
-    public AutoWoodConfig AutoWoodConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动战斗配置
-    /// </summary>
-    public AutoFightConfig AutoFightConfig { get; set; } = new();
-    
-    /// <summary>
-    ///     自动乐曲配置 - 千音雅集
-    /// </summary>
-    public AutoMusicGameConfig AutoMusicGameConfig { get; set; } = new();
-
-    /// <summary>
-    ///     自动秘境配置
-    /// </summary>
-    public AutoDomainConfig AutoDomainConfig { get; set; } = new();
-
-    /// <summary>
-    ///     宏配置
-    /// </summary>
-    public MacroConfig MacroConfig { get; set; } = new();
-
-    public RecordConfig RecordConfig { get; set; } = new();
-
-    /// <summary>
-    /// 脚本配置
-    /// </summary>
-    public ScriptConfig ScriptConfig { get; set; } = new();
-
-    /// <summary>
-    /// 路径追踪配置
-    /// </summary>
-    public PathingConditionConfig PathingConditionConfig { get; set; } = PathingConditionConfig.Default;
-
-    /// <summary>
-    ///     快捷键配置
-    /// </summary>
-    public HotKeyConfig HotKeyConfig { get; set; } = new();
-
-    /// <summary>
-    ///     通知配置
-    /// </summary>
-    public NotificationConfig NotificationConfig { get; set; } = new();
-
-    /// <summary>
-    /// 原神按键绑定配置
-    /// </summary>
-    public KeyBindingsConfig KeyBindingsConfig { get; set; } = new();
-    
-    /// <summary>
-    /// 传送相关配置
-    /// </summary>
-    public TpConfig TpConfig { get; set; } = new();
-    [JsonIgnore]
-    public Action? OnAnyChangedAction { get; set; }
-
-    public void InitEvent()
+    [Serializable]
+    public partial class NotificationConfig : ObservableObject
     {
-        PropertyChanged += OnAnyPropertyChanged;
-        MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
-        CommonConfig.PropertyChanged += OnAnyPropertyChanged;
-        GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
-        NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
-        NotificationConfig.PropertyChanged += OnNotificationPropertyChanged;
-        KeyBindingsConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
-        QuickTeleportConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoCookConfig.PropertyChanged += OnAnyPropertyChanged;
-        MacroConfig.PropertyChanged += OnAnyPropertyChanged;
-        HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
-        TpConfig.PropertyChanged += OnAnyPropertyChanged;
-        ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
-        PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
-    }
+        #region Webhook配置
 
-    public void OnAnyPropertyChanged(object? sender, EventArgs args)
-    {
-        GameTaskManager.RefreshTriggerConfigs();
-        OnAnyChangedAction?.Invoke();
-    }
+        /// <summary>
+        /// 是否启用Webhook通知
+        /// </summary>
+        [ObservableProperty]
+        private bool _webhookEnabled;
 
-    public void OnNotificationPropertyChanged(object? sender, PropertyChangedEventArgs args)
-    {
-        NotificationService.Instance().RefreshNotifiers();
+        /// <summary>
+        /// Webhook端点
+        /// </summary>
+        [ObservableProperty]
+        private string _webhookEndpoint = string.Empty;
+
+        #endregion
+
+        #region 邮件配置
+
+        /// <summary>
+        /// 是否启用邮件通知
+        /// </summary>
+        [ObservableProperty]
+        private bool _emailEnabled;
+
+        /// <summary>
+        /// SMTP服务器设置
+        /// </summary>
+        [ObservableProperty]
+        private string _smtpServer = string.Empty;
+
+        /// <summary>
+        /// SMTP端口(默认587)
+        /// </summary>
+        [ObservableProperty]
+        private int _smtpPort = 587;
+
+        /// <summary>
+        /// SMTP用户名
+        /// </summary>
+        [ObservableProperty]
+        private string _smtpUsername = string.Empty;
+
+        /// <summary>
+        /// SMTP密码
+        /// </summary>
+        [ObservableProperty]
+        private string _smtpPassword = string.Empty;
+
+        /// <summary>
+        /// 启用SSL/TLS
+        /// </summary>
+        [ObservableProperty]
+        private bool _enableSsl = true;
+
+        /// <summary>
+        /// 发件人邮箱
+        /// </summary>
+        [ObservableProperty]
+        private string _fromEmail = string.Empty;
+
+        /// <summary>
+        /// 发件人显示名称
+        /// </summary>
+        [ObservableProperty]
+        private string _fromName = "原神助手";
+
+        /// <summary>
+        /// 收件人邮箱列表(逗号分隔)
+        /// </summary>
+        [ObservableProperty]
+        private string _toEmail = string.Empty;
+
+        #endregion
+
+        #region 通知设置
+
+        /// <summary>
+        /// 任务完成时通知
+        /// </summary>
+        [ObservableProperty]
+        private bool _notifyOnTaskComplete = true;
+
+        /// <summary>
+        /// 出现错误时通知
+        /// </summary>
+        [ObservableProperty]
+        private bool _notifyOnError = true;
+
+        /// <summary>
+        /// 原神启动时通知
+        /// </summary>
+        [ObservableProperty]
+        private bool _notifyOnGameStart;
+
+        /// <summary>
+        /// 重要提醒时通知
+        /// </summary>
+        [ObservableProperty]
+        private bool _notifyOnImportant = true;
+
+        #endregion
+
+        public NotificationConfig()
+        {
+            // 注册属性变更事件
+            PropertyChanged += (_, _) => OnConfigChanged();
+        }
+
+        #region 配置验证
+
+        /// <summary>
+        /// 验证Webhook配置
+        /// </summary>
+        public bool ValidateWebhookConfig()
+        {
+            if (!WebhookEnabled) return true;
+            return !string.IsNullOrEmpty(WebhookEndpoint);
+        }
+
+        /// <summary>
+        /// 获取Webhook配置验证错误信息
+        /// </summary>
+        public string GetWebhookValidationError()
+        {
+            if (!WebhookEnabled) return string.Empty;
+            if (string.IsNullOrEmpty(WebhookEndpoint))
+                return "Webhook端点不能为空";
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 验证邮件配置
+        /// </summary>
+        public bool ValidateEmailConfig()
+        {
+            if (!EmailEnabled) return true;
+
+            // 验证SMTP设置
+            if (string.IsNullOrEmpty(SmtpServer)) return false;
+            if (SmtpPort <= 0 || SmtpPort > 65535) return false;
+            if (string.IsNullOrEmpty(SmtpUsername)) return false;
+            if (string.IsNullOrEmpty(SmtpPassword)) return false;
+
+            // 验证邮件地址
+            if (string.IsNullOrEmpty(FromEmail)) return false;
+            if (string.IsNullOrEmpty(ToEmail)) return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// 获取邮件配置验证错误信息
+        /// </summary>
+        public string GetEmailValidationError()
+        {
+            if (!EmailEnabled) return string.Empty;
+
+            // SMTP设置验证
+            if (string.IsNullOrEmpty(SmtpServer))
+                return "SMTP服务器地址不能为空";
+            if (SmtpPort <= 0 || SmtpPort > 65535)
+                return "SMTP端口无效(1-65535)";
+            if (string.IsNullOrEmpty(SmtpUsername))
+                return "SMTP用户名不能为空";
+            if (string.IsNullOrEmpty(SmtpPassword))
+                return "SMTP密码不能为空";
+
+            // 邮件地址验证
+            if (string.IsNullOrEmpty(FromEmail))
+                return "发件人邮箱不能为空";
+            if (string.IsNullOrEmpty(ToEmail))
+                return "收件人邮箱不能为空";
+
+            return string.Empty;
+        }
+
+        #endregion
+
+        #region 辅助方法
+
+        /// <summary>
+        /// 获取收件人列表
+        /// </summary>
+        public List<string> GetRecipientList()
+        {
+            var recipients = new List<string>();
+            if (!string.IsNullOrEmpty(ToEmail))
+            {
+                var emails = ToEmail.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var email in emails)
+                {
+                    var trimmedEmail = email.Trim();
+                    if (!string.IsNullOrEmpty(trimmedEmail))
+                    {
+                        recipients.Add(trimmedEmail);
+                    }
+                }
+            }
+            return recipients;
+        }
+
+        /// <summary>
+        /// 配置变更处理
+        /// </summary>
+        private void OnConfigChanged()
+        {
+            // 这里可以添加配置变更时的处理逻辑
+            // 例如: 更新通知服务状态
+        }
+
+        #endregion
+
+        #region 配置导入导出
+
+        /// <summary>
+        /// 导出配置(不包含敏感信息)
+        /// </summary>
+        public NotificationConfig ExportConfig()
+        {
+            var config = new NotificationConfig
+            {
+                // Webhook设置
+                WebhookEnabled = WebhookEnabled,
+                WebhookEndpoint = WebhookEndpoint,
+
+                // 邮件基本设置
+                EmailEnabled = EmailEnabled,
+                SmtpServer = SmtpServer,
+                SmtpPort = SmtpPort,
+                SmtpUsername = SmtpUsername,
+                EnableSsl = EnableSsl,
+                FromEmail = FromEmail,
+                FromName = FromName,
+                ToEmail = ToEmail,
+
+                // 通知设置
+                NotifyOnTaskComplete = NotifyOnTaskComplete,
+                NotifyOnError = NotifyOnError,
+                NotifyOnGameStart = NotifyOnGameStart,
+                NotifyOnImportant = NotifyOnImportant
+            };
+
+            return config;
+        }
+
+        /// <summary>
+        /// 从其他配置导入(可选择是否包含敏感信息)
+        /// </summary>
+        public void ImportConfig(NotificationConfig other, bool includeSensitive = false)
+        {
+            // Webhook设置
+            WebhookEnabled = other.WebhookEnabled;
+            WebhookEndpoint = other.WebhookEndpoint;
+
+            // 邮件基本设置
+            EmailEnabled = other.EmailEnabled;
+            SmtpServer = other.SmtpServer;
+            SmtpPort = other.SmtpPort;
+            SmtpUsername = other.SmtpUsername;
+            if (includeSensitive)
+            {
+                SmtpPassword = other.SmtpPassword;
+            }
+            EnableSsl = other.EnableSsl;
+            FromEmail = other.FromEmail;
+            FromName = other.FromName;
+            ToEmail = other.ToEmail;
+
+            // 通知设置
+            NotifyOnTaskComplete = other.NotifyOnTaskComplete;
+            NotifyOnError = other.NotifyOnError;
+            NotifyOnGameStart = other.NotifyOnGameStart;
+            NotifyOnImportant = other.NotifyOnImportant;
+        }
+
+        #endregion
     }
 }
