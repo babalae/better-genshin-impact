@@ -974,7 +974,8 @@ public class PathExecutor
         // 一些异常界面处理
         var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
         var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-        if (cookRa.IsExist() || closeRa.IsExist())
+        var closeRa2 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo);
+        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
         {
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
