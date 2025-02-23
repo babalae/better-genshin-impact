@@ -350,12 +350,12 @@ public class PathExecutor
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
+            if (PartyConfig.IsVisitStatueBeforeSwitchParty)
             {
-                // 非空的情况下，先tp到安全位置（回血的七天神像）
                 await new TpTask(ct).TpToStatueOfTheSeven();
+                await Delay(500, ct);
             }
-
+            
             var success = await new SwitchPartyTask().Start(partyName, ct);
             if (success)
             {
