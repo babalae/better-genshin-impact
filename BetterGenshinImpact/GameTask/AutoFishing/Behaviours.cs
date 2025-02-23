@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class GetFishpond : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<GetFishpond> _logger = App.GetLogger<GetFishpond>();
         private readonly Blackboard blackboard;
         public GetFishpond(string name, Blackboard blackboard) : base(name)
         {
@@ -65,7 +65,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class ChooseBait : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<ChooseBait> _logger = App.GetLogger<ChooseBait>();
         private readonly Blackboard blackboard;
         private DateTime? chooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现并尝试找鱼饵的结束时间
 
@@ -148,7 +148,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class ApproachFishAndThrowRod : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<ApproachFishAndThrowRod> _logger = App.GetLogger<ApproachFishAndThrowRod>();
         private readonly Blackboard blackboard;
 
         private int noPlacementTimes; // 没有落点的次数
@@ -378,7 +378,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// <param name="content"></param>
     public class CheckThrowRod : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<CheckThrowRod> _logger = App.GetLogger<CheckThrowRod>();
         private DateTime? timeDelay;
 
         /// <summary>
@@ -416,7 +416,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
     public class FishBiteTimeout : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<FishBiteTimeout> _logger = App.GetLogger<FishBiteTimeout>();
         private DateTime? waitFishBiteTimeout;
         private int seconds;
 
@@ -454,7 +454,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class FishBite : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<FishBite> _logger = App.GetLogger<FishBite>();
         private readonly IOcrService ocrService = OcrFactory.Paddle;
         public FishBite(string name) : base(name)
         {
@@ -521,7 +521,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class GetFishBoxArea : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<GetFishBoxArea> _logger = App.GetLogger<GetFishBoxArea>();
         private readonly Blackboard blackboard;
         public GetFishBoxArea(string name, Blackboard blackboard) : base(name)
         {
@@ -586,7 +586,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class Fishing : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<Fishing> _logger = App.GetLogger<Fishing>();
         private readonly Blackboard blackboard;
         public Fishing(string name, Blackboard blackboard) : base(name)
         {
@@ -737,7 +737,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class MoveViewpointDown : BaseBehaviour<CaptureContent>
     {
-        private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly ILogger<MoveViewpointDown> _logger = App.GetLogger<MoveViewpointDown>();
         private readonly Blackboard blackboard;
         public MoveViewpointDown(string name, Blackboard blackboard) : base(name)
         {

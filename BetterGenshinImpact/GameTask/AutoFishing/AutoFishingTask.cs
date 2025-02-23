@@ -50,6 +50,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 Sleep = this.Sleep
             };
+            
+            var autoThrowRodTimeOut = TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut;
 
             var behaviourTree = FluentBuilder.Create<CaptureContent>()
                 .Sequence("调整视角并钓鱼")
@@ -84,7 +86,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                     .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
                                     .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                                         .PushLeaf(() => new FishBite("自动提竿"))
-                                        .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
+                                        .PushLeaf(() => new FishBiteTimeout("下杆超时检查", autoThrowRodTimeOut))
                                     .End()
                                     .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
                                     .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
@@ -274,7 +276,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     this.blackboard.pitchReset = true;
 
-                    blackboard.Sleep(2000);    // 这里要多等一会儿界面遮罩消退
+                    blackboard.Sleep(3000);    // 这里要多等一会儿界面遮罩消退
 
                     return BehaviourStatus.Running;
                 }

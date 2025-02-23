@@ -1422,7 +1422,7 @@
         <!-- 自动钓鱼 -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Glyph="&#xf6b2;" Style="{StaticResource FaFontIconStyle}" />
+                <ui:FontIcon Glyph="&#xe3a8;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
@@ -1437,13 +1437,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动钓鱼"
+                                  Text="全自动钓鱼"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动钓鱼任务 -
+                        自动选择鱼饵，全自动抛竿、提竿、完成钓鱼 -
                         <Hyperlink Command="{Binding GoToAutoFishingUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
@@ -1461,7 +1461,7 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1488,6 +1488,34 @@
                               ItemsSource="{Binding AutoMusicLevelList}"
                               SelectedItem="{Binding Config.AutoFishingConfig.XXXXX, Mode=TwoWay}" 
                               SelectedIndex="0" />
+                </Grid>-->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="上钩等待超时时间"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="超过这个时间将自动提竿，并重新识别并选择鱼饵进行抛竿"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Margin="0,0,36,0"
+                                  Maximum="60"
+                                  Minimum="5"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
