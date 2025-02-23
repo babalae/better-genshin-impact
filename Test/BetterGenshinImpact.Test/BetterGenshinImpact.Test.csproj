@@ -13,7 +13,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\BetterGenshinImpact\BetterGenshinImpact.csproj" />
+	  <ProjectReference Include="..\..\BetterGenshinImpact\BetterGenshinImpact.csproj" />
 	</ItemGroup>
 
 </Project>
