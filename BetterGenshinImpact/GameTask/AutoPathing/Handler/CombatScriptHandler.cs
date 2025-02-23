@@ -47,6 +47,7 @@ public class CombatScriptHandler : IActionHandler
             catch (RetryException e)
             {
                 Logger.LogWarning("简易策略脚本执行时出现重试异常，原因：{Msg}，重试中...", e.Message);
+                throw;
             }
             catch (Exception e)
             {
