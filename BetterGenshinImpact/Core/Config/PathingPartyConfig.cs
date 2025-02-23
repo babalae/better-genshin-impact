@@ -20,7 +20,7 @@ public partial class PathingPartyConfig : ObservableObject
     
     // 切换队伍前是否前往须弥七天神像
     [ObservableProperty]
-    private bool _isVisitStatueBeforeSwitchParty = true;
+    private bool _isVisitStatueBeforeSwitchParty = false;
         
     // 主要行走追踪的角色编号
     [ObservableProperty]

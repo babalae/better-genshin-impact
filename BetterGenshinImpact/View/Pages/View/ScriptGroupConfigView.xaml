@@ -87,7 +87,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="切换队伍前是否前往须弥七天神像"
+                                      Text="切换队伍前强制前往安全的神像区域"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
