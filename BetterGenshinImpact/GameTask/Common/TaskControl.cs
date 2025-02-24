@@ -94,7 +94,11 @@ public class TaskControl
         //未激活则尝试恢复窗口
         while (!SystemControl.IsGenshinImpactActiveByProcess())
         {
-           
+            if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+                throw new RetryException("当前获取焦点的窗口不是原神");
+            }
             if (count>=10 && count%10==0)
             {
                 Logger.LogInformation("多次尝试未恢复，尝试最小化后激活窗口！");
