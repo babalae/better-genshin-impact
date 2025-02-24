@@ -19,6 +19,7 @@ using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -700,7 +701,7 @@ public class Avatar
 
     public void KeyDown(string key)
     {
-        var vk = MappingKey(User32Helper.ToVk(key));
+        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
         switch (key)
         {
             case "VK_LBUTTON":
@@ -726,7 +727,7 @@ public class Avatar
 
     public void KeyUp(string key)
     {
-        var vk = MappingKey(User32Helper.ToVk(key));
+        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
         switch (key)
         {
             case "VK_LBUTTON":
@@ -752,7 +753,7 @@ public class Avatar
 
     public void KeyPress(string key)
     {
-        var vk = MappingKey(User32Helper.ToVk(key));
+        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
         switch (key)
         {
             case "VK_LBUTTON":
@@ -774,67 +775,5 @@ public class Avatar
                 Simulation.SendInput.Keyboard.KeyPress(vk);
                 break;
         }
-    }
-
-    /// <summary>
-    /// 根据默认键位，将脚本中写死的按键映射为实际的按键
-    /// </summary>
-    /// <param name="source"></param>
-    /// <returns></returns>
-    private static User32.VK MappingKey(User32.VK source)
-    {
-        if (TaskContext.Instance().Config.KeyBindingsConfig.GlobalKeyMappingEnabled)
-        {
-            // NOTE: 普攻、鼠标的冲刺、元素视野、视角居中和派蒙菜单不支持改键，此处不会进行映射
-            return source switch
-            {
-                User32.VK.VK_W => GIActions.MoveForward.ToActionKey().ToVK(),
-                User32.VK.VK_S => GIActions.MoveBackward.ToActionKey().ToVK(),
-                User32.VK.VK_A => GIActions.MoveLeft.ToActionKey().ToVK(),
-                User32.VK.VK_D => GIActions.MoveRight.ToActionKey().ToVK(),
-                User32.VK.VK_LCONTROL => GIActions.SwitchToWalkOrRun.ToActionKey().ToVK(),
-                User32.VK.VK_E => GIActions.ElementalSkill.ToActionKey().ToVK(),
-                User32.VK.VK_Q => GIActions.ElementalBurst.ToActionKey().ToVK(),
-                User32.VK.VK_LSHIFT => GIActions.SprintKeyboard.ToActionKey().ToVK(),
-                User32.VK.VK_R => GIActions.SwitchAimingMode.ToActionKey().ToVK(),
-                User32.VK.VK_SPACE => GIActions.Jump.ToActionKey().ToVK(),
-                User32.VK.VK_X => GIActions.Drop.ToActionKey().ToVK(),
-                User32.VK.VK_F => GIActions.PickUpOrInteract.ToActionKey().ToVK(),
-                User32.VK.VK_Z => GIActions.QuickUseGadget.ToActionKey().ToVK(),
-                User32.VK.VK_T => GIActions.InteractionInSomeMode.ToActionKey().ToVK(),
-                User32.VK.VK_V => GIActions.QuestNavigation.ToActionKey().ToVK(),
-                User32.VK.VK_P => GIActions.AbandonChallenge.ToActionKey().ToVK(),
-                User32.VK.VK_1 => GIActions.SwitchMember1.ToActionKey().ToVK(),
-                User32.VK.VK_2 => GIActions.SwitchMember2.ToActionKey().ToVK(),
-                User32.VK.VK_3 => GIActions.SwitchMember3.ToActionKey().ToVK(),
-                User32.VK.VK_4 => GIActions.SwitchMember4.ToActionKey().ToVK(),
-                User32.VK.VK_5 => GIActions.SwitchMember5.ToActionKey().ToVK(),
-                User32.VK.VK_TAB => GIActions.ShortcutWheel.ToActionKey().ToVK(),
-                User32.VK.VK_B => GIActions.OpenInventory.ToActionKey().ToVK(),
-                User32.VK.VK_C => GIActions.OpenCharacterScreen.ToActionKey().ToVK(),
-                User32.VK.VK_M => GIActions.OpenMap.ToActionKey().ToVK(),
-                User32.VK.VK_F1 => GIActions.OpenAdventurerHandbook.ToActionKey().ToVK(),
-                User32.VK.VK_F2 => GIActions.OpenCoOpScreen.ToActionKey().ToVK(),
-                User32.VK.VK_F3 => GIActions.OpenWishScreen.ToActionKey().ToVK(),
-                User32.VK.VK_F4 => GIActions.OpenBattlePassScreen.ToActionKey().ToVK(),
-                User32.VK.VK_F5 => GIActions.OpenTheEventsMenu.ToActionKey().ToVK(),
-                User32.VK.VK_F6 => GIActions.OpenTheSettingsMenu.ToActionKey().ToVK(),
-                User32.VK.VK_F7 => GIActions.OpenTheFurnishingScreen.ToActionKey().ToVK(),
-                User32.VK.VK_F8 => GIActions.OpenStellarReunion.ToActionKey().ToVK(),
-                User32.VK.VK_J => GIActions.OpenQuestMenu.ToActionKey().ToVK(),
-                User32.VK.VK_Y => GIActions.OpenNotificationDetails.ToActionKey().ToVK(),
-                User32.VK.VK_RETURN => GIActions.OpenChatScreen.ToActionKey().ToVK(),
-                User32.VK.VK_U => GIActions.OpenSpecialEnvironmentInformation.ToActionKey().ToVK(),
-                User32.VK.VK_G => GIActions.CheckTutorialDetails.ToActionKey().ToVK(),
-                User32.VK.VK_LMENU => GIActions.ShowCursor.ToActionKey().ToVK(),
-                User32.VK.VK_L => GIActions.OpenPartySetupScreen.ToActionKey().ToVK(),
-                User32.VK.VK_O => GIActions.OpenFriendsScreen.ToActionKey().ToVK(),
-                User32.VK.VK_OEM_2 => GIActions.HideUI.ToActionKey().ToVK(),
-                // 其他按键（保留的？）不作转换
-                // NOTE: 是否可以在脚本中增加类似编译器预处理指令的语法，使全局按键映射功能在执行特定脚本（如用户自行编写且不推送到中央仓库的自用脚本）时禁用
-                _ => source,
-            };
-        }
-        return source;
     }
 }

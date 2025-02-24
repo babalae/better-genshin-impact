@@ -34,7 +34,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool IsExclusive { get; set; }
 
         private Blackboard blackboard;
-        internal IBehaviour<CaptureContent> BehaviourTree { get; set; }
+        // internal IBehaviour<CaptureContent> BehaviourTree { get; set; }
 
         /// <summary>
         /// 辣条（误）
@@ -54,7 +54,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
             IsExclusive = false;
 
-            BehaviourTree = FluentBuilder.Create<CaptureContent>()
+            /*BehaviourTree = FluentBuilder.Create<CaptureContent>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
                     .UntilSuccess("钓鱼循环")
@@ -79,13 +79,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         .End()
                     .End()
                 .End()
-                .Build();
+                .Build();*/
 
             BehaviourTreeLaTiao = FluentBuilder.Create<CaptureContent>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
                     .UntilSuccess("拉条循环")
                         .Sequence("拉条")
+                            .PushLeaf(() => new FishBite("自动提竿"))
                             .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
                             .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
                         .End()
@@ -113,14 +114,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                if (TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
-                {
-                    BehaviourTree.Tick(content);
-                }
-                else
-                {
-                    BehaviourTreeLaTiao.Tick(content);
-                }
+                // if (TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled)
+                // {
+                //     BehaviourTree.Tick(content);
+                // }
+                // else
+                // {
+                //     BehaviourTreeLaTiao.Tick(content);
+                // }
+                BehaviourTreeLaTiao.Tick(content);
             }
         }
 
@@ -342,8 +344,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 if (IsEnabled && !prevIsExclusive)
                 {
-                    _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
-                    _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled.ToChinese());
+                    _logger.LogInformation("→ {Text}", "半自动钓鱼，启动！");
+                    // _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled.ToChinese());
                 }
 
                 return BehaviourStatus.Running;

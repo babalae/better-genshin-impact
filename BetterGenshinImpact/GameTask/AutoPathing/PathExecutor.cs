@@ -31,6 +31,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -349,12 +350,13 @@ public class PathExecutor
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
+            if (PartyConfig.IsVisitStatueBeforeSwitchParty || !string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
             {
-                // 非空的情况下，先tp到安全位置（回血的七天神像）
+                // 非空的情况下或者设置强制tp的情况下，先tp到安全位置（回血的七天神像）
                 await new TpTask(ct).TpToStatueOfTheSeven();
+                await Delay(500, ct);
             }
-
+            
             var success = await new SwitchPartyTask().Start(partyName, ct);
             if (success)
             {
@@ -568,7 +570,7 @@ public class PathExecutor
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
         await tpTask.TpToStatueOfTheSeven();
-        await Delay(3000, ct);
+        await Delay(5000, ct);
         Logger.LogInformation("HP恢复完成");
     }
 
@@ -974,7 +976,8 @@ public class PathExecutor
         // 一些异常界面处理
         var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
         var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-        if (cookRa.IsExist() || closeRa.IsExist())
+        var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
+        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
         {
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);

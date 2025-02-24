@@ -394,6 +394,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoMusicGameHotkeyType,
             (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand); }
         ));
+        soloTaskDirectory.Children.Add(new HotKeySettingModel(
+            "启动/停止自动钓鱼",
+            nameof(Config.HotKeyConfig.AutoFishingGameHotkey),
+            Config.HotKeyConfig.AutoFishingGameHotkey,
+            Config.HotKeyConfig.AutoFishingGameHotkeyType,
+            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoFishingCommand); }
+        ));
 
         macroDirectory.Children.Add(new HotKeySettingModel(
             "快捷点击原神内确认按钮",

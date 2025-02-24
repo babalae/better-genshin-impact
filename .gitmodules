@@ -1,3 +1,3 @@
-[submodule "BetterGenshinImpact/Script"]
-	path = BetterGenshinImpact/Script
-	url = https://github.com/babalae/bettergi-scripts.git
+[submodule "Test/BetterGenshinImpact.UnitTest/Assets"]
+	path = Test/BetterGenshinImpact.UnitTest/Assets
+	url = https://github.com/huiyadanli/BetterGI.UnitTest.Assets.git

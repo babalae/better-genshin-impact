@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
@@ -54,7 +56,11 @@ public class SetTimeTask
         await SetTime(h, m, r1, r2, r3, stepDuration, ct);
         await Delay(1000, ct);
         GameCaptureRegion.GameRegion1080PPosClick(1500, 1000); // 确认
-        await Delay(18000, ct);
+        await Delay(3000, ct);
+
+        // 出现X的时候代表时间切换成功
+        await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
+
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
         await Delay(2000, ct);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
