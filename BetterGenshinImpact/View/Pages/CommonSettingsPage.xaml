@@ -662,7 +662,62 @@
 
             </ui:CardControl.Header>
         </ui:CardControl>
-
+       <!--  其他设置  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" >
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xF211;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="其他设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="设定一些其他功能的配置，如失去焦点自动激活游戏等"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="游戏失去焦点时候，强制恢复激活游戏窗口"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="适用于调度器任务和部分独立任务，失去焦点后，将自动激活游戏窗口，开启此项后，如果想切出游戏窗口，可以先暂停任务，之后再切出"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />
+                </Grid>
+                
+            </StackPanel>
+        </ui:CardExpander>
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="通知设置" />
