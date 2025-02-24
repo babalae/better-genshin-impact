@@ -92,8 +92,11 @@ public class TaskControl
     {
         if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
         {
-            Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-            throw new RetryException("当前获取焦点的窗口不是原神");
+            if (!SystemControl.IsGenshinImpactActiveByProcess())
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+                throw new RetryException("当前获取焦点的窗口不是原神");
+            }
         }
         
         var count = 0;
@@ -113,12 +116,6 @@ public class TaskControl
             count++;
             Thread.Sleep(1000);
         }
-
-        /*if (!SystemControl.IsGenshinImpactActiveByProcess())
-        {
-            Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-            throw new RetryException("当前获取焦点的窗口不是原神");
-        }*/
     }
 
     public static void Sleep(int millisecondsTimeout, CancellationToken ct)

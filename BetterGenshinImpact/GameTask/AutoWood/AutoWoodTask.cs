@@ -35,7 +35,7 @@ public partial class AutoWoodTask : ISoloTask
 
     private bool _first = true;
 
-    private readonly WoodStatisticsPrinter _printer;
+    private WoodStatisticsPrinter _printer;
 
     private readonly Login3rdParty _login3rdParty;
 
@@ -50,13 +50,12 @@ public partial class AutoWoodTask : ISoloTask
         this._taskParam = taskParam;
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
-
-        _printer = new WoodStatisticsPrinter(_assets);
     }
 
     public Task Start(CancellationToken ct)
     {
         _assets = AutoWoodAssets.Instance;
+        _printer = new WoodStatisticsPrinter(_assets);
         var runTimeWatch = new Stopwatch();
         _ct = ct;
         _printer.Ct = _ct;
