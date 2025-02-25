@@ -25,6 +25,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Drawing;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -51,6 +52,46 @@ public class AutoDomainTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
+
+    static double CalcRgbDiff(Bitmap image)
+    {
+        // 初始化 RGB 通道列表
+        var rList = new System.Collections.Generic.List<int>();
+        var gList = new System.Collections.Generic.List<int>();
+        var bList = new System.Collections.Generic.List<int>();
+
+        // 遍历图像的每个像素
+        for (int y = 0; y < image.Height; y++)
+        {
+            for (int x = 0; x < image.Width; x++)
+            {
+                Color pixel = image.GetPixel(x, y);
+                rList.Add(pixel.R);
+                gList.Add(pixel.G);
+                bList.Add(pixel.B);
+            }
+        }
+
+        // 计算 R 和 G 的差值
+        var rMinusG = rList.Zip(gList, (r, g) => r - g).ToArray();
+
+        // 计算差值的绝对值的平均值
+        double meanDiff = rMinusG.Select(x => Math.Abs(x)).Average();
+
+        return meanDiff;
+    }
+
+    static int IsDead(Bitmap image)
+    {
+        double d1 = CalcRgbDiff(image);
+        if (d1<3){
+            return 1;
+        }
+        else{
+            return 0;
+        }
+    }
+
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -509,6 +550,28 @@ public class AutoDomainTask : ISoloTask
             return true;
         }
 
+        //实时阵亡检测部分
+        var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
+        var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
+        var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
+        var avatar4=ra.DeriveCrop(new Rect(1794,540,14,25)).SrcBitmap;
+        if (IsDead(avatar1) == 1)
+        {
+            Logger.LogInformation("1号位阵亡");
+        }
+        if (IsDead(avatar2) == 1)
+        {
+            Logger.LogInformation("2号位阵亡");
+        }
+        if (IsDead(avatar3) == 1)
+        {
+            Logger.LogInformation("3号位阵亡");
+        }
+        if (IsDead(avatar4) == 1)
+        {
+            Logger.LogInformation("4号位阵亡");
+        }
+        
         return false;
     }
 
