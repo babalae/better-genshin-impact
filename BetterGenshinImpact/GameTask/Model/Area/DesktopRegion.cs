@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
+using Fischless.WindowsInput;
 using System.Drawing;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -15,6 +16,12 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
     public void DesktopRegionClick(int x, int y, int w, int h)
     {
         Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
+            (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
+    }
+
+    public void DesktopRegionClick(int x, int y, int w, int h, IMouseSimulator mouse)   // todo 重构使方法与键鼠模拟层解耦以利单元测试
+    {
+        mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
     }
 

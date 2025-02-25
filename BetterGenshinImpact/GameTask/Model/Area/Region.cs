@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.View.Drawable;
+using Fischless.WindowsInput;
 using OpenCvSharp;
 using System;
 using System.Diagnostics;
@@ -99,6 +100,12 @@ public class Region : IDisposable
         ClickTo(0, 0, Width, Height);
     }
 
+    public void Click(IMouseSimulator mouse)// todo 重构使方法与键鼠模拟层解耦以利单元测试
+    {
+        // 相对自己是 0, 0 坐标
+        ClickTo(0, 0, Width, Height, mouse);
+    }
+
     /// <summary>
     /// 点击区域内【指定位置】
     /// region.Derive(x,y).Click() 等效于 region.ClickTo(x,y)
@@ -108,6 +115,10 @@ public class Region : IDisposable
     public void ClickTo(int x, int y)
     {
         ClickTo(x, y, 0, 0);
+    }
+    public void ClickTo(int x, int y, IMouseSimulator mouse)// todo 重构使方法与键鼠模拟层解耦以利单元测试
+    {
+        ClickTo(x, y, 0, 0, mouse);
     }
 
     public void ClickTo(double dx, double dy)
@@ -129,6 +140,12 @@ public class Region : IDisposable
     {
         var res = ConvertRes<DesktopRegion>.ConvertPositionToTargetRegion(x, y, w, h, this);
         res.TargetRegion.DesktopRegionClick(res.X, res.Y, res.Width, res.Height);
+    }
+
+    public void ClickTo(int x, int y, int w, int h, IMouseSimulator mouse)  // todo 重构使方法与键鼠模拟层解耦以利单元测试
+    {
+        var res = ConvertRes<DesktopRegion>.ConvertPositionToTargetRegion(x, y, w, h, this);
+        res.TargetRegion.DesktopRegionClick(res.X, res.Y, res.Width, res.Height, mouse);
     }
 
     /// <summary>

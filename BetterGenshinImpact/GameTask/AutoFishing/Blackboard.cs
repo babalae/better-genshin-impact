@@ -47,8 +47,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         internal bool pitchReset = false;
 
         #region 分层暂放
-        internal static readonly YoloV8Predictor predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
-        internal Action<int> Sleep { get; set; }
+        public YoloV8Predictor predictor;
+        public Action<int> Sleep;
+
+        public Blackboard(YoloV8Predictor predictor, Action<int> sleep)
+        {
+            this.predictor = predictor;
+            Sleep = sleep;
+        }
         #endregion
 
         internal virtual void Reset()
