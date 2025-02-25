@@ -482,7 +482,7 @@ public class AutoDomainTask : ISoloTask
         var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
         var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
-        combatTask.Start();
+        // combatTask.Start();
         domainEndTask.Start();
         autoEatRecoveryHpTask.Start();
         return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
