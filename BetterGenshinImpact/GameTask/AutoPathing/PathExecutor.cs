@@ -592,7 +592,7 @@ public class PathExecutor
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
-
+    public DateTime moveToStartTime;
     private async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
@@ -603,7 +603,7 @@ public class PathExecutor
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
-        var startTime = DateTime.UtcNow;
+        moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
         var prevPositions = new List<Point2f>();
@@ -615,7 +615,7 @@ public class PathExecutor
         while (!ct.IsCancellationRequested)
         {
             num++;
-            if ((DateTime.UtcNow - startTime).TotalSeconds > 240)
+            if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
                 Logger.LogWarning("执行超时，放弃此次追踪");
                 throw new RetryException("路径点执行超时，放弃整条路径");
