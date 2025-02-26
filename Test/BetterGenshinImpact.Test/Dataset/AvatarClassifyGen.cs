@@ -19,17 +19,17 @@ public class AvatarClassifyGen
         // 读取基础图像
         // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_HutaoCostumeWinter.png", SearchOption.TopDirectoryOnly).ToList();
-        List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Iansan.png", SearchOption.TopDirectoryOnly).ToList();
-        sideImageFiles.AddRange(sideImageFiles2);
-        List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Citlali.png", SearchOption.TopDirectoryOnly).ToList();
-        sideImageFiles.AddRange(sideImageFiles3);
-        List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Lanyan.png", SearchOption.TopDirectoryOnly).ToList();
-        sideImageFiles.AddRange(sideImageFiles4);
-        List<string> sideImageFiles5 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_XianglingCostumeWinter.png", SearchOption.TopDirectoryOnly).ToList();
-        sideImageFiles.AddRange(sideImageFiles5);
-        List<string> sideImageFiles6 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Mavuika.png", SearchOption.TopDirectoryOnly).ToList();
-        sideImageFiles.AddRange(sideImageFiles6);
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Mizuki.png", SearchOption.TopDirectoryOnly).ToList();
+        // List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Iansan.png", SearchOption.TopDirectoryOnly).ToList();
+        // sideImageFiles.AddRange(sideImageFiles2);
+        // List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Citlali.png", SearchOption.TopDirectoryOnly).ToList();
+        // sideImageFiles.AddRange(sideImageFiles3);
+        // List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Lanyan.png", SearchOption.TopDirectoryOnly).ToList();
+        // sideImageFiles.AddRange(sideImageFiles4);
+        // List<string> sideImageFiles5 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_XianglingCostumeWinter.png", SearchOption.TopDirectoryOnly).ToList();
+        // sideImageFiles.AddRange(sideImageFiles5);
+        // List<string> sideImageFiles6 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Mavuika.png", SearchOption.TopDirectoryOnly).ToList();
+        // sideImageFiles.AddRange(sideImageFiles6);
 
         // 生成训练集
         GenTo(sideImageFiles, Path.Combine(BaseDir, @"dateset\train"), 200);
