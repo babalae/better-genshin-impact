@@ -4,7 +4,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
@@ -105,7 +104,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 Name = "ChooseBait",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{blackboard.selectedBaitName}.png"),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{blackboard.selectedBaitName}.png", 1920, 1080, 1d),
                 Threshold = 0.8,
                 Use3Channels = true,
                 DrawOnWindow = false
@@ -131,13 +130,23 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                resRa.Click(input.Mouse);
+                resRa.Click();
                 blackboard.Sleep(700);
                 // 可能重复点击，所以固定界面点击下
-                captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d), input.Mouse);
+                captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d));
                 blackboard.Sleep(200);
                 // 点击确定
-                Bv.ClickWhiteConfirmButton(captureRegion, input.Mouse);
+                var ra = captureRegion.Find(new RecognitionObject
+                {
+                    Name = "BtnWhiteConfirm",
+                    RecognitionType = RecognitionTypes.TemplateMatch,
+                    TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_confirm.png", 1920, 1080, 1d),  // todo 改成注入配置的形式，直接用魔法值不好
+                    Use3Channels = true
+                }.InitTemplate());
+                if (ra.IsExist())
+                {
+                    ra.Click();
+                }
                 blackboard.chooseBaitUIOpening = false;
                 logger.LogInformation("退出换饵界面");
                 blackboard.Sleep(500); // 等待界面切换

@@ -11,23 +11,37 @@ namespace BetterGenshinImpact.GameTask.Model.Area;
 /// 无缩放的桌面屏幕大小
 /// 主要用于点击操作
 /// </summary>
-public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
+public class DesktopRegion : Region
 {
-    public void DesktopRegionClick(int x, int y, int w, int h)
+    private readonly IMouseSimulator mouse;
+    public DesktopRegion() : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
     {
-        Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
-            (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
+        mouse = Simulation.SendInput.Mouse;
     }
 
-    public void DesktopRegionClick(int x, int y, int w, int h, IMouseSimulator mouse)   // todo 重构使方法与键鼠模拟层解耦以利单元测试
+    public DesktopRegion(IMouseSimulator mouse) : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
     {
+        this.mouse = mouse;
+    }
+
+
+    public void DesktopRegionClick(int x, int y, int w, int h)
+    {
+        if (mouse == null)
+        {
+            throw new System.NullReferenceException();
+        }
         mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
     }
 
     public void DesktopRegionMove(int x, int y, int w, int h)
     {
-        Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
+        if (mouse == null)
+        {
+            throw new System.NullReferenceException();
+        }
+        mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height);
     }
 

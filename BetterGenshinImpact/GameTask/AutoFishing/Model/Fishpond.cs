@@ -24,6 +24,13 @@ public class Fishpond
     /// </summary>
     public List<OneFish> Fishes { get; set; } = [];
 
+    public Fishpond(List<OneFish> fishes)
+    {
+        Fishes = fishes;
+
+        FishpondRect = CalculateFishpondRect();
+    }
+
     /// <summary>
     /// </summary>
     /// <param name="result"></param>

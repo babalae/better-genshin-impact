@@ -7,7 +7,6 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
 using OpenCvSharp;
-using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -30,18 +29,6 @@ public static partial class Bv
         if (ra.IsExist())
         {
             ra.Click();
-            return true;
-        }
-
-        return false;
-    }
-
-    public static bool ClickWhiteConfirmButton(ImageRegion captureRa, IMouseSimulator mouse)    // todo 重构使方法与键鼠模拟层解耦以利单元测试
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnWhiteConfirm);
-        if (ra.IsExist())
-        {
-            ra.Click(mouse);
             return true;
         }
 
@@ -76,18 +63,6 @@ public static partial class Bv
         if (ra.IsExist())
         {
             ra.Click();
-            return true;
-        }
-
-        return false;
-    }
-
-    public static bool ClickBlackConfirmButton(ImageRegion captureRa, IMouseSimulator mouse)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnBlackConfirm);
-        if (ra.IsExist())
-        {
-            ra.Click(mouse);
             return true;
         }
 

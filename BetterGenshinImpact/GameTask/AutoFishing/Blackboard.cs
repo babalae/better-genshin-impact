@@ -22,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 鱼塘
         /// </summary>
-        internal Fishpond fishpond;
+        public Fishpond fishpond;
 
         /// <summary>
         /// 是否没有目标鱼

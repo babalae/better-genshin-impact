@@ -149,7 +149,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                             Sleep(1000);
                             ra = TaskControl.CaptureToRectArea(forceNew: true);
-                            Bv.ClickBlackConfirmButton(ra, input.Mouse);
+                            Bv.ClickBlackConfirmButton(ra);
                             Sleep(1000);
                         }
                         break;
@@ -225,6 +225,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (result.Boxes.Any())
                 {
                     Fishpond fishpond = new Fishpond(result);
+                    logger.LogInformation("定位到鱼塘：" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
                     int i = 0;
                     foreach (var fish in fishpond.Fishes)
                     {
@@ -300,7 +301,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     blackboard.Sleep(2000);
                     return BehaviourStatus.Running;
                 }
-                else if (Bv.ClickWhiteConfirmButton(imageRegion, input.Mouse))
+                else if (Bv.ClickWhiteConfirmButton(imageRegion))
                 {
                     logger.LogInformation("点击开始钓鱼");
 

@@ -23,16 +23,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         /// <summary>
         /// 测试各种鱼塘的获取，结果为成功
         /// </summary>
-        /// <param name="filename"></param>
         public void GetFishpondTest_VariousFishpond_ShouldSuccess(string screenshot1080p)
         {
             //
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new ImageRegion(bitmap, 0, 0);
 
-            //
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
+
             var blackboard = new Blackboard(predictor, sleep: i => { });
+
+            //
             GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
