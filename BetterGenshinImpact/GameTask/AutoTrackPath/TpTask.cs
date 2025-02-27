@@ -362,7 +362,8 @@ public class TpTask(CancellationToken ct)
                 if (mouseDistance < _tpConfig.MapZoomInDistance)
                 {
                     double targetZoomLevel = currentZoomLevel * mouseDistance / _tpConfig.MapZoomInDistance;
-                    if (targetZoomLevel > minZoomLevel)
+                    targetZoomLevel = Math.Max(targetZoomLevel, minZoomLevel);
+                    if (currentZoomLevel > minZoomLevel + _tpConfig.PrecisionThreshold)
                     {
                         await AdjustMapZoomLevel(currentZoomLevel, targetZoomLevel);
                         double nextZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
