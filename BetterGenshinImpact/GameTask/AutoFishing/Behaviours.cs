@@ -68,25 +68,27 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
-        private DateTime? chooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现并尝试找鱼饵的结束时间
+        private readonly TimeProvider timeProvider;
+        private DateTimeOffset? chooseBaitUIOpenWaitEndTime; // 等待选鱼饵界面出现并尝试找鱼饵的结束时间
 
         /// <summary>
         /// 选择鱼饵
         /// </summary>
         /// <param name="name"></param>
         /// <param name="autoFishingTrigger"></param>
-        public ChooseBait(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public ChooseBait(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
         {
             this.blackboard = blackboard;
             this.logger = logger;
             this.input = input;
+            this.timeProvider = timeProvider ?? TimeProvider.System;
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
             if (this.Status == BehaviourStatus.Ready)   // 第一次进来直接返回，更新截图
             {
-                chooseBaitUIOpenWaitEndTime = DateTime.Now.AddSeconds(3);
+                chooseBaitUIOpenWaitEndTime = timeProvider.GetLocalNow().AddSeconds(3);
                 logger.LogInformation("打开换饵界面");
                 blackboard.chooseBaitUIOpening = true;
                 input.Mouse.RightButtonClick();
@@ -104,7 +106,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 Name = "ChooseBait",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{blackboard.selectedBaitName}.png", 1920, 1080, 1d),
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{blackboard.selectedBaitName}.png", 1920, 1080, 1d),  // todo 改成注入配置的形式，直接用魔法值不好
                 Threshold = 0.8,
                 Use3Channels = true,
                 DrawOnWindow = false
@@ -114,7 +116,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using var resRa = captureRegion.Find(ro);
             if (resRa.IsEmpty())
             {
-                if (DateTime.Now >= chooseBaitUIOpenWaitEndTime)
+                if (timeProvider.GetLocalNow() >= chooseBaitUIOpenWaitEndTime)
                 {
                     logger.LogWarning("没有找到目标鱼饵");
                     input.Keyboard.KeyPress(VK.VK_ESCAPE);
@@ -159,19 +161,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// <summary>
     /// 抛竿
     /// </summary>
-    public class ApproachFishAndThrowRod : BaseBehaviour<ImageRegion>
+    public class ThrowRod : BaseBehaviour<ImageRegion>
     {
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
+        private readonly DrawContent drawContent;
 
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
-        public ApproachFishAndThrowRod(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public ThrowRod(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, DrawContent? drawContent = null) : base(name)
         {
             this.blackboard = blackboard;
             this.logger = logger;
             this.input = input;
+            this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
         protected override void OnInitialize()
@@ -189,14 +193,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             if (status != BehaviourStatus.Running)
             {
-                VisionContext.Instance().DrawContent.RemoveRect("Target");
-                VisionContext.Instance().DrawContent.RemoveRect("Fish");
+                drawContent.RemoveRect("Target");
+                drawContent.RemoveRect("Fish");
             }
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("ApproachFishAndThrowRod");
+            logger.LogDebug("ThrowRod");
             blackboard.noTargetFish = false;
             var prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
 
@@ -293,12 +297,24 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 imageRegion.DrawRect(fishpondTargetRect, "Target");
                 imageRegion.Derive(currentFish.Rect).DrawSelf("Fish");
 
-                // VisionContext.Instance().DrawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
-                // VisionContext.Instance().DrawContent.PutRect("Fish", currentFish.Rect.ToRectDrawable());
+                // drawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
+                // drawContent.PutRect("Fish", currentFish.Rect.ToRectDrawable());
 
                 // 来自 HutaoFisher 的抛竿技术
                 var rod = fishpondTargetRect;
                 var fish = currentFish.Rect;
+                if (ScaleMax1080PCaptureRect == default)  // todo 等配置能注入后和SystemInfo.ScaleMax1080PCaptureRect放到一起
+                {
+                    if (imageRegion.Width > 1920)
+                    {
+                        var scale = imageRegion.Width / 1920d;
+                        ScaleMax1080PCaptureRect = new Rect(imageRegion.X, imageRegion.Y, 1920, (int)(imageRegion.Height / scale));
+                    }
+                    else
+                    {
+                        ScaleMax1080PCaptureRect = new Rect(imageRegion.X, imageRegion.Y, imageRegion.Width, imageRegion.Height);
+                    }
+                }
                 var dx = NormalizeXTo1024(fish.Left + fish.Right - rod.Left - rod.Right) / 2.0;
                 var dy = NormalizeYTo576(fish.Top + fish.Bottom - rod.Top - rod.Bottom) / 2.0;
                 var state = RodNet.GetRodState(new RodInput
@@ -374,14 +390,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return BehaviourStatus.Running;
         }
 
+        private Rect ScaleMax1080PCaptureRect { get; set; }
+
         private double NormalizeXTo1024(int x)
         {
-            return x * 1.0 / TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width * 1024;
+            return x * 1.0 / ScaleMax1080PCaptureRect.Width * 1024;
         }
 
         private double NormalizeYTo576(int y)
         {
-            return y * 1.0 / TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Height * 576;
+            return y * 1.0 / ScaleMax1080PCaptureRect.Height * 576;
         }
 
     }

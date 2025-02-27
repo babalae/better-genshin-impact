@@ -1,10 +1,9 @@
 ﻿using BehaviourTree;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
-using Compunet.YoloV8;
+using Microsoft.Extensions.Time.Testing;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -50,10 +49,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [Theory]
         [InlineData(@"20250226161354285_ChooseBait_Succeeded.png", new string[] { "koi" })]
         /// <summary>
-        /// 测试各种选取鱼饵，结果为运行中
-        /// todo DateTime改TimeProvider
+        /// 测试各种选取鱼饵，结果为失败
         /// </summary>
-        public void ChooseBaitTest_VariousBait_ShouldBeRunning(string screenshot1080p, IEnumerable<string> fishNames)
+        public void ChooseBaitTest_VariousBait_ShouldFail(string screenshot1080p, IEnumerable<string> fishNames)
         {
             //
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
@@ -64,18 +62,39 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 fishpond = new Fishpond(fishNames.Select(n => new OneFish(n, OpenCvSharp.Rect.Empty, 0)).ToList())
             };
 
+            DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
+
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), new FakeInputSimulator());
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), new FakeInputSimulator(), fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
+            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.True(blackboard.chooseBaitUIOpening);
             Assert.Equal(BehaviourStatus.Running, actual);
+
+            //
+            fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(1));
 
             //
             actual = sut.Tick(imageRegion);
 
             //
+            Assert.False(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.True(blackboard.chooseBaitUIOpening);
             Assert.Equal(BehaviourStatus.Running, actual);
+
+            //
+            fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(3));
+
+            //
+            actual = sut.Tick(imageRegion);
+
+            //
+            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.False(blackboard.chooseBaitUIOpening);
+            Assert.Equal(BehaviourStatus.Failed, actual);
         }
     }
 }

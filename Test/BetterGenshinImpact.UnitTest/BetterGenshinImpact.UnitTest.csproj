@@ -11,6 +11,7 @@
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="6.0.0" />
+        <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.2.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
         <PackageReference Include="xunit" Version="2.5.3" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
@@ -22,10 +23,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\BetterGenshinImpact\BetterGenshinImpact.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Assets\AutoFishing\" />
     </ItemGroup>
 
 </Project>

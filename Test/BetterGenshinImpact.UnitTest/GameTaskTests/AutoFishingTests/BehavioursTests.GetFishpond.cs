@@ -7,9 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
-using OpenCvSharp;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX;
 using Compunet.YoloV8;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests

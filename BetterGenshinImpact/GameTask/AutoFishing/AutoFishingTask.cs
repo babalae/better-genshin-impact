@@ -89,7 +89,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                     .UntilSuccess("重复抛竿")
                                         .Sequence("重复抛竿序列")
                                             .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, input))
-                                            .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard, _logger, input))
+                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, input))
                                         .End()
                                     .End()
                                     .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
