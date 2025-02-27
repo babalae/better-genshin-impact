@@ -86,15 +86,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            if (this.Status == BehaviourStatus.Ready)   // 第一次进来直接返回，更新截图
+            if (this.Status == BehaviourStatus.Ready)
             {
+                if (blackboard.fishpond.Fishes.Any(f => f.FishType.BaitName == blackboard.selectedBaitName))    // 如果该种鱼没钓完就不用换饵
+                {
+                    return BehaviourStatus.Succeeded;
+                }
                 chooseBaitUIOpenWaitEndTime = timeProvider.GetLocalNow().AddSeconds(3);
                 logger.LogInformation("打开换饵界面");
                 blackboard.chooseBaitUIOpening = true;
                 input.Mouse.RightButtonClick();
                 blackboard.Sleep(100);
                 input.Mouse.MoveMouseBy(0, 200); // 鼠标移走，防止干扰
-                blackboard.Sleep(100);
+                blackboard.Sleep(500);
                 return BehaviourStatus.Running;
             }
 
@@ -479,7 +483,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 logger.LogInformation($"{seconds}秒没有咬杆，本次收杆");
                 input.Mouse.LeftButtonClick();
-                blackboard.Sleep(1000);
+                blackboard.Sleep(2000);
                 return BehaviourStatus.Failed;
             }
             else
@@ -800,7 +804,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 logger.LogInformation("调整视角至俯视");
                 blackboard.pitchReset = false;
                 // 下移视角方便看鱼
-                input.Mouse.MoveMouseBy(0, 400);
+                input.Mouse.MoveMouseBy(0, 500);
                 blackboard.Sleep(100);
                 return BehaviourStatus.Running;
             }

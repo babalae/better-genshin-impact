@@ -63,6 +63,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
             pitchReset = false;
+            selectedBaitName = string.Empty;
         }
     }
 }
