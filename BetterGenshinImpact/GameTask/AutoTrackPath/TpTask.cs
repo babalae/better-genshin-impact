@@ -362,13 +362,15 @@ public class TpTask(CancellationToken ct)
                 if (mouseDistance < _tpConfig.MapZoomInDistance)
                 {
                     double targetZoomLevel = currentZoomLevel * mouseDistance / _tpConfig.MapZoomInDistance;
-                    targetZoomLevel = Math.Max(targetZoomLevel, minZoomLevel);
-                    await AdjustMapZoomLevel(currentZoomLevel, targetZoomLevel);
-                    double nextZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
-                    totalMoveMouseX *= currentZoomLevel / nextZoomLevel;
-                    totalMoveMouseY *= currentZoomLevel / nextZoomLevel;
-                    mouseDistance *= currentZoomLevel / nextZoomLevel;
-                    currentZoomLevel = nextZoomLevel;
+                    if (targetZoomLevel > minZoomLevel)
+                    {
+                        await AdjustMapZoomLevel(currentZoomLevel, targetZoomLevel);
+                        double nextZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+                        totalMoveMouseX *= currentZoomLevel / nextZoomLevel;
+                        totalMoveMouseY *= currentZoomLevel / nextZoomLevel;
+                        mouseDistance *= currentZoomLevel / nextZoomLevel;
+                        currentZoomLevel = nextZoomLevel;
+                    }
                 }
             }
 
