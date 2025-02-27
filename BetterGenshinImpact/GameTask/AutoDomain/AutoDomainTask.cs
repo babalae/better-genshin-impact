@@ -515,7 +515,7 @@ public class AutoDomainTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (IsDomainEnd())
+                    if (IsDomainEnd(cts))
                     {
                         await cts.CancelAsync();
                         break;
@@ -530,7 +530,7 @@ public class AutoDomainTask : ISoloTask
         }, cts.Token);
     }
 
-    private bool IsDomainEnd()
+    private bool IsDomainEnd(CancellationTokenSource cts)
     {
         using var ra = CaptureToRectArea();
 
@@ -551,6 +551,20 @@ public class AutoDomainTask : ISoloTask
         }
 
         //实时阵亡检测部分
+        var after_death = () =>
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                cts.CancelAsync();
+                Logger.LogWarning("存在角色被击败，前往七天神像复活");
+                Sleep(600);
+                Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                // tp 到七天神像复活
+                var tpTask = new TpTask(new CancellationToken());
+                tpTask.TpToStatueOfTheSeven().Wait(new CancellationToken());
+                throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            }
+        };
         var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
         var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
         var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
@@ -558,18 +572,22 @@ public class AutoDomainTask : ISoloTask
         if (IsDead(avatar1) == 1)
         {
             Logger.LogInformation("1号位阵亡");
+            after_death();
         }
         if (IsDead(avatar2) == 1)
         {
             Logger.LogInformation("2号位阵亡");
+            after_death();
         }
         if (IsDead(avatar3) == 1)
         {
             Logger.LogInformation("3号位阵亡");
+            after_death();
         }
         if (IsDead(avatar4) == 1)
         {
             Logger.LogInformation("4号位阵亡");
+            after_death();
         }
         
         return false;
