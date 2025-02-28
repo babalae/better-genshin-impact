@@ -17,8 +17,7 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
     // 2048 区块下，存在传送点的最大面积，识别结果比这个大的话，需要点击放大
 
     // 传送点信息
-
-    public List<GiWorldPosition> TpPositions;
+    public readonly List<GiWorldPosition> TpPositions;
 
     // 每个地区点击后处于的中心位置
     public readonly Dictionary<string, double[]> CountryPositions = new()
@@ -32,6 +31,7 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
     };
     
     public readonly Dictionary<string, GiWorldPosition> DomainPositionMap = new();
+    public readonly Dictionary<string, GiWorldPosition> GoddessPositions = new();
     public readonly List<String> DomainNameList = [];
     // 反方向行走的副本
     public readonly List<string> DomainBackwardList = ["无妄引咎密宫", "芬德尼尔之顶"];
@@ -47,6 +47,9 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
             DomainPositionMap[tp.Name] = tp;
             DomainNameList.Add(tp.Name);
         }
-
+        foreach (var tp in TpPositions.Where(tp => (tp.Type == "Goddess")))
+        {
+            GoddessPositions[tp.Id] = tp;
+        }
     }
 }

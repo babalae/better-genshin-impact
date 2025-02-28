@@ -15,7 +15,7 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-
+    
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
@@ -436,8 +436,8 @@
 
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="通用功能置" />
-        <!--  快速传送  -->
+                      Text="通用功能设置" />
+        <!--  大地图传送相关设置  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf3c5;" Style="{StaticResource FaFontIconStyle}" />
@@ -514,7 +514,9 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MaxMouseMove, Mode=TwoWay}" />
+                                Text="{Binding Config.TpConfig.MaxMouseMove, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -540,7 +542,9 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay}" />
+                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -566,7 +570,9 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomInDistance, Mode=TwoWay}" />
+                                Text="{Binding Config.TpConfig.MapZoomInDistance, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -592,12 +598,152 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.StepIntervalMilliseconds, Mode=TwoWay}" />
+                                Text="{Binding Config.TpConfig.StepIntervalMilliseconds,
+                                Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+        
+        <!--回血相关设置-->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf0fa;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="七天神像设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="用于指定回血的七天神像"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="是否就近七天神像恢复血量"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}"/>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="传送到七天神像之后是否需要移动后回血"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="启用后将自动向七天神像方向移动"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     IsChecked="{Binding Config.TpConfig.ShouldMove}"/>
+                </Grid>
+                <!-- 指定国家 -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="七天神像国家"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="选择七天神像所在国家"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                 ItemsSource="{Binding CountryList}"
+                                 SelectedItem="{Binding SelectedCountry}"
+                                 MinWidth="120"/>
+                </Grid>
 
-
+                <!-- 指定区域 -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="七天神像区域"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="选择七天神像所在区域"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                 ItemsSource="{Binding Areas}"
+                                 SelectedItem="{Binding SelectedArea}"
+                                 MinWidth="120"/>
+                </Grid>
+                
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="回血等待间隔（秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="传送到七天神像之后需要等待多久恢复血量"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TpConfig.HpRestoreDuration, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
         <!-- 新增手动导入本地脚本仓库功能 -->
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
             <ui:CardControl.Header>

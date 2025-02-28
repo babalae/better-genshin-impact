@@ -7,12 +7,14 @@
 public class GiWorldPosition
 {
     /// <summary>
-    /// 为这个坐标点命名
+    /// 基本属性
     /// </summary>
-    public string? Name { get; set; }
-
+    public required string Name { get; set; } // tp 名称
+    public required string Id { get; set; } // 唯一 id
+    public required string Type { get; set; } // tp 类型
+    public required string Area { get; set; } // 所在区域
     /// <summary>
-    /// 坐标描述
+    /// 坐标描述和所在区域
     /// </summary>
     public string? Description { get; set; }
     public string? Country { get; set; }

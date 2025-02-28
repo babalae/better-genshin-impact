@@ -10,6 +10,9 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -65,10 +68,62 @@ public class TpTask(CancellationToken ct)
                 await AdjustMapZoomLevel(currentZoomLevel, 3);
             }
         }
-
-        await Tp(_tpConfig.ReviveStatueOfTheSevenPointX, _tpConfig.ReviveStatueOfTheSevenPointY);
+        string? country = _tpConfig.ReviveStatueOfTheSevenCountry;
+        string? area = _tpConfig.ReviveStatueOfTheSevenArea;
+        double x = _tpConfig.ReviveStatueOfTheSevenPointX;
+        double y = _tpConfig.ReviveStatueOfTheSevenPointY;
+        if (_tpConfig.IsReviveInNearestStatueOfTheSeven)
+        {
+            var center = GetBigMapCenterPoint();
+            (x, y, country, area) = GetNearestGoddess(center.X, center.Y);
+        }
+        Logger.LogInformation($"传送至 {country} {area} 七天神像", country, area);
+        await Tp(x, y);
+        if (_tpConfig.ShouldMove || _tpConfig.IsReviveInNearestStatueOfTheSeven)
+        {
+            var waypoint = new Waypoint
+            {
+                X = x,
+                Y = y,
+                Type = WaypointType.Path.Code,
+                MoveMode = MoveModeEnum.Walk.Code
+            };
+            var waypointForTrack = new WaypointForTrack(waypoint);
+            await new PathExecutor(ct).MoveTo(waypointForTrack);
+        }
+        
+        await Delay((int)(_tpConfig.HpRestoreDuration * 1000), ct);
     }
 
+    /// <summary>
+    /// 获取离 x,y 最近的七天神像
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <returns></returns>
+    public (double x, double y, string? country, string? area) GetNearestGoddess(double x, double y)
+    {
+        double nearestGoddessX = _tpConfig.ReviveStatueOfTheSevenPointX;
+        double nearestGoddessY = _tpConfig.ReviveStatueOfTheSevenPointY;
+        double minDistance = double.MaxValue;
+        string? nearestGoddessCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
+        string? nearestGoddessArea = _tpConfig.ReviveStatueOfTheSevenArea;
+        foreach (var (goddess, goddessPosition) in MapLazyAssets.Instance.GoddessPositions)
+        {
+            var distance = Math.Sqrt(Math.Pow(goddessPosition.X - x, 2) + Math.Pow(goddessPosition.Y - y, 2));
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                nearestGoddessX = goddessPosition.X;
+                nearestGoddessY = goddessPosition.Y;
+                nearestGoddessArea = goddessPosition.Area;
+                nearestGoddessCountry = goddessPosition.Name;
+            }
+        }
+        // 获取最近的女神像位置
+        return (nearestGoddessX, nearestGoddessY, nearestGoddessCountry, nearestGoddessArea);
+    }
+    
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>

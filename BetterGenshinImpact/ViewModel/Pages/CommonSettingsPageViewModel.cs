@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System.Collections.ObjectModel;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service.Interface;
@@ -10,8 +11,12 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
@@ -35,13 +40,95 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
 
     [ObservableProperty]
     private string _webhookStatus = string.Empty;
+    
+    public ObservableCollection<string> CountryList { get; } = new();
+    public ObservableCollection<string> Areas { get; } = new();
+    private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
 
+    private string _selectedCountry;
+    public string SelectedCountry
+    {
+        get => _selectedCountry;
+        set
+        {
+            if (SetProperty(ref _selectedCountry, value))
+            {
+                UpdateAreas(value);
+            }
+        }
+    }
+
+    private string _selectedArea;
+    public string SelectedArea
+    {
+        get => _selectedArea;
+        set
+        {
+            if (SetProperty(ref _selectedArea, value))
+            {
+                UpdateRevivePoint(SelectedCountry, SelectedArea);
+            }
+        }
+    }
+
+    private void InitializeCountries()
+    {
+        var countries = MapLazyAssets.Instance.GoddessPositions.Values
+            .Select(g => g.Country)
+            .Distinct()
+            .OrderBy(c => c);
+        CountryList.Clear();
+        foreach (var country in countries)
+        {
+            if (!string.IsNullOrEmpty(country))
+            {
+                CountryList.Add(country);
+            }
+        }
+        SelectedCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
+        UpdateAreas(SelectedCountry);
+        SelectedArea = _tpConfig.ReviveStatueOfTheSevenArea;
+    }
+
+    private void UpdateAreas(string country)
+    {
+        Areas.Clear();
+        if (string.IsNullOrEmpty(country)) return;
+    
+        var areas = MapLazyAssets.Instance.GoddessPositions.Values
+            .Where(g => g.Country == country)
+            .Select(g => g.Area)
+            .Distinct()
+            .OrderBy(a => a);
+        foreach (var area in areas)
+        {
+            Areas.Add(area);
+        }
+    }
+
+   // 当国家或区域改变时更新坐标
+    private void UpdateRevivePoint(string country, string area)
+    {
+        if (string.IsNullOrEmpty(country) || string.IsNullOrEmpty(area)) return;
+    
+        var goddess = MapLazyAssets.Instance.GoddessPositions.Values
+            .FirstOrDefault(g => g.Country == country && g.Area == area);
+        if (goddess != null)
+        {
+            _tpConfig.ReviveStatueOfTheSevenCountry = country;
+            _tpConfig.ReviveStatueOfTheSevenArea = area;
+            _tpConfig.ReviveStatueOfTheSevenPointX = goddess.X;
+            _tpConfig.ReviveStatueOfTheSevenPointY = goddess.Y;
+        }
+    }
+    
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService, NotificationService notificationService)
     {
         Config = configService.Get();
         _navigationService = navigationService;
         _notificationService = notificationService;
+        InitializeCountries();
     }
 
     public void OnNavigatedTo()
