@@ -99,13 +99,13 @@ public class TpTask(CancellationToken ct)
             /* 动态调整缩放逻辑：
                 1. 如果当前缩放大于显示传送点级别 -> 缩小
                 2. 如果小于配置的最小级别 -> 放大 */
-            if (zoomLevel > DisplayTpPointZoomLevel)
+            if (zoomLevel > DisplayTpPointZoomLevel + _tpConfig.PrecisionThreshold)
             {
                 await AdjustMapZoomLevel(zoomLevel, DisplayTpPointZoomLevel);
                 zoomLevel = DisplayTpPointZoomLevel;
                 Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.00}", DisplayTpPointZoomLevel);
             }
-            else if (zoomLevel < _tpConfig.MinZoomLevel)
+            else if (zoomLevel < _tpConfig.MinZoomLevel - _tpConfig.PrecisionThreshold)
             {
                 await AdjustMapZoomLevel(zoomLevel, _tpConfig.MinZoomLevel);
                 zoomLevel = _tpConfig.MinZoomLevel;
@@ -341,22 +341,11 @@ public class TpTask(CancellationToken ct)
         // 缩小地图到恰当的缩放
         if (_tpConfig.MapZoomEnabled) 
         {
-            while (mouseDistance > _tpConfig.MapZoomOutDistance)
+            if (mouseDistance > _tpConfig.MapZoomOutDistance)
             {
-                if (currentZoomLevel < maxZoomLevel - 1.0)
-                {
-                    // 离 maxZoomLevel 较远时，通过点击缩放按键缩放
-                    await AdjustMapZoomLevel(false);
-                }
-                else if (currentZoomLevel < maxZoomLevel - _tpConfig.PrecisionThreshold)
-                {
-                    // 离 maxZoomLevel 较近时，通过滑动缩放条缩放
-                    await AdjustMapZoomLevel(currentZoomLevel, maxZoomLevel);
-                }
-                else
-                {
-                    break;  // 考虑识别的精度，离 maxZoomLevel 较近时认为无需移动
-                }
+                double targetZoomLevel = currentZoomLevel * mouseDistance / _tpConfig.MapZoomOutDistance;
+                targetZoomLevel = Math.Min(targetZoomLevel, maxZoomLevel);
+                await AdjustMapZoomLevel(currentZoomLevel, targetZoomLevel);
                 double nextZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
                 totalMoveMouseX *= currentZoomLevel / nextZoomLevel;
                 totalMoveMouseY *= currentZoomLevel / nextZoomLevel;
@@ -370,25 +359,19 @@ public class TpTask(CancellationToken ct)
         {
             if (_tpConfig.MapZoomEnabled)
             {
-                while ( mouseDistance < _tpConfig.MapZoomInDistance)
+                if (mouseDistance < _tpConfig.MapZoomInDistance)
                 {
-                    if (currentZoomLevel > minZoomLevel + 1.0)
+                    double targetZoomLevel = currentZoomLevel * mouseDistance / _tpConfig.MapZoomInDistance;
+                    targetZoomLevel = Math.Max(targetZoomLevel, minZoomLevel);
+                    if (currentZoomLevel > minZoomLevel + _tpConfig.PrecisionThreshold)
                     {
-                        await AdjustMapZoomLevel(true);
+                        await AdjustMapZoomLevel(currentZoomLevel, targetZoomLevel);
+                        double nextZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
+                        totalMoveMouseX *= currentZoomLevel / nextZoomLevel;
+                        totalMoveMouseY *= currentZoomLevel / nextZoomLevel;
+                        mouseDistance *= currentZoomLevel / nextZoomLevel;
+                        currentZoomLevel = nextZoomLevel;
                     }
-                    else if (currentZoomLevel > minZoomLevel + _tpConfig.PrecisionThreshold)
-                    {
-                        await AdjustMapZoomLevel(currentZoomLevel, minZoomLevel);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                    double nextZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
-                    totalMoveMouseX *= currentZoomLevel / nextZoomLevel;
-                    totalMoveMouseY *= currentZoomLevel / nextZoomLevel;
-                    mouseDistance *= currentZoomLevel / nextZoomLevel;
-                    currentZoomLevel = nextZoomLevel;
                 }
             }
 
@@ -450,6 +433,7 @@ public class TpTask(CancellationToken ct)
     /// 调整地图缩放级别以加速移动
     /// </summary>
     /// <param name="zoomIn">是否放大地图</param>
+   [Obsolete]
     private async Task AdjustMapZoomLevel(bool zoomIn)
     {
         if (zoomIn)
