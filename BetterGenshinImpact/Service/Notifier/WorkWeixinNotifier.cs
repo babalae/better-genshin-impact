@@ -107,10 +107,6 @@ public class WorkWeixinNotifier : INotifier
     {
         using (var ms = new MemoryStream())
         {
-            string uniqueFileName = $"notification_image_{Guid.NewGuid()}.jpeg";
-            string imagePath = Path.Combine(TempManager.GetTempDirectory(), uniqueFileName);
-            image.Save(imagePath, System.Drawing.Imaging.ImageFormat.Jpeg);
-            
             // Save the image to a MemoryStream in JPEG format
             image.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
             byte[] imageBytes = ms.ToArray();
@@ -128,14 +124,11 @@ public class WorkWeixinNotifier : INotifier
             image.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
             byte[] imageBytes = ms.ToArray();
 
-            using (var md5 = MD5.Create())
-            {
-                // Compute the MD5 hash of the raw byte data (before encoding to Base64)
-                byte[] hashBytes = md5.ComputeHash(imageBytes);
-                // Convert hash bytes to a hex string (without hyphens)
-                string md5Hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-                return md5Hash;
-            }
+            // Compute the MD5 hash of the raw byte data
+            byte[] hashBytes = MD5.HashData(imageBytes);
+            // Convert hash bytes to a hex string
+            string md5Hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+            return md5Hash;
         }
     }
 }
