@@ -924,6 +924,7 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.HydroCollect.Code
             || waypoint.Action == ActionEnum.ElectroCollect.Code
             || waypoint.Action == ActionEnum.AnemoCollect.Code
+            || waypoint.Action == ActionEnum.PyroCollect.Code
             || waypoint.Action == ActionEnum.CombatScript.Code
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code)
