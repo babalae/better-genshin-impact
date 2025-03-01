@@ -448,6 +448,9 @@ public class AutoDomainTask : ISoloTask
     {
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
+        cts.Token.Register(()=>{
+            Logger.LogInformation("cts取消请求");
+        });
         combatScenes.BeforeTask(cts.Token);
         // 战斗操作
         var combatTask =  Task.Run(async () =>
