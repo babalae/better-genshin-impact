@@ -444,14 +444,16 @@ public class AutoDomainTask : ISoloTask
         }), _ct);
     }
 
-    private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
+    private async Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
     {
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
         combatScenes.BeforeTask(cts.Token);
         // 战斗操作
-        var combatTask = new Task(() =>
+        var combatTask =  Task.Run(async () =>
         {
+            await Task.Delay(1); //用于把此combatTask任务转化为异步
+
             try
             {
                 while (!cts.Token.IsCancellationRequested)
@@ -482,10 +484,9 @@ public class AutoDomainTask : ISoloTask
         var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
         var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
-        combatTask.Start();
-        domainEndTask.Start();
-        autoEatRecoveryHpTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
+        await combatTask;
+        await domainEndTask;
+        await autoEatRecoveryHpTask;
     }
 
     private void EndFightWait()
@@ -509,7 +510,7 @@ public class AutoDomainTask : ISoloTask
     /// </summary>
     private Task DomainEndDetectionTask(CancellationTokenSource cts)
     {
-        return new Task(async () =>
+        return  Task.Run(async () =>
         {
             try
             {
@@ -598,7 +599,7 @@ public class AutoDomainTask : ISoloTask
 
     private Task AutoEatRecoveryHpTask(CancellationToken ct)
     {
-        return new Task(async () =>
+        return Task.Run(async () =>
         {
             if (!_config.AutoEat)
             {
