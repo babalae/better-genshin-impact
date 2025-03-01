@@ -9,9 +9,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
@@ -218,6 +220,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                         await Task.Delay(1000);
                     }
                 }
+                await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 Notify.Event(NotificationEvent.DragonEnd).Success("一条龙结束");
             });
     }
