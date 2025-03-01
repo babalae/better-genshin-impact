@@ -119,15 +119,7 @@ public class Avatar
     {
         if (Bv.IsInRevivePrompt(region))
         {
-            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
-            // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
-            Sleep(600, Ct);
-            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-            // tp 到七天神像复活
-            var tpTask = new TpTask(Ct);
-            tpTask.TpToStatueOfTheSeven().Wait(Ct);
-
+            //先报异常，立即取消cts，然后再执行传送部分代码
             throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }
     }
