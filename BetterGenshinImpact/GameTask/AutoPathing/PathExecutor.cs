@@ -346,18 +346,19 @@ public class PathExecutor
     /// <returns></returns>
     private async Task<bool> SwitchParty(string? partyName)
     {
-        bool success = false;
+        bool success = true;
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
             {
-                return true;
+                return success;
             }
 
             bool forceTp = PartyConfig.IsVisitStatueBeforeSwitchParty;
 
             if (forceTp) // 强制传送模式
             {
+                await new TpTask(ct).TpToStatueOfTheSeven();  // fix typos
                 success = await new SwitchPartyTask().Start(partyName, ct);
             }
             else // 优先原地切换模式
@@ -369,7 +370,6 @@ public class PathExecutor
                 catch (PartySetupFailedException)
                 {
                     await new TpTask(ct).TpToStatueOfTheSeven();
-                    await Delay(3000, ct); // 更多的加载时间
                     success = await new SwitchPartyTask().Start(partyName, ct);
                 }
             }
@@ -565,7 +565,7 @@ public class PathExecutor
         using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
-            Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
+            Logger.LogInformation("当前角色血量过低，去七天神像恢复");
             await TpStatueOfTheSeven();
             throw new RetryException("回血完成后重试路线");
         }
@@ -585,8 +585,7 @@ public class PathExecutor
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
         await tpTask.TpToStatueOfTheSeven();
-        await Delay(5000, ct);
-        Logger.LogInformation("HP恢复完成");
+        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
@@ -608,7 +607,7 @@ public class PathExecutor
         await Delay(500, ct);
     }
     public DateTime moveToStartTime;
-    private async Task MoveTo(WaypointForTrack waypoint)
+    public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
