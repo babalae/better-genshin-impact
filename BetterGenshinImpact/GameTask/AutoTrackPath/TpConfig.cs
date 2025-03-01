@@ -65,7 +65,7 @@ public partial class TpConfig : ObservableValidator
     private double _reviveStatueOfTheSevenPointY = -824.4; // 七天神像点位Y坐标
     
     [ObservableProperty] 
-    private string _reviveStatueOfTheSevenArea = "化城郭";  // 七天神像所在区域
+    private string _reviveStatueOfTheSevenArea = "道成林";  // 七天神像所在区域
 
     [ObservableProperty] 
     private string _reviveStatueOfTheSevenCountry = "须弥";  // 七天神像所在国家
