@@ -77,7 +77,7 @@ public partial class TpConfig : ObservableValidator
     private GiTpPosition? _reviveStatueOfTheSeven;
     
     [ObservableProperty]
-    private bool _shouldMove = true;  // 回血前是否需要移动
+    private bool _shouldMove = false;  // 回血前是否需要移动
 
     [ObservableProperty]
     [NotifyDataErrorInfo] 
