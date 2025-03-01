@@ -31,7 +31,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -343,6 +346,7 @@ public class PathExecutor
     /// <returns></returns>
     private async Task<bool> SwitchParty(string? partyName)
     {
+        bool success = false;
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
@@ -350,26 +354,37 @@ public class PathExecutor
                 return true;
             }
 
-            if (PartyConfig.IsVisitStatueBeforeSwitchParty || !string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
+            bool forceTp = PartyConfig.IsVisitStatueBeforeSwitchParty;
+
+            if (forceTp) // 强制传送模式
             {
-                // 非空的情况下或者设置强制tp的情况下，先tp到安全位置（回血的七天神像）
-                await new TpTask(ct).TpToStatueOfTheSeven();
-                await Delay(500, ct);
+                success = await new SwitchPartyTask().Start(partyName, ct);
             }
-            
-            var success = await new SwitchPartyTask().Start(partyName, ct);
+            else // 优先原地切换模式
+            {
+                try
+                {
+                    success = await new SwitchPartyTask().Start(partyName, ct);
+                }
+                catch (PartySetupFailedException)
+                {
+                    await new TpTask(ct).TpToStatueOfTheSeven();
+                    await Delay(3000, ct); // 更多的加载时间
+                    success = await new SwitchPartyTask().Start(partyName, ct);
+                }
+            }
+
             if (success)
             {
                 RunnerContext.Instance.PartyName = partyName;
                 RunnerContext.Instance.ClearCombatScenes();
-                return true;
             }
-
-            return false;
         }
 
-        return true;
+        return success;
     }
+
+
 
     private static string? FilterPartyNameByConditionConfig(PathingTask task)
     {
