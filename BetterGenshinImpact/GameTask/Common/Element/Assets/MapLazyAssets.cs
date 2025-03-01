@@ -17,7 +17,7 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
     // 2048 区块下，存在传送点的最大面积，识别结果比这个大的话，需要点击放大
 
     // 传送点信息
-    public readonly List<GiWorldPosition> TpPositions;
+    public readonly List<GiTpPosition> TpPositions;
 
     // 每个地区点击后处于的中心位置
     public readonly Dictionary<string, double[]> CountryPositions = new()
@@ -30,8 +30,8 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
         { "纳塔", [8973.5, -1879.1] },
     };
     
-    public readonly Dictionary<string, GiWorldPosition> DomainPositionMap = new();
-    public readonly Dictionary<string, GiWorldPosition> GoddessPositions = new();
+    public readonly Dictionary<string, GiTpPosition> DomainPositionMap = new();
+    public readonly Dictionary<string, GiTpPosition> GoddessPositions = new();
     public readonly List<String> DomainNameList = [];
     // 反方向行走的副本
     public readonly List<string> DomainBackwardList = ["无妄引咎密宫", "芬德尼尔之顶"];
@@ -39,7 +39,7 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
     public MapLazyAssets()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-        TpPositions = JsonSerializer.Deserialize<List<GiWorldPosition>>(json, ConfigService.JsonOptions) ?? throw new System.Exception("tp.json deserialize failed");
+        TpPositions = JsonSerializer.Deserialize<List<GiTpPosition>>(json, ConfigService.JsonOptions) ?? throw new System.Exception("tp.json deserialize failed");
         
         // 取出秘境 description=Domain
         foreach (var tp in TpPositions.Where(tp => (tp.Description == "材料本"|| tp.Description == "圣遗物本")))

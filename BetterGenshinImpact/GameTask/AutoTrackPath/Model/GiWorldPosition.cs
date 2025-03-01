@@ -7,17 +7,10 @@
 public class GiWorldPosition
 {
     /// <summary>
-    /// 基本属性
-    /// </summary>
-    public required string Name { get; set; } // tp 名称
-    public required string Id { get; set; } // 唯一 id
-    public required string Type { get; set; } // tp 类型
-    public required string Area { get; set; } // 所在区域
-    /// <summary>
-    /// 坐标描述和所在区域
+    /// 坐标描述和
     /// </summary>
     public string? Description { get; set; }
-    public string? Country { get; set; }
+    
 
     /// <summary>
     /// 坐标 x,y,z 三个值，分别代表纵向、高度、横向，采用原神实际的坐标系
@@ -33,4 +26,22 @@ public class GiWorldPosition
 
     public double X => (double)Position[2]; // c
     public double Y => (double)Position[0]; // a
+}
+
+public class GiTpPosition: GiWorldPosition
+{
+    /// <summary>
+    /// 基本属性
+    /// </summary>
+    public required string Id { get; set; } // tp id
+    public string? Name { get; set; } // tp 名称
+    public string? Type { get; set; } // tp 类型
+    public string? Country { get; set; }  // 所在国家
+    public string? Area { get; set; } // 所在区域
+    
+    // 实际传送的坐标
+    public decimal[] TranPosition { get; set; } = new decimal[3];
+    public double TranX => (double)TranPosition[2];
+    public double TranY => (double)TranPosition[0];
+    
 }
