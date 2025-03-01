@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -51,7 +52,7 @@ public class TpTask(CancellationToken ct)
     private const double DisplayTpPointZoomLevel = 4.4; // 传送点显示的时候的地图比例
 
     /// <summary>
-    /// 传送到须弥七天神像
+    /// 传送到七天神像
     /// </summary>
     public async Task TpToStatueOfTheSeven()
     {
@@ -75,9 +76,16 @@ public class TpTask(CancellationToken ct)
         if (_tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
             var center = GetBigMapCenterPoint();
-            (x, y, country, area) = GetNearestGoddess(center.X, center.Y);
+            var giTpPoint = GetNearestGoddess(center.X, center.Y);
+            if (giTpPoint != null)
+            {
+                country = giTpPoint.Country;
+                area = giTpPoint.Area;
+                x = giTpPoint.X;
+                y = giTpPoint.Y;
+            }
         }
-        Logger.LogInformation($"传送至 {country} {area} 七天神像", country, area);
+        Logger.LogInformation("将传送至 {country} {area} 七天神像", country, area);
         await Tp(x, y);
         if (_tpConfig.ShouldMove || _tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
@@ -101,27 +109,21 @@ public class TpTask(CancellationToken ct)
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
-    public (double x, double y, string? country, string? area) GetNearestGoddess(double x, double y)
+    private GiTpPosition? GetNearestGoddess(double x, double y)
     {
-        double nearestGoddessX = _tpConfig.ReviveStatueOfTheSevenPointX;
-        double nearestGoddessY = _tpConfig.ReviveStatueOfTheSevenPointY;
+        GiTpPosition? nearestGiTpPosition = null;
         double minDistance = double.MaxValue;
-        string? nearestGoddessCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
-        string? nearestGoddessArea = _tpConfig.ReviveStatueOfTheSevenArea;
-        foreach (var (goddess, goddessPosition) in MapLazyAssets.Instance.GoddessPositions)
+        foreach (var (_, goddessPosition) in MapLazyAssets.Instance.GoddessPositions)
         {
             var distance = Math.Sqrt(Math.Pow(goddessPosition.X - x, 2) + Math.Pow(goddessPosition.Y - y, 2));
             if (distance < minDistance)
             {
                 minDistance = distance;
-                nearestGoddessX = goddessPosition.X;
-                nearestGoddessY = goddessPosition.Y;
-                nearestGoddessArea = goddessPosition.Area;
-                nearestGoddessCountry = goddessPosition.Name;
+                nearestGiTpPosition = goddessPosition;
             }
         }
-        // 获取最近的女神像位置
-        return (nearestGoddessX, nearestGoddessY, nearestGoddessCountry, nearestGoddessArea);
+        // 获取最近的神像位置
+        return nearestGiTpPosition;
     }
     
     /// <summary>
@@ -139,9 +141,9 @@ public class TpTask(CancellationToken ct)
         // 获取离目标传送点最近的两个传送点，按距离排序
         var nTpPoints = GetNearestNTpPoints(tpX, tpY, 2);
         // 获取最近的传送点与区域
-        var (x, y, country) = force ? (tpX, tpY, null) : (nTpPoints[0].x, nTpPoints[0].y, nTpPoints[0].country);
-        var disBetweenTpPoints = Math.Sqrt(Math.Pow(nTpPoints[0].x - nTpPoints[1].x, 2) +
-                                           Math.Pow(nTpPoints[0].y - nTpPoints[1].y, 2));
+        var (x, y, country) = force ? (tpX, tpY, null) : (nTpPoints[0].X, nTpPoints[0].Y, nTpPoints[0].Country);
+        var disBetweenTpPoints = Math.Sqrt(Math.Pow(nTpPoints[0].X - nTpPoints[1].X, 2) +
+                                           Math.Pow(nTpPoints[0].Y - nTpPoints[1].Y, 2));
         // 确保不会点错传送点的最小缩放，保证至少为 1.0
         var minZoomLevel = Math.Max(disBetweenTpPoints / 20, 1.0);
         // 计算传送点位置离哪个地图切换后的中心点最近，切换到该地图
@@ -689,7 +691,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="y"></param>
     /// <param name="n">获取最近的 n 个传送点</param>
     /// <returns></returns>
-    public List<(double x, double y, string? country)> GetNearestNTpPoints(double x, double y, int n = 1)
+    public List<GiTpPosition> GetNearestNTpPoints(double x, double y, int n = 1)
     {
         // 检查 n 的合法性
         if (n < 1)
@@ -698,21 +700,9 @@ public class TpTask(CancellationToken ct)
         }
 
         // 按距离排序并选择前 n 个点
-        var sortedTpPositions = MapLazyAssets.Instance.TpPositions
-            .Select(tpPosition => new
-            {
-                tpPosition.X,
-                tpPosition.Y,
-                tpPosition.Country,
-                Distance = Math.Sqrt(Math.Pow(tpPosition.X - x, 2) + Math.Pow(tpPosition.Y - y, 2))
-            })
-            .OrderBy(tp => tp.Distance)
-            .Take(n) // 取前 n 个点
-            .ToList();
-
-        // 将结果转换为 List<(x, y, country)>
-        return sortedTpPositions
-            .Select(tp => (tp.X, tp.Y, tp.Country))
+        return MapLazyAssets.Instance.TpPositions
+            .OrderBy(tp => Math.Pow(tp.X - x, 2) + Math.Pow(tp.Y - y, 2))
+            .Take(n)
             .ToList();
     }
 

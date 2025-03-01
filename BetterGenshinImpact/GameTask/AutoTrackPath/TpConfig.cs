@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using Range = OpenCvSharp.Range;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -72,6 +73,9 @@ public partial class TpConfig : ObservableValidator
     [ObservableProperty]
     private bool _isReviveInNearestStatueOfTheSeven = false; // 是否就近回复
 
+    [ObservableProperty] 
+    private GiTpPosition? _reviveStatueOfTheSeven;
+    
     [ObservableProperty]
     private bool _shouldMove = true;  // 回血前是否需要移动
 

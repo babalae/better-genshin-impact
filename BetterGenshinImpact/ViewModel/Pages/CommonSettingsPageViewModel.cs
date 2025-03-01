@@ -46,7 +46,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
 
-    private string _selectedCountry;
+    private string _selectedCountry = string.Empty;
     public string SelectedCountry
     {
         get => _selectedCountry;
@@ -59,7 +59,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
     }
 
-    private string _selectedArea;
+    private string _selectedArea = string.Empty;
     public string SelectedArea
     {
         get => _selectedArea;
@@ -75,9 +75,9 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     private void InitializeCountries()
     {
         var countries = MapLazyAssets.Instance.GoddessPositions.Values
-            .Select(g => g.Country)
-            .Distinct()
-            .OrderBy(c => c);
+            .OrderBy(g => int.TryParse(g.Id, out int id) ? id : int.MaxValue) 
+            .GroupBy(g => g.Country)   
+            .Select(grp => grp.Key);    
         CountryList.Clear();
         foreach (var country in countries)
         {
@@ -86,25 +86,31 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
                 CountryList.Add(country);
             }
         }
-        SelectedCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
+        _selectedCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
         UpdateAreas(SelectedCountry);
-        SelectedArea = _tpConfig.ReviveStatueOfTheSevenArea;
+        _selectedArea = _tpConfig.ReviveStatueOfTheSevenArea;
+        UpdateRevivePoint(SelectedCountry, SelectedArea);
     }
 
     private void UpdateAreas(string country)
     {
         Areas.Clear();
+        SelectedArea = string.Empty; 
         if (string.IsNullOrEmpty(country)) return;
     
         var areas = MapLazyAssets.Instance.GoddessPositions.Values
             .Where(g => g.Country == country)
-            .Select(g => g.Area)
-            .Distinct()
-            .OrderBy(a => a);
+            .OrderBy(g => int.TryParse(g.Id, out int id) ? id : int.MaxValue) 
+            .GroupBy(g => g.Area)       
+            .Select(grp => grp.Key); 
         foreach (var area in areas)
         {
-            Areas.Add(area);
+            if (!string.IsNullOrEmpty(area))
+            {
+                Areas.Add(area);
+            }
         }
+        SelectedArea = Areas.FirstOrDefault() ?? string.Empty;
     }
 
    // 当国家或区域改变时更新坐标
@@ -114,13 +120,12 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     
         var goddess = MapLazyAssets.Instance.GoddessPositions.Values
             .FirstOrDefault(g => g.Country == country && g.Area == area);
-        if (goddess != null)
-        {
-            _tpConfig.ReviveStatueOfTheSevenCountry = country;
-            _tpConfig.ReviveStatueOfTheSevenArea = area;
-            _tpConfig.ReviveStatueOfTheSevenPointX = goddess.X;
-            _tpConfig.ReviveStatueOfTheSevenPointY = goddess.Y;
-        }
+        if (goddess == null) return;
+        _tpConfig.ReviveStatueOfTheSevenCountry = country;
+        _tpConfig.ReviveStatueOfTheSevenArea = area;
+        _tpConfig.ReviveStatueOfTheSevenPointX = goddess.X;
+        _tpConfig.ReviveStatueOfTheSevenPointY = goddess.Y;
+        _tpConfig.ReviveStatueOfTheSeven = goddess;
     }
     
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService, NotificationService notificationService)
