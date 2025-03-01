@@ -476,7 +476,7 @@ public class AutoDomainTask : ISoloTask
             {
                 Logger.LogInformation("自动战斗线程结束");
             }
-        }, cts.Token);
+        });
 
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
@@ -527,7 +527,7 @@ public class AutoDomainTask : ISoloTask
             catch
             {
             }
-        }, cts.Token);
+        });
     }
 
     private bool IsDomainEnd(CancellationTokenSource cts)
@@ -627,7 +627,7 @@ public class AutoDomainTask : ISoloTask
             {
                 Logger.LogDebug(e, "红血自动吃药检测时发生异常");
             }
-        }, ct);
+        });
     }
 
     private bool IsTakeFood()
