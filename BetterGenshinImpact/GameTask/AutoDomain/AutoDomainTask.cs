@@ -524,6 +524,9 @@ public class AutoDomainTask : ISoloTask
                     await Delay(1000, cts.Token);
                 }
             }
+            catch (RetryException e){
+                throw;
+            }
             catch
             {
             }
