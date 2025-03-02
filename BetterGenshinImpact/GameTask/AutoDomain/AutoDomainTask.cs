@@ -495,10 +495,15 @@ public class AutoDomainTask : ISoloTask
             }
         });
 
-        // 对局结束检测
-        var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
         var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
+
+        //other_tasks用于在cts取消后，确认其他任务是否已经结束
+        var other_tasks= Task.WhenAll(combatTask,autoEatRecoveryHpTask);
+        // 对局结束检测
+        var domainEndTask = DomainEndDetectionTask(cts,other_tasks);
+
+
         await combatTask;
         await domainEndTask;
         await autoEatRecoveryHpTask;
@@ -523,7 +528,7 @@ public class AutoDomainTask : ISoloTask
     /// <summary>
     /// 对局结束检测
     /// </summary>
-    private Task DomainEndDetectionTask(CancellationTokenSource cts)
+    private Task DomainEndDetectionTask(CancellationTokenSource cts,Task other_tasks)
     {
         return  Task.Run(async () =>
         {
