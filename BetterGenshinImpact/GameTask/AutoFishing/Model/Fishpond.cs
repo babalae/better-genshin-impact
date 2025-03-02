@@ -35,14 +35,41 @@ public class Fishpond
     /// </summary>
     /// <param name="result"></param>
     /// <param name="includeTarget">是否包含抛竿落点</param>
-    public Fishpond(DetectionResult result, bool includeTarget = false)
+    /// <param name="ignoreObtained">是否忽略“获得”物品的图标</param>
+    public Fishpond(DetectionResult result, bool includeTarget = false, bool ignoreObtained = false)
     {
         foreach (var box in result.Boxes)
         {
+            Rect rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
             if (box.Class.Name == "rod" || box.Class.Name == "err rod")
             {
-                TargetRect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
+                TargetRect = rect;
                 continue;
+            }
+            else if (ignoreObtained)
+            {
+                // todo：特殊鱼的图标以及新获得的图标是不一样的，要特殊处理
+                // todo：不是很重要但有机会可以从构造函数里分离逻辑
+                // 忽略界面左侧提示的“获得”物品的图标，当上一竿获得鱼时，会对当前竿产生干扰
+                // 使用估算大小和位置的方式来判断并剔除
+                if (box.Bounds.Width < result.Image.Width * 0.024 && box.Bounds.Height < result.Image.Width * 0.024)
+                {
+                    Rect huode = new Rect((int)(0.04375 * result.Image.Width), (int)(0.4666 * result.Image.Height), (int)(0.1 * result.Image.Width), (int)(0.1 * result.Image.Width));
+                    if (huode.Contains(rect))
+                    {
+                        continue;
+                    }
+                }
+                // 忽略界面中央提示的“获得”物品的图标
+                if (box.Bounds.Width > result.Image.Width * 0.03 && box.Bounds.Width < result.Image.Width * 0.05 &&
+                    box.Bounds.Height > result.Image.Width * 0.03 && box.Bounds.Height < result.Image.Width * 0.05)
+                {
+                    Rect huode = new Rect((int)(0.4 * result.Image.Width), (int)(0.445 * result.Image.Height), (int)(0.2 * result.Image.Width), (int)(0.06125 * result.Image.Width));
+                    if (huode.Contains(rect))
+                    {
+                        continue;
+                    }
+                }
             }
             if (includeTarget)
             {
@@ -52,7 +79,7 @@ public class Fishpond
                 }
             }
 
-            var fish = new OneFish(box.Class.Name, new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height), box.Confidence);
+            var fish = new OneFish(box.Class.Name, rect, box.Confidence);
             Fishes.Add(fish);
         }
 
@@ -132,39 +159,6 @@ public class Fishpond
             {
                 min = distance;
                 result = fish;
-            }
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// 最多的鱼吃的鱼饵名称
-    /// </summary>
-    /// <returns></returns>
-    public string MostMatchBait()
-    {
-        Dictionary<string, int> dict = [];
-        foreach (var fish in Fishes)
-        {
-            if (dict.TryGetValue(fish.FishType.BaitName, out _))
-            {
-                dict[fish.FishType.BaitName]++;
-            }
-            else
-            {
-                dict[fish.FishType.BaitName] = 1;
-            }
-        }
-
-        var max = 0;
-        var result = "";
-        foreach (var (key, value) in dict)
-        {
-            if (value > max)
-            {
-                max = value;
-                result = key;
             }
         }
 

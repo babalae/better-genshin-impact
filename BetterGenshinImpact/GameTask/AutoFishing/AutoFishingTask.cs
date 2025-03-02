@@ -229,7 +229,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     int i = 0;
                     foreach (var fish in fishpond.Fishes)
                     {
-                        imageRegion.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i}");
+                        imageRegion.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i++}");
                     }
                     blackboard.Sleep(1000);
                     VisionContext.Instance().DrawContent.ClearAll();

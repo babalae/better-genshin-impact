@@ -11,6 +11,7 @@ using System.IO;
 using OpenCvSharp.Extensions;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.GameTask.Model.Area;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -183,11 +184,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var mat = bitmap.ToMat();
                 var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
                 mat.Rectangle(rect, Scalar.White, -1);
-                Cv2.ImWrite(savePath, mat);
+                new Task(() =>
+                {
+                    Cv2.ImWrite(savePath, mat);
+                }).Start();
             }
             else
             {
-                bitmap.Save(savePath, ImageFormat.Png);
+                new Task(() =>
+                {
+                    bitmap.Save(savePath, ImageFormat.Png);
+                }).Start();
             }
 
             logger.LogInformation("截图已保存: {Name}", name);

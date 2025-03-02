@@ -30,10 +30,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger logger;
         private readonly Blackboard blackboard;
-        public GetFishpond(string name, Blackboard blackboard, ILogger logger) : base(name)
+        private readonly DrawContent drawContent;
+        public GetFishpond(string name, Blackboard blackboard, ILogger logger, DrawContent? drawContent = null) : base(name)
         {
             this.blackboard = blackboard;
             this.logger = logger;
+            this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
@@ -44,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             memoryStream.Seek(0, SeekOrigin.Begin);
             var result = blackboard.predictor.Detect(memoryStream);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
-            var fishpond = new Fishpond(result);
+            var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == Rect.Empty)
             {
                 blackboard.Sleep(500);
@@ -54,6 +56,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 blackboard.fishpond = fishpond;
                 logger.LogInformation("定位到鱼塘：" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType).Select(g => $"{g.Key.ChineseName}{g.Count()}条")));
+                int i = 0;
+                foreach (var fish in fishpond.Fishes)
+                {
+                    imageRegion.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i++}");
+                }
+                blackboard.Sleep(1000);
+                drawContent.ClearAll();
 
                 return BehaviourStatus.Succeeded;
             }
@@ -752,7 +761,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 保证鼠标松开
                 input.Mouse.LeftButtonUp();
 
-                blackboard.Sleep(7000);
+                blackboard.Sleep(2000);
 
                 return BehaviourStatus.Succeeded;
 

@@ -36,7 +36,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             };
 
             //
-            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), new FakeInputSimulator());
+            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), new FakeInputSimulator(), drawContent: new FakeDrawContent());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -65,7 +65,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             };
 
             //
-            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), new FakeInputSimulator());
+            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), new FakeInputSimulator(), drawContent: new FakeDrawContent());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
