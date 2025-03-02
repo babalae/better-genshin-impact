@@ -540,6 +540,13 @@ public class AutoDomainTask : ISoloTask
                     cts.Cancel();
                     await other_tasks;
                     Logger.LogInformation("战斗脚本已结束");
+                    //检查是否进入了切人复活界面
+                    var region = CaptureToRectArea();
+                    if (Bv.IsInRevivePrompt(region)){
+                        Logger.LogInformation("进入了吃药复活界面，正在退出...");
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+                        await Task.Delay(600);
+                    }
                     //角色刚死亡时无法马上打开地图。循环尝试打开
                     var is_map_open=false;
                     while (! is_map_open){
