@@ -84,7 +84,7 @@ public class AutoDomainTask : ISoloTask
     static int IsDead(Bitmap image)
     {
         double d1 = CalcRgbDiff(image);
-        if (d1<3){
+        if (d1<2){
             return 1;
         }
         else{
@@ -202,7 +202,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
-                
+
                 break;
             }
             Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
@@ -499,7 +499,7 @@ public class AutoDomainTask : ISoloTask
 
     private void EndFightWait()
     {
-        
+
         if (_ct.IsCancellationRequested)
         {
             return;
@@ -590,40 +590,48 @@ public class AutoDomainTask : ISoloTask
             return true;
         }
 
-        //实时阵亡检测部分
-        var on_death = () =>
+        //先判断是否处于正常页面，防止因释放元素爆发造成误检
+        var combatScenes = new CombatScenes().InitializeTeam(ra);
+        if (!combatScenes.CheckTeamInitialized())
         {
-            Logger.LogWarning("存在角色被击败，前往七天神像复活");
-            Sleep(200);
-            throw new RetryException("存在角色被击败，前往七天神像复活");
-        };
+            Logger.LogWarning("当前页面未检测到角色名称，可能在放元素爆发？");
+        }
+        else
+        {
+            //实时阵亡检测部分
+            var on_death = () =>
+            {
+                Logger.LogWarning("存在角色被击败，前往七天神像复活");
+                Sleep(200);
+                throw new RetryException("存在角色被击败，前往七天神像复活");
+            };
 
-        var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
-        var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
-        var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
-        var avatar4=ra.DeriveCrop(new Rect(1794,540,14,25)).SrcBitmap;
-        if (IsDead(avatar1) == 1)
-        {
-            Logger.LogInformation("1号位阵亡");
-            on_death();
-        }
-        if (IsDead(avatar2) == 1)
-        {
-            Logger.LogInformation("2号位阵亡");
-            on_death();
-        }
-        if (IsDead(avatar3) == 1)
-        {
-            Logger.LogInformation("3号位阵亡");
-            on_death();
-        }
-        if (IsDead(avatar4) == 1)
-        {
-            Logger.LogInformation("4号位阵亡");
-            on_death();
+            var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
+            var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
+            var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
+            var avatar4=ra.DeriveCrop(new Rect(1794,540,14,25)).SrcBitmap;
+            if (IsDead(avatar1) == 1)
+            {
+                Logger.LogInformation("1号位阵亡");
+                on_death();
+            }
+            if (IsDead(avatar2) == 1)
+            {
+                Logger.LogInformation("2号位阵亡");
+                on_death();
+            }
+            if (IsDead(avatar3) == 1)
+            {
+                Logger.LogInformation("3号位阵亡");
+                on_death();
+            }
+            if (IsDead(avatar4) == 1)
+            {
+                Logger.LogInformation("4号位阵亡");
+                on_death();
+            }
         }
 
-        
         return false;
     }
 
@@ -778,7 +786,7 @@ public class AutoDomainTask : ISoloTask
                             }
 
                             Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
-                            Sleep(60); 
+                            Sleep(60);
                             Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
                             prevKey = moveLeftKey;
                         }
@@ -790,14 +798,14 @@ public class AutoDomainTask : ISoloTask
                             }
 
                             Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
-                            Sleep(60); 
+                            Sleep(60);
                             Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
                             prevKey = moveRightKey;
                         }
                         else
                         {
                             Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
-                            Sleep(60); 
+                            Sleep(60);
                             Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
                             Sleep(500, _ct);
                             treeCts.Cancel();
@@ -844,7 +852,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     // 左右移动5次说明已经在树中心了
                     Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
-                    Sleep(60); 
+                    Sleep(60);
                     Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
                     Sleep(500, _ct);
                     treeCts.Cancel();
