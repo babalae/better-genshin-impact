@@ -468,18 +468,6 @@ public class AutoDomainTask : ISoloTask
                     }
                 }
             }
-            catch(RetryException e){
-                cts.Cancel();
-                Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
-                // 先打开地图
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
-                Sleep(600);
-                Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-                // tp 到七天神像复活
-                var tpTask = new TpTask(new CancellationToken());
-                tpTask.TpToStatueOfTheSeven().Wait(new CancellationToken());
-                throw;
-            }
             catch (NormalEndException e)
             {
                 Logger.LogInformation("战斗操作中断：{Msg}", e.Message);
@@ -560,6 +548,7 @@ public class AutoDomainTask : ISoloTask
                         await Task.Delay(300);
                         var ra1 = CaptureToRectArea();
                         is_map_open=Bv.IsInBigMapUi(ra1);
+
                     }
                     Sleep(300);
                     // tp 到七天神像复活
