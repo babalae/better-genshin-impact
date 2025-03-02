@@ -536,7 +536,7 @@ public class AutoDomainTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (IsDomainEnd(cts))
+                    if (IsDomainEnd())
                     {
                         await cts.CancelAsync();
                         break;
@@ -545,8 +545,28 @@ public class AutoDomainTask : ISoloTask
                     await Delay(1000, cts.Token);
                 }
             }
-            catch (RetryException e){
-                throw;
+            catch (RetryException e)
+            {
+                if (!cts.IsCancellationRequested)
+                {
+                    cts.Cancel();
+                    await other_tasks;
+                    Logger.LogInformation("战斗脚本已结束");
+                    //角色刚死亡时无法马上打开地图。循环尝试打开
+                    var is_map_open=false;
+                    while (! is_map_open){
+                        Logger.LogWarning("尝试打开地图");
+                        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                        await Task.Delay(300);
+                        var ra1 = CaptureToRectArea();
+                        is_map_open=Bv.IsInBigMapUi(ra1);
+                    }
+                    Sleep(300);
+                    // tp 到七天神像复活
+                    var tpTask = new TpTask(new CancellationToken());
+                    tpTask.TpToStatueOfTheSeven().Wait(new CancellationToken());
+                    throw;
+                }
             }
             catch
             {
@@ -554,7 +574,7 @@ public class AutoDomainTask : ISoloTask
         });
     }
 
-    private bool IsDomainEnd(CancellationTokenSource cts)
+    private bool IsDomainEnd()
     {
         using var ra = CaptureToRectArea();
 
@@ -575,46 +595,36 @@ public class AutoDomainTask : ISoloTask
         }
 
         //实时阵亡检测部分
-        var after_death = () =>
+        var on_death = () =>
         {
-            if (!cts.IsCancellationRequested)
-            {
-                cts.CancelAsync();
-                Logger.LogWarning("存在角色被击败，前往七天神像复活");
-                Sleep(600);
-                Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-                // tp 到七天神像复活
-                var tpTask = new TpTask(new CancellationToken());
-                tpTask.TpToStatueOfTheSeven().Wait(new CancellationToken());
-                throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
-            }
+            Logger.LogWarning("存在角色被击败，前往七天神像复活");
+            Sleep(200);
+            throw new RetryException("存在角色被击败，前往七天神像复活");
         };
 
-        if (!cts.IsCancellationRequested){
-            var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
-            var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
-            var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
-            var avatar4=ra.DeriveCrop(new Rect(1794,540,14,25)).SrcBitmap;
-            if (IsDead(avatar1) == 1)
-            {
-                Logger.LogInformation("1号位阵亡");
-                after_death();
-            }
-            if (IsDead(avatar2) == 1)
-            {
-                Logger.LogInformation("2号位阵亡");
-                after_death();
-            }
-            if (IsDead(avatar3) == 1)
-            {
-                Logger.LogInformation("3号位阵亡");
-                after_death();
-            }
-            if (IsDead(avatar4) == 1)
-            {
-                Logger.LogInformation("4号位阵亡");
-                after_death();
-            }
+        var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
+        var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
+        var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
+        var avatar4=ra.DeriveCrop(new Rect(1794,540,14,25)).SrcBitmap;
+        if (IsDead(avatar1) == 1)
+        {
+            Logger.LogInformation("1号位阵亡");
+            on_death();
+        }
+        if (IsDead(avatar2) == 1)
+        {
+            Logger.LogInformation("2号位阵亡");
+            on_death();
+        }
+        if (IsDead(avatar3) == 1)
+        {
+            Logger.LogInformation("3号位阵亡");
+            on_death();
+        }
+        if (IsDead(avatar4) == 1)
+        {
+            Logger.LogInformation("4号位阵亡");
+            on_death();
         }
 
         
