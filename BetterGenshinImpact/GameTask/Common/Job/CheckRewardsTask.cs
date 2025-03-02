@@ -32,7 +32,7 @@ public class CheckRewardsTask
             // OCR识别每日是否完成
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             using var ra = CaptureToRectArea();
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 1.0 / 3, 360 * assetScale, ra.Height));
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height - ra.Height / 3.0, 730 * assetScale, ra.Height / 3.0));
             var done = ocrList.FirstOrDefault(txt => txt.Text.Contains("今日奖励已领取"));
             if (done != null)
             {

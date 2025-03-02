@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -238,7 +239,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                             break;
                         case "关闭游戏和软件":
                             SystemControl.CloseGame();
-                            Application.Current.Shutdown();
+                            Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
                             break;
                         case "关机":
                             SystemControl.CloseGame();
