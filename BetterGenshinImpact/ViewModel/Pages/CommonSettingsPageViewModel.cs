@@ -55,6 +55,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
             if (SetProperty(ref _selectedCountry, value))
             {
                 UpdateAreas(value);
+                SelectedArea = Areas.FirstOrDefault() ?? string.Empty;
             }
         }
     }
@@ -110,7 +111,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
                 Areas.Add(area);
             }
         }
-        SelectedArea = Areas.FirstOrDefault() ?? string.Empty;
     }
 
    // 当国家或区域改变时更新坐标
