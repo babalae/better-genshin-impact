@@ -564,7 +564,7 @@ public class TpTask(CancellationToken ct)
         Simulation.SendInput.Mouse.LeftButtonUp();
     }
 
-    int[] GenerateSteps(int delta, int steps) {
+    private int[] GenerateSteps(int delta, int steps) {
         double[] factors = new double[steps];
         double sum = 0;
         for (int i = 0; i < steps; i++) {
