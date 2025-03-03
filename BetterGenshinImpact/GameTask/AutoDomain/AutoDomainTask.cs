@@ -591,7 +591,7 @@ public class AutoDomainTask : ISoloTask
         }
 
         //先判断是否处于正常页面，防止因释放元素爆发造成误检
-        var combatScenes = new CombatScenes().InitializeTeam(ra);
+        var combatScenes = new CombatScenes().InitializeTeam(ra,need_log:false);
         if (!combatScenes.CheckTeamInitialized())
         {
             Logger.LogWarning("当前页面未检测到角色名称，可能在放元素爆发？");
