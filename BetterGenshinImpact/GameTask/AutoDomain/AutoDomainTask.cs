@@ -138,6 +138,7 @@ public class AutoDomainTask : ISoloTask
             // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
             Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
             await StartFight(combatScenes, combatCommands);
+            combatScenes.AfterTask();
             EndFightWait();
 
             // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
@@ -433,7 +434,6 @@ public class AutoDomainTask : ISoloTask
             finally
             {
                 Logger.LogInformation("自动战斗线程结束");
-                combatScenes.AfterTask();
             }
         }, cts.Token);
 
@@ -449,6 +449,7 @@ public class AutoDomainTask : ISoloTask
 
     private void EndFightWait()
     {
+        
         if (_ct.IsCancellationRequested)
         {
             return;

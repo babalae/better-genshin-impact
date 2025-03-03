@@ -107,6 +107,13 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void ClearTasks()
     {
+        // 确认？
+        var result = MessageBox.Show("是否清空所有任务？", "清空任务", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+        
         if (SelectedScriptGroup == null)
         {
             return;

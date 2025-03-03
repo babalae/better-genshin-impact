@@ -127,7 +127,7 @@ public class Avatar
             // tp 到七天神像复活
             var tpTask = new TpTask(Ct);
             tpTask.TpToStatueOfTheSeven().Wait(Ct);
-
+            Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
             throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }
     }
