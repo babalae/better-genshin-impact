@@ -476,11 +476,13 @@ public class TpTask(CancellationToken ct)
     /// <param name="y2">鼠标移动后位置y</param>
     public async Task MouseClickAndMove(int x1, int y1, int x2, int y2)
     {
-        GlobalMethod.MoveMouseTo(x1, y1);
+        // GlobalMethod.MoveMouseTo(x1, y1);
+        GameCaptureRegion.GameRegionMove((rect, scale) => (x1 * scale, y1 * scale));
         await Delay(50, ct);
         GlobalMethod.LeftButtonDown();
         await Delay(50, ct);
-        GlobalMethod.MoveMouseTo(x2, y2);
+        // GlobalMethod.MoveMouseTo(x2, y2);
+        GameCaptureRegion.GameRegionMove((rect, scale) => (x2 * scale, y2 * scale));
         await Delay(50, ct);
         GlobalMethod.LeftButtonUp();
         await Delay(50, ct);
@@ -541,31 +543,9 @@ public class TpTask(CancellationToken ct)
 
     private async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
     {
-        // 确保不影响总移动距离
-        int totalX = 0;
-        int totalY = 0;
-        // 梯形缩放因子
-        double scaleFactor = 0.75;
-        // 计算每一步的位移，从steps/2逐渐减小到0
-        int[] stepX = new int[steps];
-        int[] stepY = new int[steps];
-        for (int i = 0; i < steps; i++)
-        {
-            double factor = ((double)(steps - Math.Max(i, steps / 2)) / (steps / 2)) / scaleFactor;
-            stepX[i] = (int)(pixelDeltaX * factor / steps);
-            stepY[i] = (int)(pixelDeltaY * factor / steps);
-            totalX += stepX[i];
-            totalY += stepY[i];
-        }
 
-        // 均匀分配多余的部分到前半段
-        int remainingX = (pixelDeltaX - totalX);
-        int remainingY = (pixelDeltaY - totalY);
-        for (int i = 0; i < steps / 2 + 1; i++)
-        {
-            stepX[i] += remainingX / (steps / 2 + 1) + ((remainingX % (steps / 2 + 1) > i) ? 0 : 1);
-            stepY[i] += remainingY / (steps / 2 + 1) + ((remainingX % (steps / 2 + 1) > i) ? 0 : 1);
-        }
+        int[] stepX = GenerateSteps(pixelDeltaX, steps);
+        int[] stepY = GenerateSteps(pixelDeltaY, steps);
 
         // 随机起点以避免地图移动无效
         GameCaptureRegion.GameRegionMove((rect, _) =>
@@ -575,13 +555,42 @@ public class TpTask(CancellationToken ct)
         Simulation.SendInput.Mouse.LeftButtonDown();
         for (var i = 0; i < steps; i++)
         {
-            Simulation.SendInput.Mouse.MoveMouseBy(stepX[i], stepY[i]);
+            var i1 = i;
             await Delay(_tpConfig.StepIntervalMilliseconds, ct);
+            // Simulation.SendInput.Mouse.MoveMouseBy(stepX[i], stepY[i]);
+            GameCaptureRegion.GameRegionMoveBy((_, scale) => (stepX[i1] * scale, stepY[i1] * scale));
         }
 
         Simulation.SendInput.Mouse.LeftButtonUp();
     }
 
+    int[] GenerateSteps(int delta, int steps) {
+        double[] factors = new double[steps];
+        double sum = 0;
+        for (int i = 0; i < steps; i++) {
+            factors[i] = Math.Cos(i * Math.PI / (2 * steps));
+            sum += factors[i];
+        }
+
+        int[] stepsArr = new int[steps];
+        int remaining = delta;
+    
+        // 两阶段分配：基础值 + 余数补偿
+        for (int i = 0; i < steps; i++) {
+            double ratio = factors[i] / sum;
+            stepsArr[i] = (int)(delta * ratio);  // 基础值
+            remaining -= stepsArr[i];
+        }
+
+        int center = steps / 2;
+        for (int r = 0; r < Math.Abs(remaining); r++) {
+            int target = (center + r) % steps;  // 从中点开始螺旋分配
+            stepsArr[target] += remaining > 0 ? 1 : -1;
+        }
+
+        return stepsArr;
+    }
+    
     public Point2f GetPositionFromBigMap()
     {
         return GetBigMapCenterPoint();
