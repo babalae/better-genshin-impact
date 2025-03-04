@@ -32,5 +32,5 @@ public partial class AutoFishingConfig : ObservableObject
     /// <summary>
     /// 自动抛竿未上钩超时时间(秒)
     /// </summary>
-    [ObservableProperty] private int _autoThrowRodTimeOut = 10;
+    [ObservableProperty] private int _autoThrowRodTimeOut = 15;
 }
