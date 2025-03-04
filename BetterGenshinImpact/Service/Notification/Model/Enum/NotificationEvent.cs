@@ -18,6 +18,7 @@ public class NotificationEvent(string code, string msg)
     public static readonly NotificationEvent AlbumStart = new("album.start", "自动音游专辑启动");
     public static readonly NotificationEvent AlbumEnd = new("album.end", "自动音游专辑结束");
     public static readonly NotificationEvent AlbumError = new("album.error", "自动音游专辑错误");
+    public static readonly NotificationEvent DailyReward = new("daily.reward", "检查每日奖励领取状态");
     
     public string Code { get; private set; } = code;
     public string Msg { get; private set; } = msg;

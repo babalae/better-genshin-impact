@@ -53,7 +53,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
                     if (cdRemain < cdTime)
                     {
                         var ms = (int)Math.Ceiling(cdTime - cdRemain) + 100;
-                        Logger.LogInformation("{}的E技能CD未结束，等待{Milliseconds}ms", combatScenesAvatar.Name, ms);
+                        Logger.LogInformation("{Name}的E技能CD未结束，等待{Milliseconds}ms", combatScenesAvatar.Name, ms);
                         await Delay(ms, ct);
                     }
 

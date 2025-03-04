@@ -66,6 +66,10 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private string _sundayDomainName = string.Empty;
 
+    // 完成后操作
+    [ObservableProperty]
+    private string _completionAction = string.Empty;
+
     // 通过当天是哪一天来返回配置
     public (string partyName, string domainName) GetDomainConfig()
     {

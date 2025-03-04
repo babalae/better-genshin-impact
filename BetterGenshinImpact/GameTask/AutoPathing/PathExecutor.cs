@@ -31,7 +31,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -343,33 +346,45 @@ public class PathExecutor
     /// <returns></returns>
     private async Task<bool> SwitchParty(string? partyName)
     {
+        bool success = true;
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
             {
-                return true;
+                return success;
             }
 
-            if (PartyConfig.IsVisitStatueBeforeSwitchParty || !string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
+            bool forceTp = PartyConfig.IsVisitStatueBeforeSwitchParty;
+
+            if (forceTp) // 强制传送模式
             {
-                // 非空的情况下或者设置强制tp的情况下，先tp到安全位置（回血的七天神像）
-                await new TpTask(ct).TpToStatueOfTheSeven();
-                await Delay(500, ct);
+                await new TpTask(ct).TpToStatueOfTheSeven();  // fix typos
+                success = await new SwitchPartyTask().Start(partyName, ct);
             }
-            
-            var success = await new SwitchPartyTask().Start(partyName, ct);
+            else // 优先原地切换模式
+            {
+                try
+                {
+                    success = await new SwitchPartyTask().Start(partyName, ct);
+                }
+                catch (PartySetupFailedException)
+                {
+                    await new TpTask(ct).TpToStatueOfTheSeven();
+                    success = await new SwitchPartyTask().Start(partyName, ct);
+                }
+            }
+
             if (success)
             {
                 RunnerContext.Instance.PartyName = partyName;
                 RunnerContext.Instance.ClearCombatScenes();
-                return true;
             }
-
-            return false;
         }
 
-        return true;
+        return success;
     }
+
+
 
     private static string? FilterPartyNameByConditionConfig(PathingTask task)
     {
@@ -550,7 +565,7 @@ public class PathExecutor
         using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
-            Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
+            Logger.LogInformation("当前角色血量过低，去七天神像恢复");
             await TpStatueOfTheSeven();
             throw new RetryException("回血完成后重试路线");
         }
@@ -570,8 +585,7 @@ public class PathExecutor
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
         await tpTask.TpToStatueOfTheSeven();
-        await Delay(5000, ct);
-        Logger.LogInformation("HP恢复完成");
+        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
@@ -593,7 +607,7 @@ public class PathExecutor
         await Delay(500, ct);
     }
     public DateTime moveToStartTime;
-    private async Task MoveTo(WaypointForTrack waypoint)
+    public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
@@ -910,6 +924,7 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.HydroCollect.Code
             || waypoint.Action == ActionEnum.ElectroCollect.Code
             || waypoint.Action == ActionEnum.AnemoCollect.Code
+            || waypoint.Action == ActionEnum.PyroCollect.Code
             || waypoint.Action == ActionEnum.CombatScript.Code
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code)

@@ -420,7 +420,7 @@ public partial class AutoWoodTask : ISoloTask
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
-                throw new NormalEndException("请先装备小道具「王树瑞佑」！");
+                throw new NormalEndException("请先装备小道具「王树瑞佑」！如果已经装备仍旧出现此提示，请重新仔细阅读文档中的《快速上手》！");
 #else
                 System.Threading.Thread.Sleep(2000);
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
