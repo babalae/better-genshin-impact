@@ -61,6 +61,11 @@ public class DesktopRegion : Region
         Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height);
     }
+    
+    public static void DesktopRegionMoveBy(double dx, double dy)
+    {
+        Simulation.SendInput.Mouse.MoveMouseBy((int)dx, (int)dy);
+    }
 
     public GameCaptureRegion Derive(Bitmap captureBitmap, int x, int y)
     {

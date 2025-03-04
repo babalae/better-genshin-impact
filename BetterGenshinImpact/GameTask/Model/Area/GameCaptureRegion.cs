@@ -102,6 +102,14 @@ public class GameCaptureRegion(Bitmap bitmap, int initX, int initY, Region? owne
         DesktopRegion.DesktopRegionMove(captureAreaRect.X + cx, captureAreaRect.Y + cy);
     }
 
+    public static void GameRegionMoveBy(Func<Size, double, (double, double)> deltaFunc)
+    {
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        var (dx, dy) = deltaFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
+        DesktopRegion.DesktopRegionMoveBy(dx, dy);
+    }
+    
     /// <summary>
     /// 静态方法,输入1080P下的坐标,方法会自动转换到当前游戏捕获区域大小下的坐标并点击
     /// </summary>
