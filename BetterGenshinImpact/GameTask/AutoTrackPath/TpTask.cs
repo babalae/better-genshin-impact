@@ -134,6 +134,9 @@ public class TpTask(CancellationToken ct)
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
     private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
     {
+        // tp 前释放所有按键
+        Simulation.ReleaseAllKey();
+        await Delay(20, ct);
         // 1. 确认在地图界面
         await CheckInBigMapUi();
 
