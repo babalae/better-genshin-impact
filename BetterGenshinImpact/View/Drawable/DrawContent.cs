@@ -20,7 +20,7 @@ public class DrawContent
     /// </summary>
     public ConcurrentDictionary<string, List<LineDrawable>> LineList { get; set; } = new();
 
-    public void PutRect(string key, RectDrawable newRect)
+    public virtual void PutRect(string key, RectDrawable newRect)
     {
         if (RectList.TryGetValue(key, out var prevRect))
         {
@@ -34,7 +34,7 @@ public class DrawContent
         MaskWindow.Instance().Refresh();
     }
 
-    public void PutOrRemoveRectList(string key, List<RectDrawable>? list)
+    public virtual void PutOrRemoveRectList(string key, List<RectDrawable>? list)
     {
         bool changed = false;
 
@@ -72,7 +72,7 @@ public class DrawContent
         }
     }
 
-    public void RemoveRect(string key)
+    public virtual void RemoveRect(string key)
     {
         if (RectList.TryGetValue(key, out _))
         {
@@ -81,7 +81,7 @@ public class DrawContent
         }
     }
 
-    public void PutLine(string key, LineDrawable newLine)
+    public virtual void PutLine(string key, LineDrawable newLine)
     {
         if (LineList.TryGetValue(key, out var prev))
         {
@@ -96,7 +96,7 @@ public class DrawContent
     }
 
 
-    public void RemoveLine(string key)
+    public virtual void RemoveLine(string key)
     {
         if (LineList.TryGetValue(key, out _))
         {
@@ -110,7 +110,7 @@ public class DrawContent
     /// <summary>
     /// 清理所有绘制内容
     /// </summary>
-    public void ClearAll()
+    public virtual void ClearAll()
     {
         if (RectList.IsEmpty && TextList.IsEmpty && LineList.IsEmpty)
         {

@@ -13,7 +13,10 @@ public partial class PathingPartyConfig : ObservableObject
     // 配置是否启用，不启用会使用路径追踪内的条件配置
     [ObservableProperty]
     private bool _enabled = false;
-
+    
+    // 是否启用自动拾取
+    [ObservableProperty]
+    private bool _autoPickEnabled = true;
     // 切换到队伍的名称
     [ObservableProperty]
     private string _partyName = string.Empty;
