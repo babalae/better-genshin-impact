@@ -38,9 +38,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("开始寻找鱼塘");
+        }
+
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("GetFishpond");
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
@@ -200,6 +204,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             blackboard.pitchReset = true;
             logger.LogInformation("长按预抛竿");
             blackboard.Sleep(3000);
+            logger.LogInformation("开始抛竿");
         }
 
         protected override void OnTerminate(BehaviourStatus status)
@@ -213,7 +218,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("ThrowRod");
             blackboard.noTargetFish = false;
             var prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
 
@@ -468,7 +472,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private DateTime? waitFishBiteTimeout;
-        private int seconds;
+        private readonly int seconds;
 
         /// <summary>
         /// 如果未超时返回运行中，超时返回失败
@@ -515,9 +519,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.logger = logger;
             this.input = input;
         }
+
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("提竿识别开始");
+        }
+
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("FishBite");
             // 自动识别的钓鱼框向下延伸到屏幕中间
             //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
             //    fishBoxRect.Width, imageRegion.CaptureRectArea.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
@@ -585,10 +594,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.logger = logger;
         }
 
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("钓鱼框识别开始");
+        }
+
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("GetFishBoxArea");
-
             using var topMat = new Mat(imageRegion.SrcMat, new Rect(0, 0, imageRegion.Width, imageRegion.Height / 2));
 
             var rects = AutoFishingImageRecognition.GetFishBarRect(topMat);
@@ -653,12 +665,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.input = input;
         }
 
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("拉扯开始");
+        }
+
         private MOUSEEVENTF _prevMouseEvent = 0x0;
         private bool _findFishBoxTips;
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("Fishing");
             var fishBarMat = new Mat(imageRegion.SrcMat, blackboard.fishBoxRect);
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)

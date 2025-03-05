@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using Compunet.YoloV8;
 using OpenCvSharp;
@@ -44,7 +42,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 镜头俯仰是否被行为重置
         /// 进入钓鱼模式后、以及提竿后，镜头的俯仰会被重置。进行相关动作前须优化俯仰角，避免鱼塘被脚下的悬崖遮挡。
         /// </summary>
-        internal bool pitchReset = false;
+        internal bool pitchReset = true;
 
         #region 分层暂放
         public YoloV8Predictor predictor;
@@ -62,7 +60,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             noTargetFish = false;
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
-            pitchReset = false;
+            pitchReset = true;
             selectedBaitName = string.Empty;
         }
     }
