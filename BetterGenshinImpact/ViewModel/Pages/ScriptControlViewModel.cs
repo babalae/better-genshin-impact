@@ -277,6 +277,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             CloseButtonText = "取消",
             PrimaryButtonText = "确定",
             Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
         void OnQuestionButtonOnClick(object sender, RoutedEventArgs args)
@@ -901,6 +902,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Content = new ScriptGroupProjectEditor { DataContext = viewModel },
             CloseButtonText = "关闭",
             Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
         uiMessageBox.ShowDialogAsync();
     }
@@ -943,6 +945,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 Content = ui,
                 CloseButtonText = "关闭",
                 Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
             };
             uiMessageBox.ShowDialogAsync();
 
