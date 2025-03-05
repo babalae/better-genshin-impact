@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,8 @@ using Fischless.WindowsInput;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using static Vanara.PInvoke.User32;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -36,8 +38,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private readonly Blackboard blackboard;
 
-        public AutoFishingTask()
+        private readonly AutoFishingTaskParam param;
+
+        public AutoFishingTask(AutoFishingTaskParam param)
         {
+            this.param = param;
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
             this.blackboard = new Blackboard(predictor, this.Sleep);
         }
@@ -60,64 +65,61 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public Task Start(CancellationToken ct)
         {
             this._ct = ct;
-
-            var autoThrowRodTimeOut = TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut;
+            BaseBehaviour<ImageRegion>.SaveScreenshotOnTerminate = param.SaveScreenshotOnKeyTick;
 
             var behaviourTree = FluentBuilder.Create<ImageRegion>()
-                .Sequence("调整视角并钓鱼")
-                    .Do($"设置变量{nameof(blackboard.pitchReset)}", _ =>
-                    {
-                        blackboard.pitchReset = true;
-                        return BehaviourStatus.Succeeded;
-                    })
-                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, input))
-                    .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                        .PushLeaf(() => new TurnAround("转圈圈调整视角", blackboard, _logger, input))
-                        .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard, _logger))
-                    .End()
-                    .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard, _logger, input))
-                    .UntilFailed(@"\")
-                        .Sequence("一直钓鱼直到没鱼")
-                            .AlwaysSucceed(@"\")
-                                .Sequence("从找鱼开始")
-                                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, input))
-                                    .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                                        .PushLeaf(() => new GetFishpond("检测鱼群", blackboard, _logger))
-                                        .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard, _logger))
-                                    .End()
-                                    .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, input))
-                                    .UntilSuccess("重复抛竿")
-                                        .Sequence("重复抛竿序列")
+                .Sequence("钓鱼并确保完成后退出钓鱼模式")
+                    .MySimpleParallel("在整体超时时间内钓鱼", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                        .Sequence("调整视角并钓鱼")
+                            .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, input))
+                            .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                .PushLeaf(() => new TurnAround("转圈圈调整视角", blackboard, _logger, input))
+                                .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard, _logger))
+                            .End()
+                            .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard, _logger, input))
+                            .UntilFailed(@"\")
+                                .Sequence("一直钓鱼直到没鱼")
+                                    .AlwaysSucceed(@"\")
+                                        .Sequence("从找鱼开始")
                                             .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, input))
-                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, input))
+                                            .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                .PushLeaf(() => new GetFishpond("检测鱼群", blackboard, _logger))
+                                                .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard, _logger))
+                                            .End()
+                                            .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, input))
+                                            .UntilSuccess("重复抛竿")
+                                                .Sequence("重复抛竿序列")
+                                                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, input))
+                                                    .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, input))
+                                                .End()
+                                            .End()
+                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                            .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger))
+                                            .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                .PushLeaf(() => new FishBite("自动提竿", _logger, input))
+                                                .PushLeaf(() => new FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, blackboard, _logger, input))
+                                            .End()
+                                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger))
+                                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, input))
                                         .End()
                                     .End()
-                                    .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
-                                    .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger))
-                                    .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
-                                        .PushLeaf(() => new FishBite("自动提竿", _logger, input))
-                                        .PushLeaf(() => new FishBiteTimeout("下杆超时检查", autoThrowRodTimeOut, blackboard, _logger, input))
-                                    .End()
-                                    .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger))
-                                    .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, input))
+                                    .Do("冒泡-找鱼-没鱼检查", _ => blackboard.noFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                                 .End()
                             .End()
-                            .Do("冒泡-找鱼-没鱼检查", _ => blackboard.noFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                         .End()
+                        .PushLeaf(() => new WholeProcessTimeout("检查整体超时", param.WholeProcessTimeoutSeconds, _logger))
                     .End()
+                    .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, input))
                 .End()
                 .Build();
 
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
+            _logger.LogInformation($"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}");
             TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
             _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");
 
-
-            SetTimeTask setTimeTask = new SetTimeTask();
-            foreach (int hour in new int[] { 7, 19 })
+            void tickARound()
             {
-                setTimeTask.Start(hour, 0, ct).Wait();
-
                 this.blackboard.Reset();
 
                 while (!ct.IsCancellationRequested)
@@ -141,19 +143,24 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         _logger.LogInformation("钓鱼结束");
 
-
-                        var ra = content.CaptureRectArea;
-                        if (!ra.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
-                        {
-                            _logger.LogInformation("← {Text}", "退出钓鱼界面");
-                            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                            Sleep(1000);
-                            ra = TaskControl.CaptureToRectArea(forceNew: true);
-                            Bv.ClickBlackConfirmButton(ra);
-                            Sleep(1000);
-                        }
                         break;
                     }
+                }
+            }
+
+            using var ra = TaskControl.CaptureToRectArea(forceNew: true);
+            if (ra.FindMulti(AutoFightAssets.Instance.PRa).Count != 0)
+            {
+                _logger.LogInformation("当前处于联机状态，不使用昼夜设置");
+                tickARound();
+            }
+            else
+            {
+                SetTimeTask setTimeTask = new SetTimeTask();
+                foreach (int hour in param.FishingTimePolicy == FishingTimePolicy.Daytime ? [7] : (param.FishingTimePolicy == FishingTimePolicy.Nighttime ? [19] : new int[] { 7, 19 }))
+                {
+                    setTimeTask.Start(hour, 0, ct).Wait(ct);
+                    tickARound();
                 }
             }
 
@@ -167,19 +174,54 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             TaskControl.Sleep(millisecondsTimeout, _ct);
         }
 
+        public class WholeProcessTimeout : BaseBehaviour<ImageRegion>
+        {
+            private readonly ILogger logger;
+            private DateTime? timeout;
+            private readonly int seconds;
+
+            /// <summary>
+            /// 如果未超时返回运行中，超时返回成功
+            /// </summary>
+            /// <param name="name"></param>
+            /// <param name="seconds"></param>
+            public WholeProcessTimeout(string name, int seconds, ILogger logger) : base(name, logger)
+            {
+                this.seconds = seconds;
+                this.logger = logger;
+            }
+            protected override void OnInitialize()
+            {
+                logger.LogInformation($"钓鱼任务将在{seconds}秒后超时");
+                timeout = DateTime.Now.AddSeconds(seconds);
+            }
+            protected override BehaviourStatus Update(ImageRegion _)
+            {
+                if (DateTime.Now >= timeout)
+                {
+                    logger.LogInformation($"{seconds}秒超时已到，强制结束任务");
+                    return BehaviourStatus.Succeeded;
+                }
+                else
+                {
+                    return BehaviourStatus.Running;
+                }
+            }
+        }
+
         public class FindFishTimeout : BaseBehaviour<ImageRegion>
         {
             private readonly ILogger logger;
             private readonly Blackboard blackboard;
             private DateTime? timeout;
-            private int seconds;
+            private readonly int seconds;
 
             /// <summary>
             /// 如果未超时返回运行中，超时返回失败
             /// </summary>
             /// <param name="name"></param>
             /// <param name="seconds"></param>
-            public FindFishTimeout(string name, int seconds, Blackboard blackboard, ILogger logger) : base(name)
+            public FindFishTimeout(string name, int seconds, Blackboard blackboard, ILogger logger) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;
@@ -209,7 +251,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly ILogger logger;
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-            public TurnAround(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+            public TurnAround(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;
@@ -281,7 +323,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly ILogger logger;
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-            public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+            public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;
@@ -322,6 +364,44 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     logger.LogInformation("进入钓鱼模式");
                     return BehaviourStatus.Succeeded;
                 }
+            }
+        }
+
+        private class QuitFishingMode : BaseBehaviour<ImageRegion>
+        {
+            private readonly ILogger logger;
+            private readonly IInputSimulator input;
+            private readonly Blackboard blackboard;
+            public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
+            {
+                this.blackboard = blackboard;
+                this.logger = logger;
+                this.input = input;
+            }
+
+            protected override BehaviourStatus Update(ImageRegion imageRegion)
+            {
+                if (Status == BehaviourStatus.Ready)
+                {
+                    return BehaviourStatus.Running;
+                }
+
+                if (Bv.FindF(imageRegion, "钓鱼"))
+                {
+                    logger.LogInformation("退出完成");
+                    return BehaviourStatus.Succeeded;
+                }
+                else if (Bv.ClickBlackConfirmButton(imageRegion))
+                {
+                    logger.LogInformation("在“是否退出钓鱼？”界面点击确认");
+                    blackboard.Sleep(1000);
+                }
+                else
+                {
+                    input.Keyboard.KeyPress(VK.VK_ESCAPE);
+                    blackboard.Sleep(2000);
+                }
+                return BehaviourStatus.Running;
             }
         }
     }

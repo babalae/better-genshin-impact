@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.ViewModel.Pages;
+using System;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -152,6 +154,6 @@ public class Genshin
     /// <returns></returns>
     public async Task AutoFishing()
     {
-        await new AutoFishingTask().Start(CancellationContext.Instance.Cts.Token);
+        await new AutoFishingTask(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All, false)).Start(CancellationContext.Instance.Cts.Token);  // todo 做成可由脚本作者传入
     }
 }

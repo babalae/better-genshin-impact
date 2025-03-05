@@ -31,16 +31,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly Blackboard blackboard;
         private readonly DrawContent drawContent;
-        public GetFishpond(string name, Blackboard blackboard, ILogger logger, DrawContent? drawContent = null) : base(name)
+        public GetFishpond(string name, Blackboard blackboard, ILogger logger, DrawContent? drawContent = null) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("开始寻找鱼塘");
+        }
+
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("GetFishpond");
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
@@ -85,7 +89,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         /// <param name="name"></param>
         /// <param name="autoFishingTrigger"></param>
-        public ChooseBait(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
+        public ChooseBait(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -183,7 +187,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
-        public ThrowRod(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, DrawContent? drawContent = null) : base(name)
+        public ThrowRod(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, DrawContent? drawContent = null) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -200,6 +204,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             blackboard.pitchReset = true;
             logger.LogInformation("长按预抛竿");
             blackboard.Sleep(3000);
+            logger.LogInformation("开始抛竿");
         }
 
         protected override void OnTerminate(BehaviourStatus status)
@@ -213,7 +218,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("ThrowRod");
             blackboard.noTargetFish = false;
             var prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
 
@@ -432,7 +436,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 检查抛竿结果
         /// </summary>
         /// <param name="name"></param>
-        public CheckThrowRod(string name, ILogger logger) : base(name)
+        public CheckThrowRod(string name, ILogger logger) : base(name, logger)
         {
             this.logger = logger;
         }
@@ -468,14 +472,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private DateTime? waitFishBiteTimeout;
-        private int seconds;
+        private readonly int seconds;
 
         /// <summary>
         /// 如果未超时返回运行中，超时返回失败
         /// </summary>
         /// <param name="name"></param>
         /// <param name="seconds"></param>
-        public FishBiteTimeout(string name, int seconds, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public FishBiteTimeout(string name, int seconds, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.seconds = seconds;
             this.blackboard = blackboard;
@@ -510,14 +514,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly IOcrService ocrService = OcrFactory.Paddle;
-        public FishBite(string name, ILogger logger, IInputSimulator input) : base(name)
+        public FishBite(string name, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.logger = logger;
             this.input = input;
         }
+
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("提竿识别开始");
+        }
+
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("FishBite");
             // 自动识别的钓鱼框向下延伸到屏幕中间
             //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
             //    fishBoxRect.Width, imageRegion.CaptureRectArea.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
@@ -579,16 +588,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger logger;
         private readonly Blackboard blackboard;
-        public GetFishBoxArea(string name, Blackboard blackboard, ILogger logger) : base(name)
+        public GetFishBoxArea(string name, Blackboard blackboard, ILogger logger) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
         }
 
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("钓鱼框识别开始");
+        }
+
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("GetFishBoxArea");
-
             using var topMat = new Mat(imageRegion.SrcMat, new Rect(0, 0, imageRegion.Width, imageRegion.Height / 2));
 
             var rects = AutoFishingImageRecognition.GetFishBarRect(topMat);
@@ -646,11 +658,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
-        public Fishing(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public Fishing(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
             this.input = input;
+        }
+
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("拉扯开始");
         }
 
         private MOUSEEVENTF _prevMouseEvent = 0x0;
@@ -658,7 +675,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            logger.LogDebug("Fishing");
             var fishBarMat = new Mat(imageRegion.SrcMat, blackboard.fishBoxRect);
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
@@ -799,7 +815,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
-        public MoveViewpointDown(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public MoveViewpointDown(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
