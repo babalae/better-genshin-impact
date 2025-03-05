@@ -65,6 +65,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public Task Start(CancellationToken ct)
         {
             this._ct = ct;
+            BaseBehaviour<ImageRegion>.SaveScreenshotOnTerminate = param.SaveScreenshotOnKeyTick;
 
             var behaviourTree = FluentBuilder.Create<ImageRegion>()
                 .Sequence("钓鱼并确保完成后退出钓鱼模式")
@@ -106,14 +107,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                 .End()
                             .End()
                         .End()
-                        .PushLeaf(() => new WholeProcessTimeout("检查整体超时", param.WholeProcessTimeoutSeconds))
+                        .PushLeaf(() => new WholeProcessTimeout("检查整体超时", param.WholeProcessTimeoutSeconds, _logger))
                     .End()
                     .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, input))
                 .End()
                 .Build();
 
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
-            _logger.LogInformation($"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}");
+            _logger.LogInformation($"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}");
             TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
             _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");
 
@@ -175,7 +176,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public class WholeProcessTimeout : BaseBehaviour<ImageRegion>
         {
-            private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+            private readonly ILogger logger;
             private DateTime? timeout;
             private readonly int seconds;
 
@@ -184,20 +185,21 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             /// </summary>
             /// <param name="name"></param>
             /// <param name="seconds"></param>
-            public WholeProcessTimeout(string name, int seconds) : base(name)
+            public WholeProcessTimeout(string name, int seconds, ILogger logger) : base(name, logger)
             {
                 this.seconds = seconds;
+                this.logger = logger;
             }
             protected override void OnInitialize()
             {
-                _logger.LogInformation($"钓鱼任务将在{seconds}秒后超时");
+                logger.LogInformation($"钓鱼任务将在{seconds}秒后超时");
                 timeout = DateTime.Now.AddSeconds(seconds);
             }
             protected override BehaviourStatus Update(ImageRegion _)
             {
                 if (DateTime.Now >= timeout)
                 {
-                    _logger.LogInformation($"{seconds}秒超时已到，强制结束任务");
+                    logger.LogInformation($"{seconds}秒超时已到，强制结束任务");
                     return BehaviourStatus.Succeeded;
                 }
                 else
@@ -219,7 +221,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             /// </summary>
             /// <param name="name"></param>
             /// <param name="seconds"></param>
-            public FindFishTimeout(string name, int seconds, Blackboard blackboard, ILogger logger) : base(name)
+            public FindFishTimeout(string name, int seconds, Blackboard blackboard, ILogger logger) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;
@@ -249,7 +251,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly ILogger logger;
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-            public TurnAround(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+            public TurnAround(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;
@@ -321,7 +323,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly ILogger logger;
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-            public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+            public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;
@@ -370,7 +372,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly ILogger logger;
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-            public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+            public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
             {
                 this.blackboard = blackboard;
                 this.logger = logger;

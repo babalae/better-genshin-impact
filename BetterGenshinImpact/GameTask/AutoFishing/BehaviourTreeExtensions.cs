@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using BetterGenshinImpact.Core.Config;
 using OpenCvSharp;
-using System.Drawing.Imaging;
 using System.IO;
-using OpenCvSharp.Extensions;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.GameTask.Model.Area;
 using System.Threading.Tasks;
@@ -124,25 +122,26 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
     }
 
-    [Obsolete]
     /// <summary>
-    /// 方便生产截图的类，用于覆盖行为树原本的BaseBehaviour类
-    /// 不用的时候记得注释或者改名
+    /// 原库的BaseBehaviour继承后也无法改写Tick方法，只得另起此实现类
+    /// 暂时直接覆盖行为树原本的BaseBehaviour
     /// </summary>
-    /// <typeparam name="TContext"></typeparam>
-    public abstract class XBaseBehaviour<TContext> : IBehaviour<TContext>, IDisposable where TContext : ImageRegion
+    public abstract class BaseBehaviour<TImageRegion> : IBehaviour<TImageRegion>, IDisposable where TImageRegion : ImageRegion
     {
-        private readonly ILogger logger = App.GetLogger<BaseBehaviour<TContext>>();
+        public static bool SaveScreenshotOnTerminate;
+
+        private readonly ILogger logger;
         public string Name { get; }
 
         public BehaviourStatus Status { get; private set; }
 
-        protected XBaseBehaviour(string name)
+        protected BaseBehaviour(string name, ILogger logger)
         {
             Name = name;
+            this.logger = logger;
         }
 
-        public BehaviourStatus Tick(TContext context)
+        public BehaviourStatus Tick(TImageRegion context)
         {
             if (Status == BehaviourStatus.Ready)
             {
@@ -157,14 +156,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             if (Status != BehaviourStatus.Running)
             {
-                TakeScreenshot(context, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_{Status}.png");
+                if (SaveScreenshotOnTerminate)
+                {
+                    string name = $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_{Status}.png";
+                    logger.LogInformation("保存截图: {Name}", name);
+                    SaveScreenshot(context, name);
+                }
                 OnTerminate(Status);
             }
 
             return Status;
         }
 
-        public void TakeScreenshot(ImageRegion imageRegion, string? name)
+        public virtual void SaveScreenshot(ImageRegion imageRegion, string? name)
         {
             var path = Global.Absolute($@"log\screenshot\");
             if (!Directory.Exists(path))
@@ -179,25 +183,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             var savePath = Global.Absolute($@"log\screenshot\{name}");
 
+            var mat = imageRegion.SrcMat;
             if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
             {
-                var mat = bitmap.ToMat();
                 var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
                 mat.Rectangle(rect, Scalar.White, -1);
-                new Task(() =>
-                {
-                    Cv2.ImWrite(savePath, mat);
-                }).Start();
             }
-            else
+            new Task(() =>
             {
-                new Task(() =>
-                {
-                    bitmap.Save(savePath, ImageFormat.Png);
-                }).Start();
-            }
-
-            logger.LogInformation("截图已保存: {Name}", name);
+                Cv2.ImWrite(savePath, mat);
+            }).Start();
         }
 
         public void Reset()
@@ -209,7 +204,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
         }
 
-        protected abstract BehaviourStatus Update(TContext context);
+        protected abstract BehaviourStatus Update(TImageRegion context);
 
         protected virtual void OnTerminate(BehaviourStatus status)
         {

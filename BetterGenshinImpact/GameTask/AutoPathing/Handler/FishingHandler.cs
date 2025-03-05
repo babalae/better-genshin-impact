@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class FishingHandler : IActionHandler
 {
-    private AutoFishingTask _autoFishingTask = new(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All));   // todo 做成可由脚本作者传入
+    private AutoFishingTask _autoFishingTask = new(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All, false));   // todo 做成可由脚本作者传入
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {

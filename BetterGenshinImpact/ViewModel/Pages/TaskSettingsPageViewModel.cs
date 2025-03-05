@@ -126,6 +126,12 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [ObservableProperty]
     private Dictionary<FishingTimePolicy, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy)).Cast<FishingTimePolicy>().Select(e => new KeyValuePair<FishingTimePolicy, string>(e, e.GetDescription() ?? "Description lost!")).ToDictionary();
 
+    private bool saveScreenshotOnKeyTick;
+    public bool SaveScreenshotOnKeyTick
+    {
+        get => Config.CommonConfig.ScreenshotEnabled && saveScreenshotOnKeyTick;
+        set => SetProperty(ref saveScreenshotOnKeyTick, value);
+    }
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -400,7 +406,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     {
         SwitchAutoFishingEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-            .RunSoloTaskAsync(new AutoFishingTask(new AutoFishingTaskParam(WholeProcessTimeoutSeconds, Config.AutoFishingConfig.AutoThrowRodTimeOut, FishingTimePolicy)));
+            .RunSoloTaskAsync(new AutoFishingTask(new AutoFishingTaskParam(WholeProcessTimeoutSeconds, Config.AutoFishingConfig.AutoThrowRodTimeOut, FishingTimePolicy, SaveScreenshotOnKeyTick)));
         SwitchAutoFishingEnabled = false;
     }
 

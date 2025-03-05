@@ -154,6 +154,6 @@ public class Genshin
     /// <returns></returns>
     public async Task AutoFishing()
     {
-        await new AutoFishingTask(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All)).Start(CancellationContext.Instance.Cts.Token);  // todo 做成可由脚本作者传入
+        await new AutoFishingTask(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All, false)).Start(CancellationContext.Instance.Cts.Token);  // todo 做成可由脚本作者传入
     }
 }

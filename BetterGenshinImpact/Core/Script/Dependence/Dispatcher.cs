@@ -108,7 +108,7 @@ public class Dispatcher
             //     break;
 
             case "AutoFishing":
-                await new AutoFishingTask(new AutoFishingTaskParam(taskSettingsPageViewModel.WholeProcessTimeoutSeconds, taskSettingsPageViewModel.Config.AutoFishingConfig.AutoThrowRodTimeOut, taskSettingsPageViewModel.FishingTimePolicy)).Start(CancellationContext.Instance.Cts.Token);
+                await new AutoFishingTask(new AutoFishingTaskParam(taskSettingsPageViewModel.WholeProcessTimeoutSeconds, taskSettingsPageViewModel.Config.AutoFishingConfig.AutoThrowRodTimeOut, taskSettingsPageViewModel.FishingTimePolicy, taskSettingsPageViewModel.SaveScreenshotOnKeyTick)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
             default:

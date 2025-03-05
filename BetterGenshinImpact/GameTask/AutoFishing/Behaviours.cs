@@ -31,7 +31,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly Blackboard blackboard;
         private readonly DrawContent drawContent;
-        public GetFishpond(string name, Blackboard blackboard, ILogger logger, DrawContent? drawContent = null) : base(name)
+        public GetFishpond(string name, Blackboard blackboard, ILogger logger, DrawContent? drawContent = null) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -89,7 +89,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         /// <param name="name"></param>
         /// <param name="autoFishingTrigger"></param>
-        public ChooseBait(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name)
+        public ChooseBait(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -187,7 +187,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
-        public ThrowRod(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, DrawContent? drawContent = null) : base(name)
+        public ThrowRod(string name, Blackboard blackboard, ILogger logger, IInputSimulator input, DrawContent? drawContent = null) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -436,7 +436,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 检查抛竿结果
         /// </summary>
         /// <param name="name"></param>
-        public CheckThrowRod(string name, ILogger logger) : base(name)
+        public CheckThrowRod(string name, ILogger logger) : base(name, logger)
         {
             this.logger = logger;
         }
@@ -479,7 +479,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         /// <param name="name"></param>
         /// <param name="seconds"></param>
-        public FishBiteTimeout(string name, int seconds, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public FishBiteTimeout(string name, int seconds, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.seconds = seconds;
             this.blackboard = blackboard;
@@ -514,7 +514,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly IOcrService ocrService = OcrFactory.Paddle;
-        public FishBite(string name, ILogger logger, IInputSimulator input) : base(name)
+        public FishBite(string name, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.logger = logger;
             this.input = input;
@@ -588,7 +588,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger logger;
         private readonly Blackboard blackboard;
-        public GetFishBoxArea(string name, Blackboard blackboard, ILogger logger) : base(name)
+        public GetFishBoxArea(string name, Blackboard blackboard, ILogger logger) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -658,7 +658,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
-        public Fishing(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public Fishing(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;
@@ -815,7 +815,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger logger;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
-        public MoveViewpointDown(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name)
+        public MoveViewpointDown(string name, Blackboard blackboard, ILogger logger, IInputSimulator input) : base(name, logger)
         {
             this.blackboard = blackboard;
             this.logger = logger;

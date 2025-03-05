@@ -29,8 +29,8 @@ public class SetTimeTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "拾取周边物品异常");
-            Logger.LogError("拾取周边物品异常: {Msg}", e.Message);
+            Logger.LogDebug(e, "设置时间异常");
+            Logger.LogError("设置时间异常: {Msg}", e.Message);
         }
         finally
         {
