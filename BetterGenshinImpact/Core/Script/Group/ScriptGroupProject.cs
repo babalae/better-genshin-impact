@@ -157,14 +157,13 @@ public partial class ScriptGroupProject : ObservableObject
         {
             // 加载并执行
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
-            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
+            if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
+            {
+                TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+            }
             await pathingTask.Pathing(task);
-        }
-        else
-        {
-            //throw new Exception("不支持的脚本类型");
         }
     }
 

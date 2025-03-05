@@ -140,7 +140,18 @@ internal class GameTaskManager
     public static Mat LoadAssetImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
     {
         var info = TaskContext.Instance().SystemInfo;
-        var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{info.GameScreenSize.Width}x{info.GameScreenSize.Height}");
+        return LoadAssetImage(featName, assertName, info.GameScreenSize.Width, info.GameScreenSize.Height, info.AssetScale, flags);
+    }
+
+    /// <summary>
+    /// 这个重载是为了和TaskContext.Instance().SystemInfo解耦
+    /// todo: 更系统的分层
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="FileNotFoundException"></exception>
+    public static Mat LoadAssetImage(string featName, string assertName, int width, int height, double assetScale, ImreadModes flags = ImreadModes.Color)
+    {
+        var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{width}x{height}");
         if (!Directory.Exists(assetsFolder))
         {
             assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
@@ -158,9 +169,9 @@ internal class GameTaskManager
         }
 
         var mat = Mat.FromStream(File.OpenRead(filePath), flags);
-        if (info.GameScreenSize.Width != 1920)
+        if (width != 1920)
         {
-            mat = ResizeHelper.Resize(mat, info.AssetScale);
+            mat = ResizeHelper.Resize(mat, assetScale);
         }
 
         return mat;

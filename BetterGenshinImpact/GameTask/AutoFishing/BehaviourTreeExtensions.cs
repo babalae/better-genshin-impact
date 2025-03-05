@@ -4,6 +4,14 @@ using BehaviourTree;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.Core.Config;
+using OpenCvSharp;
+using System.Drawing.Imaging;
+using System.IO;
+using OpenCvSharp.Extensions;
+using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.GameTask.Model.Area;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -113,6 +121,116 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _firstStatus = BehaviourStatus.Ready;
             _secondStatus = BehaviourStatus.Ready;
             base.DoReset(status);
+        }
+    }
+
+    [Obsolete]
+    /// <summary>
+    /// 方便生产截图的类，用于覆盖行为树原本的BaseBehaviour类
+    /// 不用的时候记得注释或者改名
+    /// </summary>
+    /// <typeparam name="TContext"></typeparam>
+    public abstract class XBaseBehaviour<TContext> : IBehaviour<TContext>, IDisposable where TContext : ImageRegion
+    {
+        private readonly ILogger logger = App.GetLogger<BaseBehaviour<TContext>>();
+        public string Name { get; }
+
+        public BehaviourStatus Status { get; private set; }
+
+        protected XBaseBehaviour(string name)
+        {
+            Name = name;
+        }
+
+        public BehaviourStatus Tick(TContext context)
+        {
+            if (Status == BehaviourStatus.Ready)
+            {
+                OnInitialize();
+            }
+
+            Status = Update(context);
+            if (Status == BehaviourStatus.Ready)
+            {
+                throw new InvalidOperationException("Ready status should not be returned by Behaviour Update Method");
+            }
+
+            if (Status != BehaviourStatus.Running)
+            {
+                TakeScreenshot(context, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_{Status}.png");
+                OnTerminate(Status);
+            }
+
+            return Status;
+        }
+
+        public void TakeScreenshot(ImageRegion imageRegion, string? name)
+        {
+            var path = Global.Absolute($@"log\screenshot\");
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+
+            var bitmap = imageRegion.SrcBitmap;
+            if (String.IsNullOrWhiteSpace(name))
+            {
+                name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
+            }
+            var savePath = Global.Absolute($@"log\screenshot\{name}");
+
+            if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
+            {
+                var mat = bitmap.ToMat();
+                var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
+                mat.Rectangle(rect, Scalar.White, -1);
+                new Task(() =>
+                {
+                    Cv2.ImWrite(savePath, mat);
+                }).Start();
+            }
+            else
+            {
+                new Task(() =>
+                {
+                    bitmap.Save(savePath, ImageFormat.Png);
+                }).Start();
+            }
+
+            logger.LogInformation("截图已保存: {Name}", name);
+        }
+
+        public void Reset()
+        {
+            if (Status != 0)
+            {
+                DoReset(Status);
+                Status = BehaviourStatus.Ready;
+            }
+        }
+
+        protected abstract BehaviourStatus Update(TContext context);
+
+        protected virtual void OnTerminate(BehaviourStatus status)
+        {
+        }
+
+        protected virtual void OnInitialize()
+        {
+        }
+
+        protected virtual void DoReset(BehaviourStatus status)
+        {
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

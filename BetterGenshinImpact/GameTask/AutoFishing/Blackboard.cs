@@ -17,17 +17,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 已选择的鱼饵名
         /// </summary>
-        internal string selectedBaitName = string.Empty;
+        public string selectedBaitName = string.Empty;
 
         /// <summary>
         /// 鱼塘
         /// </summary>
-        internal Fishpond fishpond;
+        public Fishpond fishpond;
 
         /// <summary>
         /// 是否没有目标鱼
         /// </summary>
-        internal bool noTargetFish;
+        public bool noTargetFish;
 
         /// <summary>
         /// 拉条位置的识别框
@@ -38,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 是否正在选鱼饵界面
         /// 此时有阴影遮罩，OpenCv的图像匹配会受干扰
         /// </summary>
-        internal bool chooseBaitUIOpening = false;
+        public bool chooseBaitUIOpening = false;
 
         /// <summary>
         /// 镜头俯仰是否被行为重置
@@ -47,8 +47,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         internal bool pitchReset = false;
 
         #region 分层暂放
-        internal static readonly YoloV8Predictor predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
-        internal Action<int> Sleep { get; set; }
+        public YoloV8Predictor predictor;
+        public Action<int> Sleep;
+
+        public Blackboard(YoloV8Predictor predictor, Action<int> sleep)
+        {
+            this.predictor = predictor;
+            Sleep = sleep;
+        }
         #endregion
 
         internal virtual void Reset()
@@ -57,6 +63,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
             pitchReset = false;
+            selectedBaitName = string.Empty;
         }
     }
 }
