@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
 
@@ -37,14 +38,17 @@ public class ScriptProject
         Manifest.Validate(ProjectPath);
     }
 
-    public StackPanel? LoadSettingUi(dynamic context)
+    public ScrollViewer? LoadSettingUi(dynamic context)
     {
         var settingItems = Manifest.LoadSettingItems(ProjectPath);
         if (settingItems.Count == 0)
         {
             return null;
         }
-        var stackPanel = new StackPanel();
+        var stackPanel = new StackPanel
+        {
+            Margin = new Thickness(0, 0, 20, 0) // 给右侧滚动条留出位置
+        };
         foreach (var item in settingItems)
         {
             var controls = item.ToControl(context);
@@ -54,7 +58,14 @@ public class ScriptProject
             }
         }
 
-        return stackPanel;
+        var scrollViewer = new ScrollViewer
+        {
+            Content = stackPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            MaxHeight = 350 // 设置最大高度
+        };
+
+        return scrollViewer;
     }
 
     public IScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig = null)
