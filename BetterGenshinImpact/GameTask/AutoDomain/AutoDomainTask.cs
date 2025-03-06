@@ -53,7 +53,7 @@ public class AutoDomainTask : ISoloTask
 
     private CancellationToken _ct;
 
-    static double CalcRgbDiff(Bitmap image)
+    static (double brightness, double MeanDiff) CalcRgbDiff(Bitmap image)
     {
         // 初始化 RGB 通道列表
         var rList = new System.Collections.Generic.List<int>();
@@ -72,19 +72,27 @@ public class AutoDomainTask : ISoloTask
             }
         }
 
+        // 计算 R 通道的平均值
+        double brightness = rList.Average();
+
         // 计算 R 和 G 的差值
         var rMinusG = rList.Zip(gList, (r, g) => r - g).ToArray();
 
         // 计算差值的绝对值的平均值
         double meanDiff = rMinusG.Select(x => Math.Abs(x)).Average();
 
-        return meanDiff;
+        // 返回一个包含 R 通道平均值和差值平均值的元组
+        return (brightness, meanDiff);
     }
 
     static int IsDead(Bitmap image)
     {
-        double d1 = CalcRgbDiff(image);
-        if (d1<2){
+        (double brightness, double MeanDiff )= CalcRgbDiff(image);
+        if (MeanDiff<2 && brightness<180){
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string filePath = $"image_{timestamp}.png"; // 定义文件名
+            image.Save(filePath); // 保存图像
+
             return 1;
         }
         else{
