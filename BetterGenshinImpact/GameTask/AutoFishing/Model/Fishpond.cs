@@ -52,7 +52,7 @@ public class Fishpond
                 // todo：不是很重要但有机会可以从构造函数里分离逻辑
                 // 忽略界面左侧提示的“获得”物品的图标，当上一竿获得鱼时，会对当前竿产生干扰
                 // 使用估算大小和位置的方式来判断并剔除
-                if (box.Bounds.Width < result.Image.Width * 0.024 && box.Bounds.Height < result.Image.Width * 0.024)
+                if (box.Bounds.Width < result.Image.Width * 0.036 && box.Bounds.Height < result.Image.Width * 0.036)
                 {
                     Rect huode = new Rect((int)(0.04375 * result.Image.Width), (int)(0.4666 * result.Image.Height), (int)(0.1 * result.Image.Width), (int)(0.1 * result.Image.Width));
                     if (huode.Contains(rect))
@@ -61,8 +61,8 @@ public class Fishpond
                     }
                 }
                 // 忽略界面中央提示的“获得”物品的图标
-                if (box.Bounds.Width > result.Image.Width * 0.03 && box.Bounds.Width < result.Image.Width * 0.05 &&
-                    box.Bounds.Height > result.Image.Width * 0.03 && box.Bounds.Height < result.Image.Width * 0.05)
+                if (box.Bounds.Width > result.Image.Width * 0.03 && box.Bounds.Width < result.Image.Width * 0.06 &&
+                    box.Bounds.Height > result.Image.Width * 0.03 && box.Bounds.Height < result.Image.Width * 0.06)
                 {
                     Rect huode = new Rect((int)(0.4 * result.Image.Width), (int)(0.445 * result.Image.Height), (int)(0.2 * result.Image.Width), (int)(0.06125 * result.Image.Width));
                     if (huode.Contains(rect))
