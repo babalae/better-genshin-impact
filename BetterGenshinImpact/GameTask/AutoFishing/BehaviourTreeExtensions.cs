@@ -128,17 +128,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public abstract class BaseBehaviour<TImageRegion> : IBehaviour<TImageRegion>, IDisposable where TImageRegion : ImageRegion
     {
-        public static bool SaveScreenshotOnTerminate;
+        private readonly bool saveScreenshotOnTerminate;
 
-        private readonly ILogger logger;
+        protected readonly ILogger logger;
         public string Name { get; }
 
         public BehaviourStatus Status { get; private set; }
 
-        protected BaseBehaviour(string name, ILogger logger)
+        protected BaseBehaviour(string name, ILogger logger, bool saveScreenshotOnTerminate)
         {
             Name = name;
             this.logger = logger;
+            this.saveScreenshotOnTerminate = saveScreenshotOnTerminate;
         }
 
         public BehaviourStatus Tick(TImageRegion context)
@@ -156,11 +157,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             if (Status != BehaviourStatus.Running)
             {
-                if (SaveScreenshotOnTerminate)
+                if (saveScreenshotOnTerminate)
                 {
-                    string name = $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_{Status}.png";
-                    logger.LogInformation("保存截图: {Name}", name);
-                    SaveScreenshot(context, name);
+                    string fileName = $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_{Status}.png";
+                    logger.LogInformation("保存截图: {Name}", fileName);
+                    SaveScreenshot(context, fileName);
                 }
                 OnTerminate(Status);
             }

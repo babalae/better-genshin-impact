@@ -33,7 +33,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var blackboard = new Blackboard(predictor, sleep: i => { });
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
             BehaviourStatus actualStatus = sut.Tick(imageRegion);
 
             //
@@ -69,7 +69,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var blackboard = new Blackboard(predictor, sleep: i => { });
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
             sut.Tick(imageRegion);
             int actual = blackboard.fishpond?.Fishes?.Count(f => f.FishType.Name == fishName) ?? 0;
 

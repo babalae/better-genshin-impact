@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -14,12 +16,17 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class FishingHandler : IActionHandler
 {
-    private AutoFishingTask _autoFishingTask = new(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All, false));   // todo 做成可由脚本作者传入
-
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         // 钓鱼
-        await _autoFishingTask.Start(ct);
+        var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+        if (taskSettingsPageViewModel == null)
+        {
+            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
+        }
+        AutoFishingTask autoFishingTask = new(new AutoFishingTaskParam(taskSettingsPageViewModel.WholeProcessTimeoutSeconds, TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut, taskSettingsPageViewModel.FishingTimePolicy, false));
+
+        await autoFishingTask.Start(ct);
 
         await Delay(1000, ct);
     }
