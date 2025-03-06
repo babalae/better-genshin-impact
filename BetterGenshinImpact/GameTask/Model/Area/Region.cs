@@ -80,7 +80,7 @@ public class Region : IDisposable
     /// <summary>
     /// 绘图上下文
     /// </summary>
-    private readonly DrawContent drawContent;
+    protected readonly DrawContent drawContent;
 
     // public List<Region>? NextChildren { get; protected set; }
 

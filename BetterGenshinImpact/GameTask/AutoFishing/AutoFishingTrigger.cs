@@ -47,25 +47,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
             this.blackboard = new Blackboard(predictor, this.Sleep);
-        }
-
-        public void Init()
-        {
-            IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
-            IsExclusive = false;
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
                     .UntilSuccess("拉条循环")
                         .Sequence("拉条")
-                            .PushLeaf(() => new FishBite("自动提竿", _logger, input))
-                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger))
-                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, input))
+                            .PushLeaf(() => new FishBite("自动提竿", _logger, false, input))
+                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
+                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
                         .End()
                     .End()
                 .End()
                 .Build();
+        }
+
+        public void Init()
+        {
+            IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
+            IsExclusive = false;
         }
 
         private DateTime _prevExecute = DateTime.MinValue;

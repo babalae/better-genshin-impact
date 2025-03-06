@@ -152,8 +152,13 @@ public class Genshin
     /// 钓鱼
     /// </summary>
     /// <returns></returns>
-    public async Task AutoFishing()
+    public async Task AutoFishing(int fishingTimePolicy = 0)
     {
-        await new AutoFishingTask(new AutoFishingTaskParam(300, 15, FishingTimePolicy.All, false)).Start(CancellationContext.Instance.Cts.Token);  // todo 做成可由脚本作者传入
+        var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+        if (taskSettingsPageViewModel == null)
+        {
+            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
+        }
+        await new AutoFishingTask(new AutoFishingTaskParam(taskSettingsPageViewModel.WholeProcessTimeoutSeconds, TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut, (FishingTimePolicy)fishingTimePolicy, false)).Start(CancellationContext.Instance.Cts.Token);  // todo 做成可由脚本作者传入
     }
 }

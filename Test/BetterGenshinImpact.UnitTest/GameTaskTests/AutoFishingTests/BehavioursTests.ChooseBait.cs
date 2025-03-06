@@ -33,7 +33,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             };
 
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), new FakeInputSimulator());
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, new FakeInputSimulator());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -66,7 +66,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
 
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //

@@ -33,7 +33,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var blackboard = new Blackboard(predictor, sleep: i => { });
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
             BehaviourStatus actualStatus = sut.Tick(imageRegion);
 
             //
@@ -55,6 +55,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [InlineData("20250301234659009_GetFishpond_Succeeded.png", "axe marlin", 2)]
         [InlineData("20250301235638915_GetFishpond_Succeeded.png", "butterflyfish", 1)]
         [InlineData("20250302001049589_GetFishpond_Succeeded.png", "axe marlin", 0)]
+        [InlineData("20250306165029475_GetFishpond_Succeeded.png", "butterflyfish", 0)]
+        [InlineData("20250306171545590_GetFishpond_Succeeded.png", "heartfeather bass", 0)]
         /// <summary>
         /// 测试各种鱼的获取数量，数量应相符
         /// </summary>
@@ -69,7 +71,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var blackboard = new Blackboard(predictor, sleep: i => { });
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
             sut.Tick(imageRegion);
             int actual = blackboard.fishpond?.Fishes?.Count(f => f.FishType.Name == fishName) ?? 0;
 
