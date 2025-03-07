@@ -633,6 +633,15 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
     }
 
+    [RelayCommand]
+    private void OnAddShell()
+    {
+        var str = PromptDialog.Prompt("执行shell是非常危险的，请不要输入你不认识的东西。\n 可能会导致安全问题并破坏你的系统。","请输入需要执行的shell");
+        if (!string.IsNullOrEmpty(str))
+        {
+            SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildShellProject(str));
+        }
+    }
 
     [RelayCommand]
     private void OnAddPathing()
