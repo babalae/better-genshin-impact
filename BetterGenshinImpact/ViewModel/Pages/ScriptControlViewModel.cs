@@ -477,7 +477,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             SelectedScriptGroup?.AddProject(scriptGroupProject);
         }
 
-        Toast.Success($"增加了{projects.Count - oldcount}个路径追踪任务");
+        Toast.Success($"增加了{projects.Count - oldcount}个地图追踪任务");
         if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
 
@@ -649,7 +649,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath);
         var stackPanel = CreatePathingScriptSelectionPanel(root.Children);
 
-        var result = PromptDialog.Prompt("请选择需要添加的路径追踪任务", "请选择需要添加的路径追踪任务", stackPanel, new Size(500, 600));
+        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(500, 600));
         if (!string.IsNullOrEmpty(result))
         {
             AddSelectedPathingScripts((StackPanel)stackPanel.Content);

@@ -33,7 +33,7 @@ internal class AutoFightHandler : IActionHandler
         AutoFightParam taskParams = null;
         if (config != null && config is PathingPartyConfig patyConfig && patyConfig.AutoFightEnabled)
         {
-            //替换配置为路径追踪
+            //替换配置为地图追踪
 
             taskParams = GetFightAutoFightParam(patyConfig.AutoFightConfig);
         }

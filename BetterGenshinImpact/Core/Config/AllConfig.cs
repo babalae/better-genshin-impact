@@ -158,7 +158,7 @@ public partial class AllConfig : ObservableObject
     public ScriptConfig ScriptConfig { get; set; } = new();
 
     /// <summary>
-    /// 路径追踪配置
+    /// 地图追踪配置
     /// </summary>
     public PathingConditionConfig PathingConditionConfig { get; set; } = PathingConditionConfig.Default;
 

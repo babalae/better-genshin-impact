@@ -204,7 +204,7 @@ public class ScriptGroupProjectExtensions
     {
         { "Javascript", "JS脚本" },
         { "KeyMouse", "键鼠脚本" },
-        { "Pathing", "路径追踪" },
+        { "Pathing", "地图追踪" },
         { "Shell", "Shell" }
     };
 

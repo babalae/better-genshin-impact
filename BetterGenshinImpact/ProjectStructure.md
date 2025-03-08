@@ -34,8 +34,8 @@ BetterGenshinImpact/
 │   │   ├── MacroConfig.cs:这段代码定义了一个名为`MacroConfig`的C#类，它似乎用于配置一个名为“BetterGenshinImpact”的游戏辅助工具的宏功能。该类包含多个可观察属性，用于设置不同的宏参数，如技能间隔时间、按键模式、战斗宏的启用状态和优先级等。总结：这份代码的功能是配置“BetterGenshinImpact”游戏辅助工具的宏功能。
 │   │   ├── MaskWindowConfig.cs:这段代码定义了一个名为`MaskWindowConfig`的C#类，它使用CommunityToolkit的MVVM（Model-View-ViewModel）框架来创建一个配置类，用于管理一个遮罩窗口的各种设置。该类包含多个属性，如是否锁定控件、是否显示方向提示、是否显示识别结果、日志窗口的位置和大小、是否启用遮罩窗口等，以及一些与UID遮盖和状态指示相关的配置。总结：这份代码的功能是定义一个用于配置遮罩窗口的类，用于管理原神游戏中的辅助功能设置。
 │   │   ├── OneDragonFlowConfig.cs:这段代码定义了一个C#类`OneDragonFlowConfig`，它是一个用于配置《原神》游戏内自动战斗和任务设置的模型。该类包含了一系列属性，用于存储不同的配置信息，如合成树脂的国家、冒险者协会的国家、自动战斗的队伍和策略名称，以及每周不同日子的秘境配置。通过`GetDomainConfig`方法，可以根据当前日期返回相应的队伍和秘境配置。
-│   │   ├── PathingConditionConfig.cs:这段代码是一个配置类，用于配置GenshinImpact游戏中的路径追踪条件，包括队伍和角色的条件配置，以及特殊动作和采集物的匹配规则，最终生成队伍配置用于游戏中的自动战斗。
-│   │   ├── PathingPartyConfig.cs:这段代码定义了一个C#类`PathingPartyConfig`，它是一个用于配置路径追踪和自动战斗设置的模型。这个类使用了`ObservableObject`来支持数据绑定，并且包含了多个属性来配置队伍名称、角色编号、战斗策略等，以及一些辅助配置，如是否仅在某些情况下复活、是否启用自动战斗等。总结：这份代码的功能是配置《原神》游戏中的路径追踪和自动战斗设置。
+│   │   ├── PathingConditionConfig.cs:这段代码是一个配置类，用于配置GenshinImpact游戏中的地图追踪条件，包括队伍和角色的条件配置，以及特殊动作和采集物的匹配规则，最终生成队伍配置用于游戏中的自动战斗。
+│   │   ├── PathingPartyConfig.cs:这段代码定义了一个C#类`PathingPartyConfig`，它是一个用于配置地图追踪和自动战斗设置的模型。这个类使用了`ObservableObject`来支持数据绑定，并且包含了多个属性来配置队伍名称、角色编号、战斗策略等，以及一些辅助配置，如是否仅在某些情况下复活、是否启用自动战斗等。总结：这份代码的功能是配置《原神》游戏中的地图追踪和自动战斗设置。
 │   │   ├── RecordConfig.cs:这段代码定义了一个名为`RecordConfig`的C#类，它使用CommunityToolkit的MVVM（Model-View-ViewModel）库来创建一个可观察的对象。该类包含三个私有字段，分别用于存储视角移动与鼠标移动距离的转换系数、视角移动与DirectInput移动单位的转换系数，以及一个布尔值用于标记是否记录相机视角朝向。这个类似乎是为了配置和存储与游戏《原神》相关的视角和输入设置。总结：这份代码的功能是定义一个用于存储和配置游戏《原神》视角和输入设置的配置类。
 │   │   ├── RectConfig.cs:这段代码定义了一个名为`RectConfig`的类，它用于封装一个矩形区域，包含矩形的左上角坐标（X,Y）和矩形的宽度和高度。该类提供了一个从`RectConfig`到`OpenCvSharp.Rect`的转换方法，以便与OpenCV库兼容。总结：这段代码的功能是提供一个用于表示和转换OpenCV矩形区域的配置类。
 │   │   └── ScriptConfig.cs:这段C#代码定义了一个名为`ScriptConfig`的类，它使用`CommunityToolkit.Mvvm.ComponentModel`命名空间中的`ObservableObject`来支持数据绑定。该类包含几个属性，用于存储与脚本配置相关的数据，如自动更新脚本仓库的周期、上次更新时间、脚本仓库按钮红点是否可见以及已订阅的脚本路径列表。总结：这份代码的功能是定义一个用于存储和跟踪GenshinImpact脚本配置的类。
@@ -209,7 +209,7 @@ BetterGenshinImpact/
 │   │   ├── CameraRotateTask.cs:这段代码的功能是使用BetterGenshinImpact游戏辅助工具，通过模拟鼠标移动来控制游戏中的摄像机旋转到指定的目标角度，并在达到目标角度或尝试次数超过限制时停止旋转。
 │   │   ├── Handler/
 │   │   │   ├── ActionFactory.cs:这段代码的功能是创建一个用于处理游戏动作的工厂类，它能够根据不同的动作类型动态地生成相应的动作处理器实例。
-│   │   │   ├── AutoFightHandler.cs:这段C#代码是一个名为`AutoFightHandler`的类，它实现了`IActionHandler`接口，并提供了自动战斗的功能。该类通过读取配置文件和路径追踪配置来控制游戏中的自动战斗行为。总结：该代码的功能是提供一个自动战斗的处理器，用于在游戏中自动执行战斗任务。
+│   │   │   ├── AutoFightHandler.cs:这段C#代码是一个名为`AutoFightHandler`的类，它实现了`IActionHandler`接口，并提供了自动战斗的功能。该类通过读取配置文件和地图追踪配置来控制游戏中的自动战斗行为。总结：该代码的功能是提供一个自动战斗的处理器，用于在游戏中自动执行战斗任务。
 │   │   │   ├── CombatScriptHandler.cs:这段C#代码定义了一个名为`CombatScriptHandler`的类，它实现了`IActionHandler`接口。该类包含一个异步方法`RunAsync`，用于执行一个战斗策略脚本。该方法接收一个`CancellationToken`、一个可选的`WaypointForTrack`对象和一个可选的配置对象。如果`WaypointForTrack`对象包含一个有效的战斗策略，该方法将获取战斗场景信息，并尝试执行策略中的每个命令。如果发生异常，它将记录错误信息。如果`WaypointForTrack`对象为空，它将记录一个错误日志。总结：该代码的功能是执行一个为GenshinImpact游戏中的战斗场景设计的策略脚本。
 │   │   │   ├── ElementalCollectHandler.cs:这段代码的功能是自动化处理《原神》游戏中的元素采集任务，通过识别和切换游戏中的角色，使用他们的元素技能或普通攻击来收集对应的元素。
 │   │   │   ├── ElementalSkillHandler.cs:这段代码定义了一个名为`ElementalSkillHandler`的类，它实现了`IActionHandler`接口。该类用于在游戏《原神》中触发元素战技。具体来说，它通过调用`Simulation.SendInput.SimulateAction`方法发送一个模拟动作，该动作对应于游戏中的元素战技，并在执行后等待1000毫秒。总结：该代码的功能是模拟在游戏《原神》中释放元素战技。
@@ -225,17 +225,17 @@ BetterGenshinImpact/
 │   │   │   │   ├── MoveModeEnum.cs:这段代码定义了一个名为`MoveModeEnum`的枚举类，用于表示游戏中的移动模式，包括步行、奔跑、持续冲刺、攀爬、飞行、跳跃和游泳。它提供了枚举值的代码和描述，以及一个静态方法来通过代码获取对应的描述信息。总结来说，这份代码的功能是定义并管理游戏中的移动模式枚举。
 │   │   │   │   ├── PathingTaskType.cs:这段C#代码定义了一个名为`PathingTaskType`的枚举类，用于表示路径规划任务类型，包括采集、挖矿和锄地。它提供了获取所有枚举值的方法以及根据代码获取对应消息的方法。总结：该代码定义了一个枚举类，用于表示和获取路径规划任务类型及其对应的描述信息。
 │   │   │   │   └── WaypointType.cs:这段代码定义了一个名为`WaypointType`的枚举类，用于表示在游戏《原神》中自动路径规划模型中的不同类型的路径点。它包含了四个静态只读字段，分别代表路径点、目标点、传送点和方位点，并且提供了获取所有枚举值的`Values`属性。此外，它还包含了一个`GetMsgByCode`静态方法，用于根据路径点的代码获取对应的描述信息。总结：这份代码的功能是定义并管理《原神》游戏中自动路径规划模型中不同类型路径点的枚举。
-│   │   │   ├── PathingTask.cs:这段代码定义了一个名为`PathingTask`的C#类，用于处理与路径追踪任务相关的数据。它包含任务信息、位置点列表、文件名和文件路径，并提供方法来从文件路径或JSON字符串构建任务对象，以及将任务对象保存到文件中。此外，它还包含检查任务是否包含特定动作和获取采集物名称的方法。总结：该代码的功能是管理GenshinImpact游戏中的路径追踪任务数据。
+│   │   │   ├── PathingTask.cs:这段代码定义了一个名为`PathingTask`的C#类，用于处理与地图追踪任务相关的数据。它包含任务信息、位置点列表、文件名和文件路径，并提供方法来从文件路径或JSON字符串构建任务对象，以及将任务对象保存到文件中。此外，它还包含检查任务是否包含特定动作和获取采集物名称的方法。总结：该代码的功能是管理GenshinImpact游戏中的地图追踪任务数据。
 │   │   │   ├── PathingTaskConfig.cs:这段C#代码定义了一个名为`PathingTaskConfig`的类，它似乎用于配置路径导航任务。以下是代码的详细分析：1.引入了几个命名空间，包括用于枚举的`Enum`，`System`（用于基础类库），以及`System.Text.Json.Serialization`（用于JSON序列化）。2.`PathingTaskConfig`类被标记为`[Serializable]`，这意味着该类可以被序列化为JSON格式，这通常用于配置文件或网络传输。3.类中没有任何属性或方法，但是有注释说明了一些可能的配置选项：-持续操作：切换某个角色，执行长E或短E技能。-持续疾跑。-边跳边走。根据这些信息，可以推测这段代码的功能是：**概括总结：**这份代码定义了一个用于配置游戏内自动路径导航任务的配置类，允许用户设置角色操作和移动方式。
 │   │   │   ├── PathingTaskInfo.cs:这段代码定义了一个名为`PathingTaskInfo`的C#类，用于表示路径规划任务的信息。该类包含任务名称、描述、作者、版本、BetterGI版本、任务类型以及一些与任务参数和配置相关的字段。任务类型通过一个枚举`PathingTaskType`来定义，并且有一个方法`GetMsgByCode`用于获取类型描述。总结：这份代码的功能是定义一个用于存储和表示GenshinImpact游戏中的路径规划任务的类。
 │   │   │   ├── Waypoint.cs:这段代码定义了一个名为`Waypoint`的C#类，用于表示游戏中的路径点。它包含坐标（X和Y），以及与路径点相关的类型（Type）、移动模式（MoveMode）和可选的动作（Action）及其参数（ActionParams）。这个类可能用于自动路径导航系统，帮助玩家在游戏中自动移动和执行特定动作。总结：这段代码的功能是定义一个用于游戏自动路径导航的路径点模型。
 │   │   │   └── WaypointForTrack.cs:这段代码定义了一个名为`WaypointForTrack`的类，它继承自`Waypoint`类。这个类用于在游戏《原神》中处理路径规划，它包含了原神游戏坐标系和全地图图像坐标系中的位置信息，以及与战斗脚本相关的数据。具体来说，它将原神游戏坐标系中的位置转换为全地图图像坐标系，并能够解析与战斗相关的脚本和日志信息。总结：这份代码的功能是创建一个用于《原神》游戏路径规划的坐标点类，包含坐标转换和战斗脚本解析功能。
 │   │   ├── Navigation.cs:这段代码的功能是用于《原神》游戏中自动导航，通过图像识别和地图匹配来获取玩家的当前位置，计算目标方向和距离，并将当前位置发送给其他组件。总结：该代码实现了《原神》游戏中的自动路径导航功能。
-│   │   ├── PathExecutor.cs:这段代码的功能是：实现一个自动路径追踪系统，用于在游戏《原神》中自动执行路径点，包括切换队伍、处理异常、自动跳过剧情等操作。
+│   │   ├── PathExecutor.cs:这段代码的功能是：实现一个自动地图追踪系统，用于在游戏《原神》中自动执行路径点，包括切换队伍、处理异常、自动跳过剧情等操作。
 │   │   ├── PathRecorder.cs:这段代码的功能是用于记录和编辑《原神》游戏中的路径点，以便自动导航。
 │   │   ├── Suspend/
 │   │   │   ├── ISuspendable.cs:这段代码定义了一个名为`ISuspendable`的接口，该接口包含三个成员：一个无参数的方法`Suspend()`用于暂停操作，一个无参数的方法`Resume()`用于恢复操作，以及一个只读属性`IsSuspended`用于获取当前对象是否处于暂停状态。总结：这份代码的功能是定义了一个可暂停和恢复操作的接口。
-│   │   │   └── PathExecutorSuspend.cs:这段代码的功能是提供一个暂停和恢复游戏路径执行器（PathExecutor）操作的机制，用于在路径追踪过程中记录和恢复当前路径状态。
+│   │   │   └── PathExecutorSuspend.cs:这段代码的功能是提供一个暂停和恢复游戏路径执行器（PathExecutor）操作的机制，用于在地图追踪过程中记录和恢复当前路径状态。
 │   │   └── TrapEscaper.cs:这段代码的功能是模拟游戏《原神》中的自动路径导航和避障，通过模拟按键操作来控制角色移动和旋转，以绕过障碍物并到达目标位置。
 │   ├── AutoPick/
 │   │   ├── Assets/
@@ -614,7 +614,7 @@ BetterGenshinImpact/
 │   │   ├── KeyBindingsSettingsPageViewModel.cs:这段代码是一个C#的ViewModel，用于管理GenshinImpact游戏的按键绑定设置。它提供了用户界面来配置和控制游戏中的各种按键绑定，并能够从注册表中读取现有的按键绑定设置。总结来说，这份代码的功能是提供一个用于配置GenshinImpact游戏按键绑定的用户界面。
 │   │   ├── KeyMouseRecordPageViewModel.cs:这段代码是一个C#的ViewModel，用于管理一个名为“KeyMouseRecordPage”的WPF用户界面页面的逻辑。它提供了脚本录制、播放、编辑、删除和查看脚本列表的功能，并集成了日志记录和用户提示服务。总结来说，这份代码的功能是提供一个用于管理GenshinImpact游戏脚本录制的用户界面。
 │   │   ├── MacroSettingsPageViewModel.cs:这段代码是一个C#的ViewModel，用于在WPF应用程序中处理宏设置页面的逻辑。它包含对宏配置的访问、导航到其他页面、编辑宏文件和打开宏相关网页的功能。总结：该代码的功能是提供一个宏设置页面的视图模型，用于配置和导航宏设置相关的功能。
-│   │   ├── MapPathingViewModel.cs:这段代码是一个C#的ViewModel，用于管理GenshinImpact游戏中的路径追踪功能。它提供了地图路径追踪任务的列表视图，允许用户打开脚本文件夹、启动路径追踪任务、打开地图查看器、地图编辑器、设置和查看路径追踪相关的配置信息。
+│   │   ├── MapPathingViewModel.cs:这段代码是一个C#的ViewModel，用于管理GenshinImpact游戏中的地图追踪功能。它提供了地图地图追踪任务的列表视图，允许用户打开脚本文件夹、启动地图追踪任务、打开地图查看器、地图编辑器、设置和查看地图追踪相关的配置信息。
 │   │   ├── NotificationSettingsPageViewModel.cs:这段C#代码定义了一个名为`NotificationSettingsPageViewModel`的ViewModel类，它用于处理与通知设置相关的功能。该类继承自`ObservableObject`，这意味着它支持数据绑定，并且包含一个私有字段`_notificationService`，用于与通知服务进行交互。它还包含一个`OnTestWebhook`方法，该方法是一个异步方法，用于测试Webhook通知的配置是否正确，并在UI上显示结果。总结：这份代码的功能是提供一个视图模型，用于管理通知设置并测试Webhook通知的有效性。
 │   │   ├── OneDragon/
 │   │   │   ├── CraftViewModel.cs:这段C#代码定义了一个名为`CraftViewModel`的类，它继承自`OneDragonBaseViewModel`。这个类使用了CommunityToolkit的MVVM（Model-View-ViewModel）框架。`CraftViewModel`类包含一个只读属性`Title`，其值被设置为"合成浓缩树脂"。根据代码内容，可以推测这份代码的功能是：定义了一个表示合成浓缩树脂合成界面的视图模型。
@@ -629,7 +629,7 @@ BetterGenshinImpact/
 │   │   │   └── TcgViewModel.cs:这段C#代码定义了一个名为`TcgViewModel`的类，它继承自`OneDragonBaseViewModel`。这个类使用了CommunityToolkit的MVVM（Model-View-ViewModel）框架。`TcgViewModel`类包含一个只读属性`Title`，其值被设置为"自动七圣召唤"。根据代码内容，可以推测这份代码的功能是：定义了一个视图模型类，用于表示一个名为“自动七圣召唤”的页面或功能。
 │   │   ├── OneDragonFlowViewModel.cs:这段C#代码是一个用于管理《原神》游戏内“一条龙”任务的ViewModel。它允许用户配置和执行一系列自动化任务，如领取邮件、合成树脂等，并支持保存和加载配置。
 │   │   ├── ScriptControlViewModel.cs:这段代码是一个C#的ViewModel，用于管理GenshinImpact辅助工具的脚本配置和执行。它提供了添加、编辑、删除脚本组，以及执行脚本的功能，并支持日志分析和配置设置。
-│   │   ├── TaskSettingsPageViewModel.cs:这段C#代码是一个用于《原神》游戏的辅助工具的ViewModel，它提供了自动执行游戏任务的功能，如自动召唤、伐木、领域战斗、自动战斗、音乐游戏和自动路径追踪等，并允许用户配置和启动这些任务。总结来说，这份代码的功能是创建一个用户界面来配置和启动《原神》游戏的自动化任务。
+│   │   ├── TaskSettingsPageViewModel.cs:这段C#代码是一个用于《原神》游戏的辅助工具的ViewModel，它提供了自动执行游戏任务的功能，如自动召唤、伐木、领域战斗、自动战斗、音乐游戏和自动地图追踪等，并允许用户配置和启动这些任务。总结来说，这份代码的功能是创建一个用户界面来配置和启动《原神》游戏的自动化任务。
 │   │   ├── TriggerSettingsPageViewModel.cs:这段代码是一个C#的ViewModel，用于实现一个名为“BetterGenshinImpact”的应用程序中的一个设置页面。该页面允许用户配置游戏内自动跳过和自动选择选项的设置，包括选择聊天选项、OCR引擎、默认拾取按钮等，并提供了一些操作，如编辑黑白名单、打开QQ群链接和导航到热键页面。总结：该代码的功能是提供一个用于配置《原神》游戏内自动跳过和自动选择选项设置的界面。
 │   │   └── View/
 │   │   │   ├── AutoFightViewModel.cs:这段代码是一个C#的ViewModel，用于BetterGenshinImpact项目中的自动战斗功能。它管理着自动战斗的策略配置，包括加载自定义脚本、选择战斗策略以及打开本地脚本仓库和战斗文件夹。总结：该代码的功能是管理BetterGenshinImpact游戏中的自动战斗策略配置。

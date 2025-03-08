@@ -33,7 +33,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="路径追踪行走配置（不启用则使用路径追踪内的条件配置）"
+                                      Text="地图追踪行走配置（不启用则使用地图追踪内的条件配置）"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
@@ -295,7 +295,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="允许在jsScript脚本中启用此路径追踪配置"
+                                      Text="允许在jsScript脚本中启用此地图追踪配置"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -320,7 +320,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="需启用上方允许JS中使用此路径追踪配置才生效，允许在此调度器中（一般在JS脚本中）调用自动战斗任务时，采用此追踪配置里的战斗策略。"
+                                      Text="需启用上方允许JS中使用此地图追踪配置才生效，允许在此调度器中（一般在JS脚本中）调用自动战斗任务时，采用此追踪配置里的战斗策略。"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -345,7 +345,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="当执行完一个路线后，如果时间为当前配置的时间（范围：0-23），则此路径追踪任务后续都将都跳过，适用于连续执行的兜底任务，例如想通宵挂机，并且在4点后，开始执行新的任务。"
+                                      Text="当执行完一个路线后，如果时间为当前配置的时间（范围：0-23），则此地图追踪任务后续都将都跳过，适用于连续执行的兜底任务，例如想通宵挂机，并且在4点后，开始执行新的任务。"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -382,7 +382,7 @@
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       TextWrapping="Wrap">
-                            需开启上方路径追踪配置，开启此项可制定战斗配置，关闭此项，则用于独立任务中的配置
+                            需开启上方地图追踪配置，开启此项可制定战斗配置，关闭此项，则用于独立任务中的配置
                         </ui:TextBlock>
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -732,13 +732,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="路径追踪动作配置"
+                                      Text="地图追踪动作配置"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       TextWrapping="Wrap">
-                            路径追踪到达目标点的时候会执行一些动作，有些动作必须配置对应角色在队伍内的位置
+                            地图追踪到达目标点的时候会执行一些动作，有些动作必须配置对应角色在队伍内的位置
                         </ui:TextBlock>
 
                     </Grid>

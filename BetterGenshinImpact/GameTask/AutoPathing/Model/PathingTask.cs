@@ -68,7 +68,7 @@ public class PathingTask
         // 比较版本号大小 BgiVersion
         if (!string.IsNullOrWhiteSpace(task.Info.BgiVersion) && Global.IsNewVersion(task.Info.BgiVersion))
         {
-            TaskControl.Logger.LogError("路径追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 脚本可能无法正常工作，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 脚本可能无法正常工作，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
         }
         return task;
     }
