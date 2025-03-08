@@ -12,6 +12,7 @@ using System.Dynamic;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Shell;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
@@ -112,6 +113,11 @@ public partial class ScriptGroupProject : ObservableObject
         return new ScriptGroupProject(name, name, "KeyMouse");
     }
 
+    public static ScriptGroupProject BuildShellProject(string command)
+    {
+        return new ScriptGroupProject(command, command, "Shell");
+    }
+
     public static ScriptGroupProject BuildPathingProject(string name, string folder)
     {
         return new ScriptGroupProject(name, folder, "Pathing");
@@ -165,6 +171,15 @@ public partial class ScriptGroupProject : ObservableObject
             }
             await pathingTask.Pathing(task);
         }
+        if (Type == "Shell")
+        {
+            var task = ShellExecutor.BuildFromShellName(Name);
+            await task.Execute();
+        }
+        else
+        {
+            throw new Exception("不支持的脚本类型");
+        }
     }
 
     partial void OnTypeChanged(string value)
@@ -189,7 +204,8 @@ public class ScriptGroupProjectExtensions
     {
         { "Javascript", "JS脚本" },
         { "KeyMouse", "键鼠脚本" },
-        { "Pathing", "路径追踪" }
+        { "Pathing", "路径追踪" },
+        { "Shell", "Shell" }
     };
 
     public static readonly Dictionary<string, string> StatusDescriptions = new()
