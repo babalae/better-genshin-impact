@@ -113,6 +113,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 .Build();
 
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
+            _logger.LogWarning("请不要携带任何{Msg}，极有可能会误识别导致无法结束自动钓鱼！", "跟宠");
             _logger.LogInformation($"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}");
             TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
             _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");

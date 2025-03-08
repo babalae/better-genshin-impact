@@ -3,6 +3,7 @@ using Compunet.YoloV8.Data;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
@@ -38,8 +39,15 @@ public class Fishpond
     /// <param name="ignoreObtained">是否忽略“获得”物品的图标</param>
     public Fishpond(DetectionResult result, bool includeTarget = false, bool ignoreObtained = false)
     {
+        Print(result);
         foreach (var box in result.Boxes)
         {
+            // 可信度太低的直接放弃
+            if (box.Confidence < 0.4)
+            {
+                continue;
+            }
+            
             Rect rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
             if (box.Class.Name == "rod" || box.Class.Name == "err rod")
             {
@@ -87,6 +95,16 @@ public class Fishpond
         Fishes = [.. Fishes.OrderByDescending(fish => fish.Confidence)];
 
         FishpondRect = CalculateFishpondRect();
+    }
+    
+    private void Print(DetectionResult result)
+    {
+        Debug.Write("鱼塘YOLO识别结果：");
+        foreach (var box in result.Boxes)
+        {
+            Debug.Write(box.ToString());
+        }
+        Debug.WriteLine("");
     }
 
     /// <summary>
