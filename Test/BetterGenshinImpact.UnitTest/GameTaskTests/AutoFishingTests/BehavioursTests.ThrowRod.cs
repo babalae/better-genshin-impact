@@ -36,8 +36,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 selectedBaitName = selectedBaitName
             };
 
-            DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
-            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
             //
             ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: new FakeDrawContent());
@@ -68,8 +67,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 selectedBaitName = selectedBaitName
             };
 
-            DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
-            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
             //
             ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: new FakeDrawContent());
@@ -78,6 +76,47 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.False(blackboard.noTargetFish);
             Assert.Equal(BehaviourStatus.Running, actual);
+        }
+
+        /// <summary>
+        /// 抛竿时，给定三条炮鲀鱼，并且确定算法能将下杆点从鱼的左侧移动到最左侧的炮鲀鱼上，此时希望“当前鱼”能始终锁定在最左侧的鱼上
+        /// 由于偶尔观测到“摇摆”行为的出现，故设计此测试
+        /// </summary>
+        [Fact]
+        public void ThrowRodTest_Target_ShouldBeTheLeftOne()
+        {
+            //
+            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\202503082114541115.png");
+            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+
+            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
+
+            var blackboard = new Blackboard(predictor, sleep: i => { })
+            {
+                selectedBaitName = "fake fly bait"
+            };
+
+            //
+            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), new FakeTimeProvider(), drawContent: new FakeDrawContent());
+            sut.Tick(imageRegion);
+            var actual = sut.currentFish;
+
+            //
+            Assert.True(blackboard.fishpond.TargetRect != null && blackboard.fishpond.TargetRect.Value != OpenCvSharp.Rect.Empty);
+            Assert.Equal(3, blackboard.fishpond.Fishes.Count(f => f.FishType.Name == "pufferfish"));
+            Assert.Equal(blackboard.fishpond.Fishes.OrderBy(f => f.Rect.X).First(), actual);
+
+            //
+            bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\202503082114560489.png");
+            imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+
+            //
+            sut.Tick(imageRegion);
+            actual = sut.currentFish;
+
+            //
+            Assert.Equal(3, blackboard.fishpond.Fishes.Count(f => f.FishType.Name == "pufferfish"));
+            Assert.Equal(blackboard.fishpond.Fishes.OrderBy(f => f.Rect.X).First(), actual);
         }
     }
 }

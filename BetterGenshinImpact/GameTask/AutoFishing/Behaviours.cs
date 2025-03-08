@@ -197,6 +197,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             noPlacementTimes = 0;
             noTargetFishTimes = 0;
+            prevTargetFishRect = Rect.Empty;
 
             input.Mouse.LeftButtonDown();
             blackboard.pitchReset = true;
@@ -213,7 +214,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             drawContent.RemoveRect("PrevFish");
         }
 
-        Rect prevTargetFishRect = Rect.Empty; // 记录上一个目标鱼的位置
+        Rect prevTargetFishRect; // 记录上一个目标鱼的位置
+
+        /// <summary>
+        /// 当前鱼
+        /// </summary>
+        public OneFish? currentFish { get; private set; }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
@@ -228,6 +234,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var result = blackboard.predictor.Detect(memoryStream);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
+            blackboard.fishpond = fishpond;
             Random _rd = new();
             if (fishpond.TargetRect == null || fishpond.TargetRect == Rect.Empty)
             {
@@ -261,7 +268,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             Rect fishpondTargetRect = (Rect)fishpond.TargetRect;
 
             // 找到落点最近的鱼
-            OneFish? currentFish = null;
+            currentFish = null;
             if (prevTargetFishRect == Rect.Empty)
             {
                 var list = fishpond.FilterByBaitName(blackboard.selectedBaitName);
