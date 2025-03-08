@@ -413,7 +413,7 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     [RelayCommand]
     private async Task OnGoToAutoFishingUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/timer/fish.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/fish.html"));
     }
 
     [RelayCommand]

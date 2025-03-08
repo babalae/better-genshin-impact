@@ -1437,13 +1437,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="全自动钓鱼"
+                                  Text="全自动钓鱼（单个鱼塘）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动选择鱼饵，全自动抛竿、提竿、完成钓鱼 -
+                        不要携带跟宠！在出现钓鱼F按钮的位置启动本任务 -
                         <Hyperlink Command="{Binding GoToAutoFishingUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
