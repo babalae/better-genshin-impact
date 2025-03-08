@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Drawing;
 using BetterGenshinImpact.Core.Config;
 using Compunet.YoloV8;
+using Microsoft.Extensions.Time.Testing;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -35,8 +36,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 selectedBaitName = selectedBaitName
             };
 
+            DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
+
             //
-            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
+            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: new FakeDrawContent());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -64,8 +68,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 selectedBaitName = selectedBaitName
             };
 
+            DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
+
             //
-            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
+            ThrowRod sut = new ThrowRod("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: new FakeDrawContent());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
