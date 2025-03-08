@@ -115,7 +115,7 @@ public partial class ScriptGroupProject : ObservableObject
 
     public static ScriptGroupProject BuildShellProject(string command)
     {
-        return new ScriptGroupProject(command, command, "Shell");
+        return new ScriptGroupProject(command, "", "Shell");
     }
 
     public static ScriptGroupProject BuildPathingProject(string name, string folder)

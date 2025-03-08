@@ -636,7 +636,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     [RelayCommand]
     private void OnAddShell()
     {
-        var str = PromptDialog.Prompt("执行shell是非常危险的，请不要输入你不认识的东西。\n 可能会导致安全问题并破坏你的系统。","请输入需要执行的shell");
+        var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点","请输入需要执行的shell");
         if (!string.IsNullOrEmpty(str))
         {
             SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildShellProject(str));
