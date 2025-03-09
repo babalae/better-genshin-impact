@@ -42,7 +42,7 @@
                 FontSize="16"
                 TextWrapping="Wrap">
                 <Run Text="❗本软件从未授权任何第三方平台进行" /><Run Text="售卖" Foreground="Red" />
-                <Run Text="。如果你是付费获取的本软件（闲鱼、淘宝等），凭此界面向商家" /><Run Text="退款" Foreground="Red" /><Run Text="！" />
+                <Run Text="。如果你是付费获取的本软件（闲鱼、淘宝等），请举报商家并发起" /><Run Text="退款" Foreground="Red" /><Run Text="！" />
             </emoji:TextBlock>
             <!--<StackPanel Margin="5"
                         Orientation="Horizontal">
