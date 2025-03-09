@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -70,6 +71,30 @@ public class NotificationService : IHostedService
         if (TaskContext.Instance().Config.NotificationConfig.WorkweixinNotificationEnabled)
         {
             _notifierManager.RegisterNotifier(new WorkWeixinNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WorkweixinWebhookUrl));
+        }
+
+        if (TaskContext.Instance().Config.NotificationConfig.WebSocketNotificationEnabled)
+        {
+            var jsonSerializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            };
+            var cts = new CancellationTokenSource();
+            _notifierManager.RegisterNotifier(new WebSocketNotifier(TaskContext.Instance().Config.NotificationConfig.WebSocketEndpoint, jsonSerializerOptions, cts));
+        }
+
+        // 添加 EmailNotifier 初始化逻辑
+        if (TaskContext.Instance().Config.NotificationConfig.EmailNotificationEnabled)
+        {
+            _notifierManager.RegisterNotifier(new EmailNotifier(
+                TaskContext.Instance().Config.NotificationConfig.SmtpServer,
+                TaskContext.Instance().Config.NotificationConfig.SmtpPort,
+                TaskContext.Instance().Config.NotificationConfig.SmtpUsername,
+                TaskContext.Instance().Config.NotificationConfig.SmtpPassword,
+                TaskContext.Instance().Config.NotificationConfig.FromEmail,
+                TaskContext.Instance().Config.NotificationConfig.FromName,
+                TaskContext.Instance().Config.NotificationConfig.ToEmail
+            ));
         }
     }
 
