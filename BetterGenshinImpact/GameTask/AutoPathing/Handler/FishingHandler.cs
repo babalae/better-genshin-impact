@@ -24,7 +24,7 @@ public class FishingHandler : IActionHandler
         {
             throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
-        AutoFishingTask autoFishingTask = new(new AutoFishingTaskParam(taskSettingsPageViewModel.WholeProcessTimeoutSeconds, TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut, taskSettingsPageViewModel.FishingTimePolicy, false));
+        AutoFishingTask autoFishingTask = new(AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig));
 
         await autoFishingTask.Start(ct);
 
