@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.Helpers;
 using Microsoft.ClearScript;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
@@ -35,12 +36,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             var autoFishingConfig = TaskContext.Instance().Config.AutoFishingConfig;
-            
+
             var jsObject = (ScriptObject)config;
-            var wholeProcessTimeoutSeconds = (int?)jsObject.GetProperty("wholeProcessTimeoutSeconds") ?? autoFishingConfig.WholeProcessTimeoutSeconds;
-            var throwRodTimeOutTimeoutSeconds = (int?)jsObject.GetProperty("throwRodTimeOutTimeoutSeconds") ?? autoFishingConfig.AutoThrowRodTimeOut;
-            var fishingTimePolicy = (FishingTimePolicy?)jsObject.GetProperty("fishingTimePolicy") ?? autoFishingConfig.FishingTimePolicy;
-            var saveScreenshotOnKeyTick = (bool?)jsObject.GetProperty("saveScreenshotOnKeyTick") ?? false;
+            var wholeProcessTimeoutSeconds = ScriptObjectConverter.GetValue(jsObject, "wholeProcessTimeoutSeconds", autoFishingConfig.WholeProcessTimeoutSeconds);
+            var throwRodTimeOutTimeoutSeconds = ScriptObjectConverter.GetValue(jsObject, "throwRodTimeOutTimeoutSeconds", autoFishingConfig.AutoThrowRodTimeOut);
+            var fishingTimePolicy = (FishingTimePolicy)ScriptObjectConverter.GetValue(jsObject, "fishingTimePolicy", (int)autoFishingConfig.FishingTimePolicy);
+            var saveScreenshotOnKeyTick = ScriptObjectConverter.GetValue(jsObject, "saveScreenshotOnKeyTick", false);
 
             return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick);
         }
