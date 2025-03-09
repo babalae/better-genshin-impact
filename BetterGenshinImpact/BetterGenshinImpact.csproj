@@ -43,6 +43,10 @@
 		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+		<PackageReference Include="DeviceId" Version="6.8.0" />
+		<PackageReference Include="DeviceId.Windows" Version="6.8.0" />
+		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.8.0" />
+		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
@@ -151,6 +155,21 @@
 	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Page Update="View\Windows\WelcomeDialog.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	    <XamlRuntime>Wpf</XamlRuntime>
+	    <SubType>Designer</SubType>
+	  </Page>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="View\Windows\WelcomeDialog.xaml.cs">
+	    <SubType>Code</SubType>
+	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 
 </Project>
