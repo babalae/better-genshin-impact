@@ -261,6 +261,34 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     }
     
     [RelayCommand]
+    private async Task OnTestWebSocketNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<WebSocketNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
+    [RelayCommand]
+    private async Task OnTestEmailNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<EmailNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
+    [RelayCommand]
     private void ImportLocalScriptsRepoZip()
     {
         Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
