@@ -159,6 +159,9 @@ public class Genshin
         {
             throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
-        await new AutoFishingTask(new AutoFishingTaskParam(taskSettingsPageViewModel.WholeProcessTimeoutSeconds, TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodTimeOut, (FishingTimePolicy)fishingTimePolicy, false)).Start(CancellationContext.Instance.Cts.Token);  // todo 做成可由脚本作者传入
+
+        var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
+        param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
+        await new AutoFishingTask(param).Start(CancellationContext.Instance.Cts.Token);
     }
 }

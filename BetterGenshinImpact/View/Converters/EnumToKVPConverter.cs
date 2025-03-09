@@ -4,38 +4,46 @@ using System.Text;
 using System.Windows.Data;
 using System.Windows;
 using System.ComponentModel;
+using System.Globalization;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using System.Reflection;
 using Vanara.Extensions.Reflection;
 
-namespace BetterGenshinImpact.View.Converters
+namespace BetterGenshinImpact.View.Converters;
+
+[ValueConversion(typeof(KeyValuePair<Enum, string>), typeof(Enum))]
+public class EnumToKVPConverter : IValueConverter
 {
-    [ValueConversion(typeof(KeyValuePair<Enum, string>), typeof(Enum))]
-    public sealed class EnumToKVPConverter : IValueConverter
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        if (value == null)
         {
-            Enum e = (Enum)value;
-            var name = Enum.GetName(value.GetType(), value);
-            if (name != null)
-            {
-                var field = value.GetType().GetField(name);
-                if (field != null && Attribute.GetCustomAttribute(field, typeof(DescriptionAttribute)) is DescriptionAttribute attr)
-                    return new KeyValuePair<Enum, string>(e, attr.Description);
-            }
-            throw new NotSupportedException();
+            return null;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        var enumType = value.GetType();
+        if (!enumType.IsEnum)
         {
-            // 这里很难拆箱，干脆反射了
-            var key = value.InvokeMethod<Enum>("get_Key");
-            if (key != null)
-            {
-                return key;
-            }
-            throw new NotSupportedException();
+            throw new ArgumentException("Value must be an enum");
         }
+
+        var name = Enum.GetName(enumType, value);
+        var field = enumType.GetField(name);
+        var descriptionAttribute = field?.GetCustomAttribute<DescriptionAttribute>();
+
+        var description = descriptionAttribute != null ? descriptionAttribute.Description : name;
+        return new KeyValuePair<Enum, string>((Enum)value, description);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        var kvp = (KeyValuePair<Enum, string>)value;
+        return kvp.Key;
     }
 }
