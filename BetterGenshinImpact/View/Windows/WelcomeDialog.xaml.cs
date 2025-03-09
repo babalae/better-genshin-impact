@@ -35,6 +35,6 @@ public partial class WelcomeDialog
     private void HyperlinkRequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         string uri = e.Uri.AbsoluteUri;
-        Launcher.LaunchUriAsync(new Uri(uri)).Wait();
+        Launcher.LaunchUriAsync(new Uri(uri));
     }
 }
