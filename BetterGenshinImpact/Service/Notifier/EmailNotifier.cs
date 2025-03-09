@@ -24,6 +24,9 @@ namespace BetterGenshinImpact.Service.Notifier
         // 收件人邮箱
         public string ToEmail { get; set; }
 
+        // 提升 SmtpClient 为类的成员变量
+        private readonly SmtpClient _smtpClient;
+
         public EmailNotifier(
             string smtpServer,
             int smtpPort,
@@ -40,6 +43,13 @@ namespace BetterGenshinImpact.Service.Notifier
             _fromEmail = fromEmail;
             _fromName = fromName;
             ToEmail = toEmail;
+
+            // 在构造函数中初始化 SmtpClient
+            _smtpClient = new SmtpClient(_smtpServer, _smtpPort)
+            {
+                Credentials = new System.Net.NetworkCredential(_smtpUsername, _smtpPassword),
+                EnableSsl = true
+            };
         }
 
         public async Task SendAsync(BaseNotificationData content)
@@ -51,12 +61,6 @@ namespace BetterGenshinImpact.Service.Notifier
 
             try
             {
-                using var smtpClient = new SmtpClient(_smtpServer, _smtpPort)
-                {
-                    Credentials = new System.Net.NetworkCredential(_smtpUsername, _smtpPassword),
-                    EnableSsl = true
-                };
-
                 using var mailMessage = new MailMessage
                 {
                     From = new MailAddress(_fromEmail, _fromName),
@@ -67,7 +71,8 @@ namespace BetterGenshinImpact.Service.Notifier
                 
                 mailMessage.To.Add(ToEmail);
 
-                await smtpClient.SendMailAsync(mailMessage);
+                // 使用成员变量 _smtpClient 发送邮件
+                await _smtpClient.SendMailAsync(mailMessage);
             }
             catch (System.Exception ex)
             {

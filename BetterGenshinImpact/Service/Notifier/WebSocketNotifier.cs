@@ -23,27 +23,52 @@ namespace BetterGenshinImpact.Service.Notifier
             _webSocket = new ClientWebSocket();
         }
 
-        // 实现 INotifier 接口的 Name 属性
         public string Name => "WebSocketNotifier";
 
-        public async Task ConnectAsync()
+        private async Task EnsureConnectedAsync()
         {
-            await _webSocket.ConnectAsync(new Uri(_endpoint), _cts.Token);
+            if (_webSocket.State == WebSocketState.Open)
+                return;
+
+            _webSocket.Dispose();
+            _webSocket = new ClientWebSocket();
+            
+            try
+            {
+                Console.WriteLine("Connecting to WebSocket...");
+                await _webSocket.ConnectAsync(new Uri(_endpoint), _cts.Token);
+                Console.WriteLine("WebSocket connected.");
+            }
+            catch (SystemException ex)
+            {
+                Console.WriteLine($"WebSocket connection failed: {ex.Message}");
+            }
         }
 
         public async Task SendAsync(BaseNotificationData notificationData)
         {
-            var json = JsonSerializer.Serialize(notificationData, _jsonSerializerOptions);
-            var buffer = System.Text.Encoding.UTF8.GetBytes(json);
-            await _webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, _cts.Token);
+            try
+            {
+                await EnsureConnectedAsync();
+                var json = JsonSerializer.Serialize(notificationData, _jsonSerializerOptions);
+                var buffer = System.Text.Encoding.UTF8.GetBytes(json);
+                await _webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, _cts.Token);
+            }
+            catch (WebSocketException ex)
+            {
+                Console.WriteLine($"WebSocket send failed: {ex.Message}");
+                await EnsureConnectedAsync();  // Attempt to reconnect
+            }
         }
 
         public async Task CloseAsync()
         {
-            if (_webSocket.State == WebSocketState.Open)
+            if (_webSocket.State == WebSocketState.Open || _webSocket.State == WebSocketState.CloseReceived)
             {
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", _cts.Token);
             }
+            _webSocket.Dispose();
+            _webSocket = new ClientWebSocket();
         }
 
         public void Dispose()
@@ -54,10 +79,6 @@ namespace BetterGenshinImpact.Service.Notifier
 
         public async Task SendNotificationAsync(BaseNotificationData notificationData)
         {
-            if (_webSocket.State != WebSocketState.Open)
-            {
-                await ConnectAsync();
-            }
             await SendAsync(notificationData);
         }
     }
