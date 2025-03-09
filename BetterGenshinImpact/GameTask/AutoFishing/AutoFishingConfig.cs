@@ -33,4 +33,17 @@ public partial class AutoFishingConfig : ObservableObject
     /// 自动抛竿未上钩超时时间(秒)
     /// </summary>
     [ObservableProperty] private int _autoThrowRodTimeOut = 15;
+    
+    /// <summary>
+    /// 整个任务超时时间
+    /// </summary>
+    [ObservableProperty]
+    private int _wholeProcessTimeoutSeconds = 300;
+
+    /// <summary>
+    /// 昼夜策略
+    /// 钓全天的鱼、还是只钓白天或夜晚的鱼
+    /// </summary>
+    [ObservableProperty]
+    private FishingTimePolicy _fishingTimePolicy = FishingTimePolicy.All;
 }

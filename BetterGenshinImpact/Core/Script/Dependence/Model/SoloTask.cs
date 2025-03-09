@@ -20,7 +20,7 @@ public class SoloTask
         Name = name;
     }
 
-    public SoloTask(string name, dynamic config)
+    public SoloTask(string name, object? config)
     {
         Name = name;
         // if (Name == "AutoPick")
