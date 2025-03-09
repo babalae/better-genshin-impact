@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.Helpers;
+using Microsoft.ClearScript;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -20,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public int ThrowRodTimeOutTimeoutSeconds { get; set; }
         public FishingTimePolicy FishingTimePolicy { get; set; }
         public bool SaveScreenshotOnKeyTick { get; set; }
-        
+
         /// <summary>
         /// 从JS请求参数构建任务参数
         /// </summary>
@@ -32,18 +34,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 return BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
             }
-            
+
             var autoFishingConfig = TaskContext.Instance().Config.AutoFishingConfig;
 
-            var configType = config.GetType();
-            var wholeProcessTimeoutSeconds = (int?)configType.GetProperty("wholeProcessTimeoutSeconds")?.GetValue(config) ?? autoFishingConfig.WholeProcessTimeoutSeconds;
-            var throwRodTimeOutTimeoutSeconds = (int?)configType.GetProperty("throwRodTimeOutTimeoutSeconds")?.GetValue(config) ?? autoFishingConfig.AutoThrowRodTimeOut;
-            var fishingTimePolicy = (FishingTimePolicy?)configType.GetProperty("fishingTimePolicy")?.GetValue(config) ?? autoFishingConfig.FishingTimePolicy;
-            var saveScreenshotOnKeyTick = (bool?)configType.GetProperty("saveScreenshotOnKeyTick")?.GetValue(config) ?? false;
+            var jsObject = (ScriptObject)config;
+            var wholeProcessTimeoutSeconds = ScriptObjectConverter.GetValue(jsObject, "wholeProcessTimeoutSeconds", autoFishingConfig.WholeProcessTimeoutSeconds);
+            var throwRodTimeOutTimeoutSeconds = ScriptObjectConverter.GetValue(jsObject, "throwRodTimeOutTimeoutSeconds", autoFishingConfig.AutoThrowRodTimeOut);
+            var fishingTimePolicy = (FishingTimePolicy)ScriptObjectConverter.GetValue(jsObject, "fishingTimePolicy", (int)autoFishingConfig.FishingTimePolicy);
+            var saveScreenshotOnKeyTick = ScriptObjectConverter.GetValue(jsObject, "saveScreenshotOnKeyTick", false);
 
             return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick);
         }
-        
+
         /// <summary>
         /// 从配置文件构建任务参数
         /// </summary>

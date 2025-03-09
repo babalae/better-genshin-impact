@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.Core.Script.Dependence.Model;
+﻿using Microsoft.ClearScript;
+
+namespace BetterGenshinImpact.Core.Script.Dependence.Model;
 
 /// <summary>
 /// 独立任务
@@ -13,19 +15,16 @@ public class SoloTask
     /// <summary>
     /// 独立任务配置
     /// </summary>
-    public object? Config;
+    public object? Config { get; set; }
 
     public SoloTask(string name)
     {
         Name = name;
     }
 
-    public SoloTask(string name, object? config)
+    public SoloTask(string name, ScriptObject config)
     {
         Name = name;
-        // if (Name == "AutoPick")
-        // {
-        //     Config = ScriptObjectConverter.ConvertTo<AutoPickExternalConfig>(config);
-        // }
+        Config = config;
     }
 }
