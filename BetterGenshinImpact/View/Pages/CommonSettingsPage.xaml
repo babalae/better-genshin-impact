@@ -1404,7 +1404,7 @@
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,24,0"
-                                     IsChecked="{Binding Config.NotificationConfig.WebSocketNotificationEnabled, Mode=TwoWay}" />
+                                     IsChecked="{Binding Config.NotificationConfig.EmailNotificationEnabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1459,10 +1459,10 @@
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 HorizontalAlignment="Right"
-                                MinWidth="180"
+                                MinWidth="60"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.SmtpServer, Mode=TwoWay}"
+                                Text="{Binding Config.NotificationConfig.SmtpPort, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
@@ -1574,7 +1574,7 @@
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.SmtpServer, Mode=TwoWay}"
+                                Text="{Binding Config.NotificationConfig.FromName, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
