@@ -183,7 +183,7 @@
                               Grid.Column="1"
                               Width="80"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding DefaultPickButtonNames}"
+                              ItemsSource="{Binding PickButtonNames}"
                               SelectedItem="{Binding Config.AutoPickConfig.PickKey, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
