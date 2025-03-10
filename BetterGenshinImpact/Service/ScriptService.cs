@@ -238,7 +238,7 @@ public partial class ScriptService : IScriptService
         }
         else if (project.Type == "Pathing")
         {
-            _logger.LogInformation("→ 开始执行路径追踪任务: {Name}", project.Name);
+            _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
             await project.Run();
         }
         else if (project.Type == "Shell"){

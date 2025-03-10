@@ -10,7 +10,7 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class PathingPartyConfig : ObservableObject
 {
-    // 配置是否启用，不启用会使用路径追踪内的条件配置
+    // 配置是否启用，不启用会使用地图追踪内的条件配置
     [ObservableProperty]
     private bool _enabled = false;
     
@@ -68,7 +68,7 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
     
-    //允许在jsScript脚本中使用此路径追踪配置
+    //允许在jsScript脚本中使用此地图追踪配置
     [ObservableProperty]
     private bool _jsScriptUseEnabled = false;
     

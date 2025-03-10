@@ -115,7 +115,7 @@ public partial class ScriptGroupProject : ObservableObject
 
     public static ScriptGroupProject BuildShellProject(string command)
     {
-        return new ScriptGroupProject(command, command, "Shell");
+        return new ScriptGroupProject(command, "", "Shell");
     }
 
     public static ScriptGroupProject BuildPathingProject(string name, string folder)
@@ -153,13 +153,13 @@ public partial class ScriptGroupProject : ObservableObject
 
             await Project.ExecuteAsync(JsScriptSettingsObject,pathingPartyConfig);
         }
-        if (Type == "KeyMouse")
+        else if (Type == "KeyMouse")
         {
             // 加载并执行
             var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
             await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
         }
-        if (Type == "Pathing")
+        else if (Type == "Pathing")
         {
             // 加载并执行
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
@@ -171,14 +171,10 @@ public partial class ScriptGroupProject : ObservableObject
             }
             await pathingTask.Pathing(task);
         }
-        if (Type == "Shell")
+        else if (Type == "Shell")
         {
             var task = ShellExecutor.BuildFromShellName(Name);
             await task.Execute();
-        }
-        else
-        {
-            throw new Exception("不支持的脚本类型");
         }
     }
 
@@ -204,7 +200,7 @@ public class ScriptGroupProjectExtensions
     {
         { "Javascript", "JS脚本" },
         { "KeyMouse", "键鼠脚本" },
-        { "Pathing", "路径追踪" },
+        { "Pathing", "地图追踪" },
         { "Shell", "Shell" }
     };
 

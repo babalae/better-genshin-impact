@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -29,6 +30,7 @@ using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
+using System.Reflection;
 using Vanara.Extensions;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -118,14 +120,15 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private string _switchAutoFishingButtonText = "启动";
 
     [ObservableProperty]
-    private int _wholeProcessTimeoutSeconds = 300;
-
-    [ObservableProperty]
-    private FishingTimePolicy _fishingTimePolicy;
-
-    [ObservableProperty]
-    private Dictionary<FishingTimePolicy, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy)).Cast<FishingTimePolicy>().Select(e => new KeyValuePair<FishingTimePolicy, string>(e, e.GetDescription() ?? "Description lost!")).ToDictionary();
-
+    private Dictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
+        .Cast<FishingTimePolicy>()
+        .ToDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+    
     private bool saveScreenshotOnKeyTick;
     public bool SaveScreenshotOnKeyTick
     {
@@ -405,15 +408,16 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private async Task OnSwitchAutoFishing()
     {
         SwitchAutoFishingEnabled = true;
+        var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
-            .RunSoloTaskAsync(new AutoFishingTask(new AutoFishingTaskParam(WholeProcessTimeoutSeconds, Config.AutoFishingConfig.AutoThrowRodTimeOut, FishingTimePolicy, SaveScreenshotOnKeyTick)));
+            .RunSoloTaskAsync(new AutoFishingTask(param));
         SwitchAutoFishingEnabled = false;
     }
 
     [RelayCommand]
     private async Task OnGoToAutoFishingUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/timer/fish.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/fish.html"));
     }
 
     [RelayCommand]

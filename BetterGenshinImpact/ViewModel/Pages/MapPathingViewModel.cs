@@ -157,7 +157,7 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         // var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         // {
         //     Content = view,
-        //     Title = "路径追踪配置",
+        //     Title = "地图追踪配置",
         //     CloseButtonText = "关闭"
         // };
         //

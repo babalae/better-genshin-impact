@@ -64,7 +64,7 @@ public class PathExecutor
     }
 
     /// <summary>
-    /// 判断是否中止路径追踪的条件
+    /// 判断是否中止地图追踪的条件
     /// </summary>
     public Func<ImageRegion, bool>? EndAction { get; set; }
 
@@ -97,7 +97,7 @@ public class PathExecutor
     //当到达恢复点位
     public void TryCloseSkipOtherOperations()
     {
-        // Logger.LogWarning("判断是否跳过路径追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
+        // Logger.LogWarning("判断是否跳过地图追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
         if (RecordWaypoints == CurWaypoints && CurWaypoint.Item1 < RecordWaypoint.Item1)
         {
             return;
@@ -105,7 +105,7 @@ public class PathExecutor
 
         if (_skipOtherOperations)
         {
-            Logger.LogWarning("已到达上次点位，路径追踪功能恢复");
+            Logger.LogWarning("已到达上次点位，地图追踪功能恢复");
         }
 
         _skipOtherOperations = false;
@@ -114,7 +114,7 @@ public class PathExecutor
     //记录点位，方便后面恢复
     public void StartSkipOtherOperations()
     {
-        Logger.LogWarning("记录恢复点位，路径追踪将到达上次点位之前将跳过走路之外的操作");
+        Logger.LogWarning("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作");
         _skipOtherOperations = true;
         RecordWaypoints = CurWaypoints;
         RecordWaypoint = CurWaypoint;
@@ -295,11 +295,11 @@ public class PathExecutor
         {
             if (PartyConfig is { Enabled: false })
             {
-                // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
+                // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
                 var partyName = FilterPartyNameByConditionConfig(task);
                 if (!await SwitchParty(partyName))
                 {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
                     return false;
                 }
             }
@@ -307,7 +307,7 @@ public class PathExecutor
             {
                 if (!await SwitchParty(PartyConfig.PartyName))
                 {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
                     return false;
                 }
             }
@@ -328,14 +328,14 @@ public class PathExecutor
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用路径追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用路径追踪功能！");
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用地图追踪功能！");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏路径追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用路径追踪功能！");
+            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
         }
     }
 
@@ -412,7 +412,7 @@ public class PathExecutor
             return false;
         }
 
-        // 没有强制配置的情况下，使用路径追踪内的条件配置
+        // 没有强制配置的情况下，使用地图追踪内的条件配置
         // 必须放在这里，因为要通过队伍识别来得到最终结果
         var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
         if (PartyConfig is { Enabled: false })
@@ -1058,7 +1058,7 @@ public class PathExecutor
     {
         if (EndAction != null && EndAction(ra))
         {
-            throw new NormalEndException("达成结束条件，结束路径追踪");
+            throw new NormalEndException("达成结束条件，结束地图追踪");
         }
     }
 }
