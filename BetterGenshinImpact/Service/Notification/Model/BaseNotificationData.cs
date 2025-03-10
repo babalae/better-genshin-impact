@@ -5,6 +5,7 @@ using System.Drawing;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Converter;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
@@ -21,13 +22,13 @@ public class BaseNotificationData
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public NotificationEventResult Result { get; set; }
-    
+
     /// <summary>
     /// 事件触发时间
     /// </summary>
     [JsonConverter(typeof(DateTimeJsonConverter))]
     public DateTime Timestamp { get; set; } = DateTime.Now;
-    
+
     /// <summary>
     /// 事件触发时的截图
     /// </summary>
@@ -46,14 +47,16 @@ public class BaseNotificationData
 
     public void Send()
     {
-        if (TaskContext.Instance().Config.NotificationConfig.IncludeScreenShot)
+        try
         {
-            Screenshot = (Bitmap)TaskControl.CaptureToRectArea().SrcBitmap.Clone();
+            NotificationService.Instance().NotifyAllNotifiers(this);
         }
-
-        NotificationService.Instance().NotifyAllNotifiers(this);
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "发送通知失败");
+        }
     }
-    
+
     public void Send(string message)
     {
         Message = message;

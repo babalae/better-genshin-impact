@@ -45,6 +45,7 @@ public class AutoFightTask : ISoloTask
     private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
+        public int DetectDelayTime = 450;
         public Dictionary<string, int> DelayTimes = new();
         public double CheckTime = 5;
         public List<string> CheckNames = new();
@@ -57,6 +58,7 @@ public class AutoFightTask : ISoloTask
             ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
             BattleEndProgressBarColor = ParseStringToTuple(finishDetectConfig.BattleEndProgressBarColor, (95, 235, 255));
             BattleEndProgressBarColorTolerance = ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
+            DetectDelayTime = (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -218,9 +220,9 @@ public class AutoFightTask : ISoloTask
 
 
         //战斗前检查，可做成配置
-/*        if (await CheckFightFinish()) {
-            return;
-        }*/
+        // if (await CheckFightFinish()) {
+        //     return;
+        // }
         var fightEndFlag = false;
         string lastFightName = "";
         string skipFightName = "";
@@ -246,7 +248,7 @@ public class AutoFightTask : ISoloTask
 
                         //根据元素技能冷却事件优化出招流程，只有当人物切换后才会触发检查
                         double skillCd;
-                        if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name,out skillCd))
+                        if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name, out skillCd))
                         {
                             var avatar = combatScenes.SelectAvatar(command.Name);
                             if (avatar == null)
@@ -255,23 +257,23 @@ public class AutoFightTask : ISoloTask
                             }
                             if (skillCd < 0)
                             {
-                                skillCd = FindMax([avatar.SkillCd,avatar.SkillHoldCd]);
+                                skillCd = FindMax([avatar.SkillCd, avatar.SkillHoldCd]);
                             }
-                            var dif=(DateTime.UtcNow - avatar.LastSkillTime);
+                            var dif = (DateTime.UtcNow - avatar.LastSkillTime);
                             //当技能未冷却时，跳过此次出招
-                            if ((DateTime.UtcNow -avatar.LastSkillTime).TotalSeconds < skillCd)
+                            if ((DateTime.UtcNow - avatar.LastSkillTime).TotalSeconds < skillCd)
                             {
                                 if (skipFightName != command.Name)
                                 {
-                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd-dif.TotalSeconds}秒,跳过此次行动");
+                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd - dif.TotalSeconds}秒,跳过此次行动");
                                 }
                                 skipFightName = command.Name;
                                 continue;
                             }
                         }
 
-                        
-                        
+
+
                         command.Execute(combatScenes);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
@@ -292,6 +294,7 @@ public class AutoFightTask : ISoloTask
                             {
                                 checkFightFinishStopwatch.Restart();
                                 var delayTime = _finishDetectConfig.DelayTime;
+                                var detectDelayTime = _finishDetectConfig.DetectDelayTime;
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
                                 {
                                     delayTime = time;
@@ -306,7 +309,7 @@ public class AutoFightTask : ISoloTask
                                 {
                                     Logger.LogInformation($"{command.Name}下一个人为{combatCommands[i+1].Name}毫秒");
                                 }*/
-                                fightEndFlag = await CheckFightFinish(delayTime);
+                                fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
                             }
                         }
 
@@ -328,6 +331,10 @@ public class AutoFightTask : ISoloTask
                 Debug.WriteLine(e.Message);
                 Debug.WriteLine(e.StackTrace);
                 throw;
+            }
+            finally
+            {
+                Simulation.ReleaseAllKey();
             }
         }, cts2.Token);
 
@@ -377,6 +384,7 @@ public class AutoFightTask : ISoloTask
                     await Delay(300, ct);
                     if (kazuha.TrySwitch())
                     {
+                        time = DateTime.UtcNow - kazuha.LastSkillTime;
                         if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
                         {
                             Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s", time.TotalSeconds);
@@ -416,7 +424,7 @@ public class AutoFightTask : ISoloTask
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
-    private async Task<bool> CheckFightFinish(int delayTime = 1500)
+    private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
         //  YOLO 判断血条和怪物位置
         // if (HasFightFlagByYolo(CaptureToRectArea()))
@@ -449,33 +457,32 @@ public class AutoFightTask : ISoloTask
             }
         }
         **/
-
+        //Simulation.SendInput.SimulateAction(GIActions.Drop);//在换队前取消爬墙状态
         await Delay(delayTime, _ct);
-        Logger.LogInformation("打开编队界面检查战斗是否结束");
+        Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
         // 最终方案确认战斗结束
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(450, _ct);
+        await Delay(detectDelayTime, _ct);
         var ra = CaptureToRectArea();
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
         {
             Logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
             return true;
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
         Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
         /**
         if (!Bv.IsInMainUi(ra))
         {
-            // 如果不在主界面，说明异常，直接结束战斗继续下一步（路径追踪下一步会进入异常处理）
+            // 如果不在主界面，说明异常，直接结束战斗继续下一步（地图追踪下一步会进入异常处理）
             Logger.LogInformation("当前不在主界面，直接结束战斗！");
             return true;
         }**/
-        
+
         _lastFightFlagTime = DateTime.Now;
         return false;
     }
@@ -504,16 +511,16 @@ public class AutoFightTask : ISoloTask
             throw new ArgumentException("The array is empty or null.");
         }
 
-        double max = numbers[0]>10000 ? 0 : numbers[0];
+        double max = numbers[0] > 10000 ? 0 : numbers[0];
         foreach (var num in numbers)
         {
-            var cpnum = numbers[0]>10000 ? 0 : num;
+            var cpnum = numbers[0] > 10000 ? 0 : num;
             max = Math.Max(max, num);
         }
 
         return max;
     }
-    private static Dictionary<string, double> ParseStringToDictionary(string input,double defaultValue=-1)
+    private static Dictionary<string, double> ParseStringToDictionary(string input, double defaultValue = -1)
     {
         var dictionary = new Dictionary<string, double>();
 

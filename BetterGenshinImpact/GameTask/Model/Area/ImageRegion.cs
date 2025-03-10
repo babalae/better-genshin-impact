@@ -71,7 +71,7 @@ public class ImageRegion : Region
         }
     }
 
-    public ImageRegion(Bitmap bitmap, int x, int y, Region? owner = null, INodeConverter? converter = null) : base(x, y, bitmap.Width, bitmap.Height, owner, converter)
+    public ImageRegion(Bitmap bitmap, int x, int y, Region? owner = null, INodeConverter? converter = null, DrawContent? drawContent = null) : base(x, y, bitmap.Width, bitmap.Height, owner, converter, drawContent)
     {
         _srcBitmap = bitmap;
     }
@@ -192,7 +192,7 @@ public class ImageRegion : Region
             {
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
-                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                    drawContent.RemoveRect(ro.Name);
                 }
 
                 failAction?.Invoke();
@@ -262,7 +262,7 @@ public class ImageRegion : Region
                 {
                     // 画出OCR识别到的区域
                     var drawList = result.Regions.Select(item => this.ToRectDrawable(item.Rect.BoundingRect() + ro.RegionOfInterest.Location, ro.Name, ro.DrawOnWindowPen)).ToList();
-                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, drawList);
+                    drawContent.PutOrRemoveRectList(ro.Name, drawList);
                 }
 
                 successAction?.Invoke(newRa);
@@ -272,7 +272,7 @@ public class ImageRegion : Region
             {
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
-                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                    drawContent.RemoveRect(ro.Name);
                 }
 
                 failAction?.Invoke();
@@ -314,7 +314,7 @@ public class ImageRegion : Region
                 {
                     // 画出OCR识别到的区域
                     var drawList = result.Regions.Select(item => this.ToRectDrawable(item.Rect.BoundingRect() + ro.RegionOfInterest.Location, ro.Name, ro.DrawOnWindowPen)).ToList();
-                    VisionContext.Instance().DrawContent.PutOrRemoveRectList(ro.Name, drawList);
+                    drawContent.PutOrRemoveRectList(ro.Name, drawList);
                 }
                 if (ro.RegionOfInterest != Rect.Empty)
                 {
@@ -334,7 +334,7 @@ public class ImageRegion : Region
             {
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
                 {
-                    VisionContext.Instance().DrawContent.RemoveRect(ro.Name);
+                    drawContent.RemoveRect(ro.Name);
                 }
 
                 failAction?.Invoke();

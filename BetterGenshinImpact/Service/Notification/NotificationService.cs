@@ -4,12 +4,14 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Drawing;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -64,6 +66,11 @@ public class NotificationService : IHostedService
         {
             _notifierManager.RegisterNotifier(new FeishuNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.FeishuWebhookUrl));
         }
+
+        if (TaskContext.Instance().Config.NotificationConfig.WorkweixinNotificationEnabled)
+        {
+            _notifierManager.RegisterNotifier(new WorkWeixinNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WorkweixinWebhookUrl));
+        }
     }
 
     public void RefreshNotifiers()
@@ -111,6 +118,22 @@ public class NotificationService : IHostedService
             {
                 return;
             }
+        }
+
+        try
+        {
+            if (TaskContext.Instance().Config.NotificationConfig.IncludeScreenShot)
+            {
+                var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
+                if (bitmap != null)
+                {
+                    notificationData.Screenshot = (Bitmap)bitmap.Clone();
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogDebug(e, "补充通知截图失败");
         }
 
         await _notifierManager.SendNotificationToAllAsync(notificationData);

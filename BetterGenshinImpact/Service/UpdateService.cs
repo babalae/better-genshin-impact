@@ -49,9 +49,9 @@ public class UpdateService : IUpdateService
         {
             string newVersion = await GetLatestVersionAsync();
 
-#if DEBUG && true
-            newVersion = "256.256.256.256";
-#endif
+// #if DEBUG && true
+//             newVersion = "256.256.256.256";
+// #endif
 
             if (string.IsNullOrWhiteSpace(newVersion))
             {

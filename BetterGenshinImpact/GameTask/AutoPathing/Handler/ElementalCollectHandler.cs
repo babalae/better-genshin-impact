@@ -53,7 +53,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
                     if (cdRemain < cdTime)
                     {
                         var ms = (int)Math.Ceiling(cdTime - cdRemain) + 100;
-                        Logger.LogInformation("{}的E技能CD未结束，等待{Milliseconds}ms", combatScenesAvatar.Name, ms);
+                        Logger.LogInformation("{Name}的E技能CD未结束，等待{Milliseconds}ms", combatScenesAvatar.Name, ms);
                         await Delay(ms, ct);
                     }
 
@@ -119,6 +119,19 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("温迪", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("琴", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("早柚", ElementalType.Anemo, false, true),
+        // 火
+        new ElementalCollectAvatar("烟绯", ElementalType.Pyro, true, true),
+        new ElementalCollectAvatar("迪卢克", ElementalType.Pyro, false,true),
+        new ElementalCollectAvatar("可莉", ElementalType.Pyro, true, true),
+        new ElementalCollectAvatar("班尼特", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("香菱", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("托马", ElementalType.Pyro,false, true),
+        new ElementalCollectAvatar("胡桃", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("迪希雅", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("夏沃蕾", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("辛焱", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("林尼", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("宵宫", ElementalType.Pyro, false, true),
     ];
 
     public static ElementalCollectAvatar? Get(string name, ElementalType type) => Lists.FirstOrDefault(x => x.Name == name && x.ElementalType == type);

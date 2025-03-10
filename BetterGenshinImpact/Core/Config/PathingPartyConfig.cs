@@ -10,14 +10,21 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class PathingPartyConfig : ObservableObject
 {
-    // 配置是否启用，不启用会使用路径追踪内的条件配置
+    // 配置是否启用，不启用会使用地图追踪内的条件配置
     [ObservableProperty]
     private bool _enabled = false;
-
+    
+    // 是否启用自动拾取
+    [ObservableProperty]
+    private bool _autoPickEnabled = true;
     // 切换到队伍的名称
     [ObservableProperty]
     private string _partyName = string.Empty;
-
+    
+    // 切换队伍前是否前往须弥七天神像
+    [ObservableProperty]
+    private bool _isVisitStatueBeforeSwitchParty = false;
+        
     // 主要行走追踪的角色编号
     [ObservableProperty]
     private string _mainAvatarIndex = string.Empty;
@@ -61,7 +68,7 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _onlyInTeleportRecover = false;
     
-    //允许在jsScript脚本中使用此路径追踪配置
+    //允许在jsScript脚本中使用此地图追踪配置
     [ObservableProperty]
     private bool _jsScriptUseEnabled = false;
     
@@ -91,7 +98,6 @@ public partial class PathingPartyConfig : ObservableObject
 
     [ObservableProperty]
     private AutoFightConfig _autoFightConfig = new();
-
     public static PathingPartyConfig BuildDefault()
     {
         // 即便是不启用的情况下也设置默认值，减少后续使用的判断

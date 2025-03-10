@@ -15,7 +15,7 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-
+    
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
@@ -433,6 +433,437 @@
             <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
         </ui:CardControl>
 
+
+        <ui:TextBlock Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="通用功能设置" />
+        <!--  大地图传送相关设置  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf3c5;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="大地图地图传送设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="用于地图追踪、自动秘境、一条龙等功能中传送功能的配置"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="地图移动过程中是否缩放地图"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="建议开启，关闭该设置可能在运行部分脚本时发生错误"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.TpConfig.MapZoomEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="单次鼠标移动的最大距离"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="过大可能会导致鼠标移动出窗口"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TpConfig.MaxMouseMove, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="地图缩小的距离"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="大于这个距离会缩小地图以加快传送"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="地图放大的距离"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="小于这个距离会放大地图以提高移动的精度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TpConfig.MapZoomInDistance, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="鼠标移动的时间间隔（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TpConfig.StepIntervalMilliseconds,
+                                Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+        
+        <!--回血相关设置-->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf0fa;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="七天神像设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="用于指定回血的七天神像"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="是否就近七天神像恢复血量"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}"/>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="传送到七天神像之后是否需要移动后回血"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="启用后将自动向七天神像方向移动"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     IsChecked="{Binding Config.TpConfig.ShouldMove}"/>
+                </Grid>
+                <!-- 指定国家 -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="七天神像国家"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="选择七天神像所在国家"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                 ItemsSource="{Binding CountryList}"
+                                 SelectedItem="{Binding SelectedCountry}"
+                                 MinWidth="120"/>
+                </Grid>
+
+                <!-- 指定区域 -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                                  Text="七天神像区域"
+                                  FontTypography="Body"/>
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Text="选择七天神像所在区域"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                 ItemsSource="{Binding Areas}"
+                                 SelectedItem="{Binding SelectedArea}"
+                                 MinWidth="120"/>
+                </Grid>
+                
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="回血等待间隔（秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="传送到七天神像之后需要等待多久恢复血量"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.TpConfig.HpRestoreDuration, Mode=TwoWay, 
+                                UpdateSourceTrigger=PropertyChanged,
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+        <!-- 新增手动导入本地脚本仓库功能 -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="手动导入本地脚本仓库（zip格式）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="脚本仓库无法在线更新时使用"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding ImportLocalScriptsRepoZipCommand}"
+                               Content="导入" />
+                </Grid>
+                
+            </ui:CardControl.Header>
+        </ui:CardControl>
+
+        <!--新增全局按键映射功能-->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Symbol=KeyboardMouse16}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用全局按键映射"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="使按键绑定设置对外部脚本生效"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               IsChecked="{Binding Config.KeyBindingsConfig.GlobalKeyMappingEnabled}"/>
+                </Grid>
+
+            </ui:CardControl.Header>
+        </ui:CardControl>
+       <!--  其他设置  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" >
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf141;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="其他设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="设定一些其他功能的配置，如失去焦点自动激活游戏等"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="游戏失去焦点时候，强制恢复激活游戏窗口"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="适用于调度器任务和部分独立任务，失去焦点后，将自动激活游戏窗口，开启此项后，如果想切出游戏窗口，可以先暂停任务，之后再切出"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />
+                </Grid>
+                
+            </StackPanel>
+        </ui:CardExpander>
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="通知设置" />
@@ -519,7 +950,7 @@
                                 MinWidth="220"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.NotificationEventSubscribe, Mode=TwoWay}"/>
+                                Text="{Binding Config.NotificationConfig.NotificationEventSubscribe, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -770,14 +1201,9 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:TextBlock Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="通用功能置" />
-        <!--  快速传送  -->
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
-            <ui:CardExpander.Icon>
-                <ui:FontIcon Glyph="&#xf3c5;" Style="{StaticResource FaFontIconStyle}" />
-            </ui:CardExpander.Icon>
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon CommentArrowLeft24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -791,13 +1217,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="大地图地图传送设置"
+                                  Text="启用企业微信通知"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于地图追踪、自动秘境、一条龙等功能中传送功能的配置"
+                                  Text="企业微信通知相关设置"
                                   TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.WorkweixinNotificationEnabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -807,24 +1238,27 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图移动过程中是否缩放地图"
+                                  Text="企业微信通知地址"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="建议开启，关闭该设置可能在运行部分脚本时发生错误"
+                                  Text="填写企业微信通知地址"
                                   TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.TpConfig.MapZoomEnabled, Mode=TwoWay}" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.WorkweixinWebhookUrl, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -838,100 +1272,24 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="单次鼠标移动的最大距离"
+                                  Text="测试企业微信通知"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="过大可能会导致鼠标移动出窗口"
+                                  Text="发送测试通知"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MaxMouseMove, Mode=TwoWay}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="地图缩小的距离"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="大于这个距离会缩小地图以加快传送"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="地图放大的距离"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="小于这个距离会放大地图以提高移动的精度"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomInDistance, Mode=TwoWay}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="鼠标移动的时间间隔（毫秒）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.StepIntervalMilliseconds, Mode=TwoWay}" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding TestWorkWeixinNotificationCommand}"
+                               Content="发送" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+
+
         <!--  地图  -->
         <!--<ui:CardControl Margin="0,0,0,12"
                         Icon="{ui:SymbolIcon Cursor24}"

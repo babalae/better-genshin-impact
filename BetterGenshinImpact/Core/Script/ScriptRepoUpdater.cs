@@ -35,7 +35,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
 
     // 中央仓库信息地址
-    public static readonly string CenterRepoInfoUrl = "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json";
+    public static readonly List<string> CenterRepoInfoUrls = 
+    [
+        "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json",
+        "https://r2-script.bettergi.com/github_mirror/repo.json",
+    ];
 
     // 中央仓库解压后文件夹名
     public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-main";
@@ -88,15 +92,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public async Task<(string, bool)> UpdateCenterRepo()
     {
         // 测速并获取信息
-        var res = await ProxySpeedTester.GetFastestProxyAsync(CenterRepoInfoUrl);
-        // 解析信息
-        var fastProxyUrl = res.Item1;
-        var jsonString = res.Item2;
+        var (fastUrl, jsonString) = await ProxySpeedTester.GetFastestUrlAsync(CenterRepoInfoUrls);
         if (string.IsNullOrEmpty(jsonString))
         {
-            throw new Exception("获取仓库信息失败");
+            throw new Exception("从互联网下载最新的仓库信息失败");
         }
-        
+
         var (time, url, file) = ParseJson(jsonString);
 
         var updated = false;
@@ -115,9 +116,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             needDownload = true;
         }
+
         if (needDownload)
         {
-            await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url));
+            await DownloadRepoAndUnzip(url);
             updated = true;
         }
 
@@ -133,7 +135,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 检查是否需要更新
         if (long.Parse(time) > long.Parse(time2))
         {
-            await DownloadRepoAndUnzip(string.Format(fastProxyUrl, url2));
+            await DownloadRepoAndUnzip(url2);
             updated = true;
         }
 
@@ -251,7 +253,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Content = $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
                     CloseButtonText = "关闭",
                     PrimaryButtonText = "确认导入",
-                    WindowStartupLocation = WindowStartupLocation.Manual,
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
 
                 var result = await uiMessageBox.ShowDialogAsync();
@@ -321,7 +324,31 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         Toast.Information("获取最新仓库信息中...");
 
         // 更新仓库
-        var (repoPath, _) = await Task.Run(UpdateCenterRepo);
+        string repoPath;
+        try
+        {
+            (repoPath, _) = await Task.Run(UpdateCenterRepo);
+        }
+        catch (Exception e)
+        {
+            Toast.Warning("获取最新仓库信息失败，尝试使用本地已有仓库信息");
+            try
+            {
+                repoPath = FindCenterRepoPath();
+            }
+            catch
+            {
+                await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+                return;
+            }
+        }
+
+        if (string.IsNullOrEmpty(repoPath))
+        {
+            await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+            return;
+        }
+
 
         // // 收集将被覆盖的文件和文件夹
         // var filesToOverwrite = new List<string>();
@@ -398,7 +425,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 {
                     // 目标文件所在文件夹不存在时创建它
                     Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-                    
+
                     if (File.Exists(destPath))
                     {
                         File.Delete(destPath);

@@ -183,6 +183,13 @@ public partial class ScriptService : IScriptService
                 list.Add(newProject);
                 hasTimer = true;
             }
+            else if (project.Type == "Shell")
+            {
+                var newProject = ScriptGroupProject.BuildShellProject(project.Name);
+                CopyProjectProperties(project, newProject);
+                list.Add(newProject);
+                hasTimer = true;
+            }
         }
 
         return list;
@@ -231,7 +238,11 @@ public partial class ScriptService : IScriptService
         }
         else if (project.Type == "Pathing")
         {
-            _logger.LogInformation("→ 开始执行路径追踪任务: {Name}", project.Name);
+            _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
+            await project.Run();
+        }
+        else if (project.Type == "Shell"){
+            _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
             await project.Run();
         }
     }

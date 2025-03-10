@@ -24,7 +24,7 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         _isSuspended = true;
     }
 
-    //路径过远时，检查路径追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态
+    //路径过远时，检查地图追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态
     public bool CheckAndResetSuspendPoint()
     {
         if (_isSuspended)
@@ -43,6 +43,8 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
 
     public void Resume()
     {
+        //暂定恢复时，重置移动时的时间，防止因暂停而导致超时
+        pathExecutor.moveToStartTime = DateTime.UtcNow;
         _isSuspended = false;
     }
 

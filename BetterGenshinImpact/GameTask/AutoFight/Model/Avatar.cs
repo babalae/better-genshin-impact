@@ -19,6 +19,7 @@ using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -126,7 +127,7 @@ public class Avatar
             // tp 到七天神像复活
             var tpTask = new TpTask(Ct);
             tpTask.TpToStatueOfTheSeven().Wait(Ct);
-
+            Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
             throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
         }
     }
@@ -153,6 +154,7 @@ public class Avatar
                 return;
             }
 
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
             switch (Index)
             {
                 case 1:
@@ -188,7 +190,7 @@ public class Avatar
     /// <returns></returns>
     public bool TrySwitch(int tryTimes = 4, bool needLog = true)
     {
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
             {
@@ -209,6 +211,7 @@ public class Avatar
                 return true;
             }
 
+            Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
             switch (Index)
             {
                 case 1:
@@ -253,6 +256,7 @@ public class Avatar
                 return;
             }
 
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
             switch (Index)
             {
                 case 1:
@@ -609,6 +613,28 @@ public class Avatar
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
+        else if (Name == "恰斯卡")
+        {
+            var dpi = TaskContext.Instance().DpiScale;
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+            int cnt = 0;
+            while (ms >= 0)
+            {
+                if (Ct is { IsCancellationRequested: true })
+                {
+                    return;
+                }
+
+                // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
+                double rate = cnt % 10 < 5 ? 0 : 4.5;//每500ms做一轮上下移动。
+                cnt++;
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
+                ms -= 50;
+                Sleep(50);
+            }
+
+            Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+        }
         else
         {
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
@@ -675,19 +701,79 @@ public class Avatar
 
     public void KeyDown(string key)
     {
-        var vk = User32Helper.ToVk(key);
-        Simulation.SendInput.Keyboard.KeyDown(vk);
+        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
+        switch (key)
+        {
+            case "VK_LBUTTON":
+                Simulation.SendInput.Mouse.LeftButtonDown();
+                break;
+            case "VK_RBUTTON":
+                Simulation.SendInput.Mouse.RightButtonDown();
+                break;
+            case "VK_MBUTTON":
+                Simulation.SendInput.Mouse.MiddleButtonDown();
+                break;
+            case "VK_XBUTTON1":
+                Simulation.SendInput.Mouse.XButtonDown(0x0001);
+                break;
+            case "VK_XBUTTON2":
+                Simulation.SendInput.Mouse.XButtonDown(0x0001);
+                break;
+            default:
+                Simulation.SendInput.Keyboard.KeyDown(vk);
+                break;
+        }
     }
 
     public void KeyUp(string key)
     {
-        var vk = User32Helper.ToVk(key);
-        Simulation.SendInput.Keyboard.KeyUp(vk);
+        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
+        switch (key)
+        {
+            case "VK_LBUTTON":
+                Simulation.SendInput.Mouse.LeftButtonUp();
+                break;
+            case "VK_RBUTTON":
+                Simulation.SendInput.Mouse.RightButtonUp();
+                break;
+            case "VK_MBUTTON":
+                Simulation.SendInput.Mouse.MiddleButtonUp();
+                break;
+            case "VK_XBUTTON1":
+                Simulation.SendInput.Mouse.XButtonUp(0x0001);
+                break;
+            case "VK_XBUTTON2":
+                Simulation.SendInput.Mouse.XButtonUp(0x0001);
+                break;
+            default:
+                Simulation.SendInput.Keyboard.KeyUp(vk);
+                break;
+        }
     }
 
     public void KeyPress(string key)
     {
-        var vk = User32Helper.ToVk(key);
-        Simulation.SendInput.Keyboard.KeyPress(vk);
+        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
+        switch (key)
+        {
+            case "VK_LBUTTON":
+                Simulation.SendInput.Mouse.LeftButtonClick();
+                break;
+            case "VK_RBUTTON":
+                Simulation.SendInput.Mouse.RightButtonClick();
+                break;
+            case "VK_MBUTTON":
+                Simulation.SendInput.Mouse.MiddleButtonClick();
+                break;
+            case "VK_XBUTTON1":
+                Simulation.SendInput.Mouse.XButtonClick(0x0001);
+                break;
+            case "VK_XBUTTON2":
+                Simulation.SendInput.Mouse.XButtonClick(0x0001);
+                break;
+            default:
+                Simulation.SendInput.Keyboard.KeyPress(vk);
+                break;
+        }
     }
 }

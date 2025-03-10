@@ -189,7 +189,7 @@ public partial class MaskWindow : Window
     {
         if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
         {
-            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于左上角会遮盖一些图像识别要素导致识别失败，请关闭 MSI Afterburner 或者调整信息位置后重试！");
+            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！");
         }
     }
 

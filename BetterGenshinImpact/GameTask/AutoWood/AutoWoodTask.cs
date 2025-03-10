@@ -35,7 +35,7 @@ public partial class AutoWoodTask : ISoloTask
 
     private bool _first = true;
 
-    private readonly WoodStatisticsPrinter _printer;
+    private WoodStatisticsPrinter _printer;
 
     private readonly Login3rdParty _login3rdParty;
 
@@ -50,13 +50,12 @@ public partial class AutoWoodTask : ISoloTask
         this._taskParam = taskParam;
         _login3rdParty = new();
         AutoWoodAssets.DestroyInstance();
-
-        _printer = new WoodStatisticsPrinter(_assets);
     }
 
     public Task Start(CancellationToken ct)
     {
         _assets = AutoWoodAssets.Instance;
+        _printer = new WoodStatisticsPrinter(_assets);
         var runTimeWatch = new Stopwatch();
         _ct = ct;
         _printer.Ct = _ct;
@@ -421,7 +420,7 @@ public partial class AutoWoodTask : ISoloTask
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
-                throw new NormalEndException("请先装备小道具「王树瑞佑」！");
+                throw new NormalEndException("请先装备小道具「王树瑞佑」！如果已经装备仍旧出现此提示，请重新仔细阅读文档中的《快速上手》！");
 #else
                 System.Threading.Thread.Sleep(2000);
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);

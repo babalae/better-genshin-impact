@@ -10,6 +10,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -30,109 +31,124 @@ public class SwitchPartyTask
 
         if (!Bv.IsInPartyViewUi(ra1))
         {
+            // 如果不在主界面，则返回主界面
             if (!Bv.IsInMainUi(ra1))
             {
                 await _returnMainUiTask.Start(ct);
                 await Delay(200, ct);
+                using var raAfterMain = CaptureToRectArea();
+                if (!Bv.IsInMainUi(raAfterMain))
+                {
+                    throw new InvalidOperationException("未能返回主界面");
+                }
             }
 
+            // 尝试打开队伍配置页面
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            await Delay(1000, ct); // 加载2s // 由于胡桃可以不等待直接进入，所以这里只等待1s
+
+            // 考虑加载时间 2s，共检查 5s，如果失败则抛出异常
+            bool isOpened = false;
+            for (int i = 0; i < 5; i++) // 检查 5 次
+            {
+                await Delay(1000, ct);
+                using var raCheck = CaptureToRectArea();
+                if (Bv.IsInPartyViewUi(CaptureToRectArea()))
+                {
+                    isOpened = true;
+                    break;
+                }
+            }
+
+            if (!isOpened)
+            {
+                throw new PartySetupFailedException("未能打开队伍配置界面");
+            }
         }
 
-        if (await Bv.WaitForPartyViewUi(ct))
+        await Delay(500, ct);
+
+        using var ra = CaptureToRectArea();
+        var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+
+        // OCR 当前队伍名称（无法单字，中间禁止空格）
+        var currTeamNameRaList = ra.FindMulti(new RecognitionObject
         {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale),
+                partyViewBtn.Height)
+        });
+
+        var currTeamName = string.Join("",
+            currTeamNameRaList.Select(x => x.Text).Where(x => !string.IsNullOrWhiteSpace(x)));
+        // Logger.LogInformation("切换队伍，当前队伍名称: {Text}", currTeamName);
+        if (currTeamName == partyName)
+        {
+            Logger.LogInformation("切换队伍，当前队伍[{Name}]即为目标队伍，无需切换", partyName);
+            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             await Delay(500, ct);
+            await _returnMainUiTask.Start(ct);
+            return true;
+        }
 
-            using var ra = CaptureToRectArea();
-            var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
-            if (!partyViewBtn.IsExist())
-            {
-                throw new Exception("补充判定失败，未能打开队伍界面");
-            }
+        // 点击队伍选择按钮
+        partyViewBtn.Click();
+        await Delay(500, ct);
 
-            // OCR 当前队伍名称（无法单字，中间禁止空格）
-            var currTeamNameRaList = ra.FindMulti(new RecognitionObject
-            {
-                RecognitionType = RecognitionTypes.Ocr,
-                RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale), partyViewBtn.Height)
-            });
+        ImageRegion? switchRa = null;
+        Region? partyDeleteBtn = null;
+        var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
+        {
+            switchRa = CaptureToRectArea();
+            partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
+            return partyDeleteBtn.IsExist();
+        }, ct, 5);
 
-            var currTeamName = string.Join("", currTeamNameRaList.Select(x => x.Text).Where(x => !string.IsNullOrWhiteSpace(x)));
-            // Logger.LogInformation("切换队伍，当前队伍名称: {Text}", currTeamName);
-            if (currTeamName == partyName)
+        if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
+        {
+            throw new PartySetupFailedException("未能打开队伍配置界面");
+        }
+
+
+        var nextX = partyDeleteBtn.Left;
+        var nextY = partyDeleteBtn.Top - partyDeleteBtn.Height * 2;
+
+        // 滚轮到最上方
+        switchRa.MoveTo(nextX, nextY);
+        await Delay(10, ct);
+        for (var i = 0; i < 100; i++)
+        {
+            Simulation.SendInput.Mouse.VerticalScroll(1);
+            await Delay(10, ct);
+        }
+
+        await Delay(200, ct);
+
+        // 逐页查找
+        for (var i = 0; i < 11; i++)
+        {
+            var page = CaptureToRectArea();
+            var found = await FindPage(partyName, page, partyDeleteBtn, ct);
+            if (found)
             {
-                Logger.LogInformation("切换队伍，当前队伍[{Name}]即为目标队伍，无需切换", partyName);
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(500, ct);
-                await _returnMainUiTask.Start(ct);
                 return true;
             }
 
-            // 点击队伍选择按钮
-            partyViewBtn.Click();
-            await Delay(500, ct);
-
-            ImageRegion? switchRa = null;
-            Region? partyDeleteBtn = null;
-            var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
+            // 点击下一页
+            if (i == 0)
             {
-                switchRa = CaptureToRectArea();
-                partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
-                return partyDeleteBtn.IsExist();
-            }, ct, 5);
-            
-            if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
-            {
-                throw new Exception("未能打开队伍选择界面");
+                // #ebe4d8 首次点一下第一个，防止第五个被点击过
+                page.ClickTo(600 * _assetScale, 200 * _assetScale);
             }
 
-
-            var nextX = partyDeleteBtn.Left;
-            var nextY = partyDeleteBtn.Top - partyDeleteBtn.Height * 2;
-
-            // 滚轮到最上方
-            switchRa.MoveTo(nextX, nextY);
-            await Delay(10, ct);
-            for (var i = 0; i < 100; i++)
-            {
-                Simulation.SendInput.Mouse.VerticalScroll(1);
-                await Delay(10, ct);
-            }
-
-            await Delay(200, ct);
-
-            // 逐页查找
-            for (var i = 0; i < 11; i++)
-            {
-                var page = CaptureToRectArea();
-                var found = await FindPage(partyName, page, partyDeleteBtn, ct);
-                if (found)
-                {
-                    return true;
-                }
-
-                // 点击下一页
-                if (i == 0)
-                {
-                    // #ebe4d8 首次点一下第一个，防止第五个被点击过
-                    page.ClickTo(600 * _assetScale, 200 * _assetScale);
-                }
-
-                page.ClickTo(nextX, nextY); // 点击最下方队伍下移
-                await Delay(400, ct);
-            }
-
-            // 未找到
-            Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
-            await _returnMainUiTask.Start(ct);
-            return false;
+            page.ClickTo(nextX, nextY); // 点击最下方队伍下移
+            await Delay(400, ct);
         }
-        else
-        {
-            Logger.LogError("未能打开队伍界面");
-            return false;
-        }
+
+        // 未找到
+        Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
+        await _returnMainUiTask.Start(ct);
+        return false;
+
     }
 
     private async Task<bool> FindPage(string partyName, ImageRegion page, Region partyDeleteBtn, CancellationToken ct)
@@ -148,7 +164,7 @@ public class SwitchPartyTask
         {
             if (textRegion.Text == partyName)
             {
-                page.ClickTo(textRegion.Right, textRegion.Bottom + textRegion.Height * 2);
+                page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
                 await Delay(200, ct);
                 Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
                 await ConfirmParty(page, ct);

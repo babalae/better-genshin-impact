@@ -158,7 +158,7 @@ public partial class AllConfig : ObservableObject
     public ScriptConfig ScriptConfig { get; set; } = new();
 
     /// <summary>
-    /// 路径追踪配置
+    /// 地图追踪配置
     /// </summary>
     public PathingConditionConfig PathingConditionConfig { get; set; } = PathingConditionConfig.Default;
 
@@ -176,7 +176,10 @@ public partial class AllConfig : ObservableObject
     /// 原神按键绑定配置
     /// </summary>
     public KeyBindingsConfig KeyBindingsConfig { get; set; } = new();
-    
+    /// <summary>
+    /// 其他配置
+    /// </summary>
+    public OtherConfig OtherConfig { get; set; } = new();
     /// <summary>
     /// 传送相关配置
     /// </summary>

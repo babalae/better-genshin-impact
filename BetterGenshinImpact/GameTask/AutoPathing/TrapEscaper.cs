@@ -60,7 +60,7 @@ public class TrapEscaper(CancellationToken ct)
 
             // 旋转视角
             /* 这里的角度增加了一个randomAngle角度，用来在原角度不适用的情况下修改角度以适应复杂环境
-               randomAngle会定期归零，不会任何程度上影响路径追踪的结果（指到达既设点位）
+               randomAngle会定期归零，不会任何程度上影响地图追踪的结果（指到达既设点位）
                randomAngle为类变量，会在需要修改角度的情况下进行更改，更改时会附带有重置计时器_lastActionTime的代码
                总体的自动避障逻辑为：
                0. 检测是否卡在障碍物上，如果是则执行大脱困

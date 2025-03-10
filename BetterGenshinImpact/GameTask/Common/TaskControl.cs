@@ -1,14 +1,12 @@
-﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Model.Area;
-using Fischless.GameCapture;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Fischless.GameCapture;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -25,11 +23,7 @@ public class TaskControl
     public static void CheckAndSleep(int millisecondsTimeout)
     {
         TrySuspend();
-        if (!SystemControl.IsGenshinImpactActiveByProcess())
-        {
-            Logger.LogInformation("当前获取焦点的窗口不是原神，停止执行");
-            throw new NormalEndException("当前获取焦点的窗口不是原神");
-        }
+        CheckAndActivateGameWindow();
         
         Thread.Sleep(millisecondsTimeout);
     }
@@ -39,11 +33,7 @@ public class TaskControl
         NewRetry.Do(() =>
         {
             TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
+            CheckAndActivateGameWindow();
             
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
@@ -98,6 +88,36 @@ public class TaskControl
         }
     }
 
+    private static void CheckAndActivateGameWindow()
+    {
+        if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
+        {
+            if (!SystemControl.IsGenshinImpactActiveByProcess())
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
+                throw new RetryException("当前获取焦点的窗口不是原神");
+            }
+        }
+        
+        var count = 0;
+        //未激活则尝试恢复窗口
+        while (!SystemControl.IsGenshinImpactActiveByProcess())
+        {
+            if (count>=10 && count%10==0)
+            {
+                Logger.LogInformation("多次尝试未恢复，尝试最小化后激活窗口！");
+                SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+            }
+            else
+            {
+                Logger.LogInformation("当前获取焦点的窗口不是原神，尝试恢复窗口");
+                SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+            }
+            count++;
+            Thread.Sleep(1000);
+        }
+    }
+
     public static void Sleep(int millisecondsTimeout, CancellationToken ct)
     {
         if (ct.IsCancellationRequested)
@@ -117,11 +137,8 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
             TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
+            CheckAndActivateGameWindow();
+
             
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
@@ -150,12 +167,8 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
             TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
-            
+            CheckAndActivateGameWindow();
+
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);
         if (ct is { IsCancellationRequested: true })
@@ -192,12 +205,17 @@ public class TaskControl
                 Sleep(30);
             }
 
-            throw new System.Exception("尝试多次后,截图失败!");
+            throw new Exception("尝试多次后,截图失败!");
         }
         else
         {
             return bitmap;
         }
+    }
+    
+    public static Bitmap? CaptureGameBitmapNoRetry(IGameCapture? gameCapture)
+    {
+        return gameCapture?.Capture();
     }
 
     // private static CaptureContent CaptureToContent(IGameCapture? gameCapture)

@@ -5,8 +5,8 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using Fischless.WindowsInput;
 using OpenCvSharp;
-using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -193,6 +193,17 @@ public static partial class Bv
         if (FindF(captureRa, text))
         {
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool FindFAndPress(ImageRegion captureRa, IKeyboardSimulator keyboard, params string[] text)
+    {
+        if (FindF(captureRa, text))
+        {
+            keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             return true;
         }
 

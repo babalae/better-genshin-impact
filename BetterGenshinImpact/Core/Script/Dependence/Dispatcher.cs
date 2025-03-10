@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -14,8 +15,8 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Dispatcher
 {
-    private object _config=null;
-    public  Dispatcher(object config)
+    private object _config = null;
+    public Dispatcher(object config)
     {
         _config = config;
     }
@@ -83,7 +84,7 @@ public class Dispatcher
                 break;
 
             case "AutoFight":
-                
+
                 /*if (taskSettingsPageViewModel.GetFightStrategy(out var path1))
                 {
                     return;
@@ -91,7 +92,7 @@ public class Dispatcher
                 var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
                 var param = new AutoFightParam(path1, autoFightConfig);
                 await new AutoFightTask(param).Start(CancellationContext.Instance.Cts.Token);*/
-                await new AutoFightHandler().RunAsyncByScript(CancellationContext.Instance.Cts.Token, null,_config);
+                await new AutoFightHandler().RunAsyncByScript(CancellationContext.Instance.Cts.Token, null, _config);
                 break;
 
             case "AutoDomain":
@@ -105,6 +106,10 @@ public class Dispatcher
             // case "AutoMusicGame":
             //     taskSettingsPageViewModel.SwitchAutoMusicGameCommand.Execute(null);
             //     break;
+
+            case "AutoFishing":
+                await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(CancellationContext.Instance.Cts.Token);
+                break;
 
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));

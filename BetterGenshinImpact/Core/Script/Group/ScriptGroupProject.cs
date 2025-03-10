@@ -12,6 +12,7 @@ using System.Dynamic;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Shell;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
@@ -112,6 +113,11 @@ public partial class ScriptGroupProject : ObservableObject
         return new ScriptGroupProject(name, name, "KeyMouse");
     }
 
+    public static ScriptGroupProject BuildShellProject(string command)
+    {
+        return new ScriptGroupProject(command, "", "Shell");
+    }
+
     public static ScriptGroupProject BuildPathingProject(string name, string folder)
     {
         return new ScriptGroupProject(name, folder, "Pathing");
@@ -147,24 +153,28 @@ public partial class ScriptGroupProject : ObservableObject
 
             await Project.ExecuteAsync(JsScriptSettingsObject,pathingPartyConfig);
         }
-        if (Type == "KeyMouse")
+        else if (Type == "KeyMouse")
         {
             // 加载并执行
             var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
             await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
         }
-        if (Type == "Pathing")
+        else if (Type == "Pathing")
         {
             // 加载并执行
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
-            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
+            if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
+            {
+                TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+            }
             await pathingTask.Pathing(task);
         }
-        else
+        else if (Type == "Shell")
         {
-            //throw new Exception("不支持的脚本类型");
+            var task = ShellExecutor.BuildFromShellName(Name);
+            await task.Execute();
         }
     }
 
@@ -190,7 +200,8 @@ public class ScriptGroupProjectExtensions
     {
         { "Javascript", "JS脚本" },
         { "KeyMouse", "键鼠脚本" },
-        { "Pathing", "路径追踪" }
+        { "Pathing", "地图追踪" },
+        { "Shell", "Shell" }
     };
 
     public static readonly Dictionary<string, string> StatusDescriptions = new()

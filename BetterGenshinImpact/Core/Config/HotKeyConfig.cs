@@ -148,6 +148,13 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _autoMusicGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+    
+    // 活动音游开始/停止
+    [ObservableProperty]
+    private string _autoFishingGameHotkey = "";
+
+    [ObservableProperty]
+    private string _autoFishingGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     // 自动寻路
     [ObservableProperty]

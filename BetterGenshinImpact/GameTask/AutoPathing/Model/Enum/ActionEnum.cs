@@ -14,11 +14,15 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
     public static readonly ActionEnum HydroCollect = new("hydro_collect", "水元素力采集", ActionUseWaypointTypeEnum.Target);
     public static readonly ActionEnum ElectroCollect = new("electro_collect", "雷元素力采集", ActionUseWaypointTypeEnum.Target);
     public static readonly ActionEnum AnemoCollect = new("anemo_collect", "风元素力采集", ActionUseWaypointTypeEnum.Target);
+    public static readonly ActionEnum PyroCollect = new("pyro_collect", "火元素力采集", ActionUseWaypointTypeEnum.Target);
 
     public static readonly ActionEnum CombatScript = new("combat_script", "战斗策略脚本", ActionUseWaypointTypeEnum.Custom); // 这个必须要 action_params 里面有脚本
 
     public static readonly ActionEnum Mining = new("mining", "挖矿", ActionUseWaypointTypeEnum.Custom);
     public static readonly ActionEnum LogOutput = new("log_output", "输出日志", ActionUseWaypointTypeEnum.Custom);
+    
+    public static readonly ActionEnum Fishing = new("fishing", "钓鱼", ActionUseWaypointTypeEnum.Custom);
+
 
     // 还有要加入的其他动作
     // 滚轮F

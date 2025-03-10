@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
-using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask;
@@ -200,7 +197,13 @@ public class SystemControl
             _ = User32.SetActiveWindow(hWnd);
         }
     }
-
+    public static void MinimizeAndActivateWindow(nint hWnd)
+    {
+        HWND hShell = User32.FindWindow("Shell_TrayWnd", null);
+        User32.SendMessage(hShell, 0x0111, (IntPtr)419, IntPtr.Zero);
+        Thread.Sleep(500);
+        FocusWindow(hWnd);
+    }
     public static void RestoreWindow(nint hWnd)
     {
         if (User32.IsWindow(hWnd))
@@ -258,4 +261,60 @@ public class SystemControl
     //     // TODO：点完之后有个15s的倒计时，好像不处理也没什么问题，直接睡个20s吧
     //     Thread.Sleep(20000);
     // }
+    public static void CloseGame()
+    {
+        try
+        {
+            // 尝试通过进程名称查找原神进程
+            var processes = Process.GetProcessesByName("YuanShen")
+                .Concat(Process.GetProcessesByName("GenshinImpact"))
+                .Concat(Process.GetProcessesByName("Genshin Impact Cloud Game"))
+                .ToArray();
+
+            if (processes.Length > 0)
+            {
+                foreach (var process in processes)
+                {
+                    try
+                    {
+                        // 尝试正常关闭进程
+                        process.CloseMainWindow();
+                        
+                        // 给进程一些时间来响应关闭请求
+                        if (!process.WaitForExit(5000))
+                        {
+                            // 如果进程没有在5秒内关闭，则强制终止它
+                            process.Kill();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"关闭游戏进程时出错: {ex.Message}");
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"CloseGame方法执行出错: {ex.Message}");
+        }
+    }
+
+    public static void Shutdown()
+    {
+        try
+        {
+            // 使用Windows API安全关闭系统
+            // 这里使用的是标准的Windows关机命令，需要适当的权限
+            Process.Start("shutdown", "/s /t 60 /c \"系统将在60秒后关闭，请保存您的工作。\"");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Shutdown方法执行出错: {ex.Message}");
+        }
+    }
 }

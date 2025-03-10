@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
+using Fischless.WindowsInput;
 using System.Drawing;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -10,17 +11,37 @@ namespace BetterGenshinImpact.GameTask.Model.Area;
 /// 无缩放的桌面屏幕大小
 /// 主要用于点击操作
 /// </summary>
-public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
+public class DesktopRegion : Region
 {
+    private readonly IMouseSimulator mouse;
+    public DesktopRegion() : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
+    {
+        mouse = Simulation.SendInput.Mouse;
+    }
+
+    public DesktopRegion(IMouseSimulator mouse) : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
+    {
+        this.mouse = mouse;
+    }
+
+
     public void DesktopRegionClick(int x, int y, int w, int h)
     {
-        Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
+        if (mouse == null)
+        {
+            throw new System.NullReferenceException();
+        }
+        mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
     }
 
     public void DesktopRegionMove(int x, int y, int w, int h)
     {
-        Simulation.SendInput.Mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
+        if (mouse == null)
+        {
+            throw new System.NullReferenceException();
+        }
+        mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
             (y + (h * 1d / 2)) * 65535 / Height);
     }
 
@@ -39,6 +60,11 @@ public class DesktopRegion() : Region(0, 0, PrimaryScreen.WorkingArea.Width, Pri
     {
         Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
             cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height);
+    }
+    
+    public static void DesktopRegionMoveBy(double dx, double dy)
+    {
+        Simulation.SendInput.Mouse.MoveMouseBy((int)dx, (int)dy);
     }
 
     public GameCaptureRegion Derive(Bitmap captureBitmap, int x, int y)

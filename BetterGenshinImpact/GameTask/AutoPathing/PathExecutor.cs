@@ -31,6 +31,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -60,7 +64,7 @@ public class PathExecutor
     }
 
     /// <summary>
-    /// 判断是否中止路径追踪的条件
+    /// 判断是否中止地图追踪的条件
     /// </summary>
     public Func<ImageRegion, bool>? EndAction { get; set; }
 
@@ -93,7 +97,7 @@ public class PathExecutor
     //当到达恢复点位
     public void TryCloseSkipOtherOperations()
     {
-        // Logger.LogWarning("判断是否跳过路径追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
+        // Logger.LogWarning("判断是否跳过地图追踪:" + (CurWaypoint.Item1 < RecordWaypoint.Item1));
         if (RecordWaypoints == CurWaypoints && CurWaypoint.Item1 < RecordWaypoint.Item1)
         {
             return;
@@ -101,7 +105,7 @@ public class PathExecutor
 
         if (_skipOtherOperations)
         {
-            Logger.LogWarning("已到达上次点位，路径追踪功能恢复");
+            Logger.LogWarning("已到达上次点位，地图追踪功能恢复");
         }
 
         _skipOtherOperations = false;
@@ -110,7 +114,7 @@ public class PathExecutor
     //记录点位，方便后面恢复
     public void StartSkipOtherOperations()
     {
-        Logger.LogWarning("记录恢复点位，路径追踪将到达上次点位之前将跳过走路之外的操作");
+        Logger.LogWarning("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作");
         _skipOtherOperations = true;
         RecordWaypoints = CurWaypoints;
         RecordWaypoint = CurWaypoint;
@@ -165,10 +169,6 @@ public class PathExecutor
                         CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
                         TryCloseSkipOtherOperations();
                         await RecoverWhenLowHp(waypoint); // 低血量恢复
-                        if (waypoint.Action == ActionEnum.LogOutput.Code)
-                        {
-                            Logger.LogInformation(waypoint.LogInfo);
-                        }
 
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
@@ -260,7 +260,7 @@ public class PathExecutor
         {
             return false;
         }
-        
+
         var action = ActionEnum.GetEnumByCode(waypoint.Action);
         if (action is not null && action.UseWaypointTypeEnum != ActionUseWaypointTypeEnum.Custom)
         {
@@ -295,11 +295,11 @@ public class PathExecutor
         {
             if (PartyConfig is { Enabled: false })
             {
-                // 调度器未配置的情况下，根据路径追踪条件配置切换队伍
+                // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
                 var partyName = FilterPartyNameByConditionConfig(task);
                 if (!await SwitchParty(partyName))
                 {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查路径追踪设置！");
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
                     return false;
                 }
             }
@@ -307,7 +307,7 @@ public class PathExecutor
             {
                 if (!await SwitchParty(PartyConfig.PartyName))
                 {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的路径追踪配置！");
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
                     return false;
                 }
             }
@@ -328,14 +328,14 @@ public class PathExecutor
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用路径追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用路径追踪功能！");
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用地图追踪功能！");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏路径追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用路径追踪功能！");
+            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
         }
     }
 
@@ -346,32 +346,45 @@ public class PathExecutor
     /// <returns></returns>
     private async Task<bool> SwitchParty(string? partyName)
     {
+        bool success = true;
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
             {
-                return true;
+                return success;
             }
 
-            if (!string.IsNullOrEmpty(RunnerContext.Instance.PartyName))
+            bool forceTp = PartyConfig.IsVisitStatueBeforeSwitchParty;
+
+            if (forceTp) // 强制传送模式
             {
-                // 非空的情况下，先tp到安全位置（回血的七天神像）
-                await new TpTask(ct).TpToStatueOfTheSeven();
+                await new TpTask(ct).TpToStatueOfTheSeven();  // fix typos
+                success = await new SwitchPartyTask().Start(partyName, ct);
+            }
+            else // 优先原地切换模式
+            {
+                try
+                {
+                    success = await new SwitchPartyTask().Start(partyName, ct);
+                }
+                catch (PartySetupFailedException)
+                {
+                    await new TpTask(ct).TpToStatueOfTheSeven();
+                    success = await new SwitchPartyTask().Start(partyName, ct);
+                }
             }
 
-            var success = await new SwitchPartyTask().Start(partyName, ct);
             if (success)
             {
                 RunnerContext.Instance.PartyName = partyName;
                 RunnerContext.Instance.ClearCombatScenes();
-                return true;
             }
-
-            return false;
         }
 
-        return true;
+        return success;
     }
+
+
 
     private static string? FilterPartyNameByConditionConfig(PathingTask task)
     {
@@ -399,7 +412,7 @@ public class PathExecutor
             return false;
         }
 
-        // 没有强制配置的情况下，使用路径追踪内的条件配置
+        // 没有强制配置的情况下，使用地图追踪内的条件配置
         // 必须放在这里，因为要通过队伍识别来得到最终结果
         var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
         if (PartyConfig is { Enabled: false })
@@ -552,7 +565,7 @@ public class PathExecutor
         using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
-            Logger.LogInformation("当前角色血量过低，去须弥七天神像恢复");
+            Logger.LogInformation("当前角色血量过低，去七天神像恢复");
             await TpStatueOfTheSeven();
             throw new RetryException("回血完成后重试路线");
         }
@@ -572,8 +585,7 @@ public class PathExecutor
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
         await tpTask.TpToStatueOfTheSeven();
-        await Delay(3000, ct);
-        Logger.LogInformation("HP恢复完成");
+        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
@@ -594,8 +606,8 @@ public class PathExecutor
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
-
-    private async Task MoveTo(WaypointForTrack waypoint)
+    public DateTime moveToStartTime;
+    public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
@@ -605,7 +617,7 @@ public class PathExecutor
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
-        var startTime = DateTime.UtcNow;
+        moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
         var prevPositions = new List<Point2f>();
@@ -617,7 +629,7 @@ public class PathExecutor
         while (!ct.IsCancellationRequested)
         {
             num++;
-            if ((DateTime.UtcNow - startTime).TotalSeconds > 240)
+            if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
                 Logger.LogWarning("执行超时，放弃此次追踪");
                 throw new RetryException("路径点执行超时，放弃整条路径");
@@ -895,8 +907,12 @@ public class PathExecutor
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
-            await handler.RunAsync(ct);
+            await handler.RunAsync(ct, waypoint);
             await Delay(800, ct);
+        }
+        else if (waypoint.Action == ActionEnum.LogOutput.Code)
+        {
+            Logger.LogInformation(waypoint.LogInfo);
         }
     }
 
@@ -908,7 +924,10 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.HydroCollect.Code
             || waypoint.Action == ActionEnum.ElectroCollect.Code
             || waypoint.Action == ActionEnum.AnemoCollect.Code
-            || waypoint.Action == ActionEnum.CombatScript.Code)
+            || waypoint.Action == ActionEnum.PyroCollect.Code
+            || waypoint.Action == ActionEnum.CombatScript.Code
+            || waypoint.Action == ActionEnum.Mining.Code
+            || waypoint.Action == ActionEnum.Fishing.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
@@ -972,7 +991,8 @@ public class PathExecutor
         // 一些异常界面处理
         var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
         var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
-        if (cookRa.IsExist() || closeRa.IsExist())
+        var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
+        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
         {
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
@@ -1001,6 +1021,9 @@ public class PathExecutor
             {
                 _autoSkipTrigger = new AutoSkipTrigger(new AutoSkipConfig
                 {
+                    Enabled = true,
+                    QuicklySkipConversationsEnabled = true, // 快速点击过剧情
+                    ClosePopupPagedEnabled = true,
                     ClickChatOption = "优先选择最后一个选项",
                 });
                 _autoSkipTrigger.Init();
@@ -1035,7 +1058,7 @@ public class PathExecutor
     {
         if (EndAction != null && EndAction(ra))
         {
-            throw new NormalEndException("达成结束条件，结束路径追踪");
+            throw new NormalEndException("达成结束条件，结束地图追踪");
         }
     }
 }

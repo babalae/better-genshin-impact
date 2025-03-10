@@ -32,7 +32,7 @@
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="此处的按键绑定设置对除自动拾取、钓鱼、音游、伐木外的功能有效。请手动设置拾取按键、星之归还按键、隐藏主界面按键。"
+                      Text="此处的按键设置默认对除自动拾取、钓鱼、音游、伐木外的内置功能有效，在设置中打开“启用全局按键映射”开关可对JS脚本、战斗脚本和地图追踪内包含的简易策略脚本生效。请手动设置拾取按键、星之归还按键、隐藏主界面按键。"
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">

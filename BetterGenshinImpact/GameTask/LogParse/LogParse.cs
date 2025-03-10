@@ -91,7 +91,7 @@ namespace LogParse
 
                 if (configGroupEntity != null)
                 {
-                    result = parseBgiLine(@"→ 开始执行路径追踪任务: ""(.+?)""", logstr);
+                    result = parseBgiLine(@"→ 开始执行地图追踪任务: ""(.+?)""", logstr);
                     if (result.Item1)
                     {
                         configTask = new();

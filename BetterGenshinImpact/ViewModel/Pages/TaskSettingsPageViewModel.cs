@@ -15,11 +15,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.System;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Helpers;
@@ -27,6 +29,9 @@ using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using System.Linq;
+using System.Reflection;
+using Vanara.Extensions;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -108,6 +113,29 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
 
+    [ObservableProperty]
+    private bool _switchAutoFishingEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoFishingButtonText = "启动";
+
+    [ObservableProperty]
+    private Dictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
+        .Cast<FishingTimePolicy>()
+        .ToDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+    
+    private bool saveScreenshotOnKeyTick;
+    public bool SaveScreenshotOnKeyTick
+    {
+        get => Config.CommonConfig.ScreenshotEnabled && saveScreenshotOnKeyTick;
+        set => SetProperty(ref saveScreenshotOnKeyTick, value);
+    }
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -118,7 +146,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
-        _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
+        _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
     }
 
@@ -339,13 +367,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    public async Task OnGoToAutoTrackPathUrlAsync()
+    private async Task OnGoToAutoTrackPathUrlAsync()
     {
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
     }
 
     [RelayCommand]
-    public async Task OnSwitchAutoMusicGame()
+    private async Task OnSwitchAutoMusicGame()
     {
         SwitchAutoMusicGameEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
@@ -354,13 +382,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    public async Task OnGoToAutoMusicGameUrlAsync()
+    private async Task OnGoToAutoMusicGameUrlAsync()
     {
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/music.html"));
     }
 
     [RelayCommand]
-    public async Task OnSwitchAutoAlbum()
+    private async Task OnSwitchAutoAlbum()
     {
         SwitchAutoAlbumEnabled = true;
         await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
@@ -369,7 +397,23 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    public void OnOpenLocalScriptRepo()
+    private async Task OnSwitchAutoFishing()
+    {
+        SwitchAutoFishingEnabled = true;
+        var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
+        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            .RunSoloTaskAsync(new AutoFishingTask(param));
+        SwitchAutoFishingEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnGoToAutoFishingUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/fish.html"));
+    }
+
+    [RelayCommand]
+    private void OnOpenLocalScriptRepo()
     {
         _autoFightViewModel.OnOpenLocalScriptRepo();
     }
