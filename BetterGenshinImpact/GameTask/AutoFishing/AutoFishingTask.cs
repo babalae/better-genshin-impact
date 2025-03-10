@@ -47,21 +47,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.blackboard = new Blackboard(predictor, this.Sleep);
         }
 
-        public class Blackboard : AutoFishing.Blackboard
-        {
-            public bool noFish = false;
-
-            public Blackboard(YoloV8Predictor predictor, Action<int> sleep) : base(predictor, sleep)
-            {
-            }
-
-            internal override void Reset()
-            {
-                base.Reset();
-                noFish = false;
-            }
-        }
-
         public Task Start(CancellationToken ct)
         {
             this._ct = ct;

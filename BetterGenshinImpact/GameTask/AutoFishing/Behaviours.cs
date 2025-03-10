@@ -112,7 +112,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return BehaviourStatus.Running;
             }
 
-            blackboard.selectedBaitName = blackboard.fishpond.Fishes.GroupBy(f => f.FishType).OrderByDescending(g => g.Count()).First().First().FishType.BaitName; // 选择最多鱼吃的饵料
+            blackboard.selectedBaitName = blackboard.fishpond.Fishes.GroupBy(f => f.FishType.BaitName)
+                .Where(b => !blackboard.chooseBaitfailures.GroupBy(f => f).Where(g => g.Count() >= 2).Any(g => g.Key == b.Key))  // 不能是已经失败两次的饵
+                .OrderByDescending(g => g.Count()).First().Key; // 选择最多鱼吃的饵料
             logger.LogInformation("选择鱼饵 {Text}", BaitType.FromName(blackboard.selectedBaitName).ChineseName);
 
             // 寻找鱼饵
@@ -136,7 +138,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     input.Keyboard.KeyPress(VK.VK_ESCAPE);
                     blackboard.chooseBaitUIOpening = false;
                     logger.LogInformation("退出换饵界面");
+
+                    blackboard.chooseBaitfailures.Add(blackboard.selectedBaitName);
+                    if (blackboard.chooseBaitfailures.Count(f => f == blackboard.selectedBaitName) >= 2)
+                    {
+                        logger.LogWarning($"本次将忽略{BaitType.FromName(blackboard.selectedBaitName).ChineseName}");
+                    }
+                    if (!blackboard.fishpond.Fishes.Any(f => !blackboard.chooseBaitfailures.GroupBy(f => f).Where(g => g.Count() >= 2).Any(g => g.Key == f.FishType.BaitName)))    // 如果鱼塘中所有鱼的鱼饵都失败两次了，就当没鱼了
+                    {
+                        blackboard.noFish = true;
+                    }
+
                     blackboard.selectedBaitName = string.Empty;
+
                     return BehaviourStatus.Failed;
                 }
                 else
