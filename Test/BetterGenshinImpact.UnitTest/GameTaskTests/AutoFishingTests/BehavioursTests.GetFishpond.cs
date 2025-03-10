@@ -47,6 +47,31 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         }
 
         [Theory]
+        [InlineData("20250225101257889_GetFishpond_Succeeded.png", new string[] { "fruit paste bait", "fruit paste bait", "redrot bait", "redrot bait" }, new string[] { "false worm bait", "false worm bait", "fake fly bait", "fake fly bait" })]
+        /// 测试鱼的鱼饵均在失败列表中且被忽略，结果为运行中
+        /// </summary>
+        public void GetFishpondTest_AllIgnored_ShouldBeRunning(string screenshot1080p, IEnumerable<string> chooseBaitfailures, IEnumerable<string> throwRodNoTargetFishfailures)
+        {
+            //
+            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+
+            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
+
+            var blackboard = new Blackboard(predictor, sleep: i => { });
+            blackboard.chooseBaitfailures = chooseBaitfailures.ToList();
+            blackboard.throwRodNoTargetFishfailures = throwRodNoTargetFishfailures.ToList();
+
+            //
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
+            BehaviourStatus actualStatus = sut.Tick(imageRegion);
+
+            //
+            Assert.Equal(BehaviourStatus.Running, actualStatus);
+            Assert.NotEmpty(blackboard.fishpond.Fishes);
+        }
+
+        [Theory]
         [InlineData("20250225101257889_GetFishpond_Succeeded.png", "medaka", 1)]
         [InlineData("20250301192848793_GetFishpond_Succeeded.png", "medaka", 2)]
         [InlineData("20250226161354285_ChooseBait_Succeeded.png", "medaka", 0)]

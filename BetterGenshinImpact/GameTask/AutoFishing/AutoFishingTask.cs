@@ -47,21 +47,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.blackboard = new Blackboard(predictor, this.Sleep);
         }
 
-        public class Blackboard : AutoFishing.Blackboard
-        {
-            public bool noFish = false;
-
-            public Blackboard(YoloV8Predictor predictor, Action<int> sleep) : base(predictor, sleep)
-            {
-            }
-
-            internal override void Reset()
-            {
-                base.Reset();
-                noFish = false;
-            }
-        }
-
         public Task Start(CancellationToken ct)
         {
             this._ct = ct;
@@ -92,7 +77,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                     .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                                 .End()
                                             .End()
-                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.throwRodNoTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                                             .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger, param.SaveScreenshotOnKeyTick))
                                             .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                                                 .PushLeaf(() => new FishBite("自动提竿", _logger, param.SaveScreenshotOnKeyTick, input))
@@ -130,13 +115,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         break;
                     }
 
-                    var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.Instance().GameCapture);
+                    using var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.Instance().GameCapture);
                     if (bitmap == null)
                     {
                         _logger.LogWarning("截图失败");
                         continue;
                     }
-                    var content = new CaptureContent(bitmap, 0, 0);
+                    using var content = new CaptureContent(bitmap, 0, 0);
                     behaviourTree.Tick(content.CaptureRectArea);
 
                     if (behaviourTree.Status != BehaviourStatus.Running)
