@@ -13,6 +13,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class Blackboard
     {
         /// <summary>
+        /// 没鱼啦，不钓了
+        /// </summary>
+        public bool noFish = false;
+
+        /// <summary>
         /// 已选择的鱼饵名
         /// </summary>
         public string selectedBaitName = string.Empty;
@@ -39,6 +44,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool chooseBaitUIOpening = false;
 
         /// <summary>
+        /// 选鱼饵失败列表
+        /// 失败一次就加入一次鱼饵名，列表中同名鱼饵的数量代表该种失败了几次
+        /// </summary>
+        public List<string> chooseBaitfailures = new List<string>();
+
+        /// <summary>
         /// 镜头俯仰是否被行为重置
         /// 进入钓鱼模式后、以及提竿后，镜头的俯仰会被重置。进行相关动作前须优化俯仰角，避免鱼塘被脚下的悬崖遮挡。
         /// </summary>
@@ -57,9 +68,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         internal virtual void Reset()
         {
+            noFish = false;
             noTargetFish = false;
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
+            chooseBaitfailures = new List<string>();
             pitchReset = true;
             selectedBaitName = string.Empty;
         }
