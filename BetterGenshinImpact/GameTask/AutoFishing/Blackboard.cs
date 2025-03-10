@@ -30,7 +30,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 是否没有目标鱼
         /// </summary>
-        public bool noTargetFish;
+        public bool throwRodNoTargetFish;
+
+        /// <summary>
+        /// 抛竿无目标鱼失败列表
+        /// 失败一次就加入一次鱼饵名，列表中同名鱼饵的数量代表该种失败了几次
+        /// </summary>
+        public List<string> throwRodNoTargetFishfailures = new List<string>();
 
         /// <summary>
         /// 拉条位置的识别框
@@ -69,7 +75,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         internal virtual void Reset()
         {
             noFish = false;
-            noTargetFish = false;
+            throwRodNoTargetFish = false;
+            throwRodNoTargetFishfailures = new List<string>();
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
             chooseBaitfailures = new List<string>();

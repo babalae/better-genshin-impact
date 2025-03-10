@@ -77,7 +77,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                     .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                                 .End()
                                             .End()
-                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.throwRodNoTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                                             .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger, param.SaveScreenshotOnKeyTick))
                                             .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                                                 .PushLeaf(() => new FishBite("自动提竿", _logger, param.SaveScreenshotOnKeyTick, input))

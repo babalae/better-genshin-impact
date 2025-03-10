@@ -98,11 +98,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         }
 
         /// <summary>
-        /// 测试选鱼饵失败若干次，结果应得出“没有鱼”
+        /// 测试选鱼饵失败若干次，失败列表应符合预期
         /// 这个测试侧重连续选鱼饵失败、两次选鱼饵失败之间穿插一次选鱼饵成功的情况
         /// </summary>
         [Fact]
-        public void ChooseBaitTest_AllBaitIgnored_Case1_ShouldBeNoFish()
+        public void ChooseBaitTest_AllBaitIgnored_Case1_FailureListShouldBeExpected()
         {
             //
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
@@ -199,16 +199,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
             Assert.Equal(2, blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait").Count());
-            Assert.True(blackboard.noFish);
             #endregion
         }
 
         /// <summary>
-        /// 测试选鱼饵失败若干次，结果应得出“没有鱼”
+        /// 测试选鱼饵失败若干次，失败列表应符合预期
         /// 这个测试侧重两种鱼饵交替失败的情况
         /// </summary>
         [Fact]
-        public void ChooseBaitTest_AllBaitIgnored_Case2_ShouldBeNoFish()
+        public void ChooseBaitTest_AllBaitIgnored_Case2_FailureListShouldBeExpected()
         {
             //
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
@@ -289,7 +288,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
             Assert.Equal(2, blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait").Count());
-            Assert.True(blackboard.noFish);
             #endregion
         }
     }

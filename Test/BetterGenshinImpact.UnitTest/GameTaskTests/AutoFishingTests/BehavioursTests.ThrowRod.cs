@@ -43,7 +43,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
-            Assert.False(blackboard.noTargetFish);
+            Assert.False(blackboard.throwRodNoTargetFish);
             Assert.Equal(BehaviourStatus.Succeeded, actual);
         }
 
@@ -74,7 +74,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
-            Assert.False(blackboard.noTargetFish);
+            Assert.False(blackboard.throwRodNoTargetFish);
             Assert.Equal(BehaviourStatus.Running, actual);
         }
 
