@@ -17,17 +17,14 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
-using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
-using System.Windows;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui.Violeta.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class MapPathingViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class MapPathingViewModel : ViewModel
 {
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
@@ -74,13 +71,9 @@ public partial class MapPathingViewModel : ObservableObject, INavigationAware, I
         }
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitScriptListViewData();
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]

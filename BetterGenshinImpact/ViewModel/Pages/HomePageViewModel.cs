@@ -27,7 +27,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class HomePageViewModel : ViewModel
 {
     [ObservableProperty]
     private string[] _modeNames = GameCaptureFactory.ModeNames();
@@ -291,14 +291,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnUiTaskStartTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(() => Start(_hWnd));
-    }
-
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]
