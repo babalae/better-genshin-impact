@@ -35,7 +35,7 @@ using Vanara.Extensions;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class TaskSettingsPageViewModel : ViewModel
 {
     public AllConfig Config { get; set; }
 
@@ -166,14 +166,6 @@ public partial class TaskSettingsPageViewModel : ObservableObject, INavigationAw
     private void OnStrategyDropDownOpened(string type)
     {
         _autoFightViewModel.OnStrategyDropDownOpened(type);
-    }
-
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]

@@ -14,7 +14,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class TriggerSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class TriggerSettingsPageViewModel : ViewModel
 {
     [ObservableProperty]
     private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
@@ -40,14 +40,6 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
         Config = configService.Get();
         _navigationService = navigationService;
         _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
-    }
-
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]
