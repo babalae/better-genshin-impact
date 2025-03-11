@@ -50,7 +50,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public Task Start(CancellationToken ct)
         {
             this._ct = ct;
-
+            // @formatter:off
             var behaviourTree = FluentBuilder.Create<ImageRegion>()
                 .Sequence("钓鱼并确保完成后退出钓鱼模式")
                     .MySimpleParallel("在整体超时时间内钓鱼", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
@@ -96,7 +96,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                 .End()
                 .Build();
-
+            // @formatter:on
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
             _logger.LogWarning("请不要携带任何{Msg}，极有可能会误识别导致无法结束自动钓鱼！", "跟宠");
             _logger.LogInformation($"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}");
@@ -107,6 +107,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 this.blackboard.Reset();
 
+                var prevManualGc = DateTime.MinValue;
                 while (!ct.IsCancellationRequested)
                 {
                     if (!SystemControl.IsGenshinImpactActiveByProcess())
@@ -121,6 +122,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _logger.LogWarning("截图失败");
                         continue;
                     }
+
                     using var content = new CaptureContent(bitmap, 0, 0);
                     behaviourTree.Tick(content.CaptureRectArea);
 
@@ -129,6 +131,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _logger.LogInformation("钓鱼结束");
 
                         break;
+                    }
+
+                    if ((DateTime.Now - prevManualGc).TotalSeconds > 2)
+                    {
+                        GC.Collect();
+                        prevManualGc = DateTime.Now;
                     }
                 }
             }
@@ -151,7 +159,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             _logger.LogInformation("→ 钓鱼任务结束");
 
-            return Task.CompletedTask;  // todo 这个行为树库不支持异步编程。。。
+            return Task.CompletedTask; // todo 这个行为树库不支持异步编程。。。
         }
 
         public void Sleep(int millisecondsTimeout)
@@ -173,11 +181,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 this.seconds = seconds;
             }
+
             protected override void OnInitialize()
             {
                 logger.LogInformation($"钓鱼任务将在{seconds}秒后超时");
                 timeout = DateTime.Now.AddSeconds(seconds);
             }
+
             protected override BehaviourStatus Update(ImageRegion _)
             {
                 if (DateTime.Now >= timeout)
@@ -208,10 +218,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 this.blackboard = blackboard;
                 this.seconds = seconds;
             }
+
             protected override void OnInitialize()
             {
                 timeout = DateTime.Now.AddSeconds(seconds);
             }
+
             protected override BehaviourStatus Update(ImageRegion _)
             {
                 if (DateTime.Now >= timeout)
@@ -231,6 +243,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
+
             public TurnAround(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
@@ -252,6 +265,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         imageRegion.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i++}");
                     }
+
                     blackboard.Sleep(1000);
                     VisionContext.Instance().DrawContent.ClearAll();
 
@@ -272,6 +286,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     }
 
                     #region 1、使人物朝向和镜头方向一致；2、打断角色待机动作，避免钓鱼F交互键被吞
+
                     // 加入昼夜切换后，使用KeyPress按S键被莫名吞掉了
                     // 并且发现如果原地空格跳跃后紧跟按一下S键，角色会向侧后方走去
                     // 于是使用“按一段时间”来代替KeyPress的“按一瞬间”，以求稳定的表现
@@ -284,6 +299,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     blackboard.Sleep(400);
                     blackboard.Sleep(300);
+
                     #endregion
 
                     logger.LogInformation("视角调整完毕");
@@ -301,6 +317,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
+
             public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
@@ -326,7 +343,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     this.blackboard.pitchReset = true;
 
-                    blackboard.Sleep(3000);    // 这里要多等一会儿界面遮罩消退
+                    blackboard.Sleep(3000); // 这里要多等一会儿界面遮罩消退
 
                     return BehaviourStatus.Running;
                 }
@@ -348,6 +365,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
+
             public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
@@ -376,6 +394,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     input.Keyboard.KeyPress(VK.VK_ESCAPE);
                     blackboard.Sleep(2000);
                 }
+
                 return BehaviourStatus.Running;
             }
         }
