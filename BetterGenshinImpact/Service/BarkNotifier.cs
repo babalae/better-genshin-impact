@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Linq; // Added for LINQ methods
+using System.Collections.Generic; // Added for potential collection operations
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -30,9 +32,9 @@ namespace BetterGenshinImpact.Service.Notifier
         /// <param name="sound">可选的通知声音</param>
         /// <param name="group">可选的通知分组</param>
         public BarkNotifier(
-            string[] deviceKeys, 
-            string apiBaseUrl = "https://api.day.app/push", 
-            string sound = "minuet", 
+            string[] deviceKeys,
+            string apiBaseUrl = "https://api.day.app/push",
+            string sound = "minuet",
             string group = "default")
         {
             // 输入验证
@@ -71,21 +73,28 @@ namespace BetterGenshinImpact.Service.Notifier
                 var jsonPayload = JsonSerializer.Serialize(notificationPayload);
                 var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                // 并行发送到所有配置的设备
-                var tasks = _deviceKeys.Select(async deviceKey => 
-                {
-                    try 
-                    {
-                        var response = await _httpClient.PostAsync($"{_apiBaseUrl}/{deviceKey}", httpContent);
-                        response.EnsureSuccessStatusCode();
-                    }
-                    catch (HttpRequestException ex)
-                    {
-                        // 记录单个设备发送失败，但不阻止其他设备通知
-                        Console.Error.WriteLine($"设备 {deviceKey} 通知发送失败: {ex.Message}");
-                    }
-                });
+                // 创建任务列表
+                var tasks = new List<Task>();
 
+                // 为每个设备创建任务
+                foreach (var deviceKey in _deviceKeys)
+                {
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var response = await _httpClient.PostAsync($"{_apiBaseUrl}/{deviceKey}", httpContent);
+                            response.EnsureSuccessStatusCode();
+                        }
+                        catch (HttpRequestException ex)
+                        {
+                            // 记录单个设备发送失败，但不阻止其他设备通知
+                            Console.Error.WriteLine($"设备 {deviceKey} 通知发送失败: {ex.Message}");
+                        }
+                    }));
+                }
+
+                // 等待所有任务完成
                 await Task.WhenAll(tasks);
             }
             catch (System.Exception ex)
@@ -108,7 +117,7 @@ namespace BetterGenshinImpact.Service.Notifier
         private string FormatNotificationBody(BaseNotificationData content)
         {
             var bodyBuilder = new StringBuilder();
-            
+
             foreach (var prop in content.GetType().GetProperties())
             {
                 var value = prop.GetValue(content);
