@@ -489,6 +489,7 @@ public class TpTask(CancellationToken ct)
         await Delay(50, ct);
         GlobalMethod.LeftButtonUp();
         await Delay(50, ct);
+        GameCaptureRegion.GameRegionMove((rect, scale) => (rect.Width / 2d, rect.Width / 2d));
     }
 
     /// <summary>
