@@ -237,7 +237,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             drawContent.RemoveRect("Target");
             drawContent.RemoveRect("Fish");
-            drawContent.RemoveRect("PrevFish");
         }
 
         /// <summary>
@@ -723,7 +722,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            var fishBarMat = new Mat(imageRegion.SrcMat, blackboard.fishBoxRect);
+            using var fishBarMat = new Mat(imageRegion.SrcMat, blackboard.fishBoxRect);
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
             {
