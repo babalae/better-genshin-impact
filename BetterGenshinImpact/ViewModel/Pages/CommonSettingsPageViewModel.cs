@@ -231,6 +231,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
             Toast.Error(res.Message);
         }
     }
+
     
     [RelayCommand]
     private async Task OnTestFeishuNotification()
@@ -288,7 +289,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
     }
 
-    
     [RelayCommand]
     private async Task OnTestBarkNotification()
     {
