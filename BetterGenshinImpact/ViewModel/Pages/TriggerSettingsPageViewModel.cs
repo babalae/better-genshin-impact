@@ -1,7 +1,7 @@
-﻿using System;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -9,8 +9,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Diagnostics;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
-using SharpCompress;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -26,7 +24,7 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
 
     [ObservableProperty]
     private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
-    
+
     [ObservableProperty]
     private List<string> _pickButtonNames;
 
@@ -42,8 +40,8 @@ public partial class TriggerSettingsPageViewModel : ObservableObject, INavigatio
         Config = configService.Get();
         _navigationService = navigationService;
         _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
-        
-        _pickButtonNames = new List<string> { "F", "E"};
+
+        _pickButtonNames = new List<string> { "F", "E" };
         if (!string.IsNullOrEmpty(Config.AutoPickConfig.PickKey)
             && Config.AutoPickConfig.PickKey.Length == 1
             && char.IsUpper(Config.AutoPickConfig.PickKey[0])
