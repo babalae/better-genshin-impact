@@ -108,7 +108,7 @@ namespace BetterGenshinImpact.Service.Notifier
         private string FormatNotificationBody(BaseNotificationData content)
         {
             var bodyBuilder = new StringBuilder();
-
+            
             foreach (var prop in content.GetType().GetProperties())
             {
                 var value = prop.GetValue(content);
