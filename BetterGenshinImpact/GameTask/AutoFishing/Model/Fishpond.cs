@@ -147,39 +147,4 @@ public class Fishpond
 
         return new Rect(left, top, right - left, bottom - top);
     }
-
-    /// <summary>
-    /// 通过鱼饵名称过滤鱼
-    /// </summary>
-    /// <param name="baitName"></param>
-    /// <returns></returns>
-    public List<OneFish> FilterByBaitName(string baitName)
-    {
-        return [.. Fishes.Where(fish => fish.FishType.BaitName == baitName).OrderByDescending(fish => fish.Confidence)];
-    }
-
-    public OneFish? FilterByBaitNameAndRecently(string baitName, Rect prevTargetFishRect)
-    {
-        var fishes = FilterByBaitName(baitName);
-        if (fishes.Count == 0)
-        {
-            return null;
-        }
-
-        var min = double.MaxValue;
-        var c1 = prevTargetFishRect.GetCenterPoint();
-        OneFish? result = null;
-        foreach (var fish in fishes)
-        {
-            var c2 = fish.Rect.GetCenterPoint();
-            var distance = Math.Sqrt(Math.Pow(c1.X - c2.X, 2) + Math.Pow(c1.Y - c2.Y, 2));
-            if (distance < min)
-            {
-                min = distance;
-                result = fish;
-            }
-        }
-
-        return result;
-    }
 }
