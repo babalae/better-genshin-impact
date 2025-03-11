@@ -54,8 +54,8 @@ public class NotificationService : IHostedService, IDisposable
     /// 构造函数：依赖注入关键组件
     /// </summary>
     public NotificationService(
-        NotifierManager notifierManager, 
-        ILogger<NotificationService> logger, 
+        NotifierManager notifierManager,
+        ILogger<NotificationService> logger,
         TaskContext taskContext)
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
@@ -91,7 +91,7 @@ public class NotificationService : IHostedService, IDisposable
             if (_taskContext.Config.NotificationConfig.WebhookEnabled)
             {
                 _notifierManager.RegisterNotifier(new WebhookNotifier(
-                    NotifyHttpClient, 
+                    NotifyHttpClient,
                     _taskContext.Config.NotificationConfig.WebhookEndpoint
                 ));
             }
@@ -106,7 +106,7 @@ public class NotificationService : IHostedService, IDisposable
             if (_taskContext.Config.NotificationConfig.FeishuNotificationEnabled)
             {
                 _notifierManager.RegisterNotifier(new FeishuNotifier(
-                    NotifyHttpClient, 
+                    NotifyHttpClient,
                     _taskContext.Config.NotificationConfig.FeishuWebhookUrl
                 ));
             }
@@ -115,7 +115,7 @@ public class NotificationService : IHostedService, IDisposable
             if (_taskContext.Config.NotificationConfig.WorkweixinNotificationEnabled)
             {
                 _notifierManager.RegisterNotifier(new WorkWeixinNotifier(
-                    NotifyHttpClient, 
+                    NotifyHttpClient,
                     _taskContext.Config.NotificationConfig.WorkweixinWebhookUrl
                 ));
             }
@@ -129,8 +129,8 @@ public class NotificationService : IHostedService, IDisposable
                 };
                 var cts = new CancellationTokenSource();
                 _notifierManager.RegisterNotifier(new WebSocketNotifier(
-                    _taskContext.Config.NotificationConfig.WebSocketEndpoint, 
-                    jsonSerializerOptions, 
+                    _taskContext.Config.NotificationConfig.WebSocketEndpoint,
+                    jsonSerializerOptions,
                     cts
                 ));
             }
@@ -220,9 +220,8 @@ public class NotificationService : IHostedService, IDisposable
                 testData.Screenshot = TaskControl.CaptureToRectArea().SrcBitmap;
             }
 
-            // 使用超时控制发送测试通知
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            await notifier.SendAsync(testData, cts.Token);
+            // 发送测试通知，但不使用取消令牌参数
+            await notifier.SendAsync(testData);
 
             _logger.LogInformation($"通知器 {typeof(T).Name} 测试成功");
             return NotificationTestResult.Success();
@@ -253,7 +252,7 @@ public class NotificationService : IHostedService, IDisposable
     {
         // 事件订阅过滤
         var subscribeEventStr = _taskContext.Config.NotificationConfig.NotificationEventSubscribe;
-        if (!string.IsNullOrEmpty(subscribeEventStr) && 
+        if (!string.IsNullOrEmpty(subscribeEventStr) &&
             !subscribeEventStr.Contains(notificationData.Event))
         {
             _logger.LogDebug($"事件 {notificationData.Event} 未订阅，跳过通知");
@@ -284,22 +283,11 @@ public class NotificationService : IHostedService, IDisposable
             _logger.LogDebug(ex, "补充通知截图失败");
         }
 
-        // 并行发送通知
-        try
-        {
-            var notificationTasks = _notifierManager.GetNotifiers()
-                .Select(notifier => notifier.SendAsync(notificationData))
-                .ToList();
+        // 使用原始方法发送通知，不使用并行方式
+        await _notifierManager.SendNotificationToAllAsync(notificationData);
 
-            await Task.WhenAll(notificationTasks);
-
-            // 更新最后通知时间
-            _lastNotificationTimes[notificationData.Event] = DateTime.UtcNow;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "通知发送过程中发生错误");
-        }
+        // 更新最后通知时间
+        _lastNotificationTimes[notificationData.Event] = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -320,7 +308,7 @@ public class NotificationService : IHostedService, IDisposable
         var key = notificationData.Event;
         var now = DateTime.UtcNow;
 
-        return _lastNotificationTimes.TryGetValue(key, out var lastTime) 
+        return _lastNotificationTimes.TryGetValue(key, out var lastTime)
                && (now - lastTime).TotalSeconds < MinNotificationInterval;
     }
 
