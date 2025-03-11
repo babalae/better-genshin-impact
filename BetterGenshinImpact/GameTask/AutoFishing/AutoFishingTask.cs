@@ -53,47 +53,47 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             var behaviourTree = FluentBuilder.Create<ImageRegion>()
                 .Sequence("钓鱼并确保完成后退出钓鱼模式")
-                .MySimpleParallel("在整体超时时间内钓鱼", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                .Sequence("调整视角并钓鱼")
-                .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                .PushLeaf(() => new TurnAround("转圈圈调整视角", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard, _logger, param.SaveScreenshotOnKeyTick))
-                .End()
-                .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .UntilFailed(@"\")
-                .Sequence("一直钓鱼直到没鱼")
-                .AlwaysSucceed(@"\")
-                .Sequence("从找鱼开始")
-                .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                .PushLeaf(() => new GetFishpond("检测鱼群", blackboard, _logger, param.SaveScreenshotOnKeyTick))
-                .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard, _logger, param.SaveScreenshotOnKeyTick))
-                .End()
-                .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .UntilSuccess("重复抛竿")
-                .Sequence("重复抛竿序列")
-                .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .End()
-                .End()
-                .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.throwRodNoTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
-                .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger, param.SaveScreenshotOnKeyTick))
-                .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
-                .PushLeaf(() => new FishBite("自动提竿", _logger, param.SaveScreenshotOnKeyTick, input))
-                .PushLeaf(() => new FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick, input))
-                .End()
-                .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, param.SaveScreenshotOnKeyTick))
-                .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                .End()
-                .End()
-                .Do("冒泡-找鱼-没鱼检查", _ => blackboard.noFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
-                .End()
-                .End()
-                .End()
-                .PushLeaf(() => new WholeProcessTimeout("检查整体超时", param.WholeProcessTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick))
-                .End()
-                .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                    .MySimpleParallel("在整体超时时间内钓鱼", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                        .Sequence("调整视角并钓鱼")
+                            .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                            .MySimpleParallel("找鱼20秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                .PushLeaf(() => new TurnAround("转圈圈调整视角", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                .PushLeaf(() => new FindFishTimeout("等20秒", 20, blackboard, _logger, param.SaveScreenshotOnKeyTick))
+                            .End()
+                            .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                            .UntilFailed(@"\")
+                                .Sequence("一直钓鱼直到没鱼")
+                                    .AlwaysSucceed(@"\")
+                                        .Sequence("从找鱼开始")
+                                            .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                            .MySimpleParallel("找鱼10秒", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                .PushLeaf(() => new GetFishpond("检测鱼群", blackboard, _logger, param.SaveScreenshotOnKeyTick))
+                                                .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard, _logger, param.SaveScreenshotOnKeyTick))
+                                            .End()
+                                            .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                            .UntilSuccess("重复抛竿")
+                                                .Sequence("重复抛竿序列")
+                                                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                    .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                .End()
+                                            .End()
+                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.throwRodNoTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                            .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger, param.SaveScreenshotOnKeyTick))
+                                            .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                .PushLeaf(() => new FishBite("自动提竿", _logger, param.SaveScreenshotOnKeyTick, input))
+                                                .PushLeaf(() => new FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick, input))
+                                            .End()
+                                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, param.SaveScreenshotOnKeyTick))
+                                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                        .End()
+                                    .End()
+                                    .Do("冒泡-找鱼-没鱼检查", _ => blackboard.noFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                .End()
+                            .End()
+                        .End()
+                        .PushLeaf(() => new WholeProcessTimeout("检查整体超时", param.WholeProcessTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick))
+                    .End()
+                    .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                 .End()
                 .Build();
 
@@ -107,7 +107,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 this.blackboard.Reset();
 
-                var prevManualGc = DateTime.MinValue;
                 while (!ct.IsCancellationRequested)
                 {
                     if (!SystemControl.IsGenshinImpactActiveByProcess())
@@ -122,7 +121,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _logger.LogWarning("截图失败");
                         continue;
                     }
-
                     using var content = new CaptureContent(bitmap, 0, 0);
                     behaviourTree.Tick(content.CaptureRectArea);
 
@@ -131,12 +129,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _logger.LogInformation("钓鱼结束");
 
                         break;
-                    }
-
-                    if ((DateTime.Now - prevManualGc).TotalSeconds > 2)
-                    {
-                        GC.Collect();
-                        prevManualGc = DateTime.Now;
                     }
                 }
             }
@@ -159,7 +151,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             _logger.LogInformation("→ 钓鱼任务结束");
 
-            return Task.CompletedTask; // todo 这个行为树库不支持异步编程。。。
+            return Task.CompletedTask;  // todo 这个行为树库不支持异步编程。。。
         }
 
         public void Sleep(int millisecondsTimeout)
@@ -181,13 +173,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 this.seconds = seconds;
             }
-
             protected override void OnInitialize()
             {
                 logger.LogInformation($"钓鱼任务将在{seconds}秒后超时");
                 timeout = DateTime.Now.AddSeconds(seconds);
             }
-
             protected override BehaviourStatus Update(ImageRegion _)
             {
                 if (DateTime.Now >= timeout)
@@ -218,12 +208,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 this.blackboard = blackboard;
                 this.seconds = seconds;
             }
-
             protected override void OnInitialize()
             {
                 timeout = DateTime.Now.AddSeconds(seconds);
             }
-
             protected override BehaviourStatus Update(ImageRegion _)
             {
                 if (DateTime.Now >= timeout)
@@ -243,7 +231,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-
             public TurnAround(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
@@ -265,7 +252,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         imageRegion.Derive(fish.Rect).DrawSelf($"{fish.FishType.ChineseName}.{i++}");
                     }
-
                     blackboard.Sleep(1000);
                     VisionContext.Instance().DrawContent.ClearAll();
 
@@ -286,7 +272,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     }
 
                     #region 1、使人物朝向和镜头方向一致；2、打断角色待机动作，避免钓鱼F交互键被吞
-
                     // 加入昼夜切换后，使用KeyPress按S键被莫名吞掉了
                     // 并且发现如果原地空格跳跃后紧跟按一下S键，角色会向侧后方走去
                     // 于是使用“按一段时间”来代替KeyPress的“按一瞬间”，以求稳定的表现
@@ -299,7 +284,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     blackboard.Sleep(400);
                     blackboard.Sleep(300);
-
                     #endregion
 
                     logger.LogInformation("视角调整完毕");
@@ -317,7 +301,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-
             public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
@@ -343,7 +326,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                     this.blackboard.pitchReset = true;
 
-                    blackboard.Sleep(3000); // 这里要多等一会儿界面遮罩消退
+                    blackboard.Sleep(3000);    // 这里要多等一会儿界面遮罩消退
 
                     return BehaviourStatus.Running;
                 }
@@ -365,7 +348,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-
             public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
@@ -394,7 +376,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     input.Keyboard.KeyPress(VK.VK_ESCAPE);
                     blackboard.Sleep(2000);
                 }
-
                 return BehaviourStatus.Running;
             }
         }
