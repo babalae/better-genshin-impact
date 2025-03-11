@@ -158,7 +158,7 @@ public partial class NotificationConfig : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(_smtpServer))
                 errors.Add("电子邮件通知需要配置SMTP服务器");
-
+            
             if (_smtpPort <= 0 || _smtpPort > 65535)
                 errors.Add("SMTP端口无效");
         }
@@ -178,21 +178,21 @@ public partial class NotificationConfig : ObservableObject
     {
         _notificationEventSubscribe = string.Empty;
         _includeScreenShot = true;
-
+        
         _webhookEnabled = false;
         _webhookEndpoint = string.Empty;
-
+        
         _webSocketNotificationEnabled = false;
         _webSocketEndpoint = string.Empty;
-
+        
         _windowsUwpNotificationEnabled = false;
-
+        
         _feishuNotificationEnabled = false;
         _feishuWebhookUrl = string.Empty;
-
+        
         _workweixinNotificationEnabled = false;
         _workweixinWebhookUrl = string.Empty;
-
+        
         _emailNotificationEnabled = false;
         _smtpServer = string.Empty;
         _smtpPort = 587;
@@ -201,7 +201,7 @@ public partial class NotificationConfig : ObservableObject
         _fromEmail = string.Empty;
         _fromName = string.Empty;
         _toEmail = string.Empty;
-
+        
         _barkNotificationEnabled = false;
         _barkApiEndpoint = "https://api.day.app/push";
         _barkDeviceKeys = Array.Empty<string>();

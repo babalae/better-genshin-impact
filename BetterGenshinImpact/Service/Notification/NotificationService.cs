@@ -7,7 +7,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Drawing;
 using System.Net.Http;
-	@@ -11,143 +12,265 @@
+using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -273,7 +274,8 @@ public class NotificationService : IHostedService, IDisposable
             {
                 var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
                 if (bitmap != null)
-	@@ -156,16 +279,76 @@ public async Task NotifyAllNotifiersAsync(BaseNotificationData notificationData)
+                {
+                    notificationData.Screenshot = (Bitmap)bitmap.Clone();
                 }
             }
         }
