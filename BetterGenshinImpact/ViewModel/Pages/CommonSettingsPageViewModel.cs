@@ -287,6 +287,21 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
             Toast.Error(res.Message);
         }
     }
+
+    
+    [RelayCommand]
+    private async Task OnTestBarkNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<BarkNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
     
     [RelayCommand]
     private void ImportLocalScriptsRepoZip()
