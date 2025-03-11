@@ -31,7 +31,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 * 独立任务
   * [全自动七圣召唤](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
   * [自动伐木](http://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
-  * [自动秘境](http://bettergi.com/feats/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
+  * [自动秘境](http://bettergi.com/feats/task/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
   * [自动音游](https://bettergi.com/feats/task/music.html)：一键自动完成千音雅集的专辑，快速获取成就
 * 全自动
   * [一条龙](https://github.com/babalae/better-genshin-impact/issues/846)：一键完成日常（使用历练点），并领取奖励
