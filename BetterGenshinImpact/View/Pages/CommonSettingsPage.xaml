@@ -650,7 +650,6 @@
                                   Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                     Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}"/>
                 </Grid>
                 <Grid Margin="16">
@@ -669,7 +668,6 @@
                                   Text="启用后将自动向七天神像方向移动"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                     Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.ShouldMove}"/>
                 </Grid>
                 <!-- 指定国家 -->
@@ -1722,8 +1720,7 @@
                                Content="发送" />
                 </Grid>
             </StackPanel>
-        </ui:CardExpander>        
-
+        </ui:CardExpander>   
         <!--  地图  -->
         <!--<ui:CardControl Margin="0,0,0,12"
                         Icon="{ui:SymbolIcon Cursor24}"
