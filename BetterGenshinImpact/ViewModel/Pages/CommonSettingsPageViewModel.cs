@@ -335,8 +335,3 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
     }
 }
-        {
-            MessageBox.Error($"Error importing script repository: {ex.Message}");
-        }
-    }
-}
