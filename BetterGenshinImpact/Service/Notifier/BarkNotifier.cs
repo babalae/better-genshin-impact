@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.Service.Notifier
 
         // Bark API配置
         private readonly string _apiBaseUrl;
-        private readonly string[] _deviceKeys;
+        private readonly string _deviceKeys;
         private readonly HttpClient _httpClient;
 
         // 可选的通知配置
@@ -32,13 +32,14 @@ namespace BetterGenshinImpact.Service.Notifier
         /// <param name="sound">可选的通知声音</param>
         /// <param name="group">可选的通知分组</param>
         public BarkNotifier(
-            string[] deviceKeys,
+            //string[] deviceKeys,
+            string deviceKeys,
             string apiBaseUrl = "https://api.day.app/push",
             string sound = "minuet",
             string group = "default")
         {
             // 输入验证
-            if (deviceKeys == null || deviceKeys.Length == 0)
+            if (string.IsNullOrEmpty((deviceKeys)))
                 throw new ArgumentException("必须提供至少一个设备密钥", nameof(deviceKeys));
 
             _apiBaseUrl = apiBaseUrl.TrimEnd('/');
