@@ -21,7 +21,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class JsListViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class JsListViewModel : ViewModel
 {
     private readonly ILogger<JsListViewModel> _logger = App.GetLogger<JsListViewModel>();
     private readonly string scriptPath = Global.ScriptPath();
@@ -71,13 +71,9 @@ public partial class JsListViewModel : ObservableObject, INavigationAware, IView
         return di.GetDirectories();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitScriptListViewData();
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]
