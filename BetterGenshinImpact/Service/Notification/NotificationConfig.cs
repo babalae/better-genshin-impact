@@ -108,8 +108,7 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty]
     private bool _barkNotificationEnabled = false;
 
-    [ObservableProperty]
-    private string _barkApiEndpoint = "https://api.day.app/push";
+    [ObservableProperty] private string _barkApiEndpoint = string.Empty;
 
     [ObservableProperty] 
     private string _barkDeviceKeys = string.Empty;
