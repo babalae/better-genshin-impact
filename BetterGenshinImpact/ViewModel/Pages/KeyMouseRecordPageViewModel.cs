@@ -22,7 +22,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class KeyMouseRecordPageViewModel : ViewModel
+public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     private readonly ILogger<KeyMouseRecordPageViewModel> _logger = App.GetLogger<KeyMouseRecordPageViewModel>();
     private readonly string scriptPath = Global.Absolute(@"User\KeyMouseScript");
@@ -74,9 +74,13 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         return files.Select(file => new FileInfo(file)).ToList();
     }
 
-    public override void OnNavigatedTo()
+    public void OnNavigatedTo()
     {
         InitScriptListViewData();
+    }
+
+    public void OnNavigatedFrom()
+    {
     }
 
     [RelayCommand]

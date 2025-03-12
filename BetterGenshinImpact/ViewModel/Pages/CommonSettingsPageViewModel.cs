@@ -27,7 +27,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class CommonSettingsPageViewModel : ViewModel
+public partial class CommonSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
 {
     public AllConfig Config { get; set; }
 
@@ -134,6 +134,14 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _navigationService = navigationService;
         _notificationService = notificationService;
         InitializeCountries();
+    }
+
+    public void OnNavigatedTo()
+    {
+    }
+
+    public void OnNavigatedFrom()
+    {
     }
 
     [RelayCommand]
