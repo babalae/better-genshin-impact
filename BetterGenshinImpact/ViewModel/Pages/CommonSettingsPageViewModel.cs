@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Enum;
@@ -250,6 +250,48 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     private async Task OnTestWorkWeixinNotification()
     {
         var res = await _notificationService.TestNotifierAsync<WorkWeixinNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
+    [RelayCommand]
+    private async Task OnTestWebSocketNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<WebSocketNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
+    [RelayCommand]
+    private async Task OnTestEmailNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<EmailNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
+    [RelayCommand]
+    private async Task OnTestBarkNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<BarkNotifier>();
         if(res.IsSuccess)
         {
             Toast.Success(res.Message);
