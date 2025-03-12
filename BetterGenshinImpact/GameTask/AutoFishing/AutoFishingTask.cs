@@ -152,6 +152,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 _logger.LogInformation("当前处于联机状态，不使用昼夜设置");
                 tickARound();
             }
+            else if (param.FishingTimePolicy == FishingTimePolicy.DontChange)
+            {
+                tickARound();
+            }
             else
             {
                 SetTimeTask setTimeTask = new SetTimeTask();
