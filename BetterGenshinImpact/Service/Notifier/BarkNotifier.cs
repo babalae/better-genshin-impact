@@ -3,8 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Linq; // Added for LINQ methods
-using System.Collections.Generic; // Added for potential collection operations
+using System.Collections.Generic;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -17,7 +16,7 @@ namespace BetterGenshinImpact.Service.Notifier
 
         // Bark API配置
         private readonly string _apiBaseUrl;
-        private readonly string _deviceKeys;
+        private readonly string[] _deviceKeys; // 改为设备密钥数组
         private readonly HttpClient _httpClient;
 
         // 可选的通知配置
@@ -27,23 +26,28 @@ namespace BetterGenshinImpact.Service.Notifier
         /// <summary>
         /// Bark通知器构造函数
         /// </summary>
-        /// <param name="apiBaseUrl">Bark API基础URL</param>
         /// <param name="deviceKeys">设备密钥数组</param>
+        /// <param name="apiBaseUrl">Bark API基础URL</param>
         /// <param name="sound">可选的通知声音</param>
         /// <param name="group">可选的通知分组</param>
         public BarkNotifier(
-            //string[] deviceKeys,
             string deviceKeys,
             string apiBaseUrl = "https://api.day.app/push",
             string sound = "minuet",
             string group = "default")
         {
             // 输入验证
-            if (string.IsNullOrEmpty((deviceKeys)))
+            if (string.IsNullOrEmpty(deviceKeys))
                 throw new ArgumentException("必须提供至少一个设备密钥", nameof(deviceKeys));
 
             _apiBaseUrl = apiBaseUrl.TrimEnd('/');
-            _deviceKeys = deviceKeys;
+            
+            // 将逗号分隔的设备密钥字符串转换为数组
+            _deviceKeys = deviceKeys.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            if (_deviceKeys.Length == 0)
+                throw new ArgumentException("必须提供至少一个有效的设备密钥", nameof(deviceKeys));
+                
             _sound = sound;
             _group = group;
 
@@ -67,36 +71,25 @@ namespace BetterGenshinImpact.Service.Notifier
                     body = FormatNotificationBody(content),
                     sound = _sound,
                     group = _group,
-                    device_keys = _deviceKeys
+                    device_keys = _deviceKeys  // 使用设备密钥数组
                 };
 
                 // 序列化通知数据
                 var jsonPayload = JsonSerializer.Serialize(notificationPayload);
                 var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                // 创建任务列表
-                var tasks = new List<Task>();
-
-                // 为每个设备创建任务
-                foreach (var deviceKey in _deviceKeys)
+                try
                 {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var response = await _httpClient.PostAsync($"{_apiBaseUrl}/{deviceKey}", httpContent);
-                            response.EnsureSuccessStatusCode();
-                        }
-                        catch (HttpRequestException ex)
-                        {
-                            // 记录单个设备发送失败，但不阻止其他设备通知
-                            Console.Error.WriteLine($"设备 {deviceKey} 通知发送失败: {ex.Message}");
-                        }
-                    }));
+                    // 发送到API端点
+                    var response = await _httpClient.PostAsync(_apiBaseUrl, httpContent);
+                    response.EnsureSuccessStatusCode();
                 }
-
-                // 等待所有任务完成
-                await Task.WhenAll(tasks);
+                catch (HttpRequestException ex)
+                {
+                    // 记录发送失败
+                    Console.Error.WriteLine($"通知发送失败: {ex.Message}");
+                    throw new NotifierException($"Bark通知发送失败: {ex.Message}");
+                }
             }
             catch (System.Exception ex)
             {
