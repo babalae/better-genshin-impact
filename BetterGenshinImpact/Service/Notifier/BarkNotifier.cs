@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -115,7 +116,7 @@ namespace BetterGenshinImpact.Service.Notifier
         /// Bark通知器构造函数
         /// </summary>
         /// <param name="deviceKeys">设备密钥，多个设备使用逗号、分号或空格分隔</param>
-        /// <param name="apiBaseUrl">Bark API基础URL</param>
+        /// <param name="apiHost">Bark API基础URL</param>
         /// <param name="options">Bark通知默认选项</param>
         public BarkNotifier(
             string deviceKeys,
@@ -126,12 +127,12 @@ namespace BetterGenshinImpact.Service.Notifier
             if (string.IsNullOrEmpty(deviceKeys))
                 throw new ArgumentException("必须提供至少一个设备密钥", nameof(deviceKeys));
 
-            // 确保主机名格式正确，并添加固定的API路径
+            // 确保主机名格式正确
             apiHost = apiHost.TrimEnd('/');
             if (!apiHost.StartsWith("http://") && !apiHost.StartsWith("https://"))
                 apiHost = "https://" + apiHost;
                 
-            _apiBaseUrl = $"{apiHost}/push";
+            _apiBaseUrl = apiHost;
             
             // 将逗号分隔的设备密钥字符串转换为数组
             _deviceKeys = deviceKeys.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -172,8 +173,7 @@ namespace BetterGenshinImpact.Service.Notifier
                 var payload = new Dictionary<string, object>
                 {
                     ["title"] = mergedOptions.Title ?? FormatNotificationTitle(content),
-                    ["body"] = mergedOptions.Body ?? FormatNotificationBody(content),
-                    ["device_keys"] = _deviceKeys
+                    ["body"] = mergedOptions.Body ?? FormatNotificationBody(content)
                 };
 
                 // 添加其他可选参数
@@ -223,37 +223,65 @@ namespace BetterGenshinImpact.Service.Notifier
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                try
+                // 为每个设备发送单独的请求
+                var tasks = new List<Task>();
+                foreach (var deviceKey in _deviceKeys)
                 {
-                    // 输出请求信息用于调试
-                    Console.WriteLine($"发送通知到: {_apiBaseUrl}");
-                    Console.WriteLine($"请求内容: {jsonPayload}");
-                    
-                    // 发送到API端点
-                    var response = await _httpClient.PostAsync(_apiBaseUrl, httpContent);
-                    
-                    // 读取响应内容
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        Console.Error.WriteLine($"服务器返回错误: {(int)response.StatusCode} {response.StatusCode}");
-                        Console.Error.WriteLine($"响应内容: {responseContent}");
-                        throw new HttpRequestException($"服务器返回错误: {(int)response.StatusCode} {response.StatusCode}, 响应内容: {responseContent}");
-                    }
-                    
-                    Console.WriteLine($"通知发送成功: {responseContent}");
+                    tasks.Add(SendToDeviceAsync(deviceKey, httpContent, jsonPayload));
                 }
-                catch (HttpRequestException ex)
+                
+                // 等待所有请求完成
+                await Task.WhenAll(tasks);
+                
+                // 检查任务是否有异常
+                foreach (var task in tasks)
                 {
-                    // 记录发送失败
-                    Console.Error.WriteLine($"通知发送失败: {ex.Message}");
-                    throw new NotifierException($"Bark通知发送失败: {ex.Message}");
+                    if (task.Exception != null)
+                    {
+                        throw task.Exception;
+                    }
                 }
             }
             catch (System.Exception ex)
             {
                 throw new NotifierException($"Bark通知发送失败: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 向单个设备发送请求
+        /// </summary>
+        private async Task SendToDeviceAsync(string deviceKey, HttpContent httpContent, string jsonPayload)
+        {
+            try
+            {
+                // 构建URL（按照API要求，设备Key放在URL路径中）
+                var requestUrl = $"{_apiBaseUrl}/{deviceKey}";
+                
+                // 输出请求信息用于调试
+                Console.WriteLine($"发送通知到: {requestUrl}");
+                Console.WriteLine($"请求内容: {jsonPayload}");
+                
+                // 发送到API端点
+                var response = await _httpClient.PostAsync(requestUrl, httpContent);
+                
+                // 读取响应内容
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.Error.WriteLine($"服务器返回错误: {(int)response.StatusCode} {response.StatusCode}");
+                    Console.Error.WriteLine($"响应内容: {responseContent}");
+                    throw new HttpRequestException($"服务器返回错误: {(int)response.StatusCode} {response.StatusCode}, 响应内容: {responseContent}");
+                }
+                
+                Console.WriteLine($"通知发送成功: {responseContent}");
+            }
+            catch (HttpRequestException ex)
+            {
+                // 记录发送失败
+                Console.Error.WriteLine($"设备 {deviceKey} 通知发送失败: {ex.Message}");
+                throw new NotifierException($"Bark通知发送失败 (设备: {deviceKey}): {ex.Message}");
             }
         }
 
