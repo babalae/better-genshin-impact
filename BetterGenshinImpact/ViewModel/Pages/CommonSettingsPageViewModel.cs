@@ -1,4 +1,3 @@
-using System;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
@@ -69,7 +68,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         {
             if (SetProperty(ref _selectedArea, value))
             {
-                UpdateRevivePoint(SelectedCountry, value);
+                UpdateRevivePoint(SelectedCountry, SelectedArea);
             }
         }
     }
@@ -88,26 +87,16 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
                 CountryList.Add(country);
             }
         }
-        
-        // Fix: Check if stored value exists in the list before selecting it
-        _selectedCountry = CountryList.Contains(_tpConfig.ReviveStatueOfTheSevenCountry) 
-            ? _tpConfig.ReviveStatueOfTheSevenCountry 
-            : CountryList.FirstOrDefault() ?? string.Empty;
-        
-        UpdateAreas(_selectedCountry);
-        
-        // Fix: Check if stored value exists in the list before selecting it
-        _selectedArea = Areas.Contains(_tpConfig.ReviveStatueOfTheSevenArea) 
-            ? _tpConfig.ReviveStatueOfTheSevenArea 
-            : Areas.FirstOrDefault() ?? string.Empty;
-        
-        UpdateRevivePoint(_selectedCountry, _selectedArea);
+        _selectedCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
+        UpdateAreas(SelectedCountry);
+        _selectedArea = _tpConfig.ReviveStatueOfTheSevenArea;
+        UpdateRevivePoint(SelectedCountry, SelectedArea);
     }
 
     private void UpdateAreas(string country)
     {
         Areas.Clear();
-        
+        SelectedArea = string.Empty; 
         if (string.IsNullOrEmpty(country)) return;
     
         var areas = MapLazyAssets.Instance.GoddessPositions.Values
@@ -124,8 +113,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
     }
 
-    // Fix: Changed comment from Chinese to English
-    // Updates coordinates when country or area changes
+   // 当国家或区域改变时更新坐标
     private void UpdateRevivePoint(string country, string area)
     {
         if (string.IsNullOrEmpty(country) || string.IsNullOrEmpty(area)) return;
@@ -133,7 +121,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         var goddess = MapLazyAssets.Instance.GoddessPositions.Values
             .FirstOrDefault(g => g.Country == country && g.Area == area);
         if (goddess == null) return;
-        
         _tpConfig.ReviveStatueOfTheSevenCountry = country;
         _tpConfig.ReviveStatueOfTheSevenArea = area;
         _tpConfig.ReviveStatueOfTheSevenPointX = goddess.X;
@@ -151,8 +138,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
 
     public void OnNavigatedTo()
     {
-        // Refresh country list and area when navigated to
-        InitializeCountries();
     }
 
     public void OnNavigatedFrom()
@@ -162,7 +147,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public void OnRefreshMaskSettings()
     {
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "Recalculate control positions"));
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
     [RelayCommand]
@@ -192,14 +177,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
             if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.NormalTrigger)
             {
                 TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-            }
-        }
-        else
-        {
-            // Fix: Add handling for when ScreenshotEnabled is false
-            if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.CacheCaptureWithTrigger)
-            {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
             }
         }
     }
@@ -244,8 +221,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     private async Task OnTestWindowsUwpNotification()
     {
-        IsLoading = true;
-        
         var res = await _notificationService.TestNotifierAsync<WindowsUwpNotifier>();
         if(res.IsSuccess)
         {
@@ -255,15 +230,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         {
             Toast.Error(res.Message);
         }
-        
-        IsLoading = false;
     }
     
     [RelayCommand]
     private async Task OnTestFeishuNotification()
     {
-        IsLoading = true;
-        
         var res = await _notificationService.TestNotifierAsync<FeishuNotifier>();
         if(res.IsSuccess)
         {
@@ -273,15 +244,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         {
             Toast.Error(res.Message);
         }
-        
-        IsLoading = false;
     }
     
     [RelayCommand]
     private async Task OnTestWorkWeixinNotification()
     {
-        IsLoading = true;
-        
         var res = await _notificationService.TestNotifierAsync<WorkWeixinNotifier>();
         if(res.IsSuccess)
         {
@@ -291,15 +258,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         {
             Toast.Error(res.Message);
         }
-        
-        IsLoading = false;
     }
     
     [RelayCommand]
     private async Task OnTestWebSocketNotification()
     {
-        IsLoading = true;
-        
         var res = await _notificationService.TestNotifierAsync<WebSocketNotifier>();
         if(res.IsSuccess)
         {
@@ -309,15 +272,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         {
             Toast.Error(res.Message);
         }
-        
-        IsLoading = false;
     }
     
     [RelayCommand]
     private async Task OnTestEmailNotification()
     {
-        IsLoading = true;
-        
         var res = await _notificationService.TestNotifierAsync<EmailNotifier>();
         if(res.IsSuccess)
         {
@@ -327,46 +286,55 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         {
             Toast.Error(res.Message);
         }
-        
-        IsLoading = false;
+    }
+    
+    [RelayCommand]
+    private async Task OnTestBarkNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<BarkNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
     }
     
     [RelayCommand]
     private void ImportLocalScriptsRepoZip()
     {
-        try
+        Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
+            Filter = "Zip Files (*.zip)|*.zip",
+            Multiselect = false
+        };
 
-            var dialog = new Microsoft.Win32.OpenFileDialog
+        if (dialog.ShowDialog() == true)
+        {
+            var zipPath = dialog.FileName;
+            // 删除旧文件夹
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
             {
-                Filter = "Zip Files (*.zip)|*.zip",
-                Multiselect = false
-            };
-
-            if (dialog.ShowDialog() == true)
+                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
+            }
+            ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
+            
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
             {
-                var zipPath = dialog.FileName;
-                // Delete old folder
-                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-                {
-                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                }
-                
-                ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
-                
-                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-                {
-                    MessageBox.Information("Script repository offline package imported successfully!");
-                }
-                else
-                {
-                    MessageBox.Error("Script repository offline package import failed, incorrect script repository package content!");
-                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
-                }
+                MessageBox.Information("脚本仓库离线包导入成功！");
+            }
+            else
+            {
+                MessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }
-        catch (Exception ex)
+    }
+}
         {
             MessageBox.Error($"Error importing script repository: {ex.Message}");
         }
