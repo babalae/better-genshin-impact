@@ -1,11 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.DirectoryServices.ActiveDirectory;
 
 namespace BetterGenshinImpact.Service.Notification;
 
 /// <summary>
-///     Notification
+/// 通知配置管理器
 /// </summary>
 [Serializable]
 public partial class NotificationConfig : ObservableObject
@@ -101,4 +101,17 @@ public partial class NotificationConfig : ObservableObject
 
     [ObservableProperty]
     private string _toEmail = string.Empty;
+    
+    /// <summary>
+    /// Bark移动推送通知配置
+    /// </summary>
+    [ObservableProperty]
+    private bool _barkNotificationEnabled = false;
+
+    [ObservableProperty]
+    private string _barkApiEndpoint = "https://api.day.app/push";
+
+    [ObservableProperty] 
+    private string _barkDeviceKeys = string.Empty;
+    // private string[] _barkDeviceKeys = Array.Empty<string>();
 }

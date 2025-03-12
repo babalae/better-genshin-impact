@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -73,17 +73,31 @@ public class NotificationService : IHostedService
             _notifierManager.RegisterNotifier(new WorkWeixinNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WorkweixinWebhookUrl));
         }
 
-        if (TaskContext.Instance().Config.NotificationConfig.WebSocketNotificationEnabled)
-        {
-            var jsonSerializerOptions = new JsonSerializerOptions
+            // WebSocket通知初始化
+            if (TaskContext.Instance().Config.NotificationConfig.WebSocketNotificationEnabled)
             {
-                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            };
-            var cts = new CancellationTokenSource();
-            _notifierManager.RegisterNotifier(new WebSocketNotifier(TaskContext.Instance().Config.NotificationConfig.WebSocketEndpoint, jsonSerializerOptions, cts));
-        }
+                var jsonSerializerOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                };
+                var cts = new CancellationTokenSource();
+                _notifierManager.RegisterNotifier(new WebSocketNotifier(
+                    TaskContext.Instance().Config.NotificationConfig.WebSocketEndpoint,
+                    jsonSerializerOptions,
+                    cts
+                ));
+            }
 
-        // 添加 EmailNotifier 初始化逻辑
+            // Bark通知初始化
+            if (TaskContext.Instance().Config.NotificationConfig.BarkNotificationEnabled)
+            {
+                _notifierManager.RegisterNotifier(new BarkNotifier(
+                    TaskContext.Instance().Config.NotificationConfig.BarkDeviceKeys,
+                    TaskContext.Instance().Config.NotificationConfig.BarkApiEndpoint
+                ));
+            }
+
+        // 邮件通知初始化
         if (TaskContext.Instance().Config.NotificationConfig.EmailNotificationEnabled)
         {
             _notifierManager.RegisterNotifier(new EmailNotifier(
@@ -167,5 +181,13 @@ public class NotificationService : IHostedService
     public void NotifyAllNotifiers(BaseNotificationData notificationData)
     {
         Task.Run(() => NotifyAllNotifiersAsync(notificationData));
+    }
+
+    /// <summary>
+    /// 释放资源
+    /// </summary>
+    public void Dispose()
+    {
+        NotifyHttpClient.Dispose();
     }
 }
