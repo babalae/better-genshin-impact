@@ -41,7 +41,7 @@ using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class ScriptControlViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class ScriptControlViewModel : ViewModel
 {
     private readonly ISnackbarService _snackbarService;
 
@@ -63,12 +63,9 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     public readonly string LogPath = Global.Absolute(@"log");
+    
 
-    public void OnNavigatedFrom()
-    {
-    }
-
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         ReadScriptGroup();
     }
