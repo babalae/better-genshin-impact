@@ -1,4 +1,4 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.CommonSettingsPage"
+<Page x:Class="BetterGenshinImpact.View.Pages.CommonSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -1804,4 +1804,3 @@
         </ui:CardControl>-->
     </StackPanel>
 </Page>
-
