@@ -24,8 +24,6 @@ public class WaypointForTrack : Waypoint
     public CombatScript? CombatScript { get; set; }
     public string? LogInfo { get; set; }
     
-    public int? StopFlyingWaitTime { get; set; }
-
     public WaypointForTrack(Waypoint waypoint)
     {
         Type = waypoint.Type;
@@ -46,17 +44,6 @@ public class WaypointForTrack : Waypoint
         if (waypoint.Action == ActionEnum.LogOutput.Code && waypoint.ActionParams is not null)
         {
             LogInfo = waypoint.ActionParams;
-        }
-        if (waypoint.Action == ActionEnum.StopFlying.Code && waypoint.ActionParams is not null)
-        {
-            try 
-            {
-                StopFlyingWaitTime = (int)(double.Parse(waypoint.ActionParams) * 1000);
-            }
-            catch (FormatException)
-            {
-                StopFlyingWaitTime = -1;
-            }
         }
     }
 }

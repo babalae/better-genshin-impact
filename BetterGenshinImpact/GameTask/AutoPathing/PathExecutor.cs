@@ -358,7 +358,7 @@ public class PathExecutor
 
             if (forceTp) // 强制传送模式
             {
-                await new TpTask(ct).TpToStatueOfTheSeven();  // fix typos
+                await new TpTask(ct).TpToStatueOfTheSeven(); // fix typos
                 success = await new SwitchPartyTask().Start(partyName, ct);
             }
             else // 优先原地切换模式
@@ -383,7 +383,6 @@ public class PathExecutor
 
         return success;
     }
-
 
 
     private static string? FilterPartyNameByConditionConfig(PathingTask task)
@@ -606,7 +605,9 @@ public class PathExecutor
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
+
     public DateTime moveToStartTime;
+
     public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
@@ -895,28 +896,7 @@ public class PathExecutor
     {
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
-            //下落攻击接近目的地
-            if (waypoint.StopFlyingWaitTime > 0)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.Jump);
-                await Delay((int)waypoint.StopFlyingWaitTime, ct);
-            } 
-            else if (waypoint.StopFlyingWaitTime == -1)
-            {
-                Logger.LogWarning("错误的下落攻击等待时间，请检查 action_params 格式。");
-            }
-            Logger.LogInformation("动作：下落攻击");
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-            for (int i = 0; i < 20; i++)
-            {
-                var screen = CaptureToRectArea();
-                var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
-                if (isFlying)
-                {
-                    await Delay(200, ct);
-                }
-            }
-            Logger.LogInformation("动作：下落攻击 结束");
+            await ActionFactory.GetBeforeHandler(ActionEnum.StopFlying.Code).RunAsync(ct, waypoint);
         }
     }
 
