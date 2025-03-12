@@ -896,9 +896,27 @@ public class PathExecutor
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
             //下落攻击接近目的地
+            if (waypoint.StopFlyingWaitTime > 0)
+            {
+                Simulation.SendInput.SimulateAction(GIActions.Jump);
+                await Delay((int)waypoint.StopFlyingWaitTime, ct);
+            } 
+            else if (waypoint.StopFlyingWaitTime == -1)
+            {
+                Logger.LogWarning("错误的下落攻击等待时间，请检查 action_params 格式。");
+            }
             Logger.LogInformation("动作：下落攻击");
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-            await Delay(1000, ct);
+            for (int i = 0; i < 20; i++)
+            {
+                var screen = CaptureToRectArea();
+                var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
+                if (isFlying)
+                {
+                    await Delay(200, ct);
+                }
+            }
+            Logger.LogInformation("动作：下落攻击 结束");
         }
     }
 

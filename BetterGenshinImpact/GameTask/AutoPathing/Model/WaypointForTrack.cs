@@ -2,7 +2,6 @@
 using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using System.Diagnostics.Eventing.Reader;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -24,6 +23,8 @@ public class WaypointForTrack : Waypoint
     /// </summary>
     public CombatScript? CombatScript { get; set; }
     public string? LogInfo { get; set; }
+    
+    public int? StopFlyingWaitTime { get; set; }
 
     public WaypointForTrack(Waypoint waypoint)
     {
@@ -45,6 +46,17 @@ public class WaypointForTrack : Waypoint
         if (waypoint.Action == ActionEnum.LogOutput.Code && waypoint.ActionParams is not null)
         {
             LogInfo = waypoint.ActionParams;
+        }
+        if (waypoint.Action == ActionEnum.StopFlying.Code && waypoint.ActionParams is not null)
+        {
+            try 
+            {
+                StopFlyingWaitTime = (int)(double.Parse(waypoint.ActionParams) * 1000);
+            }
+            catch (FormatException)
+            {
+                StopFlyingWaitTime = -1;
+            }
         }
     }
 }
