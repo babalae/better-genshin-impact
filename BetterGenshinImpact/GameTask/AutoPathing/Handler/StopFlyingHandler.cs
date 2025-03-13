@@ -13,9 +13,10 @@ public class StopFlyingHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        if (waypointForTrack != null && !string.IsNullOrEmpty(waypointForTrack.ActionParams))
+        if (waypointForTrack != null
+            && !string.IsNullOrEmpty(waypointForTrack.ActionParams)
+            && int.TryParse(waypointForTrack.ActionParams, out var stopFlyingWaitTime))
         {
-            var stopFlyingWaitTime = (int)double.Parse(waypointForTrack.ActionParams); // 毫秒级
             Simulation.SendInput.SimulateAction(GIActions.Jump);
             await Delay(stopFlyingWaitTime, ct);
         }
