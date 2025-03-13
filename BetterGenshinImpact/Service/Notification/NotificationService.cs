@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Service.Notification.Model;
+﻿using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using OpenCvSharp.Extensions;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -166,7 +167,7 @@ public class NotificationService : IHostedService
                 var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
                 if (bitmap != null)
                 {
-                    notificationData.Screenshot = (Bitmap)bitmap.Clone();
+                    notificationData.Screenshot = bitmap.ToBitmap();
                 }
             }
         }

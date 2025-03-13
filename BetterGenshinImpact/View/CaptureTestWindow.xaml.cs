@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 using BetterGenshinImpact.Helpers;
+using OpenCvSharp.WpfExtensions;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View;
@@ -72,7 +73,7 @@ public partial class CaptureTestWindow : Window
             _captureCount++;
             sw.Reset();
             sw.Start();
-            DisplayCaptureResultImage.Source = bitmap.ToBitmapImage();
+            DisplayCaptureResultImage.Source = bitmap.ToBitmapSource();
             sw.Stop();
             Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
             _transferTime += sw.ElapsedMilliseconds;

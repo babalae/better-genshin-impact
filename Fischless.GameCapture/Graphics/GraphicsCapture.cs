@@ -5,6 +5,8 @@ using Vanara.PInvoke;
 using Windows.Foundation.Metadata;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 
 namespace Fischless.GameCapture.Graphics;
 
@@ -112,7 +114,7 @@ public class GraphicsCapture : IGameCapture
         }
     }
 
-    public Bitmap? Capture()
+    public Mat? Capture()
     {
         if (_hWnd == IntPtr.Zero)
         {
@@ -130,7 +132,7 @@ public class GraphicsCapture : IGameCapture
                     return null;
                 }
 
-                return frame.ToBitmap(_region);
+                return frame.ToBitmap(_region)?.ToMat();
             }
             catch (Exception e)
             {
@@ -146,7 +148,7 @@ public class GraphicsCapture : IGameCapture
                 return null;
             }
 
-            return (Bitmap)_currentBitmap.Clone();
+            return ((Bitmap)_currentBitmap.Clone()).ToMat();
         }
     }
 

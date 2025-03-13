@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -177,7 +178,7 @@ public class TaskControl
         }
     }
 
-    public static Bitmap CaptureGameBitmap(IGameCapture? gameCapture)
+    public static Mat CaptureGameBitmap(IGameCapture? gameCapture)
     {
         var bitmap = gameCapture?.Capture();
         // wgc 缓冲区设置的2 所以至少截图3次
@@ -189,7 +190,7 @@ public class TaskControl
                 Sleep(50);
             }
         }
-
+        
         if (bitmap == null)
         {
             Logger.LogWarning("截图失败!");
@@ -201,10 +202,10 @@ public class TaskControl
                 {
                     return bitmap;
                 }
-
+        
                 Sleep(30);
             }
-
+        
             throw new Exception("尝试多次后,截图失败!");
         }
         else
@@ -213,7 +214,7 @@ public class TaskControl
         }
     }
     
-    public static Bitmap? CaptureGameBitmapNoRetry(IGameCapture? gameCapture)
+    public static Mat? CaptureGameBitmapNoRetry(IGameCapture? gameCapture)
     {
         return gameCapture?.Capture();
     }

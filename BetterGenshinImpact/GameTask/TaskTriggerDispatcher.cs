@@ -284,13 +284,13 @@ namespace BetterGenshinImpact.GameTask
                     {
                         // if (!_prevGameActive)
                         // {
-                            maskWindow.Invoke(() =>
+                        maskWindow.Invoke(() =>
+                        {
+                            if (maskWindow.IsExist())
                             {
-                                if (maskWindow.IsExist())
-                                {
-                                    maskWindow.Show();
-                                }
-                            });
+                                maskWindow.Show();
+                            }
+                        });
                         // }
                     }
 
@@ -323,10 +323,10 @@ namespace BetterGenshinImpact.GameTask
                     return;
                 }
 
-                if (IsOnlyCacheCapture(bitmap))
-                {
-                    return;
-                }
+                // if (IsOnlyCacheCapture(bitmap))
+                // {
+                //     return;
+                // }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
                 var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
@@ -336,7 +336,6 @@ namespace BetterGenshinImpact.GameTask
                     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                     if (exclusiveTrigger != null)
                     {
-                        
                         exclusiveTrigger.OnCapture(content);
                         speedTimer.Record(exclusiveTrigger.Name);
                     }
@@ -350,13 +349,12 @@ namespace BetterGenshinImpact.GameTask
 
                         foreach (var trigger in runningTriggers)
                         {
-                            
                             trigger.OnCapture(content);
                             speedTimer.Record(trigger.Name);
                         }
                     }
                 }
-                
+
                 speedTimer.DebugPrint();
                 content.Dispose();
             }
@@ -456,17 +454,17 @@ namespace BetterGenshinImpact.GameTask
             return _dispatcherCacheCaptureMode;
         }
 
-        public Bitmap GetLastCaptureBitmap()
-        {
-            lock (_bitmapLocker)
-            {
-                return new Bitmap(_bitmap);
-            }
-        }
+        // public Bitmap GetLastCaptureBitmap()
+        // {
+        //     lock (_bitmapLocker)
+        //     {
+        //         return new Bitmap(_bitmap);
+        //     }
+        // }
 
         public CaptureContent GetLastCaptureContent()
         {
-            var bitmap = GetLastCaptureBitmap();
+            var bitmap = TaskControl.CaptureGameBitmap(GameCapture);
             return new CaptureContent(bitmap, _frameIndex, _timer.Interval);
         }
 
@@ -497,20 +495,19 @@ namespace BetterGenshinImpact.GameTask
                         Directory.CreateDirectory(path);
                     }
 
-                    var bitmap = GetLastCaptureBitmap();
+                    var bitmap = TaskControl.CaptureGameBitmap(GameCapture);
                     var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
                     var savePath = Global.Absolute($@"log\screenshot\{name}");
 
                     if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
                     {
-                        var mat = bitmap.ToMat();
                         var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
-                        mat.Rectangle(rect, Scalar.White, -1);
-                        Cv2.ImWrite(savePath, mat);
+                        bitmap.Rectangle(rect, Scalar.White, -1);
+                        Cv2.ImWrite(savePath, bitmap);
                     }
                     else
                     {
-                        bitmap.Save(savePath, ImageFormat.Png);
+                        Cv2.ImWrite(savePath, bitmap);
                     }
 
                     _logger.LogInformation("截图已保存: {Name}", name);

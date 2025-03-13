@@ -3,6 +3,8 @@ using Fischless.GameCapture.Graphics.Helpers;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System.Diagnostics;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
 using Device = SharpDX.Direct3D11.Device;
 
@@ -64,7 +66,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
             return region;
         }
 
-        public Bitmap? Capture()
+        public Mat? Capture()
         {
             if (_hWnd == nint.Zero)
             {
@@ -78,7 +80,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
                 return null;
             }
 
-            return ToBitmap(phSurface);
+            return ToBitmap(phSurface)?.ToMat();
         }
 
         private Bitmap? ToBitmap(nint phSurface)
