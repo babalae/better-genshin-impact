@@ -13,9 +13,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class Blackboard
     {
         /// <summary>
-        /// 没鱼啦，不钓了
+        /// 不钓啦
         /// </summary>
-        public bool noFish = false;
+        public bool abort = false;
 
         /// <summary>
         /// 已选择的鱼饵名
@@ -28,15 +28,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public Fishpond fishpond;
 
         /// <summary>
-        /// 是否没有目标鱼
+        /// 是否没有抛竿落点
         /// </summary>
-        public bool throwRodNoTargetFish;
+        public bool throwRodNoTarget;
+
+        /// <summary>
+        /// 是否没有鱼饵适用的鱼
+        /// </summary>
+        public bool throwRodNoBaitFish;
 
         /// <summary>
         /// 抛竿无目标鱼失败列表
         /// 失败一次就加入一次鱼饵名，列表中同名鱼饵的数量代表该种失败了几次
         /// </summary>
-        public List<string> throwRodNoTargetFishfailures = new List<string>();
+        public List<string> throwRodNoBaitFishFailures = new List<string>();
 
         /// <summary>
         /// 拉条位置的识别框
@@ -53,7 +58,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 选鱼饵失败列表
         /// 失败一次就加入一次鱼饵名，列表中同名鱼饵的数量代表该种失败了几次
         /// </summary>
-        public List<string> chooseBaitfailures = new List<string>();
+        public List<string> chooseBaitFailures = new List<string>();
 
         /// <summary>
         /// 镜头俯仰是否被行为重置
@@ -74,12 +79,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         internal virtual void Reset()
         {
-            noFish = false;
-            throwRodNoTargetFish = false;
-            throwRodNoTargetFishfailures = new List<string>();
+            abort = false;
+            throwRodNoBaitFishFailures = new List<string>();
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
-            chooseBaitfailures = new List<string>();
+            chooseBaitFailures = new List<string>();
             pitchReset = true;
             selectedBaitName = string.Empty;
         }

@@ -38,6 +38,7 @@ public class ActionFactory
             return key switch
             {
                 "up_down_grab_leaf" => new UpDownGrabLeaf(),
+                "stop_flying" => new StopFlyingHandler(),
                 _ => throw new ArgumentException("未知的前置 action 类型")
             };
         });

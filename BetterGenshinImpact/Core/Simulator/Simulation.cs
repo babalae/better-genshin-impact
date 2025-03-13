@@ -30,7 +30,7 @@ public class Simulation
         }
     }
 
-    private static bool IsKeyDown(User32.VK key)
+    public static bool IsKeyDown(User32.VK key)
     {
         // 获取按键状态
         var state = User32.GetAsyncKeyState((int)key);
