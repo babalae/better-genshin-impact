@@ -59,8 +59,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
 
             var blackboard = new Blackboard(predictor, sleep: i => { });
-            blackboard.chooseBaitfailures = chooseBaitfailures.ToList();
-            blackboard.throwRodNoTargetFishfailures = throwRodNoTargetFishfailures.ToList();
+            blackboard.chooseBaitFailures = chooseBaitfailures.ToList();
+            blackboard.throwRodNoBaitFishFailures = throwRodNoTargetFishfailures.ToList();
 
             //
             GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
