@@ -178,7 +178,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d));
                 blackboard.Sleep(200);
                 // 点击确定
-                var ra = captureRegion.Find(new RecognitionObject
+                using var ra = captureRegion.Find(new RecognitionObject
                 {
                     Name = "BtnWhiteConfirm",
                     RecognitionType = RecognitionTypes.TemplateMatch,
@@ -220,6 +220,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion context)
         {
+            // todo 这个方案不能令人满意，应该是底层做一个事件监听来记录被点击，底层向上暴露一个和Timer用起来差不多的东西，它应该有个开始记录方法、有个获取从开始到目前是否被点击的方法
+            // 但说到底，检查是否鼠标被干扰，不是一个必选的方法。做一个精确度高的图形检测方案，来检测当前位于哪个步骤，会更好。
             if (!Simulation.IsKeyDown(VK.VK_LBUTTON))
             {
                 logger.LogWarning("检测到当前鼠标左键状态不符合要求，可能受到干扰，退出任务");
@@ -534,7 +536,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return BehaviourStatus.Running;
             }
 
-            Region baitRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
+            using Region baitRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
             if (baitRectArea.IsEmpty())
             {
                 return BehaviourStatus.Succeeded;
@@ -722,7 +724,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 Rect _cur, _left;
                 if (Math.Abs(rects[0].Height - rects[1].Height) > 10)
                 {
-                    TaskControl.Logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
+                    logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
                     return BehaviourStatus.Running;
                 }
 
