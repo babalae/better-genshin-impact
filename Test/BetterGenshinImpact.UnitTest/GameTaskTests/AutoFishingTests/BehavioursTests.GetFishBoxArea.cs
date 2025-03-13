@@ -17,6 +17,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
     {
         [Theory]
         [InlineData(@"20250306111752769_GetFishBoxArea_Succeeded.png")]
+        [InlineData(@"20250313-0442-39.4967763.mp4_20250313_132441.664.png")]   // 网友反馈的案例，有偏色
+        [InlineData(@"20250313-0442-39.4967763.mp4_20250313_132441.969.png")]
         /// <summary>
         /// 测试获取钓鱼拉扯框，结果为成功
         /// </summary>
