@@ -19,7 +19,7 @@
 
 
 <div align="center">
-🌟 点一下右上角的 Star 按钮后，可以接收到软件更新通知哦~
+🌟 点一下右上角的 Star，Github 主页就能收到软件更新通知了哦~
 </div>
 
 <div align="center">
