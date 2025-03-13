@@ -17,6 +17,18 @@
 
 <br/>
 
+
+<div align="center">
+🌟 点一下右上角的 Star 按钮后，可以接收到软件更新通知哦~
+</div>
+
+<div align="center">
+    <img src="https://img.alicdn.com/imgextra/i1/2042484851/O1CN01OL1E1v1lhoM7Wdmup_!!2042484851.gif" alt="Star" width="186" height="60">
+  </a>
+</div>
+
+<br/>
+
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
