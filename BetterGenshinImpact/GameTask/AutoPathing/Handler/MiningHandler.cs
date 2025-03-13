@@ -22,7 +22,6 @@ public class MiningHandler : IActionHandler
                                                                                         雷泽 e(hold)
                                                                                         卡齐娜 e(hold),a(0.2),a(0.2),a(0.2),a(0.2)
                                                                                         坎蒂丝 e(hold)
-                                                                                        凝光 a(0.2),a(0.2),a(0.2),a(0.2),a(0.2),a(0.2),a(0.2),a(0.2)
                                                                                         """);
 
     private readonly ScanPickTask _scanPickTask = new();
