@@ -515,6 +515,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class CheckThrowRod : BaseBehaviour<ImageRegion>
     {
         private DateTime? timeDelay;
+        private bool hasChecked;
 
         /// <summary>
         /// 检查抛竿结果
@@ -527,11 +528,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         protected override void OnInitialize()
         {
             timeDelay = DateTime.Now.AddSeconds(3);
+            hasChecked = false;
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            if (DateTime.Now < timeDelay)
+            if (DateTime.Now < timeDelay || hasChecked)
             {
                 return BehaviourStatus.Running;
             }
@@ -539,7 +541,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using Region baitRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
             if (baitRectArea.IsEmpty())
             {
-                return BehaviourStatus.Succeeded;
+                hasChecked = true;
+                return BehaviourStatus.Running;
             }
             else
             {
