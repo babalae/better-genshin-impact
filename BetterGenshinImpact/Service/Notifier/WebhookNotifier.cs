@@ -16,7 +16,7 @@ public class WebhookNotifier : INotifier
     public string Endpoint { get; set; }
 
     // 添加 send_to 属性
-    private  string SendTo { get; set; }
+    private string SendTo { get; set; }
 
     private readonly HttpClient _httpClient;
     
