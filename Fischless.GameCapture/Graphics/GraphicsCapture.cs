@@ -5,8 +5,11 @@ using Vanara.PInvoke;
 using Windows.Foundation.Metadata;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
+using Windows.Graphics.DirectX.Direct3D11;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
+using SharpDX.DXGI;
+using Device = SharpDX.Direct3D11.Device;
+using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 namespace Fischless.GameCapture.Graphics;
 
@@ -16,15 +19,23 @@ public class GraphicsCapture : IGameCapture
 
     private Direct3D11CaptureFramePool _captureFramePool = null!;
     private GraphicsCaptureItem _captureItem = null!;
+
     private GraphicsCaptureSession _captureSession = null!;
+
+    private IDirect3DDevice _d3dDevice = null!;
 
     public CaptureModes Mode => CaptureModes.WindowsGraphicsCapture;
     public bool IsCapturing { get; private set; }
 
     private ResourceRegion? _region;
 
-    private bool _useBitmapCache = false;
-    private Bitmap? _currentBitmap;
+
+    // 最新帧的存储
+    private Mat? _latestFrame;
+    private readonly ReaderWriterLockSlim _frameAccessLock = new();
+
+    // 用于获取帧数据的临时纹理和暂存资源
+    private Texture2D? _stagingTexture;
 
     public void Dispose() => Stop();
 
@@ -43,24 +54,27 @@ public class GraphicsCapture : IGameCapture
             throw new InvalidOperationException("Failed to create capture item.");
         }
 
-        _captureItem.Closed += CaptureItemOnClosed;
 
-        var device = Direct3D11Helper.CreateDevice();
+        // 创建D3D设备
+        _d3dDevice = Direct3D11Helper.CreateDevice();
 
-        _captureFramePool = Direct3D11CaptureFramePool.Create(device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2,
+        // 创建帧池
+        _captureFramePool = Direct3D11CaptureFramePool.Create(
+            _d3dDevice,
+            DirectXPixelFormat.B8G8R8A8UIntNormalized,
+            2,
             _captureItem.Size);
 
-        if (settings != null && settings.TryGetValue("useBitmapCache", out object? value) && (bool)value)
-        {
-            _useBitmapCache = true;
-            _captureFramePool.FrameArrived += OnFrameArrived;
-        }
+
+        _captureItem.Closed += CaptureItemOnClosed;
+        _captureFramePool.FrameArrived += OnFrameArrived;
 
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
         if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsCursorCaptureEnabled"))
         {
             _captureSession.IsCursorCaptureEnabled = false;
         }
+
         if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
         {
             _captureSession.IsBorderRequired = false;
@@ -100,55 +114,120 @@ public class GraphicsCapture : IGameCapture
         return region;
     }
 
+    private Texture2D CreateStagingTexture(Direct3D11CaptureFrame frame, Device device)
+    {
+        // 创建可以用于CPU读取的暂存纹理
+        var textureDesc = new Texture2DDescription
+        {
+            CpuAccessFlags = CpuAccessFlags.Read,
+            BindFlags = BindFlags.None,
+            Format = Format.B8G8R8A8_UNorm,
+            Width = _region == null ? frame.ContentSize.Width : _region.Value.Right - _region.Value.Left,
+            Height = _region == null ? frame.ContentSize.Height : _region.Value.Bottom - _region.Value.Top,
+            OptionFlags = ResourceOptionFlags.None,
+            MipLevels = 1,
+            ArraySize = 1,
+            SampleDescription = { Count = 1, Quality = 0 },
+            Usage = ResourceUsage.Staging
+        };
+
+        return new Texture2D(device, textureDesc);
+    }
+
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
-        using var frame = _captureFramePool?.TryGetNextFrame();
-
-        if (frame != null)
+        using var frame = sender.TryGetNextFrame();
+        if (frame == null)
         {
-            var b = frame.ToBitmap(_region);
-            if (b != null)
+            return;
+        }
+
+        var frameSize = _captureItem.Size;
+
+        // 检查帧大小是否变化 // 不会被访问到的代码
+        if (frameSize.Width != frame.ContentSize.Width ||
+            frameSize.Height != frame.ContentSize.Height)
+        {
+            frameSize = frame.ContentSize;
+            _captureFramePool.Recreate(
+                _d3dDevice,
+                DirectXPixelFormat.B8G8R8A8UIntNormalized,
+                2,
+                frameSize
+            );
+            _stagingTexture = null;
+        }
+
+        // 从捕获的帧创建一个可以被访问的纹理
+        using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
+        var d3dDevice = surfaceTexture.Device;
+
+        _stagingTexture ??= CreateStagingTexture(frame, d3dDevice);
+        var stagingTexture = _stagingTexture;
+
+        // 将捕获的纹理复制到暂存纹理
+        if (_region != null)
+        {
+            d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, _region, stagingTexture, 0);
+        }
+        else
+        {
+            d3dDevice.ImmediateContext.CopyResource(surfaceTexture, stagingTexture);
+        }
+
+
+        // 映射纹理以便CPU读取
+        var dataBox = d3dDevice.ImmediateContext.MapSubresource(
+            stagingTexture,
+            0,
+            MapMode.Read,
+            MapFlags.None);
+
+        try
+        {
+            // 创建一个新的Mat
+            var newFrame = new Mat(stagingTexture.Description.Height, stagingTexture.Description.Width, MatType.CV_8UC4, dataBox.DataPointer);
+
+            // 使用写锁更新最新帧
+            _frameAccessLock.EnterWriteLock();
+            try
             {
-                _currentBitmap = b;
+                // 释放之前的帧
+                _latestFrame?.Dispose();
+                // 克隆新帧以保持对其的引用（因为dataBox.DataPointer将被释放）
+                _latestFrame = newFrame.Clone();
             }
+            finally
+            {
+                newFrame.Dispose();
+                _frameAccessLock.ExitWriteLock();
+            }
+        }
+        finally
+        {
+            // 取消映射纹理
+            d3dDevice.ImmediateContext.UnmapSubresource(surfaceTexture, 0);
         }
     }
 
     public Mat? Capture()
     {
-        if (_hWnd == IntPtr.Zero)
+        // 使用读锁获取最新帧
+        _frameAccessLock.EnterReadLock();
+        try
         {
-            return null;
-        }
-
-        if (!_useBitmapCache)
-        {
-            try
-            {
-                using var frame = _captureFramePool?.TryGetNextFrame();
-
-                if (frame == null)
-                {
-                    return null;
-                }
-
-                return frame.ToBitmap(_region)?.ToMat();
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e);
-            }
-
-            return null;
-        }
-        else
-        {
-            if (_currentBitmap == null)
+            // 如果没有可用帧则返回null
+            if (_latestFrame == null)
             {
                 return null;
             }
 
-            return ((Bitmap)_currentBitmap.Clone()).ToMat();
+            // 返回最新帧的副本（这里我们必须克隆，因为Mat是不线程安全的）
+            return _latestFrame.Clone();
+        }
+        finally
+        {
+            _frameAccessLock.ExitReadLock();
         }
     }
 
@@ -159,9 +238,24 @@ public class GraphicsCapture : IGameCapture
         _captureSession = null!;
         _captureFramePool = null!;
         _captureItem = null!;
+        _d3dDevice?.Dispose();
 
         _hWnd = IntPtr.Zero;
         IsCapturing = false;
+
+        // 释放最新帧
+        _frameAccessLock.EnterWriteLock();
+        try
+        {
+            _latestFrame?.Dispose();
+            _latestFrame = null;
+        }
+        finally
+        {
+            _frameAccessLock.ExitWriteLock();
+        }
+
+        _frameAccessLock.Dispose();
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)
