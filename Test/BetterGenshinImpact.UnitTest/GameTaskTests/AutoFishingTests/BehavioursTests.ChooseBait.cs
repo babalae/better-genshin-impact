@@ -127,7 +127,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitfailures.Where(f => f == "fake fly bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "fake fly bait"));
             #endregion
 
             #region 第2次失败
@@ -143,8 +143,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitfailures.Where(f => f == "fake fly bait").Count());
-            Assert.False(blackboard.noFish);
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "fake fly bait").Count());
+            Assert.False(blackboard.abort);
             #endregion
 
             #region medaka受到遮挡，第3次失败
@@ -162,7 +162,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait"));
             #endregion
 
             #region sunfish受到遮挡，medaka再次出现，第4次成功，并钓起medaka
@@ -180,7 +180,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.False(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Succeeded, actual);
-            Assert.Single(blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait"));
             #endregion
 
             #region sunfish再次出现，第5次失败
@@ -198,7 +198,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait").Count());
             #endregion
         }
 
@@ -232,7 +232,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitfailures.Where(f => f == "fake fly bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "fake fly bait"));
             #endregion
 
             #region koi受到遮挡，第2次失败
@@ -250,8 +250,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait"));
-            Assert.False(blackboard.noFish);
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait"));
+            Assert.False(blackboard.abort);
             #endregion
 
             #region koi再次出现，第3次失败
@@ -269,7 +269,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitfailures.Where(f => f == "fake fly bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "fake fly bait").Count());
             #endregion
 
             #region 第4次失败
@@ -287,7 +287,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             //
             Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitfailures.Where(f => f == "spinelgrain bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait").Count());
             #endregion
         }
     }

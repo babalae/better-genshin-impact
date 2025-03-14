@@ -57,6 +57,8 @@ public class TpTask(CancellationToken ct)
     public async Task TpToStatueOfTheSeven()
     {
         await CheckInBigMapUi();
+        
+        // 提前调整至恰当的缩放以更快的传送
         if (_tpConfig.MapZoomEnabled)
         {
             double currentZoomLevel = GetBigMapZoomLevel(CaptureToRectArea());
@@ -73,22 +75,23 @@ public class TpTask(CancellationToken ct)
         string? area = _tpConfig.ReviveStatueOfTheSevenArea;
         double x = _tpConfig.ReviveStatueOfTheSevenPointX;
         double y = _tpConfig.ReviveStatueOfTheSevenPointY;
+        GiTpPosition revivePoint = _tpConfig.ReviveStatueOfTheSeven ?? GetNearestGoddess(x, y);
         if (_tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
             var center = GetBigMapCenterPoint();
             var giTpPoint = GetNearestGoddess(center.X, center.Y);
-            if (giTpPoint != null)
-            {
-                country = giTpPoint.Country;
-                area = giTpPoint.Area;
-                x = giTpPoint.X;
-                y = giTpPoint.Y;
-            }
+            country = giTpPoint.Country;
+            area = giTpPoint.Area;
+            x = giTpPoint.X;
+            y = giTpPoint.Y;
+            revivePoint = giTpPoint;
         }
+
         Logger.LogInformation("将传送至 {country} {area} 七天神像", country, area);
         await Tp(x, y);
         if (_tpConfig.ShouldMove || _tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
+            (x, y) = GetClosestPoint(revivePoint.TranX, revivePoint.TranY, x, y, 5);
             var waypoint = new Waypoint
             {
                 X = x,
@@ -98,9 +101,36 @@ public class TpTask(CancellationToken ct)
             };
             var waypointForTrack = new WaypointForTrack(waypoint);
             await new PathExecutor(ct).MoveTo(waypointForTrack);
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
         
         await Delay((int)(_tpConfig.HpRestoreDuration * 1000), ct);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="tranX"> 传送后实际到达的点X坐标 </param>
+    /// <param name="tranY"> 传送后实际到达的点Y坐标 </param>
+    /// <param name="x"> 传送点 X 坐标 </param>
+    /// <param name="y"> 传送点 Y 坐标 </param>
+    /// <param name="d"> 期望最终离传送点的距离 </param>
+    /// <returns>  </returns>
+    private static (double X, double Y) GetClosestPoint(double tranX, double tranY, double x, double y, double d)
+    {
+        double dx = x - tranX;
+        double dy = y - tranY;
+        double distanceSquared = dx * dx + dy * dy;
+        double distance = Math.Sqrt(distanceSquared);
+        d = d > 0 ? d : 0;
+        if (distance < d)
+        {
+            return (tranX, tranY);
+        }
+        double ratio = d / distance;
+        double px = (x - dx * ratio);
+        double py = (y - dy * ratio);
+        return (px, py);
     }
 
     /// <summary>
@@ -109,7 +139,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
-    private GiTpPosition? GetNearestGoddess(double x, double y)
+    private GiTpPosition GetNearestGoddess(double x, double y)
     {
         GiTpPosition? nearestGiTpPosition = null;
         double minDistance = double.MaxValue;
@@ -123,7 +153,7 @@ public class TpTask(CancellationToken ct)
             }
         }
         // 获取最近的神像位置
-        return nearestGiTpPosition;
+        return nearestGiTpPosition ?? throw new InvalidOperationException("没找到最近的七天神像");;
     }
     
     /// <summary>

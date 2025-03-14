@@ -649,7 +649,7 @@
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
-                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}" />
                 </Grid>
                 <Grid Margin="16">
@@ -667,7 +667,7 @@
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="启用后将自动向七天神像方向移动"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
-                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.ShouldMove}" />
                 </Grid>
                 <!-- 指定国家 -->
@@ -687,6 +687,7 @@
                                   Text="选择七天神像所在国家"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                              Margin="0,0,36,0"
                               ItemsSource="{Binding CountryList}"
                               SelectedItem="{Binding SelectedCountry}"
                               MinWidth="120" />
@@ -709,6 +710,7 @@
                                   Text="选择七天神像所在区域"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                              Margin="0,0,36,0"
                               ItemsSource="{Binding Areas}"
                               SelectedItem="{Binding SelectedArea}"
                               MinWidth="120" />
@@ -1713,6 +1715,7 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="多个设备使用逗号、分号或空格分隔 （请使用英文输入法）"
                                   TextWrapping="Wrap" />
+                    
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -1720,7 +1723,7 @@
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.BarkDeviceKeys, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                                TextWrapping="Wrap" />
                 </Grid>
 
                 <!-- 高级参数 -->
@@ -1741,16 +1744,20 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="critical（重要）&#x0a;active（默认）&#x0a;timeSensitive（专注下也会提醒）&#x0a;passive（通知但不提醒）"
+                                  Text="修改推送级别"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.BarkLevel, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ComboBox Grid.Row="0" 
+                              Grid.RowSpan="2" 
+                              Grid.Column="1"
+                              SelectedItem="{Binding Config.NotificationConfig.BarkLevel}"
+                              SelectedValuePath="Tag"
+                              Margin="0,0,36,0"
+                              MinWidth="120" >
+                        <ComboBoxItem Content="passive（通知但不提醒）" Tag="passive"/>
+                        <ComboBoxItem Content="critical（重要通知）" Tag="critical"/>
+                        <ComboBoxItem Content="active（默认通知）" Tag="active"/>
+                        <ComboBoxItem Content="sensitive（专注通知）" Tag="timeSensitive"/>
+                    </ComboBox>
                 </Grid>
 
                 <Grid Margin="16">
@@ -1770,16 +1777,18 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="例如: minuet, silence, bell"
+                                  Text="选择通知声音"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.BarkSound, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ComboBox Grid.Row="0" 
+                              Grid.RowSpan="2" 
+                              Grid.Column="1"
+                              SelectedItem="{Binding Config.NotificationConfig.BarkSound}"
+                              Margin="0,0,36,0"
+                              MinWidth="120" >
+                        <ComboBoxItem Content="minuet"/>
+                        <ComboBoxItem Content="silence" />
+                        <ComboBoxItem Content="bell"/>
+                    </ComboBox>
                 </Grid>
 
                 <Grid Margin="16">
@@ -1830,14 +1839,17 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="传1保存推送，传其他不保存"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ComboBox Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 MinWidth="180"
+                                 MaxWidth="800"
+                                 Margin="0,0,36,0"
+                                 SelectedValue="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
+                                 SelectedValuePath="Tag">
+                        <ComboBoxItem Content="是" Tag="1" />
+                        <ComboBoxItem Content="否" Tag="0" />
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1924,7 +1936,7 @@
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,24,0"
-                                     IsChecked="{Binding TelegramNotificationEnabled, Mode=TwoWay}" />
+                                     IsChecked="{Binding Config.NotificationConfig.TelegramNotificationEnabled, Mode=TwoWay}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1953,7 +1965,7 @@
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding TelegramBotToken, Mode=TwoWay}"
+                                Text="{Binding Config.NotificationConfig.TelegramBotToken, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
 
@@ -1982,7 +1994,7 @@
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding TelegramChatId, Mode=TwoWay}"
+                                Text="{Binding Config.NotificationConfig.TelegramChatId, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
 
@@ -2011,7 +2023,7 @@
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding TelegramApiBaseUrl, Mode=TwoWay}"
+                                Text="{Binding Config.NotificationConfig.TelegramApiBaseUrl, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
 

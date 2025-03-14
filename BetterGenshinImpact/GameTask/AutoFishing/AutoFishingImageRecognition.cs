@@ -17,21 +17,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             try
             {
-                using var mask = new Mat();
-                using var rgbMat = new Mat();
+                // 拉条框的黄色是：RGB 255, 255, 192 ~ HSV 43, 63, 255
+                // var testPixel = rgbMat.At<Vec3b>(105, 968);
+                using Mat rgbMat = src.CvtColor(ColorConversionCodes.BGR2HSV_FULL);
 
-                Cv2.CvtColor(src, rgbMat, ColorConversionCodes.BGR2RGB);
-                var lowPurple = new Scalar(255, 255, 192);
-                var highPurple = new Scalar(255, 255, 192);
-                Cv2.InRange(rgbMat, lowPurple, highPurple, mask);
+                var lowYellow = new Scalar(43 - 3, 63 - 20, 255 - 10);
+                var highYellow = new Scalar(43 + 3, 63 + 40, 255);
+                using Mat mask = rgbMat.InRange(lowYellow, highYellow);
+
                 Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary); //二值化
 
                 Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External,
                     ContourApproximationModes.ApproxSimple, null);
                 if (contours.Length > 0)
                 {
-                    var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Height >= 10);
-                    return boxes.ToList();
+                    var boxes = contours.Select(Cv2.MinAreaRect).Where(r => r.Angle % 90 <= 1)  // 剔除倾斜的
+                        .Select(r => r.BoundingRect()).ToList();
+
+                    boxes = boxes.Where(r => r.Height >= 10 && r.Width >= 5).ToList();  // 剔除太小的
+                    return boxes;
                 }
             }
             catch (Exception e)

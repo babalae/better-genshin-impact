@@ -71,15 +71,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                 .PushLeaf(() => new FindFishTimeout("等10秒", 10, blackboard, _logger, param.SaveScreenshotOnKeyTick))
                                             .End()
                                             .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                                            .UntilSuccess("重复抛竿")
-                                                .Sequence("重复抛竿序列")
-                                                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                                                    .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                            .MySimpleParallel("抛竿直到成功或出错", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                .UntilSuccess("重复抛竿")
+                                                    .Sequence("重复抛竿序列")
+                                                        .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                        .MySimpleParallel("举起鱼竿并抛竿", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                            .PushLeaf(() => new LiftAndHold("举起鱼竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                        .End()
+                                                    .End()
                                                 .End()
+                                                .Do("抛竿检查", _ => (blackboard.abort || blackboard.throwRodNoTarget || blackboard.throwRodNoBaitFish) ? BehaviourStatus.Failed : BehaviourStatus.Running)
                                             .End()
-                                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.throwRodNoTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
-                                            .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger, param.SaveScreenshotOnKeyTick))
                                             .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
+                                                .PushLeaf(() => new CheckThrowRod("检查抛竿结果", _logger, param.SaveScreenshotOnKeyTick))
                                                 .PushLeaf(() => new FishBite("自动提竿", _logger, param.SaveScreenshotOnKeyTick, input))
                                                 .PushLeaf(() => new FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick, input))
                                             .End()
@@ -87,7 +92,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                             .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                         .End()
                                     .End()
-                                    .Do("冒泡-找鱼-没鱼检查", _ => blackboard.noFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
+                                    .Do("冒泡-终止检查", _ => blackboard.abort ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
                                 .End()
                             .End()
                         .End()
@@ -145,6 +150,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (ra.FindMulti(AutoFightAssets.Instance.PRa).Count != 0)
             {
                 _logger.LogInformation("当前处于联机状态，不使用昼夜设置");
+                tickARound();
+            }
+            else if (param.FishingTimePolicy == FishingTimePolicy.DontChange)
+            {
                 tickARound();
             }
             else
@@ -228,7 +237,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 if (DateTime.Now >= timeout)
                 {
-                    blackboard.noFish = true;
+                    blackboard.abort = true;
                     logger.LogInformation($"{seconds}秒没有找到鱼，退出钓鱼界面");
                     return BehaviourStatus.Failed;
                 }

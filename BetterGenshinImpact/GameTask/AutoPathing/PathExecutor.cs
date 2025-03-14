@@ -358,7 +358,7 @@ public class PathExecutor
 
             if (forceTp) // 强制传送模式
             {
-                await new TpTask(ct).TpToStatueOfTheSeven();  // fix typos
+                await new TpTask(ct).TpToStatueOfTheSeven(); // fix typos
                 success = await new SwitchPartyTask().Start(partyName, ct);
             }
             else // 优先原地切换模式
@@ -383,7 +383,6 @@ public class PathExecutor
 
         return success;
     }
-
 
 
     private static string? FilterPartyNameByConditionConfig(PathingTask task)
@@ -606,7 +605,9 @@ public class PathExecutor
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
+
     public DateTime moveToStartTime;
+
     public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
@@ -895,10 +896,7 @@ public class PathExecutor
     {
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
-            //下落攻击接近目的地
-            Logger.LogInformation("动作：下落攻击");
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-            await Delay(1000, ct);
+            await ActionFactory.GetBeforeHandler(ActionEnum.StopFlying.Code).RunAsync(ct, waypoint);
         }
     }
 

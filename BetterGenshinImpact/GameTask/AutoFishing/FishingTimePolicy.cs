@@ -12,6 +12,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [Description("白天")]
         Daytime,
         [Description("夜晚")]
-        Nighttime
+        Nighttime,
+        [Description("不调")]
+        DontChange
     }
 }

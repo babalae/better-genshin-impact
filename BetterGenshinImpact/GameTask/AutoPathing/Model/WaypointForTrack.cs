@@ -2,7 +2,6 @@
 using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using System.Diagnostics.Eventing.Reader;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -24,7 +23,7 @@ public class WaypointForTrack : Waypoint
     /// </summary>
     public CombatScript? CombatScript { get; set; }
     public string? LogInfo { get; set; }
-
+    
     public WaypointForTrack(Waypoint waypoint)
     {
         Type = waypoint.Type;
