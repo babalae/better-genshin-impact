@@ -238,6 +238,7 @@ public class GraphicsCapture : IGameCapture
         _captureSession = null!;
         _captureFramePool = null!;
         _captureItem = null!;
+        _stagingTexture?.Dispose();
         _d3dDevice?.Dispose();
 
         _hWnd = IntPtr.Zero;
