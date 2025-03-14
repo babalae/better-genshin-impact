@@ -5,7 +5,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
-using System.Collections.Generic; // 添加对 System.Collections.Generic 命名空间的引用
+using System.Collections.Generic;
+using BetterGenshinImpact.Service.Notification; // 添加对 System.Collections.Generic 命名空间的引用
+using BetterGenshinImpact.Service.Notification; // 添加对 NotificationConfig 类型的引用
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -25,11 +27,12 @@ public class WebhookNotifier : INotifier
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
-    public WebhookNotifier(HttpClient httpClient, string endpoint = "", string sendTo = "")
+    public WebhookNotifier(HttpClient httpClient, NotificationConfig config)
     {
+        
         _httpClient = httpClient;
-        Endpoint = endpoint;
-        SendTo = sendTo; // 初始化 send_to 属性
+        Endpoint = config.WebhookEndpoint;
+        SendTo = config.WebhookSendTo; // 初始化 send_to 属性
     }
 
     public async Task SendAsync(BaseNotificationData content)

@@ -156,6 +156,8 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _webhookEndpoint = string.Empty;
     
 
+    [ObservableProperty] private string _webhookSendTo = string.Empty; // 修改属性名
+    
     [ObservableProperty] private string _webSocketEndpoint = string.Empty;
 
     [ObservableProperty] private bool _webSocketNotificationEnabled;
