@@ -1564,7 +1564,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="钓全天的鱼、还是只钓白天或夜晚的鱼"
+                                  Text="钓全天的鱼、还是只钓白天或夜晚的鱼、亦或不调整时间"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
