@@ -1070,15 +1070,7 @@
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right"
                                Command="{Binding TestWebhookCommand}"
-                               Content="发送"
-                               IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="1"
-                                  Margin="0,0,36,0"
-                                  HorizontalAlignment="Right"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding WebhookStatus}"
-                                  TextWrapping="Wrap" />
+                               Content="发送"/>
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
