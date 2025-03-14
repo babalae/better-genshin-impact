@@ -724,9 +724,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var rects = AutoFishingImageRecognition.GetFishBarRect(topMat);
             if (rects != null && rects.Count == 2)
             {
-                Rect _cur, _left;
+                Rect _cur, _right;
                 if (Math.Abs(rects[0].Height - rects[1].Height) > 10)
                 {
+                    if (saveScreenshotOnTerminate)
+                    {
+                        SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
+                    }
                     logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
                     return BehaviourStatus.Running;
                 }
@@ -734,20 +738,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (rects[0].Width < rects[1].Width)
                 {
                     _cur = rects[0];
-                    _left = rects[1];
+                    _right = rects[1];
                 }
                 else
                 {
                     _cur = rects[1];
-                    _left = rects[0];
+                    _right = rects[0];
                 }
 
-                if (_left.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在left左边
-                    || _cur.Width > _left.Width // left一定比cur宽
+                if (_right.X < _cur.X // cur 是游标位置, 在初始状态下，cur 一定在right左边
+                    || _cur.Width > _right.Width // right一定比cur宽
                     || _cur.X + _cur.Width > topMat.Width / 2 // cur 一定在屏幕左侧
-                    || _cur.X + _cur.Width > _left.X - _left.Width / 2 // cur 一定在left左侧+left的一半宽度
-                    || _cur.X + _cur.Width > topMat.Width / 2 - _left.Width // cur 一定在屏幕中轴线减去整个left的宽度的位置左侧
-                    || !(_left.X < topMat.Width / 2 && _left.X + _left.Width > topMat.Width / 2) // left肯定穿过游戏中轴线
+                    || _cur.X + _cur.Width > _right.X - _right.Width / 2 // cur 一定在right左侧+right的一半宽度
+                    || _cur.X + _cur.Width > topMat.Width / 2 - _right.Width // cur 一定在屏幕中轴线减去整个right的宽度的位置左侧
                    )
                 {
                     return BehaviourStatus.Running;
@@ -755,10 +758,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 int hExtra = _cur.Height, vExtra = _cur.Height / 4;
                 blackboard.fishBoxRect = new Rect(_cur.X - hExtra, _cur.Y - vExtra,
-                     (_left.X + _left.Width / 2 - _cur.X) * 2 + hExtra * 2, _cur.Height + vExtra * 2);
+                     (topMat.Width / 2 - _cur.X) * 2 + hExtra * 2, _cur.Height + vExtra * 2);
                 // VisionContext.Instance().DrawContent.PutRect("FishBox", _fishBoxRect.ToRectDrawable(new Pen(Color.LightPink, 2)));
                 using var boxRa = imageRegion.Derive(blackboard.fishBoxRect);
                 boxRa.DrawSelf("FishBox", new Pen(Color.LightPink, 2));
+                logger.LogInformation("  识别到钓鱼框");
                 return BehaviourStatus.Succeeded;
             }
 
@@ -773,10 +777,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
-        public Fishing(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
+        private readonly DrawContent drawContent;
+        public Fishing(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminate)
         {
             this.blackboard = blackboard;
             this.input = input;
+            this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
         protected override void OnInitialize()
@@ -785,7 +791,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
 
         private MOUSEEVENTF _prevMouseEvent = 0x0;
-        private bool _findFishBoxTips;
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
@@ -793,15 +798,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var rects = AutoFishingImageRecognition.GetFishBarRect(fishBarMat);
             if (rects != null && rects.Count > 0)
             {
-                if (rects.Count >= 2 && _prevMouseEvent == 0x0 && !_findFishBoxTips)
-                {
-                    _findFishBoxTips = true;
-                    logger.LogInformation("  识别到钓鱼框，自动拉扯中...");
-                }
-
                 // 超过3个矩形是异常情况，取高度最高的三个矩形进行识别
                 if (rects.Count > 3)
                 {
+                    if (saveScreenshotOnTerminate)
+                    {
+                        SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
+                    }
+                    logger.LogError("识别到超过3个矩形，取前三");
                     rects.Sort((a, b) => b.Height.CompareTo(a.Height));
                     rects.RemoveRange(3, rects.Count - 3);
                 }
@@ -882,8 +886,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 PutRects(imageRegion, new Rect(), new Rect(), new Rect());
                 // 没有矩形视为已经完成钓鱼
-                VisionContext.Instance().DrawContent.RemoveRect("FishBox");
-                _findFishBoxTips = false;
+                drawContent.RemoveRect("FishBox");
                 _prevMouseEvent = 0x0;
                 logger.LogInformation("  拉扯结束");
                 logger.LogInformation(@"└------------------------┘");
@@ -915,7 +918,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     fishBoxRa.ToRectDrawable(cur, "cur", _pen),
                     fishBoxRa.ToRectDrawable(right, "right", _pen),
                 }.Where(r => r.Rect.Height != 0).ToList();
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList("FishingBarAll", list);
+            drawContent.PutOrRemoveRectList("FishingBarAll", list);
         }
     }
 

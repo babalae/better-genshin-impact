@@ -14,6 +14,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [Theory]
         [InlineData(@"20250306111752053_FishBite_Succeeded.png")]
         [InlineData(@"20250306111752769_GetFishBoxArea_Succeeded.png")]
+        [InlineData(@"20250314164703100_FishBite_Succeeded_FP.png")]   // 假阳性
         /// <summary>
         /// 测试鱼咬钩，结果为成功
         /// </summary>

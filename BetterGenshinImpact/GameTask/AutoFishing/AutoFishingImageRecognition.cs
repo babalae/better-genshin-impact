@@ -31,10 +31,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     ContourApproximationModes.ApproxSimple, null);
                 if (contours.Length > 0)
                 {
-                    var boxes = contours.Select(Cv2.MinAreaRect).Where(r => r.Angle % 90 <= 1)  // 剔除倾斜的
-                        .Select(r => r.BoundingRect()).ToList();
-
-                    boxes = boxes.Where(r => r.Height >= 10 && r.Width >= 5).ToList();  // 剔除太小的
+                    contours = contours.Where(c => Cv2.MinAreaRect(c).Angle % 45 <= 1).ToArray();  // 剔除倾斜的；箭头边缘是45度角，在游标靠近两侧箭头时，箭头的最小外接是45度的
+                    List<Rect> boxes = contours.Select(Cv2.BoundingRect).ToList();
+                    Rect widest = boxes.OrderBy(b => b.Width).LastOrDefault();  // 取最宽的一根当作基准
+                    if (widest == default)
+                    {
+                        return null;
+                    }
+                    boxes = boxes.Where(r => Math.Abs(widest.Height - r.Height) < (widest.Height / 3) && r.Width > (widest.Height / 4)).ToList();  // 剔除高度差异太大的，和宽度太小的
                     return boxes;
                 }
             }

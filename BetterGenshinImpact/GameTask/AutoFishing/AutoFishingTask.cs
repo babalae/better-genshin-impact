@@ -326,41 +326,54 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
+            private readonly TimeProvider timeProvider;
+            private DateTimeOffset? pressFWaitEndTime;
+            private DateTimeOffset? clickWhiteConfirmButtonWaitEndTime;
+            private DateTimeOffset? overallWaitEndTime;
 
-            public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input) : base(name, logger, saveScreenshotOnTerminate)
+            public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
                 this.input = input;
+                this.timeProvider = timeProvider ?? TimeProvider.System;
             }
 
             protected override BehaviourStatus Update(ImageRegion imageRegion)
             {
                 if (Status == BehaviourStatus.Ready)
                 {
+                    overallWaitEndTime = timeProvider.GetLocalNow().AddSeconds(10);
                     return BehaviourStatus.Running;
                 }
 
-                if (Bv.FindFAndPress(imageRegion, input.Keyboard, "钓鱼"))
+                if ((pressFWaitEndTime == null || pressFWaitEndTime < timeProvider.GetLocalNow()) && Bv.FindFAndPress(imageRegion, input.Keyboard, "钓鱼"))
                 {
                     logger.LogInformation("按下钓鱼键");
-                    blackboard.Sleep(2000);
+                    pressFWaitEndTime = timeProvider.GetLocalNow().AddSeconds(3);
                     return BehaviourStatus.Running;
                 }
-                else if (Bv.ClickWhiteConfirmButton(imageRegion))
+                else if ((clickWhiteConfirmButtonWaitEndTime == null || clickWhiteConfirmButtonWaitEndTime < timeProvider.GetLocalNow()) && Bv.ClickWhiteConfirmButton(imageRegion))
                 {
                     logger.LogInformation("点击开始钓鱼");
 
                     this.blackboard.pitchReset = true;
 
-                    blackboard.Sleep(3000); // 这里要多等一会儿界面遮罩消退
+                    clickWhiteConfirmButtonWaitEndTime = timeProvider.GetLocalNow().AddSeconds(3);
 
                     return BehaviourStatus.Running;
                 }
 
                 if (imageRegion.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty())
                 {
-                    logger.LogInformation("进入钓鱼模式失败");
-                    return BehaviourStatus.Failed;
+                    if (overallWaitEndTime < timeProvider.GetLocalNow())
+                    {
+                        logger.LogInformation("进入钓鱼模式失败");
+                        return BehaviourStatus.Failed;
+                    }
+                    else
+                    {
+                        return BehaviourStatus.Running;
+                    }
                 }
                 else
                 {
