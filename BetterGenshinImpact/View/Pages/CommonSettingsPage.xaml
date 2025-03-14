@@ -1734,7 +1734,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="多个设备使用逗号、分号或空格分隔 （请使用英文输入法）"
+                                  Text="多个设备使用英文逗号、分号或空格分隔"
                                   TextWrapping="Wrap" />
 
                     <ui:TextBox Grid.Row="0"
@@ -1858,7 +1858,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="传1保存推送，传其他不保存"
+                                  Text="选择是否保存推送历史"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
