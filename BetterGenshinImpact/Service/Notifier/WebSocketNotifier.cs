@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
@@ -53,6 +53,7 @@ namespace BetterGenshinImpact.Service.Notifier
                 var json = JsonSerializer.Serialize(notificationData, _jsonSerializerOptions);
                 var buffer = System.Text.Encoding.UTF8.GetBytes(json);
                 await _webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, _cts.Token);
+                await CloseAsync(); // 添加关闭连接的代码
             }
             catch (WebSocketException ex)
             {
