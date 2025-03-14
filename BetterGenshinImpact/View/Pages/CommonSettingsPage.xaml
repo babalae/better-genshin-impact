@@ -1715,7 +1715,11 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="多个设备使用逗号、分号或空格分隔 （请使用英文输入法）"
                                   TextWrapping="Wrap" />
+<<<<<<< HEAD
 
+=======
+                    
+>>>>>>> upstream/main
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -1746,17 +1750,30 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="修改推送级别"
                                   TextWrapping="Wrap" />
+<<<<<<< HEAD
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
+=======
+                    <ComboBox Grid.Row="0" 
+                              Grid.RowSpan="2" 
+>>>>>>> upstream/main
                               Grid.Column="1"
                               SelectedItem="{Binding Config.NotificationConfig.BarkLevel}"
                               SelectedValuePath="Tag"
                               Margin="0,0,36,0"
+<<<<<<< HEAD
                               MinWidth="120">
                         <ComboBoxItem Content="passive（通知但不提醒）" Tag="passive" />
                         <ComboBoxItem Content="critical（重要通知）" Tag="critical" />
                         <ComboBoxItem Content="active（默认通知）" Tag="active" />
                         <ComboBoxItem Content="sensitive（专注通知）" Tag="timeSensitive" />
+=======
+                              MinWidth="120" >
+                        <ComboBoxItem Content="passive（通知但不提醒）" Tag="passive"/>
+                        <ComboBoxItem Content="critical（重要通知）" Tag="critical"/>
+                        <ComboBoxItem Content="active（默认通知）" Tag="active"/>
+                        <ComboBoxItem Content="sensitive（专注通知）" Tag="timeSensitive"/>
+>>>>>>> upstream/main
                     </ComboBox>
                 </Grid>
 
@@ -1779,6 +1796,7 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="选择通知声音"
                                   TextWrapping="Wrap" />
+<<<<<<< HEAD
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
@@ -1788,6 +1806,17 @@
                         <ComboBoxItem Content="minuet" />
                         <ComboBoxItem Content="silence" />
                         <ComboBoxItem Content="bell" />
+=======
+                    <ComboBox Grid.Row="0" 
+                              Grid.RowSpan="2" 
+                              Grid.Column="1"
+                              SelectedItem="{Binding Config.NotificationConfig.BarkSound}"
+                              Margin="0,0,36,0"
+                              MinWidth="120" >
+                        <ComboBoxItem Content="minuet"/>
+                        <ComboBoxItem Content="silence" />
+                        <ComboBoxItem Content="bell"/>
+>>>>>>> upstream/main
                     </ComboBox>
                 </Grid>
 
@@ -1840,6 +1869,7 @@
                                   Text="传1保存推送，传其他不保存"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
+<<<<<<< HEAD
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               MinWidth="180"
@@ -1847,6 +1877,15 @@
                               Margin="0,0,36,0"
                               SelectedValue="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
                               SelectedValuePath="Tag">
+=======
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 MinWidth="180"
+                                 MaxWidth="800"
+                                 Margin="0,0,36,0"
+                                 SelectedValue="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
+                                 SelectedValuePath="Tag">
+>>>>>>> upstream/main
                         <ComboBoxItem Content="是" Tag="1" />
                         <ComboBoxItem Content="否" Tag="0" />
                     </ComboBox>
