@@ -38,7 +38,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         return null;
                     }
-                    boxes = boxes.Where(r => Math.Abs(widest.Height - r.Height) < (widest.Height / 3) && r.Width > (widest.Height / 4)).ToList();  // 剔除高度差异太大的，和宽度太小的
+                    boxes = boxes.Where(r => Math.Abs((widest.Y + widest.Height / 2) - (r.Y + r.Height / 2)) < widest.Height / 5)   // 保持一条水平线
+                        .Where(r => Math.Abs(widest.Height - r.Height) < (widest.Height / 3) && r.Width > (widest.Height / 4)).ToList();  // 剔除高度差异太大的，和宽度太小的
                     return boxes;
                 }
             }
