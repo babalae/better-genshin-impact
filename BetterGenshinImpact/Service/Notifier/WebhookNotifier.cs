@@ -63,11 +63,16 @@ public class WebhookNotifier : INotifier
 
     private StringContent TransformData(BaseNotificationData notificationData)
     {
-        // 使用 SendTo 属性来设置 send_to 字段
+        // 使用 SendTo 属性来设置 send_to 字段，并将 notification_data 的内容合并到外层字典
         var dataToSend = new Dictionary<string, object>
         {
             { "send_to", SendTo },
-            { "notification_data", notificationData }
+            { "event", notificationData.Event },
+            { "result", notificationData.Result },
+            { "timestamp", notificationData.Timestamp },
+            { "screenshot", notificationData.Screenshot },
+            { "message", notificationData.Message },
+            { "data", notificationData.Data }
         };
 
         var serializedData = JsonSerializer.Serialize(dataToSend, _jsonSerializerOptions);
