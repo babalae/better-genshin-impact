@@ -295,6 +295,21 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
     
     [RelayCommand]
+    private async Task OnTestTelegramNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<TelegramNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
+    
+    [RelayCommand]
     private void ImportLocalScriptsRepoZip()
     {
         Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
