@@ -31,6 +31,8 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private string _barkCall = string.Empty;
 
+    [ObservableProperty] private string _barkCiphertext = string.Empty;
+
     /// <summary>
     /// 复制推送时指定复制的内容
     /// </summary>
