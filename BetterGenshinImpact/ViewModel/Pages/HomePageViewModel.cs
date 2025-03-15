@@ -112,6 +112,14 @@ public partial class HomePageViewModel : ViewModel
                 var odVm = App.GetService<OneDragonFlowViewModel>();
                 odVm?.OneKeyExecuteCommand.Execute(null);
             }
+            else if (args[1].Trim().Equals("--startGroups", StringComparison.InvariantCultureIgnoreCase) ||
+                     args.Length > 3)
+            {
+                var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
+                // 启动调度器
+                var scheduler = App.GetService<ScriptControlViewModel>();
+                scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
+            }
             else if (args[1].Contains("start"))
             {
                 _ = OnStartTriggerAsync();
