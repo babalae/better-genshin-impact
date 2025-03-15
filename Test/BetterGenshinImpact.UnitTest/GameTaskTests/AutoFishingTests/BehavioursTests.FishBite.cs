@@ -43,13 +43,16 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
-            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
+            FakeLogger logger = new FakeLogger();
+            FakeInputSimulator input = new FakeInputSimulator();
+
             //
-            FishBiteTimeout fishBiteTimeoutBehaviour = new FishBiteTimeout("-", 15, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider);
+            FishBiteTimeout fishBiteTimeoutBehaviour = new FishBiteTimeout("-", 15, logger, false, input, fakeTimeProvider);
             var sut = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("-", SimpleParallelPolicy.OnlyOneMustSucceed)
-                    .PushLeaf(() => new FishBite("-", new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent()))
+                    //.PushLeaf(() => new CheckThrowRod("-", logger, false, fakeTimeProvider)) // todo
+                    .PushLeaf(() => new FishBite("-", logger, false, input, drawContent: new FakeDrawContent()))
                     .PushLeaf(() => fishBiteTimeoutBehaviour)
                 .End()
                 .Build();
@@ -60,7 +63,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.False(fishBiteTimeoutBehaviour.leftButtonClicked);
 
             //
-            fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(15));
+            fakeTimeProvider.Advance(TimeSpan.FromSeconds(15));
 
             //
             actual = sut.Tick(imageRegion);
@@ -70,7 +73,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.True(fishBiteTimeoutBehaviour.leftButtonClicked);
 
             //
-            fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(16));
+            fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
             bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pFishBite}");
             imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 

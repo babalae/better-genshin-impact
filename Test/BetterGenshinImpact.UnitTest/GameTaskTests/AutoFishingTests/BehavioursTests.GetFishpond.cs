@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Config;
 using Compunet.YoloV8;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
+using Microsoft.Extensions.Time.Testing;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -33,7 +34,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var blackboard = new Blackboard(predictor, sleep: i => { });
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
             BehaviourStatus actualStatus = sut.Tick(imageRegion);
 
             //
@@ -63,7 +64,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             blackboard.throwRodNoBaitFishFailures = throwRodNoTargetFishfailures.ToList();
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
             BehaviourStatus actualStatus = sut.Tick(imageRegion);
 
             //
@@ -96,7 +97,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var blackboard = new Blackboard(predictor, sleep: i => { });
 
             //
-            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, drawContent: new FakeDrawContent());
+            GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
             sut.Tick(imageRegion);
             int actual = blackboard.fishpond?.Fishes?.Count(f => f.FishType.Name == fishName) ?? 0;
 

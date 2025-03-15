@@ -31,10 +31,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class GetFishpond : BaseBehaviour<ImageRegion>
     {
         private readonly Blackboard blackboard;
+        private readonly TimeProvider timeProvider;
+        private DateTimeOffset? detectInterval;
         private readonly DrawContent drawContent;
-        public GetFishpond(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
+        public GetFishpond(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
+            this.timeProvider = timeProvider ?? TimeProvider.System;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
@@ -45,6 +48,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
+            if (detectInterval != null && timeProvider.GetLocalNow() < detectInterval)
+            {
+                return BehaviourStatus.Running;
+            }
+            else
+            {
+                detectInterval = timeProvider.GetLocalNow().AddSeconds(0.5);
+            }
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
@@ -53,7 +64,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == Rect.Empty)
             {
-                blackboard.Sleep(500);
                 return BehaviourStatus.Running;
             }
             else
@@ -198,6 +208,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
     }
 
+    [Obsolete]
     /// <summary>
     /// 《How to Cast a Fly Rod: Step-by-Step Guide for Beginners》：https://hookedonfly.fishing/2024/10/how-to-cast-a-fly-rod/
     /// </summary>
@@ -267,6 +278,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             foundTarget = false;
             mouseMoveI *= -1;
             mouseMoveR = 0d;
+
+            input.Mouse.LeftButtonDown();
+            blackboard.pitchReset = true;
+            logger.LogInformation("长按举起鱼竿");
         }
 
         protected override void OnTerminate(BehaviourStatus status)
@@ -509,37 +524,38 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
     /// <summary>
     /// 检查抛竿结果
-    /// 避免往红色靶点抛竿导致失败
     /// </summary>
     /// <param name="imageRegion"></param>
     public class CheckThrowRod : BaseBehaviour<ImageRegion>
     {
-        private DateTime? timeDelay;
+        private readonly TimeProvider timeProvider;
+        private DateTimeOffset? timeDelay;
         private bool hasChecked;
 
         /// <summary>
         /// 检查抛竿结果
+        /// 如果仍发现选饵按钮则失败
         /// </summary>
-        /// <param name="name"></param>
-        public CheckThrowRod(string name, ILogger logger, bool saveScreenshotOnTerminat) : base(name, logger, saveScreenshotOnTerminat)
+        public CheckThrowRod(string name, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
         {
+            this.timeProvider = timeProvider ?? TimeProvider.System;
         }
 
         protected override void OnInitialize()
         {
-            timeDelay = DateTime.Now.AddSeconds(3);
+            timeDelay = timeProvider.GetLocalNow().AddSeconds(3);
             hasChecked = false;
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            if (DateTime.Now < timeDelay || hasChecked)
+            if (timeProvider.GetLocalNow() < timeDelay || hasChecked)
             {
                 return BehaviourStatus.Running;
             }
 
-            using Region baitRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
-            if (baitRectArea.IsEmpty())
+            using Region btnRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
+            if (btnRectArea.IsEmpty())
             {
                 hasChecked = true;
                 return BehaviourStatus.Running;
@@ -561,7 +577,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool leftButtonClicked;
 
         /// <summary>
-        /// 如果未超时返回运行中，超时返回失败
+        /// 如果未超时返回运行中，超时返回失败并按左键提竿
         /// </summary>
         /// <param name="name"></param>
         /// <param name="seconds"></param>
@@ -598,6 +614,52 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else
             {
                 return BehaviourStatus.Running;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 检查提竿结果
+    /// </summary>
+    public class CheckRaiseHook : BaseBehaviour<ImageRegion>
+    {
+        private readonly TimeProvider timeProvider;
+        private DateTimeOffset? timeDelay;
+        private bool hasChecked;
+
+        /// <summary>
+        /// 检查提竿结果
+        /// 如果仍发现提竿按钮则失败
+        /// </summary>
+        /// <param name="name"></param>
+        public CheckRaiseHook(string name, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
+        {
+            this.timeProvider = timeProvider ?? TimeProvider.System;
+        }
+
+        protected override void OnInitialize()
+        {
+            timeDelay = timeProvider.GetLocalNow().AddSeconds(3);
+            hasChecked = false;
+        }
+
+        protected override BehaviourStatus Update(ImageRegion imageRegion)
+        {
+            if (timeProvider.GetLocalNow() < timeDelay || hasChecked)
+            {
+                return BehaviourStatus.Running;
+            }
+
+            using Region btnRectArea = imageRegion.Find(AutoFishingAssets.Instance.WaitBiteButtonRo);   // todo 解耦以适用单元测试
+            if (btnRectArea.IsEmpty())
+            {
+                hasChecked = true;
+                return BehaviourStatus.Running;
+            }
+            else
+            {
+                logger.LogInformation("提竿失败");
+                return BehaviourStatus.Failed;
             }
         }
     }
@@ -777,11 +839,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
+        private readonly TimeProvider timeProvider;
         private readonly DrawContent drawContent;
-        public Fishing(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminate)
+        private DateTimeOffset? noDetectionDuringTime;
+        public Fishing(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminate)
         {
             this.blackboard = blackboard;
             this.input = input;
+            this.timeProvider = timeProvider ?? TimeProvider.System;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
         }
 
@@ -885,6 +950,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else
             {
                 PutRects(imageRegion, new Rect(), new Rect(), new Rect());
+
+                if (noDetectionDuringTime == null)
+                {
+                    noDetectionDuringTime = timeProvider.GetLocalNow().AddSeconds(1);
+                    return BehaviourStatus.Running;
+                }
+                else if (timeProvider.GetLocalNow() < noDetectionDuringTime)
+                {
+                    return BehaviourStatus.Running;
+                }
+
                 // 没有矩形视为已经完成钓鱼
                 drawContent.RemoveRect("FishBox");
                 _prevMouseEvent = 0x0;
@@ -894,11 +970,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 保证鼠标松开
                 input.Mouse.LeftButtonUp();
 
-                blackboard.Sleep(2000);
 
                 return BehaviourStatus.Succeeded;
             }
 
+
+            noDetectionDuringTime = null;
             return BehaviourStatus.Running;
         }
 
@@ -949,5 +1026,59 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return BehaviourStatus.Succeeded;
         }
 
+    }
+
+    /// <summary>
+    /// 检查开始钓一条鱼的初始状态
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    public class CheckInitalState : BaseBehaviour<ImageRegion>
+    {
+        private readonly IInputSimulator input;
+        private readonly TimeProvider timeProvider;
+        private DateTimeOffset? moveMouseInterval;
+
+        /// <summary>
+        /// 检查开始钓一条鱼的初始状态
+        /// 必须能看到换饵按钮，直到看到才能成功
+        /// 由于模板匹配召回率低，会转动视角
+        /// </summary>
+        public CheckInitalState(string name, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
+        {
+            this.input = input;
+            this.timeProvider = timeProvider ?? TimeProvider.System;
+        }
+
+        protected override void OnInitialize()
+        {
+            logger.LogInformation("开始寻找换饵图标");
+            theta = 0d;
+        }
+
+        private double theta;
+
+        protected override BehaviourStatus Update(ImageRegion imageRegion)
+        {
+            using Region btnRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
+            if (btnRectArea.IsEmpty())
+            {
+                if (moveMouseInterval == null || timeProvider.GetLocalNow() > moveMouseInterval)
+                {
+                    theta += Math.PI / 10;
+                    double rho = 10 + 2 * theta;
+                    double x = rho * Math.Cos(theta);
+                    double y = rho * Math.Sin(theta);
+
+                    input.Mouse.MoveMouseBy((int)x, (int)y);
+                    moveMouseInterval = timeProvider.GetLocalNow().AddSeconds(0.1);
+                }
+                return BehaviourStatus.Running;
+            }
+            else
+            {
+                logger.LogInformation("找到换饵图标");
+                return BehaviourStatus.Succeeded;
+            }
+        }
     }
 }

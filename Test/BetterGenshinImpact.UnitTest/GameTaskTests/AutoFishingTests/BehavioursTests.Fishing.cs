@@ -1,6 +1,7 @@
 ﻿using BehaviourTree;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
+using Microsoft.Extensions.Time.Testing;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -24,7 +25,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            FakeDrawContent fakeDrawContent = new FakeDrawContent();
+            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
@@ -32,12 +34,22 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             getFishBoxArea.Tick(imageRegion);
 
             bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
 
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
             //
-            Fishing sut = new Fishing("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
+            Fishing sut = new Fishing("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent);
             BehaviourStatus actual = sut.Tick(imageRegion);
+
+            //
+            Assert.Equal(BehaviourStatus.Running, actual);
+
+            //
+            fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
+
+            //
+            actual = sut.Tick(imageRegion);
 
             //
             Assert.Equal(BehaviourStatus.Running, actual);
@@ -52,7 +64,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            FakeDrawContent fakeDrawContent = new FakeDrawContent();
+            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
@@ -60,12 +73,22 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             getFishBoxArea.Tick(imageRegion);
 
             bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
 
+            FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
             //
-            Fishing sut = new Fishing("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
+            Fishing sut = new Fishing("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent);
             BehaviourStatus actual = sut.Tick(imageRegion);
+
+            //
+            Assert.Equal(BehaviourStatus.Running, actual);
+
+            //
+            fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
+
+            //
+            actual = sut.Tick(imageRegion);
 
             //
             Assert.Equal(BehaviourStatus.Succeeded, actual);
