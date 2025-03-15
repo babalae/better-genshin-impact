@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Config;
 using Compunet.YoloV8;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -25,7 +26,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishpondTest_VariousFishExist_ShouldSuccess(string screenshot1080p, IEnumerable<string> fishNames)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
@@ -53,7 +54,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishpondTest_AllIgnored_ShouldBeRunning(string screenshot1080p, IEnumerable<string> chooseBaitfailures, IEnumerable<string> throwRodNoTargetFishfailures)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
@@ -88,7 +89,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishpondTest_FishCount_ShouldSuccess(string screenshot1080p, string fishName, int count)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();

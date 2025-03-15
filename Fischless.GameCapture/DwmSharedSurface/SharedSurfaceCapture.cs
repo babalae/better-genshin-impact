@@ -3,6 +3,8 @@ using Fischless.GameCapture.Graphics.Helpers;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System.Diagnostics;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
 using Device = SharpDX.Direct3D11.Device;
 
@@ -11,6 +13,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
     public class SharedSurfaceCapture : IGameCapture
     {
         private nint _hWnd;
+        private static readonly object LockObject = new object();
         private Device? _d3dDevice;
 
         public void Dispose() => Stop();
@@ -64,34 +67,45 @@ namespace Fischless.GameCapture.DwmSharedSurface
             return region;
         }
 
-        public Bitmap? Capture()
+        public Mat? Capture()
         {
             if (_hWnd == nint.Zero)
             {
                 return null;
             }
 
-
-            NativeMethods.DwmGetDxSharedSurface(_hWnd, out var phSurface, out _, out _, out _, out _);
-            if (phSurface == nint.Zero)
+            lock (LockObject)
             {
-                return null;
-            }
+                NativeMethods.DwmGetDxSharedSurface(_hWnd, out var phSurface, out _, out _, out _, out _);
+                if (phSurface == nint.Zero)
+                {
+                    return null;
+                }
 
-            return ToBitmap(phSurface);
+       
+                if (_d3dDevice == null)
+                {
+                    Debug.WriteLine("D3Device is null.");
+                    return null;
+                }
+
+                using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
+                using var stagingTexture = CreateStagingTexture(surfaceTexture, _d3dDevice);
+                var mat = stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
+                if (mat == null)
+                {
+                    return null;
+                }
+                var bgrMat = new Mat();
+                Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
+                return bgrMat;
+            }
         }
+        
 
-        private Bitmap? ToBitmap(nint phSurface)
+        private Texture2D CreateStagingTexture(Texture2D surfaceTexture, Device device)
         {
-            if (_d3dDevice == null)
-            {
-                Debug.WriteLine("D3Device is null.");
-                return null;
-            }
-
-            using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
-
-            var staging = new Texture2D(_d3dDevice, new Texture2DDescription
+            return new Texture2D(device, new Texture2DDescription
             {
                 Width = _region == null ? surfaceTexture.Description.Width : _region.Value.Right - _region.Value.Left,
                 Height = _region == null ? surfaceTexture.Description.Height : _region.Value.Bottom - _region.Value.Top,
@@ -104,9 +118,6 @@ namespace Fischless.GameCapture.DwmSharedSurface
                 CpuAccessFlags = CpuAccessFlags.Read,
                 OptionFlags = ResourceOptionFlags.None
             });
-
-
-            return staging.CreateBitmap(_d3dDevice, surfaceTexture, _region);
         }
 
         public void Stop()

@@ -2,7 +2,7 @@
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -23,6 +23,7 @@ namespace BetterGenshinImpact.Service;
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
+
     private static bool IsCurrentHourEqual(string input)
     {
         // 尝试将输入字符串转换为整数
@@ -41,52 +42,51 @@ public partial class ScriptService : IScriptService
         // 如果输入非数字或不合法，返回 false
         return false;
     }
+
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
         groupName ??= "默认";
 
-        var hasTimer = false;
-        var list = ReloadScriptProjects(projectList, ref hasTimer);
+        var list = ReloadScriptProjects(projectList);
 
-        // 针对JS 脚本，检查是否包含定时器操作
-        var jsProjects = ExtractJsProjects(list);
-        if (!hasTimer && jsProjects.Count > 0)
-        {
-            var codeList = await ReadCodeList(jsProjects);
-            hasTimer = HasTimerOperation(codeList);
-        }
+        // // 针对JS 脚本，检查是否包含定时器操作
+        // var jsProjects = ExtractJsProjects(list);
+        // if (!hasTimer && jsProjects.Count > 0)
+        // {
+        //     var codeList = await ReadCodeList(jsProjects);
+        //     hasTimer = HasTimerOperation(codeList);
+        // }
 
         // 没启动时候，启动截图器
         await StartGameTask();
 
         if (!string.IsNullOrEmpty(groupName))
         {
-            if (hasTimer)
-            {
-                _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
-            }
+            // if (hasTimer)
+            // {
+            //     _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
+            // }
 
             _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
         }
 
-        var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-        
+        // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
+
         Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
-        
-        await new TaskRunner(timerOperation)
+
+        await new TaskRunner()
             .RunThreadAsync(async () =>
             {
                 var stopwatch = new Stopwatch();
 
                 foreach (var project in list)
                 {
-                    
                     if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
                     {
                         _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                         continue;
                     }
-                    
+
                     if (project.Status != "Enabled")
                     {
                         _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
@@ -103,24 +103,21 @@ public partial class ScriptService : IScriptService
                     {
                         try
                         {
-                            if (hasTimer)
-                            {
-                                TaskTriggerDispatcher.Instance().ClearTriggers();
-                            }
+                            TaskTriggerDispatcher.Instance().ClearTriggers();
+
 
                             _logger.LogInformation("------------------------------");
 
                             stopwatch.Reset();
                             stopwatch.Start();
                             await ExecuteProject(project);
-                            
+
                             //多次执行时及时中断
                             if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
                             {
                                 _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                                 break;
                             }
-                            
                         }
                         catch (NormalEndException e)
                         {
@@ -144,7 +141,6 @@ public partial class ScriptService : IScriptService
                             _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
-
                         }
 
                         await Task.Delay(2000);
@@ -152,14 +148,18 @@ public partial class ScriptService : IScriptService
                 }
             });
 
+        // 还原定时器
+        TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
+        
         if (!string.IsNullOrEmpty(groupName))
         {
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
+
         Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
     }
 
-    private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList, ref bool hasTimer)
+    private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
     {
         var list = new List<ScriptGroupProject>();
         foreach (var project in projectList)
@@ -181,14 +181,14 @@ public partial class ScriptService : IScriptService
                 var newProject = ScriptGroupProject.BuildPathingProject(project.Name, project.FolderName);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
-                hasTimer = true;
+                // hasTimer = true;
             }
             else if (project.Type == "Shell")
             {
                 var newProject = ScriptGroupProject.BuildShellProject(project.Name);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
-                hasTimer = true;
+                // hasTimer = true;
             }
         }
 
@@ -204,23 +204,22 @@ public partial class ScriptService : IScriptService
         target.GroupInfo = source.GroupInfo;
     }
 
-    private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)
-    {
-        var jsProjects = new List<ScriptProject>();
-        foreach (var project in list)
-        {
-            if (project is { Type: "Javascript", Project: not null })
-            {
-                jsProjects.Add(project.Project);
-            }
-        }
-
-        return jsProjects;
-    }
+    // private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)
+    // {
+    //     var jsProjects = new List<ScriptProject>();
+    //     foreach (var project in list)
+    //     {
+    //         if (project is { Type: "Javascript", Project: not null })
+    //         {
+    //             jsProjects.Add(project.Project);
+    //         }
+    //     }
+    //
+    //     return jsProjects;
+    // }
 
     private async Task ExecuteProject(ScriptGroupProject project)
     {
-       
         if (project.Type == "Javascript")
         {
             if (project.Project == null)
@@ -241,7 +240,8 @@ public partial class ScriptService : IScriptService
             _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
             await project.Run();
         }
-        else if (project.Type == "Shell"){
+        else if (project.Type == "Shell")
+        {
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
             await project.Run();
         }

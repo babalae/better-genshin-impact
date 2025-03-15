@@ -9,7 +9,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
@@ -87,7 +87,6 @@ public class AutoTrackPathTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
             Logger.LogInformation("→ {Text}", "自动路线结束");
 
             if (hasLock)
@@ -101,8 +100,6 @@ public class AutoTrackPathTask
     {
         SystemControl.ActivateWindow();
         Logger.LogInformation("→ {Text}", "自动路线，启动！");
-        TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-        Sleep(TaskContext.Instance().Config.TriggerInterval * 5, _ct); // 等待缓存图像
     }
 
     public async Task DoTask()

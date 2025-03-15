@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
@@ -125,7 +124,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         {
             var s = await File.ReadAllTextAsync(path);
 
-            await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            await new TaskRunner()
                 .RunThreadAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)

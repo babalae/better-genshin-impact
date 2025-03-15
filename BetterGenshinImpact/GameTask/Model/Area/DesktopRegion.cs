@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.Helpers;
 using Fischless.WindowsInput;
 using System.Drawing;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
 
@@ -67,8 +68,8 @@ public class DesktopRegion : Region
         Simulation.SendInput.Mouse.MoveMouseBy((int)dx, (int)dy);
     }
 
-    public GameCaptureRegion Derive(Bitmap captureBitmap, int x, int y)
+    public GameCaptureRegion Derive(Mat captureMat, int x, int y)
     {
-        return new GameCaptureRegion(captureBitmap, x, y, this, new TranslationConverter(x, y));
+        return new GameCaptureRegion(captureMat, x, y, this, new TranslationConverter(x, y));
     }
 }
