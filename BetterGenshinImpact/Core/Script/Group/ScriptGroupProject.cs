@@ -55,8 +55,7 @@ public partial class ScriptGroupProject : ObservableObject
     private string _schedule = string.Empty;
 
     [JsonIgnore]
-    public string ScheduleDesc =>
-        ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
+    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
     [ObservableProperty]
     private int _runNum = 1;
