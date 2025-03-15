@@ -181,6 +181,17 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _workweixinWebhookUrl = string.Empty;
 
     /// <summary>
+    /// 钉钉Webhook地址
+    /// </summary>
+    [ObservableProperty] private string _dingDingWebhookUrl = string.Empty;
+
+    /// <summary>
+    /// 钉钉Webhook密钥
+    /// </summary>
+    [ObservableProperty] private string _dingDingSecret = string.Empty;
+
+
+    /// <summary>
     ///     xx信息推送通知API密钥
     /// </summary>
     [ObservableProperty] private string _xxtuiApiKey = string.Empty;
