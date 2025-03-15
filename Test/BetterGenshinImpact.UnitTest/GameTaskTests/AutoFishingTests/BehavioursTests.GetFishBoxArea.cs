@@ -10,6 +10,7 @@ using System.Drawing;
 using Microsoft.Extensions.Time.Testing;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -25,8 +26,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishBoxArea_ShouldSuccess(string screenshot1080p)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(bitmap, 0, 0,  drawContent: new FakeDrawContent());
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
@@ -45,7 +46,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishBoxArea_ShouldFail()
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\202503012143011486@900p.png");
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\202503012143011486@900p.png");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
 
             var blackboard = new Blackboard(null, sleep: i => { });

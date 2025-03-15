@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -34,13 +33,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private readonly INavigationService _navigationService;
 
     private readonly NotificationService _notificationService;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _webhookStatus = string.Empty;
-    
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
@@ -164,13 +156,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     public void OnSwitchTakenScreenshotEnabled()
     {
-        if (Config.CommonConfig.ScreenshotEnabled)
-        {
-            if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.NormalTrigger)
-            {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-            }
-        }
     }
 
     [RelayCommand]
@@ -200,14 +185,15 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnTestWebhook()
     {
-        IsLoading = true;
-        WebhookStatus = string.Empty;
-
         var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
-
-        WebhookStatus = res.Message;
-
-        IsLoading = false;
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
     }
 
     [RelayCommand]
