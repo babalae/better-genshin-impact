@@ -27,8 +27,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ThrowRodTest_VariousFish_ShouldSuccess(string screenshot1080p, string selectedBaitName)
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
 
@@ -57,8 +57,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ThrowRodTest_VariousFish_ShouldFail(string screenshot1080p, string selectedBaitName)
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
 
@@ -86,8 +86,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ThrowRodTest_NoBaitFish_ShouldFail(string screenshot1080p, string selectedBaitName)
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
 
@@ -127,8 +127,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ThrowRodTest_Target_ShouldBeTheLeftOne()
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\202503082114541115.png");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\202503082114541115.png");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
 
@@ -148,8 +148,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.Equal(blackboard.fishpond.Fishes.OrderBy(f => f.Rect.X).First(), actual);
 
             //
-            bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\202503082114560489.png");
-            imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            mat = new Mat(@$"..\..\..\Assets\AutoFishing\202503082114560489.png");
+            imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             //
             sut.Tick(imageRegion);
@@ -169,8 +169,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ThrowRodTest_NoTarget_ShouldFail(string screenshot1080p)
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
 

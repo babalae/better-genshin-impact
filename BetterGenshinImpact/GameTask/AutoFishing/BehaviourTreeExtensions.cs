@@ -117,7 +117,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public abstract class BaseBehaviour<TImageRegion> : IBehaviour<TImageRegion>, IDisposable where TImageRegion : ImageRegion
     {
-        private readonly bool saveScreenshotOnTerminate;
+        protected readonly bool saveScreenshotOnTerminate;
 
         protected readonly ILogger logger;
         public string Name { get; }

@@ -71,12 +71,7 @@ public class ImageRegion : Region
         }
     }
 
-    public ImageRegion(Bitmap bitmap, int x, int y, Region? owner = null, INodeConverter? converter = null, DrawContent? drawContent = null) : base(x, y, bitmap.Width, bitmap.Height, owner, converter, drawContent)
-    {
-        _srcBitmap = bitmap;
-    }
-
-    public ImageRegion(Mat mat, int x, int y, Region? owner = null, INodeConverter? converter = null, DrawContent? drawContent = null) : base(x, y, mat.Width, mat.Height, owner, converter)
+    public ImageRegion(Mat mat, int x, int y, Region? owner = null, INodeConverter? converter = null, DrawContent? drawContent = null) : base(x, y, mat.Width, mat.Height, owner, converter, drawContent)
     {
         _srcMat = mat;
     }
