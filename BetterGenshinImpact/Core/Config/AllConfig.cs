@@ -51,13 +51,13 @@ public partial class AllConfig : ObservableObject
     [ObservableProperty]
     private int _triggerInterval = 50;
 
-    /// <summary>
-    ///     WGC使用位图缓存
-    ///     高帧率情况下，可能会导致卡顿
-    ///     云原神可能会出现黑屏
-    /// </summary>
-    [ObservableProperty]
-    private bool _wgcUseBitmapCache = true;
+    // /// <summary>
+    // ///     WGC使用位图缓存
+    // ///     高帧率情况下，可能会导致卡顿
+    // ///     云原神可能会出现黑屏
+    // /// </summary>
+    // [ObservableProperty]
+    // private bool _wgcUseBitmapCache = true;
 
     /// <summary>
     /// 自动修复Win11下BitBlt截图方式不可用的问题

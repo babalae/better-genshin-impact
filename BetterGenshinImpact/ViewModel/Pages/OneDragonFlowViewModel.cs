@@ -15,7 +15,7 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
@@ -213,7 +213,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 没启动的时候先启动
         await ScriptService.StartGameTask();
 
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunThreadAsync(async () =>
             {
                 Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
