@@ -124,6 +124,42 @@ public class NotificationService : IHostedService
                 TaskContext.Instance().Config.NotificationConfig.TelegramChatId,
                 TaskContext.Instance().Config.NotificationConfig.TelegramApiBaseUrl
             ));
+
+        // Xxtui推送通知初始化
+        if (TaskContext.Instance().Config.NotificationConfig.XxtuiNotificationEnabled)
+        {
+            // 解析渠道列表
+            var channelsStr = TaskContext.Instance().Config.NotificationConfig.XxtuiChannels;
+            XxtuiChannel[] channels;
+
+            if (!string.IsNullOrEmpty(channelsStr))
+            {
+                var channelStrings = channelsStr.Split(',');
+                var validChannels = new XxtuiChannel[channelStrings.Length];
+                var validCount = 0;
+
+                for (var i = 0; i < channelStrings.Length; i++)
+                    if (Enum.TryParse<XxtuiChannel>(channelStrings[i].Trim(), out var parsedChannel))
+                        validChannels[validCount++] = parsedChannel;
+
+                // 调整数组大小以匹配有效通道数
+                if (validCount < channelStrings.Length) Array.Resize(ref validChannels, validCount);
+
+                channels = validChannels;
+            }
+            else
+            {
+                // 默认使用微信公众号
+                channels = new[] { XxtuiChannel.WX_MP };
+            }
+
+            // 注册通知器
+            _notifierManager.RegisterNotifier(new XxtuiNotifier(
+                TaskContext.Instance().Config.NotificationConfig.XxtuiApiKey,
+                TaskContext.Instance().Config.NotificationConfig.XxtuiFrom,
+                channels
+            ));
+        }
     }
 
     public void RefreshNotifiers()
