@@ -1375,7 +1375,7 @@
         <!--  钉钉机器人  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
-                         Icon="{ui:SymbolIcon ChatMultiple24}">
+                         Icon="{ui:SymbolIcon Bot24}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
