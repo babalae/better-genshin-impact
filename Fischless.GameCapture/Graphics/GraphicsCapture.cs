@@ -29,6 +29,10 @@ public class GraphicsCapture : IGameCapture
 
     private ResourceRegion? _region;
 
+    // HDR相关
+    private bool _isHdrEnabled;
+    private DirectXPixelFormat _pixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
+
 
     // 最新帧的存储
     private Mat? _latestFrame;
@@ -58,10 +62,14 @@ public class GraphicsCapture : IGameCapture
         // 创建D3D设备
         _d3dDevice = Direct3D11Helper.CreateDevice();
 
+        // 检测HDR状态
+        _isHdrEnabled = IsHdrEnabled(_hWnd);
+        _pixelFormat = _isHdrEnabled ? DirectXPixelFormat.R16G16B16A16Float : DirectXPixelFormat.B8G8R8A8UIntNormalized;
+
         // 创建帧池
         _captureFramePool = Direct3D11CaptureFramePool.Create(
             _d3dDevice,
-            DirectXPixelFormat.B8G8R8A8UIntNormalized,
+            _pixelFormat,
             2,
             _captureItem.Size);
 
@@ -114,6 +122,28 @@ public class GraphicsCapture : IGameCapture
         return region;
     }
 
+    public static bool IsHdrEnabled(nint hWnd)
+    {
+        try
+        {
+            var hdc = User32.GetDC(hWnd);
+            if (hdc != IntPtr.Zero)
+            {
+                int bitsPerPixel = Gdi32.GetDeviceCaps(hdc, Gdi32.DeviceCap.BITSPIXEL);
+                User32.ReleaseDC(hWnd, hdc);
+
+                // 如果位深大于等于32位，认为支持HDR
+                return bitsPerPixel >= 32;
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private Texture2D CreateStagingTexture(Direct3D11CaptureFrame frame, Device device)
     {
         // 创建可以用于CPU读取的暂存纹理
@@ -121,7 +151,7 @@ public class GraphicsCapture : IGameCapture
         {
             CpuAccessFlags = CpuAccessFlags.Read,
             BindFlags = BindFlags.None,
-            Format = Format.B8G8R8A8_UNorm,
+            Format = _isHdrEnabled ? Format.R16G16B16A16_Float : Format.B8G8R8A8_UNorm,
             Width = _region == null ? frame.ContentSize.Width : _region.Value.Right - _region.Value.Left,
             Height = _region == null ? frame.ContentSize.Height : _region.Value.Bottom - _region.Value.Top,
             OptionFlags = ResourceOptionFlags.None,
@@ -151,7 +181,7 @@ public class GraphicsCapture : IGameCapture
             frameSize = frame.ContentSize;
             _captureFramePool.Recreate(
                 _d3dDevice,
-                DirectXPixelFormat.B8G8R8A8UIntNormalized,
+                _pixelFormat,
                 2,
                 frameSize
             );
@@ -186,7 +216,15 @@ public class GraphicsCapture : IGameCapture
         try
         {
             // 创建一个新的Mat
-            var newFrame = new Mat(stagingTexture.Description.Height, stagingTexture.Description.Width, MatType.CV_8UC4, dataBox.DataPointer);
+            var newFrame = new Mat(stagingTexture.Description.Height, stagingTexture.Description.Width,
+                _isHdrEnabled ? MatType.MakeType(7, 4) : MatType.CV_8UC4, dataBox.DataPointer);
+
+            // 如果是HDR，进行HDR到SDR的转换
+            if (_isHdrEnabled)
+            {
+                // rgb -> bgr
+                newFrame = ConvertHdrToSdr(newFrame);
+            }
 
             // 使用写锁更新最新帧
             _frameAccessLock.EnterWriteLock();
@@ -208,6 +246,21 @@ public class GraphicsCapture : IGameCapture
             // 取消映射纹理
             d3dDevice.ImmediateContext.UnmapSubresource(surfaceTexture, 0);
         }
+    }
+
+    private static Mat ConvertHdrToSdr(Mat hdrMat)
+    {
+        // 创建一个目标 8UC4 Mat
+        Mat sdkMat = new Mat(hdrMat.Size(), MatType.CV_8UC4);
+
+        // 将 32FC4 缩放到 0-255 范围并转换为 8UC4
+        // 注意：这种简单缩放可能不会保留 HDR 的所有细节
+        hdrMat.ConvertTo(sdkMat, MatType.CV_8UC4, 255.0);
+
+        // 将 HDR 的 RGB 通道转换为 BGR
+        Cv2.CvtColor(sdkMat, sdkMat, ColorConversionCodes.RGBA2BGRA);
+
+        return sdkMat;
     }
 
     public Mat? Capture()
