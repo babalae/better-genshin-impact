@@ -40,6 +40,9 @@ public class GraphicsCapture : IGameCapture
 
     // 用于获取帧数据的临时纹理和暂存资源
     private Texture2D? _stagingTexture;
+    
+    private long _lastFrameTime = 0;
+
 
     public void Dispose() => Stop();
 
@@ -63,7 +66,7 @@ public class GraphicsCapture : IGameCapture
         _d3dDevice = Direct3D11Helper.CreateDevice();
 
         // 检测HDR状态
-        _isHdrEnabled = IsHdrEnabled(_hWnd);
+        _isHdrEnabled = false;
         _pixelFormat = _isHdrEnabled ? DirectXPixelFormat.R16G16B16A16Float : DirectXPixelFormat.B8G8R8A8UIntNormalized;
 
         // 创建帧池
@@ -171,6 +174,14 @@ public class GraphicsCapture : IGameCapture
         {
             return;
         }
+        
+        // 限制最高处理帧率为66fps
+        var now = Kernel32.GetTickCount();
+        if (now - _lastFrameTime < 15)
+        {
+            return;
+        }
+        _lastFrameTime = now;
 
         var frameSize = _captureItem.Size;
 
@@ -298,18 +309,18 @@ public class GraphicsCapture : IGameCapture
         IsCapturing = false;
 
         // 释放最新帧
-        _frameAccessLock.EnterWriteLock();
-        try
-        {
-            _latestFrame?.Dispose();
-            _latestFrame = null;
-        }
-        finally
-        {
-            _frameAccessLock.ExitWriteLock();
-        }
-
-        _frameAccessLock.Dispose();
+        // _frameAccessLock.EnterWriteLock();
+        // try
+        // {
+        //     _latestFrame?.Dispose();
+        //     _latestFrame = null;
+        // }
+        // finally
+        // {
+        //     _frameAccessLock.ExitWriteLock();
+        // }
+        //
+        // _frameAccessLock.Dispose();
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)
