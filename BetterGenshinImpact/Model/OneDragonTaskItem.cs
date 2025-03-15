@@ -63,7 +63,17 @@ public partial class OneDragonTaskItem : ObservableObject
                 Action = async () => { await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token); };
                 break;
             case "合成树脂":
-                Action = async () => { await new GoToCraftingBenchTask().Start(config.CraftingBenchCountry, CancellationContext.Instance.Cts.Token); };
+                Action = async () =>
+                {
+                    try
+                    {
+                        await new GoToCraftingBenchTask().Start(config.CraftingBenchCountry, CancellationContext.Instance.Cts.Token);
+                    }
+                    catch (Exception e)
+                    {
+                        TaskControl.Logger.LogError("合成树脂执行异常：" + e.Message);
+                    }
+                };
                 break;
             case "自动秘境":
                 Action = async () =>
