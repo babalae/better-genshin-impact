@@ -1371,8 +1371,28 @@ public partial class ScriptControlViewModel : ViewModel
         {
             ReadScriptGroup();
         }
-        var selectedGroups = ScriptGroups.Where(x => names.Contains(x.Name)).ToList();
-        await StartGroups(selectedGroups);
+        List<ScriptGroup> scriptGroups = new List<ScriptGroup>();
+        foreach (var name in names)
+        {
+            try
+            {
+                var group = ScriptGroups.First(x => x.Name == name);
+                scriptGroups.Add(group);
+            }
+            catch (InvalidOperationException)
+            {
+                _logger.LogWarning("传入的配置组名称不存在:{Name}", name);
+            }
+        }
+
+        if (scriptGroups.Count > 0)
+        {
+            await StartGroups(scriptGroups);
+        }
+        else
+        {
+            _logger.LogWarning("需要执行的配置组为空");
+        }
     }
 
     private async Task StartGroups(List<ScriptGroup> scriptGroups)
