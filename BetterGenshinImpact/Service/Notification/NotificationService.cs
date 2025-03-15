@@ -1,18 +1,18 @@
-using BetterGenshinImpact.Service.Notification.Model;
-using BetterGenshinImpact.Service.Notifier;
-using BetterGenshinImpact.Service.Notifier.Exception;
-using BetterGenshinImpact.Service.Notifier.Interface;
-using Microsoft.Extensions.Hosting;
 using System;
 using System.Drawing;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.Service.Notifier.Exception;
+using BetterGenshinImpact.Service.Notifier.Interface;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -30,16 +30,6 @@ public class NotificationService : IHostedService
         InitializeNotifiers();
     }
 
-    public static NotificationService Instance()
-    {
-        if (_instance == null)
-        {
-            throw new Exception("Not instantiated");
-        }
-
-        return _instance;
-    }
-
     public Task StartAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
@@ -50,12 +40,20 @@ public class NotificationService : IHostedService
         return Task.CompletedTask;
     }
 
+    public static NotificationService Instance()
+    {
+        if (_instance == null) throw new Exception("Not instantiated");
+
+        return _instance;
+    }
+
 
     private void InitializeNotifiers()
     {
         if (TaskContext.Instance().Config.NotificationConfig.WebhookEnabled)
         {
-            _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
+            _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient,
+                TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
         }
 
         if (TaskContext.Instance().Config.NotificationConfig.WindowsUwpNotificationEnabled)
@@ -65,37 +63,37 @@ public class NotificationService : IHostedService
 
         if (TaskContext.Instance().Config.NotificationConfig.FeishuNotificationEnabled)
         {
-            _notifierManager.RegisterNotifier(new FeishuNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.FeishuWebhookUrl));
+            _notifierManager.RegisterNotifier(new FeishuNotifier(NotifyHttpClient,
+                TaskContext.Instance().Config.NotificationConfig.FeishuWebhookUrl));
         }
 
         if (TaskContext.Instance().Config.NotificationConfig.WorkweixinNotificationEnabled)
         {
-            _notifierManager.RegisterNotifier(new WorkWeixinNotifier(NotifyHttpClient, TaskContext.Instance().Config.NotificationConfig.WorkweixinWebhookUrl));
+            _notifierManager.RegisterNotifier(new WorkWeixinNotifier(NotifyHttpClient,
+                TaskContext.Instance().Config.NotificationConfig.WorkweixinWebhookUrl));
         }
 
-            // WebSocket通知初始化
-            if (TaskContext.Instance().Config.NotificationConfig.WebSocketNotificationEnabled)
+        // WebSocket通知初始化
+        if (TaskContext.Instance().Config.NotificationConfig.WebSocketNotificationEnabled)
+        {
+            var jsonSerializerOptions = new JsonSerializerOptions
             {
-                var jsonSerializerOptions = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-                };
-                var cts = new CancellationTokenSource();
-                _notifierManager.RegisterNotifier(new WebSocketNotifier(
-                    TaskContext.Instance().Config.NotificationConfig.WebSocketEndpoint,
-                    jsonSerializerOptions,
-                    cts
-                ));
-            }
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            };
+            var cts = new CancellationTokenSource();
+            _notifierManager.RegisterNotifier(new WebSocketNotifier(
+                TaskContext.Instance().Config.NotificationConfig.WebSocketEndpoint,
+                jsonSerializerOptions,
+                cts
+            ));
+        }
 
-            // Bark通知初始化
-            if (TaskContext.Instance().Config.NotificationConfig.BarkNotificationEnabled)
-            {
-                _notifierManager.RegisterNotifier(new BarkNotifier(
-                    TaskContext.Instance().Config.NotificationConfig.BarkDeviceKeys,
-                    TaskContext.Instance().Config.NotificationConfig.BarkApiEndpoint
-                ));
-            }
+        // Bark通知初始化
+        if (TaskContext.Instance().Config.NotificationConfig.BarkNotificationEnabled)
+            _notifierManager.RegisterNotifier(new BarkNotifier(
+                TaskContext.Instance().Config.NotificationConfig.BarkDeviceKeys,
+                TaskContext.Instance().Config.NotificationConfig.BarkApiEndpoint
+            ));
 
         // 邮件通知初始化
         if (TaskContext.Instance().Config.NotificationConfig.EmailNotificationEnabled)
@@ -110,6 +108,15 @@ public class NotificationService : IHostedService
                 TaskContext.Instance().Config.NotificationConfig.ToEmail
             ));
         }
+
+        // Telegram通知初始化
+        if (TaskContext.Instance().Config.NotificationConfig.TelegramNotificationEnabled)
+            _notifierManager.RegisterNotifier(new TelegramNotifier(
+                NotifyHttpClient, // 使用共享的HttpClient
+                TaskContext.Instance().Config.NotificationConfig.TelegramBotToken,
+                TaskContext.Instance().Config.NotificationConfig.TelegramChatId,
+                TaskContext.Instance().Config.NotificationConfig.TelegramApiBaseUrl
+            ));
     }
 
     public void RefreshNotifiers()

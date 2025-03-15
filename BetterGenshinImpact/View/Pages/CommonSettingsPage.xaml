@@ -15,7 +15,7 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-    
+
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
@@ -605,7 +605,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        
+
         <!--回血相关设置-->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
@@ -636,84 +636,86 @@
             <StackPanel>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
                                   Text="是否就近七天神像恢复血量"
-                                  FontTypography="Body"/>
+                                  FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
-                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                     IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}"/>
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
                                   Text="传送到七天神像之后是否需要移动后回血"
-                                  FontTypography="Body"/>
+                                  FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="启用后将自动向七天神像方向移动"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
-                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                     IsChecked="{Binding Config.TpConfig.ShouldMove}"/>
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.TpConfig.ShouldMove}" />
                 </Grid>
                 <!-- 指定国家 -->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
                                   Text="七天神像国家"
-                                  FontTypography="Body"/>
+                                  FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="选择七天神像所在国家"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                 ItemsSource="{Binding CountryList}"
-                                 SelectedItem="{Binding SelectedCountry}"
-                                 MinWidth="120"/>
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding CountryList}"
+                              SelectedItem="{Binding SelectedCountry}"
+                              MinWidth="120" />
                 </Grid>
 
                 <!-- 指定区域 -->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" Grid.Column="0" 
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
                                   Text="七天神像区域"
-                                  FontTypography="Body"/>
+                                  FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="选择七天神像所在区域"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"/>
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                                 ItemsSource="{Binding Areas}"
-                                 SelectedItem="{Binding SelectedArea}"
-                                 MinWidth="120"/>
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding Areas}"
+                              SelectedItem="{Binding SelectedArea}"
+                              MinWidth="120" />
                 </Grid>
-                
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -773,7 +775,7 @@
                                Command="{Binding ImportLocalScriptsRepoZipCommand}"
                                Content="导入" />
                 </Grid>
-                
+
             </ui:CardControl.Header>
         </ui:CardControl>
 
@@ -800,16 +802,16 @@
                                   Text="使按键绑定设置对外部脚本生效"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               IsChecked="{Binding Config.KeyBindingsConfig.GlobalKeyMappingEnabled}"/>
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.KeyBindingsConfig.GlobalKeyMappingEnabled}" />
                 </Grid>
 
             </ui:CardControl.Header>
         </ui:CardControl>
-       <!--  其他设置  -->
-        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" >
+        <!--  其他设置  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf141;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
@@ -861,7 +863,7 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />
                 </Grid>
-                
+
             </StackPanel>
         </ui:CardExpander>
         <ui:TextBlock Margin="0,0,0,8"
@@ -1373,7 +1375,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestWebSocketNotificationCommand}"
                                Content="发送" />
-                    </Grid>
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
         <!--  Email通知  -->
@@ -1693,7 +1695,7 @@
                                 Text="{Binding Config.NotificationConfig.BarkApiEndpoint, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
-                
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1713,6 +1715,7 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="多个设备使用逗号、分号或空格分隔 （请使用英文输入法）"
                                   TextWrapping="Wrap" />
+                    
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -1720,9 +1723,9 @@
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.BarkDeviceKeys, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                                TextWrapping="Wrap" />
                 </Grid>
-                
+
                 <!-- 高级参数 -->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1741,18 +1744,22 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="critical（重要）&#x0a;active（默认）&#x0a;timeSensitive（专注下也会提醒）&#x0a;passive（通知但不提醒）"
+                                  Text="修改推送级别"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.BarkLevel, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ComboBox Grid.Row="0" 
+                              Grid.RowSpan="2" 
+                              Grid.Column="1"
+                              SelectedItem="{Binding Config.NotificationConfig.BarkLevel}"
+                              SelectedValuePath="Tag"
+                              Margin="0,0,36,0"
+                              MinWidth="120" >
+                        <ComboBoxItem Content="passive（通知但不提醒）" Tag="passive"/>
+                        <ComboBoxItem Content="critical（重要通知）" Tag="critical"/>
+                        <ComboBoxItem Content="active（默认通知）" Tag="active"/>
+                        <ComboBoxItem Content="sensitive（专注通知）" Tag="timeSensitive"/>
+                    </ComboBox>
                 </Grid>
-                
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1770,18 +1777,20 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="例如: minuet, silence, bell"
+                                  Text="选择通知声音"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.BarkSound, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ComboBox Grid.Row="0" 
+                              Grid.RowSpan="2" 
+                              Grid.Column="1"
+                              SelectedItem="{Binding Config.NotificationConfig.BarkSound}"
+                              Margin="0,0,36,0"
+                              MinWidth="120" >
+                        <ComboBoxItem Content="minuet"/>
+                        <ComboBoxItem Content="silence" />
+                        <ComboBoxItem Content="bell"/>
+                    </ComboBox>
                 </Grid>
-                
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1810,7 +1819,7 @@
                                 Text="{Binding Config.NotificationConfig.BarkGroup, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
-                
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1830,14 +1839,17 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="传1保存推送，传其他不保存"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ComboBox Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 MinWidth="180"
+                                 MaxWidth="800"
+                                 Margin="0,0,36,0"
+                                 SelectedValue="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
+                                 SelectedValuePath="Tag">
+                        <ComboBoxItem Content="是" Tag="1" />
+                        <ComboBoxItem Content="否" Tag="0" />
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1892,6 +1904,154 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestBarkNotificationCommand}"
+                               Content="发送" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+        <!--  Telegram通知  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Send20}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用 Telegram 通知"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="Telegram 机器人相关设置"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.TelegramNotificationEnabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="机器人 Token"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="填写 Telegram 机器人的 Token"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.TelegramBotToken, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="聊天 ID"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="填写接收消息的聊天 ID"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.TelegramChatId, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="API 基础 URL（可选）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="留空使用官方 API，或填写第三方 API 地址"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.TelegramApiBaseUrl, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+
+                <!-- 测试按钮 -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="测试 Telegram 通知"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="发送测试通知"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding TestTelegramNotificationCommand}"
                                Content="发送" />
                 </Grid>
             </StackPanel>
