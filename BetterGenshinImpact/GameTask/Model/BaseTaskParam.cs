@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model.Enum;
+﻿
 using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Model;
