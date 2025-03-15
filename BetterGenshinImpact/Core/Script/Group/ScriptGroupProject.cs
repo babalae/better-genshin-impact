@@ -55,7 +55,8 @@ public partial class ScriptGroupProject : ObservableObject
     private string _schedule = string.Empty;
 
     [JsonIgnore]
-    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
+    public string ScheduleDesc =>
+        ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
     [ObservableProperty]
     private int _runNum = 1;
@@ -171,12 +172,18 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             }
+
             await pathingTask.Pathing(task);
         }
         else if (Type == "Shell")
         {
-            var shellConfig = GroupInfo?.Config.ShellConfig ?? new ShellConfig();
-            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig));
+            ShellConfig? shellConfig = null;
+            if (GroupInfo?.Config.EnableShellConfig ?? false)
+            {
+                shellConfig = GroupInfo?.Config.ShellConfig;
+            }
+
+            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
             await task.Start(CancellationContext.Instance.Cts.Token);
         }
     }

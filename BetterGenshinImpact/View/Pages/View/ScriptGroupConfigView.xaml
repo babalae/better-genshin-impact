@@ -1,20 +1,22 @@
 ﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              Width="800"
-             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
-             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              d:DataContext="{d:DesignInstance Type=pages:ScriptGroupConfigViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Height="800">
-        <StackPanel Margin="42,16,42,12"   Width="700">
+    <ScrollViewer Height="800"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto">
+        <StackPanel Width="700" Margin="42,16,42,12">
 
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
@@ -71,7 +73,7 @@
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
-                                         IsChecked="{Binding PathingConfig.AutoPickEnabled}"/>
+                                         IsChecked="{Binding PathingConfig.AutoPickEnabled}" />
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
@@ -120,7 +122,7 @@
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
-                                         IsChecked="{Binding PathingConfig.IsVisitStatueBeforeSwitchParty}"/>
+                                         IsChecked="{Binding PathingConfig.IsVisitStatueBeforeSwitchParty}" />
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
@@ -389,7 +391,7 @@
                                          Grid.Column="1"
                                          Margin="0,0,24,0"
                                          IsChecked="{Binding PathingConfig.AutoFightEnabled, Mode=TwoWay}" />
-                        <!---->
+                        <!--    -->
                     </Grid>
                 </ui:CardExpander.Header>
                 <StackPanel>
@@ -418,8 +420,8 @@
                                    Grid.RowSpan="2"
                                    Grid.Column="1"
                                    Margin="0,0,12,0"
-                                   Content="脚本仓库"
                                    Command="{Binding OpenLocalScriptRepoCommand}"
+                                   Content="脚本仓库"
                                    Icon="{ui:SymbolIcon Archive24}" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
@@ -436,13 +438,12 @@
                                   SelectedItem="{Binding PathingConfig.AutoFightConfig.StrategyName, Mode=TwoWay}">
                             <b:Interaction.Triggers>
                                 <b:EventTrigger EventName="DropDownOpened">
-                                    <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
-                                                           CommandParameter="Combat" />
+                                    <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}" CommandParameter="Combat" />
                                 </b:EventTrigger>
                             </b:Interaction.Triggers>
                         </ComboBox>
                     </Grid>
-                   <Grid Margin="16">
+                    <Grid Margin="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -471,11 +472,11 @@
                                     TextWrapping="Wrap" />
                     </Grid>
                     <Grid Margin="16">
-                        
+
                         <ui:CardExpander Margin="0,0,0,12"
                                          ContentPadding="0"
                                          IsExpanded="False">
-                           
+
                             <ui:CardExpander.Header>
                                 <Grid>
 
@@ -505,83 +506,83 @@
                                 </Grid>
                             </ui:CardExpander.Header>
                             <StackPanel>
-                        <Grid Margin="16">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                                            <Grid Margin="16">
-                            
-                            <ui:CardExpander Margin="0,0,0,12"
-                                             ContentPadding="0"
-                                             IsExpanded="False">
+                                <Grid Margin="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Margin="16">
 
-                                <ui:CardExpander.Header>
-                                    <Grid>
+                                        <ui:CardExpander Margin="0,0,0,12"
+                                                         ContentPadding="0"
+                                                         IsExpanded="False">
 
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <ui:TextBlock Grid.Row="0"
-                                                      Grid.Column="0"
-                                                      FontTypography="Body"
-                                                      Text="更快检查结束战斗"
-                                                      TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
-                                                      Grid.Column="0"
-                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
-                                                      TextWrapping="Wrap" />
-                                        <ui:ToggleSwitch Grid.Row="0"
-                                                         Grid.RowSpan="2"
-                                                         Grid.Column="1"
-                                                         Margin="0,0,36,0"
-                                                         IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.FastCheckEnabled, Mode=TwoWay}" />
+                                            <ui:CardExpander.Header>
+                                                <Grid>
+
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:TextBlock Grid.Row="0"
+                                                                  Grid.Column="0"
+                                                                  FontTypography="Body"
+                                                                  Text="更快检查结束战斗"
+                                                                  TextWrapping="Wrap" />
+                                                    <ui:TextBlock Grid.Row="1"
+                                                                  Grid.Column="0"
+                                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                                  Text="快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                                  TextWrapping="Wrap" />
+                                                    <ui:ToggleSwitch Grid.Row="0"
+                                                                     Grid.RowSpan="2"
+                                                                     Grid.Column="1"
+                                                                     Margin="0,0,36,0"
+                                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.FastCheckEnabled, Mode=TwoWay}" />
+                                                </Grid>
+                                            </ui:CardExpander.Header>
+                                            <StackPanel>
+                                                <Grid Margin="16">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:TextBlock Grid.Row="0"
+                                                                  Grid.Column="0"
+                                                                  FontTypography="Body"
+                                                                  Text="更快检查结束战斗参数"
+                                                                  TextWrapping="Wrap" />
+                                                    <ui:TextBlock Grid.Row="1"
+                                                                  Grid.Column="0"
+                                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                                  Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                                  TextWrapping="Wrap" />
+                                                    <ui:TextBox Grid.Row="0"
+                                                                Grid.RowSpan="2"
+                                                                Grid.Column="1"
+                                                                MinWidth="180"
+                                                                MaxWidth="800"
+                                                                Margin="0,0,36,0"
+                                                                Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.FastCheckParams, Mode=TwoWay}"
+                                                                TextWrapping="Wrap" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </ui:CardExpander>
                                     </Grid>
-                                    </ui:CardExpander.Header>
-                                        <StackPanel>
-                                            <Grid Margin="16">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <ui:TextBlock Grid.Row="0"
-                                                              Grid.Column="0"
-                                                              FontTypography="Body"
-                                                              Text="更快检查结束战斗参数"
-                                                              TextWrapping="Wrap" />
-                                                <ui:TextBlock Grid.Row="1"
-                                                              Grid.Column="0"
-                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                              Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
-                                                              TextWrapping="Wrap" />
-                                                <ui:TextBox Grid.Row="0"
-                                                            Grid.RowSpan="2"
-                                                            Grid.Column="1"
-                                                            MinWidth="180"
-                                                            MaxWidth="800"
-                                                            Margin="0,0,36,0"
-                                                            Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.FastCheckParams, Mode=TwoWay}"
-                                                            TextWrapping="Wrap" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </ui:CardExpander>
+
                                 </Grid>
-                            
-                            </Grid>
                                 <Grid Margin="16">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -606,7 +607,7 @@
                                                 Grid.Column="1"
                                                 MinWidth="120"
                                                 Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.CheckEndDelay}" />
-                                </Grid>  
+                                </Grid>
                                 <Grid Margin="16">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -620,22 +621,22 @@
                                                   Grid.Column="0"
                                                   FontTypography="Body"
                                                   Text="按键触发后检查延时"
-                                                  TextWrapping="Wrap"/>
+                                                  TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
-                                                  TextWrapping="Wrap"/>
+                                                  TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
                                                 Grid.Column="1"
                                                 MinWidth="120"
                                                 Text="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.BeforeDetectDelay}" />
                                 </Grid>
-                                
+
                             </StackPanel>
-                            </ui:CardExpander>
-                        
+                        </ui:CardExpander>
+
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
@@ -711,6 +712,138 @@
                                     Grid.Column="1"
                                     MinWidth="120"
                                     Text="{Binding PathingConfig.AutoFightConfig.Timeout}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             Icon="{ui:SymbolIcon FlashSettings24}"
+                             IsExpanded="True">
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Shell执行配置"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      TextWrapping="Wrap">
+                            在本组中执行Shell命令会使用这里的配置。如关闭此项，则使用默认配置。
+                        </ui:TextBlock>
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         IsChecked="{Binding ScriptGroupConfig.EnableShellConfig, Mode=TwoWay}" />
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="禁用Shell任务"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="如果打开，则Shell任务会被跳过执行"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding ShellConfig.Disable}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Shell执行超时"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="最长等待命令返回的时间，单位秒。如果时间&lt;=0则不等待，直接返回。"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="120"
+                                    Text="{Binding ShellConfig.Timeout}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="隐藏命令执行窗口"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="推荐启用，不然会有一个大黑框。"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding ShellConfig.NoWindow}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="在Log中记录命令输出"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="打开的话若命令有输出会在Log中显示，关闭则不显示。(只有命令执行成功且有输出才会显示)"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding ShellConfig.Output}" />
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>
