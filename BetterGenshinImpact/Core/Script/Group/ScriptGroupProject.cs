@@ -132,7 +132,6 @@ public partial class ScriptGroupProject : ObservableObject
         {
             throw new Exception("FolderName 为空");
         }
-
         Project = new ScriptProject(FolderName);
     }
 
@@ -144,7 +143,6 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 throw new Exception("JS脚本未初始化");
             }
-
             JsScriptSettingsObject ??= new ExpandoObject();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
@@ -171,12 +169,18 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             }
+
             await pathingTask.Pathing(task);
         }
         else if (Type == "Shell")
         {
-            var shellConfig = GroupInfo?.Config.ShellConfig ?? new ShellConfig();
-            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig));
+            ShellConfig? shellConfig = null;
+            if (GroupInfo?.Config.EnableShellConfig ?? false)
+            {
+                shellConfig = GroupInfo?.Config.ShellConfig;
+            }
+
+            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
             await task.Start(CancellationContext.Instance.Cts.Token);
         }
     }

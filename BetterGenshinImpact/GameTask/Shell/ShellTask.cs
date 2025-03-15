@@ -62,8 +62,8 @@ public class ShellTask(ShellTaskParam param) : ISoloTask
             if (timeoutSignal is { IsCancellationRequested: true })
             {
                 TaskControl.Logger.LogError("shell {Shell} 执行超时", param.Command);
+                return;
             }
-
             TaskControl.Logger.LogError("shell {Shell} 被取消", param.Command);
             return;
         }

@@ -15,4 +15,10 @@ public partial class ScriptGroupConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private ShellConfig _shellConfig = new();
+    
+    /// <summary>
+    /// 是否启用 Shell 执行配置
+    /// </summary>
+    [ObservableProperty]
+    private bool _enableShellConfig;
 }
