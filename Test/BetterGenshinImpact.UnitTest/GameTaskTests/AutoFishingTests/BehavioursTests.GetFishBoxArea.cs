@@ -26,8 +26,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishBoxArea_ShouldSuccess(string screenshot1080p)
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0,  drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0,  drawContent: new FakeDrawContent());
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
@@ -46,8 +46,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void GetFishBoxArea_ShouldFail()
         {
             //
-            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\202503012143011486@900p.png");
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\202503012143011486@900p.png");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
@@ -70,8 +70,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.Equal(BehaviourStatus.Running, actual);
 
             //
-            bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\20250306111752769_GetFishBoxArea_Succeeded.png");
-            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: new FakeDrawContent());
+            mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250306111752769_GetFishBoxArea_Succeeded.png");
+            imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
             fakeTimeProvider.Advance(TimeSpan.FromSeconds(6));
 
             //

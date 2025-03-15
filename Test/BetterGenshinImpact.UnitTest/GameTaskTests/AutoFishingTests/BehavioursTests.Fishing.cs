@@ -2,9 +2,9 @@
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Time.Testing;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,17 +24,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void Fishing_ShouldBeRunning(string screenshot1080pGetFishBoxArea, string screenshot1080p)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
             FakeDrawContent fakeDrawContent = new FakeDrawContent();
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
             GetFishBoxArea getFishBoxArea = new GetFishBoxArea("-", blackboard, new FakeLogger(), false);
             getFishBoxArea.Tick(imageRegion);
 
-            bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
+            mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
@@ -63,17 +63,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void Fishing_ShouldSuccess(string screenshot1080pGetFishBoxArea, string screenshot1080p)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
             FakeDrawContent fakeDrawContent = new FakeDrawContent();
-            var imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
 
             var blackboard = new Blackboard(null, sleep: i => { });
 
             GetFishBoxArea getFishBoxArea = new GetFishBoxArea("-", blackboard, new FakeLogger(), false);
             getFishBoxArea.Tick(imageRegion);
 
-            bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            imageRegion = new GameCaptureRegion(bitmap, 0, 0, drawContent: fakeDrawContent);
+            mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: fakeDrawContent);
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 

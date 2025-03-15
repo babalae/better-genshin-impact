@@ -4,9 +4,9 @@ using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using Microsoft.Extensions.Time.Testing;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,8 +24,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ChooseBaitTest_VariousBait_ShouldSuccess(string screenshot1080p, IEnumerable<string> fishNames)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new ImageRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
             var blackboard = new Blackboard(null, sleep: i => { })
             {
@@ -54,8 +54,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ChooseBaitTest_VariousBait_ShouldFail(string screenshot1080p, IEnumerable<string> fishNames)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new ImageRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
             var blackboard = new Blackboard(null, sleep: i => { })
             {
@@ -105,8 +105,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ChooseBaitTest_AllBaitIgnored_Case1_FailureListShouldBeExpected()
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
-            var imageRegion = new ImageRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
             IEnumerable<string> fishNames = new string[] { "sunfish", "koi", "koi head", "medaka" };
             var blackboard = new Blackboard(null, sleep: i => { })
@@ -210,8 +210,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void ChooseBaitTest_AllBaitIgnored_Case2_FailureListShouldBeExpected()
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
-            var imageRegion = new ImageRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
             IEnumerable<string> fishNames = new string[] { "koi", "koi head", "sunfish" };
             var blackboard = new Blackboard(null, sleep: i => { })
