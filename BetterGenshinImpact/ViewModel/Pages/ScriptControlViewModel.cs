@@ -63,7 +63,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     public readonly string LogPath = Global.Absolute(@"log");
-    
+
 
     public override void OnNavigatedTo()
     {
@@ -1362,25 +1362,38 @@ public partial class ScriptControlViewModel : ViewModel
                 .Select(kv => kv.Key)
                 .ToList();
 
-            _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", selectedGroups.Select(x => x.Name)));
+            await StartGroups(selectedGroups);
+        }
+    }
+    public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
+    {
+        if( ScriptGroups.Count == 0)
+        {
+            ReadScriptGroup();
+        }
+        var selectedGroups = ScriptGroups.Where(x => names.Contains(x.Name)).ToList();
+        await StartGroups(selectedGroups);
+    }
 
-            try
+    private async Task StartGroups(List<ScriptGroup> scriptGroups)
+    {
+        _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
+        try
+        {
+            RunnerContext.Instance.IsContinuousRunGroup = true;
+            foreach (var scriptGroup in scriptGroups)
             {
-                RunnerContext.Instance.IsContinuousRunGroup = true;
-                foreach (var scriptGroup in selectedGroups)
-                {
-                    await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
-                    await Task.Delay(2000);
-                }
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
+                await Task.Delay(2000);
             }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
-            finally
-            {
-                RunnerContext.Instance.Reset();
-            }
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.Message);
+        }
+        finally
+        {
+            RunnerContext.Instance.Reset();
         }
     }
 }
