@@ -88,7 +88,7 @@ public class AutoDomainTask : ISoloTask
     static int IsDead(Bitmap image)
     {
         (double brightness, double MeanDiff )= CalcRgbDiff(image);
-        if (MeanDiff<2 && brightness<180){
+        if (MeanDiff<0.8 && brightness<150){
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string filePath = $"image_{timestamp}.png"; // 定义文件名
             image.Save(filePath); // 保存图像
@@ -613,31 +613,35 @@ public class AutoDomainTask : ISoloTask
                 Sleep(200);
                 throw new RetryException("存在角色被击败，前往七天神像复活");
             };
+            List<int> offsets = new List<int> { 0, 16 }; //切人时头像框左右平移，所以带上偏移每个角色截图两次
+            foreach (var x_offset in offsets){
+                var avatar1 = ra.DeriveCrop(new Rect(1794-x_offset, 252, 14, 25)).SrcBitmap;
+                var avatar2 = ra.DeriveCrop(new Rect(1794-x_offset, 348, 14, 25)).SrcBitmap;
+                var avatar3 = ra.DeriveCrop(new Rect(1794-x_offset, 444, 14, 25)).SrcBitmap;
+                var avatar4 = ra.DeriveCrop(new Rect(1794-x_offset, 540, 14, 25)).SrcBitmap;
+                if (IsDead(avatar1) == 1)
+                {
+                    Logger.LogInformation("1号位阵亡");
+                    on_death();
+                }
+                if (IsDead(avatar2) == 1)
+                {
+                    Logger.LogInformation("2号位阵亡");
+                    on_death();
+                }
+                if (IsDead(avatar3) == 1)
+                {
+                    Logger.LogInformation("3号位阵亡");
+                    on_death();
+                }
+                if (IsDead(avatar4) == 1)
+                {
+                    Logger.LogInformation("4号位阵亡");
+                    on_death();
+                }
 
-            var avatar1=ra.DeriveCrop(new Rect(1794,252,14,25)).SrcBitmap;
-            var avatar2=ra.DeriveCrop(new Rect(1794,348,14,25)).SrcBitmap;
-            var avatar3=ra.DeriveCrop(new Rect(1794,444,14,25)).SrcBitmap;
-            var avatar4=ra.DeriveCrop(new Rect(1794,540,14,25)).SrcBitmap;
-            if (IsDead(avatar1) == 1)
-            {
-                Logger.LogInformation("1号位阵亡");
-                on_death();
             }
-            if (IsDead(avatar2) == 1)
-            {
-                Logger.LogInformation("2号位阵亡");
-                on_death();
-            }
-            if (IsDead(avatar3) == 1)
-            {
-                Logger.LogInformation("3号位阵亡");
-                on_death();
-            }
-            if (IsDead(avatar4) == 1)
-            {
-                Logger.LogInformation("4号位阵亡");
-                on_death();
-            }
+
         }
 
         return false;
