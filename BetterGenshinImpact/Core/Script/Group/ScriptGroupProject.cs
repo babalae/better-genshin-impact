@@ -18,7 +18,8 @@ namespace BetterGenshinImpact.Core.Script.Group;
 
 public partial class ScriptGroupProject : ObservableObject
 {
-    [ObservableProperty] private int _index;
+    [ObservableProperty]
+    private int _index;
 
     /// <summary>
     /// 理论上是文件名
@@ -34,27 +35,34 @@ public partial class ScriptGroupProject : ObservableObject
     /// </summary>
     public string FolderName { get; set; } = string.Empty;
 
-    [ObservableProperty] private string _type = string.Empty;
+    [ObservableProperty]
+    private string _type = string.Empty;
 
-    [JsonIgnore] public string TypeDesc => ScriptGroupProjectExtensions.TypeDescriptions[Type];
+    [JsonIgnore]
+    public string TypeDesc => ScriptGroupProjectExtensions.TypeDescriptions[Type];
 
-    [ObservableProperty] private string _status = string.Empty;
+    [ObservableProperty]
+    private string _status = string.Empty;
 
-    [JsonIgnore] public string StatusDesc => ScriptGroupProjectExtensions.StatusDescriptions[Status];
+    [JsonIgnore]
+    public string StatusDesc => ScriptGroupProjectExtensions.StatusDescriptions[Status];
 
     /// <summary>
     /// 执行周期
     /// 不在 ScheduleDescriptions 中则会被视为自定义Cron表达式
     /// </summary>
-    [ObservableProperty] private string _schedule = string.Empty;
+    [ObservableProperty]
+    private string _schedule = string.Empty;
 
     [JsonIgnore]
     public string ScheduleDesc =>
         ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
-    [ObservableProperty] private int _runNum = 1;
+    [ObservableProperty]
+    private int _runNum = 1;
 
-    [JsonIgnore] public ScriptProject? Project { get; set; }
+    [JsonIgnore]
+    public ScriptProject? Project { get; set; }
 
     public ExpandoObject? JsScriptSettingsObject { get; set; }
 
@@ -67,7 +75,9 @@ public partial class ScriptGroupProject : ObservableObject
     /// <summary>
     /// 下一个从此执行标志
     /// </summary>
-    [JsonIgnore][ObservableProperty] public bool? _nextFlag = false;
+    [JsonIgnore]
+    [ObservableProperty]
+    public bool? _nextFlag = false;
 
     public ScriptGroupProject()
     {
