@@ -1,6 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
@@ -35,13 +35,6 @@ namespace BetterGenshinImpact.GameTask
         private bool _prevGameActive;
 
         private DateTime _prevManualGc = DateTime.MinValue;
-
-        /// <summary>
-        /// 调度器捕获模式, 影响以下内容：
-        /// 1. 是否缓存图像
-        /// 2. 是否执行触发器
-        /// </summary>
-        private DispatcherCaptureModeEnum _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.NormalTrigger;
 
         private static readonly object _triggerListLocker = new();
 
@@ -132,13 +125,7 @@ namespace BetterGenshinImpact.GameTask
                     { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
                 }
             );
-
-            // 捕获模式初始化配置
-            if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
-            {
-                _dispatcherCacheCaptureMode = DispatcherCaptureModeEnum.CacheCaptureWithTrigger;
-            }
-
+            
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
@@ -383,27 +370,6 @@ namespace BetterGenshinImpact.GameTask
         private bool SizeIsZero(RECT rect)
         {
             return rect.Width == 0 || rect.Height == 0;
-        }
-        
-        public void SetCacheCaptureMode(DispatcherCaptureModeEnum mode)
-        {
-            // if (mode is DispatcherCaptureModeEnum.Start)
-            // {
-            //     this.StartTimer();
-            // }
-            // else if (mode is DispatcherCaptureModeEnum.Stop)
-            // {
-            //     this.StopTimer();
-            // }
-            // else
-            // {
-            //     _dispatcherCacheCaptureMode = mode;
-            // }
-        }
-
-        public DispatcherCaptureModeEnum GetCacheCaptureMode()
-        {
-            return _dispatcherCacheCaptureMode;
         }
 
         public void TakeScreenshot()

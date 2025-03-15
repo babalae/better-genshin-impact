@@ -153,6 +153,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="GameTask\Model\Enum\" />
 	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />

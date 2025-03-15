@@ -1,6 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
@@ -134,27 +134,6 @@ public class TaskRunner
         var maskWindow = MaskWindow.Instance();
         SystemControl.ActivateWindow();
         maskWindow.Invoke(maskWindow.Show);
-        // if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
-        // {
-        //     Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待日志窗口被激活
-        //     TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Stop);
-        // }
-        // else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImage)
-        // {
-        //     TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-        //     Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-        // }
-        // else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
-        // {
-        //     TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-        //     Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-        // }
-        // else if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
-        // {
-        //     TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-        //     TaskTriggerDispatcher.Instance().ClearTriggers();
-        //     Thread.Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
-        // }
     }
 
     public void End()
@@ -165,27 +144,6 @@ public class TaskRunner
         }
 
         VisionContext.Instance().DrawContent.ClearAll();
-        // if (_timerOperation == DispatcherTimerOperationEnum.UseSelfCaptureImage)
-        // {
-        //     TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.Start);
-        // }
-        // else if (_timerOperation is DispatcherTimerOperationEnum.UseCacheImage or DispatcherTimerOperationEnum.UseCacheImageWithTrigger or DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
-        // {
-        //     // 还原到原来的模式
-        //     if (TaskContext.Instance().Config.CommonConfig.ScreenshotEnabled || TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled)
-        //     {
-        //         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-        //     }
-        //     else
-        //     {
-        //         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
-        //     }
-        //
-        //     if (_timerOperation == DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty)
-        //     {
-        //         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
-        //     }
-        // }
     }
 
 }

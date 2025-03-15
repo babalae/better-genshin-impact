@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;

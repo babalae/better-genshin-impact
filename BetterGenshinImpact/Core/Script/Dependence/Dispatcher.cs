@@ -4,10 +4,8 @@ using BetterGenshinImpact.ViewModel.Pages;
 using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoWood;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 

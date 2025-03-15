@@ -2,7 +2,7 @@
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;

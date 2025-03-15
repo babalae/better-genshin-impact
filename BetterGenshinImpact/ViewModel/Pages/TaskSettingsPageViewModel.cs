@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 using Windows.System;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
