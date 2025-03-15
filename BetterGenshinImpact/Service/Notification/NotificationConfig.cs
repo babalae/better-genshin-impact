@@ -87,6 +87,21 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private int _barkVolume = 5;
 
+    /// <summary>
+    ///     钉钉Webhook密钥
+    /// </summary>
+    [ObservableProperty] private string _dingDingSecret = string.Empty;
+
+    /// <summary>
+    ///     dindin 通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _dingDingwebhookNotificationEnabled;
+
+    /// <summary>
+    ///     钉钉Webhook地址
+    /// </summary>
+    [ObservableProperty] private string _dingdingWebhookUrl = string.Empty;
+
     // Email 通知配置
     [ObservableProperty] private bool _emailNotificationEnabled;
 
@@ -179,16 +194,6 @@ public partial class NotificationConfig : ObservableObject
     ///     企业微信通知通知地址
     /// </summary>
     [ObservableProperty] private string _workweixinWebhookUrl = string.Empty;
-
-    /// <summary>
-    /// 钉钉Webhook地址
-    /// </summary>
-    [ObservableProperty] private string _dingDingWebhookUrl = string.Empty;
-
-    /// <summary>
-    /// 钉钉Webhook密钥
-    /// </summary>
-    [ObservableProperty] private string _dingDingSecret = string.Empty;
 
 
     /// <summary>
