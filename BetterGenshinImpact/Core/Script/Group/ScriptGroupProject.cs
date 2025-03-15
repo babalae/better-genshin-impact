@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Shell;
 using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
@@ -12,14 +13,12 @@ using System.Dynamic;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Shell;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
 public partial class ScriptGroupProject : ObservableObject
 {
-    [ObservableProperty]
-    private int _index;
+    [ObservableProperty] private int _index;
 
     /// <summary>
     /// 理论上是文件名
@@ -35,34 +34,27 @@ public partial class ScriptGroupProject : ObservableObject
     /// </summary>
     public string FolderName { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    private string _type = string.Empty;
+    [ObservableProperty] private string _type = string.Empty;
 
-    [JsonIgnore]
-    public string TypeDesc => ScriptGroupProjectExtensions.TypeDescriptions[Type];
+    [JsonIgnore] public string TypeDesc => ScriptGroupProjectExtensions.TypeDescriptions[Type];
 
-    [ObservableProperty]
-    private string _status = string.Empty;
+    [ObservableProperty] private string _status = string.Empty;
 
-    [JsonIgnore]
-    public string StatusDesc => ScriptGroupProjectExtensions.StatusDescriptions[Status];
+    [JsonIgnore] public string StatusDesc => ScriptGroupProjectExtensions.StatusDescriptions[Status];
 
     /// <summary>
     /// 执行周期
     /// 不在 ScheduleDescriptions 中则会被视为自定义Cron表达式
     /// </summary>
-    [ObservableProperty]
-    private string _schedule = string.Empty;
+    [ObservableProperty] private string _schedule = string.Empty;
 
     [JsonIgnore]
-    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
+    public string ScheduleDesc =>
+        ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
-    [ObservableProperty]
-    private int _runNum = 1;
+    [ObservableProperty] private int _runNum = 1;
 
-    [JsonIgnore]
-    public ScriptProject? Project { get; set; }
-
+    [JsonIgnore] public ScriptProject? Project { get; set; }
 
     public ExpandoObject? JsScriptSettingsObject { get; set; }
 
@@ -71,12 +63,11 @@ public partial class ScriptGroupProject : ObservableObject
     /// </summary>
     [JsonIgnore]
     public ScriptGroup? GroupInfo { get; set; }
+
     /// <summary>
     /// 下一个从此执行标志
     /// </summary>
-    [JsonIgnore]
-    [ObservableProperty]
-    public bool? _nextFlag = false;
+    [JsonIgnore][ObservableProperty] public bool? _nextFlag = false;
 
     public ScriptGroupProject()
     {
@@ -132,6 +123,7 @@ public partial class ScriptGroupProject : ObservableObject
         {
             throw new Exception("FolderName 为空");
         }
+
         Project = new ScriptProject(FolderName);
     }
 
@@ -143,15 +135,16 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 throw new Exception("JS脚本未初始化");
             }
+
             JsScriptSettingsObject ??= new ExpandoObject();
-            
+
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
-            if (!(pathingPartyConfig is {Enabled:true,JsScriptUseEnabled:true}))
+            if (!(pathingPartyConfig is { Enabled: true, JsScriptUseEnabled: true }))
             {
                 pathingPartyConfig = null;
             }
 
-            await Project.ExecuteAsync(JsScriptSettingsObject,pathingPartyConfig);
+            await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
         }
         else if (Type == "KeyMouse")
         {
@@ -173,8 +166,9 @@ public partial class ScriptGroupProject : ObservableObject
         }
         else if (Type == "Shell")
         {
-            var task = ShellExecutor.BuildFromShellName(Name);
-            await task.Execute();
+            var shellConfig = GroupInfo?.Config.ShellConfig ?? new ShellConfig();
+            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig));
+            await task.Start(CancellationContext.Instance.Cts.Token);
         }
     }
 
