@@ -1,10 +1,4 @@
-﻿using BetterGenshinImpact.Service.Notification.Model;
-using BetterGenshinImpact.Service.Notifier;
-using BetterGenshinImpact.Service.Notifier.Exception;
-using BetterGenshinImpact.Service.Notifier.Interface;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Drawing;
+﻿using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -18,7 +12,6 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 using OpenCvSharp.Extensions;
 
 namespace BetterGenshinImpact.Service.Notification;
@@ -113,6 +106,18 @@ public class NotificationService : IHostedService
                 TaskContext.Instance().Config.NotificationConfig.FromEmail,
                 TaskContext.Instance().Config.NotificationConfig.FromName,
                 TaskContext.Instance().Config.NotificationConfig.ToEmail
+            ));
+        }
+
+        // 钉钉通知初始化
+        if (TaskContext.Instance().Config.NotificationConfig.DingDingwebhookNotificationEnabled &&
+            !string.IsNullOrEmpty(TaskContext.Instance().Config.NotificationConfig.DingdingWebhookUrl) &&
+            !string.IsNullOrEmpty(TaskContext.Instance().Config.NotificationConfig.DingDingSecret))
+        {
+            _notifierManager.RegisterNotifier(new DingDingWebhook(
+                NotifyHttpClient,
+                TaskContext.Instance().Config.NotificationConfig.DingdingWebhookUrl,
+                TaskContext.Instance().Config.NotificationConfig.DingDingSecret
             ));
         }
 

@@ -15,6 +15,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _barkStatus = string.Empty;
 
+    /// <summary>
+    ///     钉钉通知测试状态
+    /// </summary>
+    [ObservableProperty] private string _dingDingStatus = string.Empty;
+
     [ObservableProperty] private string _emailStatus = string.Empty;
 
     [ObservableProperty] private string _feishuStatus = string.Empty;
@@ -202,6 +207,26 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         var res = await _notificationService.TestNotifierAsync<XxtuiNotifier>();
 
         XxtuiStatus = res.Message;
+
+        // 添加Toast提示
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
+
+    [RelayCommand]
+    private async Task OnTestDingDingWebhookNotification()
+    {
+        IsLoading = true;
+        DingDingStatus = string.Empty; // 使用专门的状态变量，与xxtui保持一致
+
+        var res = await _notificationService.TestNotifierAsync<DingDingWebhook>();
+
+        DingDingStatus = res.Message;
 
         // 添加Toast提示
         if (res.IsSuccess)
