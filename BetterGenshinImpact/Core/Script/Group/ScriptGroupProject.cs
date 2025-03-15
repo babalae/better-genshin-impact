@@ -55,8 +55,7 @@ public partial class ScriptGroupProject : ObservableObject
     private string _schedule = string.Empty;
 
     [JsonIgnore]
-    public string ScheduleDesc =>
-        ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
+    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
     [ObservableProperty]
     private int _runNum = 1;
@@ -133,7 +132,6 @@ public partial class ScriptGroupProject : ObservableObject
         {
             throw new Exception("FolderName 为空");
         }
-
         Project = new ScriptProject(FolderName);
     }
 
@@ -145,7 +143,6 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 throw new Exception("JS脚本未初始化");
             }
-
             JsScriptSettingsObject ??= new ExpandoObject();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;

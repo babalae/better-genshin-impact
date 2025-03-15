@@ -154,10 +154,10 @@ public partial class NotificationConfig : ObservableObject
     /// <summary>
     /// </summary>
     [ObservableProperty] private string _webhookEndpoint = string.Empty;
-    
+
 
     [ObservableProperty] private string _webhookSendTo = string.Empty; // 修改属性名
-    
+
     [ObservableProperty] private string _webSocketEndpoint = string.Empty;
 
     [ObservableProperty] private bool _webSocketNotificationEnabled;
@@ -179,4 +179,24 @@ public partial class NotificationConfig : ObservableObject
     ///     企业微信通知通知地址
     /// </summary>
     [ObservableProperty] private string _workweixinWebhookUrl = string.Empty;
+
+    /// <summary>
+    ///     xx信息推送通知API密钥
+    /// </summary>
+    [ObservableProperty] private string _xxtuiApiKey = string.Empty;
+
+    /// <summary>
+    ///     xx信息推送通知渠道（WX_MP,WX_QY_ROBOT,DING_ROBOT,BARK）
+    /// </summary>
+    [ObservableProperty] private string _xxtuiChannels = "WX_MP";
+
+    /// <summary>
+    ///     xx信息推送通知来源
+    /// </summary>
+    [ObservableProperty] private string _xxtuiFrom = "Better原神";
+
+    /// <summary>
+    ///     信息推送通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _xxtuiNotificationEnabled;
 }
