@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Shell;
 using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
@@ -12,7 +13,6 @@ using System.Dynamic;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Shell;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
@@ -63,7 +63,6 @@ public partial class ScriptGroupProject : ObservableObject
     [JsonIgnore]
     public ScriptProject? Project { get; set; }
 
-
     public ExpandoObject? JsScriptSettingsObject { get; set; }
 
     /// <summary>
@@ -71,6 +70,7 @@ public partial class ScriptGroupProject : ObservableObject
     /// </summary>
     [JsonIgnore]
     public ScriptGroup? GroupInfo { get; set; }
+
     /// <summary>
     /// 下一个从此执行标志
     /// </summary>
@@ -132,6 +132,7 @@ public partial class ScriptGroupProject : ObservableObject
         {
             throw new Exception("FolderName 为空");
         }
+
         Project = new ScriptProject(FolderName);
     }
 
@@ -143,15 +144,16 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 throw new Exception("JS脚本未初始化");
             }
+
             JsScriptSettingsObject ??= new ExpandoObject();
-            
+
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
-            if (!(pathingPartyConfig is {Enabled:true,JsScriptUseEnabled:true}))
+            if (!(pathingPartyConfig is { Enabled: true, JsScriptUseEnabled: true }))
             {
                 pathingPartyConfig = null;
             }
 
-            await Project.ExecuteAsync(JsScriptSettingsObject,pathingPartyConfig);
+            await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
         }
         else if (Type == "KeyMouse")
         {
@@ -173,8 +175,9 @@ public partial class ScriptGroupProject : ObservableObject
         }
         else if (Type == "Shell")
         {
-            var task = ShellExecutor.BuildFromShellName(Name);
-            await task.Execute();
+            var shellConfig = GroupInfo?.Config.ShellConfig ?? new ShellConfig();
+            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig));
+            await task.Start(CancellationContext.Instance.Cts.Token);
         }
     }
 
