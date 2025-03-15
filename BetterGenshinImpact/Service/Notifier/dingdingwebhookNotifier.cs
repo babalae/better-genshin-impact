@@ -3,21 +3,19 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
-using System.Text.Json;
-using BetterGenshinImpact.Service.Notifier.Interface;
 using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Service.Notifier.Interface;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
 public class DingDingWebhook : INotifier
 {
-    public string Name { get; set; } = "DingDing";
-
     private readonly HttpClient _httpClient;
-    private readonly string _webhookUrl;
     private readonly string _secret;
+    private readonly string _webhookUrl;
 
     public DingDingWebhook(HttpClient httpClient, string webhookUrl, string secret)
     {
@@ -25,6 +23,8 @@ public class DingDingWebhook : INotifier
         _webhookUrl = webhookUrl;
         _secret = secret;
     }
+
+    public string Name { get; set; } = "DingDing";
 
     public async Task SendAsync(BaseNotificationData content)
     {
