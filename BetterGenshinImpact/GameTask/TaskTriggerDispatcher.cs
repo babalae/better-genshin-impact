@@ -113,10 +113,10 @@ namespace BetterGenshinImpact.GameTask
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
             
-            if (GraphicsCapture.IsHdrEnabled(hWnd))
-            {
-                _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
-            }
+            // if (GraphicsCapture.IsHdrEnabled(hWnd))
+            // {
+            //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
+            // }
 
             // 启动截图
             GameCapture.Start(hWnd,
