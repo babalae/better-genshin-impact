@@ -109,6 +109,17 @@ public class NotificationService : IHostedService
             ));
         }
 
+        // 钉钉通知初始化
+        if (!string.IsNullOrEmpty(TaskContext.Instance().Config.NotificationConfig.DingDingWebhookUrl) &&
+            !string.IsNullOrEmpty(TaskContext.Instance().Config.NotificationConfig.DingDingSecret))
+        {
+            _notifierManager.RegisterNotifier(new DingDingWebhook(
+                NotifyHttpClient,
+                TaskContext.Instance().Config.NotificationConfig.DingDingWebhookUrl,
+                TaskContext.Instance().Config.NotificationConfig.DingDingSecret
+            ));
+        }
+
         // Telegram通知初始化
         if (TaskContext.Instance().Config.NotificationConfig.TelegramNotificationEnabled)
             _notifierManager.RegisterNotifier(new TelegramNotifier(

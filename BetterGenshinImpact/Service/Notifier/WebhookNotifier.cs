@@ -2,12 +2,13 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
+using System.Text.Json; // 确保 System.Text.Json 命名空间被引用
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using System.Collections.Generic;
 using BetterGenshinImpact.Service.Notification; // 添加对 System.Collections.Generic 命名空间的引用
 using BetterGenshinImpact.Service.Notification; // 添加对 NotificationConfig 类型的引用
+using System.Text.Json; // 添加对 System.Text.Json 命名空间的引用
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -29,7 +30,6 @@ public class WebhookNotifier : INotifier
 
     public WebhookNotifier(HttpClient httpClient, NotificationConfig config)
     {
-        
         _httpClient = httpClient;
         Endpoint = config.WebhookEndpoint;
         SendTo = config.WebhookSendTo; // 初始化 send_to 属性
