@@ -10,7 +10,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
-		<AssemblyVersion>0.43.2</AssemblyVersion>
+		<AssemblyVersion>0.43.3</AssemblyVersion>
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
@@ -153,6 +153,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="GameTask\Model\Enum\" />
 	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />

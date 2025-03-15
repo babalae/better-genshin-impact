@@ -4,7 +4,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
@@ -34,16 +34,12 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
         {
             if (_recordTask == null)
             {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-
                 _recordTaskCts = new CancellationTokenSource();
                 _recordTask = RecordTask(_recordTaskCts.Token);
                 _recordTask.Start();
             }
             else
             {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.NormalTrigger);
-
                 _recordTaskCts?.Cancel();
                 _recordTask = null;
             }

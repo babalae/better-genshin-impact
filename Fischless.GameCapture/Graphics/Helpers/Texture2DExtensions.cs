@@ -4,6 +4,7 @@ using SharpDX.DXGI;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using Windows.Graphics.Capture;
+using OpenCvSharp;
 
 namespace Fischless.GameCapture.Graphics.Helpers;
 
@@ -59,6 +60,42 @@ public static class Texture2DExtensions
         catch (Exception e)
         {
             Debug.WriteLine("Failed to copy texture to bitmap.");
+            Debug.WriteLine(e.StackTrace);
+            return null;
+        }
+        finally
+        {
+            staging.Dispose();
+        }
+    }
+    
+    public static Mat? CreateMat(this Texture2D staging, SharpDX.Direct3D11.Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null)
+    {
+        try
+        {
+            // Copy data
+            if (region != null)
+            {
+                d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, region, staging, 0);
+            }
+            else
+            {
+                d3dDevice.ImmediateContext.CopyResource(surfaceTexture, staging);
+            }
+
+            // 映射纹理以便CPU读取
+            var dataBox = d3dDevice.ImmediateContext.MapSubresource(
+                staging,
+                0,
+                MapMode.Read,
+                SharpDX.Direct3D11.MapFlags.None);
+
+            var mat = new Mat(staging.Description.Height, staging.Description.Width, MatType.CV_8UC4, dataBox.DataPointer);
+            return mat;
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine("Failed to copy texture to mat.");
             Debug.WriteLine(e.StackTrace);
             return null;
         }
