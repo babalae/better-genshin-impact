@@ -3,7 +3,6 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                 xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
@@ -148,13 +147,13 @@
                         <ui:SymbolIcon Symbol="KeyboardMouse16" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <!--<ui:NavigationViewItem Content="通知"
+                <ui:NavigationViewItem Content="通知"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:NotificationSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Alert24" />
                     </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>-->
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="设置"

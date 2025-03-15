@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -12,14 +11,12 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
-using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Win32;
 using Wpf.Ui;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -182,128 +179,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
         }
 
         Process.Start("explorer.exe", path);
-    }
-
-    [RelayCommand]
-    private async Task OnTestWebhook()
-    {
-        var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestWindowsUwpNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<WindowsUwpNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestFeishuNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<FeishuNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestWorkWeixinNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<WorkWeixinNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestWebSocketNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<WebSocketNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestEmailNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<EmailNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestBarkNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<BarkNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestTelegramNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<TelegramNotifier>();
-        if (res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnTestxxtuiNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<XxtuiNotifier>();
-        if (res.IsSuccess)
-            Toast.Success(res.Message);
-        else
-            Toast.Error(res.Message);
     }
 
     [RelayCommand]
