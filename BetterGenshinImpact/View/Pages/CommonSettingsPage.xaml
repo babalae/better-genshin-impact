@@ -979,7 +979,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Webhook相关设置"
+                                  Text="Webhook 相关设置"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1001,12 +1001,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Webhook端点"
+                                  Text="Webhook 端点"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写Webhook端点"
+                                  Text="填写 Webhook 端点"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1015,6 +1015,34 @@
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.WebhookEndpoint, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="发送对象"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="填写发送对象"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.WebhookSendTo, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
@@ -1038,18 +1066,11 @@
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.Column="1"
+                               Grid.RowSpan="2"
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right"
                                Command="{Binding TestWebhookCommand}"
-                               Content="发送"
-                               IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="1"
-                                  Margin="0,0,36,0"
-                                  HorizontalAlignment="Right"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding WebhookStatus}"
-                                  TextWrapping="Wrap" />
+                               Content="发送"/>
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1713,7 +1734,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="多个设备使用逗号、分号或空格分隔 （请使用英文输入法）"
+                                  Text="多个设备使用英文逗号、分号或空格分隔"
                                   TextWrapping="Wrap" />
 
                     <ui:TextBox Grid.Row="0"
@@ -1837,7 +1858,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="传1保存推送，传其他不保存"
+                                  Text="选择是否保存推送历史"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"

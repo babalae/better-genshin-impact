@@ -53,7 +53,7 @@ public class NotificationService : IHostedService
         if (TaskContext.Instance().Config.NotificationConfig.WebhookEnabled)
         {
             _notifierManager.RegisterNotifier(new WebhookNotifier(NotifyHttpClient,
-                TaskContext.Instance().Config.NotificationConfig.WebhookEndpoint));
+                TaskContext.Instance().Config.NotificationConfig));
         }
 
         if (TaskContext.Instance().Config.NotificationConfig.WindowsUwpNotificationEnabled)
