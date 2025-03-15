@@ -12,8 +12,8 @@ namespace BetterGenshinImpact.Service.Notifier;
 
 public class TelegramNotifier : INotifier, IDisposable
 {
-    // 永远不更改此URL常量，这是Telegram API的标准URL前缀
-    private const string TELEGRAM_API_URL = "https://api.telegram.org/bot";
+    // 默认Telegram API的标准URL前缀
+    private const string DEFAULT_TELEGRAM_API_URL = "https://api.telegram.org/bot";
     private readonly bool _createdHttpClient;
     private readonly HttpClient _httpClient;
 
@@ -28,7 +28,7 @@ public class TelegramNotifier : INotifier, IDisposable
     /// <param name="httpClient">可选的HttpClient，如果不提供则创建新的</param>
     /// <param name="telegramBotToken">Telegram机器人Token</param>
     /// <param name="telegramChatId">Telegram聊天ID</param>
-    /// <param name="telegramApiBaseUrl">不再使用，保留参数仅为兼容性</param>
+    /// <param name="telegramApiBaseUrl">自定义Telegram API基础URL（可以只填写域名，如"xxx.xxx.xxx"），为空则使用默认URL</param>
     public TelegramNotifier(HttpClient httpClient = null, string telegramBotToken = "", string telegramChatId = "",
         string telegramApiBaseUrl = "")
     {
@@ -47,8 +47,28 @@ public class TelegramNotifier : INotifier, IDisposable
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
         }
 
-        // 忽略自定义API URL，始终使用标准Telegram API URL
-        TelegramApiBaseUrl = TELEGRAM_API_URL;
+        // 使用自定义API URL，如果为空则使用默认Telegram API URL
+        if (string.IsNullOrEmpty(telegramApiBaseUrl))
+        {
+            TelegramApiBaseUrl = DEFAULT_TELEGRAM_API_URL;
+        }
+        else
+        {
+            // 格式化用户提供的API URL
+            var formattedUrl = telegramApiBaseUrl.Trim();
+
+            // 添加协议前缀（如果没有）
+            if (!formattedUrl.StartsWith("http://") && !formattedUrl.StartsWith("https://"))
+                formattedUrl = "https://" + formattedUrl;
+
+            // 确保URL以斜杠结尾
+            if (!formattedUrl.EndsWith("/")) formattedUrl += "/";
+
+            // 添加bot路径（如果需要）
+            if (!formattedUrl.EndsWith("/bot")) formattedUrl += "bot";
+
+            TelegramApiBaseUrl = formattedUrl;
+        }
     }
 
     /// <summary>
@@ -62,9 +82,9 @@ public class TelegramNotifier : INotifier, IDisposable
     public string TelegramChatId { get; set; }
 
     /// <summary>
-    ///     Telegram API基础URL - 内部使用
+    ///     Telegram API基础URL
     /// </summary>
-    private string TelegramApiBaseUrl { get; set; }
+    public string TelegramApiBaseUrl { get; set; }
 
     public void Dispose()
     {
@@ -125,8 +145,8 @@ public class TelegramNotifier : INotifier, IDisposable
 
     private async Task SendTextMessageAsync(string message)
     {
-        // 构建Telegram API URL - 固定格式：https://api.telegram.org/bot{token}/sendMessage
-        var endpoint = $"{TELEGRAM_API_URL}{TelegramBotToken}/sendMessage";
+        // 构建Telegram API URL - 使用自定义或默认API基础URL
+        var endpoint = $"{TelegramApiBaseUrl}{TelegramBotToken}/sendMessage";
 
         try
         {
