@@ -108,6 +108,7 @@ namespace LogParse
                         {
                             configTask.Fault.ReviveCount++;
                         }
+                        
                         //传送失败，重试 n 次
                         result = parseBgiLine($@"传送失败，重试 (\d+) 次", logstr);
                         if (result.Item1)
@@ -115,19 +116,31 @@ namespace LogParse
                             configTask.Fault.TeleportFailCount = int.Parse(result.Item2[1]);
                
                         }
+                        
                         //战斗超时结束
                         if (logstr == "战斗超时结束")
                         {
                             configTask.Fault.BattleTimeoutCount ++;
-                        }                
+                        }
                         
                         //重试一次路线或放弃此路线！
                         if (logstr.EndsWith("重试一次路线或放弃此路线！"))
                         {
-                            configTask.Fault.RetryCount++;
+                            configTask.Fault.RetryCount ++;
                         }
                        
+                        //疑似卡死，尝试脱离...
+                        if (logstr == "疑似卡死，尝试脱离...")
+                        {
+                            configTask.Fault.StuckCount ++;
+                        }
                         
+                        //One or more errors occurred
+                        result = parseBgiLine(@"执行脚本时发生异常: ""(.+?)""", logstr);
+                        if (result.Item1)
+                        {
+                            configTask.Fault.ErrCount ++;
+                        }
                         
                         if (logstr.StartsWith("→ 脚本执行结束: \"" + configTask.Name + "\""))
                         {
@@ -241,11 +254,14 @@ namespace LogParse
                     public int ReviveCount { get; set; } = 0;
                     //传送失败次数
                     public int TeleportFailCount { get; set; } = 0;
+                    //疑似卡死次数
+                    public int StuckCount { get; set; } = 0;
                     //重试次数
                     public int RetryCount { get; set; } = 0;
                     //战斗超时
                     public int BattleTimeoutCount { get; set; } = 0;
-                
+                    //异常发生次数
+                    public int ErrCount { get; set; } = 0;
                 }
                 
             }
@@ -401,8 +417,10 @@ namespace LogParse
             {
                 colConfigList.Add((name: "复活次数", value: task => FormatNumberWithStyle(task.Fault.ReviveCount)));
                 colConfigList.Add((name: "重试次数", value: task => FormatNumberWithStyle(task.Fault.RetryCount)));
+                colConfigList.Add((name: "疑似卡死次数", value: task => FormatNumberWithStyle(task.Fault.StuckCount)));
                 colConfigList.Add((name: "战斗超时次数", value: task => FormatNumberWithStyle(task.Fault.BattleTimeoutCount)));
                 colConfigList.Add((name: "传送失败次数", value: task => FormatNumberWithStyle(task.Fault.TeleportFailCount)));
+                colConfigList.Add((name: "异常发生次数", value: task => FormatNumberWithStyle(task.Fault.ErrCount)));
             }
 
             

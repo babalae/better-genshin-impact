@@ -33,13 +33,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private readonly INavigationService _navigationService;
 
     private readonly NotificationService _notificationService;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _webhookStatus = string.Empty;
-    
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
@@ -192,14 +185,15 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnTestWebhook()
     {
-        IsLoading = true;
-        WebhookStatus = string.Empty;
-
         var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
-
-        WebhookStatus = res.Message;
-
-        IsLoading = false;
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
     }
 
     [RelayCommand]
@@ -285,6 +279,21 @@ public partial class CommonSettingsPageViewModel : ViewModel
             Toast.Error(res.Message);
         }
     }
+    
+    [RelayCommand]
+    private async Task OnTestTelegramNotification()
+    {
+        var res = await _notificationService.TestNotifierAsync<TelegramNotifier>();
+        if(res.IsSuccess)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+    
     
     [RelayCommand]
     private void ImportLocalScriptsRepoZip()
