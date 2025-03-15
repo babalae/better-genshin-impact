@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -157,13 +156,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     public void OnSwitchTakenScreenshotEnabled()
     {
-        if (Config.CommonConfig.ScreenshotEnabled)
-        {
-            if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.NormalTrigger)
-            {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-            }
-        }
     }
 
     [RelayCommand]

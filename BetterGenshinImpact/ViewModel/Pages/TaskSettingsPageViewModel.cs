@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 using Windows.System;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
@@ -183,7 +183,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         SwitchAutoGeniusInvokationEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)));
         SwitchAutoGeniusInvokationEnabled = false;
     }
@@ -219,7 +219,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public async Task OnSwitchAutoWood()
     {
         SwitchAutoWoodEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoWoodTask(new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount)));
         SwitchAutoWoodEnabled = false;
     }
@@ -241,7 +241,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var param = new AutoFightParam(path, Config.AutoFightConfig);
 
         SwitchAutoFightEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImageWithTrigger)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoFightTask(param));
         SwitchAutoFightEnabled = false;
     }
@@ -261,7 +261,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         SwitchAutoDomainEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseCacheImage)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
         SwitchAutoDomainEnabled = false;
     }
@@ -376,7 +376,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private async Task OnSwitchAutoMusicGame()
     {
         SwitchAutoMusicGameEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoMusicGameTask(new AutoMusicGameParam()));
         SwitchAutoMusicGameEnabled = false;
     }
@@ -391,7 +391,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private async Task OnSwitchAutoAlbum()
     {
         SwitchAutoAlbumEnabled = true;
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
         SwitchAutoAlbumEnabled = false;
     }
@@ -401,7 +401,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchAutoFishingEnabled = true;
         var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunSoloTaskAsync(new AutoFishingTask(param));
         SwitchAutoFishingEnabled = false;
     }

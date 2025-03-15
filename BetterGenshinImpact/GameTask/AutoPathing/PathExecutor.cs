@@ -463,7 +463,7 @@ public class PathExecutor
                 }
             }
 
-            Logger.LogError("此路径存在 {action} 收集动作，队伍中没有对应元素角色:{}，无法执行此路径！", action, string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
+            Logger.LogError("此路径存在 {El}元素采集 动作，队伍中没有对应元素角色:{Names}，无法执行此路径！", el.ToChinese(), string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
             return false;
         }
         else

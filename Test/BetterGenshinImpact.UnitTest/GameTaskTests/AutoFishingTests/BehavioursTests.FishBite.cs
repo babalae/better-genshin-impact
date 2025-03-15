@@ -6,6 +6,7 @@ using System.Drawing;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -20,7 +21,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void FishBite_ShouldSuccess(string screenshot1080p)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             //
@@ -39,7 +40,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public void FishBite_Tree_Timeout_ShouldSuccess(string screenshot1080pCheckThrowRod, string screenshot1080pFishBite)
         {
             //
-            Bitmap bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
+            Mat bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
             var imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             DateTimeOffset dateTime = new DateTimeOffset(2025, 2, 26, 16, 13, 54, 285, TimeSpan.FromHours(8));
@@ -70,7 +71,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             //
             fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(16));
-            bitmap = new Bitmap(@$"..\..\..\Assets\AutoFishing\{screenshot1080pFishBite}");
+            bitmap = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pFishBite}");
             imageRegion = new GameCaptureRegion(bitmap, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
             //

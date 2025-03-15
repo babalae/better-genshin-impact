@@ -8,7 +8,7 @@
 // using BetterGenshinImpact.GameTask.Common.Element.Assets;
 // using BetterGenshinImpact.GameTask.Common.Map;
 // using BetterGenshinImpact.GameTask.Model.Area;
-// using BetterGenshinImpact.GameTask.Model.Enum;
+// 
 // using BetterGenshinImpact.View.Drawable;
 // using BetterGenshinImpact.ViewModel.Pages;
 // using Microsoft.Extensions.Logging;
