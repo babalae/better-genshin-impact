@@ -50,7 +50,6 @@ public partial class CaptureTestWindow : Window
         _capture.Start(hWnd,
             new Dictionary<string, object>()
             {
-                { "useBitmapCache", TaskContext.Instance().Config.WgcUseBitmapCache },
                 { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11 && TaskContext.Instance().Config.AutoFixWin11BitBlt }
             }
         );

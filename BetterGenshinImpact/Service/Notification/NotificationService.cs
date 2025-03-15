@@ -164,7 +164,7 @@ public class NotificationService : IHostedService
         {
             if (TaskContext.Instance().Config.NotificationConfig.IncludeScreenShot)
             {
-                var bitmap = TaskControl.CaptureGameBitmapNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
+                var bitmap = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
                 if (bitmap != null)
                 {
                     notificationData.Screenshot = bitmap.ToBitmap();

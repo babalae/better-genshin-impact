@@ -213,7 +213,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         // 没启动的时候先启动
         await ScriptService.StartGameTask();
 
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunThreadAsync(async () =>
             {
                 Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");

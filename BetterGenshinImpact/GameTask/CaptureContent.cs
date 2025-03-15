@@ -19,13 +19,13 @@ public class CaptureContent : IDisposable
 
     public ImageRegion CaptureRectArea { get; private set; }
 
-    public CaptureContent(Mat srcBitmap, int frameIndex, double interval)
+    public CaptureContent(Mat image, int frameIndex, double interval)
     {
         FrameIndex = frameIndex;
         TimerInterval = interval;
         var systemInfo = TaskContext.Instance().SystemInfo;
 
-        var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(srcBitmap, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
+        var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
         CaptureRectArea = gameCaptureRegion.DeriveTo1080P();
     }
 

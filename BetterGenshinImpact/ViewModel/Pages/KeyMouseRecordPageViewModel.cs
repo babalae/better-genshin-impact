@@ -125,7 +125,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         {
             var s = await File.ReadAllTextAsync(path);
 
-            await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            await new TaskRunner()
                 .RunThreadAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)

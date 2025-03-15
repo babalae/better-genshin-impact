@@ -17,8 +17,6 @@ public class TaskControl
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
-
-    
     
     
     public static void CheckAndSleep(int millisecondsTimeout)
@@ -178,29 +176,19 @@ public class TaskControl
         }
     }
 
-    public static Mat CaptureGameBitmap(IGameCapture? gameCapture)
+    public static Mat CaptureGameImage(IGameCapture? gameCapture)
     {
-        var bitmap = gameCapture?.Capture();
-        // wgc 缓冲区设置的2 所以至少截图3次
-        if (gameCapture?.Mode == CaptureModes.WindowsGraphicsCapture)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                bitmap = gameCapture?.Capture();
-                Sleep(50);
-            }
-        }
-        
-        if (bitmap == null)
+        var image = gameCapture?.Capture();
+        if (image == null)
         {
             Logger.LogWarning("截图失败!");
-            // 重试5次
-            for (var i = 0; i < 5; i++)
+            // 重试3次
+            for (var i = 0; i < 3; i++)
             {
-                bitmap = gameCapture?.Capture();
-                if (bitmap != null)
+                image = gameCapture?.Capture();
+                if (image != null)
                 {
-                    return bitmap;
+                    return image;
                 }
         
                 Sleep(30);
@@ -210,49 +198,14 @@ public class TaskControl
         }
         else
         {
-            return bitmap;
+            return image;
         }
     }
     
-    public static Mat? CaptureGameBitmapNoRetry(IGameCapture? gameCapture)
+    public static Mat? CaptureGameImageNoRetry(IGameCapture? gameCapture)
     {
         return gameCapture?.Capture();
     }
-
-    // private static CaptureContent CaptureToContent(IGameCapture? gameCapture)
-    // {
-    //     var bitmap = CaptureGameBitmap(gameCapture);
-    //     return new CaptureContent(bitmap, 0, 0);
-    // }
-    //
-    // public static CaptureContent CaptureToContent()
-    // {
-    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture);
-    // }
-
-    // public static ImageRegion CaptureToRectArea()
-    // {
-    //     return CaptureToContent(TaskTriggerDispatcher.GlobalGameCapture).CaptureRectArea;
-    // }
-
-    // /// <summary>
-    // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
-    // /// </summary>
-    // /// <returns></returns>
-    // [Obsolete]
-    // public static CaptureContent GetContentFromDispatcher()
-    // {
-    //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent();
-    // }
-
-    // /// <summary>
-    // /// 此方法 TaskDispatcher至少处于 DispatcherCaptureModeEnum.CacheCaptureWithTrigger 状态才能使用
-    // /// </summary>
-    // /// <returns></returns>
-    // public static ImageRegion GetRectAreaFromDispatcher()
-    // {
-    //     return TaskTriggerDispatcher.Instance().GetLastCaptureContent().CaptureRectArea;
-    // }
 
     /// <summary>
     /// 自动判断当前运行上下文中截图方式，并选择合适的截图方式返回
@@ -260,6 +213,8 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        return TaskTriggerDispatcher.Instance().CaptureToRectArea(forceNew);
+        var image =CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
+        var content = new CaptureContent(image, 0, 0);
+        return content.CaptureRectArea;
     }
 }
