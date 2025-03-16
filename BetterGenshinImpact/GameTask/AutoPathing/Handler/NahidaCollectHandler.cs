@@ -82,10 +82,11 @@ public class NahidaCollectHandler : IActionHandler
             if (!ct.IsCancellationRequested)
             {
                 await Delay(200, ct);
-                nahida.GetSkillCurrentCd(CaptureToRectArea());
+                var cd = nahida.GetSkillCurrentCd(CaptureToRectArea());
+                Logger.LogInformation("{Nhd} 长按E转圈,cd:{Cd}", "纳西妲", Math.Round(cd, 2));
             }
 
-            nahida.LastSkillTime = DateTime.Now;
+            nahida.LastSkillTime = DateTime.UtcNow;
         }
 
         await Delay(800, ct);
