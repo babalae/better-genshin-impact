@@ -1,9 +1,7 @@
 ﻿using BehaviourTree;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
@@ -22,6 +20,7 @@ using System.Linq;
 using Fischless.WindowsInput;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -59,7 +58,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = blackboard.predictor.Detect(memoryStream);
+            var result = blackboard.Predictor.Detect(memoryStream);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == Rect.Empty)
@@ -102,6 +101,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class ChooseBait : BaseBehaviour<ImageRegion>
     {
+        private readonly ISystemInfo systemInfo;
         private readonly IInputSimulator input;
         private readonly Blackboard blackboard;
         private readonly TimeProvider timeProvider;
@@ -113,9 +113,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         /// <param name="name"></param>
         /// <param name="autoFishingTrigger"></param>
-        public ChooseBait(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
+        public ChooseBait(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, ISystemInfo systemInfo, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
+            this.systemInfo = systemInfo;
             this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
         }
@@ -148,14 +149,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 Name = "ChooseBait",
                 RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{blackboard.selectedBaitName}.png", 1920, 1080, 1d),  // todo 改成注入配置的形式，直接用魔法值不好
+                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", $"bait\\{blackboard.selectedBaitName}.png", systemInfo),
                 Threshold = 0.8,
                 Use3Channels = true,
                 DrawOnWindow = false
             }.InitTemplate();
 
-            var captureRegion = imageRegion;
-            using var resRa = captureRegion.Find(ro);
+            using var resRa = imageRegion.Find(ro);
             if (resRa.IsEmpty())
             {
                 if (timeProvider.GetLocalNow() >= chooseBaitUIOpenWaitEndTime)
@@ -185,14 +185,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 resRa.Click();
                 blackboard.Sleep(700);
                 // 可能重复点击，所以固定界面点击下
-                captureRegion.ClickTo((int)(captureRegion.Width * 0.675), (int)(captureRegion.Height / 3d));
+                imageRegion.ClickTo((int)(imageRegion.Width * 0.675), (int)(imageRegion.Height / 3d));
                 blackboard.Sleep(200);
                 // 点击确定
-                using var ra = captureRegion.Find(new RecognitionObject
+                using var ra = imageRegion.Find(new RecognitionObject
                 {
                     Name = "BtnWhiteConfirm",
                     RecognitionType = RecognitionTypes.TemplateMatch,
-                    TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_confirm.png", 1920, 1080, 1d),  // todo 改成注入配置的形式，直接用魔法值不好
+                    TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_confirm.png", systemInfo),
                     Use3Channels = true
                 }.InitTemplate());
                 if (ra.IsExist())
@@ -211,6 +211,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     [Obsolete]
     /// <summary>
     /// 《How to Cast a Fly Rod: Step-by-Step Guide for Beginners》：https://hookedonfly.fishing/2024/10/how-to-cast-a-fly-rod/
+    /// 《How to Catch Fish》：https://game8.co/games/Genshin-Impact/archives/340798
+    /// 《Tutorial/Fishing》：https://genshin-impact.fandom.com/wiki/Tutorial/Fishing
     /// </summary>
     public class LiftAndHold : BaseBehaviour<ImageRegion>
     {
@@ -304,7 +306,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = blackboard.predictor.Detect(memoryStream);
+            var result = blackboard.Predictor.Detect(memoryStream);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
             blackboard.fishpond = fishpond;
@@ -528,6 +530,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// <param name="imageRegion"></param>
     public class CheckThrowRod : BaseBehaviour<ImageRegion>
     {
+        private readonly Blackboard blackboard;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? timeDelay;
         private bool hasChecked;
@@ -536,8 +539,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 检查抛竿结果
         /// 如果仍发现选饵按钮则失败
         /// </summary>
-        public CheckThrowRod(string name, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
+        public CheckThrowRod(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
         {
+            this.blackboard = blackboard;
             this.timeProvider = timeProvider ?? TimeProvider.System;
         }
 
@@ -554,7 +558,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return BehaviourStatus.Running;
             }
 
-            using Region btnRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
+            using Region btnRectArea = imageRegion.Find(blackboard.AutoFishingAssets.BaitButtonRo);
             if (btnRectArea.IsEmpty())
             {
                 hasChecked = true;
@@ -623,6 +627,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class CheckRaiseHook : BaseBehaviour<ImageRegion>
     {
+        private readonly Blackboard blackboard;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? timeDelay;
         private bool hasChecked;
@@ -632,8 +637,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 如果仍发现提竿按钮则失败
         /// </summary>
         /// <param name="name"></param>
-        public CheckRaiseHook(string name, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
+        public CheckRaiseHook(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
         {
+            this.blackboard = blackboard;
             this.timeProvider = timeProvider ?? TimeProvider.System;
         }
 
@@ -650,7 +656,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return BehaviourStatus.Running;
             }
 
-            using Region btnRectArea = imageRegion.Find(AutoFishingAssets.Instance.WaitBiteButtonRo);   // todo 解耦以适用单元测试
+            using Region btnRectArea = imageRegion.Find(blackboard.AutoFishingAssets.WaitBiteButtonRo);
             if (btnRectArea.IsEmpty())
             {
                 hasChecked = true;
@@ -669,27 +675,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// </summary>
     public class FishBite : BaseBehaviour<ImageRegion>
     {
+        private readonly Blackboard blackboard;
         private readonly IInputSimulator input;
         private readonly DrawContent drawContent;
         private readonly IOcrService ocrService = OcrFactory.Paddle;
-        private readonly RecognitionObject liftRodButtonRo;
-        public FishBite(string name, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
+        public FishBite(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
         {
+            this.blackboard = blackboard;
             this.input = input;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
-
-            liftRodButtonRo = new RecognitionObject
-            {
-                Name = "LiftRodButton",
-                RecognitionType = RecognitionTypes.TemplateMatch,
-                TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "lift_rod.png", 1920, 1080, 1d),  // todo 改成注入配置的形式，直接用魔法值不好
-                RegionOfInterest = new Rect(1920 - 1920 / 2,
-                    1080 - 1080 / 4,
-                    1920 / 2,
-                    1080 / 4),
-                Threshold = 0.7,
-                DrawOnWindow = false
-            }.InitTemplate();
         }
 
         protected override void OnInitialize()
@@ -718,7 +712,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 tipsRa.DrawSelf("FishBiteTips");
 
                 // 图像提竿判断
-                using var liftRodButtonRa = imageRegion.Find(liftRodButtonRo);
+                using var liftRodButtonRa = imageRegion.Find(blackboard.AutoFishingAssets.LiftRodButtonRo);
                 if (!liftRodButtonRa.IsEmpty())
                 {
                     input.Mouse.LeftButtonClick();
@@ -1034,6 +1028,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// <param name="imageRegion"></param>
     public class CheckInitalState : BaseBehaviour<ImageRegion>
     {
+        private readonly Blackboard blackboard;
         private readonly IInputSimulator input;
         private readonly TimeProvider timeProvider;
         private DateTimeOffset? moveMouseInterval;
@@ -1043,8 +1038,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 必须能看到换饵按钮，直到看到才能成功
         /// 由于模板匹配召回率低，会转动视角
         /// </summary>
-        public CheckInitalState(string name, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
+        public CheckInitalState(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null) : base(name, logger, saveScreenshotOnTerminat)
         {
+            this.blackboard = blackboard;
             this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
         }
@@ -1059,7 +1055,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
-            using Region btnRectArea = imageRegion.Find(AutoFishingAssets.Instance.BaitButtonRo);
+            using Region btnRectArea = imageRegion.Find(blackboard.AutoFishingAssets.BaitButtonRo);
             if (btnRectArea.IsEmpty())
             {
                 if (moveMouseInterval == null || timeProvider.GetLocalNow() > moveMouseInterval)

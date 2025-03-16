@@ -8,7 +8,7 @@ using Size = System.Drawing.Size;
 
 namespace BetterGenshinImpact.GameTask.Model
 {
-    public class SystemInfo
+    public class SystemInfo : ISystemInfo
     {
         /// <summary>
         /// 显示器分辨率 无缩放

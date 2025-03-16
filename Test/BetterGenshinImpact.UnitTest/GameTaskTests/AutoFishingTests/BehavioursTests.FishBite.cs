@@ -2,7 +2,6 @@
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.GameTask.Model.Area;
-using System.Drawing;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
 using Microsoft.Extensions.Time.Testing;
@@ -25,8 +24,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
+            Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
+
             //
-            FishBite sut = new FishBite("-", new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
+            FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -44,6 +47,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
+            Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
+
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
             FakeInputSimulator input = new FakeInputSimulator();
@@ -53,7 +60,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var sut = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("-", SimpleParallelPolicy.OnlyOneMustSucceed)
                     //.PushLeaf(() => new CheckThrowRod("-", logger, false, fakeTimeProvider)) // todo
-                    .PushLeaf(() => new FishBite("-", logger, false, input, drawContent: new FakeDrawContent()))
+                    .PushLeaf(() => new FishBite("-", blackboard, logger, false, input, drawContent: new FakeDrawContent()))
                     .PushLeaf(() => fishBiteTimeoutBehaviour)
                 .End()
                 .Build();

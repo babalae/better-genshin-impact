@@ -18,6 +18,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [Theory]
         [InlineData(@"20250225101300361_ChooseBait_Succeeded.png", new string[] { "medaka", "butterflyfish", "butterflyfish", "pufferfish" })]
         [InlineData(@"20250226161354285_ChooseBait_Succeeded.png", new string[] { "medaka", "medaka" })]
+        [InlineData(@"202503160917566615@900p.png", new string[] { "pufferfish" })]
         /// <summary>
         /// 测试各种选取鱼饵，结果为成功
         /// </summary>
@@ -27,13 +28,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
-            var blackboard = new Blackboard(null, sleep: i => { })
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+            var blackboard = new Blackboard(sleep: i => { })
             {
                 fishpond = new Fishpond(fishNames.Select(n => new OneFish(n, OpenCvSharp.Rect.Empty, 0)).ToList())
             };
 
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, new FakeInputSimulator());
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -57,7 +59,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
-            var blackboard = new Blackboard(null, sleep: i => { })
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+            var blackboard = new Blackboard(sleep: i => { })
             {
                 fishpond = new Fishpond(fishNames.Select(n => new OneFish(n, OpenCvSharp.Rect.Empty, 0)).ToList())
             };
@@ -66,7 +69,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
 
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -109,7 +112,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
             IEnumerable<string> fishNames = new string[] { "sunfish", "koi", "koi head", "medaka" };
-            var blackboard = new Blackboard(null, sleep: i => { })
+
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+            var blackboard = new Blackboard(sleep: i => { })
             {
                 fishpond = new Fishpond(fishNames.Select(n => new OneFish(n, OpenCvSharp.Rect.Empty, 0)).ToList())
             };
@@ -119,7 +124,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             #region 第1次失败
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
             fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(3));
             actual = sut.Tick(imageRegion);
@@ -213,8 +218,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
             var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
 
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
             IEnumerable<string> fishNames = new string[] { "koi", "koi head", "sunfish" };
-            var blackboard = new Blackboard(null, sleep: i => { })
+            var blackboard = new Blackboard(sleep: i => { })
             {
                 fishpond = new Fishpond(fishNames.Select(n => new OneFish(n, OpenCvSharp.Rect.Empty, 0)).ToList())
             };
@@ -224,7 +230,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             #region 第1次失败
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
             fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(3));
             actual = sut.Tick(imageRegion);

@@ -46,14 +46,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public AutoFishingTrigger()
         {
             var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
-            this.blackboard = new Blackboard(predictor, this.Sleep);
+            this.blackboard = new Blackboard(predictor, this.Sleep, AutoFishingAssets.Instance);
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                     .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
                     .UntilSuccess("拉条循环")
                         .Sequence("拉条")
-                            .PushLeaf(() => new FishBite("自动提竿", _logger, false, input))
+                            .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, false, input))
                             .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
                             .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
                         .End()

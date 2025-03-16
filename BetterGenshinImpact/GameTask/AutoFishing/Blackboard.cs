@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using Compunet.YoloV8;
 using OpenCvSharp;
@@ -67,13 +68,31 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         internal bool pitchReset = true;
 
         #region 分层暂放
-        public YoloV8Predictor predictor;
-        public Action<int> Sleep;
+        private readonly YoloV8Predictor? predictor;
+        internal YoloV8Predictor Predictor
+        {
+            get
+            {
+                return predictor ?? throw new MissingMemberException();
+            }
+        }
+        internal Action<int> Sleep { get; set; }
 
-        public Blackboard(YoloV8Predictor predictor, Action<int> sleep)
+        private readonly AutoFishingAssets? autoFishingAssets;
+        internal AutoFishingAssets AutoFishingAssets
+        {
+            get
+            {
+                return autoFishingAssets ?? throw new MissingMemberException();
+            }
+        }
+
+
+        public Blackboard(YoloV8Predictor? predictor = null, Action<int>? sleep = null, AutoFishingAssets? autoFishingAssets = null)
         {
             this.predictor = predictor;
-            Sleep = sleep;
+            this.Sleep = sleep ?? (_ => throw new NotImplementedException());
+            this.autoFishingAssets = autoFishingAssets;
         }
         #endregion
 
