@@ -12,15 +12,9 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
-using Vanara;
-using Vanara.PInvoke;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -56,9 +50,12 @@ public class AutoFightTask : ISoloTask
             FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
             ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
             ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
-            BattleEndProgressBarColor = ParseStringToTuple(finishDetectConfig.BattleEndProgressBarColor, (95, 235, 255));
-            BattleEndProgressBarColorTolerance = ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
-            DetectDelayTime = (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
+            BattleEndProgressBarColor =
+                ParseStringToTuple(finishDetectConfig.BattleEndProgressBarColor, (95, 235, 255));
+            BattleEndProgressBarColorTolerance =
+                ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
+            DetectDelayTime =
+                (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -85,7 +82,8 @@ public class AutoFightTask : ISoloTask
                 var trimmedSegment = segment.Trim();
 
                 // 如果是纯数字部分
-                if (double.TryParse(trimmedSegment, NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
+                if (double.TryParse(trimmedSegment, NumberStyles.Float, CultureInfo.InvariantCulture,
+                        out double number))
                 {
                     checkTime = number; // 更新 CheckTime
                 }
@@ -120,7 +118,8 @@ public class AutoFightTask : ISoloTask
                 // 如果是纯数字部分
                 if (parts.Length == 1)
                 {
-                    if (double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
+                    if (double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture,
+                            out double number))
                     {
                         delayTime = (int)(number * 1000); // 更新 delayTime
                     }
@@ -129,7 +128,8 @@ public class AutoFightTask : ISoloTask
                 else if (parts.Length == 2)
                 {
                     string name = parts[0].Trim();
-                    if (double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                    if (double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture,
+                            out double value))
                     {
                         nameDelayMap[name] = (int)(value * 1000); // 更新字典，取最后一个值
                     }
@@ -247,31 +247,37 @@ public class AutoFightTask : ISoloTask
                         }
 
                         //根据元素技能冷却事件优化出招流程，只有当人物切换后才会触发检查
-                        double skillCd;
-                        if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name, out skillCd))
+                        if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name, out var skillCd))
                         {
                             var avatar = combatScenes.SelectAvatar(command.Name);
                             if (avatar == null)
                             {
                                 continue;
                             }
-                            if (skillCd < 0)
+
+                            double cd;
+                            if (skillCd > 0)
                             {
-                                skillCd = FindMax([avatar.SkillCd, avatar.SkillHoldCd]);
+                                var dif = (DateTime.UtcNow - avatar.LastSkillTime);
+                                cd = skillCd - dif.TotalSeconds;
                             }
-                            var dif = (DateTime.UtcNow - avatar.LastSkillTime);
+                            else
+                            {
+                                cd = avatar.GetSkillCdSeconds();
+                            }
+
                             //当技能未冷却时，跳过此次出招
-                            if ((DateTime.UtcNow - avatar.LastSkillTime).TotalSeconds < skillCd)
+                            if (cd > 0)
                             {
                                 if (skipFightName != command.Name)
                                 {
-                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{skillCd - dif.TotalSeconds}秒,跳过此次行动");
+                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{cd}秒,跳过此次行动");
                                 }
+
                                 skipFightName = command.Name;
                                 continue;
                             }
                         }
-
 
 
                         command.Execute(combatScenes);
@@ -287,8 +293,10 @@ public class AutoFightTask : ISoloTask
                             //处于最后一个位置，或者当前执行人和下一个人名字不一样的情况，满足一定条件(开启快速检查，并且检查时间大于0或人名存在配置)检查战斗
                             if (i == combatCommands.Count - 1
                                 || (
-                                    _finishDetectConfig.FastCheckEnabled && command.Name != combatCommands[i + 1].Name &&
-                                    ((_finishDetectConfig.CheckTime > 0 && checkFightFinishStopwatch.Elapsed > checkFightFinishTime)
+                                    _finishDetectConfig.FastCheckEnabled &&
+                                    command.Name != combatCommands[i + 1].Name &&
+                                    ((_finishDetectConfig.CheckTime > 0 &&
+                                      checkFightFinishStopwatch.Elapsed > checkFightFinishTime)
                                      || _finishDetectConfig.CheckNames.Contains(command.Name))
                                 ))
                             {
@@ -461,7 +469,10 @@ public class AutoFightTask : ISoloTask
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
         Simulation.SendInput.SimulateAction(GIActions.Drop);
-        if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
+        if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
+            IsYellow(b3.Item2, b3.Item1,
+                b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/
+           )
         {
             Logger.LogInformation("识别到战斗结束");
             return true;
@@ -498,6 +509,7 @@ public class AutoFightTask : ISoloTask
                (g >= 240 && g <= 255) &&
                (b >= 240 && b <= 255);
     }
+
     static double FindMax(double[] numbers)
     {
         if (numbers == null || numbers.Length == 0)
@@ -514,6 +526,7 @@ public class AutoFightTask : ISoloTask
 
         return max;
     }
+
     private static Dictionary<string, double> ParseStringToDictionary(string input, double defaultValue = -1)
     {
         var dictionary = new Dictionary<string, double>();

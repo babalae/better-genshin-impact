@@ -53,6 +53,11 @@ public class Avatar
     public double SkillCd { get; set; }
 
     /// <summary>
+    /// 最近一次OCR识别出的CD到期时间
+    /// </summary>
+    public DateTime OcrSkillCd { get; set; }
+
+    /// <summary>
     /// 长按元素战技CD
     /// </summary>
     public double SkillHoldCd { get; set; }
@@ -420,7 +425,7 @@ public class Avatar
             }
             else
             {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyPress);
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
             }
 
             Sleep(200, Ct);
@@ -431,12 +436,12 @@ public class Avatar
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
-                // todo 把cd加入执行队列
                 LastSkillTime = DateTime.UtcNow;
                 return;
             }
         }
     }
+
 
     /// <summary>
     /// 元素战技是否正在CD中
@@ -448,7 +453,13 @@ public class Avatar
         var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
         var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
-        return StringUtils.TryParseDouble(text);
+        var cd = StringUtils.TryParseDouble(text);
+        if (cd > 0 && cd <= SkillCd)
+        {
+            OcrSkillCd = DateTime.UtcNow.AddSeconds(cd);
+        }
+
+        return cd;
     }
 
     /// <summary>
@@ -579,20 +590,39 @@ public class Avatar
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
 
+    /// <summary>
+    ///
+    /// 根据cd推算E技能是否好了
+    /// </summary>
+    /// <param name="printLog">log是否输出</param>
+    /// <returns>是否好了</returns>
     public bool IsSkillReady(bool printLog = false)
     {
-        var cd = (DateTime.UtcNow - LastSkillTime).TotalMilliseconds - SkillCd * 1000;
+        var cd = GetSkillCdSeconds();
         if (cd > 0)
         {
             if (printLog)
             {
-                Logger.LogInformation("{Name}的E技能未准备好,CD还有{Seconds}秒", Name, Math.Ceiling(cd) / 1000);
+                Logger.LogInformation("{Name}的E技能未准备好,CD还有{Seconds}秒", Name, Math.Round(cd, 2));
             }
 
             return false;
         }
 
         return true;
+    }
+
+    /// <summary>
+    ///  计算上一次使用技能到现在还剩下多长时间的cd
+    /// </summary>
+    /// <returns></returns>
+    public double GetSkillCdSeconds()
+    {
+        var now = DateTime.UtcNow;
+        // 若未经过OCR的技能释放,上次时间加上最长的技能时间
+        var target =
+            LastSkillTime >= OcrSkillCd ? LastSkillTime.AddSeconds(Math.Max(SkillHoldCd, SkillCd)) : OcrSkillCd;
+        return now > target ? 0d : (target - now).TotalSeconds;
     }
 
     public async Task WaitSkillCdAsync(CancellationToken ct = default)
@@ -603,9 +633,9 @@ public class Avatar
             return;
         }
 
-        var ms = (int)Math.Ceiling((DateTime.UtcNow - LastSkillTime).TotalMilliseconds - SkillCd * 1000) + 100;
-        Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, ms / 1000);
-        await Delay(ms, ct);
+        var s = GetSkillCdSeconds() + 0.2;
+        Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, Math.Round(s, 2));
+        await Delay((int)Math.Ceiling(s * 1000), ct);
     }
 
     /// <summary>
