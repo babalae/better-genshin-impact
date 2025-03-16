@@ -63,7 +63,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     public readonly string LogPath = Global.Absolute(@"log");
-    
+
 
     public override void OnNavigatedTo()
     {
@@ -1362,25 +1362,58 @@ public partial class ScriptControlViewModel : ViewModel
                 .Select(kv => kv.Key)
                 .ToList();
 
-            _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", selectedGroups.Select(x => x.Name)));
-
+            await StartGroups(selectedGroups);
+        }
+    }
+    public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
+    {
+        if( ScriptGroups.Count == 0)
+        {
+            ReadScriptGroup();
+        }
+        List<ScriptGroup> scriptGroups = new List<ScriptGroup>();
+        foreach (var name in names)
+        {
             try
             {
-                RunnerContext.Instance.IsContinuousRunGroup = true;
-                foreach (var scriptGroup in selectedGroups)
-                {
-                    await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
-                    await Task.Delay(2000);
-                }
+                var group = ScriptGroups.First(x => x.Name == name);
+                scriptGroups.Add(group);
             }
-            catch (Exception e)
+            catch (InvalidOperationException)
             {
-                Debug.WriteLine(e.Message);
+                _logger.LogWarning("传入的配置组名称不存在:{Name}", name);
             }
-            finally
+        }
+
+        if (scriptGroups.Count > 0)
+        {
+            await StartGroups(scriptGroups);
+        }
+        else
+        {
+            _logger.LogWarning("需要执行的配置组为空");
+        }
+    }
+
+    private async Task StartGroups(List<ScriptGroup> scriptGroups)
+    {
+        _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
+        try
+        {
+            RunnerContext.Instance.IsContinuousRunGroup = true;
+            foreach (var scriptGroup in scriptGroups)
             {
-                RunnerContext.Instance.Reset();
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
+                await Task.Delay(2000);
             }
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.Message);
+        }
+        finally
+        {
+            RunnerContext.Instance.Reset();
         }
     }
 }

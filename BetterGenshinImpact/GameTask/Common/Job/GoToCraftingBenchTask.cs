@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -99,18 +100,55 @@ public class GoToCraftingBenchTask
             {
                 Enabled = true,
                 AutoSkipEnabled = true,
-                AutoRunEnabled = country != "枫丹" ,
+                AutoRunEnabled = country != "枫丹",
             },
             EndAction = region => Bv.FindFAndPress(region, "合成")
         };
         await pathingTask.Pathing(task);
 
-        await Delay(500, ct);
-
-        using var ra = CaptureToRectArea();
-        if (!Bv.IsInTalkUi(ra))
+        await Delay(700, ct);
+        
+        
+        // 多种尝试 责任链
+        if (!IsInCraftingTalkUi())
         {
-            throw new Exception("未找到与合成台交互按钮");
+            // 直接重试
+            await TryPressCrafting(ct);
+            
+            if (!IsInCraftingTalkUi())
+            {
+                // 往回走一步重试
+                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+                await Delay(200, ct);
+                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                
+                await TryPressCrafting(ct);
+            
+                // 最后 check
+                if (!IsInCraftingTalkUi())
+                {
+                    throw new Exception("未进入和合成台交互对话界面");
+                }
+            
+            }
         }
+    }
+
+
+    private bool IsInCraftingTalkUi()
+    {
+        using var ra = CaptureToRectArea();
+        return Bv.IsInTalkUi(ra);
+    }
+    
+    private async Task<bool> TryPressCrafting( CancellationToken ct)
+    {
+        using var ra1 = CaptureToRectArea();
+        var res = Bv.FindFAndPress(ra1, "合成");
+        if (res)
+        {
+            await Delay(1000, ct);
+        }
+        return res;
     }
 }
