@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -9,9 +8,9 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -333,7 +332,9 @@ public class Avatar
                 ContourApproximationModes.ApproxSimple);
             if (contours.Length > 0)
             {
-                var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale).OrderByDescending(w => w.Width).ToList();
+                var boxes = contours.Select(Cv2.BoundingRect)
+                    .Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale)
+                    .OrderByDescending(w => w.Width).ToList();
                 if (boxes.Count is not 0)
                 {
                     IndexRect = boxes.First();
@@ -346,7 +347,8 @@ public class Avatar
             // 剪裁出IndexRect区域
             var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
-            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
+            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width,
+                IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
@@ -577,6 +579,23 @@ public class Avatar
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
 
+    public bool IsSkillReady()
+    {
+        return (DateTime.UtcNow - LastSkillTime).TotalMilliseconds > SkillCd * 1000;
+    }
+
+    public async Task WaitSkillCdAsync(CancellationToken ct = default)
+    {
+        // 获取CD时间
+        if (IsSkillReady())
+        {
+            return;
+        }
+        var ms = (int)Math.Ceiling((DateTime.UtcNow - LastSkillTime).TotalMilliseconds - SkillCd * 1000) + 100;
+        Logger.LogInformation("{Name}的E技能CD未结束，等待{Milliseconds}ms", Name, ms);
+        await Delay(ms, ct);
+    }
+
     /// <summary>
     /// 跳跃
     /// </summary>
@@ -626,7 +645,7 @@ public class Avatar
                 }
 
                 // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
-                double rate = cnt % 10 < 5 ? 0 : 4.5;//每500ms做一轮上下移动。
+                double rate = cnt % 10 < 5 ? 0 : 4.5; //每500ms做一轮上下移动。
                 cnt++;
                 Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
                 ms -= 50;

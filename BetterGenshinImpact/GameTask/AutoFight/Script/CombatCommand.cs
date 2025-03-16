@@ -103,6 +103,11 @@ public class CombatCommand
         if (Method == Method.Skill)
         {
             var hold = Args != null && Args.Contains("hold");
+            var wait = Args!= null && Args.Contains("wait");
+            if (wait)
+            {
+                avatar.WaitSkillCdAsync().Wait();
+            }
             avatar.UseSkill(hold);
         }
         else if (Method == Method.Burst)

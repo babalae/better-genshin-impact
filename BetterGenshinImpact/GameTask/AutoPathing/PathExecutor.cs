@@ -813,7 +813,7 @@ public class PathExecutor
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex);
+        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex,true);
         if (avatar == null)
         {
             return;
@@ -827,19 +827,8 @@ public class PathExecutor
             Simulation.SendInput.SimulateAction(GIActions.MoveBackward);
             await Delay(200, ct);
         }
-
-        if (PartyConfig.GuardianElementalSkillLongPress)
-        {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-            await Task.Delay(800); // 不能取消
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-            await Delay(700, ct);
-        }
-        else
-        {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-            await Delay(300, ct);
-        }
+        
+        avatar.UseSkill(PartyConfig.GuardianElementalSkillLongPress);
 
         // 钟离往身后放柱子 后继续走路
         if (avatar.Name == "钟离")
@@ -934,28 +923,26 @@ public class PathExecutor
         }
     }
 
-    private async Task<Avatar?> SwitchAvatar(string index)
+    private async Task<Avatar?> SwitchAvatar(string index,bool needSkill = false)
     {
         if (string.IsNullOrEmpty(index))
         {
             return null;
         }
 
-        var avatar = _combatScenes?.Avatars[int.Parse(index) - 1];
-        if (avatar != null)
+        var avatar = _combatScenes?.SelectAvatar(int.Parse(index));
+        if (avatar == null) return null;
+        if (needSkill && !avatar.IsSkillReady())
         {
-            bool success = avatar.TrySwitch();
-            if (success)
-            {
-                await Delay(100, ct);
-                return avatar;
-            }
-            else
-            {
-                Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
-            }
+            Logger.LogInformation("角色{Name}技能未冷却，跳过。", avatar.Name);
         }
-
+        var success = avatar.TrySwitch();
+        if (success)
+        {
+            await Delay(100, ct);
+            return avatar;
+        }
+        Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
         return null;
     }
 

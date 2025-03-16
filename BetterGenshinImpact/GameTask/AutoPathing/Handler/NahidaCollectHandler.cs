@@ -41,11 +41,7 @@ public class NahidaCollectHandler : IActionHandler
             return;
         }
 
-        var cd = DateTime.Now - lastETime;
-        if (cd < TimeSpan.FromSeconds(10))
-        {
-            await Delay((int)((6 - cd.TotalSeconds + 0.5) * 1000), ct);
-        }
+        await nahida.WaitSkillCdAsync(ct);
 
         var dpi = TaskContext.Instance().DpiScale;
 
@@ -78,6 +74,7 @@ public class NahidaCollectHandler : IActionHandler
             Simulation.SendInput.Mouse.MoveMouseBy(x, y);
             await Delay(30, ct);
         }
+
         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
 
         lastETime = DateTime.Now;

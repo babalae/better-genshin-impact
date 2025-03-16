@@ -384,13 +384,7 @@ public class AutoFightTask : ISoloTask
                     await Delay(300, ct);
                     if (kazuha.TrySwitch())
                     {
-                        time = DateTime.UtcNow - kazuha.LastSkillTime;
-                        if (time.TotalMilliseconds > 0 && time.TotalSeconds <= kazuha.SkillHoldCd)
-                        {
-                            Logger.LogInformation("枫原万叶长E技能可能处于冷却中，等待 {Time} s", time.TotalSeconds);
-                            await Delay((int)Math.Ceiling(time.TotalMilliseconds), ct);
-                        }
-
+                        await kazuha.WaitSkillCdAsync(ct);
                         kazuha.UseSkill(true);
                         await Task.Delay(100);
                         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
