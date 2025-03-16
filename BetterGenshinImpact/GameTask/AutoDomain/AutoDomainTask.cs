@@ -77,11 +77,20 @@ public class AutoDomainTask : ISoloTask
 
         // 计算 R 和 G 的差值
         var rMinusG = rList.Zip(gList, (r, g) => r - g).ToArray();
+        // 计算 G 和 B 的差值
+        var gMinusB = gList.Zip(bList, (g, b) => g - b).ToArray();
+        // 计算 R 和 B 的差值
+        var rMinusB = rList.Zip(bList, (r, b) => r - b).ToArray();
 
-        // 计算差值的绝对值的平均值
-        double meanDiff = rMinusG.Select(x => Math.Abs(x)).Average();
+        // 计算差值的绝对值
+        var absDiffRG = rMinusG.Select(x => Math.Abs(x)).ToArray();
+        var absDiffGB = gMinusB.Select(x => Math.Abs(x)).ToArray();
+        var absDiffRB = rMinusB.Select(x => Math.Abs(x)).ToArray();
 
-        // 返回一个包含 R 通道平均值和差值平均值的元组
+        // 计算最大差值
+        double meanDiff = Math.Max(absDiffRG.Max(), Math.Max(absDiffGB.Max(), absDiffRB.Max()));
+
+        // 返回亮度和最大差值的元组
         return (brightness, meanDiff);
     }
 
