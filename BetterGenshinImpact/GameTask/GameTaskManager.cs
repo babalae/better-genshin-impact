@@ -77,23 +77,28 @@ internal class GameTaskManager
     /// </summary>
     /// <param name="name"></param>
     /// <param name="externalConfig"></param>
-    public static void AddTrigger(string name, object? externalConfig)
+    public static bool AddTrigger(string name, object? externalConfig)
     {
         TriggerDictionary ??= new ConcurrentDictionary<string, ITaskTrigger>();
-        TriggerDictionary.Clear(); //TODO 有问题，不应该清理
 
-        if (name == "AutoPick")
+        ITaskTrigger trigger = null;
+            string triggerName = null;
+        switch (name)
         {
-            TriggerDictionary.TryAdd("AutoPick", new AutoPick.AutoPickTrigger(externalConfig as AutoPickExternalConfig));
+            case "AutoPick":
+                triggerName = "AutoPick";
+                trigger = new AutoPick.AutoPickTrigger(externalConfig as AutoPickExternalConfig);
+                break;
+            case "AutoSkip":
+                triggerName = "AutoSkip";
+                trigger = new AutoSkip.AutoSkipTrigger();
+                break;
         }
-        else if (name == "AutoSkip")
-        {
-            TriggerDictionary.TryAdd("AutoSkip", new AutoSkip.AutoSkipTrigger());
-        }
-        // else if (name == "AutoFish")
-        // {
-        //     TriggerDictionary.Add("AutoFish", new AutoFishing.AutoFishingTrigger());
-        // }
+
+        if (triggerName == null || trigger == null) return false;
+        TriggerDictionary[triggerName] = trigger;
+        return true;
+
     }
 
     public static void RefreshTriggerConfigs()
@@ -107,9 +112,11 @@ internal class GameTaskManager
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             // 清理画布
-            WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
+            WeakReferenceMessenger.Default.Send(
+                new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
             VisionContext.Instance().DrawContent.ClearAll();
         }
+
         ReloadAssets();
     }
 
