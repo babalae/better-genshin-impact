@@ -28,12 +28,21 @@ public class Dispatcher
     /// 添加实时任务,会清理之前的所有任务
     /// </summary>
     /// <param name="timer">实时任务触发器</param>
-    /// <exception cref="ArgumentException"></exception>
     /// <exception cref="ArgumentNullException"></exception>
     public void AddTimer(RealtimeTimer timer)
     {
         ClearAllTriggers();
-        AddTrigger(timer);
+        try
+        {
+            AddTrigger(timer);
+        }catch (ArgumentException e)
+        {
+            if (e is ArgumentNullException)
+            {
+                throw;
+            }
+        }
+        
     }
 
     /// <summary>
@@ -62,8 +71,7 @@ public class Dispatcher
         {
             throw new ArgumentNullException(nameof(realtimeTimer.Name), "实时任务名称不能为空");
         }
-
-        TaskTriggerDispatcher.Instance().ClearTriggers();
+        
         if (!TaskTriggerDispatcher.Instance().AddTrigger(realtimeTimer.Name, realtimeTimer.Config))
         {
             throw new ArgumentException($"添加实时任务失败: {realtimeTimer.Name}", nameof(realtimeTimer.Name));
