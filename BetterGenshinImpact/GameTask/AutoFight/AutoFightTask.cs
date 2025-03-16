@@ -225,7 +225,7 @@ public class AutoFightTask : ISoloTask
         // }
         var fightEndFlag = false;
         string lastFightName = "";
-        string skipFightName = "";
+
         //统计切换人打架次数
         var countFight = 0;
         // 战斗操作
@@ -235,50 +235,62 @@ public class AutoFightTask : ISoloTask
             {
                 while (!cts2.Token.IsCancellationRequested)
                 {
+                    var minCoolDown = combatScenes.Avatars
+                        .Select(a => CheckAvatarAvliable(a, actionSchedulerByCd)).Min();
+                    var skipFightName = "";
+                    if (minCoolDown > 0)
+                    {
+                        Logger.LogInformation("队伍中所有角色的E技能都在冷却中,等待{MinCoolDown}秒后继续。", Math.Round(minCoolDown, 2));
+                        await Delay((int)Math.Ceiling(minCoolDown * 1000), ct);
+                    }
+
                     // 通用化战斗策略
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
+                        //如果上个执行者和这次是一个角色，且中间没有跳过，继续执行不判断cd
+                        if (lastFightName != command.Name || skipFightName != "")
+                        {
+                            var avatar = combatScenes.SelectAvatar(command.Name);
+                            if (avatar is null)
+                            {
+                                continue;
+                            }
+
+                            var cd = CheckAvatarAvliable(avatar, actionSchedulerByCd);
+                            if (cd > 0)
+                            {
+                                if (skipFightName != command.Name)
+                                {
+                                    actionSchedulerByCd.TryGetValue(command.Name, out var userCd);
+                                    if (userCd > 0)
+                                    {
+                                        Logger.LogInformation("{commandName}cd冷却为{skillCd}秒,剩余{Cd}秒,跳过此次行动",
+                                            command.Name,
+                                            userCd, Math.Round(cd, 2));
+                                    }
+                                    else
+                                    {
+                                        Logger.LogInformation("{CommandName}cd冷却剩余{Cd}秒,跳过此次行动", command.Name,
+                                            Math.Round(cd, 2));
+                                    }
+                                }
+
+                                // 避免重复log提示
+                                skipFightName = command.Name;
+                                continue;
+                            }
+
+                            skipFightName = "";
+                        }
+
+
                         if (timeoutStopwatch.Elapsed > fightTimeout)
                         {
                             Logger.LogInformation("战斗超时结束");
                             fightEndFlag = true;
                             break;
                         }
-
-                        //根据元素技能冷却事件优化出招流程，只有当人物切换后才会触发检查
-                        if (lastFightName != command.Name && actionSchedulerByCd.TryGetValue(command.Name, out var skillCd))
-                        {
-                            var avatar = combatScenes.SelectAvatar(command.Name);
-                            if (avatar == null)
-                            {
-                                continue;
-                            }
-
-                            double cd;
-                            if (skillCd > 0)
-                            {
-                                var dif = (DateTime.UtcNow - avatar.LastSkillTime);
-                                cd = skillCd - dif.TotalSeconds;
-                            }
-                            else
-                            {
-                                cd = avatar.GetSkillCdSeconds();
-                            }
-
-                            //当技能未冷却时，跳过此次出招
-                            if (cd > 0)
-                            {
-                                if (skipFightName != command.Name)
-                                {
-                                    Logger.LogInformation($"{command.Name}cd冷却为{skillCd}秒,剩余{cd}秒,跳过此次行动");
-                                }
-
-                                skipFightName = command.Name;
-                                continue;
-                            }
-                        }
-
 
                         command.Execute(combatScenes);
                         //统计战斗人次
@@ -424,6 +436,34 @@ public class AutoFightTask : ISoloTask
         return Math.Abs(a.Item1 - b.Item1) < c.Item1 &&
                Math.Abs(a.Item2 - b.Item2) < c.Item2 &&
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
+    }
+
+    private double CheckAvatarAvliable(Avatar avatar, Dictionary<string, double> actionSchedulerByCd)
+    {
+        actionSchedulerByCd.TryGetValue(avatar.Name, out var skillCd);
+        switch (skillCd)
+        {
+            case 0:
+                break;
+            case < 0:
+                var cd = avatar.GetSkillCdSeconds();
+                if (cd > 0)
+                {
+                    return cd;
+                }
+
+                break;
+            case > 0:
+                var dif = DateTime.UtcNow - avatar.LastSkillTime;
+                if (skillCd > dif.TotalSeconds)
+                {
+                    return skillCd - dif.TotalSeconds;
+                }
+
+                break;
+        }
+
+        return 0;
     }
 
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
