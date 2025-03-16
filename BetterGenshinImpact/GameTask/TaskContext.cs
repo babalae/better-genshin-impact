@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
@@ -36,13 +37,6 @@ namespace BetterGenshinImpact.GameTask
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
-            IsInitialized = true;
-        }
-        
-        public void InitForTest(int width, int height)
-        {
-            SystemInfo = new SystemInfo(width, height);
-            DpiScale = DpiHelper.ScaleY;
             IsInitialized = true;
         }
 
