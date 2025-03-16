@@ -91,12 +91,16 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        public void AddTrigger(string name, object? externalConfig)
+        public bool AddTrigger(string name, object? externalConfig)
         {
             lock (_triggerListLocker)
             {
-                GameTaskManager.AddTrigger(name, externalConfig);
-                SetTriggers(GameTaskManager.ConvertToTriggerList(true));
+                if (GameTaskManager.AddTrigger(name, externalConfig))
+                {
+                    SetTriggers(GameTaskManager.ConvertToTriggerList(true));
+                    return true;
+                }
+                return false;
             }
         }
 
