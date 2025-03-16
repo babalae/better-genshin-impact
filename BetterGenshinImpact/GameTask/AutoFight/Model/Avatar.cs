@@ -579,9 +579,20 @@ public class Avatar
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
 
-    public bool IsSkillReady()
+    public bool IsSkillReady(bool printLog = false)
     {
-        return (DateTime.UtcNow - LastSkillTime).TotalMilliseconds > SkillCd * 1000;
+        var cd = (DateTime.UtcNow - LastSkillTime).TotalMilliseconds - SkillCd * 1000;
+        if (cd > 0)
+        {
+            if (printLog)
+            {
+                Logger.LogInformation("{Name}的E技能未准备好,CD还有{Seconds}秒", Name, Math.Ceiling(cd) / 1000);
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     public async Task WaitSkillCdAsync(CancellationToken ct = default)
@@ -591,8 +602,9 @@ public class Avatar
         {
             return;
         }
+
         var ms = (int)Math.Ceiling((DateTime.UtcNow - LastSkillTime).TotalMilliseconds - SkillCd * 1000) + 100;
-        Logger.LogInformation("{Name}的E技能CD未结束，等待{Milliseconds}ms", Name, ms);
+        Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, ms / 1000);
         await Delay(ms, ct);
     }
 

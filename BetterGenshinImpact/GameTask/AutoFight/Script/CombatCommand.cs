@@ -28,14 +28,13 @@ public class CombatCommand
 
             var parameters = command.Substring(startIndex + 1, endIndex - startIndex - 1);
             Args = [..parameters.Split(',', StringSplitOptions.TrimEntries)];
-
         }
         else
         {
             Method = Method.GetEnumByCode(command);
             Args = [];
         }
-        
+
         // 校验参数
         if (Method == Method.Walk)
         {
@@ -81,6 +80,7 @@ public class CombatCommand
             {
                 return;
             }
+
             // 非宏类脚本，等待切换角色成功
             if (Method != Method.Wait
                 && Method != Method.MouseDown
@@ -94,7 +94,7 @@ public class CombatCommand
                 avatar.Switch();
             }
         }
-        
+
         Execute(avatar);
     }
 
@@ -103,9 +103,19 @@ public class CombatCommand
         if (Method == Method.Skill)
         {
             var hold = Args != null && Args.Contains("hold");
-            var wait = Args!= null && Args.Contains("wait");
-            if (wait)
+            var wait = Args != null && Args.Contains("wait");
+            var fast = Args != null && Args.Contains("fast");
+            if (fast)
             {
+                // 快速跳过e
+                if (!avatar.IsSkillReady(true))
+                {
+                    return;
+                }
+            }
+            else if (wait)
+            {
+                // 等待e结束
                 avatar.WaitSkillCdAsync().Wait();
             }
             avatar.UseSkill(hold);
