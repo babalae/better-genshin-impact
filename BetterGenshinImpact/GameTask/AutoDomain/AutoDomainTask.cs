@@ -97,7 +97,7 @@ public class AutoDomainTask : ISoloTask
     static int IsDead(Bitmap image)
     {
         (double brightness, double MeanDiff )= CalcRgbDiff(image);
-        if (MeanDiff<0.8 && brightness<150){
+        if (MeanDiff<0.5){
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string filePath = $"image_{timestamp}.png"; // 定义文件名
             image.Save(filePath); // 保存图像
