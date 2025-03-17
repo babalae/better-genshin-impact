@@ -214,7 +214,8 @@ public class CombatScenes : IDisposable
         return true;
     }
 
-    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null, List<Rect>? avatarIndexRectList = null)
+    private Avatar[] BuildAvatars(List<string> names, List<Rect>? nameRects = null,
+        List<Rect>? avatarIndexRectList = null)
     {
         if (avatarIndexRectList == null && ExpectedTeamAvatarNum == 4)
         {
@@ -269,6 +270,21 @@ public class CombatScenes : IDisposable
     public Avatar? SelectAvatar(string name)
     {
         return AvatarMap.GetValueOrDefault(name);
+    }
+
+    /// <summary>
+    /// 使用编号切换角色
+    /// </summary>
+    /// <param name="avatarIndex">从1开始</param>
+    /// <returns></returns>
+    public Avatar? SelectAvatar(int avatarIndex)
+    {
+        if (avatarIndex < 0 || avatarIndex >= AvatarCount)
+        {
+            return null;
+        }
+
+        return Avatars[avatarIndex - 1];
     }
 
     #region OCR识别队伍（已弃用）

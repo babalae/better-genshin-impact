@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -9,9 +8,9 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -52,6 +51,11 @@ public class Avatar
     /// 元素战技CD
     /// </summary>
     public double SkillCd { get; set; }
+
+    /// <summary>
+    /// 最近一次OCR识别出的CD到期时间
+    /// </summary>
+    public DateTime OcrSkillCd { get; set; }
 
     /// <summary>
     /// 长按元素战技CD
@@ -333,7 +337,9 @@ public class Avatar
                 ContourApproximationModes.ApproxSimple);
             if (contours.Length > 0)
             {
-                var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale).OrderByDescending(w => w.Width).ToList();
+                var boxes = contours.Select(Cv2.BoundingRect)
+                    .Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale)
+                    .OrderByDescending(w => w.Width).ToList();
                 if (boxes.Count is not 0)
                 {
                     IndexRect = boxes.First();
@@ -346,7 +352,8 @@ public class Avatar
             // 剪裁出IndexRect区域
             var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
-            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
+            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width,
+                IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
@@ -418,7 +425,7 @@ public class Avatar
             }
             else
             {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyPress);
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
             }
 
             Sleep(200, Ct);
@@ -429,12 +436,12 @@ public class Avatar
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
-                // todo 把cd加入执行队列
                 LastSkillTime = DateTime.UtcNow;
                 return;
             }
         }
     }
+
 
     /// <summary>
     /// 元素战技是否正在CD中
@@ -446,7 +453,13 @@ public class Avatar
         var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
         var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
-        return StringUtils.TryParseDouble(text);
+        var cd = StringUtils.TryParseDouble(text);
+        if (cd > 0 && cd <= SkillCd)
+        {
+            OcrSkillCd = DateTime.UtcNow.AddSeconds(cd);
+        }
+
+        return cd;
     }
 
     /// <summary>
@@ -578,6 +591,58 @@ public class Avatar
     }
 
     /// <summary>
+    ///
+    /// 根据cd推算E技能是否好了
+    /// </summary>
+    /// <param name="printLog">log是否输出</param>
+    /// <returns>是否好了</returns>
+    public bool IsSkillReady(bool printLog = false)
+    {
+        var cd = GetSkillCdSeconds();
+        if (cd > 0)
+        {
+            if (printLog)
+            {
+                Logger.LogInformation("{Name}的E技能未准备好,CD还有{Seconds}秒", Name, Math.Round(cd, 2));
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    ///  计算上一次使用技能到现在还剩下多长时间的cd
+    /// </summary>
+    /// <returns></returns>
+    public double GetSkillCdSeconds()
+    {
+        var now = DateTime.UtcNow;
+        // 若未经过OCR的技能释放,上次时间加上最长的技能时间
+        var maxCd = Math.Max(SkillHoldCd, SkillCd);
+        var target =
+            LastSkillTime >= OcrSkillCd ? LastSkillTime.AddSeconds(Math.Max(SkillHoldCd, SkillCd)) : OcrSkillCd;
+        var result =  now > target ? 0d : (target - now).TotalSeconds;
+        if (!(result > maxCd)) return result;
+        Logger.LogWarning("{Name}的当前技能CD大于其最大技能CD{MaxCd}。如果你没有调整系统时间的话，这是一个bug。",Name,maxCd);
+        return maxCd;
+    }
+
+    public async Task WaitSkillCd(CancellationToken ct = default)
+    {
+        // 获取CD时间
+        if (IsSkillReady())
+        {
+            return;
+        }
+
+        var s = GetSkillCdSeconds() + 0.2;
+        Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, Math.Round(s, 2));
+        await Delay((int)Math.Ceiling(s * 1000), ct);
+    }
+
+    /// <summary>
     /// 跳跃
     /// </summary>
     public void Jump()
@@ -626,7 +691,7 @@ public class Avatar
                 }
 
                 // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
-                double rate = cnt % 10 < 5 ? 0 : 4.5;//每500ms做一轮上下移动。
+                double rate = cnt % 10 < 5 ? 0 : 4.5; //每500ms做一轮上下移动。
                 cnt++;
                 Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
                 ms -= 50;
