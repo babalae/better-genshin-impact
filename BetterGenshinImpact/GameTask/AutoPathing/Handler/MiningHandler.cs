@@ -39,10 +39,13 @@ public class MiningHandler : IActionHandler
         // 挖矿
         Mining(combatScenes);
 
-        await Delay(1000, ct);
+        if (waypointForTrack is not { DisablePickupAround: true })
+        {
+            await Delay(1000, ct);
 
-        // 拾取
-        await _scanPickTask.Start(ct);
+            // 拾取
+            await _scanPickTask.Start(ct);
+        }
     }
 
     private void Mining(CombatScenes combatScenes)
