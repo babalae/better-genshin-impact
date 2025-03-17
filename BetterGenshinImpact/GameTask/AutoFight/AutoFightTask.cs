@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPick;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
@@ -396,24 +397,22 @@ public class AutoFightTask : ISoloTask
             var kazuha = combatScenes.Avatars.FirstOrDefault(a => a.Name == "枫原万叶");
             if (kazuha != null)
             {
-                var time = DateTime.UtcNow - kazuha.LastSkillTime;
+                var kazuhaCd = kazuha.GetSkillCdSeconds();
                 //当万叶cd大于3时或战斗人次少于2时（通常无怪物情况下），此时不再触发万叶拾取，
-                if (!(countFight < 2 || lastFightName == "枫原万叶" && time.TotalSeconds > 3))
+                if (!(countFight < 2 || lastFightName == "枫原万叶" && kazuhaCd > 3))
                 {
-                    Logger.LogInformation("使用枫原万叶长E拾取掉落物");
-                    await Delay(300, ct);
-                    if (kazuha.TrySwitch())
-                    {
-                        await kazuha.WaitSkillCd(ct);
-                        kazuha.UseSkill(true);
-                        await Task.Delay(100);
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                        await Delay(1500, ct);
-                    }
+                    await KazuhaPickUpTask.Execute(combatScenes, ct);
                 }
                 else
                 {
-                    Logger.LogInformation((countFight < 2 ? "首个人出招就结束战斗，应该无怪物" : "距最近一次万叶出招，时间过短") + "，跳过此次万叶拾取！");
+                    if (countFight < 2)
+                    {
+                        Logger.LogInformation("首个人出招就结束战斗，应该无怪物，跳过此次万叶拾取！");
+                    }
+                    else
+                    {
+                        Logger.LogInformation("距最近一次万叶出招，时间过短，跳过此次万叶拾取！");
+                    }
                 }
             }
         }
