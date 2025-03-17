@@ -38,7 +38,7 @@ public class NahidaCollectHandler : IActionHandler
             return;
         }
 
-        await nahida.WaitSkillCdAsync(ct);
+        await nahida.WaitSkillCd(ct);
 
         var dpi = TaskContext.Instance().DpiScale;
 

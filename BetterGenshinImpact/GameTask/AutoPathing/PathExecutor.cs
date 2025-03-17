@@ -935,6 +935,7 @@ public class PathExecutor
         if (needSkill && !avatar.IsSkillReady())
         {
             Logger.LogInformation("角色{Name}技能未冷却，跳过。", avatar.Name);
+            return null;
         }
         var success = avatar.TrySwitch();
         if (success)
