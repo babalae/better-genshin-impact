@@ -90,6 +90,8 @@ public class Dispatcher
     /// - AutoWood: 启动自动伐木任务
     /// - AutoFight: 启动自动战斗任务
     /// - AutoDomain: 启动自动秘境任务
+    /// - KazuhaPickUp: 枫原万叶聚集凋落物任务
+    /// - ScanPick: 扫描并捡物品任务
     /// </param>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentException"></exception>
