@@ -115,9 +115,10 @@ public class CombatCommand
             }
             else if (wait)
             {
-                // 等待e结束
-                avatar.WaitSkillCdAsync().Wait();
+                // 等待e结束,同步等待
+                avatar.WaitSkillCd().Wait();
             }
+
             avatar.UseSkill(hold);
         }
         else if (Method == Method.Burst)

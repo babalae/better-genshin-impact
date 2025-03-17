@@ -620,12 +620,16 @@ public class Avatar
     {
         var now = DateTime.UtcNow;
         // 若未经过OCR的技能释放,上次时间加上最长的技能时间
+        var maxCd = Math.Max(SkillHoldCd, SkillCd);
         var target =
             LastSkillTime >= OcrSkillCd ? LastSkillTime.AddSeconds(Math.Max(SkillHoldCd, SkillCd)) : OcrSkillCd;
-        return now > target ? 0d : (target - now).TotalSeconds;
+        var result =  now > target ? 0d : (target - now).TotalSeconds;
+        if (!(result > maxCd)) return result;
+        Logger.LogWarning("{Name}的当前技能CD大于其最大技能CD{MaxCd}。如果你没有调整系统时间的话，这是一个bug。",Name,maxCd);
+        return maxCd;
     }
 
-    public async Task WaitSkillCdAsync(CancellationToken ct = default)
+    public async Task WaitSkillCd(CancellationToken ct = default)
     {
         // 获取CD时间
         if (IsSkillReady())

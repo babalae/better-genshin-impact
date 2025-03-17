@@ -404,7 +404,7 @@ public class AutoFightTask : ISoloTask
                     await Delay(300, ct);
                     if (kazuha.TrySwitch())
                     {
-                        await kazuha.WaitSkillCdAsync(ct);
+                        await kazuha.WaitSkillCd(ct);
                         kazuha.UseSkill(true);
                         await Task.Delay(100);
                         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
