@@ -161,9 +161,10 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogInformation("体力已经耗尽，结束自动秘境");
                 }
-                
+
                 break;
             }
+
             Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
         }
     }
@@ -288,7 +289,7 @@ public class AutoDomainTask : ISoloTask
         var fightAssets = AutoFightAssets.Instance;
 
         // 进入秘境
-        for (int i = 0; i < 3; i++)  // 3次重试 有时候会拾取晶蝶
+        for (int i = 0; i < 3; i++) // 3次重试 有时候会拾取晶蝶
         {
             using var fRectArea = CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
             if (!fRectArea.IsEmpty())
@@ -330,11 +331,21 @@ public class AutoDomainTask : ISoloTask
         while (retryTimes < 120)
         {
             retryTimes++;
-            using var cactRectArea = CaptureToRectArea().Find(AutoFightAssets.Instance.ClickAnyCloseTipRa);
-            if (!cactRectArea.IsEmpty())
+            using var ra = CaptureToRectArea();
+            // using var cactRectArea =ra.Find(AutoFightAssets.Instance.ClickAnyCloseTipRa);
+            // if (!cactRectArea.IsEmpty())
+            // {
+            //     await Delay(1000, _ct);
+            //     cactRectArea.Click();
+            //     break;
+            // }
+
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
+            var done = ocrList.FirstOrDefault(txt => txt.Text.Contains("地脉异常") || txt.Text.Contains("点击任意") || txt.Text.Contains("位置关闭"));
+            if (done != null)
             {
                 await Delay(1000, _ct);
-                cactRectArea.Click();
+                done.Click();
                 break;
             }
 
@@ -449,7 +460,6 @@ public class AutoDomainTask : ISoloTask
 
     private void EndFightWait()
     {
-        
         if (_ct.IsCancellationRequested)
         {
             return;
@@ -663,7 +673,7 @@ public class AutoDomainTask : ISoloTask
                             }
 
                             Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
-                            Sleep(60); 
+                            Sleep(60);
                             Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
                             prevKey = moveLeftKey;
                         }
@@ -675,14 +685,14 @@ public class AutoDomainTask : ISoloTask
                             }
 
                             Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
-                            Sleep(60); 
+                            Sleep(60);
                             Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
                             prevKey = moveRightKey;
                         }
                         else
                         {
                             Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
-                            Sleep(60); 
+                            Sleep(60);
                             Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
                             Sleep(500, _ct);
                             treeCts.Cancel();
@@ -729,7 +739,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     // 左右移动5次说明已经在树中心了
                     Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
-                    Sleep(60); 
+                    Sleep(60);
                     Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
                     Sleep(500, _ct);
                     treeCts.Cancel();
