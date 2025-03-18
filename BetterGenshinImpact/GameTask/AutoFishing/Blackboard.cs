@@ -34,6 +34,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool throwRodNoTarget;
 
         /// <summary>
+        /// 没有抛竿落点的次数
+        /// </summary>
+        public int throwRodNoTargetTimes;
+
+        /// <summary>
         /// 是否没有鱼饵适用的鱼
         /// </summary>
         public bool throwRodNoBaitFish;
@@ -99,6 +104,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         internal virtual void Reset()
         {
             abort = false;
+            throwRodNoTargetTimes = 0;
             throwRodNoBaitFishFailures = new List<string>();
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;

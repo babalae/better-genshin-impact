@@ -332,6 +332,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         blackboard.Sleep(800);
 
                         blackboard.throwRodNoTarget = true;
+                        blackboard.throwRodNoTargetTimes++;
+                        if (blackboard.throwRodNoTargetTimes > 2)
+                        {
+                            logger.LogWarning("没有找到落点次数过多，目前位置可能视野不佳，退出");
+                            blackboard.abort = true;
+                        }
 
                         return BehaviourStatus.Failed;
                     }
