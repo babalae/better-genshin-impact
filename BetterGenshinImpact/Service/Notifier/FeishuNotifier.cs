@@ -30,7 +30,7 @@ public class FeishuNotifier : INotifier
 
     private readonly HttpClient _httpClient;
 
-    private static readonly string _accesssTokenUrl = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal";
+    private static readonly string _accessTokenUrl = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal";
     private static readonly string _uploadImageUrl = "https://open.feishu.cn/open-apis/im/v1/images";
     
     public FeishuNotifier(HttpClient httpClient, string endpoint = "", string appId = "", string appSecret = "")
@@ -72,8 +72,8 @@ public class FeishuNotifier : INotifier
         Object feishuMessage;
         if (notificationData.Screenshot != null && AppId.Length > 0 && AppSecret.Length > 0)
         {
-            var acctessToken = await GetAccessToken();
-            var imageKey = await UploadImage(notificationData.Screenshot, acctessToken);
+            var accessToken = await GetAccessToken();
+            var imageKey = await UploadImage(notificationData.Screenshot, accessToken);
             feishuMessage = new
             {
                 msg_type = "post",
@@ -83,8 +83,8 @@ public class FeishuNotifier : INotifier
                     {
                         zh_cn = new
                         {
-                            content = new Object[] {
-                                new Object[] {
+                            content = new object[] {
+                                new object[] {
                                     new {
                                         tag = "text",
                                         text = notificationData.Message
@@ -126,7 +126,7 @@ public class FeishuNotifier : INotifier
         };
         var accessTokenBodySerializedData = JsonSerializer.Serialize(accessTokenBody);
         var accessTokenBodyContent = new StringContent(accessTokenBodySerializedData, Encoding.UTF8, "application/json");
-        using (var accessTokenResponse = await _httpClient.PostAsync(_accesssTokenUrl, accessTokenBodyContent))
+        using (var accessTokenResponse = await _httpClient.PostAsync(_accessTokenUrl, accessTokenBodyContent))
         {
             var tokenResponseContent = await accessTokenResponse.Content.ReadAsStringAsync();
             if (!accessTokenResponse.IsSuccessStatusCode)
@@ -153,7 +153,7 @@ public class FeishuNotifier : INotifier
         return tokenString;
     }
 
-    private async Task<String> UploadImage(Image image, string acessToken)
+    private async Task<String> UploadImage(Image image, string accessToken)
     {
         string imageKey = string.Empty;
         MultipartFormDataContent multipartContent = new MultipartFormDataContent();
@@ -168,7 +168,7 @@ public class FeishuNotifier : INotifier
         {
             Content = multipartContent
         };
-        uploadImageRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", acessToken);
+        uploadImageRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         using (HttpResponseMessage uploadImageResponse = await _httpClient.SendAsync(uploadImageRequest))
         {
             var uploadResponseString = await uploadImageResponse.Content.ReadAsStringAsync();
