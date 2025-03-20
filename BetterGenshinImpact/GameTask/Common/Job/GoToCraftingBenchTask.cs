@@ -102,7 +102,7 @@ public class GoToCraftingBenchTask
                 AutoSkipEnabled = true,
                 AutoRunEnabled = country != "枫丹",
             },
-            EndAction = region => Bv.FindFAndPress(region, "合成")
+            EndAction = region => Bv.FindFAndPress(region, text: "合成")
         };
         await pathingTask.Pathing(task);
 
@@ -144,7 +144,7 @@ public class GoToCraftingBenchTask
     private async Task<bool> TryPressCrafting( CancellationToken ct)
     {
         using var ra1 = CaptureToRectArea();
-        var res = Bv.FindFAndPress(ra1, "合成");
+        var res = Bv.FindFAndPress(ra1, text: "合成");
         if (res)
         {
             await Delay(1000, ct);

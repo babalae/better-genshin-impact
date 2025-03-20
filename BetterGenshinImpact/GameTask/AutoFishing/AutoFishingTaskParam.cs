@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using System.Text;
 using BetterGenshinImpact.Helpers;
 using Microsoft.ClearScript;
+using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     public class AutoFishingTaskParam : BaseTaskParam
     {
-        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick)
+        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, CultureInfo? cultureInfo) : base(cultureInfo)
         {
             WholeProcessTimeoutSeconds = wholeProcessTimeoutSeconds;
             ThrowRodTimeOutTimeoutSeconds = throwRodTimeOutTimeoutSeconds;
@@ -43,7 +44,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var fishingTimePolicy = (FishingTimePolicy)ScriptObjectConverter.GetValue(jsObject, "fishingTimePolicy", (int)autoFishingConfig.FishingTimePolicy);
             var saveScreenshotOnKeyTick = ScriptObjectConverter.GetValue(jsObject, "saveScreenshotOnKeyTick", false);
 
-            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick);
+            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, null);
         }
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <returns></returns>
         public static AutoFishingTaskParam BuildFromConfig(AutoFishingConfig config, bool saveScreenshotOnKeyTick = false)
         {
-            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick);
+            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, new CultureInfo(config.GameCultureInfoName));
         }
     }
 }

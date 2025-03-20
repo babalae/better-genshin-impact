@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// <summary>
 /// 一些基础图像识别操作
 /// </summary>
-public static partial class Bv
+public partial class Bv
 {
     /// <summary>
     /// 等待图像被找到

@@ -32,6 +32,10 @@ using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
 using Vanara.Extensions;
+using System.Collections.Frozen;
+using System.Globalization;
+using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.View.Converters;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -120,15 +124,30 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoFishingButtonText = "启动";
 
     [ObservableProperty]
-    private Dictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
+    private FrozenDictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
         .Cast<FishingTimePolicy>()
-        .ToDictionary(
+        .ToFrozenDictionary(
             e => (Enum)e,
             e => e.GetType()
                 .GetField(e.ToString())?
                 .GetCustomAttribute<DescriptionAttribute>()?
                 .Description ?? e.ToString());
-    
+
+    [ObservableProperty]
+    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-CN", "en" }
+        .ToFrozenDictionary(
+            c => c,
+            c =>
+            {
+                CultureInfo.CurrentUICulture = new CultureInfo(c);
+                var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
+                return stringLocalizer["简体中文"].ToString();
+            }
+        );
+
+
+    //[new CultureInfo("zh-CN"), new CultureInfo("en")];
+
     private bool saveScreenshotOnKeyTick;
     public bool SaveScreenshotOnKeyTick
     {

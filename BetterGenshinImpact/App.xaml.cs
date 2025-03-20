@@ -73,6 +73,8 @@ public partial class App : Application
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
 
+                services.AddLocalization();
+
                 services.AddNavigationViewPageProvider();
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
