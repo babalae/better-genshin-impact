@@ -117,6 +117,8 @@ public partial class NotificationConfig : ObservableObject
     ///     飞书通知地址
     /// </summary>
     [ObservableProperty] private string _feishuWebhookUrl = string.Empty;
+    [ObservableProperty] private string _feishuAppId = string.Empty;
+    [ObservableProperty] private string _feishuAppSecret = string.Empty;
 
     [ObservableProperty] private string _fromEmail = string.Empty;
 
