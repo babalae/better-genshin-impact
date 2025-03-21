@@ -58,7 +58,13 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="上钩" xml:space="preserve">
-    <value>bite</value>
+  <data name="凯瑟琳" xml:space="preserve">
+    <value>凱瑟琳</value>
+  </data>
+  <data name="合成" xml:space="preserve">
+    <value>合成</value>
+  </data>
+  <data name="钓鱼" xml:space="preserve">
+    <value>釣魚</value>
   </data>
 </root>

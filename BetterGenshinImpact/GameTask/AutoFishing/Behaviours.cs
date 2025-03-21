@@ -735,7 +735,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             // OCR 提竿判断
             using Mat wordCaptureGreyMat = new Mat(imageRegion.SrcGreyMat, liftingWordsAreaRect);
             var text = ocrService.Ocr(wordCaptureGreyMat);
-            string bitedString = "上钩".ToLocalizedString(stringLocalizer, cultureInfo);
+            string bitedString = stringLocalizer.WithCultureGet(cultureInfo, "上钩");
 
             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains(bitedString))
             {

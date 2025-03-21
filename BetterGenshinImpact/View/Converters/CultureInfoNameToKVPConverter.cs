@@ -1,11 +1,8 @@
-﻿using BetterGenshinImpact;
-using BetterGenshinImpact.ViewModel.Pages;
+﻿using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Localization;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
-using System.Reflection;
 using System.Text;
 using System.Windows.Data;
 
@@ -27,10 +24,10 @@ class CultureInfoNameToKVPConverter : IValueConverter
             throw new ArgumentException("Value must be a CultureInfoName");
         }
 
-        CultureInfo.CurrentUICulture = new CultureInfo(cultureInfoName);
         var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
+        var description = stringLocalizer.WithCultureGet(new CultureInfo(cultureInfoName), "简体中文");
 
-        return new KeyValuePair<string, string>(cultureInfoName, stringLocalizer["简体中文"].ToString());
+        return new KeyValuePair<string, string>(cultureInfoName, description);
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 namespace BetterGenshinImpact.Helpers;
 public static class CultureHelper
 {
-    public static string ToLocalizedString(this string text, IStringLocalizer stringLocalizer, CultureInfo? culture)
+    public static string WithCultureGet(this IStringLocalizer stringLocalizer, CultureInfo? culture, string text)
     {
         if (culture == null)
         {
