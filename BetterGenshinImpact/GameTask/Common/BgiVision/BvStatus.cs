@@ -22,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 ///
 /// 此处主要是对游戏内的一些状态进行识别
 /// </summary>
-public static partial class Bv
+public partial class Bv
 {
     public static string WhichGameUi()
     {

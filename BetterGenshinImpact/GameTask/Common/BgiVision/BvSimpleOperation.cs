@@ -1,11 +1,17 @@
-﻿using System.Windows.Documents;
+﻿using System;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Documents;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
 using Fischless.WindowsInput;
+using Microsoft.Extensions.Localization;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -16,8 +22,9 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 ///
 /// 此处主要是对游戏内的一些状态进行识别
 /// </summary>
-public static partial class Bv
+public partial class Bv
 {
+    private static readonly IStringLocalizer<Bv> stringLocalizer = App.GetService<IStringLocalizer<Bv>>() ?? throw new NullReferenceException();
     /// <summary>
     /// 点击白色确认按钮
     /// </summary>
@@ -146,7 +153,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <param name="text"></param>
     /// <returns></returns>
-    public static bool FindF(ImageRegion captureRa, params string[] text)
+    public static bool FindF(ImageRegion captureRa, CultureInfo? gameCultureInfo = null, params string[] text)
     {
         using var ra = captureRa.Find(AutoPickAssets.Instance.PickRo);
         if (ra.IsExist())
@@ -164,11 +171,22 @@ public static partial class Bv
             var textRa = captureRa.DeriveCrop(textRect);
             var list = textRa.FindMulti(RecognitionObject.OcrThis);
 
+            string[] gameTexts;
+            if (gameCultureInfo != null)
+            {
+                using var _ = CultureHelper.Use(gameCultureInfo);
+                gameTexts = text.Select(t => stringLocalizer[t].ToString()).ToArray();
+            }
+            else
+            {
+                gameTexts = text;
+            }
+
             foreach (var item in list)
             {
                 // 所有匹配成功才算成功
                 var success = true;
-                foreach (var t in text)
+                foreach (var t in gameTexts)
                 {
                     if (!item.Text.Contains(t))
                     {
@@ -188,9 +206,9 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <param name="text"></param>
     /// <returns></returns>
-    public static bool FindFAndPress(ImageRegion captureRa, params string[] text)
+    public static bool FindFAndPress(ImageRegion captureRa, CultureInfo? gameCultureInfo = null, params string[] text)
     {
-        if (FindF(captureRa, text))
+        if (FindF(captureRa, gameCultureInfo, text))
         {
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             return true;
@@ -199,9 +217,9 @@ public static partial class Bv
         return false;
     }
 
-    public static bool FindFAndPress(ImageRegion captureRa, IKeyboardSimulator keyboard, params string[] text)
+    public static bool FindFAndPress(ImageRegion captureRa, IKeyboardSimulator keyboard, CultureInfo? gameCultureInfo = null, params string[] text)
     {
-        if (FindF(captureRa, text))
+        if (FindF(captureRa, gameCultureInfo, text))
         {
             keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             return true;

@@ -1569,13 +1569,71 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Width="80"
+                              Width="100"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding FishingTimePolicyDict}"
                               SelectedValuePath="Key"
                               DisplayMemberPath="Value"
                               SelectedItem="{Binding Config.AutoFishingConfig.FishingTimePolicy, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="游戏语言"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="Game Language"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="200"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding LanguageDict}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"
+                              SelectedItem="{Binding Config.AutoFishingConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}" />
+                </Grid>
+                <!--<Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="BGI界面语言"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="BGI UI Language"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="200"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding LanguageDict}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"
+                              SelectedItem="{Binding Config.AutoFishingConfig.UiCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}" />
+                </Grid>-->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

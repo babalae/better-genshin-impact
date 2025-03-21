@@ -36,7 +36,7 @@ public class GoToAdventurersGuildTask
                 {
                     await new SwitchPartyTask().Start(dailyRewardPartyName, ct);
                 }
-                
+
                 // F1领取奖励
                 await new ClaimEncounterPointsRewardsTask().Start(ct);
 
@@ -82,7 +82,7 @@ public class GoToAdventurersGuildTask
             // 结束后重新打开
             await Delay(1200, ct);
             var ra = CaptureToRectArea();
-            if (!Bv.FindFAndPress(ra, "凯瑟琳"))
+            if (!Bv.FindFAndPress(ra, text: "凯瑟琳"))
             {
                 throw new Exception("未找与凯瑟琳对话交互按钮");
             }
@@ -136,7 +136,7 @@ public class GoToAdventurersGuildTask
                 Enabled = true,
                 AutoSkipEnabled = true
             },
-            EndAction = region => Bv.FindFAndPress(region, "凯瑟琳")
+            EndAction = region => Bv.FindFAndPress(region, text: "凯瑟琳")
         };
         await pathingTask.Pathing(task);
 

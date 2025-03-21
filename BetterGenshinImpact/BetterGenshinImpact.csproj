@@ -49,6 +49,7 @@
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.14" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.18.1" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.18.1" />
@@ -172,5 +173,5 @@
 	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
-
+	
 </Project>

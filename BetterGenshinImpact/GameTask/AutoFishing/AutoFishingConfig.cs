@@ -46,4 +46,16 @@ public partial class AutoFishingConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private FishingTimePolicy _fishingTimePolicy = FishingTimePolicy.All;
+
+    /// <summary>
+    /// 游戏语言名称
+    /// </summary>
+    [ObservableProperty]
+    private string _gameCultureInfoName = "zh-CN";
+
+    /// <summary>
+    /// BGI界面语言名称
+    /// </summary>
+    [ObservableProperty]
+    private string _uiCultureInfoName = "zh-CN";
 }
