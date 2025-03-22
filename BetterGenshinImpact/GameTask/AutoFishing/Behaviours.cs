@@ -688,13 +688,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly DrawContent drawContent;
         private readonly IOcrService ocrService = OcrFactory.Paddle;
         private readonly CultureInfo? cultureInfo;
-        private readonly IStringLocalizer<AutoFishingImageRecognition> stringLocalizer = App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ?? throw new NullReferenceException();
-        public FishBite(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, DrawContent? drawContent = null, CultureInfo? cultureInfo = null) : base(name, logger, saveScreenshotOnTerminat)
+        private readonly IStringLocalizer<AutoFishingImageRecognition>? stringLocalizer;
+        public FishBite(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, DrawContent? drawContent = null, CultureInfo? cultureInfo = null, IStringLocalizer<AutoFishingImageRecognition>? stringLocalizer = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
             this.input = input;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
             this.cultureInfo = cultureInfo;
+            this.stringLocalizer = stringLocalizer;
         }
 
         protected override void OnInitialize()
@@ -707,9 +708,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             // 自动识别的钓鱼框向下延伸到屏幕中间
             //var liftingWordsAreaRect = new Rect(fishBoxRect.X, fishBoxRect.Y + fishBoxRect.Height * 2,
             //    fishBoxRect.Width, imageRegion.CaptureRectArea.SrcMat.Height / 2 - fishBoxRect.Y - fishBoxRect.Height * 5);
-            // 上半屏幕和中间1/3的区域
+            // 上半屏幕和中间1/2的区域
             var liftingWordsAreaRect = new Rect(imageRegion.SrcMat.Width / 3, 0, imageRegion.SrcMat.Width / 3,
-                imageRegion.SrcMat.Height / 3);
+                imageRegion.SrcMat.Height / 2);
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
             using var wordCaptureMat = new Mat(imageRegion.SrcMat, liftingWordsAreaRect);
             var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
@@ -726,16 +727,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             // 图像提竿判断
-            //using var liftRodButtonRa = imageRegion.Find(blackboard.AutoFishingAssets.LiftRodButtonRo);
-            //if (!liftRodButtonRa.IsEmpty())
-            //{
-            //    return RaiseRod("图像识别");
-            //}
+            using var liftRodButtonRa = imageRegion.Find(blackboard.AutoFishingAssets.LiftRodButtonRo);
+            if (!liftRodButtonRa.IsEmpty())
+            {
+                return RaiseRod("图像识别");
+            }
 
             // OCR 提竿判断
             using Mat wordCaptureGreyMat = new Mat(imageRegion.SrcGreyMat, liftingWordsAreaRect);
             var text = ocrService.Ocr(wordCaptureGreyMat);
-            string bitedString = stringLocalizer.WithCultureGet(cultureInfo, "上钩");
+            string bitedString = stringLocalizer == null ? "上钩" : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
 
             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains(bitedString))
             {

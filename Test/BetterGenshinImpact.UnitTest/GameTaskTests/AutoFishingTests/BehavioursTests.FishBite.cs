@@ -92,5 +92,28 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Assert.Equal(BehaviourStatus.Succeeded, actual);
             Assert.True(fishBiteTimeoutBehaviour.leftButtonClicked);
         }
+
+        [Theory]
+        [InlineData(@"202503230049406101_en.png", "en")]  // 一张移除了右下角按钮的咬钩截图
+        /// <summary>
+        /// 测试外语鱼咬钩，结果为成功
+        /// </summary>
+        public void FishBite_English_ShouldSuccess(string screenshot1080p, string cultureName)
+        {
+            //
+            Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+
+            FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+            AutoFishingAssets autoFishingAssets = new AutoFishingAssets(systemInfo);
+            Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
+
+            //
+            FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), this.autoFishingImageRecognitionStringLocalizer);
+            BehaviourStatus actual = sut.Tick(imageRegion);
+
+            //
+            Assert.Equal(BehaviourStatus.Succeeded, actual);
+        }
     }
 }

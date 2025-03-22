@@ -134,7 +134,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .Description ?? e.ToString());
 
     [ObservableProperty]
-    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-CN", "en" }
+    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "en" }
         .ToFrozenDictionary(
             c => c,
             c =>
