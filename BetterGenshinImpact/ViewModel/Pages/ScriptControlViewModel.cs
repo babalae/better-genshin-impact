@@ -332,7 +332,17 @@ public partial class ScriptControlViewModel : ViewModel
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
+            void OnHtmlGenerationStatusChanged(string status)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // 使用Toast显示状态信息而不是创建新窗口
+                    Toast.Information(status);
+                });
+            }
 
+            LogParse.LogParse.HtmlGenerationStatusChanged += OnHtmlGenerationStatusChanged;
+            Toast.Information("正在准备数据...");
             List<(string FileName, string Date)> fs = LogParse.LogParse.GetLogFiles(LogPath);
             if (dayRangeValue != "All")
             {
@@ -399,13 +409,34 @@ public partial class ScriptControlViewModel : ViewModel
             if (configGroupEntities.Count == 0)
             {
                 Toast.Warning("未解析出日志记录！");
+                LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
             }
             else
             {
                 configGroupEntities.Reverse();
+                try
+                {
+                    // 生成HTML并加载
+                    string htmlContent = LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
+                        hoeingStats ? realGameInfo : null, sgpc);
+
+                    // 取消订阅事件
+                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+
+                    // 加载HTML内容
+                    win.NavigateToHtml(htmlContent);
+                    win.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+                    Toast.Error($"生成HTML报告时出错: {ex.Message}");
+                }
+
                 //realGameInfo
                 //小怪摩拉统计
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities, hoeingStats ? realGameInfo : null, sgpc));
+                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
+                    hoeingStats ? realGameInfo : null, sgpc));
                 win.ShowDialog();
             }
         }
