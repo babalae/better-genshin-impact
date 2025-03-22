@@ -14,20 +14,17 @@ namespace LogParse
 {
     public class LogParse
     {
-        public static List<string> SafeReadAllLines(string filePath)
+        private static List<string> SafeReadAllLines(string filePath)
         {
             var lines = new List<string>();
             try
             {
                 // 使用 FileStream 和 StreamReader，允许共享读取
-                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var reader = new StreamReader(fileStream))
+                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var reader = new StreamReader(fileStream);
+                while (reader.ReadLine() is { } line)
                 {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        lines.Add(line);
-                    }
+                    lines.Add(line);
                 }
             }
             catch (IOException ex)
@@ -402,41 +399,58 @@ namespace LogParse
                 return "Invalid input time format. Please use 'yyyy-MM-dd HH:mm:ss'.";
             }
         }
-        public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, GameInfo? gameInfo,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
+        public static string GenerHtmlByConfigGroupEntity(
+            List<ConfigGroupEntity> configGroups,
+            GameInfo? gameInfo,
+            LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
-            (string name, Func<ConfigTask, string> value)[] colConfigs =
+            (string name, Func<ConfigGroupEntity.ConfigTask, string> value, string sortType)[] colConfigs =
             [
-                (name: "名称", value: task => task.Name),
-                (name: "开始日期", value: task => task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""),
-                (name: "结束日期", value: task => task.EndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? ""),
-                (name: "耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0))
+                (name: "任务名称", value: task => Path.GetFileNameWithoutExtension(task.Name), sortType: "string"),
+                (name: "开始时间", value: task => task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
+                (name: "结束时间", value: task => task.EndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
+                (name: "任务耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0), sortType: "number")
             ];
-            List<(string name, Func<ConfigTask, string> value)> colConfigList = new();
+            List<(string name, Func<ConfigGroupEntity.ConfigTask, string> value, string sortType)> colConfigList = new();
             colConfigList.AddRange(colConfigs);
             if (scriptGroupLogParseConfig.FaultStatsSwitch)
             {
-                colConfigList.Add((name: "复活次数", value: task => FormatNumberWithStyle(task.Fault.ReviveCount)));
-                colConfigList.Add((name: "重试次数", value: task => FormatNumberWithStyle(task.Fault.RetryCount)));
-                colConfigList.Add((name: "疑似卡死次数", value: task => FormatNumberWithStyle(task.Fault.StuckCount)));
-                colConfigList.Add((name: "战斗超时次数", value: task => FormatNumberWithStyle(task.Fault.BattleTimeoutCount)));
-                colConfigList.Add((name: "传送失败次数", value: task => FormatNumberWithStyle(task.Fault.TeleportFailCount)));
-                colConfigList.Add((name: "异常发生次数", value: task => FormatNumberWithStyle(task.Fault.ErrCount)));
+                colConfigList.Add((name: "复活次数", value: task => FormatNumberWithStyle(task.Fault.ReviveCount), sortType: "number"));
+                colConfigList.Add((name: "重试次数", value: task => FormatNumberWithStyle(task.Fault.RetryCount), sortType: "number"));
+                colConfigList.Add((name: "疑似卡死次数", value: task => FormatNumberWithStyle(task.Fault.StuckCount), sortType: "number"));
+                colConfigList.Add((name: "战斗超时次数", value: task => FormatNumberWithStyle(task.Fault.BattleTimeoutCount), sortType: "number"));
+                colConfigList.Add((name: "传送失败次数", value: task => FormatNumberWithStyle(task.Fault.TeleportFailCount), sortType: "number"));
+                colConfigList.Add((name: "异常发生次数", value: task => FormatNumberWithStyle(task.Fault.ErrCount), sortType: "number"));
             }
 
             
-            (string name, Func<MoraStatistics, string> value)[] msColConfigs =
-            [
-                (name: "日期", value: ms => ms.Name), (name: "小怪", value: ms => GetNumberOrEmptyString(ms.SmallMonsterStatistics)),
-                (name: "最后小怪日期", value: ms => ms.LastSmallTime),
-                (name: "精英", value: ms => GetNumberOrEmptyString(ms.EliteGameStatistics)),
-                (name: "精英详细", value: ms => ms.EliteDetails), (name: "最后精英日期", value: ms => ms.LastEliteTime),
-                (name: "总计锄地摩拉", value: ms => ms.TotalMoraKillingMonstersMora.ToString()),
-                (name: "突发事件获取摩拉", value: ms => ms.EmergencyBonus)
-            ];
+            var msColConfigs = new (string name, Func<MoraStatistics, string> value, string sortType)[]
+            {
+                ("日期", ms => ms.Name, "date"),
+                ("小怪数量", ms => GetNumberOrEmptyString(ms.SmallMonsterStatistics), "number"),
+                ("最后小怪时间", ms => ms.LastSmallTime, "date"),
+                ("精英数量", ms => GetNumberOrEmptyString(ms.EliteGameStatistics), "number"),
+                ("精英详细", ms => ms.EliteDetails, "string"),
+                ("最后精英时间", ms => ms.LastEliteTime, "date"),
+                ("总计锄地摩拉", ms => ms.TotalMoraKillingMonstersMora.ToString(), "number"),
+                ("突发事件获取摩拉", ms => ms.EmergencyBonus, "number")
+            };
+            
             //锄地部分新曾字段
-            (string name, Func<MoraStatistics, string> value)[] col2Configs=[..msColConfigs.ToList().Where(item=>item.name!="日期" && item.name!="最后小怪日期" && item.name!="最后精英日期" && item.name!="突发事件获取摩拉"),
-                (name: "摩拉（每秒）", value: ms => (ms.TotalMoraKillingMonstersMora/(ms.StatisticsEnd-ms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2")),
-            ];
+            var col2Configs = new (string name, Func<MoraStatistics, string> value, string sortType)[]
+            {
+                ("小怪", ms => GetNumberOrEmptyString(ms.SmallMonsterStatistics), "number"),
+                ("精英", ms => GetNumberOrEmptyString(ms.EliteGameStatistics), "number"),
+                ("精英详细", ms => ms.EliteDetails, "string"),
+                ("锄地摩拉", ms => ms.TotalMoraKillingMonstersMora.ToString(), "number"),
+                (
+                    name: "摩拉（每秒）", 
+                    value: ms => (ms.TotalMoraKillingMonstersMora / 
+                            (ms.StatisticsEnd - ms.StatisticsStart)?.TotalSeconds ?? 0)
+                        .ToString("F2"), 
+                    sortType: "number"
+                )
+            };
                 
                 
                 
@@ -467,11 +481,14 @@ namespace LogParse
             }
             return a + b;
         }
-        public static string GenerHtmlByConfigGroupEntity(List<ConfigGroupEntity> configGroups, string title,
-            (string name, Func<ConfigTask, string> value)[] colConfigs,
-            (string name, Func<MoraStatistics, string> value)[] col2Configs,
+
+        public static string GenerHtmlByConfigGroupEntity(
+            List<ConfigGroupEntity> configGroups, 
+            string title,
+            (string name, Func<ConfigGroupEntity.ConfigTask, string> value, string sortType)[] colConfigs,
+            (string name, Func<MoraStatistics, string> value, string sortType)[] col2Configs,
             List<ActionItem> actionItems,
-            (string name, Func<MoraStatistics, string> value)[] msColConfigs)
+            (string name, Func<MoraStatistics, string> value, string sortType)[] msColConfigs)
         {
             StringBuilder html = new StringBuilder();
 
@@ -485,18 +502,150 @@ namespace LogParse
             html.AppendLine("    <style>");
             html.AppendLine("        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }");
             html.AppendLine("        th, td { border: 1px solid black; padding: 8px; text-align: left; }");
-            html.AppendLine("        th { background-color: #f2f2f2; }");
-            html.AppendLine("    tr:nth-child(odd) {   background-color: #eaeaea; /* 奇数行颜色 */    }");
-            html.AppendLine("    tr:nth-child(even) { background-color: #f9f9f9; /* 偶数行颜色 */}");
+            html.AppendLine("        th { background-color: #f2f2f2; cursor: pointer; }");
+            html.AppendLine("        tr:nth-child(odd) { background-color: #eaeaea; }");
+            html.AppendLine("        tr:nth-child(even) { background-color: #f9f9f9; }");
+            html.AppendLine("        .sort-indicator { float: right; margin-left: 5px; }");
+            html.AppendLine("        .sort-asc:after { content: '↑'; }");
+            html.AppendLine("        .sort-desc:after { content: '↓'; }");
+            html.AppendLine("        .sub-row { background-color: #f0f8ff; font-size: 0.9em; }"); // 添加附属行样式
+            html.AppendLine("        .main-row-name { background-color: #e6f2ff; }"); // 主行名称列背景色
+            html.AppendLine("        .sub-row-name { background-color: #d9e9ff; }"); // 附属行名称列背景色
             html.AppendLine("    </style>");
+            html.AppendLine("    <script>");
+            // 修改排序函数，确保附属行与主行一起移动
+            html.AppendLine(@"        document.addEventListener('DOMContentLoaded', function() {
+            // 为所有表格的表头添加排序事件
+            document.querySelectorAll('table th').forEach(function(th, index) {
+                th.addEventListener('click', function() {
+                    const table = th.closest('table');
+                    const sortType = th.getAttribute('data-sort-type') || 'string';
+                    sortTable(table, index, sortType);
+                });
+            });
+        });
+
+        function getCellValue(row, columnIndex, sortType) {
+            const cell = row.cells[columnIndex];
+            // 优先使用data-sort属性值
+            const sortValue = cell.getAttribute('data-sort');
+            if (sortValue !== null) {
+                return sortType === 'number' || sortType === 'date' ? parseFloat(sortValue) : sortValue;
+            }
+            
+            const value = cell.textContent.trim();
+            
+            // 根据排序类型转换值
+            if (sortType === 'number') {
+                // 提取数字部分
+                const numMatch = value.match(/[\d\.]+/);
+                return numMatch ? parseFloat(numMatch[0]) : 0;
+            } else if (sortType === 'date') {
+                return value ? new Date(value).getTime() : 0;
+            } else if (sortType === 'time') {
+                // 处理时间格式（小时、分钟、秒）
+                let seconds = 0;
+                if (value.includes('小时')) {
+                    const hours = parseInt(value.match(/(\d+)小时/)[1]);
+                    seconds += hours * 3600;
+                }
+                if (value.includes('分钟')) {
+                    const minutes = parseInt(value.match(/(\d+)分钟/)[1]);
+                    seconds += minutes * 60;
+                }
+                if (value.includes('秒')) {
+                    const secondsMatch = value.match(/([\d\.]+)秒/);
+                    seconds += parseFloat(secondsMatch[1]);
+                }
+                return seconds;
+            }
+            return value;
+        }
+
+        function sortTable(table, columnIndex, sortType) {
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            
+            // 保存汇总行
+            const summaryRows = Array.from(tbody.querySelectorAll('tr.ignore-sort'));
+            
+            // 获取需要排序的行（排除汇总行）
+            const rows = Array.from(tbody.querySelectorAll('tr:not(.ignore-sort):not(.sub-row)'));
+            
+            // 创建行和其对应的附属行的映射
+            const rowPairs = [];
+            rows.forEach(row => {
+                const nextRow = row.nextElementSibling;
+                if (nextRow && nextRow.classList.contains('sub-row')) {
+                    rowPairs.push({main: row, sub: nextRow});
+                } else {
+                    rowPairs.push({main: row, sub: null});
+                }
+            });
+
+            // 确定排序方向
+            let sortDirection = 'asc';
+            const headerCell = table.querySelectorAll('th')[columnIndex];
+            
+            // 如果已经按这列排序，则切换方向
+            if (headerCell.classList.contains('sort-asc')) {
+                sortDirection = 'desc';
+            } else if (headerCell.classList.contains('sort-desc')) {
+                sortDirection = 'asc';
+            }
+            
+            // 清除所有表头的排序指示器
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // 添加新的排序指示器
+            headerCell.classList.add('sort-' + sortDirection);
+
+            // 特殊处理耗时列
+            const isTimeColumn = headerCell.textContent.trim() === '耗时';
+            const actualSortType = isTimeColumn ? 'time' : sortType;
+
+            // 排序行对
+            rowPairs.sort((pairA, pairB) => {
+                const valueA = getCellValue(pairA.main, columnIndex, actualSortType);
+                const valueB = getCellValue(pairB.main, columnIndex, actualSortType);
+                
+                if (actualSortType === 'number' || actualSortType === 'date' || actualSortType === 'time') {
+                    return sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
+                } else {
+                    return sortDirection === 'asc' 
+                        ? String(valueA).localeCompare(String(valueB), 'zh-CN') 
+                        : String(valueB).localeCompare(String(valueA), 'zh-CN');
+                }
+            });
+
+            // 清空tbody
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            
+            // 先添加排序后的数据行和附属行
+            rowPairs.forEach(pair => {
+                tbody.appendChild(pair.main);
+                if (pair.sub) {
+                    tbody.appendChild(pair.sub);
+                }
+            });
+            
+            // 最后添加汇总行
+            summaryRows.forEach(row => tbody.appendChild(row));
+        }");
+            html.AppendLine("    </script>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
+            
+            // 修改 colspan 计算逻辑
             int colspan = colConfigs.Length;
 
             if (actionItems.Count > 0)
             {
-                
-                colspan = colspan +col2Configs.Length;
+                colspan = colspan + col2Configs.Length;
                 // 按时间分组，考虑每天凌晨4点为新的一天
                 var groupedByCustomDay = actionItems.GroupBy(item => GetCustomDay(item.Time))
                     .OrderBy(group => group.Key)
@@ -504,7 +653,7 @@ namespace LogParse
 
                 html.AppendLine($"<h2>按日摩拉收益统计</h2>");
                 html.AppendLine("<table>");
-                
+
                 html.AppendLine("    <tr>");
                 foreach (var item in msColConfigs)
                 {
@@ -528,13 +677,14 @@ namespace LogParse
 
                     html.AppendLine("    </tr>");
                 }
+
                 html.AppendLine("</table>");
             }
 
             MoraStatistics allms = new MoraStatistics();
             allms.ActionItems.AddRange(actionItems);
-         
-            
+
+
             // 遍历每个配置组生成表格
             foreach (var group in configGroups)
             {
@@ -543,36 +693,39 @@ namespace LogParse
                 MoraStatistics groupms = allms.GetFilterMoraStatistics(item =>
                     {
                         DateTime dt = DateTime.Parse(item.Time);
-                        if (dt>=group.StartDate && dt<=group.EndDate)
+                        if (dt >= group.StartDate && dt <= group.EndDate)
                         {
                             return true;
                         }
+
                         return false;
                     }
                 );
-                groupms.StatisticsStart=group.StartDate;
-                groupms.StatisticsEnd=group.EndDate;
+                groupms.StatisticsStart = group.StartDate;
+                groupms.StatisticsEnd = group.EndDate;
                 html.AppendLine(
-                $"<h2>配置组：{group.Name}({group.StartDate?.ToString("yyyy-MM-dd HH:mm:ss")}-{group.EndDate?.ToString("yyyy-MM-dd HH:mm:ss")})，耗时{ConvertSecondsToTime(totalSeconds)}</h2>");
-                
-                html.AppendLine("<table>");
-                html.AppendLine("    <tr>");
-                foreach (var item in colConfigs)
-                {
-                    html.AppendLine($"        <th>{item.name}</th>");
-                }
+                    $"<h2>配置组：{group.Name}({group.StartDate?.ToString("yyyy-MM-dd HH:mm:ss")}-{group.EndDate?.ToString("yyyy-MM-dd HH:mm:ss")})，耗时{ConvertSecondsToTime(totalSeconds)}</h2>");
 
+                html.AppendLine("<table>");
+                html.AppendLine("    <thead>");
+                html.AppendLine("    <tr>");
+                for (int colIndex = 0; colIndex < colConfigs.Length; colIndex++)
+                {
+                    var col = colConfigs[colIndex];
+                    html.AppendLine($"        <th onclick=\"sortTable(this.closest('table'), {colIndex}, '{col.sortType}')\">{col.name}</th>");
+                }
                 if (actionItems.Count > 0)
                 {
-                    foreach (var item in col2Configs)
+                    for (int colIndex = 0; colIndex < col2Configs.Length; colIndex++)
                     {
-                        html.AppendLine($"        <th>{item.name}</th>");
+                        var col = col2Configs[colIndex];
+                        html.AppendLine($"        <th onclick=\"sortTable(this.closest('table'), {colIndex + colConfigs.Length}, '{col.sortType}')\">{col.name}</th>");
                     }
                 }
-
                 html.AppendLine("    </tr>");
-                
-                
+                html.AppendLine("    </thead>");
+                html.AppendLine("    <tbody>");
+
                 // 合并所有任务的 Picks
                 Dictionary<string, int> mergedPicks = new Dictionary<string, int>();
                 foreach (var task in group.ConfigTaskList)
@@ -588,34 +741,59 @@ namespace LogParse
                     }
 
                     // 任务行
-
                     timeDiff = task.EndDate - task.StartDate;
                     totalSeconds = timeDiff?.TotalSeconds ?? 0;
                     html.AppendLine("    <tr>");
-                    foreach (var item in colConfigs)
+                    
+                    // 修改第一列（名称列）的样式
+                    for (int i = 0; i < colConfigs.Length; i++)
                     {
-                        html.AppendLine($"        <td>{item.value.Invoke(task)}</td>");
+                        var item = colConfigs[i];
+                        if (i == 0) // 名称列
+                        {
+                            html.AppendLine($"        <td class=\"main-row-name\" rowspan=\"2\">{item.value.Invoke(task)}</td>");
+                        }
+                        else
+                        {
+                            html.AppendLine($"        <td>{item.value.Invoke(task)}</td>");
+                        }
                     }
+
                     if (actionItems.Count > 0)
                     {
                         MoraStatistics configTaskMs = groupms.GetFilterMoraStatistics(item =>
                             {
                                 DateTime dt = DateTime.Parse(item.Time);
-                                if (dt>=task.StartDate && dt<=task.EndDate)
+                                if (dt >= task.StartDate && dt <= task.EndDate)
                                 {
                                     return true;
                                 }
                                 return false;
                             }
                         );
-                        configTaskMs.StatisticsStart=task.StartDate;
-                        configTaskMs.StatisticsEnd=task.EndDate;
+                        configTaskMs.StatisticsStart = task.StartDate;
+                        configTaskMs.StatisticsEnd = task.EndDate;
                         foreach (var item in col2Configs)
                         {
-
                             html.AppendLine($"        <td>{item.value.Invoke(configTaskMs)}</td>");
                         }
                     }
+
+                    html.AppendLine("    </tr>");
+
+                    // 添加附属行显示该任务的拾取物
+                    var taskSortedPicks = task.Picks.OrderByDescending(p => p.Value)
+                        .Select(p => $"{p.Key} ({p.Value})");
+                    
+                    html.AppendLine("    <tr class=\"sub-row\">");
+                    // 跳过第一列，因为已经在主行中使用了rowspan="2"
+                    // 计算实际的 colspan 值
+                    int actualColspan = colConfigs.Length - 1;
+                    if (actionItems.Count > 0)
+                    {
+                        actualColspan += col2Configs.Length;
+                    }
+                    html.AppendLine($"        <td colspan=\"{actualColspan}\">拾取物: {string.Join(", ", taskSortedPicks)}</td>");
                     html.AppendLine("    </tr>");
                 }
 
@@ -623,31 +801,27 @@ namespace LogParse
                 var sortedPicks = mergedPicks.OrderByDescending(p => p.Value)
                     .Select(p => $"{p.Key} ({p.Value})");
 
-                // Picks 行
-                html.AppendLine("    <tr>");
-
-                html.AppendLine(
-                    $"        <td colspan=\"{colspan}\">拾取物: {string.Join(", ", sortedPicks)}</td>");
+                // 修改拾取物行添加 ignore-sort 类
+                html.AppendLine("    <tr class=\"ignore-sort\">");
+                html.AppendLine($"        <td colspan=\"{colspan}\">拾取物: {string.Join(", ", sortedPicks)}</td>");
                 html.AppendLine("    </tr>");
 
                 if (actionItems.Count > 0)
                 {
-                    //锄地总计
-                    html.AppendLine("    <tr>");
-
+                    html.AppendLine("    <tr class=\"ignore-sort\">");
                     html.AppendLine(
-                        $"        <td colspan=\"{colspan}\">锄地总计:{ ConcatenateStrings("小怪：", groupms.SmallMonsterStatistics.ToString()) +
-                                                                   /*ConcatenateStrings(",最后一只小怪挂于", groupms.LastSmallTime) +*/
-                                                                   ConcatenateStrings(",精英怪数量：", groupms.EliteGameStatistics.ToString()) +
-                                                                   ConcatenateStrings(",精英详细:", groupms.EliteDetails) +
-                                                                   /*ConcatenateStrings(",最后一只精英挂于", groupms.LastEliteTime) +*/
-                                                                   ConcatenateStrings(",合计锄地摩拉：", groupms.TotalMoraKillingMonstersMora.ToString())+
-                                                                   ConcatenateStrings("，每秒摩拉", (groupms.TotalMoraKillingMonstersMora/(groupms.StatisticsEnd-groupms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2"))}");
+                        $"        <td colspan=\"{colspan}\">锄地总计:{ConcatenateStrings("小怪：", groupms.SmallMonsterStatistics.ToString()) +
+                                                                  /*ConcatenateStrings(",最后一只小怪挂于", groupms.LastSmallTime) +*/
+                                                                  ConcatenateStrings(",精英怪数量：", groupms.EliteGameStatistics.ToString()) +
+                                                                  ConcatenateStrings(",精英详细:", groupms.EliteDetails) +
+                                                                  /*ConcatenateStrings(",最后一只精英挂于", groupms.LastEliteTime) +*/
+                                                                  ConcatenateStrings(",合计锄地摩拉：", groupms.TotalMoraKillingMonstersMora.ToString()) +
+                                                                  ConcatenateStrings("，每秒摩拉", (groupms.TotalMoraKillingMonstersMora / (groupms.StatisticsEnd - groupms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2"))}");
                     html.AppendLine("    </tr>");
 
                 }
-                
-                
+
+
                 html.AppendLine("</table>");
             }
 
@@ -677,7 +851,7 @@ namespace LogParse
 
             File.WriteAllText(configPath, content);
         }
-
+        
         public static LogParseConfig LoadConfig()
         {
             LogParseConfig config = null;
