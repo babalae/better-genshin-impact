@@ -1603,7 +1603,7 @@
                               ItemsSource="{Binding LanguageDict}"
                               SelectedValuePath="Key"
                               DisplayMemberPath="Value"
-                              SelectedItem="{Binding Config.AutoFishingConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}" />
                 </Grid>
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
