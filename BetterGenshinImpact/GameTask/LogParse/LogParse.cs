@@ -14,6 +14,7 @@ namespace LogParse
 {
     public class LogParse
     {
+        private static string configPath = Global.Absolute(@"log\logparse\config.json");
         private static List<string> SafeReadAllLines(string filePath)
         {
             var lines = new List<string>();
@@ -500,17 +501,43 @@ namespace LogParse
             html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
             html.AppendLine($"    <title>{title}</title>");
             html.AppendLine("    <style>");
+            html.AppendLine("        body { font-family: Arial, sans-serif; margin: 0; padding: 16px; }");
             html.AppendLine("        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }");
-            html.AppendLine("        th, td { border: 1px solid black; padding: 8px; text-align: left; }");
+            html.AppendLine("        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }");
             html.AppendLine("        th { background-color: #f2f2f2; cursor: pointer; }");
             html.AppendLine("        tr:nth-child(odd) { background-color: #eaeaea; }");
             html.AppendLine("        tr:nth-child(even) { background-color: #f9f9f9; }");
-            html.AppendLine("        .sort-indicator { float: right; margin-left: 5px; }");
-            html.AppendLine("        .sort-asc:after { content: '↑'; }");
-            html.AppendLine("        .sort-desc:after { content: '↓'; }");
-            html.AppendLine("        .sub-row { background-color: #f0f8ff; font-size: 0.9em; }"); // 添加附属行样式
-            html.AppendLine("        .main-row-name { background-color: #e6f2ff; }"); // 主行名称列背景色
-            html.AppendLine("        .sub-row-name { background-color: #d9e9ff; }"); // 附属行名称列背景色
+            html.AppendLine("        .sort-asc:after { content: ' ↑'; }");
+            html.AppendLine("        .sort-desc:after { content: ' ↓'; }");
+            html.AppendLine("        .sub-row { background-color: #f0f8ff !important; font-size: 0.9em; }");
+            html.AppendLine("        .main-row-name { background-color: #e6f2ff; }");
+            html.AppendLine("        .sub-row-name { background-color: #d9e9ff; }");
+            
+            // 改进的表格容器和固定表头样式
+            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid #ddd; }");
+            html.AppendLine("        table { border-collapse: separate; border-spacing: 0; }");
+            html.AppendLine("        th, td { border: 1.5px solid #ddd; padding: 8px; text-align: left; }");
+            html.AppendLine("        .sticky-header { position: sticky; top: 0; z-index: 100; }");
+            html.AppendLine("        .sticky-header th { ");
+            html.AppendLine("            position: sticky; ");
+            html.AppendLine("            top: 0; ");
+            html.AppendLine("            background-color: #f2f2f2; ");
+            html.AppendLine("            z-index: 100; ");
+            html.AppendLine("            border-width: 0; ");
+            html.AppendLine("            outline: 1.5px solid #4a90e2; ");
+            html.AppendLine("        }");
+            html.AppendLine("        .sticky-header::after {");
+            html.AppendLine("            content: '';");
+            html.AppendLine("            position: absolute;");
+            html.AppendLine("            left: 0;");
+            html.AppendLine("            right: 0;");
+            html.AppendLine("            top: 0;");
+            html.AppendLine("            height: 100%;");
+            html.AppendLine("            pointer-events: none;");
+            html.AppendLine("            z-index: 99;");
+            html.AppendLine("        }");
+            html.AppendLine("        tbody tr:first-child td { border-top-color: transparent; }");
+            html.AppendLine("        .table-container table { margin-bottom: 0; }");
             html.AppendLine("    </style>");
             html.AppendLine("    <script>");
             // 修改排序函数，确保附属行与主行一起移动
@@ -546,16 +573,22 @@ namespace LogParse
                 // 处理时间格式（小时、分钟、秒）
                 let seconds = 0;
                 if (value.includes('小时')) {
-                    const hours = parseInt(value.match(/(\d+)小时/)[1]);
-                    seconds += hours * 3600;
+                    const hoursMatch = value.match(/(\d+)小时/);
+                    if (hoursMatch) {
+                        seconds += parseInt(hoursMatch[1]) * 3600;
+                    }
                 }
                 if (value.includes('分钟')) {
-                    const minutes = parseInt(value.match(/(\d+)分钟/)[1]);
-                    seconds += minutes * 60;
+                    const minutesMatch = value.match(/(\d+)分钟/);
+                    if (minutesMatch) {
+                        seconds += parseInt(minutesMatch[1]) * 60;
+                    }
                 }
                 if (value.includes('秒')) {
                     const secondsMatch = value.match(/([\d\.]+)秒/);
-                    seconds += parseFloat(secondsMatch[1]);
+                    if (secondsMatch) {
+                        seconds += parseFloat(secondsMatch[1]);
+                    }
                 }
                 return seconds;
             }
@@ -603,7 +636,7 @@ namespace LogParse
             headerCell.classList.add('sort-' + sortDirection);
 
             // 特殊处理耗时列
-            const isTimeColumn = headerCell.textContent.trim() === '耗时';
+            const isTimeColumn = headerCell.textContent.trim() === '任务耗时';
             const actualSortType = isTimeColumn ? 'time' : sortType;
 
             // 排序行对
@@ -651,18 +684,19 @@ namespace LogParse
                     .OrderBy(group => group.Key)
                     .Reverse().ToList();
 
-                html.AppendLine($"<h2>按日摩拉收益统计</h2>");
+                html.AppendLine("<h2>按日摩拉收益统计</h2>");
+                html.AppendLine("<div class=\"sticky-table\">");
                 html.AppendLine("<table>");
-
-                html.AppendLine("    <tr>");
+                html.AppendLine("    <thead>");
+                html.AppendLine("    <tr class=\"sticky-header\">");
                 foreach (var item in msColConfigs)
                 {
                     html.AppendLine($"        <th>{item.name}</th>");
                 }
-
                 html.AppendLine("    </tr>");
-
-
+                html.AppendLine("</thead>");
+                html.AppendLine("<tbody>");
+                
                 foreach (var group in groupedByCustomDay)
                 {
                     //按天统计
@@ -678,7 +712,9 @@ namespace LogParse
                     html.AppendLine("    </tr>");
                 }
 
+                html.AppendLine("</tbody>");
                 html.AppendLine("</table>");
+                html.AppendLine("</div>");
             }
 
             MoraStatistics allms = new MoraStatistics();
@@ -697,18 +733,18 @@ namespace LogParse
                         {
                             return true;
                         }
-
                         return false;
                     }
                 );
                 groupms.StatisticsStart = group.StartDate;
                 groupms.StatisticsEnd = group.EndDate;
-                html.AppendLine(
-                    $"<h2>配置组：{group.Name}({group.StartDate?.ToString("yyyy-MM-dd HH:mm:ss")}-{group.EndDate?.ToString("yyyy-MM-dd HH:mm:ss")})，耗时{ConvertSecondsToTime(totalSeconds)}</h2>");
-
+                html.AppendLine($"<h2>配置组：{group.Name}</h2>");
+                html.AppendLine($"<h3>{group.StartDate?.ToString("yyyy-MM-dd HH:mm:ss")}-{group.EndDate?.ToString("yyyy-MM-dd HH:mm:ss")}</h3>");
+                html.AppendLine($"<h3>耗时{ConvertSecondsToTime(totalSeconds)}</h3>");
+                html.AppendLine("<div class=\"sticky-table\">");
                 html.AppendLine("<table>");
                 html.AppendLine("    <thead>");
-                html.AppendLine("    <tr>");
+                html.AppendLine("    <tr class=\"sticky-header\">");
                 for (int colIndex = 0; colIndex < colConfigs.Length; colIndex++)
                 {
                     var col = colConfigs[colIndex];
@@ -823,6 +859,7 @@ namespace LogParse
 
 
                 html.AppendLine("</table>");
+                html.AppendLine("</div>"); // 关闭 sticky-table div
             }
 
             // HTML尾部
@@ -832,7 +869,7 @@ namespace LogParse
             return html.ToString();
         }
 
-        private static string configPath = Global.Absolute(@"log\logparse\config.json");
+
 
         public static void WriteConfigFile(LogParseConfig config)
         {
@@ -859,7 +896,8 @@ namespace LogParse
             {
                 try
                 {
-                    config = JsonSerializer.Deserialize<LogParseConfig>(File.ReadAllText(configPath));
+                    config = JsonSerializer.Deserialize<LogParseConfig>(File.ReadAllText(configPath)) ??
+                             throw new NullReferenceException();
                 }
                 catch (Exception e)
                 {
