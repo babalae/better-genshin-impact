@@ -423,14 +423,11 @@ public partial class ScriptControlViewModel : ViewModel
                     // 取消订阅事件
                     LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
 
-                    // 加载HTML内容
-                    win.NavigateToHtml(htmlContent);
-                    win.ShowDialog();
                 }
                 catch (Exception ex)
                 {
                     LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
-                    Toast.Error($"生成HTML报告时出错: {ex.Message}");
+                    Toast.Error($"生成日志分析时出错: {ex.Message}");
                 }
 
                 //realGameInfo

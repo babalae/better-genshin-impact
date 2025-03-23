@@ -577,8 +577,8 @@ namespace LogParse
             html.AppendLine("        table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }");
             html.AppendLine("        th, td { border: none; padding: 12px 15px; text-align: left; }");
             html.AppendLine("        th { background-color: #4a90e2; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }");
-            html.AppendLine("        tr:nth-child(odd) { background-color: #f2f6fc; }");
-            html.AppendLine("        tr:nth-child(even) { background-color: #ffffff; }");
+            html.AppendLine("        tr:nth-child(odd) { background-color: #eaeaea; }");
+            html.AppendLine("        tr:nth-child(even) { background-color: #f9f9f9; }");
             html.AppendLine("        tr:hover { background-color: #e8f1fd; transition: background-color 0.2s ease; }");
             
             // 修改排序指示器样式，确保不影响表头文本对齐
@@ -592,22 +592,22 @@ namespace LogParse
             html.AppendLine("        .sub-row-name { background-color: #d5e7ff; }");
             html.AppendLine("        h2, h3 { color: #2c3e50; margin-top: 20px; }");
 
-            // 改进的表格容器和固定表头样式 - 增加圆角和阴影效果
-            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); background: white; margin-bottom: 30px; }");
-            html.AppendLine("        .sticky-header { position: sticky; top: 0; z-index: 100; }");
-            html.AppendLine("        .sticky-header th { ");
-            html.AppendLine("            position: sticky; ");
-            html.AppendLine("            top: 0; ");
-            html.AppendLine("            background-color: #4a90e2; ");
-            html.AppendLine("            color: white; ");
-            html.AppendLine("            z-index: 100; ");
-            html.AppendLine("            border-width: 0; ");
-            html.AppendLine("            box-shadow: 0 3px 8px rgba(0,0,0,0.15); ");
-            html.AppendLine("            text-align: center; ");
-            html.AppendLine("            vertical-align: middle; ");
+            // 增强固定表头样式，确保优先级更高
+            html.AppendLine("        .sticky-table { position: relative; max-height: 80vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); background: white; margin-bottom: 30px; }");
+            html.AppendLine("        tr.sticky-header { position: sticky !important; top: 0 !important; z-index: 100 !important; }");
+            html.AppendLine("        tr.sticky-header th { ");
+            html.AppendLine("            position: sticky !important; "); 
+            html.AppendLine("            top: 0 !important; "); 
+            html.AppendLine("            background-color: #4a90e2 !important; ");
+            html.AppendLine("            color: white !important; ");
+            html.AppendLine("            z-index: 100 !important; ");
+            html.AppendLine("            border-width: 0 !important; ");
+            html.AppendLine("            box-shadow: 0 3px 8px rgba(0,0,0,0.15) !important; ");
+            html.AppendLine("            text-align: center !important; ");
+            html.AppendLine("            vertical-align: middle !important; ");
             html.AppendLine("        }");
-            html.AppendLine("        .sticky-header th:first-child { border-top-left-radius: 12px; }");
-            html.AppendLine("        .sticky-header th:last-child { border-top-right-radius: 12px; }");
+            html.AppendLine("        tr.sticky-header th:first-child { border-top-left-radius: 12px; }");
+            html.AppendLine("        tr.sticky-header th:last-child { border-top-right-radius: 12px; }");
             html.AppendLine("        .sticky-header::after {");
             html.AppendLine("            content: '';");
             html.AppendLine("            position: absolute;");
@@ -1019,7 +1019,6 @@ function sortTable(table, columnIndex, sortType) {
                     var col = colConfigs[colIndex];
                     html.AppendLine($"        <th data-sort-type=\"{col.sortType}\">{col.name}</th>");
                 }
-
                 if (actionItems.Count > 0)
                 {
                     for (int colIndex = 0; colIndex < col2Configs.Length; colIndex++)
@@ -1028,7 +1027,6 @@ function sortTable(table, columnIndex, sortType) {
                         html.AppendLine($"        <th data-sort-type=\"{col.sortType}\">{col.name}</th>");
                     }
                 }
-
                 html.AppendLine("    </tr>");
                 html.AppendLine("    </thead>");
                 html.AppendLine("    <tbody>");
