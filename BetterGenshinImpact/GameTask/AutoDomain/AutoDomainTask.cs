@@ -27,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -304,21 +305,43 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
-
-
-        int retryTimes = 0, clickCount = 0;
-        while (retryTimes < 20 && clickCount < 2)
+        
+        // 点击单人挑战
+        int retryTimes = 0;
+        while (retryTimes < 20)
         {
             retryTimes++;
             using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 confirmRectArea.Click();
-                clickCount++;
+                break;
             }
 
             await Delay(1500, _ct);
         }
+        
+        await Delay(600, _ct);
+        using var confirmRectArea2 = CaptureToRectArea().Find(ElementAssets.Instance.BtnBlackConfirm);
+        if (!confirmRectArea2.IsEmpty())
+        {
+            throw new Exception("收取完成秘境的奖励需要20点原粹树脂，当前树脂不足，自动秘境停止运行");
+        }
+        
+        // 点击进入
+        retryTimes = 0;
+        while (retryTimes < 20)
+        {
+            retryTimes++;
+            using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
+            if (!confirmRectArea.IsEmpty())
+            {
+                confirmRectArea.Click();
+                break;
+            }
+            await Delay(1200, _ct);
+        }
+
 
         // 载入动画
         await Delay(3000, _ct);
