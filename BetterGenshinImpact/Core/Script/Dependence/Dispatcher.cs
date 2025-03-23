@@ -35,14 +35,14 @@ public class Dispatcher
         try
         {
             AddTrigger(timer);
-        }catch (ArgumentException e)
+        }
+        catch (ArgumentException e)
         {
             if (e is ArgumentNullException)
             {
                 throw;
             }
         }
-        
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class Dispatcher
         {
             throw new ArgumentNullException(nameof(realtimeTimer.Name), "实时任务名称不能为空");
         }
-        
+
         if (!TaskTriggerDispatcher.Instance().AddTrigger(realtimeTimer.Name, realtimeTimer.Config))
         {
             throw new ArgumentException($"添加实时任务失败: {realtimeTimer.Name}", nameof(realtimeTimer.Name));
@@ -97,6 +97,7 @@ public class Dispatcher
         {
             throw new ArgumentNullException(nameof(soloTask), "独立任务对象不能为空");
         }
+
         var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
         if (taskSettingsPageViewModel == null)
         {
@@ -111,11 +112,14 @@ public class Dispatcher
                 {
                     return;
                 }
-                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(CancellationContext.Instance.Cts.Token);
+
+                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(CancellationContext
+                    .Instance.Cts.Token);
                 break;
 
             case "AutoWood":
-                await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum, taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(CancellationContext.Instance.Cts.Token);
+                await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
+                    taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
             case "AutoFight":
@@ -135,6 +139,7 @@ public class Dispatcher
                 {
                     return;
                 }
+
                 await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts.Token);
                 break;
 
@@ -143,7 +148,8 @@ public class Dispatcher
             //     break;
 
             case "AutoFishing":
-                await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(CancellationContext.Instance.Cts.Token);
+                await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
+                    CancellationContext.Instance.Cts.Token);
                 break;
 
             default:

@@ -81,8 +81,8 @@ internal class GameTaskManager
     {
         TriggerDictionary ??= new ConcurrentDictionary<string, ITaskTrigger>();
 
-        ITaskTrigger trigger = null;
-            string triggerName = null;
+        ITaskTrigger? trigger = null;
+        string? triggerName = null;
         switch (name)
         {
             case "AutoPick":
@@ -95,10 +95,12 @@ internal class GameTaskManager
                 break;
         }
 
-        if (triggerName == null || trigger == null) return false;
+        if (triggerName == null || trigger == null)
+        {
+            return false;
+        }
         TriggerDictionary[triggerName] = trigger;
         return true;
-
     }
 
     public static void RefreshTriggerConfigs()
@@ -147,7 +149,8 @@ internal class GameTaskManager
     public static Mat LoadAssetImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
     {
         var info = TaskContext.Instance().SystemInfo;
-        return LoadAssetImage(featName, assertName, info.GameScreenSize.Width, info.GameScreenSize.Height, info.AssetScale, flags);
+        return LoadAssetImage(featName, assertName, info.GameScreenSize.Width, info.GameScreenSize.Height,
+            info.AssetScale, flags);
     }
 
     /// <summary>
@@ -156,7 +159,8 @@ internal class GameTaskManager
     /// </summary>
     /// <returns></returns>
     /// <exception cref="FileNotFoundException"></exception>
-    public static Mat LoadAssetImage(string featName, string assertName, int width, int height, double assetScale, ImreadModes flags = ImreadModes.Color)
+    public static Mat LoadAssetImage(string featName, string assertName, int width, int height, double assetScale,
+        ImreadModes flags = ImreadModes.Color)
     {
         var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{width}x{height}");
         if (!Directory.Exists(assetsFolder))
