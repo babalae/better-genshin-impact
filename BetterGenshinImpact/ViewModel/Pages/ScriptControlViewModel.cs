@@ -416,9 +416,9 @@ public partial class ScriptControlViewModel : ViewModel
                 try
                 {
                     // 生成HTML并加载
-                    string htmlContent = LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
-                        hoeingStats ? realGameInfo : null, sgpc);
-
+                    win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
+                    hoeingStats ? realGameInfo : null, sgpc));
+                win.ShowDialog();
                     // 取消订阅事件
                     LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
 
@@ -428,12 +428,6 @@ public partial class ScriptControlViewModel : ViewModel
                     LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
                     Toast.Error($"生成日志分析时出错: {ex.Message}");
                 }
-
-                //realGameInfo
-                //小怪摩拉统计
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
-                    hoeingStats ? realGameInfo : null, sgpc));
-                win.ShowDialog();
             }
         }
     }
