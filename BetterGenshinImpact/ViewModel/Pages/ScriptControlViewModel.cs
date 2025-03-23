@@ -177,6 +177,7 @@ public partial class ScriptControlViewModel : ViewModel
         // 定义范围选项数据
         var dayRangeComboBoxItems = new List<object>
         {
+            new { Text = "1天" , Value = "1" },
             new { Text = "3天", Value = "3" },
             new { Text = "7天", Value = "7" },
             new { Text = "15天", Value = "15" },
