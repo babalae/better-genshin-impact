@@ -269,14 +269,14 @@ namespace BetterGenshinImpact.GameTask
                     }
                 }
 
-                // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
-                _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
-
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
                     Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
+                
+                // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
+                _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
 
                 var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
