@@ -533,7 +533,7 @@ namespace LogParse
 
                 // 写入HTML内容
                 File.WriteAllText(filePath, htmlContent, Encoding.UTF8);
-                NotifyHtmlGenerationStatus($"日志分析文件已保存至: {filePath}");
+                NotifyHtmlGenerationStatus($"日志分析文件已保存至: .\\log\\logparse\\{fileName}");
                 // 返回文件的URI
                 return new Uri(filePath).AbsoluteUri;
             }

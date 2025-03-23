@@ -336,8 +336,7 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    // 使用Toast显示状态信息而不是创建新窗口
-                    Toast.Information(status);
+                    Toast.Information(status, time:5000);
                 });
             }
 
