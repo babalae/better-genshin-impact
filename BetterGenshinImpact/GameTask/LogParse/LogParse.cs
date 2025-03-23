@@ -573,13 +573,13 @@ namespace LogParse
             html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
             html.AppendLine($"    <title>{title}</title>");
             html.AppendLine("    <style>");
-            html.AppendLine("        body { font-family: 'Segoe UI' ,Arial, sans-serif; margin: 0; padding: 16px; background-color: #f8f9fa;}");
+            html.AppendLine("        body { font-family: 'Segoe UI' ,Arial, sans-serif; margin: 0; padding: 16px; background-color: #f5f7fa;}");
             html.AppendLine("        table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 20px; }");
-            html.AppendLine("        th, td { border: 1.5px solid #ddd; padding: 8px; text-align: left; }");
-            html.AppendLine("        th { background-color: #4a90e2; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }");
-            html.AppendLine("        tr:nth-child(odd) { background-color: #eaeaea; }");
-            html.AppendLine("        tr:nth-child(even) { background-color: #f9f9f9; }");
-            html.AppendLine("        tr:hover { background-color: #e8f1fd; transition: background-color 0.2s ease; }");
+            html.AppendLine("        th, td { border: 1.5px solid #e1e5eb; padding: 8px; text-align: left; }");
+            html.AppendLine("        th { background-color: #3f51b5; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }");
+            html.AppendLine("        tr:nth-child(odd) { background-color: #ffffff; }");
+            html.AppendLine("        tr:nth-child(even) { background-color: #f8fafd; }");
+            html.AppendLine("        tr:hover { background-color: #edf2fd; transition: background-color 0.2s ease; }");
             
             // 修改排序指示器样式，确保不影响表头文本对齐
             html.AppendLine("        th::after { content: ''; display: block; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; opacity: 0; transition: opacity 0.2s ease; }");
@@ -588,16 +588,16 @@ namespace LogParse
             html.AppendLine("        th.sort-desc::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid white; }");
             
             // 改进的表格容器和固定表头样式
-            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; }");
-            html.AppendLine("        th, td { border: 1.5px solid #ddd; padding: 8px; text-align: left; }");
+            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid #e1e5eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }");
+            html.AppendLine("        th, td { border: 1.5px solid #e1e5eb; padding: 8px; text-align: left; }");
             html.AppendLine("        .sticky-header { position: sticky; top: 0; z-index: 100; }");
             html.AppendLine("        .sticky-header th { ");
             html.AppendLine("            position: sticky; ");
             html.AppendLine("            top: 0; ");
-            html.AppendLine("            background-color: #4a90e2; ");
+            html.AppendLine("            background-color: #3f51b5; ");
             html.AppendLine("            z-index: 100; ");
             html.AppendLine("            border-width: 0; ");
-            html.AppendLine("            outline: 1.5px solid #4a90e2; ");
+            html.AppendLine("            outline: 1.5px solid #3f51b5; ");
             html.AppendLine("            text-align: center; ");
             html.AppendLine("            vertical-align: middle; ");
             html.AppendLine("        }");
@@ -620,7 +620,7 @@ namespace LogParse
             html.AppendLine("        tbody tr:first-child td { border-top-color: transparent; }");
             html.AppendLine("        tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }");
             html.AppendLine("        tbody tr:last-child td:last-child { border-bottom-right-radius: 8px; }");
-            html.AppendLine("        .table-container table { margin-bottom: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }");
+            html.AppendLine("        .table-container table { margin-bottom: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }");
             html.AppendLine("    </style>");
             html.AppendLine("    <script>");
                         html.AppendLine(@"        
