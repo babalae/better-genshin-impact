@@ -114,22 +114,33 @@ public class Avatar
     /// 通过判断确认按钮
     /// </summary>
     /// <param name="region"></param>
+    /// <param name="ct"></param>
     /// <returns></returns>
-    public void ThrowWhenDefeated(ImageRegion region)
+    public static void ThrowWhenDefeated(ImageRegion region, CancellationToken ct)
     {
         if (Bv.IsInRevivePrompt(region))
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
-            Sleep(600, Ct);
-            Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-            // tp 到七天神像复活
-            var tpTask = new TpTask(Ct);
-            tpTask.TpToStatueOfTheSeven().Wait(Ct);
-            Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
-            throw new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            Sleep(600, ct);
+            TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
+    }
+
+    /// <summary>
+    /// tp 到七天神像恢复
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <exception cref="RetryException"></exception>
+    public static void TpForRecover(CancellationToken ct, Exception ex)
+    {
+        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+        // tp 到七天神像复活
+        var tpTask = new TpTask(ct);
+        tpTask.TpToStatueOfTheSeven().Wait(ct);
+        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+        throw ex;
     }
 
     /// <summary>
@@ -146,7 +157,7 @@ public class Avatar
             }
 
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region);
+            ThrowWhenDefeated(region, Ct);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
@@ -198,7 +209,7 @@ public class Avatar
             }
 
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region);
+            ThrowWhenDefeated(region, Ct);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
@@ -248,7 +259,7 @@ public class Avatar
         for (var i = 0; i < 10; i++)
         {
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region);
+            ThrowWhenDefeated(region, Ct);
 
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (IsActive(region) && notActiveCount == 3)
@@ -424,7 +435,7 @@ public class Avatar
             Sleep(200, Ct);
 
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region);
+            ThrowWhenDefeated(region, Ct);
             var cd = GetSkillCurrentCd(region);
             if (cd > 0)
             {
@@ -467,7 +478,7 @@ public class Avatar
             Sleep(200, Ct);
 
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region);
+            ThrowWhenDefeated(region, Ct);
             var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
             if (notActiveCount == 0)
             {

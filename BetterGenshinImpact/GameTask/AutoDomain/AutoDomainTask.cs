@@ -83,19 +83,24 @@ public class AutoDomainTask : ISoloTask
                 // 其他场景不重试
                 break;
             }
-            catch (Exception e)
+            catch (RetryException e)
             {
-                if (e.Message.Contains("复活") && !string.IsNullOrEmpty(_taskParam.DomainName))
+                // 只有选择了秘境的时候才会重试
+                if (!string.IsNullOrEmpty(_taskParam.DomainName))
                 {
-                    Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
+                    var msg = e.Message;
+                    if (msg.Contains("复活"))
+                    {
+                        msg = "存在角色死亡，复活后重试秘境...";
+                    }
+
+                    Logger.LogWarning("自动秘境：{Text}", msg);
                     await Delay(2000, ct);
-                    Notify.Event(NotificationEvent.DomainRetry).Error("存在角色死亡，复活后重试秘境...");
+                    Notify.Event(NotificationEvent.DomainRetry).Error(msg);
                     continue;
                 }
-                else
-                {
-                    throw;
-                }
+
+                throw;
             }
         }
 
@@ -410,6 +415,7 @@ public class AutoDomainTask : ISoloTask
 
             try
             {
+                var startTime = DateTime.Now;
                 while (!_ct.IsCancellationRequested)
                 {
                     using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
@@ -422,6 +428,13 @@ public class AutoDomainTask : ISoloTask
                         Logger.LogInformation("检测到交互键");
                         Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                         break;
+                    }
+                    
+                    // 超时直接放弃整个秘境
+                    if (DateTime.Now - startTime> TimeSpan.FromSeconds(60))
+                    {
+                        Logger.LogWarning("自动秘境：{Text}", "前往目标位置处超时，如果选择了秘境名称，将在传送后重试秘境！");
+                        Avatar.TpForRecover(_ct, new RetryException("前往目标位置处超时，先传送到七天神像，然后重试秘境"));
                     }
                 }
             }
