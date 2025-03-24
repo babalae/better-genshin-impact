@@ -448,7 +448,7 @@ public class AutoFightTask : ISoloTask
                 // 用户设定永远不跳过
                 break;
             case < 0:
-                // 有用户设定的CD
+                // 没有用户设定的CD，或用户输入小于0
                 var cd = avatar.GetSkillCdSeconds();
                 if (cd > 0)
                 {
@@ -457,7 +457,7 @@ public class AutoFightTask : ISoloTask
 
                 break;
             case > 0:
-                // 没有用户设定的CD，或用户输入小于0
+                // 有用户设定的CD
                 var dif = DateTime.UtcNow - avatar.LastSkillTime;
                 if (skillCd > dif.TotalSeconds)
                 {
