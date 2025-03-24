@@ -239,9 +239,9 @@ public class CombatScenes : IDisposable
             throw new Exception("联机状态下，此方法必须传入队伍角色编号位置信息");
         }
 
-        var avatarCount = names.Count;
-        var avatars = new Avatar[AvatarCount];
-        for (var i = 0; i < AvatarCount; i++)
+        var namesCount = names.Count;
+        var avatars = new Avatar[namesCount];
+        for (var i = 0; i < namesCount; i++)
         {
             var nameRect = nameRects?[i] ?? Rect.Empty;
             // 根据手动写的出招表来优化CD
