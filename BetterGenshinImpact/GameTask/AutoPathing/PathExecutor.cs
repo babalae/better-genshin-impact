@@ -455,7 +455,7 @@ public class PathExecutor
     {
         if (task.HasAction(action))
         {
-            foreach (var avatar in combatScenes.Avatars)
+            foreach (var avatar in combatScenes.GetAvatars())
             {
                 if (ElementalCollectAvatarConfigs.Get(avatar.Name, el) != null)
                 {
@@ -504,7 +504,8 @@ public class PathExecutor
     /// </summary>
     private async Task<bool> TryPartyHealing()
     {
-        foreach (var avatar in _combatScenes?.Avatars ?? [])
+        if (_combatScenes is null) return false;
+        foreach (var avatar in _combatScenes.GetAvatars())
         {
             if (avatar.Name == "白术")
             {

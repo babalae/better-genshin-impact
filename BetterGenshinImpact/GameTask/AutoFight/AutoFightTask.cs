@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -16,6 +17,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
+using Vanara;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -204,8 +206,33 @@ public class AutoFightTask : ISoloTask
             throw new Exception("识别队伍角色失败");
         }
 
-        var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
+
+        // var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);
+        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
+        // 命令用到的角色 筛选交集
+        var commandAvatars = combatCommands.Select(c => c.Name).Distinct()
+            .Select(n => combatScenes.SelectAvatar(n))
+            .WhereNotNull().ToImmutableDictionary(avatar => avatar.Name);
+        if (commandAvatars.IsEmpty)
+        {
+            throw new Exception("没有可用战斗脚本");
+        }
+        // 可以跳过的角色名
+        List<string> canBeSkippedAvatarNames = [];
+        // 通过环境更新角色的cd并看看那些角色启用了跳过
+        foreach (var avatar in commandAvatars)
+        {
+            var mCd = Avatar.ParseActionSchedulerByCd(_taskParam.ActionSchedulerByCd, avatar.Key);
+            if (mCd is not null)
+            {
+                avatar.Value.ManualSkillCd = (double)mCd;
+                canBeSkippedAvatarNames.Add(avatar.Key);
+            }
+            else
+            {
+                avatar.Value.ManualSkillCd = -1;
+            }
+        }
 
         // 新的取消token
         var cts2 = new CancellationTokenSource();
@@ -235,19 +262,24 @@ public class AutoFightTask : ISoloTask
             {
                 while (!cts2.Token.IsCancellationRequested)
                 {
-                    var minCoolDown = combatScenes.Avatars
-                        .Select(a => CheckAvatarAvailable(a, actionSchedulerByCd)).Min();
-                    var skipFightName = "";
-                    if (minCoolDown > 0)
+                    if (commandAvatars.Count == canBeSkippedAvatarNames.Count)
                     {
-                        Logger.LogInformation("队伍中所有角色的E技能都在冷却中,等待{MinCoolDown}秒后继续。", Math.Round(minCoolDown, 2));
-                        await Delay((int)Math.Ceiling(minCoolDown * 1000), ct);
+                        // 所有战斗角色都可以被取消
+                        
+                        var minCoolDown = commandAvatars.Select(a => a.Value.GetSkillCdSeconds()).Min();
+                        if (minCoolDown > 0)
+                        {
+                            Logger.LogInformation("队伍中所有角色的技能都在冷却中,等待{MinCoolDown}秒后继续。", Math.Round(minCoolDown, 2));
+                            await Delay((int)Math.Ceiling(minCoolDown * 1000), ct);
+                        }
                     }
-
+                    var skipFightName = "";
                     // 通用化战斗策略
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
+                        // 这个角色不在脚本里
+                        if (!commandAvatars.ContainsKey(command.Name)) continue;
                         //如果上个执行者和这次是一个角色，且中间没有跳过，继续执行不判断cd
                         if (lastFightName != command.Name || skipFightName != "")
                         {
@@ -257,17 +289,17 @@ public class AutoFightTask : ISoloTask
                                 continue;
                             }
 
-                            var cd = CheckAvatarAvailable(avatar, actionSchedulerByCd);
+                            var cd = avatar.GetSkillCdSeconds();
                             if (cd > 0)
                             {
-                                if (skipFightName != command.Name)
+                                if (skipFightName != command.Name && canBeSkippedAvatarNames.Contains(command.Name))
                                 {
-                                    actionSchedulerByCd.TryGetValue(command.Name, out var userCd);
-                                    if (userCd > 0)
+                                    var manualSkillCd = avatar.ManualSkillCd;
+                                    if (manualSkillCd > 0)
                                     {
                                         Logger.LogInformation("{commandName}cd冷却为{skillCd}秒,剩余{Cd}秒,跳过此次行动",
                                             command.Name,
-                                            userCd, Math.Round(cd, 2));
+                                            manualSkillCd, Math.Round(cd, 2));
                                     }
                                     else
                                     {
@@ -280,7 +312,6 @@ public class AutoFightTask : ISoloTask
                                 skipFightName = command.Name;
                                 continue;
                             }
-
                             skipFightName = "";
                         }
 
@@ -393,7 +424,7 @@ public class AutoFightTask : ISoloTask
         if (_taskParam.KazuhaPickupEnabled)
         {
             // 队伍中存在万叶的时候使用一次长E
-            var kazuha = combatScenes.Avatars.FirstOrDefault(a => a.Name == "枫原万叶");
+            var kazuha = combatScenes.SelectAvatar("枫原万叶");
             if (kazuha != null)
             {
                 var time = DateTime.UtcNow - kazuha.LastSkillTime;
@@ -436,38 +467,6 @@ public class AutoFightTask : ISoloTask
         return Math.Abs(a.Item1 - b.Item1) < c.Item1 &&
                Math.Abs(a.Item2 - b.Item2) < c.Item2 &&
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
-    }
-
-    private double CheckAvatarAvailable(Avatar avatar, Dictionary<string, double> actionSchedulerByCd)
-    {
-        
-        var skillCd = actionSchedulerByCd.GetValueOrDefault(avatar.Name, -1);
-        switch (skillCd)
-        {
-            case 0:
-                // 用户设定永远不跳过
-                break;
-            case < 0:
-                // 没有用户设定的CD，或用户输入小于0
-                var cd = avatar.GetSkillCdSeconds();
-                if (cd > 0)
-                {
-                    return cd;
-                }
-
-                break;
-            case > 0:
-                // 有用户设定的CD
-                var dif = DateTime.UtcNow - avatar.LastSkillTime;
-                if (skillCd > dif.TotalSeconds)
-                {
-                    return skillCd - dif.TotalSeconds;
-                }
-
-                break;
-        }
-
-        return 0;
     }
 
     private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
@@ -571,6 +570,7 @@ public class AutoFightTask : ISoloTask
         return max;
     }
 
+    [Obsolete]
     private static Dictionary<string, double> ParseStringToDictionary(string input, double defaultValue = -1)
     {
         var dictionary = new Dictionary<string, double>();

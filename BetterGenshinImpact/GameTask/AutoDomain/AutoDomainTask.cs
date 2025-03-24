@@ -358,7 +358,7 @@ public class AutoDomainTask : ISoloTask
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
     {
-        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.Avatars);
+        var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
         var avatar = combatScenes.SelectAvatar(combatCommands[0].Name);
         avatar?.SwitchWithoutCts();
         Sleep(200);

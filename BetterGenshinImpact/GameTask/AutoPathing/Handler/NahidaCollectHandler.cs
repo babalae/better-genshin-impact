@@ -28,7 +28,8 @@ public class NahidaCollectHandler : IActionHandler
         }
 
         // 切人
-        if (combatScenes.AvatarMap.TryGetValue("纳西妲", out var nahida))
+        var nahida = combatScenes.SelectAvatar("纳西妲");
+        if (nahida is not null)
         {
             nahida.TrySwitch();
         }
@@ -82,11 +83,9 @@ public class NahidaCollectHandler : IActionHandler
             if (!ct.IsCancellationRequested)
             {
                 await Delay(200, ct);
-                var cd = nahida.GetSkillCurrentCd(CaptureToRectArea());
+                var cd = nahida.AfterUseSkill();
                 Logger.LogInformation("{Nhd} 长按E转圈,cd:{Cd}", "纳西妲", Math.Round(cd, 2));
             }
-
-            nahida.LastSkillTime = DateTime.UtcNow;
         }
 
         await Delay(800, ct);
