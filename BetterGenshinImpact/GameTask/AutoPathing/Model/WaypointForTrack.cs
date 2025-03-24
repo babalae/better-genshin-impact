@@ -28,11 +28,6 @@ public class WaypointForTrack : Waypoint
     /// </summary>
     public string? LogInfo { get; set; }
 
-    /// <summary>
-    /// Mining特有，指示是否关闭拾取
-    /// </summary>
-    public bool DisablePickupAround { get; set; }
-
     public WaypointForTrack(Waypoint waypoint)
     {
         Type = waypoint.Type;
@@ -59,13 +54,6 @@ public class WaypointForTrack : Waypoint
                 LogInfo = waypoint.ActionParams;
             }
         }
-        else if (waypoint.Action == ActionEnum.Mining.Code)
-        {
-            if (waypoint.ActionParams is not null &&
-                waypoint.ActionParams.Contains("disablePickupAround", StringComparison.InvariantCultureIgnoreCase))
-            {
-                DisablePickupAround = true;
-            }
-        }
+        // 非必要不需要在此处新增变量解析，建议把耗时低的解析放到 Handler 中
     }
 }

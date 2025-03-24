@@ -39,7 +39,9 @@ public class MiningHandler : IActionHandler
         // 挖矿
         Mining(combatScenes);
 
-        if (waypointForTrack is not { DisablePickupAround: true })
+        
+        if (waypointForTrack is { ActionParams: not null }
+            && waypointForTrack.ActionParams.Contains("disablePickupAround", StringComparison.InvariantCultureIgnoreCase))
         {
             await Delay(1000, ct);
 
