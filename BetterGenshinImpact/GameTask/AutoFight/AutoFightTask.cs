@@ -236,7 +236,7 @@ public class AutoFightTask : ISoloTask
                 while (!cts2.Token.IsCancellationRequested)
                 {
                     var minCoolDown = combatScenes.Avatars
-                        .Select(a => CheckAvatarAvliable(a, actionSchedulerByCd)).Min();
+                        .Select(a => CheckAvatarAvailable(a, actionSchedulerByCd)).Min();
                     var skipFightName = "";
                     if (minCoolDown > 0)
                     {
@@ -257,7 +257,7 @@ public class AutoFightTask : ISoloTask
                                 continue;
                             }
 
-                            var cd = CheckAvatarAvliable(avatar, actionSchedulerByCd);
+                            var cd = CheckAvatarAvailable(avatar, actionSchedulerByCd);
                             if (cd > 0)
                             {
                                 if (skipFightName != command.Name)
@@ -438,14 +438,17 @@ public class AutoFightTask : ISoloTask
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
-    private double CheckAvatarAvliable(Avatar avatar, Dictionary<string, double> actionSchedulerByCd)
+    private double CheckAvatarAvailable(Avatar avatar, Dictionary<string, double> actionSchedulerByCd)
     {
-        actionSchedulerByCd.TryGetValue(avatar.Name, out var skillCd);
+        
+        var skillCd = actionSchedulerByCd.GetValueOrDefault(avatar.Name, -1);
         switch (skillCd)
         {
             case 0:
+                // 用户设定永远不跳过
                 break;
             case < 0:
+                // 有用户设定的CD
                 var cd = avatar.GetSkillCdSeconds();
                 if (cd > 0)
                 {
@@ -454,6 +457,7 @@ public class AutoFightTask : ISoloTask
 
                 break;
             case > 0:
+                // 没有用户设定的CD，或用户输入小于0
                 var dif = DateTime.UtcNow - avatar.LastSkillTime;
                 if (skillCd > dif.TotalSeconds)
                 {
