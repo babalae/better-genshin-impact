@@ -140,7 +140,9 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.FeishuNotificationEnabled == true)
             _notifierManager.RegisterNotifier(new FeishuNotifier(
                 _notifyHttpClient,
-                _notificationConfig.FeishuWebhookUrl
+                _notificationConfig.FeishuWebhookUrl,
+                _notificationConfig.FeishuAppId,
+                _notificationConfig.FeishuAppSecret
             ));
     }
 

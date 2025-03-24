@@ -13,13 +13,25 @@ public class AutoFishingAssets : BaseAssets<AutoFishingAssets>
     public RecognitionObject LiftRodButtonRo;
     public RecognitionObject ExitFishingButtonRo;
 
-    private AutoFishingAssets()
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
+    private AutoFishingAssets() : base()
+    {
+        Initialization(this.systemInfo);
+    }
+
+    protected AutoFishingAssets(ISystemInfo systemInfo) : base(systemInfo)
+    {
+        Initialization(systemInfo);
+    }
+#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
+
+    private void Initialization(ISystemInfo systemInfo)
     {
         SpaceButtonRo = new RecognitionObject
         {
             Name = "SpaceButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "space.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "space.png", systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 3,
                 CaptureRect.Height - CaptureRect.Height / 5,
                 CaptureRect.Width / 3,
@@ -31,7 +43,7 @@ public class AutoFishingAssets : BaseAssets<AutoFishingAssets>
         {
             Name = "BaitButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "switch_bait.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "switch_bait.png", systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 2,
                 CaptureRect.Height - CaptureRect.Height / 4,
                 CaptureRect.Width / 2,
@@ -43,7 +55,7 @@ public class AutoFishingAssets : BaseAssets<AutoFishingAssets>
         {
             Name = "WaitBiteButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "wait_bite.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "wait_bite.png", systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 2,
                 CaptureRect.Height - CaptureRect.Height / 4,
                 CaptureRect.Width / 2,
@@ -55,7 +67,7 @@ public class AutoFishingAssets : BaseAssets<AutoFishingAssets>
         {
             Name = "LiftRodButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "lift_rod.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "lift_rod.png", systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 2,
                 CaptureRect.Height - CaptureRect.Height / 4,
                 CaptureRect.Width / 2,
@@ -70,7 +82,7 @@ public class AutoFishingAssets : BaseAssets<AutoFishingAssets>
         {
             Name = "ExitFishingButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "exit_fishing.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFishing", "exit_fishing.png", systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - w,
                 CaptureRect.Height - h,
                 w,

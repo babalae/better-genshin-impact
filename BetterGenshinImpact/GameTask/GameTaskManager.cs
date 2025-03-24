@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
@@ -139,19 +140,17 @@ internal class GameTaskManager
     /// <exception cref="FileNotFoundException"></exception>
     public static Mat LoadAssetImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
     {
-        var info = TaskContext.Instance().SystemInfo;
-        return LoadAssetImage(featName, assertName, info.GameScreenSize.Width, info.GameScreenSize.Height, info.AssetScale, flags);
+        return LoadAssetImage(featName, assertName, TaskContext.Instance().SystemInfo, flags);
     }
 
     /// <summary>
-    /// 这个重载是为了和TaskContext.Instance().SystemInfo解耦
-    /// todo: 更系统的分层
+    /// 获取素材图片并缩放
     /// </summary>
     /// <returns></returns>
     /// <exception cref="FileNotFoundException"></exception>
-    public static Mat LoadAssetImage(string featName, string assertName, int width, int height, double assetScale, ImreadModes flags = ImreadModes.Color)
+    public static Mat LoadAssetImage(string featName, string assertName, ISystemInfo systemInfo, ImreadModes flags = ImreadModes.Color)
     {
-        var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{width}x{height}");
+        var assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\{systemInfo.GameScreenSize.Width}x{systemInfo.GameScreenSize.Height}");
         if (!Directory.Exists(assetsFolder))
         {
             assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
@@ -169,9 +168,9 @@ internal class GameTaskManager
         }
 
         var mat = Mat.FromStream(File.OpenRead(filePath), flags);
-        if (width != 1920)
+        if (systemInfo.GameScreenSize.Width != 1920)
         {
-            mat = ResizeHelper.Resize(mat, assetScale);
+            mat = ResizeHelper.Resize(mat, systemInfo.AssetScale);
         }
 
         return mat;

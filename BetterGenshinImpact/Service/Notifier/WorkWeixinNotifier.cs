@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification.Model;
 
 namespace BetterGenshinImpact.Service.Notifier;
@@ -50,7 +49,8 @@ public class WorkWeixinNotifier : INotifier
             // Then send the text message
             if (!string.IsNullOrEmpty(content.Message))
             {
-                var textPayload = await TransformTextData(content.Message);
+                var outputMessage = content.Timestamp + " " + content.Message;
+                var textPayload = await TransformTextData(outputMessage);
                 var textResponse = await _httpClient.PostAsync(Endpoint, textPayload);
 
                 if (!textResponse.IsSuccessStatusCode)
