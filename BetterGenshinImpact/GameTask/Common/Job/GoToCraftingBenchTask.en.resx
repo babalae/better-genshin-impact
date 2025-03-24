@@ -117,10 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="上钩" xml:space="preserve">
-    <value>mordu</value>
-  </data>
-  <data name="钓鱼" xml:space="preserve">
-    <value>Pêcher</value>
+  <data name="合成" xml:space="preserve">
+    <value>Craft</value>
   </data>
 </root>

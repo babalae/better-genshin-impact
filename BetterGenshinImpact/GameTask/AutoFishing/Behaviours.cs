@@ -687,15 +687,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly IInputSimulator input;
         private readonly DrawContent drawContent;
         private readonly IOcrService ocrService = OcrFactory.Paddle;
-        private readonly CultureInfo? cultureInfo;
-        private readonly IStringLocalizer<AutoFishingImageRecognition>? stringLocalizer;
+        private readonly string getABiteLocalizedString;
         public FishBite(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, DrawContent? drawContent = null, CultureInfo? cultureInfo = null, IStringLocalizer<AutoFishingImageRecognition>? stringLocalizer = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
             this.input = input;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
-            this.cultureInfo = cultureInfo;
-            this.stringLocalizer = stringLocalizer;
+            this.getABiteLocalizedString = stringLocalizer == null ? "上钩" : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
         }
 
         protected override void OnInitialize()
@@ -736,9 +734,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             // OCR 提竿判断
             using Mat wordCaptureGreyMat = new Mat(imageRegion.SrcGreyMat, liftingWordsAreaRect);
             var text = ocrService.Ocr(wordCaptureGreyMat);
-            string bitedString = stringLocalizer == null ? "上钩" : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
 
-            if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains(bitedString))
+            if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains(this.getABiteLocalizedString))
             {
                 return RaiseRod("OCR");
             }

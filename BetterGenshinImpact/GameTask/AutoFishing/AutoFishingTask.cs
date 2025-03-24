@@ -27,6 +27,7 @@ using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using System.Globalization;
 using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -341,17 +342,18 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
             private readonly TimeProvider timeProvider;
-            private readonly CultureInfo? cultureInfo;
             private DateTimeOffset? pressFWaitEndTime;
             private DateTimeOffset? clickWhiteConfirmButtonWaitEndTime;
             private DateTimeOffset? overallWaitEndTime;
+            private readonly string fishingLocalizedString;
 
             public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
                 this.input = input;
                 this.timeProvider = timeProvider ?? TimeProvider.System;
-                this.cultureInfo = cultureInfo;
+                IStringLocalizer<AutoFishingImageRecognition> stringLocalizer = App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
+                this.fishingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
             }
 
             protected override BehaviourStatus Update(ImageRegion imageRegion)
@@ -362,7 +364,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return BehaviourStatus.Running;
                 }
 
-                if ((pressFWaitEndTime == null || pressFWaitEndTime < timeProvider.GetLocalNow()) && Bv.FindFAndPress(imageRegion, input.Keyboard, cultureInfo, "钓鱼"))
+                if ((pressFWaitEndTime == null || pressFWaitEndTime < timeProvider.GetLocalNow()) && Bv.FindFAndPress(imageRegion, input.Keyboard, this.fishingLocalizedString))
                 {
                     logger.LogInformation("按下钓鱼键");
                     pressFWaitEndTime = timeProvider.GetLocalNow().AddSeconds(3);
@@ -403,13 +405,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
-            private readonly CultureInfo? cultureInfo;
+            private readonly string fishingLocalizedString;
 
             public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate, IInputSimulator input, CultureInfo? cultureInfo = null) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
                 this.input = input;
-                this.cultureInfo = cultureInfo;
+                IStringLocalizer<AutoFishingImageRecognition> stringLocalizer = App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
+                this.fishingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
             }
 
             protected override BehaviourStatus Update(ImageRegion imageRegion)
@@ -419,7 +422,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return BehaviourStatus.Running;
                 }
 
-                if (Bv.FindF(imageRegion, cultureInfo, "钓鱼"))
+                if (Bv.FindF(imageRegion, this.fishingLocalizedString))
                 {
                     logger.LogInformation("退出完成");
                     return BehaviourStatus.Succeeded;

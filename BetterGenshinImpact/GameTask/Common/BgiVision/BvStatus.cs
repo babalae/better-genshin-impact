@@ -6,9 +6,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoFight;
-using Vanara.PInvoke;
 using System.Threading;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
@@ -22,7 +19,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 ///
 /// 此处主要是对游戏内的一些状态进行识别
 /// </summary>
-public partial class Bv
+public static partial class Bv
 {
     public static string WhichGameUi()
     {
