@@ -213,6 +213,10 @@ public class AutoFightTask : ISoloTask
         var commandAvatars = combatCommands.Select(c => c.Name).Distinct()
             .Select(n => combatScenes.SelectAvatar(n))
             .WhereNotNull().ToImmutableDictionary(avatar => avatar.Name);
+        // 过滤不可执行的脚本，Task里并不支持"当前角色"。
+        combatCommands = combatCommands
+            .Where(c =>commandAvatars.ContainsKey(c.Name))
+            .ToList();
         if (commandAvatars.IsEmpty)
         {
             throw new Exception("没有可用战斗脚本");
@@ -265,7 +269,6 @@ public class AutoFightTask : ISoloTask
                     if (commandAvatars.Count == canBeSkippedAvatarNames.Count)
                     {
                         // 所有战斗角色都可以被取消
-                        
                         var minCoolDown = commandAvatars.Select(a => a.Value.GetSkillCdSeconds()).Min();
                         if (minCoolDown > 0)
                         {
@@ -278,8 +281,6 @@ public class AutoFightTask : ISoloTask
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
-                        // 这个角色不在脚本里
-                        if (!commandAvatars.ContainsKey(command.Name)) continue;
                         //如果上个执行者和这次是一个角色，且中间没有跳过，继续执行不判断cd
                         if (lastFightName != command.Name || skipFightName != "")
                         {
