@@ -41,7 +41,7 @@ using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class ScriptControlViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class ScriptControlViewModel : ViewModel
 {
     private readonly ISnackbarService _snackbarService;
 
@@ -64,11 +64,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     public readonly string LogPath = Global.Absolute(@"log");
 
-    public void OnNavigatedFrom()
-    {
-    }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         ReadScriptGroup();
     }
@@ -113,33 +110,37 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         {
             return;
         }
-        
+
         if (SelectedScriptGroup == null)
         {
             return;
         }
+
         SelectedScriptGroup.Projects.Clear();
         WriteScriptGroup(SelectedScriptGroup);
     }
-	[RelayCommand]
+
+    [RelayCommand]
     private async Task OpenLogParse()
     {
         if (SelectedScriptGroup == null)
         {
             return;
         }
+
         GameInfo? gameInfo = null;
         var config = LogParse.LogParse.LoadConfig();
         if (!string.IsNullOrEmpty(config.Cookie))
         {
             config.CookieDictionary.TryGetValue(config.Cookie, out gameInfo);
         }
+
         LogParseConfig.ScriptGroupLogParseConfig? sgpc;
-        if (!config.ScriptGroupLogDictionary.TryGetValue(SelectedScriptGroup.Name,out sgpc))
+        if (!config.ScriptGroupLogDictionary.TryGetValue(SelectedScriptGroup.Name, out sgpc))
         {
-            sgpc=new LogParseConfig.ScriptGroupLogParseConfig();
+            sgpc = new LogParseConfig.ScriptGroupLogParseConfig();
         }
-        
+
 
         // 创建 StackPanel
         var stackPanel = new StackPanel
@@ -156,17 +157,17 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             VerticalAlignment = VerticalAlignment.Center
         };
         var rangeComboBoxItems = new List<object>
-            {
-                new  { Text = "当前配置组", Value = "CurrentConfig" },
-                new  { Text = "所有", Value = "All" }
-            };
-        rangeComboBox.DisplayMemberPath = "Text";  // 显示的文本
+        {
+            new { Text = "当前配置组", Value = "CurrentConfig" },
+            new { Text = "所有", Value = "All" }
+        };
+        rangeComboBox.DisplayMemberPath = "Text"; // 显示的文本
         rangeComboBox.SelectedValuePath = "Value"; // 绑定的值
         rangeComboBox.ItemsSource = rangeComboBoxItems;
         rangeComboBox.SelectedIndex = 0; // 默认选中第一个项
         stackPanel.Children.Add(rangeComboBox);
 
-   
+
         var dayRangeComboBox = new ComboBox
         {
             Width = 200,
@@ -175,30 +176,29 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         };
         // 定义范围选项数据
         var dayRangeComboBoxItems = new List<object>
-            {
-                new { Text = "3天", Value = "3" },
-                new { Text = "7天", Value = "7" },
-                new { Text = "15天", Value = "15" },
-                new { Text = "31天", Value = "31" },
-                new { Text = "61天", Value = "61" },
-                new { Text = "92天", Value = "92" },
-                new { Text = "所有", Value = "All" }
-            };
+        {
+            new { Text = "1天" , Value = "1" },
+            new { Text = "3天", Value = "3" },
+            new { Text = "7天", Value = "7" },
+            new { Text = "15天", Value = "15" },
+            new { Text = "31天", Value = "31" },
+            new { Text = "61天", Value = "61" },
+            new { Text = "92天", Value = "92" },
+            new { Text = "所有", Value = "All" }
+        };
         dayRangeComboBox.ItemsSource = dayRangeComboBoxItems;
-        dayRangeComboBox.DisplayMemberPath = "Text";  // 显示的文本
+        dayRangeComboBox.DisplayMemberPath = "Text"; // 显示的文本
         dayRangeComboBox.SelectedValuePath = "Value"; // 绑定的值
         dayRangeComboBox.SelectedIndex = 0;
         stackPanel.Children.Add(dayRangeComboBox);
-        
+
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox faultStatsSwitch = new CheckBox
         {
             Content = "异常情况统计",
             VerticalAlignment = VerticalAlignment.Center
         };
-        stackPanel.Children.Add(faultStatsSwitch);       
-
-        
+        stackPanel.Children.Add(faultStatsSwitch);
 
 
         // 开关控件：ToggleButton 或 CheckBox
@@ -211,7 +211,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
 
         // 将第一行添加到 StackPanel
         stackPanel.Children.Add(hoeingStatsSwitch);
-        
+
         // 第二行：文本框和“？”按钮
         StackPanel secondRow = new StackPanel
         {
@@ -242,7 +242,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Orientation = Orientation.Horizontal,
             Margin = new Thickness(0, 0, 0, 10)
         };
-        
+
         // 创建一个 TextBlock
         TextBlock hoeingDelayBlock = new TextBlock
         {
@@ -252,21 +252,18 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Margin = new Thickness(0, 0, 10, 0)
         };
 
-        
+
         TextBox hoeingDelayTextBox = new TextBox
         {
             Width = 100,
             FontSize = 16,
             VerticalContentAlignment = VerticalAlignment.Center
         };
-  
+
         threeRow.Children.Add(hoeingDelayBlock);
         threeRow.Children.Add(hoeingDelayTextBox);
-        
-        
-        
-        
-        
+
+
         // 将第二行添加到 StackPanel
         stackPanel.Children.Add(secondRow);
         stackPanel.Children.Add(threeRow);
@@ -278,6 +275,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             CloseButtonText = "取消",
             PrimaryButtonText = "确定",
             Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
         void OnQuestionButtonOnClick(object sender, RoutedEventArgs args)
@@ -295,7 +293,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
 
         questionButton.Click += OnQuestionButtonOnClick;
-        
+
         //对象赋值
         rangeComboBox.SelectedValue = sgpc.RangeValue;
         dayRangeComboBox.SelectedValue = sgpc.DayRangeValue;
@@ -303,29 +301,29 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
         hoeingDelayTextBox.Text = sgpc.HoeingDelay;
-        
+
         MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
 
-        
-        if (result == MessageBoxResult.Primary) {
+
+        if (result == MessageBoxResult.Primary)
+        {
             string rangeValue = ((dynamic)rangeComboBox.SelectedItem).Value;
             string dayRangeValue = ((dynamic)dayRangeComboBox.SelectedItem).Value;
-            string cookieValue =cookieTextBox.Text;
-            
+            string cookieValue = cookieTextBox.Text;
+
             //保存配置文件
-            sgpc.DayRangeValue=dayRangeValue;
+            sgpc.DayRangeValue = dayRangeValue;
             sgpc.RangeValue = rangeValue;
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
             sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
             sgpc.HoeingDelay = hoeingDelayTextBox.Text;
 
             config.Cookie = cookieValue;
-            config.ScriptGroupLogDictionary[SelectedScriptGroup.Name]=sgpc;
-            
+            config.ScriptGroupLogDictionary[SelectedScriptGroup.Name] = sgpc;
+
             LogParse.LogParse.WriteConfigFile(config);
-            
-            
-            
+
+
             WebpageWindow win = new()
             {
                 Title = "日志分析",
@@ -335,24 +333,35 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
+            void OnHtmlGenerationStatusChanged(string status)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Toast.Information(status, time:5000);
+                });
+            }
 
+            LogParse.LogParse.HtmlGenerationStatusChanged += OnHtmlGenerationStatusChanged;
+            Toast.Information("正在准备数据...");
             List<(string FileName, string Date)> fs = LogParse.LogParse.GetLogFiles(LogPath);
-            if (dayRangeValue != "All") {
+            if (dayRangeValue != "All")
+            {
                 int n = int.Parse(dayRangeValue);
                 if (n < fs.Count)
                 {
                     fs = fs.GetRange(fs.Count - n, n);
                 }
             }
-            
-            
+
+
             //最终确定是否打开锄地开关
             bool hoeingStats = false;
-            
+
             if ((hoeingStatsSwitch.IsChecked ?? false) && string.IsNullOrEmpty(cookieValue))
             {
                 Toast.Warning("未填写cookie，此次将不启用锄地统计！");
             }
+
             //真正存储的gameinfo
             GameInfo? realGameInfo = gameInfo;
             //统计锄地开关打开，并且不为cookie不为空
@@ -363,11 +372,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     Toast.Information("正在从米游社获取旅行札记数据，请耐心等待！");
                     gameInfo = await TravelsDiaryDetailManager.UpdateTravelsDiaryDetailManager(cookieValue);
                     Toast.Success($"米游社数据获取成功，开始进行解析，请耐心等待！");
-                    
                 }
                 catch (Exception)
                 {
-                    if (realGameInfo!=null)
+                    if (realGameInfo != null)
                     {
                         Toast.Warning("访问米游社接口异常，此次将锄地统计将不更新最新数据！");
                     }
@@ -375,42 +383,56 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     {
                         Toast.Warning("访问米游社接口异常，此次将不启用锄地统计！");
                     }
-
                 }
             }
+
             if (gameInfo != null)
             {
-                realGameInfo=gameInfo;
-               
+                realGameInfo = gameInfo;
+
                 config.CookieDictionary[cookieValue] = realGameInfo;
                 LogParse.LogParse.WriteConfigFile(config);
             }
 
-            if ((hoeingStatsSwitch.IsChecked ?? false) && realGameInfo!=null)
+            if ((hoeingStatsSwitch.IsChecked ?? false) && realGameInfo != null)
             {
                 hoeingStats = true;
             }
+
             var configGroupEntities = LogParse.LogParse.ParseFile(fs);
-            if (rangeValue == "CurrentConfig") {
+            if (rangeValue == "CurrentConfig")
+            {
                 //Toast.Success(_selectedScriptGroup.Name);
-                configGroupEntities =configGroupEntities.Where(item => SelectedScriptGroup.Name == item.Name).ToList();
+                configGroupEntities = configGroupEntities.Where(item => SelectedScriptGroup.Name == item.Name).ToList();
             }
+
             if (configGroupEntities.Count == 0)
             {
                 Toast.Warning("未解析出日志记录！");
+                LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
             }
-            else {
+            else
+            {
                 configGroupEntities.Reverse();
-                //realGameInfo
-                //小怪摩拉统计
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,hoeingStats ? realGameInfo : null,sgpc));
+                try
+                {
+                    // 生成HTML并加载
+                    win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
+                    hoeingStats ? realGameInfo : null, sgpc));
                 win.ShowDialog();
+                    // 取消订阅事件
+                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+
+                }
+                catch (Exception ex)
+                {
+                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+                    Toast.Error($"生成日志分析时出错: {ex.Message}");
+                }
             }
-
         }
-
-
     }
+
     static string[] GetJsonFiles(string folderPath)
     {
         // 检查文件夹是否存在
@@ -422,68 +444,69 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         // 获取所有 .json 文件
         return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly);
     }
+
     [RelayCommand]
     public void OnOpenLocalScriptRepo()
     {
         TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
     }
+
     [RelayCommand]
-    private  void UpdateTasks()
+    private void UpdateTasks()
     {
-            List<ScriptGroupProject> projects = new();
-            List<ScriptGroupProject> oldProjects = new();
-            oldProjects.AddRange(SelectedScriptGroup?.Projects ?? []);
-            var oldcount = oldProjects.Count;
-            List<string> folderNames = new();
-            foreach (var project in oldProjects)
+        List<ScriptGroupProject> projects = new();
+        List<ScriptGroupProject> oldProjects = new();
+        oldProjects.AddRange(SelectedScriptGroup?.Projects ?? []);
+        var oldcount = oldProjects.Count;
+        List<string> folderNames = new();
+        foreach (var project in oldProjects)
+        {
+            if (project.Type == "Pathing")
             {
-                if (project.Type == "Pathing")
+                if (!folderNames.Contains(project.FolderName))
                 {
-                    if (!folderNames.Contains(project.FolderName))
+                    folderNames.Add(project.FolderName);
+                    //根据文件夹更新
+                    var dirPath = $@"{MapPathingViewModel.PathJsonPath}\{project.FolderName}";
+                    foreach (var jsonFile in GetJsonFiles(dirPath))
                     {
-                        folderNames.Add(project.FolderName);
-                        //根据文件夹更新
-                        var dirPath = $@"{MapPathingViewModel.PathJsonPath}\{project.FolderName}";
-                        foreach (var jsonFile in GetJsonFiles(dirPath))
+                        var fileInfo = new FileInfo(jsonFile);
+                        var oldProject = oldProjects.FirstOrDefault(item => item.Name == fileInfo.Name);
+                        if (oldProject == null)
                         {
-                            var fileInfo = new FileInfo(jsonFile);
-                            var oldProject = oldProjects.FirstOrDefault(item => item.Name == fileInfo.Name);
-                            if (oldProject == null)
-                            {
-                                projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, project.FolderName));
-                            }
-                            else
-                            {
-                                projects.Add(oldProject);
-                            }
+                            projects.Add(ScriptGroupProject.BuildPathingProject(fileInfo.Name, project.FolderName));
+                        }
+                        else
+                        {
+                            projects.Add(oldProject);
                         }
                     }
                 }
-                else
-                {
-                    projects.Add(project);
-                }
             }
-
-            SelectedScriptGroup?.Projects.Clear();
-            foreach (var scriptGroupProject in projects)
+            else
             {
-                SelectedScriptGroup?.AddProject(scriptGroupProject);
+                projects.Add(project);
             }
+        }
 
-            Toast.Success($"增加了{projects.Count - oldcount}个路径追踪任务");
-            if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
+        SelectedScriptGroup?.Projects.Clear();
+        foreach (var scriptGroupProject in projects)
+        {
+            SelectedScriptGroup?.AddProject(scriptGroupProject);
+        }
+
+        Toast.Success($"增加了{projects.Count - oldcount}个地图追踪任务");
+        if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
 
     [RelayCommand]
     private void ReverseTaskOrder()
     {
-        
         List<ScriptGroupProject> projects = new();
         projects.AddRange(SelectedScriptGroup?.Projects.Reverse() ?? []);
         SelectedScriptGroup?.Projects.Clear();
-        projects.ForEach(item=>SelectedScriptGroup?.Projects.Add(item));
+        projects.ForEach(item => SelectedScriptGroup?.Projects.Add(item));
         if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
 
@@ -498,7 +521,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", item.Name);
         if (!string.IsNullOrEmpty(str))
         {
-
             // 检查是否已存在
             if (ScriptGroups.Any(x => x.Name == str))
             {
@@ -512,7 +534,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             }
             else
             {
-                var newScriptGroup =JsonSerializer.Deserialize<ScriptGroup>(JsonSerializer.Serialize(item)) ;
+                var newScriptGroup = JsonSerializer.Deserialize<ScriptGroup>(JsonSerializer.Serialize(item));
                 if (newScriptGroup != null)
                 {
                     newScriptGroup.Name = str;
@@ -630,6 +652,15 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         }
     }
 
+    [RelayCommand]
+    private void OnAddShell()
+    {
+        var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点","请输入需要执行的shell");
+        if (!string.IsNullOrEmpty(str))
+        {
+            SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildShellProject(str));
+        }
+    }
 
     [RelayCommand]
     private void OnAddPathing()
@@ -637,7 +668,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath);
         var stackPanel = CreatePathingScriptSelectionPanel(root.Children);
 
-        var result = PromptDialog.Prompt("请选择需要添加的路径追踪任务", "请选择需要添加的路径追踪任务", stackPanel, new Size(500, 600));
+        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(500, 600));
         if (!string.IsNullOrEmpty(result))
         {
             AddSelectedPathingScripts((StackPanel)stackPanel.Content);
@@ -653,20 +684,14 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             VerticalAlignment = VerticalAlignment.Center,
         };
         stackPanel.Children.Add(excludeCheckBox);
-        
+
         var filterTextBox = new TextBox
         {
             Margin = new Thickness(0, 0, 0, 10),
             PlaceholderText = "输入筛选条件...",
         };
-        filterTextBox.TextChanged += delegate
-        {
-            ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked);
-        };
-        excludeCheckBox.Click += delegate
-        {
-            ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked);
-        };
+        filterTextBox.TextChanged += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
+        excludeCheckBox.Click += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
         stackPanel.Children.Add(filterTextBox);
         AddNodesToPanel(stackPanel, list, 0, filterTextBox.Text);
 
@@ -680,7 +705,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         return scrollViewer;
     }
 
-    private void ApplyFilter(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, string filter,bool? excludeSelectedFolder = false)
+    private void ApplyFilter(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? excludeSelectedFolder = false)
     {
         if (parentPanel.Children.Count > 0)
         {
@@ -691,33 +716,31 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 {
                     removeElements.Add(frameworkElement);
                 }
-                
             }
+
             removeElements.ForEach(parentPanel.Children.Remove);
         }
-        
+
         if (excludeSelectedFolder ?? false)
         {
-            
-            List<string> skipFolderNames = SelectedScriptGroup?.Projects.ToList().Select(item=>item.FolderName).Distinct().ToList() ?? [];
+            List<string> skipFolderNames = SelectedScriptGroup?.Projects.ToList().Select(item => item.FolderName).Distinct().ToList() ?? [];
             //复制Nodes
             string jsonString = JsonSerializer.Serialize(nodes);
             var copiedNodes = JsonSerializer.Deserialize<ObservableCollection<FileTreeNode<PathingTask>>>(jsonString);
-            if (copiedNodes!=null)
+            if (copiedNodes != null)
             {
                 //路径过滤
                 copiedNodes = FileTreeNodeHelper.FilterTree(copiedNodes, skipFolderNames);
                 copiedNodes = FileTreeNodeHelper.FilterEmptyNodes(copiedNodes);
-                AddNodesToPanel(parentPanel, copiedNodes, 0,filter);
+                AddNodesToPanel(parentPanel, copiedNodes, 0, filter);
             }
-           
         }
         else
         {
-            AddNodesToPanel(parentPanel, nodes, 0,filter);
+            AddNodesToPanel(parentPanel, nodes, 0, filter);
         }
 
-        
+
         /*if (parentPanel.Children.Count > 0 && parentPanel.Children[1] is TextBox filterTextBox)
         {
             parentPanel.Children.Clear();
@@ -740,7 +763,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 Content = node.FileName,
                 Tag = node.FilePath,
                 Margin = new Thickness(depth * 30, 0, 0, 0) // 根据深度计算Margin
-                ,Name = "dynamic_"+Guid.NewGuid().ToString().Replace("-","_")
+                ,
+                Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
             };
 
             if (node.IsDirectory)
@@ -753,7 +777,8 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                     Header = checkBox,
                     Content = childPanel,
                     IsExpanded = false // 默认不展开
-                    ,Name = "dynamic_"+Guid.NewGuid().ToString().Replace("-","_")
+                    ,
+                    Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
                 };
 
                 checkBox.Checked += (s, e) => SetChildCheckBoxesState(childPanel, true);
@@ -830,7 +855,19 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         Directory.CreateDirectory(path);
         // 获取所有脚本项目
         var projects = Directory.GetDirectories(path)
-            .Select(x => new ScriptProject(Path.GetFileName(x)))
+            .Select(x =>
+            {
+                try
+                {
+                    return new ScriptProject(Path.GetFileName(x));
+                }
+                catch (Exception e)
+                {
+                    Toast.Warning($"加载单个脚本失败：{e.Message}");
+                    return null;
+                }
+            })
+            .Where(x => x != null)
             .ToList();
         return projects;
     }
@@ -893,6 +930,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Content = new ScriptGroupProjectEditor { DataContext = viewModel },
             CloseButtonText = "关闭",
             Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
         uiMessageBox.ShowDialogAsync();
     }
@@ -935,6 +973,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 Content = ui,
                 CloseButtonText = "关闭",
                 Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
             };
             uiMessageBox.ShowDialogAsync();
 
@@ -949,6 +988,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             Toast.Warning("只有JS脚本才有自定义配置");
         }
     }
+
     [RelayCommand]
     public void OnDeleteScriptByFolder(ScriptGroupProject? item)
     {
@@ -956,8 +996,10 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
         {
             return;
         }
-        SelectedScriptGroup?.Projects.ToList().Where(item2=>item2.FolderName == item.FolderName).ForEach(OnDeleteScript);
+
+        SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName).ForEach(OnDeleteScript);
     }
+
     [RelayCommand]
     public void OnDeleteScript(ScriptGroupProject? item)
     {
@@ -1043,7 +1085,6 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             WriteScriptGroup(SelectedScriptGroup);
         }
     }
-
 
 
     private void WriteScriptGroup(ScriptGroup scriptGroup)
@@ -1331,7 +1372,7 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
             },
             CloseButtonText = "关闭",
             PrimaryButtonText = "确认执行",
-            Owner =  Application.Current.MainWindow,
+            Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
 
@@ -1343,25 +1384,58 @@ public partial class ScriptControlViewModel : ObservableObject, INavigationAware
                 .Select(kv => kv.Key)
                 .ToList();
 
-            _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", selectedGroups.Select(x => x.Name)));
-
+            await StartGroups(selectedGroups);
+        }
+    }
+    public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
+    {
+        if( ScriptGroups.Count == 0)
+        {
+            ReadScriptGroup();
+        }
+        List<ScriptGroup> scriptGroups = new List<ScriptGroup>();
+        foreach (var name in names)
+        {
             try
             {
-                RunnerContext.Instance.IsContinuousRunGroup = true;
-                foreach (var scriptGroup in selectedGroups)
-                {
-                    await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
-                    await Task.Delay(2000);
-                }
+                var group = ScriptGroups.First(x => x.Name == name);
+                scriptGroups.Add(group);
             }
-            catch (Exception e)
+            catch (InvalidOperationException)
             {
-                Debug.WriteLine(e.Message);
+                _logger.LogWarning("传入的配置组名称不存在:{Name}", name);
             }
-            finally
+        }
+
+        if (scriptGroups.Count > 0)
+        {
+            await StartGroups(scriptGroups);
+        }
+        else
+        {
+            _logger.LogWarning("需要执行的配置组为空");
+        }
+    }
+
+    private async Task StartGroups(List<ScriptGroup> scriptGroups)
+    {
+        _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
+        try
+        {
+            RunnerContext.Instance.IsContinuousRunGroup = true;
+            foreach (var scriptGroup in scriptGroups)
             {
-                RunnerContext.Instance.Reset();
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
+                await Task.Delay(2000);
             }
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.Message);
+        }
+        finally
+        {
+            RunnerContext.Instance.Reset();
         }
     }
 }

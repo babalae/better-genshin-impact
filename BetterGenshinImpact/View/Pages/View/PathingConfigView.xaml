@@ -36,7 +36,7 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontSize="16"
                                   FontTypography="BodyStrong"
-                                  Text="路径追踪设置（相关配置优先级从高到低,UI样式还有问题未解决）" />
+                                  Text="地图追踪设置（相关配置优先级从高到低,UI样式还有问题未解决）" />
 
                 </StackPanel>
 

@@ -144,7 +144,8 @@ public partial class AutoWoodTask : ISoloTask
         private static readonly List<string> ExistWoods =
         [
             "悬铃木", "白梣木", "炬木", "椴木", "香柏木", "刺葵木", "柽木", "辉木", "业果木", "证悟木", "枫木", "垂香木",
-            "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
+            "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木",
+            "燃爆木", "桃椰子木", "灰灰楼林木", "白栗栎木"
         ];
 
         public CancellationToken Ct { get; set; }

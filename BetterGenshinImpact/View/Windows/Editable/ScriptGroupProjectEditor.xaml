@@ -20,7 +20,7 @@
     <Grid>
         <StackPanel>
 
-            <TextBlock Margin="0,0,0,10" Text="执行周期" />
+            <!--<TextBlock Margin="0,0,0,10" Text="执行周期" />
             <ComboBox Margin="0,0,0,20"
                       DisplayMemberPath="Value"
                       ItemsSource="{Binding Source={StaticResource ScheduleDescriptionsProvider}}"
@@ -28,7 +28,7 @@
                       SelectedValuePath="Key" />
 
             <TextBlock Margin="0,0,0,10" Text="执行次数" />
-            <TextBox Margin="0,0,0,20" Text="{Binding RunNum, Mode=TwoWay}" />
+            <TextBox Margin="0,0,0,20" Text="{Binding RunNum, Mode=TwoWay}" />-->
 
             <TextBlock Margin="0,0,0,10" Text="状态" />
             <ComboBox DisplayMemberPath="Value"

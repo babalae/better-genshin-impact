@@ -1,5 +1,7 @@
 ﻿using BetterGenshinImpact.Model;
 using OpenCvSharp;
+using System;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
@@ -12,9 +14,20 @@ namespace BetterGenshinImpact.GameTask.Model;
 /// <typeparam name="T"></typeparam>
 public class BaseAssets<T> : Singleton<T> where T : class
 {
-    protected Rect CaptureRect => TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-    protected double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+    protected readonly ISystemInfo systemInfo;
 
+    protected BaseAssets()
+    {
+        this.systemInfo = TaskContext.Instance().SystemInfo;
+    }
+
+    protected BaseAssets(ISystemInfo systemInfo)
+    {
+        this.systemInfo = systemInfo;
+    }
+
+    protected Rect CaptureRect => systemInfo.ScaleMax1080PCaptureRect;
+    protected double AssetScale => systemInfo.AssetScale;
     // private int _gameWidth;
     // private int _gameHeight;
     //

@@ -15,7 +15,7 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Model.Enum;
+
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
@@ -28,7 +28,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class OneDragonFlowViewModel : ViewModel
 {
     private readonly ILogger<OneDragonFlowViewModel> _logger = App.GetLogger<OneDragonFlowViewModel>();
 
@@ -97,7 +97,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         InitConfigList();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitConfigList();
     }
@@ -213,7 +213,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         // 没启动的时候先启动
         await ScriptService.StartGameTask();
 
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunThreadAsync(async () =>
             {
                 Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");

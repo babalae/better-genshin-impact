@@ -176,7 +176,7 @@
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <!--<Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -201,7 +201,7 @@
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.WgcUseBitmapCache, Mode=TwoWay}" />
-                </Grid>
+                </Grid>-->
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

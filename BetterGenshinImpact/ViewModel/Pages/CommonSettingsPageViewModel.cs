@@ -1,52 +1,50 @@
-﻿using System.Collections.ObjectModel;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.View.Pages;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
-using BetterGenshinImpact.Service.Notifier;
-using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Pages;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Win32;
 using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class CommonSettingsPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class CommonSettingsPageViewModel : ViewModel
 {
-    public AllConfig Config { get; set; }
-
     private readonly INavigationService _navigationService;
 
     private readonly NotificationService _notificationService;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _webhookStatus = string.Empty;
-    
-    public ObservableCollection<string> CountryList { get; } = new();
-    public ObservableCollection<string> Areas { get; } = new();
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
+
+    private string _selectedArea = string.Empty;
 
 
     private string _selectedCountry = string.Empty;
+
+    public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
+        NotificationService notificationService)
+    {
+        Config = configService.Get();
+        _navigationService = navigationService;
+        _notificationService = notificationService;
+        InitializeCountries();
+    }
+
+    public AllConfig Config { get; set; }
+    public ObservableCollection<string> CountryList { get; } = new();
+    public ObservableCollection<string> Areas { get; } = new();
+
     public string SelectedCountry
     {
         get => _selectedCountry;
@@ -60,7 +58,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
     }
 
-    private string _selectedArea = string.Empty;
     public string SelectedArea
     {
         get => _selectedArea;
@@ -76,9 +73,9 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     private void InitializeCountries()
     {
         var countries = MapLazyAssets.Instance.GoddessPositions.Values
-            .OrderBy(g => int.TryParse(g.Id, out int id) ? id : int.MaxValue) 
-            .GroupBy(g => g.Country)   
-            .Select(grp => grp.Key);    
+            .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
+            .GroupBy(g => g.Country)
+            .Select(grp => grp.Key);
         CountryList.Clear();
         foreach (var country in countries)
         {
@@ -87,6 +84,7 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
                 CountryList.Add(country);
             }
         }
+
         _selectedCountry = _tpConfig.ReviveStatueOfTheSevenCountry;
         UpdateAreas(SelectedCountry);
         _selectedArea = _tpConfig.ReviveStatueOfTheSevenArea;
@@ -96,14 +94,14 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     private void UpdateAreas(string country)
     {
         Areas.Clear();
-        SelectedArea = string.Empty; 
+        SelectedArea = string.Empty;
         if (string.IsNullOrEmpty(country)) return;
-    
+
         var areas = MapLazyAssets.Instance.GoddessPositions.Values
             .Where(g => g.Country == country)
-            .OrderBy(g => int.TryParse(g.Id, out int id) ? id : int.MaxValue) 
-            .GroupBy(g => g.Area)       
-            .Select(grp => grp.Key); 
+            .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
+            .GroupBy(g => g.Area)
+            .Select(grp => grp.Key);
         foreach (var area in areas)
         {
             if (!string.IsNullOrEmpty(area))
@@ -113,11 +111,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         }
     }
 
-   // 当国家或区域改变时更新坐标
+    // 当国家或区域改变时更新坐标
     private void UpdateRevivePoint(string country, string area)
     {
         if (string.IsNullOrEmpty(country) || string.IsNullOrEmpty(area)) return;
-    
+
         var goddess = MapLazyAssets.Instance.GoddessPositions.Values
             .FirstOrDefault(g => g.Country == country && g.Area == area);
         if (goddess == null) return;
@@ -127,27 +125,12 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
         _tpConfig.ReviveStatueOfTheSevenPointY = goddess.Y;
         _tpConfig.ReviveStatueOfTheSeven = goddess;
     }
-    
-    public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService, NotificationService notificationService)
-    {
-        Config = configService.Get();
-        _navigationService = navigationService;
-        _notificationService = notificationService;
-        InitializeCountries();
-    }
-
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
-    }
 
     [RelayCommand]
     public void OnRefreshMaskSettings()
     {
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+        WeakReferenceMessenger.Default.Send(
+            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
     [RelayCommand]
@@ -172,13 +155,6 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     [RelayCommand]
     public void OnSwitchTakenScreenshotEnabled()
     {
-        if (Config.CommonConfig.ScreenshotEnabled)
-        {
-            if (TaskTriggerDispatcher.Instance().GetCacheCaptureMode() == DispatcherCaptureModeEnum.NormalTrigger)
-            {
-                TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.CacheCaptureWithTrigger);
-            }
-        }
     }
 
     [RelayCommand]
@@ -206,66 +182,11 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
     }
 
     [RelayCommand]
-    private async Task OnTestWebhook()
-    {
-        IsLoading = true;
-        WebhookStatus = string.Empty;
-
-        var res = await _notificationService.TestNotifierAsync<WebhookNotifier>();
-
-        WebhookStatus = res.Message;
-
-        IsLoading = false;
-    }
-
-    [RelayCommand]
-    private async Task OnTestWindowsUwpNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<WindowsUwpNotifier>();
-        if(res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-    
-    [RelayCommand]
-    private async Task OnTestFeishuNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<FeishuNotifier>();
-        if(res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-    
-    [RelayCommand]
-    private async Task OnTestWorkWeixinNotification()
-    {
-        var res = await _notificationService.TestNotifierAsync<WorkWeixinNotifier>();
-        if(res.IsSuccess)
-        {
-            Toast.Success(res.Message);
-        }
-        else
-        {
-            Toast.Error(res.Message);
-        }
-    }
-    
-    [RelayCommand]
     private void ImportLocalScriptsRepoZip()
     {
         Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
 
-        var dialog = new Microsoft.Win32.OpenFileDialog
+        var dialog = new OpenFileDialog
         {
             Filter = "Zip Files (*.zip)|*.zip",
             Multiselect = false
@@ -279,8 +200,9 @@ public partial class CommonSettingsPageViewModel : ObservableObject, INavigation
             {
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
             }
+
             ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
-            
+
             if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
             {
                 MessageBox.Information("脚本仓库离线包导入成功！");

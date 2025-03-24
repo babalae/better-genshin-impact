@@ -17,30 +17,43 @@
 
 <br/>
 
+
+<div align="center">
+🌟 点一下右上角的 Star，Github 主页就能收到软件更新通知了哦~
+</div>
+
+<div align="center">
+    <img src="https://img.alicdn.com/imgextra/i1/2042484851/O1CN01OL1E1v1lhoM7Wdmup_!!2042484851.gif" alt="Star" width="186" height="60">
+  </a>
+</div>
+
+<br/>
+
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
 * 实时任务
-  * [自动拾取](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E6%8B%BE%E5%8F%96)：遇到可交互/拾取内容时自动按 <kbd>F</kbd>，支持黑白名单配置
-  * [自动剧情](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E5%89%A7%E6%83%85)：快速点击过剧情、自动选择选项、自动提交物品、关闭弹出书页等
-    * 与凯瑟琳对话时有橙色选项会 [自动领取「每日委托」奖励](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)、[自动重新派遣](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
-  * [自动邀约](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E9%82%80%E7%BA%A6)：自动剧情开启的情况下此功能才会生效，自动选择邀约选项
-  * [快速传送](http://bettergi.com/feats/domain.html)：在地图上点击传送点，或者点击后出现的列表中存在传送点，会自动点击传送点并传送
-  * [全自动钓鱼](https://bettergi.com/doc.html#%E5%85%A8%E8%87%AA%E5%8A%A8%E9%92%93%E9%B1%BC)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
-  * [自动烹饪](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E7%83%B9%E9%A5%AA)：自动在完美区域完成食物烹饪，暂不支持“仙跳墙”
+  * [自动拾取](https://bettergi.com/feats/timer/pick.html)：遇到可交互/拾取内容时自动按 <kbd>F</kbd>，支持黑白名单配置
+  * [自动剧情](https://bettergi.com/feats/timer/skip.html)：快速点击过剧情、自动选择选项、自动提交物品、关闭弹出书页等
+    * 与凯瑟琳对话时有橙色选项会 [自动领取「每日委托」奖励](https://bettergi.com/feats/timer/skip.html#%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96%E3%80%8E%E6%AF%8F%E6%97%A5%E5%A7%94%E6%89%98%E3%80%8F%E5%A5%96%E5%8A%B1)、[自动重新派遣](https://bettergi.com/feats/timer/skip.html#%E8%87%AA%E5%8A%A8%E9%87%8D%E6%96%B0%E6%B4%BE%E9%81%A3)
+  * [自动邀约](https://bettergi.com/feats/timer/skip.html#%E8%87%AA%E5%8A%A8%E9%82%80%E7%BA%A6)：自动剧情开启的情况下此功能才会生效，自动选择邀约选项
+  * [快速传送](https://bettergi.com/feats/timer/tp.html)：在地图上点击传送点，或者点击后出现的列表中存在传送点，会自动点击传送点并传送
+  * [半自动钓鱼](https://bettergi.com/feats/timer/fish.html)：AI 识别自动抛竿，鱼上钩时自动收杆，并自动完成钓鱼进度
+  * [自动烹饪](https://bettergi.com/feats/timer/cook.html)：自动在完美区域完成食物烹饪，暂不支持“仙跳墙”
 * 独立任务
-  * [全自动七圣召唤](https://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E4%B8%83%E5%9C%A3%E5%8F%AC%E5%94%A4)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
-  * [自动伐木](http://bettergi.com/doc.html#%E8%87%AA%E5%8A%A8%E4%BC%90%E6%9C%A8)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
-  * [自动秘境](http://bettergi.com/feats/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
+  * [全自动七圣召唤](https://bettergi.com/feats/task/tcg.html)：帮助你轻松完成七圣召唤角色邀请、每周来客挑战等 PVE 内容
+  * [自动伐木](https://bettergi.com/feats/task/felling.html)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
+  * [自动秘境](https://bettergi.com/feats/task/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
   * [自动音游](https://bettergi.com/feats/task/music.html)：一键自动完成千音雅集的专辑，快速获取成就
+  * [全自动钓鱼](https://bettergi.com/feats/task/fish.html)：在出现钓鱼F按钮的位置面向鱼塘，然后启动全自动钓鱼，启动后程序会自动完成钓鱼，并切换白天和晚上
 * 全自动
   * [一条龙](https://github.com/babalae/better-genshin-impact/issues/846)：一键完成日常（使用历练点），并领取奖励
   * [自动采集/挖矿/锄地](https://bettergi.com/feats/autos/pathing.html)：通过左上角小地图的识别，完成自动采集、挖矿、锄地等功能
   * [键鼠录制](https://bettergi.com/feats/autos/kmscript.html)：可以录制回放当前的键鼠操作，建议配合调度器使用
 * 操控辅助
-  * [那维莱特转圈](https://bettergi.com/doc.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)：设置快捷键后，长按可以不断水平旋转视角（当然你也可以用来转草神）
-  * [快速圣遗物强化](https://bettergi.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：通过快速切换“详情”、“强化”页跳过圣遗物强化结果展示，快速+20
-  * [商店一键购买](https://bettergi.com/doc.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
+  * [那维莱特转圈](https://bettergi.com/feats/macro/other.html#%E9%82%A3%E7%BB%B4%E8%8E%B1%E7%89%B9-%E8%BD%AC%E5%9C%88%E5%9C%88)：设置快捷键后，长按可以不断水平旋转视角（当然你也可以用来转草神）
+  * [快速圣遗物强化](https://bettergi.com/feats/macro/other.html#%E5%9C%A3%E9%81%97%E7%89%A9%E4%B8%80%E9%94%AE%E5%BC%BA%E5%8C%96)：通过快速切换“详情”、“强化”页跳过圣遗物强化结果展示，快速+20
+  * [商店一键购买](https://bettergi.com/feats/macro/other.html#%E4%B8%80%E9%94%AE%E8%B4%AD%E4%B9%B0)：可以快速以满数量购买商店中的物品，适合快速清空活动兑换，尘歌壶商店兑换等
 * [**……**](https://bettergi.com/doc.html)
 
 <div align="center">

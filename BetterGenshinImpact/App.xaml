@@ -19,6 +19,7 @@
             <bgivc:BooleanToEnableTextConverter x:Key="BooleanToEnableTextConverter" />
             <bgivc:InverseBooleanConverter x:Key="InverseBooleanConverter" />
             <bgivc:NotNullConverter x:Key="NotNullConverter" />
+            <bgivc:EnumToKVPConverter x:Key="EnumToKVPConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
