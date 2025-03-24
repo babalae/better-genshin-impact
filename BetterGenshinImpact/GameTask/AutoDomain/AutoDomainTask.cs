@@ -27,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -82,19 +83,24 @@ public class AutoDomainTask : ISoloTask
                 // 其他场景不重试
                 break;
             }
-            catch (Exception e)
+            catch (RetryException e)
             {
-                if (e.Message.Contains("复活") && !string.IsNullOrEmpty(_taskParam.DomainName))
+                // 只有选择了秘境的时候才会重试
+                if (!string.IsNullOrEmpty(_taskParam.DomainName))
                 {
-                    Logger.LogWarning("自动秘境：{Text}", "复活后重试秘境...");
+                    var msg = e.Message;
+                    if (msg.Contains("复活"))
+                    {
+                        msg = "存在角色死亡，复活后重试秘境...";
+                    }
+
+                    Logger.LogWarning("自动秘境：{Text}", msg);
                     await Delay(2000, ct);
-                    Notify.Event(NotificationEvent.DomainRetry).Error("存在角色死亡，复活后重试秘境...");
+                    Notify.Event(NotificationEvent.DomainRetry).Error(msg);
                     continue;
                 }
-                else
-                {
-                    throw;
-                }
+
+                throw;
             }
         }
 
@@ -304,21 +310,43 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
-
-
-        int retryTimes = 0, clickCount = 0;
-        while (retryTimes < 20 && clickCount < 2)
+        
+        // 点击单人挑战
+        int retryTimes = 0;
+        while (retryTimes < 20)
         {
             retryTimes++;
             using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
                 confirmRectArea.Click();
-                clickCount++;
+                break;
             }
 
             await Delay(1500, _ct);
         }
+        
+        await Delay(600, _ct);
+        using var confirmRectArea2 = CaptureToRectArea().Find(ElementAssets.Instance.BtnBlackConfirm);
+        if (!confirmRectArea2.IsEmpty())
+        {
+            throw new Exception("收取完成秘境的奖励需要20点原粹树脂，当前树脂不足，自动秘境停止运行");
+        }
+        
+        // 点击进入
+        retryTimes = 0;
+        while (retryTimes < 20)
+        {
+            retryTimes++;
+            using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
+            if (!confirmRectArea.IsEmpty())
+            {
+                confirmRectArea.Click();
+                break;
+            }
+            await Delay(1200, _ct);
+        }
+
 
         // 载入动画
         await Delay(3000, _ct);
@@ -387,6 +415,7 @@ public class AutoDomainTask : ISoloTask
 
             try
             {
+                var startTime = DateTime.Now;
                 while (!_ct.IsCancellationRequested)
                 {
                     using var fRectArea = Common.TaskControl.CaptureToRectArea().Find(AutoPickAssets.Instance.PickRo);
@@ -399,6 +428,13 @@ public class AutoDomainTask : ISoloTask
                         Logger.LogInformation("检测到交互键");
                         Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                         break;
+                    }
+                    
+                    // 超时直接放弃整个秘境
+                    if (DateTime.Now - startTime> TimeSpan.FromSeconds(60))
+                    {
+                        Logger.LogWarning("自动秘境：{Text}", "前往目标位置处超时，如果选择了秘境名称，将在传送后重试秘境！");
+                        Avatar.TpForRecover(_ct, new RetryException("前往目标位置处超时，先传送到七天神像，然后重试秘境"));
                     }
                 }
             }

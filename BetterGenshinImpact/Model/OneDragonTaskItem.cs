@@ -86,11 +86,17 @@ public partial class OneDragonTaskItem : ObservableObject
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
                     if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
                     {
-                        TaskControl.Logger.LogInformation("自动秘境战斗策略未配置，跳过");
+                        TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
                     var (partyName, domainName) = config.GetDomainConfig();
+
+                    if (string.IsNullOrEmpty(domainName))
+                    {
+                        TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过","未选择");
+                        return;
+                    }
 
                     var autoDomainParam = new AutoDomainParam(0, path)
                     {

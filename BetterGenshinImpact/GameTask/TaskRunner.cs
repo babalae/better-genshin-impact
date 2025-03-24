@@ -130,6 +130,10 @@ public class TaskRunner
             throw new NormalEndException("请先在启动页，启动截图器再使用本功能");
         }
 
+        // 清空实时任务触发器
+        TaskTriggerDispatcher.Instance().ClearTriggers();
+
+        
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();
         SystemControl.ActivateWindow();
@@ -142,6 +146,9 @@ public class TaskRunner
         {
             return;
         }
+        
+        // 还原实时任务触发器
+        TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
 
         VisionContext.Instance().DrawContent.ClearAll();
     }

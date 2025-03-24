@@ -177,6 +177,7 @@ public partial class ScriptControlViewModel : ViewModel
         // 定义范围选项数据
         var dayRangeComboBoxItems = new List<object>
         {
+            new { Text = "1天" , Value = "1" },
             new { Text = "3天", Value = "3" },
             new { Text = "7天", Value = "7" },
             new { Text = "15天", Value = "15" },
@@ -332,7 +333,16 @@ public partial class ScriptControlViewModel : ViewModel
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
+            void OnHtmlGenerationStatusChanged(string status)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Toast.Information(status, time:5000);
+                });
+            }
 
+            LogParse.LogParse.HtmlGenerationStatusChanged += OnHtmlGenerationStatusChanged;
+            Toast.Information("正在准备数据...");
             List<(string FileName, string Date)> fs = LogParse.LogParse.GetLogFiles(LogPath);
             if (dayRangeValue != "All")
             {
@@ -399,14 +409,26 @@ public partial class ScriptControlViewModel : ViewModel
             if (configGroupEntities.Count == 0)
             {
                 Toast.Warning("未解析出日志记录！");
+                LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
             }
             else
             {
                 configGroupEntities.Reverse();
-                //realGameInfo
-                //小怪摩拉统计
-                win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities, hoeingStats ? realGameInfo : null, sgpc));
+                try
+                {
+                    // 生成HTML并加载
+                    win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
+                    hoeingStats ? realGameInfo : null, sgpc));
                 win.ShowDialog();
+                    // 取消订阅事件
+                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+
+                }
+                catch (Exception ex)
+                {
+                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+                    Toast.Error($"生成日志分析时出错: {ex.Message}");
+                }
             }
         }
     }
