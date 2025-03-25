@@ -17,6 +17,7 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -27,7 +28,6 @@ using BetterGenshinImpact.View.Windows.Editable;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LogParse;
 using Microsoft.Extensions.Logging;
 using SharpCompress;
 using Wpf.Ui;
@@ -129,7 +129,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
 
         GameInfo? gameInfo = null;
-        var config = LogParse.LogParse.LoadConfig();
+        var config = LogParse.LoadConfig();
         if (!string.IsNullOrEmpty(config.Cookie))
         {
             config.CookieDictionary.TryGetValue(config.Cookie, out gameInfo);
@@ -321,7 +321,7 @@ public partial class ScriptControlViewModel : ViewModel
             config.Cookie = cookieValue;
             config.ScriptGroupLogDictionary[SelectedScriptGroup.Name] = sgpc;
 
-            LogParse.LogParse.WriteConfigFile(config);
+            LogParse.WriteConfigFile(config);
 
 
             WebpageWindow win = new()
@@ -341,9 +341,9 @@ public partial class ScriptControlViewModel : ViewModel
                 });
             }
 
-            LogParse.LogParse.HtmlGenerationStatusChanged += OnHtmlGenerationStatusChanged;
+            LogParse.HtmlGenerationStatusChanged += OnHtmlGenerationStatusChanged;
             Toast.Information("正在准备数据...");
-            List<(string FileName, string Date)> fs = LogParse.LogParse.GetLogFiles(LogPath);
+            List<(string FileName, string Date)> fs = LogParse.GetLogFiles(LogPath);
             if (dayRangeValue != "All")
             {
                 int n = int.Parse(dayRangeValue);
@@ -391,7 +391,7 @@ public partial class ScriptControlViewModel : ViewModel
                 realGameInfo = gameInfo;
 
                 config.CookieDictionary[cookieValue] = realGameInfo;
-                LogParse.LogParse.WriteConfigFile(config);
+                LogParse.WriteConfigFile(config);
             }
 
             if ((hoeingStatsSwitch.IsChecked ?? false) && realGameInfo != null)
@@ -399,7 +399,7 @@ public partial class ScriptControlViewModel : ViewModel
                 hoeingStats = true;
             }
 
-            var configGroupEntities = LogParse.LogParse.ParseFile(fs);
+            var configGroupEntities = LogParse.ParseFile(fs);
             if (rangeValue == "CurrentConfig")
             {
                 //Toast.Success(_selectedScriptGroup.Name);
@@ -409,7 +409,7 @@ public partial class ScriptControlViewModel : ViewModel
             if (configGroupEntities.Count == 0)
             {
                 Toast.Warning("未解析出日志记录！");
-                LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+                LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
             }
             else
             {
@@ -417,16 +417,16 @@ public partial class ScriptControlViewModel : ViewModel
                 try
                 {
                     // 生成HTML并加载
-                    win.NavigateToHtml(LogParse.LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
+                    win.NavigateToHtml(LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
                     hoeingStats ? realGameInfo : null, sgpc));
                 win.ShowDialog();
                     // 取消订阅事件
-                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+                    LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
 
                 }
                 catch (Exception ex)
                 {
-                    LogParse.LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
+                    LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
                     Toast.Error($"生成日志分析时出错: {ex.Message}");
                 }
             }
