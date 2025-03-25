@@ -100,7 +100,7 @@ public class AutoDomainTask : ISoloTask
         if (meanDiff<0.5){
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string filePath = $"image_{timestamp}.png"; // 定义文件名
-            image.Save(filePath); // 保存图像
+            // image.Save(filePath); // 保存图像
 
             return 1;
         }
