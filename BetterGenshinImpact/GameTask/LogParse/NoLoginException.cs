@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LogParse;
+namespace BetterGenshinImpact.GameTask.LogParse;
 
 public class NoLoginException : Exception
 {
