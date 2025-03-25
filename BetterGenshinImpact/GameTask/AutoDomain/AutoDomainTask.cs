@@ -96,8 +96,8 @@ public class AutoDomainTask : ISoloTask
 
     static int IsDead(Bitmap image)
     {
-        (double brightness, double MeanDiff )= CalcRgbDiff(image);
-        if (MeanDiff<0.5){
+        (double brightness, double meanDiff )= CalcRgbDiff(image);
+        if (meanDiff<0.5){
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string filePath = $"image_{timestamp}.png"; // 定义文件名
             image.Save(filePath); // 保存图像
@@ -506,7 +506,7 @@ public class AutoDomainTask : ISoloTask
         //other_tasks用于在cts取消后，确认其他任务是否已经结束
         var other_tasks= Task.WhenAll(combatTask,autoEatRecoveryHpTask);
         // 对局结束检测
-        var domainEndTask = DomainEndDetectionTask(cts,other_tasks);
+        var domainEndTask = DomainEndDetectionTask(cts,other_tasks,combatScenes);
 
 
         await combatTask;
@@ -533,7 +533,7 @@ public class AutoDomainTask : ISoloTask
     /// <summary>
     /// 对局结束检测
     /// </summary>
-    private Task DomainEndDetectionTask(CancellationTokenSource cts,Task other_tasks)
+    private Task DomainEndDetectionTask(CancellationTokenSource cts,Task other_tasks,CombatScenes combatScenes)
     {
         return  Task.Run(async () =>
         {
@@ -541,7 +541,7 @@ public class AutoDomainTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (IsDomainEnd())
+                    if (IsDomainEnd(combatScenes))
                     {
                         await cts.CancelAsync();
                         break;
@@ -587,7 +587,7 @@ public class AutoDomainTask : ISoloTask
         });
     }
 
-    private bool IsDomainEnd()
+    private bool IsDomainEnd(CombatScenes combatScenes)
     {
         using var ra = CaptureToRectArea();
 
@@ -608,51 +608,42 @@ public class AutoDomainTask : ISoloTask
         }
 
         //实时阵亡检测部分
-        var on_death = () =>
+        var onDeath = () =>
         {
-        //先判断是否处于正常页面，防止因释放元素爆发造成误检
-        var combatScenes = new CombatScenes().InitializeTeam(ra,need_log:false);
-        if (!combatScenes.CheckTeamInitialized())
-        {
-            Logger.LogWarning("当前页面未检测到角色名称，可能在放元素爆发？");
-        }
-            else{
-                Logger.LogWarning("存在角色被击败，前往七天神像复活");
-                Sleep(200);
-                throw new RetryException("存在角色被击败，前往七天神像复活");
+            //先判断是否处于正常页面，防止因释放元素爆发造成误检
+            var combatScenesTmp = new CombatScenes().InitializeTeam(ra,needLog:false);
+            if (!combatScenesTmp.CheckTeamInitialized())
+            {
+                Logger.LogWarning("当前页面未检测到角色名称，可能在放元素爆发？");
             }
+                else{
+                    Logger.LogWarning("存在角色被击败，前往七天神像复活");
+                    Sleep(200);
+                    throw new RetryException("存在角色被击败，前往七天神像复活");
+                }
         };
         List<int> offsets = new List<int> { 0, 16 }; //切人时头像框左右平移，所以带上偏移每个角色截图两次
-        var dead_flag = 0;
-        foreach (var x_offset in offsets){
-            var avatar1 = ra.DeriveCrop(new Rect(1794-x_offset, 252, 14, 25)).SrcBitmap;
-            var avatar2 = ra.DeriveCrop(new Rect(1794-x_offset, 348, 14, 25)).SrcBitmap;
-            var avatar3 = ra.DeriveCrop(new Rect(1794-x_offset, 444, 14, 25)).SrcBitmap;
-            var avatar4 = ra.DeriveCrop(new Rect(1794-x_offset, 540, 14, 25)).SrcBitmap;
-            if (IsDead(avatar1) == 1)
-            {
-                Logger.LogInformation("1号位阵亡");
-                dead_flag = 1;
+        var deadFlag = 0;
+        foreach (var xOffset in offsets){
+            foreach (var avatar in combatScenes.Avatars){
+                var avatarName=avatar.Name;
+                var avatarIndexRect=avatar.IndexRect;
+                //把序号框位置换算到头像位置
+                var headRect=ra.DeriveCrop(new Rect(avatarIndexRect.X-65-xOffset, avatarIndexRect.Y-4, 14, 25)).SrcBitmap;
+                if (IsDead(headRect) == 1)
+                {
+                    Logger.LogInformation($"{avatarName}阵亡");
+                    deadFlag = 1;
+                    break;
+                }
             }
-            if (IsDead(avatar2) == 1)
-            {
-                Logger.LogInformation("2号位阵亡");
-                dead_flag = 1;
+            if (deadFlag == 1){
+                break;
             }
-            if (IsDead(avatar3) == 1)
-            {
-                Logger.LogInformation("3号位阵亡");
-                dead_flag = 1;
-            }
-            if (IsDead(avatar4) == 1)
-            {
-                Logger.LogInformation("4号位阵亡");
-                dead_flag = 1;
-            }
-
         }
-        if (dead_flag == 1){
-            on_death();
+        //onDeath()包含了第二层判断，所以放在第一层判断全部执行完毕之后后
+        if (deadFlag == 1){
+            onDeath();
         }
 
 

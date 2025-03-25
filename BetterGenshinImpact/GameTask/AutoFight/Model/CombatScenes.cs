@@ -50,7 +50,7 @@ public class CombatScenes : IDisposable
     /// 通过YOLO分类器识别队伍内角色
     /// </summary>
     /// <param name="imageRegion">完整游戏画面的捕获截图</param>
-    public CombatScenes InitializeTeam(ImageRegion imageRegion,bool need_log=true)
+    public CombatScenes InitializeTeam(ImageRegion imageRegion,bool needLog=true)
     {
         AssertUtils.CheckGameResolution();
         // 优先取配置
@@ -122,7 +122,7 @@ public class CombatScenes : IDisposable
                 }
             }
 
-            if (need_log){
+            if (needLog){
                 Logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
             }
             Avatars = BuildAvatars([.. names], null, avatarIndexRectList);
@@ -130,7 +130,7 @@ public class CombatScenes : IDisposable
         }
         catch (Exception e)
         {
-            if (need_log){
+            if (needLog){
                 Logger.LogWarning(e.Message);
             }
 
