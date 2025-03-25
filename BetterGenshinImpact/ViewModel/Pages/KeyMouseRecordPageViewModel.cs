@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Model.Enum;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
@@ -22,7 +21,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class KeyMouseRecordPageViewModel : ViewModel
 {
     private readonly ILogger<KeyMouseRecordPageViewModel> _logger = App.GetLogger<KeyMouseRecordPageViewModel>();
     private readonly string scriptPath = Global.Absolute(@"User\KeyMouseScript");
@@ -74,13 +73,9 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         return files.Select(file => new FileInfo(file)).ToList();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitScriptListViewData();
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]
@@ -129,7 +124,7 @@ public partial class KeyMouseRecordPageViewModel : ObservableObject, INavigation
         {
             var s = await File.ReadAllTextAsync(path);
 
-            await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+            await new TaskRunner()
                 .RunThreadAsync(async () => await KeyMouseMacroPlayer.PlayMacro(s, CancellationContext.Instance.Cts.Token));
         }
         catch (Exception e)

@@ -20,7 +20,7 @@ public class MapTeleportPointDraw
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\传送点_1024_0.34.3.png", map);
     }
 
-    public static void DrawTeleportPoint(Mat map, List<GiWorldPosition> points)
+    public static void DrawTeleportPoint(Mat map, List<GiTpPosition> points)
     {
         foreach (var point in points)
         {

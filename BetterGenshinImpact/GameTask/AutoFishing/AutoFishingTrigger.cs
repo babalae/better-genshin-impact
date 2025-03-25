@@ -3,10 +3,7 @@ using BehaviourTree.FluentBuilder;
 using BehaviourTree.Composites;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -15,12 +12,18 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Point = OpenCvSharp.Point;
+using Fischless.WindowsInput;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX;
+using Compunet.YoloV8;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     public class AutoFishingTrigger : ITaskTrigger
     {
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
+        private readonly InputSimulator input = Simulation.SendInput;
 
         public string Name => "自动钓鱼";
         public bool IsEnabled { get; set; }
@@ -34,65 +37,35 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool IsExclusive { get; set; }
 
         private Blackboard blackboard;
-        // internal IBehaviour<CaptureContent> BehaviourTree { get; set; }
 
         /// <summary>
         /// 辣条（误）
         /// </summary>
-        private IBehaviour<CaptureContent> BehaviourTreeLaTiao { get; set; }
+        private IBehaviour<ImageRegion> BehaviourTreeLaTiao { get; set; }
 
         public AutoFishingTrigger()
         {
-            this.blackboard = new Blackboard()
-            {
-                Sleep = this.Sleep
-            };
+            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
+            this.blackboard = new Blackboard(predictor, this.Sleep, AutoFishingAssets.Instance);
+
+            BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
+                .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
+                    .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
+                    .UntilSuccess("拉条循环")
+                        .Sequence("拉条")
+                            .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, false, input))
+                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
+                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
+                        .End()
+                    .End()
+                .End()
+                .Build();
         }
 
         public void Init()
         {
             IsEnabled = TaskContext.Instance().Config.AutoFishingConfig.Enabled;
             IsExclusive = false;
-
-            /*BehaviourTree = FluentBuilder.Create<CaptureContent>()
-                .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                    .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
-                    .UntilSuccess("钓鱼循环")
-                        .Sequence("从找鱼开始")
-                            .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
-                            .PushLeaf(() => new GetFishpond("检测鱼群", blackboard))
-                            .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard))
-                            .UntilSuccess("重复抛竿")
-                                .Sequence("重复抛竿序列")
-                                    .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard))
-                                    .PushLeaf(() => new ApproachFishAndThrowRod("抛竿", blackboard))
-                                .End()
-                            .End()
-                            .Do("冒泡-抛竿-缺鱼检查", _ => blackboard.noTargetFish ? BehaviourStatus.Failed : BehaviourStatus.Succeeded)
-                            .PushLeaf(() => new CheckThrowRod("检查抛竿结果"))
-                            .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
-                                .PushLeaf(() => new FishBite("自动提竿"))
-                                .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 30))
-                            .End()
-                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
-                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
-                        .End()
-                    .End()
-                .End()
-                .Build();*/
-
-            BehaviourTreeLaTiao = FluentBuilder.Create<CaptureContent>()
-                .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                    .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
-                    .UntilSuccess("拉条循环")
-                        .Sequence("拉条")
-                            .PushLeaf(() => new FishBite("自动提竿"))
-                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard))
-                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard))
-                        .End()
-                    .End()
-                .End()
-                .Build();
         }
 
         private DateTime _prevExecute = DateTime.MinValue;
@@ -110,7 +83,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             if (!IsExclusive)
             {
                 // 进入独占模式判断
-                CheckFishingUserInterface(content);
+                CheckFishingUserInterface(content.CaptureRectArea);
             }
             else
             {
@@ -122,7 +95,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // {
                 //     BehaviourTreeLaTiao.Tick(content);
                 // }
-                BehaviourTreeLaTiao.Tick(content);
+                BehaviourTreeLaTiao.Tick(content.CaptureRectArea);
             }
         }
 
@@ -330,8 +303,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 方法是找右下角的退出钓鱼按钮
         /// 进入钓鱼界面时该触发器进入独占模式
         /// </summary>
-        /// <param name="content"></param>
-        private BehaviourStatus CheckFishingUserInterface(CaptureContent content)
+        /// <param name="imageRegion"></param>
+        private BehaviourStatus CheckFishingUserInterface(ImageRegion imageRegion)
         {
             if (blackboard.chooseBaitUIOpening)
             {
@@ -339,7 +312,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             var prevIsExclusive = IsExclusive;
-            IsExclusive = !content.CaptureRectArea.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty();
+            IsExclusive = !imageRegion.Find(AutoFishingAssets.Instance.ExitFishingButtonRo).IsEmpty();
             if (IsExclusive)
             {
                 if (IsEnabled && !prevIsExclusive)

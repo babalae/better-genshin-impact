@@ -17,21 +17,30 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             try
             {
-                using var mask = new Mat();
-                using var rgbMat = new Mat();
+                // 拉条框的黄色是：RGB 255, 255, 192 ~ HSV 43, 63, 255
+                // var testPixel = rgbMat.At<Vec3b>(105, 968);
+                using Mat rgbMat = src.CvtColor(ColorConversionCodes.BGR2HSV_FULL);
 
-                Cv2.CvtColor(src, rgbMat, ColorConversionCodes.BGR2RGB);
-                var lowPurple = new Scalar(255, 255, 192);
-                var highPurple = new Scalar(255, 255, 192);
-                Cv2.InRange(rgbMat, lowPurple, highPurple, mask);
+                var lowYellow = new Scalar(43 - 3, 63 - 20, 255 - 10);
+                var highYellow = new Scalar(43 + 3, 63 + 40, 255);
+                using Mat mask = rgbMat.InRange(lowYellow, highYellow);
+
                 Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary); //二值化
 
                 Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External,
                     ContourApproximationModes.ApproxSimple, null);
                 if (contours.Length > 0)
                 {
-                    var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Height >= 10);
-                    return boxes.ToList();
+                    contours = contours.Where(c => Cv2.MinAreaRect(c).Angle % 45 <= 1).ToArray();  // 剔除倾斜的；箭头边缘是45度角，在游标靠近两侧箭头时，箭头的最小外接是45度的
+                    List<Rect> boxes = contours.Select(Cv2.BoundingRect).ToList();
+                    Rect widest = boxes.OrderBy(b => b.Width).LastOrDefault();  // 取最宽的一根当作基准
+                    if (widest == default)
+                    {
+                        return null;
+                    }
+                    boxes = boxes.Where(r => Math.Abs((widest.Y + widest.Height / 2) - (r.Y + r.Height / 2)) < widest.Height / 5)   // 保持一条水平线
+                        .Where(r => Math.Abs(widest.Height - r.Height) < (widest.Height / 3) && r.Width > (widest.Height / 4)).ToList();  // 剔除高度差异太大的，和宽度太小的
+                    return boxes;
                 }
             }
             catch (Exception e)

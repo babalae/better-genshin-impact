@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.ViewModel.Pages;
+using System;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -150,8 +152,16 @@ public class Genshin
     /// 钓鱼
     /// </summary>
     /// <returns></returns>
-    public async Task AutoFishing()
+    public async Task AutoFishing(int fishingTimePolicy = 0)
     {
-        await new AutoFishingTask().Start(CancellationContext.Instance.Cts.Token);
+        var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+        if (taskSettingsPageViewModel == null)
+        {
+            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
+        }
+
+        var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
+        param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
+        await new AutoFishingTask(param).Start(CancellationContext.Instance.Cts.Token);
     }
 }

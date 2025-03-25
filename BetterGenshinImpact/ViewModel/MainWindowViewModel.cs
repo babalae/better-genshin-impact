@@ -21,7 +21,9 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages;
+using DeviceId;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -113,7 +115,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 自动处理目录配置
         await Patch1();
-        
+
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
@@ -122,14 +124,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // InitKeyBinding();
             Config.AutoFightConfig.TeamNames = ""; // 此配置以后无用
             Config.CommonConfig.IsFirstRun = false;
-
         }
+
         // 版本是否运行过
         if (Config.CommonConfig.RunForVersion != Global.Version)
         {
             ModifyFolderSecurity();
             Config.CommonConfig.RunForVersion = Global.Version;
         }
+        
+        OnceRun();
 
         // 检查更新
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
@@ -142,7 +146,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 更新仓库
         ScriptRepoUpdater.Instance.AutoUpdate();
-        
+
         // 清理临时目录
         TempManager.CleanUp();
     }
@@ -241,6 +245,39 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         catch (Exception e)
         {
             MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bettergi.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        }
+    }
+
+    private void OnceRun()
+    {
+        string deviceId = "default";
+        try
+        {
+            deviceId = new DeviceIdBuilder()
+                .OnWindows(windows => windows
+                    .AddMacAddressFromWmi(excludeWireless: true, excludeNonPhysical: true)
+                    .AddProcessorId()
+                    .AddMotherboardSerialNumber()
+                )
+                .ToString();
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug("获取设备ID异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+        }
+        
+        // 每个设备只运行一次
+        if (!Config.CommonConfig.OnceHadRunDeviceIdList.Contains(deviceId))
+        {
+            WelcomeDialog prompt = new WelcomeDialog
+            {
+                Owner = Application.Current.MainWindow
+            };
+            prompt.ShowDialog();
+            prompt.Focus();
+            
+            Config.CommonConfig.OnceHadRunDeviceIdList.Add(deviceId);
+            _configService.Save();
         }
     }
 }

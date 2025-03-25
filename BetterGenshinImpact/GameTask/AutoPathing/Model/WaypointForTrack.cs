@@ -2,7 +2,6 @@
 using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using System.Diagnostics.Eventing.Reader;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -18,11 +17,15 @@ public class WaypointForTrack : Waypoint
     public double MatX { get; set; }
 
     public double MatY { get; set; }
-    
+
     /// <summary>
     /// 存在 combat_script 的 action 的话，这个值会存在
     /// </summary>
     public CombatScript? CombatScript { get; set; }
+
+    /// <summary>
+    /// LogOutput 特有
+    /// </summary>
     public string? LogInfo { get; set; }
 
     public WaypointForTrack(Waypoint waypoint)
@@ -37,14 +40,20 @@ public class WaypointForTrack : Waypoint
         (MatX, MatY) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
         X = MatX;
         Y = MatY;
-        
-        if (waypoint.Action == ActionEnum.CombatScript.Code && waypoint.ActionParams is { } str)
+        if (waypoint.Action == ActionEnum.CombatScript.Code)
         {
-            CombatScript = CombatScriptParser.ParseContext(str, false);
+            if (waypoint.ActionParams is { } str)
+            {
+                CombatScript = CombatScriptParser.ParseContext(str, false);
+            }
         }
-        if (waypoint.Action == ActionEnum.LogOutput.Code && waypoint.ActionParams is not null)
+        else if (waypoint.Action == ActionEnum.LogOutput.Code)
         {
-            LogInfo = waypoint.ActionParams;
+            if (waypoint.ActionParams is not null)
+            {
+                LogInfo = waypoint.ActionParams;
+            }
         }
+        // 非必要不需要在此处新增变量解析，建议把耗时低的解析放到 Handler 中
     }
 }

@@ -39,4 +39,14 @@ public class ScriptObjectConverter
             }
         }
     }
+    
+    public static T GetValue<T>(ScriptObject source, string propertyName, T defaultValue)
+    {
+        if (source[propertyName] is not Undefined && source[propertyName] != null)
+        {
+            object value = source.GetProperty(propertyName);
+            return (T)Convert.ChangeType(value, typeof(T));
+        }
+        return defaultValue;
+    }
 }

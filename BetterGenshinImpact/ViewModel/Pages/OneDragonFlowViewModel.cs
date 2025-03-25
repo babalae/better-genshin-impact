@@ -8,11 +8,15 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model.Enum;
+using BetterGenshinImpact.GameTask.Common.Job;
+
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -24,7 +28,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class OneDragonFlowViewModel : ViewModel
 {
     private readonly ILogger<OneDragonFlowViewModel> _logger = App.GetLogger<OneDragonFlowViewModel>();
 
@@ -64,7 +68,10 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
 
     [ObservableProperty]
     private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
-    
+
+    [ObservableProperty]
+    private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
+
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
@@ -90,7 +97,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         InitConfigList();
     }
 
-    public void OnNavigatedTo()
+    public override void OnNavigatedTo()
     {
         InitConfigList();
     }
@@ -206,7 +213,7 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
         // 没启动的时候先启动
         await ScriptService.StartGameTask();
 
-        await new TaskRunner(DispatcherTimerOperationEnum.UseSelfCaptureImage)
+        await new TaskRunner()
             .RunThreadAsync(async () =>
             {
                 Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
@@ -218,7 +225,28 @@ public partial class OneDragonFlowViewModel : ObservableObject, INavigationAware
                         await Task.Delay(1000);
                     }
                 }
+
+                await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 Notify.Event(NotificationEvent.DragonEnd).Success("一条龙结束");
+
+                // 执行完成后操作
+                if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
+                {
+                    switch (SelectedConfig.CompletionAction)
+                    {
+                        case "关闭游戏":
+                            SystemControl.CloseGame();
+                            break;
+                        case "关闭游戏和软件":
+                            SystemControl.CloseGame();
+                            Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                            break;
+                        case "关机":
+                            SystemControl.CloseGame();
+                            SystemControl.Shutdown();
+                            break;
+                    }
+                }
             });
     }
 

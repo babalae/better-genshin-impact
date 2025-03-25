@@ -27,7 +27,7 @@ public class ConditionDefinitions
             "采集物", new ConditionDefinition
             {
                 Subject = "采集物",
-                Description = "路径追踪此采集物时使用的队伍名称。队伍名称是你在游戏中手动设置的队伍名称文字。建议勾选全部并配置存在盾、加血的角色队伍。",
+                Description = "地图追踪此采集物时使用的队伍名称。队伍名称是你在游戏中手动设置的队伍名称文字。建议勾选全部并配置存在盾、加血的角色队伍。",
                 ObjectOptions = new List<string> { "全部",
                     "万相石",
                     "初露之源",

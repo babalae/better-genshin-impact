@@ -144,7 +144,8 @@ public partial class AutoWoodTask : ISoloTask
         private static readonly List<string> ExistWoods =
         [
             "悬铃木", "白梣木", "炬木", "椴木", "香柏木", "刺葵木", "柽木", "辉木", "业果木", "证悟木", "枫木", "垂香木",
-            "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木"
+            "杉木", "竹节", "却砂木", "松木", "萃华木", "桦木", "孔雀木", "梦见木", "御伽木",
+            "燃爆木", "桃椰子木", "灰灰楼林木", "白栗栎木"
         ];
 
         public CancellationToken Ct { get; set; }
@@ -420,7 +421,7 @@ public partial class AutoWoodTask : ISoloTask
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
-                throw new NormalEndException("请先装备小道具「王树瑞佑」！");
+                throw new NormalEndException("请先装备小道具「王树瑞佑」！如果已经装备仍旧出现此提示，请重新仔细阅读文档中的《快速上手》！");
 #else
                 System.Threading.Thread.Sleep(2000);
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);

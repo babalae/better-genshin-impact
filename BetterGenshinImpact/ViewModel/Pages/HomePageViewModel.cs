@@ -27,7 +27,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-public partial class HomePageViewModel : ObservableObject, INavigationAware, IViewModel
+public partial class HomePageViewModel : ViewModel
 {
     [ObservableProperty]
     private string[] _modeNames = GameCaptureFactory.ModeNames();
@@ -111,6 +111,14 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
             {
                 var odVm = App.GetService<OneDragonFlowViewModel>();
                 odVm?.OneKeyExecuteCommand.Execute(null);
+            }
+            else if (args[1].Trim().Equals("--startGroups", StringComparison.InvariantCultureIgnoreCase) ||
+                     args.Length > 3)
+            {
+                var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
+                // 启动调度器
+                var scheduler = App.GetService<ScriptControlViewModel>();
+                scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
             }
             else if (args[1].Contains("start"))
             {
@@ -291,14 +299,6 @@ public partial class HomePageViewModel : ObservableObject, INavigationAware, IVi
     private void OnUiTaskStartTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(() => Start(_hWnd));
-    }
-
-    public void OnNavigatedTo()
-    {
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]

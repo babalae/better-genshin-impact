@@ -332,6 +332,10 @@ public class AutoFightTask : ISoloTask
                 Debug.WriteLine(e.StackTrace);
                 throw;
             }
+            finally
+            {
+                Simulation.ReleaseAllKey();
+            }
         }, cts2.Token);
 
         await fightTask;
@@ -474,7 +478,7 @@ public class AutoFightTask : ISoloTask
         /**
         if (!Bv.IsInMainUi(ra))
         {
-            // 如果不在主界面，说明异常，直接结束战斗继续下一步（路径追踪下一步会进入异常处理）
+            // 如果不在主界面，说明异常，直接结束战斗继续下一步（地图追踪下一步会进入异常处理）
             Logger.LogInformation("当前不在主界面，直接结束战斗！");
             return true;
         }**/

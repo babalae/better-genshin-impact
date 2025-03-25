@@ -26,7 +26,7 @@ public class UpDownGrabLeaf : IActionHandler
         // kbPress('w');  // 飞行
         while (i > 0 && !ct.IsCancellationRequested)
         {
-            Simulation.SendInput.SimulateAction(GIActions.InteractionInSomeMode, KeyType.KeyDown);
+            Simulation.SendInput.SimulateAction(GIActions.InteractionInSomeMode);
             if (i % 10 == 0)
             {
                 y = -y;

@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using Compunet.YoloV8;
 using OpenCvSharp;
@@ -15,19 +14,40 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class Blackboard
     {
         /// <summary>
+        /// 不钓啦
+        /// </summary>
+        public bool abort = false;
+
+        /// <summary>
         /// 已选择的鱼饵名
         /// </summary>
-        internal string selectedBaitName = string.Empty;
+        public string selectedBaitName = string.Empty;
 
         /// <summary>
         /// 鱼塘
         /// </summary>
-        internal Fishpond fishpond;
+        public Fishpond fishpond;
 
         /// <summary>
-        /// 是否没有目标鱼
+        /// 是否没有抛竿落点
         /// </summary>
-        internal bool noTargetFish;
+        public bool throwRodNoTarget;
+
+        /// <summary>
+        /// 没有抛竿落点的次数
+        /// </summary>
+        public int throwRodNoTargetTimes;
+
+        /// <summary>
+        /// 是否没有鱼饵适用的鱼
+        /// </summary>
+        public bool throwRodNoBaitFish;
+
+        /// <summary>
+        /// 抛竿无目标鱼失败列表
+        /// 失败一次就加入一次鱼饵名，列表中同名鱼饵的数量代表该种失败了几次
+        /// </summary>
+        public List<string> throwRodNoBaitFishFailures = new List<string>();
 
         /// <summary>
         /// 拉条位置的识别框
@@ -38,25 +58,59 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 是否正在选鱼饵界面
         /// 此时有阴影遮罩，OpenCv的图像匹配会受干扰
         /// </summary>
-        internal bool chooseBaitUIOpening = false;
+        public bool chooseBaitUIOpening = false;
+
+        /// <summary>
+        /// 选鱼饵失败列表
+        /// 失败一次就加入一次鱼饵名，列表中同名鱼饵的数量代表该种失败了几次
+        /// </summary>
+        public List<string> chooseBaitFailures = new List<string>();
 
         /// <summary>
         /// 镜头俯仰是否被行为重置
         /// 进入钓鱼模式后、以及提竿后，镜头的俯仰会被重置。进行相关动作前须优化俯仰角，避免鱼塘被脚下的悬崖遮挡。
         /// </summary>
-        internal bool pitchReset = false;
+        internal bool pitchReset = true;
 
         #region 分层暂放
-        internal static readonly YoloV8Predictor predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
+        private readonly YoloV8Predictor? predictor;
+        internal YoloV8Predictor Predictor
+        {
+            get
+            {
+                return predictor ?? throw new MissingMemberException();
+            }
+        }
         internal Action<int> Sleep { get; set; }
+
+        private readonly AutoFishingAssets? autoFishingAssets;
+        internal AutoFishingAssets AutoFishingAssets
+        {
+            get
+            {
+                return autoFishingAssets ?? throw new MissingMemberException();
+            }
+        }
+
+
+        public Blackboard(YoloV8Predictor? predictor = null, Action<int>? sleep = null, AutoFishingAssets? autoFishingAssets = null)
+        {
+            this.predictor = predictor;
+            this.Sleep = sleep ?? (_ => throw new NotImplementedException());
+            this.autoFishingAssets = autoFishingAssets;
+        }
         #endregion
 
         internal virtual void Reset()
         {
-            noTargetFish = false;
+            abort = false;
+            throwRodNoTargetTimes = 0;
+            throwRodNoBaitFishFailures = new List<string>();
             fishBoxRect = Rect.Empty;
             chooseBaitUIOpening = false;
-            pitchReset = false;
+            chooseBaitFailures = new List<string>();
+            pitchReset = true;
+            selectedBaitName = string.Empty;
         }
     }
 }
