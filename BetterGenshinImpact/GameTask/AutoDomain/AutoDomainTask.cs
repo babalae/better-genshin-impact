@@ -88,7 +88,7 @@ public class AutoDomainTask : ISoloTask
         var absDiffRB = rMinusB.Select(x => Math.Abs(x)).ToArray();
 
         // 计算最大差值
-        double meanDiff = Math.Max(absDiffRG.Max(), Math.Max(absDiffGB.Max(), absDiffRB.Max()));
+        double meanDiff = Math.Max(absDiffRG.Average(), Math.Max(absDiffGB.Average(), absDiffRB.Average()));
 
         // 返回亮度和最大差值的元组
         return (brightness, meanDiff);
