@@ -26,6 +26,7 @@ public class ActionFactory
                 "combat_script" => new CombatScriptHandler(),
                 "mining" => new MiningHandler(),
                 "fishing" => new FishingHandler(),
+                "exit_and_relogin" => new ExitAndReloginHandler(),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });
