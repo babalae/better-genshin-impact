@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -12,6 +13,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -213,5 +215,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }
+    }
+    
+    [RelayCommand]
+    private void OpenAboutWindow()
+    {
+        var aboutWindow = new AboutWindow();
+        aboutWindow.Owner = Application.Current.MainWindow;
+        aboutWindow.ShowDialog();
     }
 }

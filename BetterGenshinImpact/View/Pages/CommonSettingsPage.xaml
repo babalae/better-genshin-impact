@@ -915,7 +915,11 @@
                 Margin="0,0,36,0"
                 IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}"/>
         </ui:CardControl>-->
+        
         <!-- About Option -->
+        <ui:TextBlock Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="帮助" />
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Info24}">
             <ui:CardControl.Header>
                 <Grid>
@@ -926,12 +930,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="关于"
+                                  Text="关于 BetterGI"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="查看项目相关信息"
+                                  Text="查看项目相、文档等信息"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
