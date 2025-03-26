@@ -17,16 +17,22 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         private static readonly ConcurrentDictionary<string, PaddleOcrService> paddleOcrServices = new ConcurrentDictionary<string, PaddleOcrService>();
 
         [Theory]
-        [InlineData("zh-Hans", "每日")]
+        [InlineData("zh-Hans", "挑战,达成", "[挑战,达成]")]
         [InlineData("zh-Hans", "凯瑟琳")]
         [InlineData("en", "Daily")]
         [InlineData("en", "Katheryne")]
         [InlineData("zh-Hant", "凱瑟琳")]
         [InlineData("zh-Hant", "委託", "委[託,話]")]
+        [InlineData("zh-Hant", "挑戰,達成", "[挑戰,達成]")]
+        [InlineData("zh-Hant", "自動,退出", "[自動,退出]")]
+        [InlineData("zh-Hant", "跳過")]
         [InlineData("fr", "quotidien")]
         [InlineData("fr", "Expédition")]
         [InlineData("fr", "Pêcher", "P[ê|é]cher")]
-        [InlineData("fr", "Synthèse", "Synth[è|é]se")] 
+        [InlineData("fr", "Synthèse", "Synth[è|é]se")]
+        [InlineData("fr", "Défi, terminé", "[Défi,terminé]")]
+        [InlineData("fr", "Sortie")]
+        [InlineData("fr", "Passer")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>
