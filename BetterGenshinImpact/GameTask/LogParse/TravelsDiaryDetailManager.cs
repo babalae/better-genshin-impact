@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using Wpf.Ui.Violeta.Controls;
 
-namespace LogParse;
+namespace BetterGenshinImpact.GameTask.LogParse;
 
 public class TravelsDiaryDetailManager
 {
@@ -108,7 +108,7 @@ public class TravelsDiaryDetailManager
                 //文件不存在，全量更新
                 if (!fileExists)
                 {
-                    var _temp2 = await ys.GetTravelsDiaryDetailAsync(gameInfo, cookie, month.month, 2, 100);
+                    var _temp2 = await ys.GetTravelsDiaryDetailAsync(gameInfo, cookie, month.month, 2);
                     writeFile(tddfile, _temp2);
                     Toast.Information($"{month.year}_{month.month}数据获取成功！");
                 }

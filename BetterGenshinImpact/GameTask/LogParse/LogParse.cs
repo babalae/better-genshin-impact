@@ -8,23 +8,20 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
 using Wpf.Ui.Violeta.Controls;
-using static LogParse.LogParse.ConfigGroupEntity;
+using static BetterGenshinImpact.GameTask.LogParse.LogParse.ConfigGroupEntity;
 
-namespace LogParse
+namespace BetterGenshinImpact.GameTask.LogParse
 {
     public class LogParse
     {
-        // 添加一个静态事件用于通知HTML生成状态
-        public static event Action<string> HtmlGenerationStatusChanged;
-
-        // 触发状态变更通知的辅助方法
+        private static readonly string _configPath = Global.Absolute(@"log\logparse\config.json");
+        
+        // 添加一个静态事件用于通知日志的生成状态
+        public static event Action<string> HtmlGenerationStatusChanged = delegate { };
         private static void NotifyHtmlGenerationStatus(string status)
         {
-            HtmlGenerationStatusChanged?.Invoke(status);
+            HtmlGenerationStatusChanged.Invoke(status);
         }
-
-
-        private static string configPath = Global.Absolute(@"log\logparse\config.json");
 
         private static List<string> SafeReadAllLines(string filePath)
         {
@@ -66,8 +63,8 @@ namespace LogParse
         {
             // var logstrs = log.Item1;
             List<ConfigGroupEntity> configGroupEntities = new();
-            ConfigGroupEntity configGroupEntity = null;
-            ConfigTask configTask = null;
+            ConfigGroupEntity? configGroupEntity = null;
+            ConfigTask? configTask = null;
             for (int i = 0; i < logLines.Count; i++)
             {
                 var logstr = logLines[i].Item1;
@@ -77,22 +74,24 @@ namespace LogParse
 
                 // 定义正则表达式
 
-                var result = parseBgiLine(@"配置组 ""(.+?)"" 加载完成，共(\d+)个脚本", logstr);
+                var result = ParseBgiLine(@"配置组 ""(.+?)"" 加载完成，共(\d+)个脚本", logstr);
                 if (result.Item1)
                 {
-                    configGroupEntity = new();
-                    configGroupEntity.Name = result.Item2[1];
-                    configGroupEntity.StartDate = parsePreDataTime(logLines, i - 1, logrq);
+                    configGroupEntity = new()
+                    {
+                        Name = result.Item2[1],
+                        StartDate = ParsePreDataTime(logLines, i - 1, logrq)
+                    };
                     configGroupEntities.Add(configGroupEntity);
                 }
 
                 if (configGroupEntity != null)
                 {
                     //配置组 "战斗" 执行结束
-                    result = parseBgiLine($"配置组 \"{configGroupEntity.Name}\" 执行结束", logstr);
+                    result = ParseBgiLine($"配置组 \"{configGroupEntity.Name}\" 执行结束", logstr);
                     if (result.Item1)
                     {
-                        configGroupEntity.EndDate = parsePreDataTime(logLines, i - 1, logrq);
+                        configGroupEntity.EndDate = ParsePreDataTime(logLines, i - 1, logrq);
                         configGroupEntity = null;
                     }
                 }
@@ -100,12 +99,12 @@ namespace LogParse
 
                 if (configGroupEntity != null)
                 {
-                    result = parseBgiLine(@"→ 开始执行(?:地图追踪任务|JS脚本): ""(.+?)""", logstr);
+                    result = ParseBgiLine(@"→ 开始执行(?:地图追踪任务|JS脚本): ""(.+?)""", logstr);
                     if (result.Item1)
                     {
                         configTask = new();
                         configTask.Name = result.Item2[1];
-                        configTask.StartDate = parsePreDataTime(logLines, i - 1, logrq);
+                        configTask.StartDate = ParsePreDataTime(logLines, i - 1, logrq);
                         configGroupEntity.ConfigTaskList.Add(configTask);
                     }
 
@@ -119,7 +118,7 @@ namespace LogParse
                         }
 
                         //传送失败，重试 n 次
-                        result = parseBgiLine($@"传送失败，重试 (\d+) 次", logstr);
+                        result = ParseBgiLine(@"传送失败，重试 (\d+) 次", logstr);
                         if (result.Item1)
                         {
                             configTask.Fault.TeleportFailCount = int.Parse(result.Item2[1]);
@@ -145,7 +144,7 @@ namespace LogParse
                         }
 
                         //One or more errors occurred
-                        result = parseBgiLine(@"执行脚本时发生异常: ""(.+?)""", logstr);
+                        result = ParseBgiLine(@"执行脚本时发生异常: ""(.+?)""", logstr);
                         if (result.Item1)
                         {
                             configTask.Fault.ErrCount++;
@@ -153,14 +152,14 @@ namespace LogParse
 
                         if (logstr.StartsWith("→ 脚本执行结束: \"" + configTask.Name + "\""))
                         {
-                            configTask.EndDate = parsePreDataTime(logLines, i - 1, logrq);
+                            configTask.EndDate = ParsePreDataTime(logLines, i - 1, logrq);
                             configTask = null;
                         }
 
-                        result = parseBgiLine(@"交互或拾取：""(.+?)""", logstr);
+                        result = ParseBgiLine(@"交互或拾取：""(.+?)""", logstr);
                         if (result.Item1)
                         {
-                            configTask.addPick(result.Item2[1]);
+                            configTask.AddPick(result.Item2[1]);
                         }
                     }
                 }
@@ -169,18 +168,14 @@ namespace LogParse
             }
 
             //无论如何给个结束时间
-            if (configGroupEntity != null && configGroupEntity.EndDate == null)
+            if (configGroupEntity is { EndDate: null })
             {
                 if (configGroupEntity.ConfigTaskList.Count > 0)
                 {
                     ConfigTask ct = configGroupEntity.ConfigTaskList[^1];
                     if (ct != null)
                     {
-                        configGroupEntity.EndDate = ct.EndDate;
-                        if (configGroupEntity.EndDate == null)
-                        {
-                            configGroupEntity.EndDate = ct.StartDate;
-                        }
+                        configGroupEntity.EndDate = ct.EndDate ?? ct.StartDate;
                     }
                 }
 
@@ -189,7 +184,7 @@ namespace LogParse
             return configGroupEntities;
         }
 
-        private static (bool, List<string>) parseBgiLine(string pattern, string str)
+        private static (bool, List<string>) ParseBgiLine(string pattern, string str)
         {
             Match match = Regex.Match(str, pattern);
             if (match.Success)
@@ -200,14 +195,14 @@ namespace LogParse
             return (false, []);
         }
 
-        private static DateTime? parsePreDataTime(List<(string, string)> list, int index, string logrq)
+        private static DateTime? ParsePreDataTime(List<(string, string)> list, int index, string logrq)
         {
             if (index < 0)
             {
                 return null;
             }
 
-            (bool, List<string>) result = parseBgiLine(@"\[(\d{2}:\d{2}:\d{2})\.\d+\]", list[index].Item1);
+            (bool, List<string>) result = ParseBgiLine(@"\[(\d{2}:\d{2}:\d{2})\.\d+\]", list[index].Item1);
             if (result.Item1)
             {
                 DateTime dateTime = DateTime.ParseExact(logrq + " " + result.Item2[1], "yyyy-MM-dd HH:mm:ss", null);
@@ -246,7 +241,7 @@ namespace LogParse
                 //拾取字典
                 public Dictionary<string, int> Picks { get; } = new();
 
-                public void addPick(string val)
+                public void AddPick(string val)
                 {
                     if (!Picks.ContainsKey(val))
                     {
@@ -426,7 +421,7 @@ namespace LogParse
             GameInfo? gameInfo,
             LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
-            (string name, Func<ConfigGroupEntity.ConfigTask, string> value, string sortType)[] colConfigs =
+            (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs =
             [
                 (name: "任务名称", value: task => Path.GetFileNameWithoutExtension(task.Name), sortType: "string"),
                 (name: "开始时间", value: task => task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
@@ -434,7 +429,7 @@ namespace LogParse
                 (name: "任务耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0),
                     sortType: "number")
             ];
-            List<(string name, Func<ConfigGroupEntity.ConfigTask, string> value, string sortType)>
+            List<(string name, Func<ConfigTask, string> value, string sortType)>
                 colConfigList = new();
             colConfigList.AddRange(colConfigs);
             if (scriptGroupLogParseConfig.FaultStatsSwitch)
@@ -481,9 +476,7 @@ namespace LogParse
                     sortType: "number"
                 )
             };
-
-
-
+            
             StringBuilder html = new StringBuilder();
             //从文件解析札记数据
             NotifyHtmlGenerationStatus("正在解析札记数据...");
@@ -506,7 +499,7 @@ namespace LogParse
                 msColConfigs);
 
             // 检查HTML内容大小，如果超过阈值则保存为文件
-            const int maxHtmlSize = 1 * 1024 * 1024; // 2MB 阈值，可以根据实际情况调整
+            const int maxHtmlSize = 1 * 1024 * 1024; // 1MB 阈值，可以根据实际情况调整
             if (htmlContent.Length > maxHtmlSize)
             {
                 NotifyHtmlGenerationStatus($"日志分析较大({htmlContent.Length / 1024}KB)，正在保存为文件...");
@@ -558,7 +551,7 @@ namespace LogParse
         public static string GenerHtmlByConfigGroupEntity(
             List<ConfigGroupEntity> configGroups,
             string title,
-            (string name, Func<ConfigGroupEntity.ConfigTask, string> value, string sortType)[] colConfigs,
+            (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs,
             (string name, Func<MoraStatistics, string> value, string sortType)[] col2Configs,
             List<ActionItem> actionItems,
             (string name, Func<MoraStatistics, string> value, string sortType)[] msColConfigs)
@@ -573,13 +566,13 @@ namespace LogParse
             html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
             html.AppendLine($"    <title>{title}</title>");
             html.AppendLine("    <style>");
-            html.AppendLine("        body { font-family: 'Segoe UI' ,Arial, sans-serif; margin: 0; padding: 16px; background-color: #f5f7fa;}");
+            html.AppendLine("        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background-color: #fbfaef;}");
             html.AppendLine("        table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 20px; }");
-            html.AppendLine("        th, td { border: 1.5px solid #e1e5eb; padding: 8px; text-align: left; }");
+            html.AppendLine("        th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }");
             html.AppendLine("        th { background-color: #3f51b5; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }");
-            html.AppendLine("        tr:nth-child(odd) { background-color: #ffffff; }");
-            html.AppendLine("        tr:nth-child(even) { background-color: #f8fafd; }");
-            html.AppendLine("        tr:hover { background-color: #edf2fd; transition: background-color 0.2s ease; }");
+            html.AppendLine("        tr:nth-child(odd) { background-color: #f5fbef; }");
+            html.AppendLine("        tr:nth-child(even) { background-color: #f2faea; }");
+            html.AppendLine("        tr:hover { background-color: #cadbb8; transition: background-color 0.2s ease; }");
             
             // 修改排序指示器样式，确保不影响表头文本对齐
             html.AppendLine("        th::after { content: ''; display: block; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; opacity: 0; transition: opacity 0.2s ease; }");
@@ -588,16 +581,16 @@ namespace LogParse
             html.AppendLine("        th.sort-desc::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid white; }");
             
             // 改进的表格容器和固定表头样式
-            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid #e1e5eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }");
-            html.AppendLine("        th, td { border: 1.5px solid #e1e5eb; padding: 8px; text-align: left; }");
+            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid ##cce3e5; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }");
+            html.AppendLine("        th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }");
             html.AppendLine("        .sticky-header { position: sticky; top: 0; z-index: 100; }");
             html.AppendLine("        .sticky-header th { ");
             html.AppendLine("            position: sticky; ");
             html.AppendLine("            top: 0; ");
-            html.AppendLine("            background-color: #3f51b5; ");
+            html.AppendLine("            background-color: #59a2ab; ");
             html.AppendLine("            z-index: 100; ");
             html.AppendLine("            border-width: 0; ");
-            html.AppendLine("            outline: 1.5px solid #3f51b5; ");
+            html.AppendLine("            outline: 1.5px solid #cce3e5; ");
             html.AppendLine("            text-align: center; ");
             html.AppendLine("            vertical-align: middle; ");
             html.AppendLine("        }");
@@ -1013,16 +1006,14 @@ function sortTable(table, columnIndex, sortType) {
                 html.AppendLine("<table>");
                 html.AppendLine("    <thead>");
                 html.AppendLine("    <tr class=\"sticky-header\">");
-                for (int colIndex = 0; colIndex < colConfigs.Length; colIndex++)
+                foreach (var col in colConfigs)
                 {
-                    var col = colConfigs[colIndex];
                     html.AppendLine($"        <th data-sort-type=\"{col.sortType}\">{col.name}</th>");
                 }
                 if (actionItems.Count > 0)
                 {
-                    for (int colIndex = 0; colIndex < col2Configs.Length; colIndex++)
+                    foreach (var col in col2Configs)
                     {
-                        var col = col2Configs[colIndex];
                         html.AppendLine($"        <th data-sort-type=\"{col.sortType}\">{col.name}</th>");
                     }
                 }
@@ -1150,7 +1141,7 @@ function sortTable(table, columnIndex, sortType) {
                 WriteIndented = true // 启用格式化（缩进）
             };
             var content = JsonSerializer.Serialize(config, options);
-            string directoryPath = Path.GetDirectoryName(configPath);
+            string directoryPath = Path.GetDirectoryName(_configPath);
 
             if (!Directory.Exists(directoryPath))
             {
@@ -1158,20 +1149,20 @@ function sortTable(table, columnIndex, sortType) {
                 Directory.CreateDirectory(directoryPath);
             }
 
-            File.WriteAllText(configPath, content);
+            File.WriteAllText(_configPath, content);
         }
 
         public static LogParseConfig LoadConfig()
         {
-            LogParseConfig config = null;
-            if (File.Exists(configPath))
+            LogParseConfig? config = null;
+            if (File.Exists(_configPath))
             {
                 try
                 {
-                    config = JsonSerializer.Deserialize<LogParseConfig>(File.ReadAllText(configPath)) ??
+                    config = JsonSerializer.Deserialize<LogParseConfig>(File.ReadAllText(_configPath)) ??
                              throw new NullReferenceException();
                 }
-                catch (Exception e)
+                catch (NullReferenceException)
                 {
                     Toast.Warning("读取日志分析配置文件失败！");
                     config = new LogParseConfig();

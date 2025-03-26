@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LogParse
+namespace BetterGenshinImpact.GameTask.LogParse
 {
     public class MoraStatistics
     {
@@ -18,18 +18,18 @@ namespace LogParse
             return moraStatistics;
         }
 
-        public List<ActionItem> MonsterActionItems => this.ActionItems.Where(item => item.ActionId == 37).ToList();
+        public List<ActionItem> MonsterActionItems => ActionItems.Where(item => item.ActionId == 37).ToList();
 
         public List<ActionItem> EliteMonsterActionItems =>
-            this.MonsterActionItems.Where(item => (item.Num >= 200)).ToList();
+            MonsterActionItems.Where(item => (item.Num >= 200)).ToList();
 
         public List<ActionItem> SmallMonsterActionItems =>
-            this.MonsterActionItems.Except(EliteMonsterActionItems).ToList();
+            MonsterActionItems.Except(EliteMonsterActionItems).ToList();
         public string EmergencyBonus
         {
             get
             {
-                var ls = this.ActionItems.Where(item => item.ActionId == 28).ToList();
+                var ls = ActionItems.Where(item => item.ActionId == 28).ToList();
                 var count = ls.Count();
                 if (count == 0)
                 {
@@ -57,25 +57,20 @@ namespace LogParse
             {
                 return 3;
             }
-            else if (item.Num >= 1200)
+
+            if (item.Num >= 1200)
             {
                 return 2;
             }
-            else
-            {
-                return 1;
-            }
+
+            return 1;
         });
 
         public int EliteMora => EliteMonsterActionItems?.Sum(item => item.Num) ?? 0;
         public int SmallMonsterStatistics => SmallMonsterActionItems?.Count ?? 0;
         public int SmallMonsterMora => SmallMonsterActionItems?.Sum(item => item.Num) ?? 0;
-        public int TotalMoraKillingMonstersMora => this.MonsterActionItems.Sum((item) => item.Num);
-        public int OtherMora => this.ActionItems.Except(MonsterActionItems).Sum((item) => item.Num);
-        public int AllMora => this.ActionItems.Sum((item) => item.Num);
-
-        public MoraStatistics()
-        {
-        }
+        public int TotalMoraKillingMonstersMora => MonsterActionItems.Sum(item => item.Num);
+        public int OtherMora => ActionItems.Except(MonsterActionItems).Sum(item => item.Num);
+        public int AllMora => ActionItems.Sum(item => item.Num);
     }
 }
