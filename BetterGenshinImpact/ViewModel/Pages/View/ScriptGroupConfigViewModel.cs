@@ -26,6 +26,7 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     {
         ScriptGroupConfig = scriptGroupConfig;
         PathingConfig = scriptGroupConfig.PathingConfig;
+        AutoFightViewModel = new AutoFightViewModel(config);
         ShellConfig = scriptGroupConfig.ShellConfig;
         EnableShellConfig = scriptGroupConfig.EnableShellConfig;
     }

@@ -437,6 +437,37 @@
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="通用功能设置" />
+        <!--  按键绑定  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon KeyboardMouse16}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="按键绑定设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="如果你有游戏内改建需求，请在此配置对应的改键"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding OpenKeyBindingsWindowCommand}"
+                               Content="配置" />
+                </Grid>
+            </ui:CardControl.Header>
+        </ui:CardControl>
         <!--  大地图传送相关设置  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
@@ -621,16 +652,12 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
                                   Text="七天神像设置"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  FontTypography="Body" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="用于指定回血的七天神像"
-                                  TextWrapping="Wrap" />
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -880,13 +907,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="查看地图（开发者）"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap"
+                                  Text="查看地图（开发者）" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="查看当前识别到的位置"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap"
+                                  Text="查看当前识别到的位置" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
@@ -919,5 +946,33 @@
                 Margin="0,0,36,0"
                 IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}"/>
         </ui:CardControl>-->
+        
+        <!-- About Option -->
+        <ui:TextBlock Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="帮助" />
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Info24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="关于 BetterGI"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="查看项目相、文档等信息"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+                       Command="{Binding OpenAboutWindowCommand}"
+                       Content="查看" />
+        </ui:CardControl>
     </StackPanel>
 </Page>

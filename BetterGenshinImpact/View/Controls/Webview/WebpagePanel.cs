@@ -122,17 +122,38 @@ public class WebpagePanel : UserControl
         _currentUri = _webView.Source;
     }
 
-    public void NavigateToHtml(string html)
+    public void NavigateToHtml(string htmlContentOrUrl)
     {
         _webView?.EnsureCoreWebView2Async()
             .ContinueWith(_ => SpinWait.SpinUntil(() => _initialized))
-            .ContinueWith(_ => Dispatcher.Invoke(() => _webView?.NavigateToString(html)));
+            .ContinueWith(_ => Dispatcher.Invoke(() => 
+            {
+                // 检查是否是URL（以file:或http开头）
+                if (htmlContentOrUrl.StartsWith("file:") || htmlContentOrUrl.StartsWith("http"))
+                {
+                    // 如果是URL，使用Navigate方法
+                    _webView?.CoreWebView2?.Navigate(htmlContentOrUrl);
+                    _currentUri = new Uri(htmlContentOrUrl);
+                }
+                else
+                {
+                    // 如果是HTML内容，使用NavigateToString方法
+                    _webView?.NavigateToString(htmlContentOrUrl);
+                }
+            }));
     }
 
     private void NavigationStarting_CancelNavigation(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
         if (e.Uri.StartsWith("data:")) // when using NavigateToString
             return;
+            
+        // 允许file:和http:开头的URL导航（用于大型HTML内容）
+        if (e.Uri.StartsWith("file:") || e.Uri.StartsWith("http:") || e.Uri.StartsWith("https:"))
+        {
+            if (_currentUri != null && e.Uri == _currentUri.ToString())
+                return;
+        }
 
         var newUri = new Uri(e.Uri);
         if (newUri != _currentUri) e.Cancel = true;

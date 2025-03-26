@@ -51,7 +51,7 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _webSocketCts?.Cancel();
+        // _webSocketCts?.Cancel();
         _webSocketCts?.Dispose();
         _notifyHttpClient?.Dispose();
         GC.SuppressFinalize(this);
@@ -140,7 +140,9 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.FeishuNotificationEnabled == true)
             _notifierManager.RegisterNotifier(new FeishuNotifier(
                 _notifyHttpClient,
-                _notificationConfig.FeishuWebhookUrl
+                _notificationConfig.FeishuWebhookUrl,
+                _notificationConfig.FeishuAppId,
+                _notificationConfig.FeishuAppSecret
             ));
     }
 
