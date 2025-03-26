@@ -224,4 +224,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
         aboutWindow.Owner = Application.Current.MainWindow;
         aboutWindow.ShowDialog();
     }
+    
+    [RelayCommand]
+    private void OpenKeyBindingsWindow()
+    {
+        var keyBindingsWindow = KeyBindingsWindow.Instance;
+        keyBindingsWindow.Owner = Application.Current.MainWindow;
+        keyBindingsWindow.ShowDialog();
+    }
 }
