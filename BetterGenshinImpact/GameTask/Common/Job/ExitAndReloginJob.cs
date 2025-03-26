@@ -21,7 +21,7 @@ public class ExitAndReloginJob
     public async Task Start(CancellationToken ct)
     {
          //============== 退出游戏流程 ==============
-        Logger.LogInformation("动作：退出登录");
+        Logger.LogInformation("退出至登录页面");
         _assets = AutoWoodAssets.Instance;
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
@@ -60,9 +60,10 @@ public class ExitAndReloginJob
         });
             
         await Delay(1000, ct);  // 等待退出完成
-
+        
         //============== 重新登录流程 ==============
         // 第三方登录（如果启用）
+        Logger.LogInformation("点击登录");
         _login3rdParty.RefreshAvailabled();
         if (_login3rdParty is { Type: Login3rdParty.The3rdPartyType.Bilibili, IsAvailabled: true })
         {
@@ -105,7 +106,7 @@ public class ExitAndReloginJob
         {
             if (Bv.IsInMainUi(CaptureToRectArea()))
             {
-                Logger.LogInformation("动作：退出重新登录结束！");
+                Logger.LogInformation("退出重新登录结束！");
                 break;
             }
             await Delay(1000, ct);
