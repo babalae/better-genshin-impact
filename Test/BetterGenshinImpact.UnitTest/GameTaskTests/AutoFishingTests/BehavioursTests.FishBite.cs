@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
 
             //
-            FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent());
+            FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), ocrService, drawContent: new FakeDrawContent());
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -60,7 +60,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var sut = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("-", SimpleParallelPolicy.OnlyOneMustSucceed)
                     //.PushLeaf(() => new CheckThrowRod("-", logger, false, fakeTimeProvider)) // todo
-                    .PushLeaf(() => new FishBite("-", blackboard, logger, false, input, drawContent: new FakeDrawContent()))
+                    .PushLeaf(() => new FishBite("-", blackboard, logger, false, input, ocrService, drawContent: new FakeDrawContent()))
                     .PushLeaf(() => fishBiteTimeoutBehaviour)
                 .End()
                 .Build();
@@ -109,7 +109,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Blackboard blackboard = new Blackboard(autoFishingAssets: autoFishingAssets);
 
             //
-            FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), this.autoFishingImageRecognitionStringLocalizer);
+            FishBite sut = new FishBite("-", blackboard, new FakeLogger(), false, new FakeInputSimulator(), ocrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), this.autoFishingImageRecognitionStringLocalizer);
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //

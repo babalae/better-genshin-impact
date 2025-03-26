@@ -686,12 +686,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly Blackboard blackboard;
         private readonly IInputSimulator input;
         private readonly DrawContent drawContent;
-        private readonly IOcrService ocrService = OcrFactory.Paddle;
+        private readonly IOcrService ocrService;
         private readonly string getABiteLocalizedString;
-        public FishBite(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, DrawContent? drawContent = null, CultureInfo? cultureInfo = null, IStringLocalizer<AutoFishingImageRecognition>? stringLocalizer = null) : base(name, logger, saveScreenshotOnTerminat)
+        public FishBite(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, IOcrService ocrService, DrawContent? drawContent = null, CultureInfo? cultureInfo = null, IStringLocalizer<AutoFishingImageRecognition>? stringLocalizer = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
             this.input = input;
+            this.ocrService = ocrService;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
             this.getABiteLocalizedString = stringLocalizer == null ? "上钩" : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
         }

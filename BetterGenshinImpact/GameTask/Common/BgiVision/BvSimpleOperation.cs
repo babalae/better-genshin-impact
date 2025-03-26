@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
 using OpenCvSharp;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -168,7 +169,7 @@ public static partial class Bv
                 var success = true;
                 foreach (var t in text)
                 {
-                    if (!item.Text.Contains(t))
+                    if (!Regex.IsMatch(item.Text, t))
                     {
                         success = false;
                     }

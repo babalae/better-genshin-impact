@@ -36,6 +36,7 @@ using System.Collections.Frozen;
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.View.Converters;
+using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -134,7 +135,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .Description ?? e.ToString());
 
     [ObservableProperty]
-    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "en" }
+    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
         .ToFrozenDictionary(
             c => c,
             c =>
@@ -144,9 +145,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 return stringLocalizer["简体中文"].ToString();
             }
         );
-
-
-    //[new CultureInfo("zh-CN"), new CultureInfo("en")];
 
     private bool saveScreenshotOnKeyTick;
     public bool SaveScreenshotOnKeyTick
@@ -435,5 +433,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private void OnOpenLocalScriptRepo()
     {
         _autoFightViewModel.OnOpenLocalScriptRepo();
+    }
+
+    [RelayCommand]
+    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
+    {
+        await OcrFactory.ChangeCulture(type.Key);
     }
 }

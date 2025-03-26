@@ -1603,7 +1603,15 @@
                               ItemsSource="{Binding LanguageDict}"
                               SelectedValuePath="Key"
                               DisplayMemberPath="Value"
-                              SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
+                              >
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding GameLangSelectionChangedCommand}"
+                                                       CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}"/>
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
                 </Grid>
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>

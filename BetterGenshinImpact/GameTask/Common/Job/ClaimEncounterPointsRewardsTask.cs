@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
@@ -65,7 +66,7 @@ public class ClaimEncounterPointsRewardsTask
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, 0, 380 * assetScale, ra.Height));
 
-            var wt = ocrList.FirstOrDefault(txt => txt.Text.Contains(this.commissionsLocalizedString));
+            var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.commissionsLocalizedString));
 
             if (wt != null)
             {

@@ -132,7 +132,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             ModifyFolderSecurity();
             Config.CommonConfig.RunForVersion = Global.Version;
         }
-        
+
         OnceRun();
 
         // 检查更新
@@ -218,10 +218,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     {
         try
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 try
                 {
+                    string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
+                    await OcrFactory.ChangeCulture(gameCultureInfoName);
                     var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png"), ImreadModes.Grayscale));
                     Debug.WriteLine("PaddleOcr预热结果:" + s);
                 }
@@ -265,7 +267,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             _logger.LogDebug("获取设备ID异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
         }
-        
+
         // 每个设备只运行一次
         if (!Config.CommonConfig.OnceHadRunDeviceIdList.Contains(deviceId))
         {
@@ -275,7 +277,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             };
             prompt.ShowDialog();
             prompt.Focus();
-            
+
             Config.CommonConfig.OnceHadRunDeviceIdList.Add(deviceId);
             _configService.Save();
         }

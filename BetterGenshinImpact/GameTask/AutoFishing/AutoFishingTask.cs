@@ -28,6 +28,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -49,6 +50,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public Task Start(CancellationToken ct)
         {
             this._ct = ct;
+
+            IOcrService ocrService = OcrFactory.Paddle;
 
             IStringLocalizer<AutoFishingImageRecognition> stringLocalizer = App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
 
@@ -95,7 +98,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                             .End()
                                             .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                                                 .PushLeaf(() => new CheckThrowRod("检查抛竿结果", blackboard, _logger, param.SaveScreenshotOnKeyTick))    // todo 后面串联一个召回率高的下杆中检测方法
-                                                .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, cultureInfo: param.GameCultureInfo, stringLocalizer: stringLocalizer))
+                                                .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, ocrService, cultureInfo: param.GameCultureInfo, stringLocalizer: stringLocalizer))
                                                 .PushLeaf(() => new FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick, input))
                                             .End()
                                             .MySimpleParallel("拉条中", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
