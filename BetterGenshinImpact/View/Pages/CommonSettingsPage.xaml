@@ -621,16 +621,12 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
                                   Text="七天神像设置"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  FontTypography="Body" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
                                   Text="用于指定回血的七天神像"
-                                  TextWrapping="Wrap" />
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -880,13 +876,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="查看地图（开发者）"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap"
+                                  Text="查看地图（开发者）" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="查看当前识别到的位置"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap"
+                                  Text="查看当前识别到的位置" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
@@ -919,5 +915,29 @@
                 Margin="0,0,36,0"
                 IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}"/>
         </ui:CardControl>-->
+        <!-- About Option -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Info24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="关于"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="查看项目相关信息"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:Button Margin="0,0,36,0"
+                       Command="{Binding OpenAboutWindowCommand}"
+                       Content="查看" />
+        </ui:CardControl>
     </StackPanel>
 </Page>
