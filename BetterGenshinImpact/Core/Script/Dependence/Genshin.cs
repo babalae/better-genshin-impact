@@ -164,4 +164,13 @@ public class Genshin
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
         await new AutoFishingTask(param).Start(CancellationContext.Instance.Cts.Token);
     }
+    
+    /// <summary>
+    /// 重新登录原神
+    /// </summary>
+    /// <returns></returns>
+    public async Task Relogin()
+    {
+        await new ExitAndReloginJob().Start(CancellationContext.Instance.Cts.Token);
+    }
 }
