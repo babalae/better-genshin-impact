@@ -11313,5 +11313,20 @@
         "name": "曜石图腾柱·镜璧山",
         "description": "声望点",
         "area": "镜璧山"
+    },
+    {
+        "id": "9999",
+        "gadgetId": 70120001,
+        "gadgetType": "TransPointSecond",
+        "type": "Dungeon",
+        "position": [
+            -3377.29,
+            0,
+            10548.21
+        ],
+        "country": "纳塔",
+        "name": "荒废砌造坞",
+        "description": "圣遗物本",
+        "#" : "仅供临时使用，手动收集"
     }
 ]
