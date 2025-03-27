@@ -25,6 +25,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Drawing;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
@@ -52,6 +53,63 @@ public class AutoDomainTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
+
+    static (double brightness, double MeanDiff) CalcRgbDiff(Bitmap image)
+    {
+        // 初始化 RGB 通道列表
+        var rList = new System.Collections.Generic.List<int>();
+        var gList = new System.Collections.Generic.List<int>();
+        var bList = new System.Collections.Generic.List<int>();
+
+        // 遍历图像的每个像素
+        for (int y = 0; y < image.Height; y++)
+        {
+            for (int x = 0; x < image.Width; x++)
+            {
+                Color pixel = image.GetPixel(x, y);
+                rList.Add(pixel.R);
+                gList.Add(pixel.G);
+                bList.Add(pixel.B);
+            }
+        }
+
+        // 计算 R 通道的平均值
+        double brightness = rList.Average();
+
+        // 计算 R 和 G 的差值
+        var rMinusG = rList.Zip(gList, (r, g) => r - g).ToArray();
+        // 计算 G 和 B 的差值
+        var gMinusB = gList.Zip(bList, (g, b) => g - b).ToArray();
+        // 计算 R 和 B 的差值
+        var rMinusB = rList.Zip(bList, (r, b) => r - b).ToArray();
+
+        // 计算差值的绝对值
+        var absDiffRG = rMinusG.Select(x => Math.Abs(x)).ToArray();
+        var absDiffGB = gMinusB.Select(x => Math.Abs(x)).ToArray();
+        var absDiffRB = rMinusB.Select(x => Math.Abs(x)).ToArray();
+
+        // 计算最大差值
+        double meanDiff = Math.Max(absDiffRG.Average(), Math.Max(absDiffGB.Average(), absDiffRB.Average()));
+
+        // 返回亮度和最大差值的元组
+        return (brightness, meanDiff);
+    }
+
+    static int IsDead(Bitmap image)
+    {
+        (double brightness, double meanDiff )= CalcRgbDiff(image);
+        if (meanDiff<0.5){
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string filePath = $"image_{timestamp}.png"; // 定义文件名
+            // image.Save(filePath); // 保存图像
+
+            return 1;
+        }
+        else{
+            return 0;
+        }
+    }
+
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -310,7 +368,7 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
-        
+
         // 点击单人挑战
         int retryTimes = 0;
         while (retryTimes < 20)
@@ -325,14 +383,14 @@ public class AutoDomainTask : ISoloTask
 
             await Delay(1500, _ct);
         }
-        
+
         await Delay(600, _ct);
         using var confirmRectArea2 = CaptureToRectArea().Find(ElementAssets.Instance.BtnBlackConfirm);
         if (!confirmRectArea2.IsEmpty())
         {
             throw new Exception("收取完成秘境的奖励需要20点原粹树脂，当前树脂不足，自动秘境停止运行");
         }
-        
+
         // 点击进入
         retryTimes = 0;
         while (retryTimes < 20)
@@ -429,7 +487,7 @@ public class AutoDomainTask : ISoloTask
                         Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                         break;
                     }
-                    
+
                     // 超时直接放弃整个秘境
                     if (DateTime.Now - startTime> TimeSpan.FromSeconds(60))
                     {
@@ -450,14 +508,19 @@ public class AutoDomainTask : ISoloTask
         }), _ct);
     }
 
-    private Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
+    private async Task StartFight(CombatScenes combatScenes, List<CombatCommand> combatCommands)
     {
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
+        cts.Token.Register(()=>{
+            Logger.LogInformation("cts取消请求");
+        });
         combatScenes.BeforeTask(cts.Token);
         // 战斗操作
-        var combatTask = new Task(() =>
+        var combatTask =  Task.Run(async () =>
         {
+            await Task.Delay(1); //用于把此combatTask任务转化为异步
+
             try
             {
                 while (!cts.Token.IsCancellationRequested)
@@ -482,16 +545,20 @@ public class AutoDomainTask : ISoloTask
             {
                 Logger.LogInformation("自动战斗线程结束");
             }
-        }, cts.Token);
+        });
 
-        // 对局结束检测
-        var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
         var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
-        combatTask.Start();
-        domainEndTask.Start();
-        autoEatRecoveryHpTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
+
+        //other_tasks用于在cts取消后，确认其他任务是否已经结束
+        var other_tasks= Task.WhenAll(combatTask,autoEatRecoveryHpTask);
+        // 对局结束检测
+        var domainEndTask = DomainEndDetectionTask(cts,other_tasks,combatScenes);
+
+
+        await combatTask;
+        await domainEndTask;
+        await autoEatRecoveryHpTask;
     }
 
     private void EndFightWait()
@@ -512,15 +579,15 @@ public class AutoDomainTask : ISoloTask
     /// <summary>
     /// 对局结束检测
     /// </summary>
-    private Task DomainEndDetectionTask(CancellationTokenSource cts)
+    private Task DomainEndDetectionTask(CancellationTokenSource cts,Task other_tasks,CombatScenes combatScenes)
     {
-        return new Task(async () =>
+        return  Task.Run(async () =>
         {
             try
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    if (IsDomainEnd())
+                    if (IsDomainEnd(combatScenes))
                     {
                         await cts.CancelAsync();
                         break;
@@ -529,13 +596,44 @@ public class AutoDomainTask : ISoloTask
                     await Delay(1000, cts.Token);
                 }
             }
+            catch (RetryException e)
+            {
+                if (!cts.IsCancellationRequested)
+                {
+                    cts.Cancel();
+                    await other_tasks;
+                    Logger.LogInformation("战斗脚本已结束");
+                    //检查是否进入了切人复活界面
+                    var region = CaptureToRectArea();
+                    if (Bv.IsInRevivePrompt(region)){
+                        Logger.LogInformation("进入了吃药复活界面，正在退出...");
+                        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+                        await Task.Delay(600);
+                    }
+                    //角色刚死亡时无法马上打开地图。循环尝试打开
+                    var is_map_open=false;
+                    while (! is_map_open){
+                        Logger.LogWarning("尝试打开地图");
+                        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                        await Task.Delay(300);
+                        var ra1 = CaptureToRectArea();
+                        is_map_open=Bv.IsInBigMapUi(ra1);
+
+                    }
+                    Sleep(300);
+                    // tp 到七天神像复活
+                    var tpTask = new TpTask(new CancellationToken());
+                    tpTask.TpToStatueOfTheSeven().Wait(new CancellationToken());
+                    throw;
+                }
+            }
             catch
             {
             }
-        }, cts.Token);
+        });
     }
 
-    private bool IsDomainEnd()
+    private bool IsDomainEnd(CombatScenes combatScenes)
     {
         using var ra = CaptureToRectArea();
 
@@ -555,12 +653,52 @@ public class AutoDomainTask : ISoloTask
             return true;
         }
 
+        //实时阵亡检测部分
+        var onDeath = () =>
+        {
+            //先判断是否处于正常页面，防止因释放元素爆发造成误检
+            var combatScenesTmp = new CombatScenes().InitializeTeam(ra,needLog:false);
+            if (!combatScenesTmp.CheckTeamInitialized())
+            {
+                Logger.LogWarning("当前页面未检测到角色名称，可能在放元素爆发？");
+            }
+                else{
+                    Logger.LogWarning("存在角色被击败，前往七天神像复活");
+                    Sleep(200);
+                    throw new RetryException("存在角色被击败，前往七天神像复活");
+                }
+        };
+        List<int> offsets = new List<int> { 0, 16 }; //切人时头像框左右平移，所以带上偏移每个角色截图两次
+        var deadFlag = 0;
+        foreach (var xOffset in offsets){
+            foreach (var avatar in combatScenes.Avatars){
+                var avatarName=avatar.Name;
+                var avatarIndexRect=avatar.IndexRect;
+                //把序号框位置换算到头像位置
+                var headRect=ra.DeriveCrop(new Rect(avatarIndexRect.X-65-xOffset, avatarIndexRect.Y-4, 14, 25)).SrcBitmap;
+                if (IsDead(headRect) == 1)
+                {
+                    Logger.LogInformation($"{avatarName}阵亡");
+                    deadFlag = 1;
+                    break;
+                }
+            }
+            if (deadFlag == 1){
+                break;
+            }
+        }
+        //onDeath()包含了第二层判断，所以放在第一层判断全部执行完毕之后后
+        if (deadFlag == 1){
+            onDeath();
+        }
+
+
         return false;
     }
 
     private Task AutoEatRecoveryHpTask(CancellationToken ct)
     {
-        return new Task(async () =>
+        return Task.Run(async () =>
         {
             if (!_config.AutoEat)
             {
@@ -592,7 +730,7 @@ public class AutoDomainTask : ISoloTask
             {
                 Logger.LogDebug(e, "红血自动吃药检测时发生异常");
             }
-        }, ct);
+        });
     }
 
     private bool IsTakeFood()
