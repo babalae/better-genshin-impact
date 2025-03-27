@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.Test.Dataset;
 public class AvatarClassifyTransparentGen
 {
     // 基础图像文件夹
-    private const string BaseDir = @"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\分类器\";
+    private const string BaseDir = @"E:\HuiTask\更好的原神\侧面头像";
 
     // 背景图像文件夹
     private static readonly string BackgroundDir = Path.Combine(BaseDir, "background");
@@ -27,13 +27,13 @@ public class AvatarClassifyTransparentGen
         // 读取基础图像
         // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Mizuki.png", SearchOption.TopDirectoryOnly).ToList();
-        // List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Iansan.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles2);
-        // List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Citlali.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles3);
-        // List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Lanyan.png", SearchOption.TopDirectoryOnly).ToList();
-        // sideImageFiles.AddRange(sideImageFiles4);
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Varesa.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Iansan.png", SearchOption.TopDirectoryOnly).ToList();
+        sideImageFiles.AddRange(sideImageFiles2);
+        List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_AmborCostumeWic.png", SearchOption.TopDirectoryOnly).ToList();
+        sideImageFiles.AddRange(sideImageFiles3);
+        List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Ambor.png", SearchOption.TopDirectoryOnly).ToList();
+        sideImageFiles.AddRange(sideImageFiles4);
         // List<string> sideImageFiles5 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_XianglingCostumeWinter.png", SearchOption.TopDirectoryOnly).ToList();
         // sideImageFiles.AddRange(sideImageFiles5);
         // List<string> sideImageFiles6 = Directory.GetFiles(Path.Combine(BaseDir, SideSrcTransportDir), "UI_AvatarIcon_Side_Mavuika.png", SearchOption.TopDirectoryOnly).ToList();
