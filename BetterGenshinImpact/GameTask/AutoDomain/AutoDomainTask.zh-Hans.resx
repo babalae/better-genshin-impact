@@ -120,9 +120,6 @@
   <data name="挑战达成" xml:space="preserve">
     <value>[挑战,达成]</value>
   </data>
-  <data name="挑战达成1" xml:space="preserve">
-    <value>[挑战,达成]</value>
-  </data>
   <data name="自动退出" xml:space="preserve">
     <value>[自动,退出]</value>
   </data>
