@@ -50,7 +50,7 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
             using Mat mat = mat4.CvtColor(ColorConversionCodes.RGBA2RGB);
 
             //
-            PaddleOcrService sut = paddleOcrServices.GetOrAdd(cultureInfoName,  name => new PaddleOcrService(name));
+            PaddleOcrService sut = paddleOcrServices.GetOrAdd(cultureInfoName, name => { lock (paddleOcrServices) { return new PaddleOcrService(name); } });
             string actual = sut.Ocr(mat).Replace(" ", "");
 
             //
