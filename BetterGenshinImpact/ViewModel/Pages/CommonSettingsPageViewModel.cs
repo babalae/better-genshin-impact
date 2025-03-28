@@ -1,10 +1,16 @@
+using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -12,11 +18,14 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.View.Converters;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
 using Wpf.Ui;
 
@@ -46,6 +55,18 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public AllConfig Config { get; set; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
+
+    [ObservableProperty]
+    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
+        .ToFrozenDictionary(
+            c => c,
+            c =>
+            {
+                CultureInfo.CurrentUICulture = new CultureInfo(c);
+                var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
+                return stringLocalizer["简体中文"].ToString();
+            }
+        );
 
     public string SelectedCountry
     {
@@ -231,5 +252,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         var keyBindingsWindow = KeyBindingsWindow.Instance;
         keyBindingsWindow.Owner = Application.Current.MainWindow;
         keyBindingsWindow.ShowDialog();
+    }
+
+    [RelayCommand]
+    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
+    {
+        await OcrFactory.ChangeCulture(type.Key);
     }
 }

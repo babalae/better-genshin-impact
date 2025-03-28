@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -19,6 +23,15 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 public class ClaimBattlePassRewardsTask
 {
     private readonly ReturnMainUiTask _returnMainUiTask = new();
+
+    private readonly string claimAllLocalizedString;
+
+    public ClaimBattlePassRewardsTask()
+    {
+        IStringLocalizer<ClaimBattlePassRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimBattlePassRewardsTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.claimAllLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "一键");
+    }
 
     public async Task Start(CancellationToken ct)
     {
@@ -74,7 +87,7 @@ public class ClaimBattlePassRewardsTask
     {
         using var ra = CaptureToRectArea();
         var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.18)));
-        var wt = ocrList.FirstOrDefault(txt => txt.Text.Contains("一键"));
+        var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.claimAllLocalizedString));
         if (wt != null)
         {
             wt.Click();

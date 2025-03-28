@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Microsoft.Extensions.Localization;
+using System.Globalization;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -21,6 +24,15 @@ public class GoToCraftingBenchTask
     private readonly int _retryTimes = 2;
 
     private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
+
+    private readonly string craftLocalizedString;
+
+    public GoToCraftingBenchTask()
+    {
+        IStringLocalizer<GoToCraftingBenchTask> stringLocalizer = App.GetService<IStringLocalizer<GoToCraftingBenchTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.craftLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "合成");
+    }
 
     public async Task Start(string country, CancellationToken ct)
     {
@@ -102,7 +114,7 @@ public class GoToCraftingBenchTask
                 AutoSkipEnabled = true,
                 AutoRunEnabled = country != "枫丹",
             },
-            EndAction = region => Bv.FindFAndPress(region, "合成")
+            EndAction = region => Bv.FindFAndPress(region, text: this.craftLocalizedString)
         };
         await pathingTask.Pathing(task);
 
@@ -144,7 +156,7 @@ public class GoToCraftingBenchTask
     private async Task<bool> TryPressCrafting( CancellationToken ct)
     {
         using var ra1 = CaptureToRectArea();
-        var res = Bv.FindFAndPress(ra1, "合成");
+        var res = Bv.FindFAndPress(ra1, text: this.craftLocalizedString);
         if (res)
         {
             await Delay(1000, ct);

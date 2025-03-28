@@ -16,7 +16,6 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,7 +30,7 @@ using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
-using Vanara.Extensions;
+using System.Collections.Frozen;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -120,15 +119,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoFishingButtonText = "启动";
 
     [ObservableProperty]
-    private Dictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
+    private FrozenDictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
         .Cast<FishingTimePolicy>()
-        .ToDictionary(
+        .ToFrozenDictionary(
             e => (Enum)e,
             e => e.GetType()
                 .GetField(e.ToString())?
                 .GetCustomAttribute<DescriptionAttribute>()?
                 .Description ?? e.ToString());
-    
+
     private bool saveScreenshotOnKeyTick;
     public bool SaveScreenshotOnKeyTick
     {

@@ -21,13 +21,30 @@ public class PaddleOcrService : IOcrService
     /// </summary>
     private readonly PaddleOcrAll _paddleOcrAll;
 
-    public PaddleOcrService()
+    public PaddleOcrService(string? cultureInfoName = null)
     {
         var path = Global.Absolute(@"Assets\Model\PaddleOcr");
-        var localDetModel = DetectionModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_det"), ModelVersion.V4);
-        var localClsModel = ClassificationModel.FromDirectory(Path.Combine(path, "ch_ppocr_mobile_v2.0_cls"));
-        var localRecModel = RecognizationModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_rec"), Path.Combine(path, "ppocr_keys_v1.txt"), ModelVersion.V4);
-        var model = new FullOcrModel(localDetModel, localClsModel, localRecModel);
+        DetectionModel localDetModel;
+        RecognizationModel localRecModel;
+        FullOcrModel model;
+        switch (cultureInfoName)
+        {
+            case "zh-Hant":
+                localDetModel = DetectionModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_det"), ModelVersion.V4);   // 和简中共用一下det
+                localRecModel = RecognizationModel.FromDirectory(Path.Combine(path, "chinese_cht_PP-OCRv3_rec_infer"), Path.Combine(path, "chinese_cht_dict.txt"), ModelVersion.V3);
+                //model = OnlineFullModels.TraditionalChineseV3.DownloadAsync().Result;
+                break;
+            case "fr":
+                localDetModel = DetectionModel.FromDirectory(Path.Combine(path, "en_PP-OCRv3_det_infer"), ModelVersion.V3);
+                localRecModel = RecognizationModel.FromDirectory(Path.Combine(path, "latin_PP-OCRv3_rec_infer"), Path.Combine(path, "latin_dict.txt"), ModelVersion.V3);
+                break;
+            default:
+                localDetModel = DetectionModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_det"), ModelVersion.V4);
+                localRecModel = RecognizationModel.FromDirectory(Path.Combine(path, "ch_PP-OCRv4_rec"), Path.Combine(path, "ppocr_keys_v1.txt"), ModelVersion.V4);
+
+                break;
+        }
+        model = new FullOcrModel(localDetModel, localRecModel);
         // Action<PaddleConfig> device = TaskContext.Instance().Config.InferenceDevice switch
         // {
         //     "CPU" => PaddleDevice.Onnx(),
