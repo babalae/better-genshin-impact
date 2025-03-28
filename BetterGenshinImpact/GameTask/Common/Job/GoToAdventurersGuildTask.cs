@@ -13,6 +13,9 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.Helpers;
+using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -23,6 +26,19 @@ public class GoToAdventurersGuildTask
     private readonly int _retryTimes = 1;
 
     private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
+
+    private readonly string dailyLocalizedString;
+    private readonly string catherineLocalizedString;
+    private readonly string expeditionLocalizedString;
+
+    public GoToAdventurersGuildTask()
+    {
+        IStringLocalizer<GoToAdventurersGuildTask> stringLocalizer = App.GetService<IStringLocalizer<GoToAdventurersGuildTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日");
+        this.catherineLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "凯瑟琳");
+        this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
+    }
 
     public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null)
     {
@@ -36,7 +52,7 @@ public class GoToAdventurersGuildTask
                 {
                     await new SwitchPartyTask().Start(dailyRewardPartyName, ct);
                 }
-                
+
                 // F1领取奖励
                 await new ClaimEncounterPointsRewardsTask().Start(ct);
 
@@ -68,7 +84,7 @@ public class GoToAdventurersGuildTask
         await GoToAdventurersGuild(country, ct);
 
         // 每日
-        var res = await _chooseTalkOptionTask.SingleSelectText("每日", ct, 10, true);
+        var res = await _chooseTalkOptionTask.SingleSelectText(this.dailyLocalizedString, ct, 10, true);
         if (res == TalkOptionRes.FoundAndClick)
         {
             Logger.LogInformation("▶ {Text}", "领取『每日委托』奖励！");
@@ -82,7 +98,7 @@ public class GoToAdventurersGuildTask
             // 结束后重新打开
             await Delay(1200, ct);
             var ra = CaptureToRectArea();
-            if (!Bv.FindFAndPress(ra, "凯瑟琳"))
+            if (!Bv.FindFAndPress(ra, text: this.catherineLocalizedString))
             {
                 throw new Exception("未找与凯瑟琳对话交互按钮");
             }
@@ -97,7 +113,7 @@ public class GoToAdventurersGuildTask
         }
 
         // 探索
-        res = await _chooseTalkOptionTask.SingleSelectText("探索", ct, 10, true);
+        res = await _chooseTalkOptionTask.SingleSelectText(this.expeditionLocalizedString, ct, 10, true);
         if (res == TalkOptionRes.FoundAndClick)
         {
             await Delay(500, ct);
@@ -136,7 +152,7 @@ public class GoToAdventurersGuildTask
                 Enabled = true,
                 AutoSkipEnabled = true
             },
-            EndAction = region => Bv.FindFAndPress(region, "凯瑟琳")
+            EndAction = region => Bv.FindFAndPress(region, text: this.catherineLocalizedString)
         };
         await pathingTask.Pathing(task);
 

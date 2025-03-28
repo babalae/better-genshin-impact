@@ -29,7 +29,6 @@ using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using SharpCompress;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -997,7 +996,14 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName).ForEach(OnDeleteScript);
+        var toBeDeletedProjects = SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName);
+        if (toBeDeletedProjects != null)
+        {
+            foreach (var project in toBeDeletedProjects)
+            {
+                OnDeleteScript(project);
+            }      
+        }
     }
 
     [RelayCommand]
