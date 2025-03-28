@@ -13,7 +13,7 @@ public class ConditionDefinition
     // 谓语选项
     public List<string> PredicateOptions { get; set; } = ["包含"];
 
-    public List<string>? ObjectOptions { get; set; } // 宾语选项
+    public IEnumerable<string>? ObjectOptions { get; set; } // 宾语选项
 
     public List<string>? ResultOptions { get; set; } // 结果选项 为空使用文本框
 }
