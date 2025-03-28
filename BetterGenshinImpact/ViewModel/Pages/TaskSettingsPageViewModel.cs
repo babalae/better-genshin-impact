@@ -16,7 +16,6 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,12 +30,7 @@ using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
-using Vanara.Extensions;
 using System.Collections.Frozen;
-using System.Globalization;
-using Microsoft.Extensions.Localization;
-using BetterGenshinImpact.View.Converters;
-using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -133,18 +127,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .GetField(e.ToString())?
                 .GetCustomAttribute<DescriptionAttribute>()?
                 .Description ?? e.ToString());
-
-    [ObservableProperty]
-    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
-        .ToFrozenDictionary(
-            c => c,
-            c =>
-            {
-                CultureInfo.CurrentUICulture = new CultureInfo(c);
-                var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
-                return stringLocalizer["简体中文"].ToString();
-            }
-        );
 
     private bool saveScreenshotOnKeyTick;
     public bool SaveScreenshotOnKeyTick
@@ -433,11 +415,5 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private void OnOpenLocalScriptRepo()
     {
         _autoFightViewModel.OnOpenLocalScriptRepo();
-    }
-
-    [RelayCommand]
-    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
-    {
-        await OcrFactory.ChangeCulture(type.Key);
     }
 }
