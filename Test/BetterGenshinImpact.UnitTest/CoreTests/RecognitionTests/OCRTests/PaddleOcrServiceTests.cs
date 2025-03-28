@@ -7,14 +7,17 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using System.Drawing;
 using OpenCvSharp.Extensions;
-using System.Text.RegularExpressions;
-using System.Collections.Concurrent;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
 {
+    [Collection("Paddle Collection")]
     public partial class PaddleOcrServiceTests
     {
-        private static readonly ConcurrentDictionary<string, PaddleOcrService> paddleOcrServices = new ConcurrentDictionary<string, PaddleOcrService>();
+        private readonly PaddleFixture paddle;
+        public PaddleOcrServiceTests(PaddleFixture paddle)
+        {
+            this.paddle = paddle;
+        }
 
         [Theory]
         [InlineData("zh-Hans", "挑战,达成", "[挑战,达成]")]
@@ -50,7 +53,7 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
             using Mat mat = mat4.CvtColor(ColorConversionCodes.RGBA2RGB);
 
             //
-            PaddleOcrService sut = paddleOcrServices.GetOrAdd(cultureInfoName, name => { lock (paddleOcrServices) { return new PaddleOcrService(name); } });
+            PaddleOcrService sut = paddle.Get(cultureInfoName);
             string actual = sut.Ocr(mat).Replace(" ", "");
 
             //

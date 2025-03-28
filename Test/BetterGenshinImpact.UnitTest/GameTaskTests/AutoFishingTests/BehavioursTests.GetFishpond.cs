@@ -30,9 +30,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { });
+            var blackboard = new Blackboard(Predictor, sleep: i => { });
 
             //
             GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
@@ -58,9 +56,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { });
+            var blackboard = new Blackboard(Predictor, sleep: i => { });
             blackboard.chooseBaitFailures = chooseBaitfailures.ToList();
             blackboard.throwRodNoBaitFishFailures = throwRodNoTargetFishfailures.ToList();
 
@@ -93,9 +89,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { });
+            var blackboard = new Blackboard(Predictor, sleep: i => { });
 
             //
             GetFishpond sut = new GetFishpond("-", blackboard, new FakeLogger(), false, new FakeTimeProvider(), drawContent: new FakeDrawContent());
