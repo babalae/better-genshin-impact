@@ -259,7 +259,7 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(100);
                     Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
                     Thread.Sleep(1600);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                 }
                 else if ("苍白的遗荣".Equals(_taskParam.DomainName))
                 {
@@ -279,7 +279,8 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
 
-                Simulation.SendInput.SimulateAction(GIActions.Drop, KeyType.KeyUp); // 可能爬上去了，X键下来
+                await Delay(100, _ct);
+                Simulation.SendInput.SimulateAction(GIActions.Drop); // 可能爬上去了，X键下来
                 await Delay(3000, _ct); // 站稳
             }
             else
