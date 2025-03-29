@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -14,7 +15,7 @@ public class CombatScriptBag(List<CombatScript> combatScripts)
     {
     }
 
-    public List<CombatCommand> FindCombatScript(Avatar[] avatars)
+    public List<CombatCommand> FindCombatScript(ReadOnlyCollection<Avatar> avatars)
     {
         foreach (var combatScript in CombatScripts)
         {
@@ -26,11 +27,9 @@ public class CombatScriptBag(List<CombatScript> combatScripts)
                     matchCount++;
                 }
 
-                if (matchCount == avatars.Length)
-                {
-                    Logger.LogInformation("匹配到战斗脚本：{Name}", combatScript.Name);
-                    return combatScript.CombatCommands;
-                }
+                if (matchCount != avatars.Count) continue;
+                Logger.LogInformation("匹配到战斗脚本：{Name}", combatScript.Name);
+                return combatScript.CombatCommands;
             }
 
             combatScript.MatchCount = matchCount;

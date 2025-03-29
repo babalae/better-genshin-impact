@@ -28,14 +28,13 @@ public class CombatCommand
 
             var parameters = command.Substring(startIndex + 1, endIndex - startIndex - 1);
             Args = [..parameters.Split(',', StringSplitOptions.TrimEntries)];
-
         }
         else
         {
             Method = Method.GetEnumByCode(command);
             Args = [];
         }
-        
+
         // 校验参数
         if (Method == Method.Walk)
         {
@@ -71,7 +70,12 @@ public class CombatCommand
         if (Name == CombatScriptParser.CurrentAvatarName)
         {
             // 如果是当前角色，不进行角色切换
-            avatar = combatScenes.Avatars[0]; // 随便取一个角色
+            var avatarName = combatScenes.CurrentAvatar();
+            avatar = avatarName is not null ? combatScenes.SelectAvatar(avatarName) : combatScenes.SelectAvatar(1);
+            if (avatar == null)
+            {
+                return;
+            }
         }
         else
         {
@@ -81,6 +85,7 @@ public class CombatCommand
             {
                 return;
             }
+
             // 非宏类脚本，等待切换角色成功
             if (Method != Method.Wait
                 && Method != Method.MouseDown
@@ -94,7 +99,7 @@ public class CombatCommand
                 avatar.Switch();
             }
         }
-        
+
         Execute(avatar);
     }
 
@@ -103,6 +108,22 @@ public class CombatCommand
         if (Method == Method.Skill)
         {
             var hold = Args != null && Args.Contains("hold");
+            var wait = Args != null && Args.Contains("wait");
+            var fast = Args != null && Args.Contains("fast");
+            if (fast)
+            {
+                // 快速跳过e
+                if (!avatar.IsSkillReady(true))
+                {
+                    return;
+                }
+            }
+            else if (wait)
+            {
+                // 等待e结束,同步等待
+                avatar.WaitSkillCd().Wait();
+            }
+
             avatar.UseSkill(hold);
         }
         else if (Method == Method.Burst)

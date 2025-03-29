@@ -119,7 +119,7 @@ public partial class PathingConditionConfig : ObservableObject
         {
             if (avatarCondition.Result == "循环短E" || avatarCondition.Result == "循环长E")
             {
-                foreach (var avatar in combatScenes.Avatars)
+                foreach (var avatar in combatScenes.GetAvatars())
                 {
                     if (avatarCondition is { Object: not null } && avatarCondition.Object.Contains(avatar.Name))
                     {
@@ -127,12 +127,12 @@ public partial class PathingConditionConfig : ObservableObject
                         if (avatarCondition.Result == "循环长E")
                         {
                             partyConfig.GuardianElementalSkillLongPress = true;
-                            partyConfig.GuardianElementalSkillSecondInterval = avatar.SkillHoldCd.ToString(CultureInfo.CurrentCulture);
+                            partyConfig.GuardianElementalSkillSecondInterval = avatar.CombatAvatar.SkillHoldCd.ToString(CultureInfo.CurrentCulture);
                         }
                         else
                         {
                             partyConfig.GuardianElementalSkillLongPress = false;
-                            partyConfig.GuardianElementalSkillSecondInterval = avatar.SkillCd.ToString(CultureInfo.CurrentCulture);
+                            partyConfig.GuardianElementalSkillSecondInterval = avatar.CombatAvatar.SkillCd.ToString(CultureInfo.CurrentCulture);
                         }
                         break;
                     }
@@ -149,9 +149,9 @@ public partial class PathingConditionConfig : ObservableObject
         {
             if (avatarCondition.Result == "作为主要行走角色")
             {
-                foreach (var avatar in combatScenes.Avatars)
+                foreach (var avatar in combatScenes.GetAvatars())
                 {
-                    if (avatarCondition is { Object: not null } && avatarCondition.Object.Contains(avatar.Name))
+                    if (avatarCondition is not null && avatarCondition.Object.Contains(avatar.Name))
                     {
                         partyConfig.MainAvatarIndex = avatar.Index.ToString();
                         break;

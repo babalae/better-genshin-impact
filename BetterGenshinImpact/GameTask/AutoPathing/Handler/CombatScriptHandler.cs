@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
@@ -29,9 +27,9 @@ public class CombatScriptHandler : IActionHandler
 
 
             // 提前校验是否存在策略要求的角色
-            if (!combatScript.AvatarNames.Contains("当前角色"))
+            if (!combatScript.AvatarNames.Contains(CombatScriptParser.CurrentAvatarName))
             {
-                bool hasAvatar = combatScenes.Avatars.Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
+                bool hasAvatar = combatScenes.GetAvatars().Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
                 if (!hasAvatar)
                 {
                     Logger.LogError("简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：{AvatarNames}", string.Join(", ", combatScript.AvatarNames));

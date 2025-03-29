@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -9,9 +8,9 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -29,14 +28,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 public class Avatar
 {
     /// <summary>
+    /// 配置文件中的角色信息
+    /// </summary>
+    public readonly CombatAvatar CombatAvatar;
+
+    /// <summary>
     /// 角色名称 中文
     /// </summary>
     public string Name { get; set; }
-
-    /// <summary>
-    /// 角色名称 英文
-    /// </summary>
-    public string? NameEn { get; set; }
 
     /// <summary>
     /// 队伍内序号
@@ -44,29 +43,19 @@ public class Avatar
     public int Index { get; set; }
 
     /// <summary>
-    /// 武器类型
+    /// 最近一次OCR识别出的CD到期时间
     /// </summary>
-    public string Weapon { get; set; }
+    private DateTime OcrSkillCd { get; set; }
 
     /// <summary>
-    /// 元素战技CD
+    /// 手动配置的技能CD，有它就不使用OCR,小于0为自动
     /// </summary>
-    public double SkillCd { get; set; }
-
-    /// <summary>
-    /// 长按元素战技CD
-    /// </summary>
-    public double SkillHoldCd { get; set; }
+    public double ManualSkillCd { get; set; }
 
     /// <summary>
     /// 最近一次使用元素战技的时间
     /// </summary>
     public DateTime LastSkillTime { get; set; }
-
-    /// <summary>
-    /// 元素爆发CD
-    /// </summary>
-    public double BurstCd { get; set; }
 
     /// <summary>
     /// 元素爆发是否就绪
@@ -93,21 +82,19 @@ public class Avatar
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
 
-
-    public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect)
+    public static string? LastActiveAvatar { get; internal set; } = null;
+    
+    
+    public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
         CombatScenes = combatScenes;
         Name = name;
         Index = index;
         NameRect = nameRect;
-
-        var ca = DefaultAutoFightConfig.CombatAvatarMap[name];
-        NameEn = ca.NameEn;
-        Weapon = ca.Weapon;
-        SkillCd = ca.SkillCd;
-        SkillHoldCd = ca.SkillHoldCd;
-        BurstCd = ca.BurstCd;
+        CombatAvatar = DefaultAutoFightConfig.CombatAvatarMap[name];
+        ManualSkillCd = manualSkillCd;
     }
+
 
     /// <summary>
     /// 是否存在角色被击败
@@ -159,7 +146,7 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
             if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
             {
                 return;
@@ -211,11 +198,12 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
             if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
             {
                 if (needLog && i > 0)
                 {
+                    LastActiveAvatar = Name;
                     Logger.LogInformation("成功切换角色:{Name}", Name);
                 }
 
@@ -261,7 +249,7 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
             if (IsActive(region) && notActiveCount == 3)
             {
                 return;
@@ -344,7 +332,9 @@ public class Avatar
                 ContourApproximationModes.ApproxSimple);
             if (contours.Length > 0)
             {
-                var boxes = contours.Select(Cv2.BoundingRect).Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale).OrderByDescending(w => w.Width).ToList();
+                var boxes = contours.Select(Cv2.BoundingRect)
+                    .Where(w => w.Width >= 20 * assetScale && w.Height >= 18 * assetScale)
+                    .OrderByDescending(w => w.Width).ToList();
                 if (boxes.Count is not 0)
                 {
                     IndexRect = boxes.First();
@@ -357,7 +347,8 @@ public class Avatar
             // 剪裁出IndexRect区域
             var teamRa = region.DeriveCrop(AutoFightAssets.Instance.TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
-            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width, IndexRect.Height));
+            var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width,
+                IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
             var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
@@ -429,22 +420,36 @@ public class Avatar
             }
             else
             {
-                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyPress);
+                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
             }
 
             Sleep(200, Ct);
 
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
+            ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
             var cd = GetSkillCurrentCd(region);
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
-                // todo 把cd加入执行队列
-                LastSkillTime = DateTime.UtcNow;
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// 使用完元素战技的回调,注意,不会在这里检测是不是需要跑七天神像
+    /// </summary>
+    /// <returns>当前技能CD</returns>
+    public double AfterUseSkill(ImageRegion? givenRegion = null)
+    {
+        LastSkillTime = DateTime.UtcNow;
+        if (ManualSkillCd > 0)
+        {
+            return GetSkillCdSeconds();
+        }
+
+        var region = givenRegion ?? CaptureToRectArea();
+        return GetSkillCurrentCd(region);
     }
 
     /// <summary>
@@ -452,13 +457,20 @@ public class Avatar
     /// 右下 267x132
     /// 77x77
     /// </summary>
-    public double GetSkillCurrentCd(ImageRegion imageRegion)
+    private double GetSkillCurrentCd(ImageRegion imageRegion)
     {
         var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
         var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
-        return StringUtils.TryParseDouble(text);
+        var cd = StringUtils.TryParseDouble(text);
+        if (cd > 0 && cd <= CombatAvatar.SkillCd)
+        {
+            OcrSkillCd = DateTime.UtcNow.AddSeconds(cd);
+        }
+
+        return cd;
     }
+
 
     /// <summary>
     /// 使用元素爆发 Q
@@ -479,7 +491,7 @@ public class Avatar
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
-            var notActiveCount = CombatScenes.Avatars.Count(avatar => !avatar.IsActive(region));
+            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
             if (notActiveCount == 0)
             {
                 // isBurstReleased = true;
@@ -589,6 +601,84 @@ public class Avatar
     }
 
     /// <summary>
+    ///
+    /// 根据cd推算E技能是否好了
+    /// </summary>
+    /// <param name="skillCd">强制指定技能CD</param>
+    /// <param name="printLog">log是否输出</param>
+    /// <returns>是否好了</returns>
+    public bool IsSkillReady(bool printLog = false)
+    {
+        var cd = GetSkillCdSeconds();
+        if (cd > 0)
+        {
+            if (printLog)
+            {
+                Logger.LogInformation("{Name}的E技能未准备好,CD还有{Seconds}秒", Name, Math.Round(cd, 2));
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    ///  计算上一次使用技能到现在还剩下多长时间的cd
+    /// </summary>
+    /// <returns></returns>
+    public double GetSkillCdSeconds()
+    {
+        switch (ManualSkillCd)
+        {
+            case < 0:
+            {
+                var now = DateTime.UtcNow;
+                // 若未经过OCR的技能释放,上次时间加上最长的技能时间
+                var maxCd = Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd);
+                var target =
+                    LastSkillTime >= OcrSkillCd
+                        ? LastSkillTime.AddSeconds(Math.Max(CombatAvatar.SkillHoldCd, CombatAvatar.SkillCd))
+                        : OcrSkillCd;
+                var result = now > target ? 0d : (target - now).TotalSeconds;
+                if (!(result > maxCd)) return result;
+                Logger.LogWarning("{Name}的当前技能CD大于其最大技能CD{MaxCd}。如果你没有调整系统时间的话，这是一个bug。", Name, maxCd);
+                return maxCd;
+            }
+            case > 0:
+            {
+                // 用户设置，所以直接通过上次释放技能的时间计算
+                var dif = DateTime.UtcNow - LastSkillTime;
+                if (ManualSkillCd > dif.TotalSeconds)
+                {
+                    return ManualSkillCd - dif.TotalSeconds;
+                }
+
+                break;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// 等待技能CD
+    /// </summary>
+    /// <param name="ct">CancellationToken</param>
+    public async Task WaitSkillCd(CancellationToken ct = default)
+    {
+        // 获取CD时间
+        if (IsSkillReady())
+        {
+            return;
+        }
+
+        var s = GetSkillCdSeconds() + 0.2;
+        Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, Math.Round(s, 2));
+        await Delay((int)Math.Ceiling(s * 1000), ct);
+    }
+
+    /// <summary>
     /// 跳跃
     /// </summary>
     public void Jump()
@@ -637,7 +727,7 @@ public class Avatar
                 }
 
                 // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
-                double rate = cnt % 10 < 5 ? 0 : 4.5;//每500ms做一轮上下移动。
+                double rate = cnt % 10 < 5 ? 0 : 4.5; //每500ms做一轮上下移动。
                 cnt++;
                 Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
                 ms -= 50;
@@ -786,5 +876,60 @@ public class Avatar
                 Simulation.SendInput.Keyboard.KeyPress(vk);
                 break;
         }
+    }
+
+    /// <summary>
+    /// 从配置字符串中查找角色cd
+    /// 仅有角色名时返回 -1 ,没找到角色返回null
+    /// </summary>
+    /// <param name="input">序列</param>
+    /// <param name="avatarName">角色名</param>
+    /// <returns></returns>
+    public static double? ParseActionSchedulerByCd(string input, string avatarName)
+    {
+        if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(avatarName))
+            return null;
+
+        var searchIndex = input.Length - 1;
+
+        while (true)
+        {
+            // 逆向查找角色名最后一次出现的位置
+            var foundIndex = input.LastIndexOf(avatarName, searchIndex, StringComparison.Ordinal);
+            if (foundIndex == -1) return null;
+
+            // 验证前向边界（分号或字符串起点）
+            var startValid = foundIndex == 0 ||
+                             input[foundIndex - 1] == ';';
+
+            // 验证后向边界（逗号或分号/字符串终点）
+            var endValid = foundIndex + avatarName.Length == input.Length ||
+                           input[foundIndex + avatarName.Length] == ',' ||
+                           input[foundIndex + avatarName.Length] == ';';
+
+            if (startValid && endValid)
+            {
+                var valueStart = foundIndex + avatarName.Length;
+                // 处理逗号后的数值部分
+                if (valueStart >= input.Length || input[valueStart] != ',') return -1;
+                var valueEnd = input.IndexOf(';', valueStart);
+                if (valueEnd == -1) valueEnd = input.Length;
+
+                if (double.TryParse(input.AsSpan(valueStart + 1, valueEnd - valueStart - 1),
+                        out var result))
+                {
+                    return result;
+                }
+
+                // 存在角色名但没有数值的情况
+                return -1;
+            }
+
+            // 更新搜索范围继续查找
+            searchIndex = foundIndex - 1;
+            if (searchIndex < 0) break;
+        }
+
+        return null;
     }
 }

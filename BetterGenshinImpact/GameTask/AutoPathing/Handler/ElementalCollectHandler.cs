@@ -29,7 +29,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
         // 筛选出对应元素的角色列表
         var elementalCollectAvatars = ElementalCollectAvatarConfigs.Lists.Where(x => x.ElementalType == elementalType).ToList();
         // 循环遍历角色列表
-        foreach (var combatScenesAvatar in combatScenes.Avatars)
+        foreach (var combatScenesAvatar in combatScenes.GetAvatars())
         {
             // 判断是否为对应元素的角色
             var elementalCollectAvatar = elementalCollectAvatars.FirstOrDefault(x => x.Name == combatScenesAvatar.Name);
@@ -47,16 +47,8 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
                 }
                 else if (elementalCollectAvatar.ElementalSkill)
                 {
-                    // 获取CD时间
-                    var cdTime = combatScenesAvatar.SkillCd * 1000;
-                    var cdRemain = (DateTime.UtcNow - elementalCollectAvatar.LastUseSkillTime).TotalMilliseconds;
-                    if (cdRemain < cdTime)
-                    {
-                        var ms = (int)Math.Ceiling(cdTime - cdRemain) + 100;
-                        Logger.LogInformation("{Name}的E技能CD未结束，等待{Milliseconds}ms", combatScenesAvatar.Name, ms);
-                        await Delay(ms, ct);
-                    }
 
+                    await combatScenesAvatar.WaitSkillCd(ct);
                     combatScenesAvatar.UseSkill();
                     elementalCollectAvatar.LastUseSkillTime = DateTime.UtcNow;
                 }
