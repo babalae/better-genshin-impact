@@ -48,4 +48,10 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     {
         AutoFightViewModel.OnOpenFightFolder();
     }
+    
+    [RelayCommand]
+    private void OnAutoFightEnabledChecked()
+    {
+        PathingConfig.Enabled = true;
+    }
 }
