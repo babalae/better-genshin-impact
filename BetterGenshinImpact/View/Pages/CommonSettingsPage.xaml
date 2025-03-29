@@ -21,6 +21,49 @@
                       FontTypography="BodyStrong"
                       Text="软件设置" />
 
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon LocalLanguage24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="游戏语言"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="Game Language"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="200"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding LanguageDict}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"
+                              SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding GameLangSelectionChangedCommand}"
+                                                       CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
+                </Grid>
+
+            </ui:CardControl.Header>
+        </ui:CardControl>
+
+
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon SquareHintSparkles24}">
@@ -438,8 +481,8 @@
                       FontTypography="BodyStrong"
                       Text="通用功能设置" />
         <!--  按键绑定  -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon KeyboardMouse16}">
-            <ui:CardControl.Header>
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon KeyboardMouse16}">
+            <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -457,17 +500,45 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你有游戏内改建需求，请在此配置对应的改键"
+                                  Text="如果你有游戏内改键需求，请在此配置对应的改键"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
-                               Margin="0,0,36,0"
+                               Margin="0,0,20,0"
                                Command="{Binding OpenKeyBindingsWindowCommand}"
                                Content="配置" />
                 </Grid>
-            </ui:CardControl.Header>
-        </ui:CardControl>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用全局按键映射"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="使按键绑定设置对外部脚本生效"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.KeyBindingsConfig.GlobalKeyMappingEnabled}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
         <!--  大地图传送相关设置  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
@@ -806,37 +877,7 @@
             </ui:CardControl.Header>
         </ui:CardControl>
 
-        <!--新增全局按键映射功能-->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Symbol=KeyboardMouse16}">
-            <ui:CardControl.Header>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="启用全局按键映射"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="使按键绑定设置对外部脚本生效"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.KeyBindingsConfig.GlobalKeyMappingEnabled}" />
-                </Grid>
 
-            </ui:CardControl.Header>
-        </ui:CardControl>
         <!--  其他设置  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
@@ -860,48 +901,12 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="设定一些其他功能的配置，如语言Language、失去焦点自动恢复等"
+                                  Text="设定一些其他功能的配置，失去焦点自动恢复等"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="游戏语言"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Game Language"
-                                  TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Width="200"
-                              Margin="0,0,36,0"
-                              ItemsSource="{Binding LanguageDict}"
-                              SelectedValuePath="Key"
-                              DisplayMemberPath="Value"
-                              SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
-                              >
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="SelectionChanged">
-                                <b:InvokeCommandAction Command="{Binding GameLangSelectionChangedCommand}"
-                                                       CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}"/>
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                    </ComboBox>
-                </Grid>
+
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1011,7 +1016,7 @@
                 Margin="0,0,36,0"
                 IsChecked="{Binding Config.MaskWindowConfig.ShowLogBox, Mode=TwoWay}"/>
         </ui:CardControl>-->
-        
+
         <!-- About Option -->
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
