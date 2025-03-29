@@ -59,6 +59,8 @@ public class AutoDomainTask : ISoloTask
     private readonly string challengeCompletedLocalizedString;
     private readonly string autoLeavingLocalizedString;
     private readonly string skipLocalizedString;
+    private readonly string leyLineDisorderLocalizedString;
+    private readonly string clickanywheretocloseLocalizedString;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -78,6 +80,8 @@ public class AutoDomainTask : ISoloTask
         this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "挑战达成");
         this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "自动退出");
         this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
+        this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
+        this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
     }
 
     public async Task Start(CancellationToken ct)
@@ -382,7 +386,7 @@ public class AutoDomainTask : ISoloTask
             // }
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var done = ocrList.FirstOrDefault(txt => txt.Text.Contains("地脉异常") || txt.Text.Contains("点击任意") || txt.Text.Contains("位置关闭"));
+            var done = ocrList.FirstOrDefault(t => Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) || Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
             if (done != null)
             {
                 await Delay(1000, _ct);

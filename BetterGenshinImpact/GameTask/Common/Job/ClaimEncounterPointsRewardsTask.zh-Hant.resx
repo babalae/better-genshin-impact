@@ -118,6 +118,6 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="委托" xml:space="preserve">
-    <value>委[託,話]</value>
+    <value>委[託話]</value>
   </data>
 </root>

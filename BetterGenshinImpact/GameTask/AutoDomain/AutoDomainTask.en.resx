@@ -117,8 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="地脉异常" xml:space="preserve">
+    <value>Ley.*Line.*Disorder</value>
+  </data>
   <data name="挑战达成" xml:space="preserve">
-    <value>[Challenge,Completed]</value>
+    <value>(Challenge|Completed)</value>
+  </data>
+  <data name="点击任意位置关闭" xml:space="preserve">
+    <value>Click.*any.*where.*to.*close</value>
   </data>
   <data name="自动退出" xml:space="preserve">
     <value>Leaving</value>
