@@ -7,32 +7,42 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using System.Drawing;
 using OpenCvSharp.Extensions;
-using System.Text.RegularExpressions;
-using System.Collections.Concurrent;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
 {
+    [Collection("Paddle Collection")]
     public partial class PaddleOcrServiceTests
     {
-        private static readonly ConcurrentDictionary<string, PaddleOcrService> paddleOcrServices = new ConcurrentDictionary<string, PaddleOcrService>();
+        private readonly PaddleFixture paddle;
+        public PaddleOcrServiceTests(PaddleFixture paddle)
+        {
+            this.paddle = paddle;
+        }
 
         [Theory]
-        [InlineData("zh-Hans", "挑战,达成", "[挑战,达成]")]
+        [InlineData("zh-Hans", "挑战,达成", "挑战.*达成")]
         [InlineData("zh-Hans", "凯瑟琳")]
+        [InlineData("zh-Hans", "点击任意位置关闭")]
         [InlineData("en", "Daily")]
         [InlineData("en", "Katheryne")]
+        [InlineData("en", "Clickany where to   close", "Click.*any.*where.*to.*close")]
         [InlineData("zh-Hant", "凱瑟琳")]
-        [InlineData("zh-Hant", "委託", "委[託,話]")]
-        [InlineData("zh-Hant", "挑戰,達成", "[挑戰,達成]")]
-        [InlineData("zh-Hant", "自動,退出", "[自動,退出]")]
+        [InlineData("zh-Hant", "委託", "委[託話]")]
+        [InlineData("zh-Hant", "挑戰,達成", "挑戰.*達成")]
+        [InlineData("zh-Hant", "自動,退出", "自動.*退出")]
         [InlineData("zh-Hant", "跳過")]
+        [InlineData("zh-Hant", "地脈異常", "地[脈服][異翼昊]常")]
+        [InlineData("zh-Hant", "點擊任意位置關閉")]
         [InlineData("fr", "quotidien")]
         [InlineData("fr", "Expédition")]
-        [InlineData("fr", "Pêcher", "P[ê|é]cher")]
-        [InlineData("fr", "Synthèse", "Synth[è|é]se")]
-        [InlineData("fr", "Défi, terminé", "[Défi,terminé]")]
+        [InlineData("fr", "Pêcher", "P[êé]cher")]
+        [InlineData("fr", "Synthèse", "Synth[èé](se|tiser)")]
+        [InlineData("fr", "Synthétiser", "Synth[èé](se|tiser)")]
+        [InlineData("fr", "Défi, terminé", "Défi.*terminé")]
         [InlineData("fr", "Sortie")]
         [InlineData("fr", "Passer")]
+        [InlineData("fr", "Anomalie énergétique", "Anomalie.*énergétique")]
+        [InlineData("fr", "Cliquez pour fermer", "Cliquez.*pour.*fermer")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>
@@ -50,7 +60,7 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
             using Mat mat = mat4.CvtColor(ColorConversionCodes.RGBA2RGB);
 
             //
-            PaddleOcrService sut = paddleOcrServices.GetOrAdd(cultureInfoName, name => { lock (paddleOcrServices) { return new PaddleOcrService(name); } });
+            PaddleOcrService sut = paddle.Get(cultureInfoName);
             string actual = sut.Ocr(mat).Replace(" ", "");
 
             //

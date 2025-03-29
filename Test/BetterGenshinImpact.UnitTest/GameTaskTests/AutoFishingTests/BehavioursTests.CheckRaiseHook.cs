@@ -45,7 +45,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var sut = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                     .PushLeaf(() => new CheckThrowRod("检查抛竿结果", blackboard, logger, false, timeProvider))    // todo 后面串联一个召回率高的下杆中检测方法
-                    .PushLeaf(() => new FishBite("自动提竿", blackboard, logger, false, input, ocrService, drawContent))
+                    .PushLeaf(() => new FishBite("自动提竿", blackboard, logger, false, input, OcrService, drawContent))
                     .PushLeaf(() => new FishBiteTimeout("下杆超时检查", 15, logger, false, input, timeProvider))
                 .End()
                 .Build();

@@ -117,11 +117,17 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="地脉异常" xml:space="preserve">
+    <value>地脉异常</value>
+  </data>
   <data name="挑战达成" xml:space="preserve">
-    <value>[挑战,达成]</value>
+    <value>(挑战|达成)</value>
+  </data>
+  <data name="点击任意位置关闭" xml:space="preserve">
+    <value>点击任意位置关闭</value>
   </data>
   <data name="自动退出" xml:space="preserve">
-    <value>[自动,退出]</value>
+    <value>(自动|退出)</value>
   </data>
   <data name="跳过" xml:space="preserve">
     <value>跳过</value>
