@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
@@ -7,6 +9,8 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -19,6 +23,15 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 public class ClaimEncounterPointsRewardsTask
 {
     private readonly ReturnMainUiTask _returnMainUiTask = new();
+
+    private readonly string commissionsLocalizedString;
+
+    public ClaimEncounterPointsRewardsTask()
+    {
+        IStringLocalizer<ClaimEncounterPointsRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimEncounterPointsRewardsTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+    }
 
     public async Task Start(CancellationToken ct)
     {
@@ -51,9 +64,9 @@ public class ClaimEncounterPointsRewardsTask
         {
             using var ra = CaptureToRectArea();
 
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, 0, 360 * assetScale, ra.Height));
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, 0, 380 * assetScale, ra.Height));
 
-            var wt = ocrList.FirstOrDefault(txt => txt.Text.Contains("委托"));
+            var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.commissionsLocalizedString));
 
             if (wt != null)
             {

@@ -94,6 +94,7 @@ public class ElementalCollectAvatarConfigs
         // 雷
         new ElementalCollectAvatar("丽莎", ElementalType.Electro, true, true),
         new ElementalCollectAvatar("八重神子", ElementalType.Electro, true, false),
+        new ElementalCollectAvatar("瓦雷莎", ElementalType.Electro, true, false),
         new ElementalCollectAvatar("雷电将军", ElementalType.Electro, false, true),
         new ElementalCollectAvatar("久岐忍", ElementalType.Electro, false, true),
         new ElementalCollectAvatar("北斗", ElementalType.Electro, false, true),

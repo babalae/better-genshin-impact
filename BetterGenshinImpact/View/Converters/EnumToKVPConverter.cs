@@ -5,10 +5,7 @@ using System.Windows.Data;
 using System.Windows;
 using System.ComponentModel;
 using System.Globalization;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoFight.Script;
 using System.Reflection;
-using Vanara.Extensions.Reflection;
 
 namespace BetterGenshinImpact.View.Converters;
 
@@ -28,7 +25,7 @@ public class EnumToKVPConverter : IValueConverter
             throw new ArgumentException("Value must be an enum");
         }
 
-        var name = Enum.GetName(enumType, value);
+        var name = Enum.GetName(enumType, value) ?? throw new NullReferenceException();
         var field = enumType.GetField(name);
         var descriptionAttribute = field?.GetCustomAttribute<DescriptionAttribute>();
 

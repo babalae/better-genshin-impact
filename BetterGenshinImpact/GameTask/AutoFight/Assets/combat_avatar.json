@@ -1765,7 +1765,8 @@
   {
     "alias": [
       "梦见月瑞希",
-      "mizuki",
+      "Yumemizuki",
+      "Mizuki",
       "梦见",
       "梦见月",
       "瑞希",
@@ -1781,6 +1782,36 @@
     "name": "梦见月瑞希",
     "nameEn": "Mizuki",
     "skillCD": 15,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "伊安珊",
+      "Iansan",
+      "123"
+    ],
+    "burstCD": 18,
+    "id": "10000110",
+    "name": "伊安珊",
+    "nameEn": "Iansan",
+    "skillCD": 16,
+    "weapon": "13"
+  },
+  {
+    "alias": [
+      "瓦雷莎",
+      "Varesa",
+      "瓦雷沙",
+      "牛头人",
+      "牛战士",
+      "奶牛",
+      "奶牛妹"
+    ],
+    "burstCD": 18,
+    "id": "10000111",
+    "name": "瓦雷莎",
+    "nameEn": "Varesa",
+    "skillCD": 9,
     "weapon": "10"
   }
 ]

@@ -1,0 +1,27 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.KeyBindingsWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
+                 Title="按键绑定设置"
+                 Width="800"
+                 Height="600"
+                 d:DesignHeight="600"
+                 d:DesignWidth="800"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner"
+                 mc:Ignorable="d">
+    <Grid Name="Grid1">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0"
+                     Title="按键绑定设置"
+                     Icon="pack://application:,,,/Assets/logo.ico" />
+    </Grid>
+</ui:FluentWindow>

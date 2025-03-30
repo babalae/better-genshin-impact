@@ -915,7 +915,8 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.PyroCollect.Code
             || waypoint.Action == ActionEnum.CombatScript.Code
             || waypoint.Action == ActionEnum.Mining.Code
-            || waypoint.Action == ActionEnum.Fishing.Code)
+            || waypoint.Action == ActionEnum.Fishing.Code
+            || waypoint.Action == ActionEnum.ExitAndRelogin.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig

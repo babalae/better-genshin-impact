@@ -11313,5 +11313,326 @@
         "name": "曜石图腾柱·镜璧山",
         "description": "声望点",
         "area": "镜璧山"
+    },
+    {
+        "id": "1500",
+        "gadgetId": 70550000,
+        "gadgetType": "TransPointFirst",
+        "type": "Goddess",
+        "areaId": 53,
+        "position": [
+            -2615.884765625,
+            0,
+            10026.0244140625
+        ],
+        "tranPosition": [
+            -2613.005859375,
+            0,
+            10026.1494140625
+        ],
+        "country": "纳塔",
+        "name": "七天神像-火",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1501",
+        "gadgetId": 70550001,
+        "gadgetType": "Worktop",
+        "type": "Reputation",
+        "areaId": 49,
+        "position": [
+            -2711.71,
+            0,
+            10263.84
+        ],
+        "tranPosition": [
+            -2719.51,
+            0,
+            10264.91
+        ],
+        "country": "纳塔",
+        "name": "曜石图腾柱·安饶之野",
+        "description": "声望点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1502",
+        "gadgetId": 70550002,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2216.04,
+            0,
+            9522.30
+        ],
+        "tranPosition": [
+            -2206.81,
+            0,
+            9516.16
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1503",
+        "gadgetId": 70550003,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2365.1591796875,
+            0,
+            9838.05078125
+        ],
+        "tranPosition": [
+            -2358.939453125,
+            0,
+            9834.6474609375
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1504",
+        "gadgetId": 70550004,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2420.533203125,
+            0,
+            9713.4814453125
+        ],
+        "tranPosition": [
+            -2417.2861328125,
+            0,
+            9709.7763671875
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1505",
+        "gadgetId": 70550005,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2665.6494140625,
+            0,
+            9795.6962890625
+        ],
+        "tranPosition": [
+            -2668.3115234375,
+            0,
+            9807.5810546875
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1506",
+        "gadgetId": 70550006,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2852.591796875,
+            0,
+            9812.751953125
+        ],
+        "tranPosition": [
+            -2849.041015625,
+            0,
+            9807.8896484375
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1507",
+        "gadgetId": 70550007,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -3277.58984375,
+            0,
+            9923.642578125
+        ],
+        "tranPosition": [
+            -3276.1376953125,
+            0,
+            9918.63671875
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1508",
+        "gadgetId": 70550008,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2538.57421875,
+            0,
+            10260.70703125
+        ],
+        "tranPosition": [
+            -2528.5224609375,
+            0,
+            10261.3349609375
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1509",
+        "gadgetId": 70550009,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -3017.6318359375,
+            0,
+            10184.6669921875
+        ],
+        "tranPosition": [
+            -3022.41796875,
+            0,
+            10170.9140625
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1510",
+        "gadgetId": 70550010,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -3315.9501953125,
+            0,
+            10363.7734375
+        ],
+        "tranPosition": [
+            -3320.7392578125,
+            0,
+            10367.7314453125
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1511",
+        "gadgetId": 70550011,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2654.3740234375,
+            0,
+            10595.2470703125
+        ],
+        "tranPosition": [
+            -2667.5107421875,
+            0,
+            10595.21875
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1512",
+        "gadgetId": 70550012,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -2363.6025390625,
+            0,
+            10925.7001953125
+        ],
+        "tranPosition": [
+            -2367.2666015625,
+            0,
+            10929.0302734375
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1513",
+        "gadgetId": 70550013,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -3069.625,
+            0,
+            10794.67578125
+        ],
+        "tranPosition": [
+            -3062.6923828125,
+            0,
+            10790.6123046875
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1514",
+        "gadgetId": 70550014,
+        "gadgetType": "TransPointSecond",
+        "type": "Teleport",
+        "areaId": 49,
+        "position": [
+            -3753.4404296875,
+            0,
+            11005.9326171875
+        ],
+        "tranPosition": [
+            -3754.6669921875,
+            0,
+            11012.5029296875
+        ],
+        "country": "纳塔",
+        "name": "传送锚点",
+        "area": "安饶之野"
+    },
+    {
+        "id": "1515",
+        "gadgetId": 70550015,
+        "gadgetType": "TransPointSecond",
+        "type": "Dungeon",
+        "position": [
+            -3373.1591796875,
+            0,
+            10548.048828125
+        ],
+        "tranPosition": [
+            -3380.0751953125,
+            0,
+            10547.8212890625
+        ],
+        "country": "纳塔",
+        "name": "荒废砌造坞",
+        "description": "圣遗物本",
+        "area": "安饶之野"
     }
 ]

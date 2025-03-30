@@ -390,7 +390,13 @@
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
                                          Margin="0,0,24,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightEnabled, Mode=TwoWay}" />
+                                         IsChecked="{Binding PathingConfig.AutoFightEnabled, Mode=TwoWay}">
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="Checked">
+                                    <b:InvokeCommandAction Command="{Binding AutoFightEnabledCheckedCommand}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </ui:ToggleSwitch>
                         <!--    -->
                     </Grid>
                 </ui:CardExpander.Header>
@@ -438,7 +444,8 @@
                                   SelectedItem="{Binding PathingConfig.AutoFightConfig.StrategyName, Mode=TwoWay}">
                             <b:Interaction.Triggers>
                                 <b:EventTrigger EventName="DropDownOpened">
-                                    <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}" CommandParameter="Combat" />
+                                    <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                           CommandParameter="Combat" />
                                 </b:EventTrigger>
                             </b:Interaction.Triggers>
                         </ComboBox>

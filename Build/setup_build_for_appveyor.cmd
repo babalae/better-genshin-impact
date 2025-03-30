@@ -30,7 +30,6 @@ cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
 del /f /q %tmpfolder%\*ffmpeg*.dll
 MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\* -t7z -mx=5 -mf=BCJ2 -r -y
-copy /y publish.7z .\MicaSetup\Resources\Setups\publish.7z
 if exist "%zipFile%" ( del /f /q "%zipfile%" )
 rename publish.7z %archiveFile%
 

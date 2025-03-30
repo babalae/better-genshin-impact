@@ -501,7 +501,7 @@ public partial class AutoWoodTask : ISoloTask
 
         Sleep(500, _ct);
 
-        // 点击确认
+        // 点击退出到主界面确认
         using var contentRegion = CaptureToRectArea();
         contentRegion.Find(_assets.ConfirmRo, ra =>
         {

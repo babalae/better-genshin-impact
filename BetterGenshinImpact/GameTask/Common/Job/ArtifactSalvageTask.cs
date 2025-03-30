@@ -97,7 +97,8 @@ public class ArtifactSalvageTask
         // 确认选择
         using var ra4 = CaptureToRectArea();
         var ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeft(0.35)));
-        for (var i = 1; i <= star; i++)
+        // 5.5 变成反选
+        for (var i = star; i <= 4; i++)
         {
             foreach (var ocr in ocrList2)
             {

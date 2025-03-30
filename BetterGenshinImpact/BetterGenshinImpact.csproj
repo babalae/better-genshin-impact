@@ -10,7 +10,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
 		<AssemblyName>BetterGI</AssemblyName>
-		<AssemblyVersion>0.43.4</AssemblyVersion>
+		<AssemblyVersion>0.43.6</AssemblyVersion>
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
@@ -49,6 +49,7 @@
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.14" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.18.1" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.18.1" />
@@ -63,10 +64,8 @@
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
-		<PackageReference Include="Sdcb.PaddleInference" Version="2.5.0.1" />
 		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.5.1" />
 		<PackageReference Include="Sdcb.PaddleOCR" Version="2.7.0" />
-		<PackageReference Include="Sdcb.PaddleOCR.Models.Online" Version="2.7.0.1" />
 		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
@@ -172,5 +171,5 @@
 	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
-
+	
 </Project>

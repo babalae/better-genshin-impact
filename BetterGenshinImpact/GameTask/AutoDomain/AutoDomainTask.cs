@@ -36,6 +36,9 @@ using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
 using static Vanara.PInvoke.User32;
+using Microsoft.Extensions.Localization;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -53,6 +56,12 @@ public class AutoDomainTask : ISoloTask
 
     private CancellationToken _ct;
 
+    private readonly string challengeCompletedLocalizedString;
+    private readonly string autoLeavingLocalizedString;
+    private readonly string skipLocalizedString;
+    private readonly string leyLineDisorderLocalizedString;
+    private readonly string clickanywheretocloseLocalizedString;
+
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         AutoFightAssets.DestroyInstance();
@@ -65,6 +74,14 @@ public class AutoDomainTask : ISoloTask
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+
+        IStringLocalizer<AutoDomainTask> stringLocalizer = App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "挑战达成");
+        this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "自动退出");
+        this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
+        this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
+        this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
     }
 
     public async Task Start(CancellationToken ct)
@@ -242,7 +259,7 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(100);
                     Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
                     Thread.Sleep(1600);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                 }
                 else if ("苍白的遗荣".Equals(_taskParam.DomainName))
                 {
@@ -262,7 +279,8 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
 
-                Simulation.SendInput.SimulateAction(GIActions.Drop, KeyType.KeyUp); // 可能爬上去了，X键下来
+                await Delay(100, _ct);
+                Simulation.SendInput.SimulateAction(GIActions.Drop); // 可能爬上去了，X键下来
                 await Delay(3000, _ct); // 站稳
             }
             else
@@ -369,7 +387,7 @@ public class AutoDomainTask : ISoloTask
             // }
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var done = ocrList.FirstOrDefault(txt => txt.Text.Contains("地脉异常") || txt.Text.Contains("点击任意") || txt.Text.Contains("位置关闭"));
+            var done = ocrList.FirstOrDefault(t => Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) || Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
             if (done != null)
             {
                 await Delay(1000, _ct);
@@ -541,7 +559,7 @@ public class AutoDomainTask : ISoloTask
 
         var endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsUpperRect);
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
-        if (text.Contains("挑战") || text.Contains("达成"))
+        if (Regex.IsMatch(text, this.challengeCompletedLocalizedString))
         {
             Logger.LogInformation("检测到秘境结束提示(挑战达成)，结束秘境");
             return true;
@@ -549,7 +567,7 @@ public class AutoDomainTask : ISoloTask
 
         endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsRect);
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
-        if (text.Contains("自动") || text.Contains("退出"))
+        if (Regex.IsMatch(text, this.autoLeavingLocalizedString))
         {
             Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
             return true;
@@ -926,7 +944,7 @@ public class AutoDomainTask : ISoloTask
 
             // OCR识别是否有跳过
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0, 230 * assetScale - 5, 80 * assetScale));
-            var skipTextRa = ocrList.FirstOrDefault(t => t.Text.Contains("跳过"));
+            var skipTextRa = ocrList.FirstOrDefault(t => Regex.IsMatch(t.Text, this.skipLocalizedString));
             if (skipTextRa != null)
             {
                 hasSkip = true;

@@ -1,12 +1,11 @@
-﻿using System.Windows.Documents;
-using BetterGenshinImpact.Core.Recognition;
+﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
 using OpenCvSharp;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -170,7 +169,7 @@ public static partial class Bv
                 var success = true;
                 foreach (var t in text)
                 {
-                    if (!item.Text.Contains(t))
+                    if (!Regex.IsMatch(item.Text, t))
                     {
                         success = false;
                     }
