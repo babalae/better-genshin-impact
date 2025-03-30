@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -58,5 +59,17 @@ public class LimitedFile(string rootPath)
             callbackFunc(ex.ToString(), null);
             return string.Empty;
         }
+    }
+    
+    /// <summary>
+    /// 读取Mat图片
+    /// </summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    public Mat ReadImageMatSync(string path)
+    {
+        path = NormalizePath(path);
+        var mat = Mat.FromStream(File.OpenRead(path), ImreadModes.Color);
+        return mat;
     }
 }

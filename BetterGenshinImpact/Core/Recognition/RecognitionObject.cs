@@ -20,6 +20,9 @@ public class RecognitionObject
     /// </summary>
     public Rect RegionOfInterest { get; set; }
 
+    /// <summary>
+    /// 识别对象名称，可以为空
+    /// </summary>
     public string? Name { get; set; }
 
     #region 模板匹配
@@ -90,6 +93,29 @@ public class RecognitionObject
 
         if (UseMask && TemplateImageMat != null && MaskMat == null) MaskMat = OpenCvCommonHelper.CreateMask(TemplateImageMat, MaskColor.ToScalar());
         return this;
+    }
+    
+    public static RecognitionObject TemplateMatch(Mat mat)
+    {
+        var ro = new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = mat,
+        };
+        
+        return ro.InitTemplate();
+    }
+    
+    public static RecognitionObject TemplateMatch(Mat mat, double x, double y, double w, double h)
+    {
+        var ro = new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = mat,
+            RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h))
+        };
+        
+        return ro.InitTemplate();
     }
 
     #endregion 模板匹配
