@@ -1044,6 +1044,6 @@ public class AutoDomainTask : ISoloTask
             star = 4;
         }
 
-        await new ArtifactSalvageTask().Start(star, _ct);
+        await new ArtifactSalvageTask(star).Start(_ct);
     }
 }
