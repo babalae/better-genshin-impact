@@ -1036,7 +1036,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="查看项目相、文档等信息"
+                                  Text="查看项目、文档等信息"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
