@@ -11,17 +11,45 @@ using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using Microsoft.Extensions.Localization;
+using System.Globalization;
+using BetterGenshinImpact.Helpers;
+using System.Text.RegularExpressions;
+using BetterGenshinImpact.GameTask.Model.Area;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
 /// <summary>
 /// 圣遗物自动分解
 /// </summary>
-public class ArtifactSalvageTask
+public class ArtifactSalvageTask : ISoloTask
 {
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    public async Task Start(int star, CancellationToken ct)
+    public string Name => "圣遗物分解独立任务";
+
+    private readonly int star;
+
+    private readonly string quickSelectLocalizedString;
+
+    private readonly string[] numOfStarLocalizedString;
+
+    public ArtifactSalvageTask(int star)
+    {
+        this.star = star;
+        IStringLocalizer<ArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<ArtifactSalvageTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
+        this.numOfStarLocalizedString = [
+            stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
+            stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
+            stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
+            stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
+        ];
+    }
+
+    public async Task Start(CancellationToken ct)
     {
         await _returnMainUiTask.Start(ct);
 
@@ -86,7 +114,7 @@ public class ArtifactSalvageTask
         var ocrList = ra3.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeftBottom(0.25, 0.1)));
         foreach (var ocr in ocrList)
         {
-            if (ocr.Text.Contains("快速选择"))
+            if (Regex.IsMatch(ocr.Text, this.quickSelectLocalizedString))
             {
                 ocr.Click();
                 await Delay(500, ct);
@@ -95,24 +123,27 @@ public class ArtifactSalvageTask
         }
 
         // 确认选择
-        using var ra4 = CaptureToRectArea();
-        var ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeft(0.35)));
         // 5.5 变成反选
-        for (var i = star; i <= 4; i++)
+        if (star < 4)
         {
-            foreach (var ocr in ocrList2)
+            using var ra4 = CaptureToRectArea();
+            List<Region> ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeft(0.20)));
+            for (int i = star; i < 4; i++)
             {
-                if (ocr.Text.Contains(i + "星"))
+                foreach (var ocr in ocrList2)
                 {
-                    ocr.Click();
-                    await Delay(500, ct);
-                    break;
+                    if (Regex.IsMatch(ocr.Text, this.numOfStarLocalizedString[i]))
+                    {
+                        ocr.Click();
+                        await Delay(500, ct);
+                        break;
+                    }
                 }
             }
+            Bv.ClickWhiteConfirmButton(ra4);
+            await Delay(500, ct);
         }
 
-        Bv.ClickWhiteConfirmButton(ra4);
-        await Delay(500, ct);
 
         // 点击分解
         using var ra5 = CaptureToRectArea();

@@ -22,10 +22,10 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [Theory]
         [InlineData("zh-Hans", "挑战,达成", "挑战.*达成")]
         [InlineData("zh-Hans", "凯瑟琳")]
-        [InlineData("zh-Hans", "点击任意位置关闭")]
         [InlineData("en", "Daily")]
         [InlineData("en", "Katheryne")]
         [InlineData("en", "Clickany where to   close", "Click.*any.*where.*to.*close")]
+        [InlineData("en", "2-Star Artifacts", "2-Star.*Artifacts")]
         [InlineData("zh-Hant", "凱瑟琳")]
         [InlineData("zh-Hant", "委託", "委[託話]")]
         [InlineData("zh-Hant", "挑戰,達成", "挑戰.*達成")]
@@ -33,6 +33,8 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("zh-Hant", "跳過")]
         [InlineData("zh-Hant", "地脈異常", "地[脈服][異翼昊]常")]
         [InlineData("zh-Hant", "點擊任意位置關閉")]
+        [InlineData("zh-Hant", "快速選擇", "快速選擇")]
+        [InlineData("zh-Hant", "二星聖遺物")]
         [InlineData("fr", "quotidien")]
         [InlineData("fr", "Expédition")]
         [InlineData("fr", "Pêcher", "P[êé]cher")]
@@ -43,6 +45,8 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("fr", "Passer")]
         [InlineData("fr", "Anomalie énergétique", "Anomalie.*énergétique")]
         [InlineData("fr", "Cliquez pour fermer", "Cliquez.*pour.*fermer")]
+        [InlineData("fr", "Sélection rapide", "Sélection.*rapide")]
+        [InlineData("fr", "Artéfact 2★", "Artéfact.*2★?")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>
