@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Notification
 {
-    // private readonly Func<ScriptGroupConfig> _getCurrentGroupConfig;
-    // private readonly NotificationSettingsPageViewModel _globalSettings;
+  private readonly AllConfig _config = TaskContext.Instance().Config; 
     private readonly ILogger<Notification> _logger = App.GetLogger<Notification>();
     private readonly TimeSpan _timeWindow = TimeSpan.FromMinutes(1);
     private readonly int _maxNotifications = 5;
@@ -23,19 +22,20 @@ public class Notification
         "<script>", "http://", "https://"
     ];
     
-    private bool CheckNotificationPermission()  // todo:允许用户禁用通知
+    private bool CheckNotificationPermission()
     {
         try
         {
-            return true;
-            // return _globalSettings.JsNotificationEnabled;
-            // && _getCurrentGroupConfig()?.EnableJsNotification == true;
+            var currentProject = TaskContext.Instance().CurrentScriptProject;
+            return _config.NotificationConfig.JsNotificationEnabled &&
+                   (currentProject?.AllowJsNotification ?? true);
         }
         catch
         {
             return false;
         }
     }
+
     private bool ValidateContent(string message)   // 不允许发送超过 500 字符的消息
     {
         if (message.Length > 500) return false;

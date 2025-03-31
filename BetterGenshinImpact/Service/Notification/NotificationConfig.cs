@@ -10,6 +10,10 @@ namespace BetterGenshinImpact.Service.Notification;
 public partial class NotificationConfig : ObservableObject
 {
     /// <summary>
+    /// 是否允许 js 发送通知
+    /// </summary>
+    [ObservableProperty] private bool _jsNotificationEnabled = false;
+    /// <summary>
     /// 传"none"时，点击推送不会弹窗
     /// </summary>
     [ObservableProperty] private string _barkAction = string.Empty;

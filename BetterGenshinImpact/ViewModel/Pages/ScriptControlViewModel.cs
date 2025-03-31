@@ -26,6 +26,7 @@ using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows.Editable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -921,12 +922,17 @@ public partial class ScriptControlViewModel : ViewModel
         item.NextFlag = true;
     }
 
-    public static void ShowEditWindow(object viewModel)
+    public static void ShowEditWindow(ScriptGroupProject project)
     {
+        var viewModel = new ScriptGroupProjectEditorViewModel(project);
+        var editor = new ScriptGroupProjectEditor(project)
+        {
+            DataContext = viewModel
+        };
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = "修改通用设置",
-            Content = new ScriptGroupProjectEditor { DataContext = viewModel },
+            Content = editor,
             CloseButtonText = "关闭",
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,

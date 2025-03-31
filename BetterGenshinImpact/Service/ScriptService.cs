@@ -202,6 +202,7 @@ public partial class ScriptService : IScriptService
         target.RunNum = source.RunNum;
         target.JsScriptSettingsObject = source.JsScriptSettingsObject;
         target.GroupInfo = source.GroupInfo;
+        target.AllowJsNotification = source.AllowJsNotification;
     }
 
     // private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)
@@ -220,6 +221,7 @@ public partial class ScriptService : IScriptService
 
     private async Task ExecuteProject(ScriptGroupProject project)
     {
+        TaskContext.Instance().CurrentScriptProject = project;
         if (project.Type == "Javascript")
         {
             if (project.Project == null)

@@ -4,6 +4,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:BetterGenshinImpact.Core.Script.Group"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:editable="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Editable"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              Width="200"
              Height="300"
              d:DesignHeight="200"
@@ -16,6 +18,7 @@
         <ObjectDataProvider x:Key="ScheduleDescriptionsProvider"
                             MethodName="GetScheduleDescriptions"
                             ObjectType="{x:Type local:ScriptGroupProjectExtensions}" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </UserControl.Resources>
     <Grid>
         <StackPanel>
@@ -35,6 +38,18 @@
                       ItemsSource="{Binding Source={StaticResource StatusDescriptionsProvider}}"
                       SelectedValue="{Binding Status, Mode=TwoWay}"
                       SelectedValuePath="Key" />
+            <TextBlock Margin="0,10,0,5" Text="JS 通知权限"
+                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
+            <ComboBox Margin="0,0,0,10"
+                      ItemsSource="{Binding JsNotificationOptions}"
+                      DisplayMemberPath="Value"
+                      SelectedValuePath="Key"
+                      IsEnabled="{Binding GlobalJsNotificationEnabled}"
+                      ToolTip="{Binding JsNotificationToolTip}"
+                      SelectedValue="{Binding AllowJsNotification, Mode=TwoWay}"
+                      Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
+            </ComboBox>
+
         </StackPanel>
     </Grid>
 </UserControl>
