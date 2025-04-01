@@ -17,6 +17,11 @@ using BetterGenshinImpact.Helpers;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.Model.Area;
 using System.Collections.Generic;
+using Fischless.WindowsInput;
+using OpenCvSharp;
+using System.Linq;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -25,7 +30,11 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// </summary>
 public class ArtifactSalvageTask : ISoloTask
 {
+    private readonly ILogger logger = App.GetLogger<ArtifactSalvageTask>();
+    private readonly InputSimulator input = Simulation.SendInput;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
+
+    private CancellationToken ct;
 
     public string Name => "圣遗物分解独立任务";
 
@@ -51,10 +60,11 @@ public class ArtifactSalvageTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
+        this.ct = ct;
         await _returnMainUiTask.Start(ct);
 
         // B键打开背包
-        Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
+        input.SimulateAction(GIActions.OpenInventory);
         await Delay(1000, ct);
 
         var openBagSuccess = await NewRetry.WaitForAction(() =>
@@ -80,7 +90,7 @@ public class ArtifactSalvageTask : ISoloTask
             if (Bv.IsInMainUi(ra))
             {
                 Debug.WriteLine("背包打开失败,再次尝试打开背包");
-                Simulation.SendInput.SimulateAction(GIActions.OpenInventory);
+                input.SimulateAction(GIActions.OpenInventory);
             }
 
             return false;
@@ -88,7 +98,7 @@ public class ArtifactSalvageTask : ISoloTask
 
         if (!openBagSuccess)
         {
-            Logger.LogError("未找到背包中圣遗物菜单按钮,打开背包失败");
+            logger.LogError("未找到背包中圣遗物菜单按钮,打开背包失败");
             return;
         }
 
@@ -105,7 +115,7 @@ public class ArtifactSalvageTask : ISoloTask
         }
         else
         {
-            Logger.LogError("未找到圣遗物分解按钮");
+            logger.LogError("未找到圣遗物分解按钮");
             return;
         }
 
@@ -152,22 +162,179 @@ public class ArtifactSalvageTask : ISoloTask
         {
             salvageBtnConfirm.Click();
             await Delay(800, ct);
+            // 点击确认
+            using var ra6 = CaptureToRectArea();
+            Bv.ClickBlackConfirmButton(ra6);
+            logger.LogInformation("完成{Star}星圣遗物快速分解", star);
+            await Delay(400, ct);
         }
         else
         {
-            Logger.LogInformation("未找到圣遗物分解按钮，可能已经没有圣遗物需要分解");
-            await _returnMainUiTask.Start(ct);
-            return;
+            logger.LogInformation("未找到圣遗物分解按钮，可能已经没有圣遗物需要快速分解");
         }
 
-        // 点击确认
-        using var ra6 = CaptureToRectArea();
-        Bv.ClickBlackConfirmButton(ra6);
-        Logger.LogInformation("完成{Star}星圣遗物分解", star);
-        await Delay(400, ct);
+        // 分解5星
+        // await Salvage5Star();
 
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+        input.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
 
         await _returnMainUiTask.Start(ct);
+    }
+
+    private async Task Salvage5Star()
+    {
+        while (true)
+        {
+            // VisionContext.Instance().DrawContent.ClearAll();
+            // await Delay(400, this.ct);
+
+            using var ra = CaptureToRectArea();
+            using ImageRegion grid = ra.DeriveCrop(new Rect((int)(ra.Width * 0.025), (int)(ra.Width * 0.055), (int)(ra.Width * 0.66), (int)(ra.Width * 0.4)));
+            IEnumerable<Rect> gridItems = GetArtifactGridItems(grid.SrcMat);
+
+            //foreach (Rect item in gridItems)
+            //{
+            //    grid.DrawRect(item, item.GetHashCode().ToString(), new System.Drawing.Pen(System.Drawing.Color.Blue));
+            //}
+
+            bool anyItemSelected = false;
+            foreach (Rect item in gridItems)
+            {
+                using ImageRegion itemRegion = grid.DeriveCrop(item);
+                if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
+                {
+                    anyItemSelected = true;
+                    itemRegion.Click();
+                    await Delay(300, this.ct);
+
+                    using var ra1 = CaptureToRectArea();
+                    using ImageRegion grid1 = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.025), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.66), (int)(ra1.Width * 0.4)));
+                    using ImageRegion itemRegion1 = grid1.DeriveCrop(item);
+                    if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
+                    {
+                        logger.LogInformation("选择成功");
+                    }
+                }
+            }
+            if (anyItemSelected)
+            {
+                for (int i = 0; i < 15; i++)
+                {
+                    input.Mouse.VerticalScroll(-2);
+                    await Delay(200, this.ct);
+                }
+                grid.MoveTo(grid.Width, grid.Height);
+                await Delay(500, this.ct);
+            }
+            else
+            {
+                await Delay(400, this.ct);
+                break;
+            }
+        }
+    }
+
+    public static string GetArtifactAffixes(Mat src, IOcrService ocrService)
+    {
+        return ocrService.Ocr(src);
+    }
+
+    public static IEnumerable<Rect> GetArtifactGridItems(Mat src)
+    {
+        using Mat grey = src.CvtColor(ColorConversionCodes.BGR2GRAY);
+
+        using Mat canny = grey.Canny(20, 40);
+
+        Cv2.FindContours(canny, out var contours, out _, RetrievalModes.External,
+            ContourApproximationModes.ApproxSimple, null);
+
+        IEnumerable<Rect> boxes = contours.Where(c => Cv2.MinAreaRect(c).Angle % 90 <= 1)   // 剔除倾斜
+            .Select(Cv2.BoundingRect).Where(r =>
+            {
+                if (r.Height == 0)
+                {
+                    return false;
+                }
+                return Math.Abs(((float)r.Width / r.Height) - 0.8) < 0.05; // 按形状筛选
+            }).ToList();
+
+        //src.DrawContours(contours, -1, Scalar.Red);
+
+        int biggestRectHeight = boxes.Max(b => b.Height);
+        boxes = boxes.Where(b => (float)b.Height / biggestRectHeight > 0.85);   // 剔除太小的
+
+        return boxes.ToArray();
+    }
+
+    public static ArtifactStatus GetArtifactStatus(Mat src)
+    {
+        using Mat upperLine = new Mat(src, new Rect(0, 0, src.Width, (int)(src.Height * 0.19)));
+        //using Mat hsvMat = upperLine.CvtColor(ColorConversionCodes.BGR2HSV_FULL);
+        //var pixel_hsv_pink = hsvMat.At<Vec3b>(17, 12);    // 注意是（Y，X）
+        //var pixel_hsv_grren = hsvMat.At<Vec3b>(8, 105);   // 注意是（Y，X）
+
+        // 粉色锁
+        Scalar pinkhsv = OpenCvCommonHelper.CommonHSV2OpenCVHSVFull(new Scalar(9, 0.54, 1.00));
+        var lowPink = new Scalar(pinkhsv.Val0 - 3, pinkhsv.Val1 - 25, pinkhsv.Val2 - 25);
+        var highPink = new Scalar(pinkhsv.Val0 + 3, pinkhsv.Val1 + 25, pinkhsv.Val2);
+        using Mat pinkMask = OpenCvCommonHelper.InRangeHsvFull(upperLine, lowPink, highPink);
+
+        using Mat pinkThreshold = pinkMask.Threshold(0, 255, ThresholdTypes.Binary); //二值化
+
+        Cv2.FindContours(pinkThreshold, out var contours, out _, RetrievalModes.External,
+            ContourApproximationModes.ApproxSimple, null);
+
+        var allPinkContours = contours.Where(c => c.Max(p => p.X) < pinkMask.Width * 0.2)   // 都在左侧
+            .SelectMany(c => c);    // 拼凑零碎的像素
+        if (allPinkContours.Any())
+        {
+            var bounding = Cv2.BoundingRect(allPinkContours);
+            if (bounding.Width > pinkMask.Width * 0.07 && bounding.Height > pinkMask.Height * 0.3)  //不能太小
+            {
+                return ArtifactStatus.Locked;
+            }
+        }
+
+        // 绿色线
+        Scalar greenhsv = OpenCvCommonHelper.CommonHSV2OpenCVHSVFull(new Scalar(80, 0.76, 1.00));
+        var lowGreen = new Scalar(greenhsv.Val0 - 3, greenhsv.Val1 - 10, greenhsv.Val2 - 5);
+        var highGreen = new Scalar(greenhsv.Val0 + 3, greenhsv.Val1 + 10, greenhsv.Val2);
+        using Mat greenMask = OpenCvCommonHelper.InRangeHsvFull(upperLine, lowGreen, highGreen);
+
+        Cv2.Threshold(greenMask, greenMask, 0, 255, ThresholdTypes.Binary); //二值化
+
+        Cv2.FindContours(greenMask, out contours, out _, RetrievalModes.External,
+            ContourApproximationModes.ApproxSimple, null);
+
+        var allGreenContours = contours.SelectMany(c => c);    // 拼凑零碎的像素
+        if (allGreenContours.Any())
+        {
+            var bounding = Cv2.BoundingRect(allGreenContours);
+            if (bounding.Width > greenMask.Width * 0.2 && bounding.Height > greenMask.Height * 0.8)  //不能太小；至少存在右上角勾号的绿色背景，忽略上底边的绿线（因有缩放动画，每次都要重新框定不利缩减步骤）
+            {
+                return ArtifactStatus.Selected;
+            }
+        }
+
+        return ArtifactStatus.None;
+    }
+
+    /// <summary>
+    /// 圣遗物分解界面Grid元素的状态
+    /// </summary>
+    public enum ArtifactStatus
+    {
+        /// <summary>
+        /// 啥也没有
+        /// </summary>
+        None,
+        /// <summary>
+        /// 左上角有粉色锁定标记
+        /// </summary>
+        Locked,
+        /// <summary>
+        /// 上下有绿色选择框
+        /// </summary>
+        Selected
     }
 }
