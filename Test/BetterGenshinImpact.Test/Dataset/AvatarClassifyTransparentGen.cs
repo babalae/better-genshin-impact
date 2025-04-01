@@ -100,7 +100,7 @@ public class AvatarClassifyTransparentGen
                 // Cv2.ImShow("resizedSideImage", resizedSideImage);
                 var resizedMaskImage = new Mat();
                 // Cv2.Threshold(alphaChannel, alphaChannel, 200, 255, ThresholdTypes.Otsu);
-                Cv2.Resize(255 - alphaChannel, resizedMaskImage, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
+                Cv2.Resize(~ alphaChannel, resizedMaskImage, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
                 var resizedAlphaChannel = new Mat();
                 Cv2.Resize(alphaChannel, resizedAlphaChannel, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
 
@@ -153,7 +153,7 @@ public class AvatarClassifyTransparentGen
             var channels = background.Split();
             for (int i = 0; i < 3; i++)
             {
-                Cv2.Multiply(channels[i], 255 - alphaChannel, channels[i], 1 / 255.0);
+                Cv2.Multiply(channels[i], ~ alphaChannel, channels[i], 1 / 255.0);
             }
             Mat result = new Mat();
             Cv2.Merge(channels[..3], result);

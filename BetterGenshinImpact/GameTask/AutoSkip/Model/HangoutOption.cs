@@ -23,7 +23,7 @@ public class HangoutOption : IDisposable
 
         // 选项文字所在区域初始化
         // 选项图标往上下区域扩展 2/3
-        var r = Rect.Empty;
+        Rect r = default;
         var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         if (IconRect.Left > captureArea.Width / 2)
@@ -44,10 +44,10 @@ public class HangoutOption : IDisposable
         if (r.Width < captureArea.Width / 8)
         {
             TaskControl.Logger.LogError("自动邀约：选项文字区域过小 {Rect}", TextRect);
-            r = Rect.Empty;
+            r = default;
         }
 
-        if (r != Rect.Empty)
+        if (r != default)
         {
             if (iconRect.Prev is ImageRegion prev)
             {

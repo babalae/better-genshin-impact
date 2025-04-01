@@ -90,7 +90,7 @@ public static class Texture2DExtensions
                 MapMode.Read,
                 SharpDX.Direct3D11.MapFlags.None);
 
-            var mat = new Mat(staging.Description.Height, staging.Description.Width, MatType.CV_8UC4, dataBox.DataPointer);
+            var mat =  Mat.FromPixelData(staging.Description.Height, staging.Description.Width, MatType.CV_8UC4, dataBox.DataPointer);
             return mat;
         }
         catch (Exception e)

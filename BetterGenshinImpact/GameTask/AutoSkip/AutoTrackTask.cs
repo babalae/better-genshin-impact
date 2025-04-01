@@ -36,7 +36,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     /// <summary>
     /// 任务距离
     /// </summary>
-    private Rect _missionDistanceRect = Rect.Empty;
+    private Rect _missionDistanceRect = default;
 
     private CancellationToken _ct;
 
@@ -131,7 +131,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 var centerX = ra.Width / 2;
                 var centerY = ra.Height / 2;
                 var minDistance = double.MaxValue;
-                var nearestRect = Rect.Empty;
+                Rect nearestRect = default;
                 foreach (var tpPoint in tpPointList)
                 {
                     var distanceTp = Math.Sqrt(Math.Pow(Math.Abs(tpPoint.X - centerX), 2) + Math.Pow(Math.Abs(tpPoint.Y - centerY), 2));

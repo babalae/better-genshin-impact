@@ -230,7 +230,7 @@ public class CombatScenes : IDisposable
         var avatars = new Avatar[AvatarCount];
         for (var i = 0; i < AvatarCount; i++)
         {
-            var nameRect = nameRects?[i] ?? Rect.Empty;
+            var nameRect = nameRects?[i] ?? default;
             avatars[i] = new Avatar(this, names[i], i + 1, nameRect)
             {
                 IndexRect = avatarIndexRectList[i]

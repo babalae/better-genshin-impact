@@ -334,7 +334,7 @@ public class FeatureMatcher
         var corners = MatchCorners(_trainKeyPoints, _trainDescriptors, queryMat, queryMatMask);
         if (corners.Length == 0)
         {
-            return Rect.Empty;
+            return default;
         }
         return Cv2.BoundingRect(corners);
     }
@@ -483,7 +483,7 @@ public class FeatureMatcher
         var corners = KnnMatchCorners(_trainKeyPoints, _trainDescriptors, queryMat, queryMatMask);
         if (corners.Length == 0)
         {
-            return Rect.Empty;
+            return default;
         }
         return Cv2.BoundingRect(corners);
     }

@@ -61,14 +61,14 @@ public static class CommonExtension
 
     public static Point GetCenterPoint(this Rect rectangle)
     {
-        if (rectangle == Rect.Empty) throw new ArgumentException("rectangle is empty");
+        if (rectangle == default) throw new ArgumentException("rectangle is empty");
 
         return new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
     }
 
     public static Rect Multiply(this Rect rect, double assetScale)
     {
-        if (rect == Rect.Empty) throw new ArgumentException("rect is empty");
+        if (rect == default) throw new ArgumentException("rect is empty");
 
         return new Rect((int)(rect.X * assetScale), (int)(rect.Y * assetScale), (int)(rect.Width * assetScale), (int)(rect.Height * assetScale));
     }
