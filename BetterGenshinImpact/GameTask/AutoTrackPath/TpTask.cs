@@ -330,7 +330,7 @@ public class TpTask(CancellationToken ct)
         return (clickX, clickY);
     }
 
-    private async Task CheckInBigMapUi()
+    public async Task CheckInBigMapUi()
     {
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi())
@@ -409,7 +409,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="x">目标x坐标</param>
     /// <param name="y">目标y坐标</param>
     /// <param name="finalZoomLevel">到达目标点的最小缩放等级，只在 MapZoomEnabled 为 True 生效</param>
-    private async Task MoveMapTo(double x, double y, double finalZoomLevel = 2)
+    public async Task MoveMapTo(double x, double y, double finalZoomLevel = 2)
     {
         // 参数初始化
         double minZoomLevel = Math.Min(finalZoomLevel, _tpConfig.MinZoomLevel);
@@ -565,11 +565,18 @@ public class TpTask(CancellationToken ct)
     }
 
     /// <summary>
-    /// 调整地图的缩放级别（支持浮点数精度）。
+    /// 将大地图缩放等级设置为指定值
     /// </summary>
+    /// <remarks>
+    /// 缩放等级说明：
+    /// - 数值范围：1.0(最大地图) 到 6.0(最小地图)
+    /// - 缩放效果：数值越大，地图显示范围越广，细节越少
+    /// - 缩放位置：1.0 对应缩放条最上方，6.0 对应缩放条最下方
+    /// - 推荐范围：建议在 2.0 到 5.0 之间调整，过大或过小可能影响操作
+    /// </remarks>
     /// <param name="zoomLevel">当前缩放等级：1.0-6.0，浮点数。</param>
     /// <param name="targetZoomLevel">目标缩放等级：1.0-6.0，浮点数。</param>
-    private async Task AdjustMapZoomLevel(double zoomLevel, double targetZoomLevel)
+    public async Task AdjustMapZoomLevel(double zoomLevel, double targetZoomLevel)
     {
         // Logger.LogInformation("调整地图缩放等级：{zoomLevel:0.000} -> {targetZoomLevel:0.000}", zoomLevel, targetZoomLevel);
         int initialY = (int)(_tpConfig.ZoomStartY + (_tpConfig.ZoomEndY - _tpConfig.ZoomStartY) * (zoomLevel - 1) / 5d);
@@ -953,7 +960,7 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="region"></param>
     /// <returns></returns>
-    private double GetBigMapZoomLevel(ImageRegion region)
+    public double GetBigMapZoomLevel(ImageRegion region)
     {
         var s = Bv.GetBigMapScale(region);
         // 1~6 的缩放等级
