@@ -31,6 +31,7 @@ using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Frozen;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -134,6 +135,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
         get => Config.CommonConfig.ScreenshotEnabled && saveScreenshotOnKeyTick;
         set => SetProperty(ref saveScreenshotOnKeyTick, value);
     }
+
+    [ObservableProperty]
+    private bool _switchArtifactSalvageEnabled;
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -415,5 +419,14 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private void OnOpenLocalScriptRepo()
     {
         _autoFightViewModel.OnOpenLocalScriptRepo();
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchArtifactSalvage()
+    {
+        SwitchArtifactSalvageEnabled = true;
+        await new TaskRunner()
+            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.RegularExpression));
+        SwitchArtifactSalvageEnabled = false;
     }
 }

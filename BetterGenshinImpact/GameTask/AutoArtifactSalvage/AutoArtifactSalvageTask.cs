@@ -22,15 +22,17 @@ using OpenCvSharp;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Job;
 
-namespace BetterGenshinImpact.GameTask.Common.Job;
+namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
 /// <summary>
 /// 圣遗物自动分解
 /// </summary>
-public class ArtifactSalvageTask : ISoloTask
+public class AutoArtifactSalvageTask : ISoloTask
 {
-    private readonly ILogger logger = App.GetLogger<ArtifactSalvageTask>();
+    private readonly ILogger logger = App.GetLogger<AutoArtifactSalvageTask>();
     private readonly InputSimulator input = Simulation.SendInput;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
@@ -44,13 +46,16 @@ public class ArtifactSalvageTask : ISoloTask
 
     private readonly string[] numOfStarLocalizedString;
 
-    public ArtifactSalvageTask(int star)
+    private readonly string? regularExpression;
+
+    public AutoArtifactSalvageTask(int star, string? regularExpression = null)
     {
         this.star = star;
-        IStringLocalizer<ArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<ArtifactSalvageTask>>() ?? throw new NullReferenceException();
+        this.regularExpression = regularExpression;
+        IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
-        this.numOfStarLocalizedString = [
+        quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
+        numOfStarLocalizedString = [
             stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
@@ -124,7 +129,7 @@ public class ArtifactSalvageTask : ISoloTask
         var ocrList = ra3.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeftBottom(0.25, 0.1)));
         foreach (var ocr in ocrList)
         {
-            if (Regex.IsMatch(ocr.Text, this.quickSelectLocalizedString))
+            if (Regex.IsMatch(ocr.Text, quickSelectLocalizedString))
             {
                 ocr.Click();
                 await Delay(500, ct);
@@ -142,7 +147,7 @@ public class ArtifactSalvageTask : ISoloTask
             {
                 foreach (var ocr in ocrList2)
                 {
-                    if (Regex.IsMatch(ocr.Text, this.numOfStarLocalizedString[i]))
+                    if (Regex.IsMatch(ocr.Text, numOfStarLocalizedString[i]))
                     {
                         ocr.Click();
                         await Delay(500, ct);
@@ -174,14 +179,21 @@ public class ArtifactSalvageTask : ISoloTask
         }
 
         // 分解5星
-        // await Salvage5Star();
+        if (regularExpression != null)
+        {
+            await Salvage5Star(this.regularExpression);
+            logger.LogInformation("筛选完毕，请复查并手动分解");
+        }
+        else
+        {
+            input.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
 
-        input.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            await _returnMainUiTask.Start(ct);
+        }
 
-        await _returnMainUiTask.Start(ct);
     }
 
-    private async Task Salvage5Star()
+    private async Task Salvage5Star(string regularExpression)
     {
         while (true)
         {
@@ -205,30 +217,42 @@ public class ArtifactSalvageTask : ISoloTask
                 {
                     anyItemSelected = true;
                     itemRegion.Click();
-                    await Delay(300, this.ct);
+                    await Delay(300, ct);
 
                     using var ra1 = CaptureToRectArea();
                     using ImageRegion grid1 = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.025), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.66), (int)(ra1.Width * 0.4)));
                     using ImageRegion itemRegion1 = grid1.DeriveCrop(item);
                     if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                     {
-                        logger.LogInformation("选择成功");
+                        using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.66), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.30), (int)(ra1.Width * 0.29)));
+                        string affixes = GetArtifactAffixes(card.SrcMat, OcrFactory.Paddle);
+
+                        Match match = Regex.Match(affixes, regularExpression);
+                        if (match.Success)
+                        {
+                            logger.LogInformation("匹配成功：{m}", match.Value);
+                        }
+                        else
+                        {
+                            itemRegion.Click();
+                            await Delay(100, ct);
+                        }
                     }
                 }
             }
             if (anyItemSelected)
             {
-                for (int i = 0; i < 15; i++)
+                for (int i = 0; i < 36; i++)
                 {
                     input.Mouse.VerticalScroll(-2);
-                    await Delay(200, this.ct);
+                    await Delay(40, ct);
                 }
                 grid.MoveTo(grid.Width, grid.Height);
-                await Delay(500, this.ct);
+                await Delay(500, ct);
             }
             else
             {
-                await Delay(400, this.ct);
+                await Delay(400, ct);
                 break;
             }
         }
@@ -236,7 +260,8 @@ public class ArtifactSalvageTask : ISoloTask
 
     public static string GetArtifactAffixes(Mat src, IOcrService ocrService)
     {
-        return ocrService.Ocr(src);
+        var ocrResult = ocrService.OcrResult(src);
+        return ocrResult.Text;
     }
 
     public static IEnumerable<Rect> GetArtifactGridItems(Mat src)
@@ -255,7 +280,7 @@ public class ArtifactSalvageTask : ISoloTask
                 {
                     return false;
                 }
-                return Math.Abs(((float)r.Width / r.Height) - 0.8) < 0.05; // 按形状筛选
+                return Math.Abs((float)r.Width / r.Height - 0.8) < 0.05; // 按形状筛选
             }).ToList();
 
         //src.DrawContours(contours, -1, Scalar.Red);

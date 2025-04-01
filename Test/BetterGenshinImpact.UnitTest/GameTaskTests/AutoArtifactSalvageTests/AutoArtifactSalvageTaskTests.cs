@@ -1,5 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
-using BetterGenshinImpact.GameTask.Common.Job;
+﻿using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
 using OpenCvSharp;
 using System;
@@ -9,15 +9,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
-using static BetterGenshinImpact.GameTask.Common.Job.ArtifactSalvageTask;
+using static BetterGenshinImpact.GameTask.AutoArtifactSalvage.AutoArtifactSalvageTask;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
 {
     [Collection("Paddle Collection")]
-    public partial class ArtifactSalvageTaskTests
+    public partial class AutoArtifactSalvageTaskTests
     {
         private readonly PaddleFixture paddle;
-        public ArtifactSalvageTaskTests(PaddleFixture paddle)
+        public AutoArtifactSalvageTaskTests(PaddleFixture paddle)
         {
             this.paddle = paddle;
         }
@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             using Mat cropped = new Mat(mat, new Rect(x, y, width, height));
 
             //
-            ArtifactStatus result = ArtifactSalvageTask.GetArtifactStatus(cropped);
+            ArtifactStatus result = AutoArtifactSalvageTask.GetArtifactStatus(cropped);
 
             //
             Assert.Equal(status, result);
@@ -54,7 +54,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
 
             //
-            var result = ArtifactSalvageTask.GetArtifactGridItems(mat);
+            var result = AutoArtifactSalvageTask.GetArtifactGridItems(mat);
 
             //
             Assert.Equal(4, result.Count());
@@ -71,15 +71,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\ArtifactGrid.png");
 
             //
-            var result = ArtifactSalvageTask.GetArtifactGridItems(mat);
+            var result = AutoArtifactSalvageTask.GetArtifactGridItems(mat);
             using Mat leftTopOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 < mat.Width / 2 && r.Y + r.Height / 2 < mat.Height / 2));
             using Mat rightTopOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 > mat.Width / 2 && r.Y + r.Height / 2 < mat.Height / 2));
             using Mat leftBottomOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 < mat.Width / 2 && r.Y + r.Height / 2 > mat.Height / 2));
             using Mat rightBottomOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 > mat.Width / 2 && r.Y + r.Height / 2 > mat.Height / 2));
-            var leftTopOneStatus = ArtifactSalvageTask.GetArtifactStatus(leftTopOne);
-            var rightTopOneStatus = ArtifactSalvageTask.GetArtifactStatus(rightTopOne);
-            var leftBottomOneStatus = ArtifactSalvageTask.GetArtifactStatus(leftBottomOne);
-            var rightBottomOneStatus = ArtifactSalvageTask.GetArtifactStatus(rightBottomOne);
+            var leftTopOneStatus = AutoArtifactSalvageTask.GetArtifactStatus(leftTopOne);
+            var rightTopOneStatus = AutoArtifactSalvageTask.GetArtifactStatus(rightTopOne);
+            var leftBottomOneStatus = AutoArtifactSalvageTask.GetArtifactStatus(leftBottomOne);
+            var rightBottomOneStatus = AutoArtifactSalvageTask.GetArtifactStatus(rightBottomOne);
 
             //
             Assert.Equal(4, result.Count());
@@ -99,11 +99,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         [InlineData(@"ArtifactAffixes.png", "异种的期许")]
         [InlineData(@"ArtifactAffixes.png", "生之花")]
         [InlineData(@"ArtifactAffixes.png", "生命值")]
-        [InlineData(@"ArtifactAffixes.png", "元素精通+")]
-        [InlineData(@"ArtifactAffixes.png", "元素充能效率+")]
-        [InlineData(@"ArtifactAffixes.png", "攻击力+.*%")]
-        [InlineData(@"ArtifactAffixes.png", @"攻击力+[^%\n]*\n", false)]
-        [InlineData(@"ArtifactAffixes.png", @"防御力+[^%\n]*\n")]
+        [InlineData(@"ArtifactAffixes.png", @"(?=[\S\s]*元素精通\+)(?=[\S\s]*元素充能效率\+)")]
+        [InlineData(@"ArtifactAffixes.png", @"(?=[\S\s]*元素精通\+)(?=[\S\s]*暴击率\+)", false)]
+        [InlineData(@"ArtifactAffixes.png", @"(元素精通\+)|(暴击率\+)")]
+        [InlineData(@"ArtifactAffixes.png", @"(暴击伤害\+)|(暴击率\+)", false)]
+        [InlineData(@"ArtifactAffixes.png", @"攻击力\+[\d.]*%\n")]
+        [InlineData(@"ArtifactAffixes.png", @"攻击力\+[\d]*\n", false)]
+        [InlineData(@"ArtifactAffixes.png", @"防御力\+[\d.]*%\n", false)]
+        [InlineData(@"ArtifactAffixes.png", @"防御力\+[\d]*\n")]
         public void GetArtifactAffixes_ShouldBeRight(string screenshot, string pattern, bool isMatch = true)
         {
             //
@@ -112,7 +115,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             string result = PaddleResultDic.GetOrAdd(screenshot, screenshot_ =>
             {
                 using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot_}");
-                return ArtifactSalvageTask.GetArtifactAffixes(mat, paddle.Get());
+                return AutoArtifactSalvageTask.GetArtifactAffixes(mat, paddle.Get());
             });
 
             //

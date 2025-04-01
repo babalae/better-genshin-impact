@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -39,6 +38,7 @@ using static Vanara.PInvoke.User32;
 using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -1044,6 +1044,6 @@ public class AutoDomainTask : ISoloTask
             star = 4;
         }
 
-        await new ArtifactSalvageTask(star).Start(_ct);
+        await new AutoArtifactSalvageTask(star).Start(_ct);
     }
 }
