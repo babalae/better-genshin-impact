@@ -75,7 +75,7 @@ public class ExpeditionTask
             var result = CaptureAndOcr(content, new Rect(0, 0, captureRect.Width - (int)(480 * assetScale), captureRect.Height));
             var rect = result.FindRectByText("探险完成");
             // TODO i>1 的时候,可以通过关键词“探索派遣限制 4 / 5 ”判断是否已经派遣完成？
-            if (rect != Rect.Empty)
+            if (rect != default)
             {
                 // 点击探险完成下方的人物头像
                 content.CaptureRectArea.Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale))).Click();
@@ -83,7 +83,7 @@ public class ExpeditionTask
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
                 rect = result.FindRectByText("领取");
-                if (rect != Rect.Empty)
+                if (rect != default)
                 {
                     using var ra = content.CaptureRectArea.Derive(rect);
                     ra.Click();
@@ -96,7 +96,7 @@ public class ExpeditionTask
                     // 选择角色
                     result = CaptureAndOcr(content);
                     rect = result.FindRectByText("选择角色");
-                    if (rect != Rect.Empty)
+                    if (rect != default)
                     {
                         content.CaptureRectArea.Derive(rect).Click();
                         TaskControl.Sleep(400); // 等待动画

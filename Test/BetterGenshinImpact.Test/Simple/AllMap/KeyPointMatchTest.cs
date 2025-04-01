@@ -281,10 +281,10 @@ public class KeyPointMatchTest
             writer.Write(image.Rows);
             writer.Write(image.Cols);
             int depth = image.Depth();
-            int type = image.Type();
+            MatType type = image.Type();
             int channels = image.Channels();
             writer.Write(depth);
-            writer.Write(type);
+            writer.Write(type.Value);
             writer.Write(channels);
             int sizeInBytes = (int)image.Step() * image.Rows;
             writer.Write(sizeInBytes);

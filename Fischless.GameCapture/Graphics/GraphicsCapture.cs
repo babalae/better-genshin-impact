@@ -40,7 +40,7 @@ public class GraphicsCapture : IGameCapture
 
     // 用于获取帧数据的临时纹理和暂存资源
     private Texture2D? _stagingTexture;
-    
+
     private long _lastFrameTime = 0;
 
 
@@ -81,12 +81,14 @@ public class GraphicsCapture : IGameCapture
         _captureFramePool.FrameArrived += OnFrameArrived;
 
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
-        if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsCursorCaptureEnabled"))
+        if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
+                "IsCursorCaptureEnabled"))
         {
             _captureSession.IsCursorCaptureEnabled = false;
         }
 
-        if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession", "IsBorderRequired"))
+        if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
+                "IsBorderRequired"))
         {
             _captureSession.IsBorderRequired = false;
         }
@@ -110,7 +112,8 @@ public class GraphicsCapture : IGameCapture
 
 
         ResourceRegion region = new();
-        DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
+        DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
+            out var windowRect);
         User32.GetClientRect(_hWnd, out var clientRect);
         //POINT point = default; // 这个点和 DwmGetWindowAttribute 结果差1
         //User32.ClientToScreen(hWnd, ref point);
@@ -174,13 +177,14 @@ public class GraphicsCapture : IGameCapture
         {
             return;
         }
-        
+
         // 限制最高处理帧率为66fps
         var now = Kernel32.GetTickCount();
         if (now - _lastFrameTime < 15)
         {
             return;
         }
+
         _lastFrameTime = now;
 
         var frameSize = _captureItem.Size;
@@ -227,7 +231,7 @@ public class GraphicsCapture : IGameCapture
         try
         {
             // 创建一个新的Mat
-            var newFrame = new Mat(stagingTexture.Description.Height, stagingTexture.Description.Width,
+            var newFrame = Mat.FromPixelData(stagingTexture.Description.Height, stagingTexture.Description.Width,
                 _isHdrEnabled ? MatType.MakeType(7, 4) : MatType.CV_8UC4, dataBox.DataPointer);
 
             // 如果是HDR，进行HDR到SDR的转换

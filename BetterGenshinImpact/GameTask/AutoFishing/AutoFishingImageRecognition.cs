@@ -99,7 +99,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 Debug.WriteLine(e);
             }
 
-            return Rect.Empty;
+            return default;
         }
     }
 }

@@ -53,7 +53,7 @@ public class BigMap : Singleton<BigMap>
         catch
         {
             Debug.WriteLine("Feature Match Failed");
-            return Rect.Empty;
+            return default;
         }
     }
 }

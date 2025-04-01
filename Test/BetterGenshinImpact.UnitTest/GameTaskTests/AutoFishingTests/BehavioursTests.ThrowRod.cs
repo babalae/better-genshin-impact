@@ -135,7 +135,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var actual = sut.currentFish;
 
             //
-            Assert.True(blackboard.fishpond.TargetRect != null && blackboard.fishpond.TargetRect.Value != OpenCvSharp.Rect.Empty);
+            Assert.True(blackboard.fishpond.TargetRect != null && blackboard.fishpond.TargetRect.Value != default);
             Assert.Equal(3, blackboard.fishpond.Fishes.Count(f => f.FishType.Name == "pufferfish"));
             Assert.Equal(blackboard.fishpond.Fishes.OrderBy(f => f.Rect.X).First(), actual);
 
