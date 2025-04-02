@@ -9,6 +9,7 @@ using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
 using System.IO;
 using System.Text.Json.Serialization;
@@ -77,6 +78,9 @@ public partial class ScriptGroupProject : ObservableObject
     [JsonIgnore]
     [ObservableProperty]
     public bool? _nextFlag = false;
+    
+    [ObservableProperty]
+    private bool? _allowJsNotification = true;
 
     public ScriptGroupProject()
     {
