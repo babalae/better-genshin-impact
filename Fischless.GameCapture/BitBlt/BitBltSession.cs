@@ -117,7 +117,7 @@ public class BitBltSession : IDisposable
                 : null;
         }
     }
-    
+
     public bool IsInvalid()
     {
         return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == IntPtr.Zero;
@@ -145,7 +145,7 @@ public class BitBltSession : IDisposable
             _oldBitmap = Gdi32.SafeHBITMAP.Null;
         }
 
-        
+
         if (!_hBitmap.IsNull)
         {
             Gdi32.DeleteObject(_hBitmap);
@@ -161,16 +161,7 @@ public class BitBltSession : IDisposable
 
         if (_hdcSrc != IntPtr.Zero)
         {
-            if (_hWnd.IsNull)
-            {
-                Gdi32.DeleteDC(_hdcDest);
-            }
-            else
-            {
-                User32.ReleaseDC(_hWnd, _hdcSrc);
-            }
-
-
+            User32.ReleaseDC(_hWnd, _hdcSrc);
             _hdcSrc = User32.SafeReleaseHDC.Null;
         }
 
