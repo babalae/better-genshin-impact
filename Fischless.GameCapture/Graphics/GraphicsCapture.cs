@@ -43,6 +43,7 @@ public class GraphicsCapture : IGameCapture
 
     private long _lastFrameTime = 0;
 
+    private Stopwatch _frameTimer = new Stopwatch();
 
     public void Dispose() => Stop();
 
@@ -178,14 +179,12 @@ public class GraphicsCapture : IGameCapture
             return;
         }
 
-        // 限制最高处理帧率为66fps
-        var now = Kernel32.GetTickCount();
-        if (now - _lastFrameTime < 15)
+        // 限制最高处理帧率为62fps
+        if (_frameTimer.ElapsedMilliseconds - _lastFrameTime < 16)
         {
             return;
         }
-
-        _lastFrameTime = now;
+        _lastFrameTime = _frameTimer.ElapsedMilliseconds;
 
         var frameSize = _captureItem.Size;
 
