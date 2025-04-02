@@ -43,7 +43,7 @@ public class GraphicsCapture : IGameCapture
 
     private long _lastFrameTime = 0;
 
-    private Stopwatch _frameTimer = new Stopwatch();
+    private readonly Stopwatch _frameTimer = new Stopwatch();
 
     public void Dispose() => Stop();
 
@@ -94,6 +94,7 @@ public class GraphicsCapture : IGameCapture
             _captureSession.IsBorderRequired = false;
         }
 
+        _frameTimer.Start();
         _captureSession.StartCapture();
         IsCapturing = true;
     }
