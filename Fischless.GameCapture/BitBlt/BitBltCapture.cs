@@ -13,6 +13,8 @@ public class BitBltCapture : IGameCapture
     private volatile nint _hWnd; // 需要加锁
     private BitBltSession? _session; // 需要加锁
 
+    private volatile bool _needResetSession;
+
     public void Dispose() => Stop();
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
@@ -31,6 +33,7 @@ public class BitBltCapture : IGameCapture
             {
                 return;
             }
+
             _session?.Dispose();
             _session = null;
             IsCapturing = true;
@@ -57,7 +60,7 @@ public class BitBltCapture : IGameCapture
 
         try
         {
-            if (_session is not null && _session.IsInvalid()) // 窗口状态变化可能会导致会话失效
+            if (_session is not null && (_session.IsInvalid() || _needResetSession)) // 窗口状态变化可能会导致会话失效
             {
                 _session.Dispose();
                 _session = null;
@@ -71,6 +74,7 @@ public class BitBltCapture : IGameCapture
                 _session = null;
                 return false;
             }
+
             var width = windowRect.right - windowRect.left;
             var height = windowRect.bottom - windowRect.top;
 
@@ -85,8 +89,9 @@ public class BitBltCapture : IGameCapture
             _session = new BitBltSession(_hWnd, width, height);
             return true;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            Console.Error.WriteLine("Failed to create bitblt session", e);
             return false;
         }
         finally
@@ -123,6 +128,12 @@ public class BitBltCapture : IGameCapture
             using var mat = _session?.BitBlt();
             if (mat is null || mat.Empty())
             {
+                if (_session is not null && !_session.IsInvalid())
+                {
+                    // 有时候会出现截图失败的情况，这时候重置会话
+                    _needResetSession = true;
+                }
+
                 return null;
             }
 

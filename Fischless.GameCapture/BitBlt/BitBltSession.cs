@@ -27,12 +27,12 @@ public class BitBltSession : IDisposable
     public int Width { get; }
     public int Height { get; }
 
-    private static readonly object LockObject = new object();
+    private readonly object _lockObject = new object();
 
 
     public BitBltSession(HWND hWnd, int w, int h)
     {
-        lock (LockObject)
+        lock (_lockObject)
         {
             try
             {
@@ -110,14 +110,17 @@ public class BitBltSession : IDisposable
     /// <returns></returns>
     public Mat? BitBlt()
     {
-        lock (LockObject)
+        lock (_lockObject)
         {
-            return Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height, _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY)
-                ? Mat.FromPixelData(Height, Width, MatType.CV_8UC4, _bitsPtr)
-                : null;
+            return Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height, _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY) ? Mat.FromPixelData(Height, Width, MatType.CV_8UC4, _bitsPtr) : null;
         }
     }
 
+    /// <summary>
+    /// 不是所有的失效情况都能被检测到
+    /// 
+    /// </summary>
+    /// <returns></returns>
     public bool IsInvalid()
     {
         return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == IntPtr.Zero;
@@ -126,7 +129,7 @@ public class BitBltSession : IDisposable
 
     public void Dispose()
     {
-        lock (LockObject)
+        lock (_lockObject)
         {
             ReleaseResources();
             GC.SuppressFinalize(this);
