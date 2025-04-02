@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using OpenCvSharp;
 using Vanara.PInvoke;
+using static System.Console;
 
 namespace Fischless.GameCapture.BitBlt;
 
@@ -91,7 +92,7 @@ public class BitBltCapture : IGameCapture
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine("Failed to create bitblt session", e);
+            Error.WriteLine("Failed to create bitblt session", e);
             return false;
         }
         finally
