@@ -1,33 +1,103 @@
 ﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
 using OpenCvSharp;
 using Vanara.PInvoke;
+using static System.Console;
 
 namespace Fischless.GameCapture.BitBlt;
 
 public class BitBltCapture : IGameCapture
 {
-    private nint _hWnd;
-
-    private static readonly object LockObject = new object();
-
-
     public CaptureModes Mode => CaptureModes.BitBlt;
-
     public bool IsCapturing { get; private set; }
+    private readonly Stopwatch _sizeCheckTimer = new();
+    private readonly ReaderWriterLockSlim _lockSlim = new();
+    private volatile nint _hWnd; // 需要加锁
+    private BitBltSession? _session; // 需要加锁
+
+    private volatile bool _needResetSession;
 
     public void Dispose() => Stop();
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
-        _hWnd = hWnd;
-        IsCapturing = true;
-        if (settings != null && settings.TryGetValue("autoFixWin11BitBlt", out var value))
+        if (settings == null || !settings.TryGetValue("autoFixWin11BitBlt", out var value)) return;
+        if (value is true)
         {
-            if (value is true)
+            BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+        }
+
+        _lockSlim.EnterWriteLock();
+        try
+        {
+            _hWnd = hWnd;
+            if (_hWnd == IntPtr.Zero)
             {
-                BitBltRegistryHelper.SetDirectXUserGlobalSettings();
+                return;
             }
+
+            _session?.Dispose();
+            _session = null;
+            IsCapturing = true;
+        }
+        finally
+        {
+            _lockSlim.ExitWriteLock();
+        }
+
+        CheckSession();
+    }
+
+
+    /// <summary>
+    /// 检查窗口大小，如果改变则更新截图尺寸。返回是否成功。
+    /// </summary>
+    /// <returns></returns>
+    private bool CheckSession()
+    {
+        if (!_lockSlim.TryEnterWriteLock(TimeSpan.FromSeconds(0.5)))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (_session is not null && (_session.IsInvalid() || _needResetSession)) // 窗口状态变化可能会导致会话失效
+            {
+                _session.Dispose();
+                _session = null;
+            }
+
+            if (!User32.GetClientRect(_hWnd, out var windowRect) || windowRect == default)
+            {
+                //    Debug.Fail("Failed to get client rectangle");
+                // 窗口获取不到或者最小化
+                _session?.Dispose();
+                _session = null;
+                return false;
+            }
+
+            var width = windowRect.right - windowRect.left;
+            var height = windowRect.bottom - windowRect.top;
+
+            _session ??= new BitBltSession(_hWnd, width, height);
+            if (_session.Width == width && _session.Height == height)
+            {
+                return true;
+            }
+
+            // 窗口尺寸被改变，释放资源
+            _session.Dispose();
+            _session = new BitBltSession(_hWnd, width, height);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Error.WriteLine("Failed to create bitblt session:{0}", e);
+            return false;
+        }
+        finally
+        {
+            _lockSlim.ExitWriteLock();
         }
     }
 
@@ -38,113 +108,68 @@ public class BitBltCapture : IGameCapture
             return null;
         }
 
-        // 加锁
-        lock (LockObject)
+        if (!_sizeCheckTimer.IsRunning)
         {
-            User32.SafeReleaseHDC hdcSrc = User32.SafeReleaseHDC.Null;
-            Gdi32.SafeHDC hdcDest = Gdi32.SafeHDC.Null;
-            Gdi32.SafeHBITMAP hBitmap = Gdi32.SafeHBITMAP.Null;
-            try
+            _sizeCheckTimer.Start();
+        }
+
+        if (_sizeCheckTimer.ElapsedMilliseconds > 1000)
+        {
+            _sizeCheckTimer.Reset();
+            // 不会经常调整窗口尺寸的，所以隔一段时间检查一次就行
+            if (!CheckSession())
             {
-                if (!User32.GetClientRect(_hWnd, out var windowRect))
-                {
-                    Debug.Fail("Failed to get client rectangle");
-                    return null;
-                }
-
-                var width = windowRect.right - windowRect.left;
-                var height = windowRect.bottom - windowRect.top;
-
-                hdcSrc = User32.GetDC(_hWnd == IntPtr.Zero ? User32.GetDesktopWindow() : _hWnd);
-                if (hdcSrc.IsInvalid)
-                {
-                    Debug.WriteLine($"Failed to get DC for {_hWnd}");
-                    return null;
-                }
-
-                hdcDest = Gdi32.CreateCompatibleDC(hdcSrc);
-                if (hdcSrc.IsInvalid)
-                {
-                    Debug.Fail("Failed to create CompatibleDC");
-                    return null;
-                }
-
-                var bmi = new Gdi32.BITMAPINFO
-                {
-                    bmiHeader = new Gdi32.BITMAPINFOHEADER
-                    {
-                        biSize = (uint)Marshal.SizeOf<Gdi32.BITMAPINFOHEADER>(),
-                        biWidth = width,
-                        biHeight = -height, // Top-down image
-                        biPlanes = 1,
-                        biBitCount = 32,
-                        biCompression = 0, // BI_RGB
-                        biSizeImage = 0
-                    }
-                };
-
-                hBitmap = Gdi32.CreateDIBSection(hdcDest, bmi, Gdi32.DIBColorMode.DIB_RGB_COLORS, out var bits,
-                    IntPtr.Zero,
-                    0);
-                if (hBitmap.IsInvalid || bits == 0)
-                {
-                    Debug.WriteLine($"Failed to create dIB section for {_hWnd}");
-                    return null;
-                }
-
-                var oldBitmap = Gdi32.SelectObject(hdcDest, hBitmap);
-                if (oldBitmap.IsNull)
-                {
-                    return null;
-                }
-
-                if (!Gdi32.BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY))
-                {
-                    Debug.WriteLine($"BitBlt failed for {_hWnd}");
-                    return null;
-                }
-
-                using var mat = Mat.FromPixelData(height, width, MatType.CV_8UC4, bits);
-                Gdi32.SelectObject(hdcDest, oldBitmap);
-                if (!mat.Empty())
-                {
-                    var bgrMat = new Mat();
-                    Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-                    return bgrMat;
-                }
-                else
-                {
-                    return null;
-                }
+                return null;
             }
-            catch (Exception e)
+        }
+
+        try
+        {
+            _lockSlim.EnterReadLock();
+            using var mat = _session?.BitBlt();
+            if (mat is null || mat.Empty())
             {
-                Debug.WriteLine(e);
-                return null!;
-            }
-            finally
-            {
-                if (!hBitmap.IsNull)
+                if (_session is not null && !_session.IsInvalid())
                 {
-                    Gdi32.DeleteObject(hBitmap);
+                    // 有时候会出现截图失败的情况，这时候重置会话
+                    _needResetSession = true;
                 }
 
-                if (!hdcDest.IsNull)
-                {
-                    Gdi32.DeleteDC(hdcDest);
-                }
-
-                if (_hWnd != IntPtr.Zero)
-                {
-                    User32.ReleaseDC(_hWnd, hdcSrc);
-                }
+                return null;
             }
+
+            var bgrMat = new Mat();
+            Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
+            return bgrMat;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+        finally
+        {
+            _lockSlim.ExitReadLock();
         }
     }
 
     public void Stop()
     {
-        _hWnd = IntPtr.Zero;
+        _lockSlim.EnterWriteLock();
+        try
+        {
+            _hWnd = IntPtr.Zero;
+            _sizeCheckTimer.Stop();
+            if (_session != null)
+            {
+                _session.Dispose();
+                _session = null;
+            }
+        }
+        finally
+        {
+            _lockSlim.ExitWriteLock();
+        }
+
         IsCapturing = false;
     }
 }
