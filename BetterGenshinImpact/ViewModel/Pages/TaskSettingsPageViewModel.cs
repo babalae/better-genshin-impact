@@ -426,7 +426,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchArtifactSalvageEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.RegularExpression));
+            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.RegularExpression, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
         SwitchArtifactSalvageEnabled = false;
     }
 }

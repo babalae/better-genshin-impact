@@ -1679,7 +1679,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -1695,11 +1694,36 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Width="80"
-                              Margin="0,0,10,0"
+                              Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
                               SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
                     </ComboBox>
-
+                </Grid>
+                <Grid Margin="16" Cursor="">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="7*" />
+                        <ColumnDefinition Width="3*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="最大检查数量"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="达到最大检查数量后也会停止"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Value="{Binding Config.AutoArtifactSalvageConfig.MaxNumToCheck, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

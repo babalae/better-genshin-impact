@@ -14,4 +14,8 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
     // 1~4
     [ObservableProperty]
     private string _maxArtifactStar = "4";
+
+    // 最多检查多少个圣遗物
+    [ObservableProperty]
+    private int _maxNumToCheck = 100;
 }
