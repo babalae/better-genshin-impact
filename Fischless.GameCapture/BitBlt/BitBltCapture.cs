@@ -57,14 +57,21 @@ public class BitBltCapture : IGameCapture
 
         try
         {
-            if (!User32.GetClientRect(_hWnd, out var windowRect))
+            if (_session is not null && _session.IsInvalid()) // 窗口状态变化可能会导致会话失效
             {
-                //    Debug.Fail("Failed to get client rectangle");
-                return false;
+                _session = null;
             }
 
+            if (!User32.GetClientRect(_hWnd, out var windowRect) || windowRect == default)
+            {
+                //    Debug.Fail("Failed to get client rectangle");
+                // 窗口获取不到或者最小化
+                _session = null;
+                return false;
+            }
             var width = windowRect.right - windowRect.left;
             var height = windowRect.bottom - windowRect.top;
+
             _session ??= new BitBltSession(_hWnd, width, height);
             if (_session.Width == width && _session.Height == height)
             {

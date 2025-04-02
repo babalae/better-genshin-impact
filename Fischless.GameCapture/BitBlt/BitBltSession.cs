@@ -117,6 +117,11 @@ public class BitBltSession : IDisposable
                 : null;
         }
     }
+    
+    public bool IsInvalid()
+    {
+        return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == IntPtr.Zero;
+    }
 
 
     public void Dispose()
