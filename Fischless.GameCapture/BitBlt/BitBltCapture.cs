@@ -31,7 +31,7 @@ public class BitBltCapture : IGameCapture
             {
                 return;
             }
-
+            _session?.Dispose();
             _session = null;
             IsCapturing = true;
         }
@@ -59,6 +59,7 @@ public class BitBltCapture : IGameCapture
         {
             if (_session is not null && _session.IsInvalid()) // 窗口状态变化可能会导致会话失效
             {
+                _session.Dispose();
                 _session = null;
             }
 
@@ -66,6 +67,7 @@ public class BitBltCapture : IGameCapture
             {
                 //    Debug.Fail("Failed to get client rectangle");
                 // 窗口获取不到或者最小化
+                _session?.Dispose();
                 _session = null;
                 return false;
             }
