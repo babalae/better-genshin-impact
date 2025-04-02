@@ -46,9 +46,11 @@ public static class Direct3D11Helper
         return CreateDevice(false);
     }
 
+    private static SharpDX.Direct3D11.Device? d3dDevice;
+
     public static IDirect3DDevice CreateDevice(bool useWARP)
     {
-        var d3dDevice = new SharpDX.Direct3D11.Device(
+        d3dDevice ??= new SharpDX.Direct3D11.Device(
             useWARP ? SharpDX.Direct3D.DriverType.Software : SharpDX.Direct3D.DriverType.Hardware,
             SharpDX.Direct3D11.DeviceCreationFlags.BgraSupport);
         var device = CreateDirect3DDeviceFromSharpDXDevice(d3dDevice);
