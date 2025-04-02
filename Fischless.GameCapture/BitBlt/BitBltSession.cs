@@ -138,17 +138,20 @@ public class BitBltSession : IDisposable
     /// </summary>
     private void ReleaseResources()
     {
+        if (!_oldBitmap.IsNull)
+        {
+            // 先选回资源再释放_hBitmap
+            Gdi32.SelectObject(_hdcDest, _oldBitmap);
+            _oldBitmap = Gdi32.SafeHBITMAP.Null;
+        }
+
+        
         if (!_hBitmap.IsNull)
         {
             Gdi32.DeleteObject(_hBitmap);
             _hBitmap = Gdi32.SafeHBITMAP.Null;
         }
 
-        if (!_oldBitmap.IsNull)
-        {
-            Gdi32.SelectObject(_hdcDest, _oldBitmap);
-            _oldBitmap = Gdi32.SafeHBITMAP.Null;
-        }
 
         if (!_hdcDest.IsNull)
         {
