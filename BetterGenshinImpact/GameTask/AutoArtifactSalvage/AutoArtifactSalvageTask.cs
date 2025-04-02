@@ -142,10 +142,10 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         // 确认选择
         // 5.5 变成反选
+        using var ra4 = CaptureToRectArea();
         if (star < 4)
         {
-            using var ra4 = CaptureToRectArea();
-            List<Region> ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeft(0.20)));
+            List<Region> ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra4.ToRect().CutLeft(0.20)));
             for (int i = star; i < 4; i++)
             {
                 foreach (var ocr in ocrList2)
@@ -158,9 +158,9 @@ public class AutoArtifactSalvageTask : ISoloTask
                     }
                 }
             }
-            Bv.ClickWhiteConfirmButton(ra4);
-            await Delay(500, ct);
         }
+        Bv.ClickWhiteConfirmButton(ra4);
+        await Delay(500, ct);
 
 
         // 点击分解
@@ -172,9 +172,20 @@ public class AutoArtifactSalvageTask : ISoloTask
             await Delay(800, ct);
             // 点击确认
             using var ra6 = CaptureToRectArea();
-            Bv.ClickBlackConfirmButton(ra6);
-            logger.LogInformation("完成{Star}星圣遗物快速分解", star);
-            await Delay(400, ct);
+            if (Bv.ClickBlackConfirmButton(ra6))
+            {
+                logger.LogInformation("完成{Star}星圣遗物快速分解", star);
+                await Delay(400, ct);
+                if (regularExpression != null)
+                {
+                    input.Mouse.LeftButtonClick();
+                    await Delay(1000, ct);
+                }
+            }
+            else
+            {
+                logger.LogInformation("未找到进行分解按钮，可能发生了卡顿");
+            }
         }
         else
         {
@@ -292,7 +303,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                     using var ra2 = CaptureToRectArea();
                     using ImageRegion grid2 = ra2.DeriveCrop(new Rect((int)(ra2.Width * 0.025), (int)(ra2.Width * 0.055), (int)(ra2.Width * 0.66), (int)(ra2.Width * 0.4)));
                     IEnumerable<Rect> gridItems2 = GetArtifactGridItems(grid2.SrcMat);
-                    if (gridItems2.Min(i => i.Y) > (ra2.Width * 0.01875))  // 精细滚动，保证完整地显示四行
+                    if (gridItems2.Min(i => i.Y) > (ra2.Width * 0.018))  // 精细滚动，保证完整地显示四行
                     {
                         input.Mouse.VerticalScroll(-1);
                     }
