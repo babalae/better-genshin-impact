@@ -92,7 +92,7 @@ public class BitBltCapture : IGameCapture
         }
         catch (Exception e)
         {
-            Error.WriteLine("Failed to create bitblt session", e);
+            Error.WriteLine("Failed to create bitblt session:{0}", e);
             return false;
         }
         finally
