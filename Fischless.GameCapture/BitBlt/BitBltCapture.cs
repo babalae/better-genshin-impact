@@ -31,6 +31,7 @@ public class BitBltCapture : IGameCapture
             {
                 return;
             }
+
             _session = null;
             IsCapturing = true;
         }
@@ -38,6 +39,7 @@ public class BitBltCapture : IGameCapture
         {
             _lockSlim.ExitWriteLock();
         }
+
         CheckSession();
     }
 
@@ -71,7 +73,7 @@ public class BitBltCapture : IGameCapture
 
             // 窗口尺寸被改变，释放资源
             _session.Dispose();
-            Interlocked.Exchange(ref _session, new BitBltSession(_hWnd, width, height));
+            _session = new BitBltSession(_hWnd, width, height);
             return true;
         }
         catch (Exception)
