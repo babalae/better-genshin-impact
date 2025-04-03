@@ -57,7 +57,7 @@ public class ScanPickTask
 
             Simulation.SendInput.SimulateAction(GIActions.Drop);
             var (hasItems, pickItems) = DetectPickableItems(ct);
-            Logger.LogInformation("存在可拾取物品: {0}", hasItems);
+            // Logger.LogInformation("存在可拾取物品: {0}", hasItems);
             if (!hasItems)
             {
                 Simulation.ReleaseAllKey();
@@ -65,7 +65,7 @@ public class ScanPickTask
                 for (var i = 0; i < 20; i++)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy(600, 0);
-                    await WalkForward(ct, 100);
+                    await WalkBack(ct, 100);
                     Simulation.SendInput.SimulateAction(GIActions.Drop);
                     (hasItems, pickItems) = DetectPickableItems(ct);
                     if (hasItems) break;
@@ -140,11 +140,11 @@ public class ScanPickTask
         return (pickItems.Count > 0, pickItems);
     }
 
-    private static async Task WalkForward(CancellationToken ct, int ms = 1000)
+    private static async Task WalkBack(CancellationToken ct, int ms = 1000)
     {
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
         await Delay(ms, ct);
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
     }
 
     private void MoveCursorTo(Rect item, ImageRegion ra)
