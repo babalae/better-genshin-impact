@@ -92,7 +92,7 @@ public class BitBltCapture : IGameCapture
         }
         catch (Exception e)
         {
-            Error.WriteLine("Failed to create bitblt session:{0}", e);
+            Error.WriteLine("[BitBlt]Failed to create session:{0}", e);
             return false;
         }
         finally
@@ -123,27 +123,48 @@ public class BitBltCapture : IGameCapture
             }
         }
 
+        Mat? mat = null;
         try
         {
             _lockSlim.EnterReadLock();
-            using var mat = _session?.BitBlt();
-            if (mat is null || mat.Empty())
+            if (_session is null)
             {
-                if (_session is not null && !_session.IsInvalid())
-                {
-                    // 有时候会出现截图失败的情况，这时候重置会话
-                    _needResetSession = true;
-                }
-
+                // 没有成功创建会话，直接返回空
                 return null;
             }
+            mat = _session.BitBlt();
+            
+            if (mat is not null) // 成功执行
+            {
+                if (!mat.Empty()) // 并且获取到了图
+                {
+                    _needResetSession = false;
+                    return mat;
+                }
+                else // 成功执行但是没有图，可能是截图过快导致的
+                {
+                    mat.Dispose();
+                    mat = null; // 防止二次释放
+                }
+            }
 
-            var bgrMat = new Mat();
-            Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-            return bgrMat;
+            // 无论没有图还是执行失败都会到这里
+            if (_session is not null && !_session.IsInvalid())
+            {
+                // _session正确但是截图失败，如果持续出现这个问题需要重置会话
+                _needResetSession = true;
+            }
+
+            return null;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            // 理论这里不应出现异常，除非窗口不存在了或者有什么bug
+            // 出现异常的时候释放内存
+            mat?.Dispose();
+            // 如果持续出现异常则重置会话
+            _needResetSession = true;
+            Error.WriteLine("[BitBlt]Failed to capture image {0}", e);
             return null;
         }
         finally

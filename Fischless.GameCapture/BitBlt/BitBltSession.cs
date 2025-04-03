@@ -25,7 +25,17 @@ public class BitBltSession : IDisposable
     // 旧位图，析构时一起释放掉
     private HGDIOBJ _oldBitmap;
     public int Width { get; }
+
     public int Height { get; }
+
+    // 用于过滤alpha通道
+    private static readonly Gdi32.BLENDFUNCTION BlendFunction = new()
+    {
+        BlendOp = 0, //Gdi32.BlendOperation.AC_SRC_OVER,
+        BlendFlags = 0,
+        SourceConstantAlpha = 255,
+        AlphaFormat = 0, //Gdi32.AlphaFormat.AC_SRC_ALPHA
+    };
 
     private readonly object _lockObject = new object();
 
@@ -71,9 +81,9 @@ public class BitBltSession : IDisposable
                         biWidth = Width,
                         biHeight = -Height, // Top-down image
                         biPlanes = 1,
-                        biBitCount = 32,
+                        biBitCount = 24,
                         biCompression = 0, // BI_RGB
-                        biSizeImage = 0
+                        biSizeImage = 0,
                     }
                 };
                 _hBitmap = Gdi32.CreateDIBSection(_hdcDest, bmi, Gdi32.DIBColorMode.DIB_RGB_COLORS, out var bits,
@@ -112,9 +122,19 @@ public class BitBltSession : IDisposable
     {
         lock (_lockObject)
         {
-            return Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height, _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY) ? Mat.FromPixelData(Height, Width, MatType.CV_8UC4, _bitsPtr) : null;
+            // 直接返回转换后的位图
+            return Gdi32.AlphaBlend(_hdcDest, 0, 0, Width, Height, _hdcSrc, 0, 0, Width, Height, BlendFunction)
+                ? Mat.FromPixelData(Height, Width, MatType.CV_8UC3, _bitsPtr, (Width * 3 + 3) & ~3)
+                : null;
+
+            // 原始宏 ((((biWidth * biBitCount) + 31) & ~31) >> 3) => (biWidth * biBitCount + 3) & ~3) (在总位数是8的倍数时，两者等价)
+            // 对齐 https://learn.microsoft.com/zh-cn/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
+
+            //  适用于32位(RGBA)
+            //  return Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height, _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY ) ? Mat.FromPixelData(Height, Width, MatType.CV_8UC3, _bitsPtr) : null;
         }
     }
+
 
     /// <summary>
     /// 不是所有的失效情况都能被检测到
