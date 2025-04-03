@@ -392,6 +392,10 @@ public class TpTask(CancellationToken ct)
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
             }
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
