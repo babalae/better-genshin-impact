@@ -43,6 +43,7 @@ public class EngineExtend
 
         // 识图模块相关
         engine.AddHostType("Mat", typeof(Mat));
+        engine.AddHostType("Point2f", typeof(Point2f)); // 添加Point2f类型暴露
         engine.AddHostType("RecognitionObject", typeof(RecognitionObject));
         engine.AddHostType("DesktopRegion", typeof(DesktopRegion));
         engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));

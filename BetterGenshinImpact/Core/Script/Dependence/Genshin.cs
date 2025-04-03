@@ -6,8 +6,11 @@ using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
-
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.GameTask.Common.Map;
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
@@ -126,6 +129,30 @@ public class Genshin
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         await tpTask.TpToStatueOfTheSeven();
     }
+
+    /// <summary>
+    /// 获取当前在大地图上的位置坐标
+    /// </summary>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromBigMap()
+    {
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        return tpTask.GetPositionFromBigMap();
+    }
+
+    /// <summary>
+    /// 获取当前在小地图上的位置坐标
+    /// </summary>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromMap(){
+        var imageRegion = CaptureToRectArea();
+        if (!Bv.IsInMainUi(imageRegion))
+        {
+            throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
+        }
+        return MapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
+    }
+
     #endregion 大地图操作
     /// <summary>
     /// 切换队伍
