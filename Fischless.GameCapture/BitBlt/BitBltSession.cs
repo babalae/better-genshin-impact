@@ -34,7 +34,7 @@ public class BitBltSession : IDisposable
         BlendOp = 0, //Gdi32.BlendOperation.AC_SRC_OVER,
         BlendFlags = 0,
         SourceConstantAlpha = 255,
-        AlphaFormat = 0, //Gdi32.AlphaFormat.AC_SRC_ALPHA
+        AlphaFormat = 0,
     };
 
     private readonly object _lockObject = new object();
