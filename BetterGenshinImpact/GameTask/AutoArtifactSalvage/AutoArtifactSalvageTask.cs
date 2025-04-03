@@ -255,17 +255,9 @@ public class AutoArtifactSalvageTask : ISoloTask
                         }
                         checkedArtifactAffixesQueue.Enqueue(affixes);
 
-                        Match match = Regex.Match(affixes, regularExpression);
-                        if (match.Success)
+                        if (IsMatchRegularExpression(affixes, regularExpression, out string msg))
                         {
-                            if (string.IsNullOrEmpty(match.Value))
-                            {
-                                logger.LogInformation("匹配成功！");
-                            }
-                            else
-                            {
-                                logger.LogInformation("匹配成功：{m}", match.Value);
-                            }
+                            logger.LogInformation(message: msg);
                         }
                         else
                         {
@@ -331,6 +323,27 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             logger.LogInformation("重复检查次数过多，推断为找不到可检查的了");
         }
+    }
+
+    public static bool IsMatchRegularExpression(string affixes, string regularExpression, out string msg)
+    {
+        Match match = Regex.Match(affixes, regularExpression);
+        if (match.Success)
+        {
+            if (string.IsNullOrEmpty(match.Value))
+            {
+                msg = "匹配成功！";
+            }
+            else
+            {
+                msg = $"匹配成功：{match.Value}";
+            }
+        }
+        else
+        {
+            msg = "匹配失败！";
+        }
+        return match.Success;
     }
 
     public static string GetArtifactAffixes(Mat src, IOcrService ocrService)

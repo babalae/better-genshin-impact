@@ -32,6 +32,7 @@ using System.Linq;
 using System.Reflection;
 using System.Collections.Frozen;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -168,7 +169,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnStrategyDropDownOpened(string type)
     {
-        _autoFightViewModel.OnStrategyDropDownOpened(type);
+        AutoFightViewModel?.OnStrategyDropDownOpened(type);
     }
 
     [RelayCommand]
@@ -302,7 +303,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public void OnOpenFightFolder()
     {
-        _autoFightViewModel?.OnOpenFightFolder();
+        AutoFightViewModel?.OnOpenFightFolder();
     }
 
     [Obsolete]
@@ -418,7 +419,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenLocalScriptRepo()
     {
-        _autoFightViewModel.OnOpenLocalScriptRepo();
+        AutoFightViewModel?.OnOpenLocalScriptRepo();
     }
 
     [RelayCommand]
@@ -428,5 +429,17 @@ public partial class TaskSettingsPageViewModel : ViewModel
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.RegularExpression, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
         SwitchArtifactSalvageEnabled = false;
+    }
+
+    [RelayCommand]
+    private void OnOpenArtifactSalvageTestOCRWindow()
+    {
+        if (!TaskContext.Instance().IsInitialized)
+        {
+            PromptDialog.Prompt("请先启动截图器！", "");    // todo 自动启动截图器
+            return;
+        }
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
+        ocrDialog.ShowDialog();
     }
 }
