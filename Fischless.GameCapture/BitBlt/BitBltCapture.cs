@@ -132,7 +132,7 @@ public class BitBltCapture : IGameCapture
                 // 没有成功创建会话，直接返回空
                 return null;
             }
-            mat = _session.BitBlt();
+            mat = _session.GetMat();
             
             if (mat is not null) // 成功执行
             {

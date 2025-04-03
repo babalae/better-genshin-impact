@@ -115,10 +115,10 @@ public class BitBltSession : IDisposable
     }
 
     /// <summary>
-    /// 调用bitblt复制并返回新的mat
+    /// 调用GDI复制到缓冲区并返回新的mat
     /// </summary>
-    /// <returns></returns>
-    public Mat? BitBlt()
+    /// <returns>MatType.CV_8UC3</returns>
+    public Mat? GetMat()
     {
         lock (_lockObject)
         {
