@@ -470,6 +470,8 @@ public class AutoFightTask : ISoloTask
         if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) && IsYellow(b3.Item2, b3.Item1, b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/)
         {
             Logger.LogInformation("识别到战斗结束");
+            //取消正在进行的换队
+            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
             return true;
         }
 
