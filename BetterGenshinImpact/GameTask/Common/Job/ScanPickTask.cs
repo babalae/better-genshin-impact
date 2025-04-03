@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,42 +46,98 @@ public class ScanPickTask
 
     public async Task DoOnce(CancellationToken ct)
     {
-        var forwardTimes = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.ForwardTimes;
-        for (int n = 0; n < forwardTimes; n++) // 直走次数
+        var sec = TaskContext.Instance().Config.AutoFightConfig.PickDropsAfterFightSeconds;
+        Stopwatch timeoutStopwatch = Stopwatch.StartNew();
+        TimeSpan finishTime = TimeSpan.FromSeconds(sec);
+
+        await ResetCamera(ct);
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
+        while (!ct.IsCancellationRequested && timeoutStopwatch.Elapsed < finishTime)
         {
-            Simulation.SendInput.SimulateAction(GIActions.Drop);//取消爬墙状态
-            await ResetCamera(ct);
-            var hasDrops = false;
 
-            // 旋转视角
-            var step = 300 * _dpi; // TODO:把300换成一个更加普适的值
-            step = n % 2 == 0 ? step : -step;
-            for (var i = 0; i < 20; i++)
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
+            var (hasItems, pickItems) = DetectPickableItems(ct);
+            Logger.LogInformation("存在可拾取物品: {0}", hasItems);
+            if (!hasItems)
             {
-                var ra = CaptureToRectArea();
-                var resultDic = _predictor.Detect(ra);
-                // 过滤出可拾取物品
-                var pickItems = resultDic.Where(x => x.Key is "drops" or "ore")
-                    .SelectMany(x => x.Value).ToList();
-
-
-                if (pickItems.Count > 0)
+                Simulation.ReleaseAllKey();
+                await ResetCamera(ct);
+                for (var i = 0; i < 20; i++)
                 {
-                    hasDrops = true;
-                    await MoveTowardsFirstDrop(ct, 300 * _dpi);
-                    break;
+                    Simulation.SendInput.Mouse.MoveMouseBy(600, 0);
+                    await WalkForward(ct, 100);
+                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                    (hasItems, pickItems) = DetectPickableItems(ct);
+                    if (hasItems) break;
                 }
-
-                Simulation.SendInput.Mouse.MoveMouseBy((int)step, 0);
-                await Delay(100, ct);
             }
 
-            if (!hasDrops)
+            if (!hasItems)
             {
+                Logger.LogInformation("没有可拾取物品，结束扫描");
                 break;
             }
-        }
 
+
+            // Assume 1080p resolution
+            // approximate dist=(x-960)**2+14*(y-888.88)**2
+
+            pickItems = pickItems.OrderBy(rect => Math.Pow(rect.X - 960, 2) +
+                14 * Math.Pow(rect.Bottom - 888.88, 2)).ToList();
+            var toPickItem = pickItems[0];
+            Logger.LogDebug("Fetching: {0}", toPickItem);
+            Logger.LogDebug("Using coord: {0} {1}", toPickItem.X, toPickItem.Bottom);
+
+            // 需要避免两个对向的键同时按下
+            if (toPickItem.X < 760)
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+            }
+            else if (toPickItem.X > 1040)
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
+            }
+            else
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+            }
+            if (toPickItem.Bottom < 770)
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            }
+            else if (toPickItem.Bottom > 900)
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+            }
+            else
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            }
+            await Delay(100, ct);
+        }
+        Simulation.ReleaseAllKey();
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
+    }
+
+    /// <summary>
+    /// Detects pickable items in the current view
+    /// </summary>
+    /// <returns>A tuple containing whether items were found and the list of pickable items</returns>
+    private (bool hasItems, List<Rect> pickItems) DetectPickableItems(CancellationToken ct)
+    {
+        Delay(100, ct).Wait(ct);
+        var ra = CaptureToRectArea();
+        var resultDic = _predictor.Detect(ra);
+        // 过滤出可拾取物品
+        var pickItems = resultDic.Where(x => x.Key is "drops" or "ore")
+            .SelectMany(x => x.Value).ToList();
+        return (pickItems.Count > 0, pickItems);
     }
 
     private static async Task WalkForward(CancellationToken ct, int ms = 1000)
@@ -87,49 +145,6 @@ public class ScanPickTask
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         await Delay(ms, ct);
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-    }
-
-    private async Task MoveTowardsFirstDrop(CancellationToken ct, double step)
-    {
-        //通过每次缩小之前的步长来定位，可能有一定开销
-        var decayFactor = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.DecayFactor;
-        var calibrationTimes = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.CalibrationTimes;
-
-        var found = false;
-        for (var i = 0; i < calibrationTimes; i++)
-        {
-            var ra = CaptureToRectArea();
-            var resultDic = _predictor.Detect(ra);
-            var pickItems = resultDic.Where(x => x.Key is "drops" or "ore")
-                .SelectMany(x => x.Value).ToList();
-            if (pickItems.Count > 0)
-            {
-                step *= decayFactor;
-                found = true;
-                //只关心横坐标
-                var centerX = (pickItems.First().Left + pickItems.First().Right) / 2;
-                var dx = centerX - ra.Width / 2;
-                if (dx > 0)
-                    Simulation.SendInput.Mouse.MoveMouseBy((int)step, 0);
-                else if (dx < 0)
-                    Simulation.SendInput.Mouse.MoveMouseBy(-(int)step, 0);
-                await Delay(100, ct);
-            }
-            else
-            {
-                //也许已经对准，被人物挡住
-                break;
-            }
-        }
-        if (found) //仅在找到物品时前进（在误判进入该函数时避免远离原地）
-        {
-            Logger.LogInformation("前进采集");
-            var forwardms = TaskContext.Instance().Config.AutoFightConfig.PickDropsConfig.ForwardSeconds * 1000;
-            if (forwardms == 0)
-                forwardms = new Random().Next(1000, 3000);
-
-            await WalkForward(ct, forwardms);
-        }
     }
 
     private void MoveCursorTo(Rect item, ImageRegion ra)
