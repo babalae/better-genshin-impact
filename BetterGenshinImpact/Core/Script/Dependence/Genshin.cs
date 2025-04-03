@@ -133,27 +133,24 @@ public class Genshin
     /// <summary>
     /// 获取当前在大地图上的位置坐标
     /// </summary>
-    /// <returns>包含X和Y坐标的数组，索引0为X坐标，索引1为Y坐标</returns>
-    public float[] GetPositionFromBigMap()
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromBigMap()
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
-        Point2f position = tpTask.GetPositionFromBigMap();
-        // 转换为数组
-        return new float[] { position.X, position.Y };
+        return tpTask.GetPositionFromBigMap();
     }
 
     /// <summary>
     /// 获取当前在小地图上的位置坐标
     /// </summary>
-    /// <returns>包含X和Y坐标的数组，索引0为X坐标，索引1为Y坐标</returns>
-    public float[] GetPositionFromMap(){
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromMap(){
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        var position = MapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
-        return new float[] { position.X, position.Y };
+        return MapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
     }
 
     #endregion 大地图操作
