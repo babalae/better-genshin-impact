@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -20,9 +19,9 @@ public class MiningHandler : IActionHandler
     private readonly CombatScript _miningCombatScript = CombatScriptParser.ParseContext("""
                                                                                         钟离 e(hold)
                                                                                         雷泽 e(hold)
-                                                                                        坎蒂丝 e(hold)
                                                                                         卡齐娜 e(hold),keydown(s),wait(0.4),keyup(s),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2)
-                                                                                        凝光 attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2)
+                                                                                        坎蒂丝 e(hold)
+                                                                                        凝光 a(0.2),a(0.2),a(0.2),a(0.2),a(0.2),a(0.2),a(0.2),a(0.2)
                                                                                         """);
 
     private readonly ScanPickTask _scanPickTask = new();
