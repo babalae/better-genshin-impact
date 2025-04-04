@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
@@ -50,7 +48,6 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
 
                     await combatScenesAvatar.WaitSkillCd(ct);
                     combatScenesAvatar.UseSkill();
-                    elementalCollectAvatar.LastUseSkillTime = DateTime.UtcNow;
                 }
             }
             else
