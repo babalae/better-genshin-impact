@@ -987,8 +987,15 @@ public class PathExecutor
         var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
         if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
         {
+            // 排除大地图
+            if (Bv.IsInBigMapUi(imageRegion))
+            {
+                return;
+            }
+            
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            await Delay(1000, ct); // 等待界面关闭
         }
 
 
