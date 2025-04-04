@@ -287,7 +287,7 @@ public class Avatar
     /// <returns></returns>
     public bool IsActive(ImageRegion region)
     {
-        if (IndexRect == Rect.Empty)
+        if (IndexRect == default)
         {
             throw new Exception("IndexRect为空");
         }
@@ -316,7 +316,7 @@ public class Avatar
     public bool IsActiveNoIndexRect(ImageRegion region)
     {
         // 通过寻找右侧人物编号来判断是否出战
-        if (IndexRect == Rect.Empty)
+        if (IndexRect == default)
         {
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // 剪裁出队伍区域

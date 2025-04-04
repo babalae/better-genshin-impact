@@ -630,6 +630,11 @@ public class PathExecutor
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         while (!ct.IsCancellationRequested)
         {
+            if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            }
+            
             num++;
             if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {

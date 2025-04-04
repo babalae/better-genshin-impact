@@ -243,7 +243,7 @@ public class CombatScenes : IDisposable
         var avatars = new Avatar[namesCount];
         for (var i = 0; i < namesCount; i++)
         {
-            var nameRect = nameRects?[i] ?? Rect.Empty;
+            var nameRect = nameRects?[i] ?? default;
             // 根据手动写的出招表来优化CD
             var cd = Avatar.ParseActionSchedulerByCd(names[i], cdConfig);
             avatars[i] = new Avatar(this, names[i], i + 1, nameRect, cd ?? -1)

@@ -6,6 +6,7 @@ using Sdcb.PaddleOCR.Models;
 using System;
 using System.Diagnostics;
 using System.IO;
+using static Vanara.PInvoke.Gdi32;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
@@ -68,6 +69,16 @@ public class PaddleOcrService : IOcrService
     }
 
     public PaddleOcrResult OcrResult(Mat mat)
+    {
+        if (mat.Channels() == 4)
+        {
+            using var mat3 = mat.CvtColor(ColorConversionCodes.BGRA2BGR);
+            return _OcrResult(mat3);
+        }
+        return _OcrResult(mat);
+    }
+
+    private PaddleOcrResult _OcrResult(Mat mat)
     {
         lock (locker)
         {

@@ -19,12 +19,16 @@ public class AvatarClassifyGen
         // 读取基础图像
         // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Varesa.png", SearchOption.TopDirectoryOnly).ToList();
-        List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Iansan.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"),
+            "UI_AvatarIcon_Side_Varesa.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles2 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"),
+            "UI_AvatarIcon_Side_Iansan.png", SearchOption.TopDirectoryOnly).ToList();
         sideImageFiles.AddRange(sideImageFiles2);
-        List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_AmborCostumeWic.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles3 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"),
+            "UI_AvatarIcon_Side_AmborCostumeWic.png", SearchOption.TopDirectoryOnly).ToList();
         sideImageFiles.AddRange(sideImageFiles3);
-        List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_Ambor.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles4 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"),
+            "UI_AvatarIcon_Side_Ambor.png", SearchOption.TopDirectoryOnly).ToList();
         sideImageFiles.AddRange(sideImageFiles4);
         // List<string> sideImageFiles5 = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "UI_AvatarIcon_Side_XianglingCostumeWinter.png", SearchOption.TopDirectoryOnly).ToList();
         // sideImageFiles.AddRange(sideImageFiles5);
@@ -72,11 +76,14 @@ public class AvatarClassifyGen
             for (int i = 0; i < count; i++)
             {
                 // 随机挑选一张背景图像
-                string backgroundImageFile = Path.Combine(BackgroundDir, Directory.GetFiles(BackgroundDir, "*.png")[Rd.Next(Directory.GetFiles(BackgroundDir, "*.png").Length)]);
+                string backgroundImageFile = Path.Combine(BackgroundDir,
+                    Directory.GetFiles(BackgroundDir, "*.png")[
+                        Rd.Next(Directory.GetFiles(BackgroundDir, "*.png").Length)]);
 
                 // 从背景图像中随机取一块 128x128 的区域
                 Mat backgroundImage = Cv2.ImRead(backgroundImageFile, ImreadModes.Color);
-                Rect backgroundRect = new Rect(Rd.Next(backgroundImage.Width - 128), new Random().Next(backgroundImage.Height - 128), 128, 128);
+                Rect backgroundRect = new Rect(Rd.Next(backgroundImage.Width - 128),
+                    new Random().Next(backgroundImage.Height - 128), 128, 128);
                 Mat backgroundImageRegion = backgroundImage[backgroundRect];
 
                 // 随机平移、缩放保留区域
@@ -93,9 +100,11 @@ public class AvatarClassifyGen
                 // Cv2.ImShow("resizedSideImage", resizedSideImage);
                 var resizedMaskImage = new Mat();
                 // Cv2.Threshold(alphaChannel, alphaChannel, 200, 255, ThresholdTypes.Otsu);
-                Cv2.Resize(255 - alphaChannel, resizedMaskImage, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
+                Cv2.Resize(~alphaChannel, resizedMaskImage, new Size(128 * scale, 128 * scale), 0, 0,
+                    InterpolationFlags.Cubic);
                 var resizedAlphaChannel = new Mat();
-                Cv2.Resize(alphaChannel, resizedAlphaChannel, new Size(128 * scale, 128 * scale), 0, 0, InterpolationFlags.Cubic);
+                Cv2.Resize(alphaChannel, resizedAlphaChannel, new Size(128 * scale, 128 * scale), 0, 0,
+                    InterpolationFlags.Cubic);
 
                 // Cv2.ImShow("resizedMaskImage", resizedMaskImage);
                 // generatedImage[transformedRect] = resizedSideImage;
@@ -112,7 +121,8 @@ public class AvatarClassifyGen
                     int offsetY = Rd.Next(-ySpace, 0);
                     Debug.WriteLine($"{sideImageFileName} 缩放{scale}大于1 偏移 ({offsetX},{offsetY})");
 
-                    var roi = new Rect((resizedSideImage.Width - 128) / 2 + offsetX, (resizedSideImage.Height - 128) + offsetY, 128, 128);
+                    var roi = new Rect((resizedSideImage.Width - 128) / 2 + offsetX,
+                        (resizedSideImage.Height - 128) + offsetY, 128, 128);
                     // result = new Mat();
                     // Cv2.BitwiseAnd(backgroundImageRegionClone, backgroundImageRegionClone, result, resizedMaskImage[roi]);
                     result = Mul(backgroundImageRegionClone, resizedAlphaChannel[roi]);
@@ -126,7 +136,8 @@ public class AvatarClassifyGen
                     int offsetY = Rd.Next(-ySpace, 0);
                     Debug.WriteLine($"{sideImageFileName} 缩放{scale}小于等于1 偏移 ({offsetX},{offsetY})");
 
-                    var roi = new Rect((128 - resizedSideImage.Width) / 2 + offsetX, (128 - resizedSideImage.Height) + offsetY, resizedSideImage.Width, resizedSideImage.Height);
+                    var roi = new Rect((128 - resizedSideImage.Width) / 2 + offsetX,
+                        (128 - resizedSideImage.Height) + offsetY, resizedSideImage.Width, resizedSideImage.Height);
                     var res = new Mat();
                     // Cv2.BitwiseAnd(backgroundImageRegionClone[roi], backgroundImageRegionClone[roi], res, resizedMaskImage);
                     res = Mul(backgroundImageRegionClone[roi], resizedAlphaChannel);
@@ -146,8 +157,9 @@ public class AvatarClassifyGen
             var channels = background.Split();
             for (int i = 0; i < 3; i++)
             {
-                Cv2.Multiply(channels[i], 255 - alphaChannel, channels[i], 1 / 255.0);
+                Cv2.Multiply(channels[i], ~ alphaChannel, channels[i], 1 / 255.0);
             }
+
             Mat result = new Mat();
             Cv2.Merge(channels[..3], result);
             return result;

@@ -662,7 +662,7 @@ public class AutoDomainTask : ISoloTask
             while (!_ct.IsCancellationRequested)
             {
                 var treeRect = DetectTree(CaptureToRectArea());
-                if (treeRect != Rect.Empty)
+                if (treeRect != default)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
                     if (treeRect.X + treeRect.Width < middleX && !_config.ShortMovement)
@@ -828,7 +828,7 @@ public class AutoDomainTask : ISoloTask
             return new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
         }
 
-        return Rect.Empty;
+        return default;
     }
 
     private Task LockCameraToEastTask(CancellationTokenSource cts, Task moveAvatarTask)
@@ -1044,6 +1044,6 @@ public class AutoDomainTask : ISoloTask
             star = 4;
         }
 
-        await new ArtifactSalvageTask().Start(star, _ct);
+        await new ArtifactSalvageTask(star).Start(_ct);
     }
 }
