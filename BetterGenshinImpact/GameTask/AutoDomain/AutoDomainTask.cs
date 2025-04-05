@@ -75,7 +75,8 @@ public class AutoDomainTask : ISoloTask
 
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
 
-        IStringLocalizer<AutoDomainTask> stringLocalizer = App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
+        IStringLocalizer<AutoDomainTask> stringLocalizer =
+            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "挑战达成");
         this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "自动退出");
@@ -210,13 +211,15 @@ public class AutoDomainTask : ISoloTask
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动秘境功能 !",
+                gameScreenSize.Width, gameScreenSize.Height);
             throw new Exception("游戏窗口分辨率不是 16:9");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏可能无法正常使用自动秘境功能 !", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏可能无法正常使用自动秘境功能 !",
+                gameScreenSize.Width, gameScreenSize.Height);
         }
     }
 
@@ -328,7 +331,7 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
-        
+
         // 点击单人挑战
         int retryTimes = 0;
         while (retryTimes < 20)
@@ -343,14 +346,18 @@ public class AutoDomainTask : ISoloTask
 
             await Delay(1500, _ct);
         }
-        
+
+        // 判断弹框
         await Delay(600, _ct);
-        using var confirmRectArea2 = CaptureToRectArea().Find(ElementAssets.Instance.BtnBlackConfirm);
-        if (!confirmRectArea2.IsEmpty())
+        var ra = CaptureToRectArea();
+        using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
+            ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32  - ra.Height * 0.353));
+        if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
         {
-            throw new Exception("收取完成秘境的奖励需要20点原粹树脂，当前树脂不足，自动秘境停止运行");
+            Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
+            throw new Exception("当前树脂不足，自动秘境停止运行。");
         }
-        
+
         // 点击进入
         retryTimes = 0;
         while (retryTimes < 20)
@@ -362,6 +369,7 @@ public class AutoDomainTask : ISoloTask
                 confirmRectArea.Click();
                 break;
             }
+
             await Delay(1200, _ct);
         }
 
@@ -387,7 +395,9 @@ public class AutoDomainTask : ISoloTask
             // }
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var done = ocrList.FirstOrDefault(t => Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) || Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
+            var done = ocrList.FirstOrDefault(t =>
+                Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
+                Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
             if (done != null)
             {
                 await Delay(1000, _ct);
@@ -447,9 +457,9 @@ public class AutoDomainTask : ISoloTask
                         Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                         break;
                     }
-                    
+
                     // 超时直接放弃整个秘境
-                    if (DateTime.Now - startTime> TimeSpan.FromSeconds(60))
+                    if (DateTime.Now - startTime > TimeSpan.FromSeconds(60))
                     {
                         Logger.LogWarning("自动秘境：{Text}", "前往目标位置处超时，如果选择了秘境名称，将在传送后重试秘境！");
                         Avatar.TpForRecover(_ct, new RetryException("前往目标位置处超时，先传送到七天神像，然后重试秘境"));
@@ -943,7 +953,8 @@ public class AutoDomainTask : ISoloTask
             using var ra = CaptureToRectArea();
 
             // OCR识别是否有跳过
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0, 230 * assetScale - 5, 80 * assetScale));
+            var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0,
+                230 * assetScale - 5, 80 * assetScale));
             var skipTextRa = ocrList.FirstOrDefault(t => Regex.IsMatch(t.Text, this.skipLocalizedString));
             if (skipTextRa != null)
             {
@@ -1012,7 +1023,8 @@ public class AutoDomainTask : ISoloTask
         if (!condensedResinCountRa.IsEmpty())
         {
             // 图像右侧就是浓缩树脂数量
-            var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width, condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height);
+            var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
+                condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height);
             // Cv2.ImWrite($"log/resin_{DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")}.png", countArea.SrcGreyMat);
             var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
             condensedResinCount = StringUtils.TryParseInt(count);
@@ -1023,12 +1035,14 @@ public class AutoDomainTask : ISoloTask
         if (!fragileResinCountRa.IsEmpty())
         {
             // 图像右侧就是脆弱树脂数量
-            var countArea = ra.DeriveCrop(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y, (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height);
+            var countArea = ra.DeriveCrop(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y,
+                (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height);
             var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
             fragileResinCount = StringUtils.TryParseInt(count);
         }
 
-        Logger.LogInformation("剩余：浓缩树脂 {CondensedResinCount} 脆弱树脂 {FragileResinCount}", condensedResinCount, fragileResinCount);
+        Logger.LogInformation("剩余：浓缩树脂 {CondensedResinCount} 脆弱树脂 {FragileResinCount}", condensedResinCount,
+            fragileResinCount);
         return (condensedResinCount, fragileResinCount);
     }
 
