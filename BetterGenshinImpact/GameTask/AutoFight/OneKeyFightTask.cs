@@ -1,14 +1,12 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
-
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,8 +38,10 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             return;
         }
+
         _isKeyDown = true;
-        if (activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority || IsAvatarMacrosEdited())
+        if (activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority ||
+            IsAvatarMacrosEdited())
         {
             activeMacroPriority = TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
             _avatarMacros = LoadAvatarMacros();
@@ -146,8 +146,22 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             _currentCombatScenes = combatScenes;
         }
+
         // 找到出战角色
-        var activeAvatar = _currentCombatScenes.Avatars.First(avatar => avatar.IsActive(imageRegion));
+        // var activeAvatar = _currentCombatScenes.GetAvatars().First(avatar => avatar.IsActive(imageRegion));
+        var avatarName = _currentCombatScenes.CurrentAvatar(true, imageRegion, ct);
+        if (avatarName is null)
+        {
+            Logger.LogError("无法识别出战角色");
+            return Task.CompletedTask;
+        }
+
+        var activeAvatar = _currentCombatScenes.SelectAvatar(avatarName);
+        if (activeAvatar is null)
+        {
+            Logger.LogError("获取出战角色{Name}失败", avatarName);
+            return Task.CompletedTask;
+        }
 
         if (_avatarMacros != null && _avatarMacros.TryGetValue(activeAvatar.Name, out var combatCommands))
         {
@@ -167,6 +181,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                         command.Execute(activeAvatar);
                     }
                 }
+
                 Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
             });
         }
@@ -187,6 +202,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             return [];
         }
+
         var result = new Dictionary<string, List<CombatCommand>>();
         foreach (var avatarMacro in avatarMacros)
         {
@@ -196,6 +212,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                 result.Add(avatarMacro.Name, commands);
             }
         }
+
         return result;
     }
 

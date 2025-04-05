@@ -163,7 +163,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             Name = "P",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "p.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 7, CaptureRect.Height / 5, CaptureRect.Width / 7, CaptureRect.Height / 2 - CaptureRect.Width / 7),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(CaptureRect.Width / 12.5), CaptureRect.Height / 5, (int)(CaptureRect.Width / 12.5), CaptureRect.Height / 2 - CaptureRect.Width / 7),
             DrawOnWindow = false
         }.InitTemplate();
 

@@ -366,7 +366,7 @@ public static class KeyIdConverter
             KeyId.ScrollLock => "Scroll Lock",
             KeyId.LeftShift => "Left Shift",
             KeyId.RightShift => "Right Shift",
-            KeyId.LeftCtrl => "Left Crtl",
+            KeyId.LeftCtrl => "Left Ctrl",
             KeyId.RightCtrl => "Right Ctrl",
             KeyId.LeftAlt => "Left Alt",
             KeyId.RightAlt => "Right Alt",

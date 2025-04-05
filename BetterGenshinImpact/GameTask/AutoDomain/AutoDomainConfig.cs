@@ -47,9 +47,4 @@ public partial class AutoDomainConfig : ObservableObject
     // 结束后是否自动分解圣遗物
     [ObservableProperty]
     private bool _autoArtifactSalvage = false;
-
-    // 分解圣遗物的最大星级
-    // 1~4
-    [ObservableProperty]
-    private string _maxArtifactStar = "4";
 }

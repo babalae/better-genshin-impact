@@ -28,6 +28,7 @@ public class EngineExtend
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
+        engine.AddHostObject("notification", new Notification());
 
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(config));
@@ -42,6 +43,7 @@ public class EngineExtend
 
         // 识图模块相关
         engine.AddHostType("Mat", typeof(Mat));
+        engine.AddHostType("Point2f", typeof(Point2f)); // 添加Point2f类型暴露
         engine.AddHostType("RecognitionObject", typeof(RecognitionObject));
         engine.AddHostType("DesktopRegion", typeof(DesktopRegion));
         engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));

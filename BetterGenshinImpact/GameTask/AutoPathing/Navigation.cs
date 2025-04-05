@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -37,6 +38,39 @@ public class Navigation
         var greyMat = new Mat(imageRegion.SrcGreyMat, MapAssets.Instance.MimiMapRect);
         var p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
 
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
+            "SendCurrentPosition", new object(), p));
+        return p;
+    }
+
+    /// <summary>
+    /// 稳定获取当前位置坐标，优先使用全地图匹配，适用于不需要高效率但需要高稳定性的场景
+    /// </summary>
+    /// <param name="imageRegion">图像区域</param>
+    /// <param name="retryCount">匹配失败时的重试次数</param>
+    /// <returns>当前位置坐标</returns>
+    public static Point2f GetPositionStable(ImageRegion imageRegion, int retryCount = 3)
+    {
+        var greyMat = new Mat(imageRegion.SrcGreyMat, MapAssets.Instance.MimiMapRect);
+        
+        // 先尝试使用局部匹配
+        var p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
+        
+        // 如果全地图匹配失败，再尝试局部匹配
+        if (p == new Point2f())
+        {
+            p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
+            
+            // 如果仍然失败，进行多次重试
+            int attempts = 0;
+            while (p == new Point2f() && attempts < retryCount)
+            {
+                // 重置位置记录，强制使用全地图匹配
+                Reset();
+                p = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(greyMat);
+                attempts++;
+            }
+        }
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
             "SendCurrentPosition", new object(), p));
         return p;

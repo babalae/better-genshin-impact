@@ -1,5 +1,7 @@
 ﻿using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows.Controls;
+using System.Windows.Input;
+using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.View.Pages;
 

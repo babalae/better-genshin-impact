@@ -40,6 +40,6 @@ public class AutoDomainParam : BaseTaskParam
         PartyName = config.PartyName;
         DomainName = config.DomainName;
         AutoArtifactSalvage = config.AutoArtifactSalvage;
-        MaxArtifactStar = config.MaxArtifactStar;
+        MaxArtifactStar = TaskContext.Instance().Config.AutoArtifactSalvageConfig.MaxArtifactStar;
     }
 }

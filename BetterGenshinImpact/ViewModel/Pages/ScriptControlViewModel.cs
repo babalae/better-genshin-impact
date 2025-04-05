@@ -26,10 +26,10 @@ using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Editable;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows.Editable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using SharpCompress;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -922,12 +922,17 @@ public partial class ScriptControlViewModel : ViewModel
         item.NextFlag = true;
     }
 
-    public static void ShowEditWindow(object viewModel)
+    public static void ShowEditWindow(ScriptGroupProject project)
     {
+        var viewModel = new ScriptGroupProjectEditorViewModel(project);
+        var editor = new ScriptGroupProjectEditor(project)
+        {
+            DataContext = viewModel
+        };
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = "修改通用设置",
-            Content = new ScriptGroupProjectEditor { DataContext = viewModel },
+            Content = editor,
             CloseButtonText = "关闭",
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -997,7 +1002,14 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName).ForEach(OnDeleteScript);
+        var toBeDeletedProjects = SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName);
+        if (toBeDeletedProjects != null)
+        {
+            foreach (var project in toBeDeletedProjects)
+            {
+                OnDeleteScript(project);
+            }      
+        }
     }
 
     [RelayCommand]

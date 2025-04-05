@@ -17,6 +17,20 @@ public class LargeSiftExtractor
     private const int OVERLAP_SIZE = BLOCK_SIZE * 3;
 
     private readonly Feature2D _sift = SIFT.Create();
+    
+    
+    public static void Gen1024()
+    {
+        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5";
+        var mainMap2048BlockMat = new Mat($@"{rootPath}\map_55_2048.png", ImreadModes.Color);
+        // 缩小 2048/1024 = 2
+        var targetFilePath = $@"{rootPath}\1024_map.png";
+        // opencv 缩小
+        var mainMap1024BlockMat = mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 2, mainMap2048BlockMat.Height / 2));
+        // 转化为灰度图
+        mainMap1024BlockMat.SaveImage(targetFilePath);
+        Debug.WriteLine("done!");
+    }
 
     public static void Gen256Sift()
     {

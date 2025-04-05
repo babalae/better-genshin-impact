@@ -10,5 +10,16 @@ public partial class OtherConfig : ObservableObject
     //调度器任务和部分独立任务，失去焦点，自动激活游戏窗口
     [ObservableProperty]
     private bool _restoreFocusOnLostEnabled = false;
-    
+
+    /// <summary>
+    /// 游戏语言名称
+    /// </summary>
+    [ObservableProperty]
+    private string _gameCultureInfoName = "zh-Hans";
+
+    /// <summary>
+    /// BGI界面语言名称
+    /// </summary>
+    [ObservableProperty]
+    private string _uiCultureInfoName = "zh-Hans";
 }

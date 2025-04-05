@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -52,7 +53,7 @@ public class SwitchPartyTask
             {
                 await Delay(1000, ct);
                 using var raCheck = CaptureToRectArea();
-                if (Bv.IsInPartyViewUi(CaptureToRectArea()))
+                if (Bv.IsInPartyViewUi(raCheck))
                 {
                     isOpened = true;
                     break;
@@ -71,19 +72,17 @@ public class SwitchPartyTask
         var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
 
         // OCR 当前队伍名称（无法单字，中间禁止空格）
-        var currTeamNameRaList = ra.FindMulti(new RecognitionObject
+        var currTeamName = ra.Find(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale),
                 partyViewBtn.Height)
-        });
+        }).Text;
 
-        var currTeamName = string.Join("",
-            currTeamNameRaList.Select(x => x.Text).Where(x => !string.IsNullOrWhiteSpace(x)));
-        // Logger.LogInformation("切换队伍，当前队伍名称: {Text}", currTeamName);
-        if (currTeamName == partyName)
+        Logger.LogInformation("切换队伍，当前队伍名称: {Text}，使用正则表达式规则进行模糊匹配", currTeamName);
+        if (Regex.IsMatch(currTeamName, partyName))
         {
-            Logger.LogInformation("切换队伍，当前队伍[{Name}]即为目标队伍，无需切换", partyName);
+            Logger.LogInformation("当前队伍[{Name}]即为目标队伍，无需切换", currTeamName);
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             await Delay(500, ct);
             await _returnMainUiTask.Start(ct);
@@ -96,18 +95,20 @@ public class SwitchPartyTask
 
         ImageRegion? switchRa = null;
         Region? partyDeleteBtn = null;
-        var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
+        using (var ocrRa = CaptureToRectArea())
         {
-            switchRa = CaptureToRectArea();
-            partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
-            return partyDeleteBtn.IsExist();
-        }, ct, 5);
+            var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
+            {
+                switchRa = ocrRa;
+                partyDeleteBtn = switchRa.Find(ElementAssets.Instance.PartyBtnDelete);
+                return partyDeleteBtn.IsExist();
+            }, ct, 5);
 
-        if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
-        {
-            throw new PartySetupFailedException("未能打开队伍配置界面");
+            if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
+            {
+                throw new PartySetupFailedException("未能打开队伍配置界面");
+            }
         }
-
 
         var nextX = partyDeleteBtn.Left;
         var nextY = partyDeleteBtn.Top - partyDeleteBtn.Height * 2;
@@ -126,7 +127,7 @@ public class SwitchPartyTask
         // 逐页查找
         for (var i = 0; i < 11; i++)
         {
-            var page = CaptureToRectArea();
+            using var page = CaptureToRectArea();
             var found = await FindPage(partyName, page, partyDeleteBtn, ct);
             if (found)
             {
@@ -146,6 +147,7 @@ public class SwitchPartyTask
 
         // 未找到
         Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
+        Logger.LogInformation("如果找不到设定的队伍名，有可能是文字识别效果不佳，请尝试正则表达式");
         await _returnMainUiTask.Start(ct);
         return false;
 
@@ -162,7 +164,7 @@ public class SwitchPartyTask
         // 当前页存在则直接点击
         foreach (var textRegion in partySwitchNameRaList)
         {
-            if (textRegion.Text == partyName)
+            if (Regex.IsMatch(textRegion.Text, partyName))
             {
                 page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
                 await Delay(200, ct);

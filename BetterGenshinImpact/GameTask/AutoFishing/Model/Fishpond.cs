@@ -115,7 +115,7 @@ public class Fishpond
     {
         if (Fishes.Count == 0)
         {
-            return Rect.Empty;
+            return default;
         }
 
         var left = int.MaxValue;

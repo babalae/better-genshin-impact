@@ -455,7 +455,7 @@ public class PathExecutor
     {
         if (task.HasAction(action))
         {
-            foreach (var avatar in combatScenes.Avatars)
+            foreach (var avatar in combatScenes.GetAvatars())
             {
                 if (ElementalCollectAvatarConfigs.Get(avatar.Name, el) != null)
                 {
@@ -504,7 +504,8 @@ public class PathExecutor
     /// </summary>
     private async Task<bool> TryPartyHealing()
     {
-        foreach (var avatar in _combatScenes?.Avatars ?? [])
+        if (_combatScenes is null) return false;
+        foreach (var avatar in _combatScenes.GetAvatars())
         {
             if (avatar.Name == "白术")
             {
@@ -629,6 +630,11 @@ public class PathExecutor
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         while (!ct.IsCancellationRequested)
         {
+            if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+            {
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            }
+            
             num++;
             if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
@@ -813,7 +819,7 @@ public class PathExecutor
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex);
+        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex,true);
         if (avatar == null)
         {
             return;
@@ -827,19 +833,8 @@ public class PathExecutor
             Simulation.SendInput.SimulateAction(GIActions.MoveBackward);
             await Delay(200, ct);
         }
-
-        if (PartyConfig.GuardianElementalSkillLongPress)
-        {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-            await Task.Delay(800); // 不能取消
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-            await Delay(700, ct);
-        }
-        else
-        {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
-            await Delay(300, ct);
-        }
+        
+        avatar.UseSkill(PartyConfig.GuardianElementalSkillLongPress);
 
         // 钟离往身后放柱子 后继续走路
         if (avatar.Name == "钟离")
@@ -935,28 +930,27 @@ public class PathExecutor
         }
     }
 
-    private async Task<Avatar?> SwitchAvatar(string index)
+    private async Task<Avatar?> SwitchAvatar(string index,bool needSkill = false)
     {
         if (string.IsNullOrEmpty(index))
         {
             return null;
         }
 
-        var avatar = _combatScenes?.Avatars[int.Parse(index) - 1];
-        if (avatar != null)
+        var avatar = _combatScenes?.SelectAvatar(int.Parse(index));
+        if (avatar == null) return null;
+        if (needSkill && !avatar.IsSkillReady())
         {
-            bool success = avatar.TrySwitch();
-            if (success)
-            {
-                await Delay(100, ct);
-                return avatar;
-            }
-            else
-            {
-                Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
-            }
+            Logger.LogInformation("角色{Name}技能未冷却，跳过。", avatar.Name);
+            return null;
         }
-
+        var success = avatar.TrySwitch();
+        if (success)
+        {
+            await Delay(100, ct);
+            return avatar;
+        }
+        Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
         return null;
     }
 
@@ -993,8 +987,15 @@ public class PathExecutor
         var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
         if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
         {
+            // 排除大地图
+            if (Bv.IsInBigMapUi(imageRegion))
+            {
+                return;
+            }
+            
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            await Delay(1000, ct); // 等待界面关闭
         }
 
 

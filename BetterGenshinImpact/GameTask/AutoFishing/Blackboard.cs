@@ -52,7 +52,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 拉条位置的识别框
         /// </summary>
-        internal Rect fishBoxRect = Rect.Empty;
+        internal Rect fishBoxRect;
 
         /// <summary>
         /// 是否正在选鱼饵界面
@@ -106,7 +106,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             abort = false;
             throwRodNoTargetTimes = 0;
             throwRodNoBaitFishFailures = new List<string>();
-            fishBoxRect = Rect.Empty;
+            fishBoxRect = default;
             chooseBaitUIOpening = false;
             chooseBaitFailures = new List<string>();
             pitchReset = true;

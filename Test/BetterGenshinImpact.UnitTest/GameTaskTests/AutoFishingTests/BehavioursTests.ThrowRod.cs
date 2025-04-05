@@ -30,9 +30,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { })
+            var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
                 selectedBaitName = selectedBaitName
             };
@@ -60,9 +58,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { })
+            var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
                 selectedBaitName = selectedBaitName
             };
@@ -89,9 +85,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { })
+            var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
                 selectedBaitName = selectedBaitName
             };
@@ -130,9 +124,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\202503082114541115.png");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { })
+            var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
                 selectedBaitName = "fake fly bait"
             };
@@ -143,7 +135,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             var actual = sut.currentFish;
 
             //
-            Assert.True(blackboard.fishpond.TargetRect != null && blackboard.fishpond.TargetRect.Value != OpenCvSharp.Rect.Empty);
+            Assert.True(blackboard.fishpond.TargetRect != null && blackboard.fishpond.TargetRect.Value != default);
             Assert.Equal(3, blackboard.fishpond.Fishes.Count(f => f.FishType.Name == "pufferfish"));
             Assert.Equal(blackboard.fishpond.Fishes.OrderBy(f => f.Rect.X).First(), actual);
 
@@ -172,9 +164,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { });
+            var blackboard = new Blackboard(Predictor, sleep: i => { });
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
 
@@ -211,9 +201,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeDrawContent drawContent = new FakeDrawContent();
             var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(input.Mouse), converter: new ScaleConverter(1d), drawContent: drawContent);
 
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).Build();
-
-            var blackboard = new Blackboard(predictor, sleep: i => { });
+            var blackboard = new Blackboard(Predictor, sleep: i => { });
 
             FakeTimeProvider timeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();

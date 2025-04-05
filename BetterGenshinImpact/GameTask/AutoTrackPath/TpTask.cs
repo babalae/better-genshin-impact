@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +23,9 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
@@ -48,7 +51,7 @@ public class TpTask(CancellationToken ct)
     /// 直接通过缩放比例按钮计算缩小按钮的Y坐标
     /// </summary>
     private readonly int _zoomOutButtonY = TaskContext.Instance().Config.TpConfig.ZoomEndY + 24; //  y-coordinate for zoom-out button = _zoomEndY + 24
-    
+
     private const double DisplayTpPointZoomLevel = 4.4; // 传送点显示的时候的地图比例
 
     /// <summary>
@@ -57,7 +60,7 @@ public class TpTask(CancellationToken ct)
     public async Task TpToStatueOfTheSeven()
     {
         await CheckInBigMapUi();
-        
+
         // 提前调整至恰当的缩放以更快的传送
         if (_tpConfig.MapZoomEnabled)
         {
@@ -103,7 +106,7 @@ public class TpTask(CancellationToken ct)
             await new PathExecutor(ct).MoveTo(waypointForTrack);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
-        
+
         await Delay((int)(_tpConfig.HpRestoreDuration * 1000), ct);
     }
 
@@ -153,9 +156,9 @@ public class TpTask(CancellationToken ct)
             }
         }
         // 获取最近的神像位置
-        return nearestGiTpPosition ?? throw new InvalidOperationException("没找到最近的七天神像");;
+        return nearestGiTpPosition ?? throw new InvalidOperationException("没找到最近的七天神像");
     }
-    
+
     /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>
@@ -275,7 +278,7 @@ public class TpTask(CancellationToken ct)
 
         Logger.LogWarning("传送等待超时，换台电脑吧");
     }
-    
+
     /// <summary>
     /// 传送点是否在大地图窗口内
     /// </summary>
@@ -327,7 +330,7 @@ public class TpTask(CancellationToken ct)
         return (clickX, clickY);
     }
 
-    private async Task CheckInBigMapUi()
+    public async Task CheckInBigMapUi()
     {
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi())
@@ -389,6 +392,10 @@ public class TpTask(CancellationToken ct)
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
             }
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
@@ -406,7 +413,7 @@ public class TpTask(CancellationToken ct)
     /// <param name="x">目标x坐标</param>
     /// <param name="y">目标y坐标</param>
     /// <param name="finalZoomLevel">到达目标点的最小缩放等级，只在 MapZoomEnabled 为 True 生效</param>
-    private async Task MoveMapTo(double x, double y, double finalZoomLevel = 2)
+    public async Task MoveMapTo(double x, double y, double finalZoomLevel = 2)
     {
         // 参数初始化
         double minZoomLevel = Math.Min(finalZoomLevel, _tpConfig.MinZoomLevel);
@@ -423,13 +430,13 @@ public class TpTask(CancellationToken ct)
             ++exceptionTimes;
             mapCenterPoint = new Point2f(0f, 0f);  // 其他恰当的初始值?
         }
-        
+
         var (xOffset, yOffset) = (x - mapCenterPoint.X, y - mapCenterPoint.Y);
         double totalMoveMouseX = _tpConfig.MapScaleFactor * Math.Abs(xOffset) / currentZoomLevel;
         double totalMoveMouseY = _tpConfig.MapScaleFactor * Math.Abs(yOffset) / currentZoomLevel;
         double mouseDistance = Math.Sqrt(totalMoveMouseX * totalMoveMouseX + totalMoveMouseY * totalMoveMouseY);
         // 缩小地图到恰当的缩放
-        if (_tpConfig.MapZoomEnabled) 
+        if (_tpConfig.MapZoomEnabled)
         {
             if (mouseDistance > _tpConfig.MapZoomOutDistance)
             {
@@ -443,7 +450,7 @@ public class TpTask(CancellationToken ct)
                 currentZoomLevel = nextZoomLevel;
             }
         }
-        
+
         // 开始移动并放大地图
         for (var iteration = 0; iteration < _tpConfig.MaxIterations; iteration++)
         {
@@ -476,7 +483,7 @@ public class TpTask(CancellationToken ct)
             int moveMouseY = (int)Math.Min(totalMoveMouseY, _tpConfig.MaxMouseMove * totalMoveMouseY / mouseDistance) * Math.Sign(yOffset);
             double moveMouseLength = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY);
             int moveSteps = Math.Max((int)moveMouseLength / 10, 3); // 每次移动的步数最小为 3，避免除 0 错误
-            
+
             await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
             try
             {
@@ -526,7 +533,7 @@ public class TpTask(CancellationToken ct)
     /// 调整地图缩放级别以加速移动
     /// </summary>
     /// <param name="zoomIn">是否放大地图</param>
-   [Obsolete]
+    [Obsolete]
     private async Task AdjustMapZoomLevel(bool zoomIn)
     {
         if (zoomIn)
@@ -562,11 +569,18 @@ public class TpTask(CancellationToken ct)
     }
 
     /// <summary>
-    /// 调整地图的缩放级别（支持浮点数精度）。
+    /// 将大地图缩放等级设置为指定值
     /// </summary>
+    /// <remarks>
+    /// 缩放等级说明：
+    /// - 数值范围：1.0(最大地图) 到 6.0(最小地图)
+    /// - 缩放效果：数值越大，地图显示范围越广，细节越少
+    /// - 缩放位置：1.0 对应缩放条最上方，6.0 对应缩放条最下方
+    /// - 推荐范围：建议在 2.0 到 5.0 之间调整，过大或过小可能影响操作
+    /// </remarks>
     /// <param name="zoomLevel">当前缩放等级：1.0-6.0，浮点数。</param>
     /// <param name="targetZoomLevel">目标缩放等级：1.0-6.0，浮点数。</param>
-    private async Task AdjustMapZoomLevel(double zoomLevel, double targetZoomLevel)
+    public async Task AdjustMapZoomLevel(double zoomLevel, double targetZoomLevel)
     {
         // Logger.LogInformation("调整地图缩放等级：{zoomLevel:0.000} -> {targetZoomLevel:0.000}", zoomLevel, targetZoomLevel);
         int initialY = (int)(_tpConfig.ZoomStartY + (_tpConfig.ZoomEndY - _tpConfig.ZoomStartY) * (zoomLevel - 1) / 5d);
@@ -598,33 +612,37 @@ public class TpTask(CancellationToken ct)
         Simulation.SendInput.Mouse.LeftButtonUp();
     }
 
-    private int[] GenerateSteps(int delta, int steps) {
+    private int[] GenerateSteps(int delta, int steps)
+    {
         double[] factors = new double[steps];
         double sum = 0;
-        for (int i = 0; i < steps; i++) {
+        for (int i = 0; i < steps; i++)
+        {
             factors[i] = Math.Cos(i * Math.PI / (2 * steps));
             sum += factors[i];
         }
 
         int[] stepsArr = new int[steps];
         int remaining = delta;
-    
+
         // 两阶段分配：基础值 + 余数补偿
-        for (int i = 0; i < steps; i++) {
+        for (int i = 0; i < steps; i++)
+        {
             double ratio = factors[i] / sum;
             stepsArr[i] = (int)(delta * ratio);  // 基础值
             remaining -= stepsArr[i];
         }
 
         int center = steps / 2;
-        for (int r = 0; r < Math.Abs(remaining); r++) {
+        for (int r = 0; r < Math.Abs(remaining); r++)
+        {
             int target = (center + r) % steps;  // 从中点开始螺旋分配
             stepsArr[target] += remaining > 0 ? 1 : -1;
         }
 
         return stepsArr;
     }
-    
+
     public Point2f GetPositionFromBigMap()
     {
         return GetBigMapCenterPoint();
@@ -653,7 +671,7 @@ public class TpTask(CancellationToken ct)
             if (mapScaleButtonRa.IsExist())
             {
                 rect = BigMap.Instance.GetBigMapRectByFeatureMatch(ra.SrcGreyMat);
-                if (rect == Rect.Empty)
+                if (rect == default)
                 {
                     // 滚轮调整后再次识别
                     Simulation.SendInput.Mouse.VerticalScroll(2);
@@ -667,7 +685,7 @@ public class TpTask(CancellationToken ct)
             }
         }, TimeSpan.FromMilliseconds(500), 5);
 
-        if (rect == Rect.Empty)
+        if (rect == default)
         {
             throw new InvalidOperationException("多次重试后，识别大地图位置失败");
         }
@@ -796,14 +814,26 @@ public class TpTask(CancellationToken ct)
 
             GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
             await Delay(300, ct);
-            var ra = CaptureToRectArea();
+            using var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,
                 RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
             });
-            list.FirstOrDefault(r => r.Text.Length == minCountry.Length && !r.Text.Contains("委托") && r.Text.Contains(minCountry))?.Click();
-            Logger.LogInformation("切换到区域：{Country}", minCountry);
+            IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
+            CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+            string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, minCountry);
+            string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+            Region? matchRect = list.FirstOrDefault(r => r.Text.Length == minCountryLocalized.Length && !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
+            if (matchRect == null)
+            {
+                Logger.LogWarning("切换区域失败：{Country}", minCountry);
+            }
+            else
+            {
+                matchRect.Click();
+                Logger.LogInformation("切换到区域：{Country}", minCountry);
+            }
             await Delay(500, ct);
             return true;
         }
@@ -934,7 +964,7 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="region"></param>
     /// <returns></returns>
-    private double GetBigMapZoomLevel(ImageRegion region)
+    public double GetBigMapZoomLevel(ImageRegion region)
     {
         var s = Bv.GetBigMapScale(region);
         // 1~6 的缩放等级

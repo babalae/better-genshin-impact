@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
@@ -29,7 +27,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
         // 筛选出对应元素的角色列表
         var elementalCollectAvatars = ElementalCollectAvatarConfigs.Lists.Where(x => x.ElementalType == elementalType).ToList();
         // 循环遍历角色列表
-        foreach (var combatScenesAvatar in combatScenes.Avatars)
+        foreach (var combatScenesAvatar in combatScenes.GetAvatars())
         {
             // 判断是否为对应元素的角色
             var elementalCollectAvatar = elementalCollectAvatars.FirstOrDefault(x => x.Name == combatScenesAvatar.Name);
@@ -47,18 +45,9 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
                 }
                 else if (elementalCollectAvatar.ElementalSkill)
                 {
-                    // 获取CD时间
-                    var cdTime = combatScenesAvatar.SkillCd * 1000;
-                    var cdRemain = (DateTime.UtcNow - elementalCollectAvatar.LastUseSkillTime).TotalMilliseconds;
-                    if (cdRemain < cdTime)
-                    {
-                        var ms = (int)Math.Ceiling(cdTime - cdRemain) + 100;
-                        Logger.LogInformation("{Name}的E技能CD未结束，等待{Milliseconds}ms", combatScenesAvatar.Name, ms);
-                        await Delay(ms, ct);
-                    }
 
+                    await combatScenesAvatar.WaitSkillCd(ct);
                     combatScenesAvatar.UseSkill();
-                    elementalCollectAvatar.LastUseSkillTime = DateTime.UtcNow;
                 }
             }
             else
@@ -102,6 +91,7 @@ public class ElementalCollectAvatarConfigs
         // 雷
         new ElementalCollectAvatar("丽莎", ElementalType.Electro, true, true),
         new ElementalCollectAvatar("八重神子", ElementalType.Electro, true, false),
+        new ElementalCollectAvatar("瓦雷莎", ElementalType.Electro, true, false),
         new ElementalCollectAvatar("雷电将军", ElementalType.Electro, false, true),
         new ElementalCollectAvatar("久岐忍", ElementalType.Electro, false, true),
         new ElementalCollectAvatar("北斗", ElementalType.Electro, false, true),

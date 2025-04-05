@@ -157,7 +157,7 @@ public class TestTrigger : ITaskTrigger
 
         if (contours.Length > 0)
         {
-            var maxRect = Rect.Empty;
+            Rect maxRect = default;
             var maxIndex = 0;
             for (int i = 0; i < contours.Length; i++)
             {

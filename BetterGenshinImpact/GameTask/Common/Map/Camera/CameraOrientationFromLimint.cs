@@ -103,8 +103,8 @@ public class CameraOrientationFromLimint
 
     private void GeneratePoints()
     {
-        Mat r = new Mat(1, rLength, MatType.CV_32F, LinearSpaced(tplInnRad, tplOutRad, rLength));
-        Mat theta = new Mat(thetaLength, 1, MatType.CV_32F, LinearSpaced(0, 360, thetaLength, false));
+        Mat r =  Mat.FromPixelData(1, rLength, MatType.CV_32F, LinearSpaced(tplInnRad, tplOutRad, rLength));
+        Mat theta =Mat.FromPixelData(thetaLength, 1, MatType.CV_32F, LinearSpaced(0, 360, thetaLength, false));
         Mat rMat = r.Repeat(thetaLength, 1);
         Mat thetaMat = theta.Repeat(1, rLength);
         rotationRemapDataX = new Mat();
@@ -117,13 +117,13 @@ public class CameraOrientationFromLimint
     private void CreateAlphaMask()
     {
         var values = LinearSpaced(tplInnRad, tplOutRad, rLength);
-        var alphaMask1Row = new Mat(1, rLength, MatType.CV_32F, values.Select(v =>
+        var alphaMask1Row = Mat.FromPixelData(1, rLength, MatType.CV_32F, values.Select(v =>
         {
             var index = Array.BinarySearch(alphaParams1, v);
             return (float)(229 + (index < 0 ? ~index : index));
         }).ToArray());
         alphaMask1 = alphaMask1Row.Repeat(thetaLength, 1);
-        var alphaMask2Row = new Mat(1, rLength, MatType.CV_32F, values.Select(v => (float)(111.7 + 1.836 * v)).ToArray());
+        var alphaMask2Row = Mat.FromPixelData(1, rLength, MatType.CV_32F, values.Select(v => (float)(111.7 + 1.836 * v)).ToArray());
         alphaMask2 = alphaMask2Row.Repeat(thetaLength, 1);
     }
 
