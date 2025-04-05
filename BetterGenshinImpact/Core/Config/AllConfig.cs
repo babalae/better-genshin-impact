@@ -18,6 +18,7 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -146,6 +147,11 @@ public partial class AllConfig : ObservableObject
     public AutoDomainConfig AutoDomainConfig { get; set; } = new();
 
     /// <summary>
+    ///     自动分解圣遗物配置
+    /// </summary>
+    public AutoArtifactSalvageConfig AutoArtifactSalvageConfig { get; set; } = new();
+
+    /// <summary>
     ///     宏配置
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
@@ -206,6 +212,7 @@ public partial class AllConfig : ObservableObject
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;

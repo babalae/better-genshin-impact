@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,16 +19,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             try
             {
                 // 拉条框的黄色是：RGB 255, 255, 192 ~ HSV 43, 63, 255
-                // var testPixel = rgbMat.At<Vec3b>(105, 968);
-                using Mat rgbMat = src.CvtColor(ColorConversionCodes.BGR2HSV_FULL);
+                // var testPixel = src.At<Vec3b>(105, 968); // 注意是（Y，X）
+                // using Mat rgbMat = src.CvtColor(ColorConversionCodes.BGR2HSV_FULL);
+                // var testPixelHSV = rgbMat.At<Vec3b>(105, 968);   // 注意是（Y，X）
+                Scalar hsv = OpenCvCommonHelper.CommonHSV2OpenCVHSVFull(new Scalar(60, 0.25, 1.00));
+                var lowYellow = new Scalar(hsv.Val0 - 3, hsv.Val1 - 20, hsv.Val2 - 10);
+                var highYellow = new Scalar(hsv.Val0 + 3.5, hsv.Val1 + 40, hsv.Val2);
+                using Mat mask = OpenCvCommonHelper.InRangeHsvFull(src, lowYellow, highYellow);
 
-                var lowYellow = new Scalar(43 - 3, 63 - 20, 255 - 10);
-                var highYellow = new Scalar(43 + 3, 63 + 40, 255);
-                using Mat mask = rgbMat.InRange(lowYellow, highYellow);
+                using Mat threshold = mask.Threshold(0, 255, ThresholdTypes.Binary); //二值化
 
-                Cv2.Threshold(mask, mask, 0, 255, ThresholdTypes.Binary); //二值化
-
-                Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External,
+                Cv2.FindContours(threshold, out var contours, out _, RetrievalModes.External,
                     ContourApproximationModes.ApproxSimple, null);
                 if (contours.Length > 0)
                 {

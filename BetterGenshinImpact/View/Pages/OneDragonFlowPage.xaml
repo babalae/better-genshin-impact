@@ -484,7 +484,7 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="结束后自动分解圣遗物"
+                                              Text="结束后自动快速分解圣遗物"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
@@ -498,7 +498,7 @@
                                       Width="80"
                                       Margin="0,0,10,0"
                                       ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
-                                      SelectedItem="{Binding Config.AutoDomainConfig.MaxArtifactStar, Mode=TwoWay}">
+                                      SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
                             </ComboBox>
                             <ui:ToggleSwitch 
                                              Margin="0,0,36,0"

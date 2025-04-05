@@ -91,12 +91,19 @@ public class OpenCvCommonHelper
 
     public static Mat InRangeHsv(Mat src, Scalar low, Scalar high)
     {
-        using var mask = new Mat();
-        using var rgbMat = new Mat();
+        using var rgbMat = src.CvtColor(ColorConversionCodes.BGR2HSV);
+        return rgbMat.InRange(low, high);
+    }
 
-        Cv2.CvtColor(src, rgbMat, ColorConversionCodes.BGR2HSV);
-        Cv2.InRange(rgbMat, low, high, mask);
-        return mask.Clone();
+    public static Mat InRangeHsvFull(Mat src, Scalar low, Scalar high)
+    {
+        using var rgbMat = src.CvtColor(ColorConversionCodes.BGR2HSV_FULL);
+        return rgbMat.InRange(low, high);
+    }
+
+    public static Scalar CommonHSV2OpenCVHSVFull(Scalar commonHSV)
+    {
+        return new Scalar(commonHSV.Val0 / 255 * 180, commonHSV.Val1 * 255, commonHSV.Val2 * 255);
     }
 
     public static Mat Threshold(Mat src, Scalar s)
