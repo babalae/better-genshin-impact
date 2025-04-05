@@ -652,23 +652,23 @@
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="战斗结束后自动拾取掉落物"
-                                      TextWrapping="Wrap" />
+                                      Text="自动拾取掉落物时长（秒）"
+                                      TextWrapping="Wrap"/>
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       Text=""
-                                      TextWrapping="Wrap" />
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled, Mode=TwoWay}" />
+                                      TextWrapping="Wrap"/>
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="120"
+                                    Text="{Binding Config.AutoFightConfig.PickDropsAfterFightSeconds}"/>
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
