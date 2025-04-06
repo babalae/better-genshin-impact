@@ -18,6 +18,8 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
+using Vanara.PInvoke;//using Vanara.PInvoke;lcb
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -203,7 +205,9 @@ public class AutoFightTask : ISoloTask
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
-            throw new Exception("识别队伍角色失败");
+            Logger.LogInformation("识别队伍角色失败LCB");//LCB_TODO: 改成抛异常，不然会自动退出
+            //throw new Exception("识别队伍角色失败");
+
         }
 
 
@@ -462,6 +466,12 @@ public class AutoFightTask : ISoloTask
                         await Task.Delay(100);
                         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
                         await Delay(1500, ct);
+                        
+                        //=========滚轮操作=======================LCB
+                        Simulation.SendInput.Mouse.VerticalScroll(10);
+                        await Task.Delay(500);
+                        Simulation.SendInput.Mouse.VerticalScroll(-10);
+                        //=========滚轮操作=======================LCB
                     }
                 }
                 else
@@ -469,6 +479,8 @@ public class AutoFightTask : ISoloTask
                     Logger.LogInformation((countFight < 2 ? "首个人出招就结束战斗，应该无怪物" : "距最近一次万叶出招，时间过短") + "，跳过此次万叶拾取！");
                 }
             }
+            
+            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_1);//lcb
         }
 
         if (_taskParam is { PickDropsAfterFightEnabled: true })

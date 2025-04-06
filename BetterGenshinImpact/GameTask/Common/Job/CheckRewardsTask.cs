@@ -52,11 +52,6 @@ public class CheckRewardsTask
                 Logger.LogInformation("检查每日奖励结果：{Msg}", "今日奖励已领取");
                 Notify.Event(NotificationEvent.DailyReward).Success("检查每日奖励：已领取");
             }
-            else
-            {
-                Logger.LogWarning("检查每日奖励结果：{Msg}，请手动检查！", "未领取");
-                Notify.Event(NotificationEvent.DailyReward).Error("检查到每日奖励未领取，请手动查看！");
-            }
         }
         catch (Exception e)
         {

@@ -155,7 +155,6 @@ public class GoToAdventurersGuildTask
             EndAction = region => Bv.FindFAndPress(region, text: this.catherineLocalizedString)
         };
         await pathingTask.Pathing(task);
-
         await Delay(600, ct);
 
         const int retryTalkTimes = 3;

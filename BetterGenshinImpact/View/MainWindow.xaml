@@ -82,8 +82,8 @@
                         <ui:SymbolIcon Symbol="AnimalTurtle24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-
-                <ui:NavigationViewItem Content="全自动">
+                <!--  LCB 添加默认打开 IsExpanded="True" -->
+                <ui:NavigationViewItem Content="全自动" IsExpanded="True">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>

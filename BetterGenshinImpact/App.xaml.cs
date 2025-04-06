@@ -45,6 +45,11 @@ public partial class App : Application
             (context, services) =>
             {
                 // 提前初始化配置
+                // services.AddSingleton<ScriptControlViewModel>();
+                // services.AddSingleton<IScriptService, ScriptService>();
+                // services.AddSingleton<IConfigService, ConfigService>();
+                // services.AddSingleton<ScriptControlViewModel>();
+                
                 var configService = new ConfigService();
                 services.AddSingleton<IConfigService>(sp => configService);
                 var all = configService.Get();
@@ -292,4 +297,18 @@ public partial class App : Application
         // log
         GetLogger<App>().LogDebug(e, "UnHandle Exception");
     }
+    // 服务定位器类，用于从资源中获取服务
+    public class ServiceLocator
+    {
+        private readonly IServiceProvider _serviceProvider;
+        public ServiceLocator(IServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
+        }
+        public T GetService<T>()
+        {
+            return _serviceProvider.GetService<T>();
+        }
+    }
+    
 }

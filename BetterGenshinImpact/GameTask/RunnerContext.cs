@@ -57,7 +57,7 @@ public class RunnerContext : Singleton<RunnerContext>
             if (!_combatScenes.CheckTeamInitialized())
             {
                 Logger.LogError("队伍角色识别失败");
-                _combatScenes = null;
+                // _combatScenes = null; //LCB失败不退出
             }
         }
 

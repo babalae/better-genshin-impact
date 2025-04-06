@@ -27,4 +27,13 @@ public class SoloTask
         Name = name;
         Config = config;
     }
+    
+    public string ConfigLcb { get; set; }//LCB保留文字传入接口
+
+    public SoloTask(string name, string configLcb)//LCB保留文字传入接口
+    {
+        Name = name;
+        ConfigLcb = configLcb;
+    }
+    
 }

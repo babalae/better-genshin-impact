@@ -2,7 +2,6 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFishing;
@@ -90,10 +89,9 @@ public class Dispatcher
     /// - AutoFight: 启动自动战斗任务
     /// - AutoDomain: 启动自动秘境任务
     /// </param>
-    /// <param name="customCts">自定义取消令牌源，允许从JS控制任务取消</param>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentException"></exception>
-    public async Task RunTask(SoloTask soloTask, System.Threading.CancellationTokenSource customCts = null)
+    public async Task RunTask(SoloTask soloTask)
     {
         if (soloTask == null)
         {
@@ -106,69 +104,56 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
 
-        // 创建一个链接的取消令牌源，同时监听自定义令牌和全局令牌
-        CancellationTokenSource linkedCts = null;
-        CancellationToken cancellationToken;
-
-        if (customCts != null)
+        // 根据名称执行任务
+        switch (soloTask.Name)
         {
-            // 创建链接的取消令牌源，任何一个取消都会触发
-            linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                customCts.Token, 
-                CancellationContext.Instance.Cts.Token);
-            cancellationToken = linkedCts.Token;
-        }
-        else
-        {
-            // 如果没有自定义令牌，就使用全局令牌
-            cancellationToken = CancellationContext.Instance.Cts.Token;
-        }
+            case "AutoGeniusInvokation":
+                if (taskSettingsPageViewModel.GetTcgStrategy(out var content))
+                {
+                    return;
+                }
 
-        try
-        {
-            // 根据名称执行任务
-            switch (soloTask.Name)
-            {
-                case "AutoGeniusInvokation":
-                    if (taskSettingsPageViewModel.GetTcgStrategy(out var content))
-                    {
-                        return;
-                    }
+                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(CancellationContext
+                    .Instance.Cts.Token);
+                break;
 
-                    await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);
-                    break;
+            case "AutoWood":
+                await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
+                    taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(CancellationContext.Instance.Cts.Token);
+                break;
 
-                case "AutoWood":
-                    await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
-                        taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(cancellationToken);
-                    break;
+            case "AutoFight":
 
-                case "AutoFight":
-                    await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);
-                    break;
+                /*if (taskSettingsPageViewModel.GetFightStrategy(out var path1))
+                {
+                    return;
+                }
+                var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+                var param = new AutoFightParam(path1, autoFightConfig);
+                await new AutoFightTask(param).Start(CancellationContext.Instance.Cts.Token);*/
+                await new AutoFightHandler().RunAsyncByScript(CancellationContext.Instance.Cts.Token, null, _config);
+                break;
 
-                case "AutoDomain":
-                    if (taskSettingsPageViewModel.GetFightStrategy(out var path))
-                    {
-                        return;
-                    }
+            case "AutoDomain":
+                if (taskSettingsPageViewModel.GetFightStrategy(out var path))
+                {
+                    return;
+                }
 
-                    await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
-                    break;
+                await new AutoDomainTask(new AutoDomainParam(0, path)).Start(CancellationContext.Instance.Cts.Token);
+                break;
 
-                case "AutoFishing":
-                    await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
-                        cancellationToken);
-                    break;
+            // case "AutoMusicGame":
+            //     taskSettingsPageViewModel.SwitchAutoMusicGameCommand.Execute(null);
+            //     break;
 
-                default:
-                    throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
-            }
-        }
-        finally
-        {
-            // 释放链接的取消令牌源
-            linkedCts?.Dispose();
+            case "AutoFishing":
+                await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
+                    CancellationContext.Instance.Cts.Token);
+                break;
+
+            default:
+                throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
         }
     }
 }

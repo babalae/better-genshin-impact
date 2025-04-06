@@ -59,6 +59,8 @@ public partial class ScriptService : IScriptService
 
         // 没启动时候，启动截图器
         await StartGameTask();
+        
+        
 
         if (!string.IsNullOrEmpty(groupName))
         {
@@ -66,7 +68,10 @@ public partial class ScriptService : IScriptService
             // {
             //     _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
             // }
-
+            //===========配置组始关闭自动钓鱼标记=======LCB========
+            _logger.LogInformation("开始关闭自动钓鱼标记");
+            TaskContext.Instance().Config.AutoFishingConfig.Enabled = false; //钓鱼触发
+            //===========配置组自动钓鱼标记=======LCB========
             _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
         }
 

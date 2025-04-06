@@ -30,7 +30,7 @@ public class TaskRunner
     public TaskRunner()
     {
     }
-
+    
     // public TaskRunner(DispatcherTimerOperationEnum timerOperation)
     // {
     //     _timerOperation = timerOperation;

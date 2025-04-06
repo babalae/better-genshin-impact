@@ -89,7 +89,7 @@ public class AutoDomainTask : ISoloTask
     {
         _ct = ct;
 
-        Init();
+        Init();//lcb
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
         // 3次复活重试
@@ -270,10 +270,11 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(1000);
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
-                else if ("太山府".Equals(_taskParam.DomainName))
+                else if ("塞西莉亚苗圃".Equals(_taskParam.DomainName))//LCB
                 {
-                    // 直接F即可
-                    // nothing to do
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    Thread.Sleep(3000);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
                 else
                 {
@@ -332,6 +333,22 @@ public class AutoDomainTask : ISoloTask
             }
         }
 
+        // // 周日判断，选择周日挑战类型
+        // if (DateTime.Now.DayOfWeek == DayOfWeek.Saturday)
+        // {
+        //     Logger.LogWarning("周日选择周日挑战类型");
+        //     await Delay(600, _ct);
+        //     var ra22 = CaptureToRectArea();
+        //     using var confirmRectArea22 = ra22.Find(RecognitionObject.OcrThis);
+        //     if (confirmRectArea22.IsExist() && confirmRectArea22.Text.Contains("单人挑战"))
+        //     {
+        //         confirmRectArea22.Click( );
+        //         await Delay(2000, _ct);
+        //         confirmRectArea22.Click();
+        //     }
+        //     await Delay(60000, _ct);
+        // }
+        
         // 点击单人挑战
         int retryTimes = 0;
         while (retryTimes < 20)
@@ -357,7 +374,6 @@ public class AutoDomainTask : ISoloTask
             Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
             throw new Exception("当前树脂不足，自动秘境停止运行。");
         }
-
         // 点击进入
         retryTimes = 0;
         while (retryTimes < 20)

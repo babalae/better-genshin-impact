@@ -34,6 +34,79 @@ using System.Collections.Frozen;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.View.Windows;
 
+
+using System;
+using System.Collections.Generic;
+using BetterGenshinImpact.Model;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
+
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.View.Windows;
+using CommunityToolkit.Mvvm.Input;
+using Newtonsoft.Json;
+using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
+
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Dynamic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using ABI.Windows.ApplicationModel.UserDataTasks;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.LogParse;
+using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls.Webview;
+using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.View.Windows.Editable;
+using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows.Editable;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.ClearScript.JavaScript;
+using Microsoft.Extensions.Logging;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
+using StackPanel = Wpf.Ui.Controls.StackPanel;
+using TextBox = Wpf.Ui.Controls.TextBox;
+using Button = Wpf.Ui.Controls.Button;
+using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
+
+
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TaskSettingsPageViewModel : ViewModel
@@ -113,6 +186,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
+    
+    [ObservableProperty]
+    private OneDragonFlowViewModel? _oneDragonFlowViewModel;
 
     [ObservableProperty]
     private bool _switchAutoFishingEnabled;
@@ -152,8 +228,22 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
+        _oneDragonFlowViewModel = new OneDragonFlowViewModel();
     }
-
+  
+    
+    [RelayCommand]
+    private async Task OnSOneDragonFlow()
+    {   
+        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+        {
+            Toast.Warning("未设置任务!");
+            return;
+        }
+        OneDragonFlowViewModel.OnNavigatedTo();
+        await OneDragonFlowViewModel.OnOneKeyExecute();
+    }
+    
     [RelayCommand]
     private async Task OnStopSoloTask()
     {
