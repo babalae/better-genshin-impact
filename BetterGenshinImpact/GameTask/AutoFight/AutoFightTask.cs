@@ -209,33 +209,17 @@ public class AutoFightTask : ISoloTask
 
         // var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);
         var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
-        // 命令用到的角色 筛选交集
-        var commandAvatars = combatCommands.Select(c => c.Name).Distinct()
-            .Select(n => combatScenes.SelectAvatar(n))
-            .WhereNotNull().ToImmutableDictionary(avatar => avatar.Name);
+        // 命令用到的角色名 筛选交集
+        var commandAvatarNames = combatCommands.Select(c => c.Name).Distinct()
+            .Select(n => combatScenes.SelectAvatar(n)?.Name)
+            .WhereNotNull().ToList();
         // 过滤不可执行的脚本，Task里并不支持"当前角色"。
         combatCommands = combatCommands
-            .Where(c =>commandAvatars.ContainsKey(c.Name))
+            .Where(c => commandAvatarNames.Contains(c.Name))
             .ToList();
-        if (commandAvatars.IsEmpty)
+        if (commandAvatarNames.Count <= 0)
         {
             throw new Exception("没有可用战斗脚本");
-        }
-        // 可以跳过的角色名
-        List<string> canBeSkippedAvatarNames = [];
-        // 通过环境更新角色的cd并看看那些角色启用了跳过
-        foreach (var avatar in commandAvatars)
-        {
-            var mCd = Avatar.ParseActionSchedulerByCd(_taskParam.ActionSchedulerByCd, avatar.Key);
-            if (mCd is not null)
-            {
-                avatar.Value.ManualSkillCd = (double)mCd;
-                canBeSkippedAvatarNames.Add(avatar.Key);
-            }
-            else
-            {
-                avatar.Value.ManualSkillCd = -1;
-            }
         }
 
         // 新的取消token
@@ -259,6 +243,14 @@ public class AutoFightTask : ISoloTask
 
         //统计切换人打架次数
         var countFight = 0;
+        
+        // 可以跳过的角色名,配置中有的和命令中有的取交
+        var canBeSkippedAvatarNames = combatScenes.UpdateActionSchedulerByCd(_taskParam.ActionSchedulerByCd)
+            .Where(s => commandAvatarNames.Contains(s)).WhereNotNull().ToList();
+        
+        //所有角色是否都可被跳过
+        var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
+        
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -266,34 +258,59 @@ public class AutoFightTask : ISoloTask
             {
                 while (!cts2.Token.IsCancellationRequested)
                 {
-                    if (commandAvatars.Count == canBeSkippedAvatarNames.Count)
+                    // 所有战斗角色都可以被取消
+
+                    #region 本次战斗的跳过战斗判定
+
+                    //如果所有角色都可以被跳过，且没有任何一个cd大于0的(技能都还没好)
+                    //则强制等待，因为不等待的话什么都不能做，而且会造成刷屏
+                    if (allCanBeSkipped)
                     {
-                        // 所有战斗角色都可以被取消
-                        var minCoolDown = commandAvatars.Select(a => a.Value.GetSkillCdSeconds()).Min();
+                        //获取最低cd
+                        var minCoolDown = commandAvatarNames.Select(a => combatScenes.SelectAvatar(a)).WhereNotNull()
+                            .Select(a => a.GetSkillCdSeconds()).Min();
                         if (minCoolDown > 0)
                         {
                             Logger.LogInformation("队伍中所有角色的技能都在冷却中,等待{MinCoolDown}秒后继续。", Math.Round(minCoolDown, 2));
                             await Delay((int)Math.Ceiling(minCoolDown * 1000), ct);
                         }
                     }
+
                     var skipFightName = "";
-                    // 通用化战斗策略
+
+                    #endregion
+
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
-                        //如果上个执行者和这次是一个角色，且中间没有跳过，继续执行不判断cd
-                        if (lastFightName != command.Name || skipFightName != "")
-                        {
-                            var avatar = combatScenes.SelectAvatar(command.Name);
-                            if (avatar is null)
-                            {
-                                continue;
-                            }
 
+                        var avatar = combatScenes.SelectAvatar(command.Name);
+                        if (avatar is null)
+                        {
+                            continue;
+                        }
+
+
+                        #region 每个命令的跳过战斗判定
+
+                        // 判断是否满足跳过条件:
+                        // 1.上一次成功执行命令的最后执行角色不是这次的执行角色
+                        // 2.这次执行的角色包含在可跳过的角色列表中
+                        if (!
+                                //上次命令的执行角色和这次相同
+                                (lastFightName == command.Name &&
+                                 // 且未跳过(成功执行)了,则不进行跳过判定
+                                 skipFightName == "")
+                            &&
+                            // 且这次执行的角色包含在可跳过的角色列表中
+                            (allCanBeSkipped || canBeSkippedAvatarNames.Contains(command.Name))
+                           )
+                        {
                             var cd = avatar.GetSkillCdSeconds();
                             if (cd > 0)
                             {
-                                if (skipFightName != command.Name && canBeSkippedAvatarNames.Contains(command.Name))
+                                // 如果上一次该角色已经被跳过，则不进行log输出，以免刷屏
+                                if (skipFightName != command.Name)
                                 {
                                     var manualSkillCd = avatar.ManualSkillCd;
                                     if (manualSkillCd > 0)
@@ -313,9 +330,12 @@ public class AutoFightTask : ISoloTask
                                 skipFightName = command.Name;
                                 continue;
                             }
+
+                            // 表示这次执行命令没有跳过
                             skipFightName = "";
                         }
 
+                        #endregion
 
                         if (timeoutStopwatch.Elapsed > fightTimeout)
                         {
@@ -324,6 +344,7 @@ public class AutoFightTask : ISoloTask
                             break;
                         }
 
+                        // 通用化战斗策略
                         command.Execute(combatScenes);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
