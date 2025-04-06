@@ -255,6 +255,31 @@ public class CombatScenes : IDisposable
         return avatars;
     }
 
+    /// <summary>
+    /// 更新角色手动设置的CD
+    /// </summary>
+    /// <param name="cdConfig">配置字符串</param>
+    /// <returns>返回配置中有效的角色名</returns>
+    public List<string> UpdateActionSchedulerByCd(string cdConfig)
+    {
+        if (string.IsNullOrEmpty(cdConfig))
+        {
+            return [];
+        }
+
+        List<string> names = [];
+        foreach (var t in Avatars)
+        {
+            var mCd = Avatar.ParseActionSchedulerByCd(t.Name, cdConfig);
+            // 手动cd不为0，不是麦当劳不是0
+            if (mCd is null) continue;
+            t.ManualSkillCd = (double)mCd;
+            names.Add(t.Name);
+        }
+
+        return names;
+    }
+
     public void BeforeTask(CancellationToken ct)
     {
         for (var i = 0; i < AvatarCount; i++)
@@ -315,7 +340,7 @@ public class CombatScenes : IDisposable
         {
             return Avatar.LastActiveAvatar;
         }
-        
+
         var imageRegion = region ?? CaptureToRectArea();
         string? avatarName = null;
 
