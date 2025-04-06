@@ -162,6 +162,10 @@ public class BitBltCapture : IGameCapture
         return Capture(true);
     }
 
+    /// <summary>
+    /// 截图功能的实现。需要加锁后调用，一般只由 Capture 方法调用。
+    /// </summary>
+    /// <returns></returns>
     private Mat? Capture0()
     {
         Mat? mat = null;
