@@ -430,7 +430,8 @@ public class Avatar
             var cd = AfterUseSkill(region);
             if (cd > 0)
             {
-                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd}" : "{Name} 点按元素战技，cd:{Cd}", Name, cd);
+                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                    Math.Round(cd, 2));
                 return;
             }
         }
@@ -883,10 +884,10 @@ public class Avatar
     /// 从配置字符串中查找角色cd
     /// 仅有角色名时返回 -1 ,没找到角色返回null
     /// </summary>
-    /// <param name="input">序列</param>
     /// <param name="avatarName">角色名</param>
+    /// <param name="input">序列</param>
     /// <returns></returns>
-    public static double? ParseActionSchedulerByCd(string input, string avatarName)
+    public static double? ParseActionSchedulerByCd(string avatarName, string input)
     {
         if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(avatarName))
             return null;

@@ -94,6 +94,7 @@ public class EngineExtend
         engine.AddHostObject("middleButtonDown", GlobalMethod.MiddleButtonDown);
         engine.AddHostObject("middleButtonUp", GlobalMethod.MiddleButtonUp);
         engine.AddHostObject("captureGameRegion", GlobalMethod.CaptureGameRegion);
+        engine.AddHostObject("inputText", GlobalMethod.InputText);
 #pragma warning restore CS8974 // Converting method group to non-delegate type
     }
 }

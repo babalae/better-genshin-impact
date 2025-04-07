@@ -1608,7 +1608,7 @@
         <!-- 自动分解圣遗物 -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Glyph="&#xe3a8;" Style="{StaticResource FaFontIconStyle}" />
+                <ui:FontIcon Glyph="&#xf4bb;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>

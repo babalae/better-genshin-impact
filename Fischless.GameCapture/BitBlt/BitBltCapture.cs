@@ -14,9 +14,11 @@ public class BitBltCapture : IGameCapture
     private volatile nint _hWnd; // 需要加锁
     private BitBltSession? _session; // 需要加锁
 
-    private volatile bool _needResetSession;
+    private volatile bool _lastCaptureFailed;
 
     public void Dispose() => Stop();
+
+    public Mat? Capture() => Capture(false);
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -52,16 +54,20 @@ public class BitBltCapture : IGameCapture
     /// 检查窗口大小，如果改变则更新截图尺寸。返回是否成功。
     /// </summary>
     /// <returns></returns>
-    private bool CheckSession()
+    private void CheckSession()
     {
-        if (!_lockSlim.TryEnterWriteLock(TimeSpan.FromSeconds(0.5)))
+        if (_lockSlim.WaitingWriteCount > 0 || !_lockSlim.TryEnterWriteLock(TimeSpan.FromSeconds(0.5)))
         {
-            return false;
+            // 写锁持有只会有两种情况:start和CheckSession。无论哪一种都会检查&更新session。
+            // 所以当有线程等待更新时，将直接返回
+            return;
         }
 
         try
         {
-            if (_session is not null && (_session.IsInvalid() || _needResetSession)) // 窗口状态变化可能会导致会话失效
+            // 窗口状态变化可能会导致会话失效
+            // 上次截图失败则重置会话，避免一直截图失败
+            if (_session is not null && (_session.IsInvalid() || _lastCaptureFailed))
             {
                 _session.Dispose();
                 _session = null;
@@ -73,7 +79,7 @@ public class BitBltCapture : IGameCapture
                 // 窗口获取不到或者最小化
                 _session?.Dispose();
                 _session = null;
-                return false;
+                return;
             }
 
             var width = windowRect.right - windowRect.left;
@@ -82,18 +88,17 @@ public class BitBltCapture : IGameCapture
             _session ??= new BitBltSession(_hWnd, width, height);
             if (_session.Width == width && _session.Height == height)
             {
-                return true;
+                // 窗口大小没有改变
+                return;
             }
 
-            // 窗口尺寸被改变，释放资源
+            // 窗口尺寸被改变，释放资源，然后重新创建会话
             _session.Dispose();
             _session = new BitBltSession(_hWnd, width, height);
-            return true;
         }
         catch (Exception e)
         {
             Error.WriteLine("[BitBlt]Failed to create session:{0}", e);
-            return false;
         }
         finally
         {
@@ -101,7 +106,12 @@ public class BitBltCapture : IGameCapture
         }
     }
 
-    public Mat? Capture()
+    /// <summary>
+    /// 递归只尝试一次，会设置标志，正常调用置假即可
+    /// </summary>
+    /// <param name="recursive">递归标志</param>
+    /// <returns>截图</returns>
+    private Mat? Capture(bool recursive)
     {
         if (_hWnd == IntPtr.Zero)
         {
@@ -113,46 +123,71 @@ public class BitBltCapture : IGameCapture
             _sizeCheckTimer.Start();
         }
 
-        if (_sizeCheckTimer.ElapsedMilliseconds > 1000)
+        // 不会经常调整窗口尺寸的，所以隔一段时间检查一次就行
+        // 上次如果截图失败的话忽略计时器，避免重复截图失败
+        // 递归标志也说明上次截图失败
+        if (_lastCaptureFailed || recursive || _sizeCheckTimer.ElapsedMilliseconds > 1000)
         {
             _sizeCheckTimer.Reset();
-            // 不会经常调整窗口尺寸的，所以隔一段时间检查一次就行
-            if (!CheckSession())
-            {
-                return null;
-            }
+            CheckSession();
         }
 
-        Mat? mat = null;
         try
         {
             _lockSlim.EnterReadLock();
+            var result = Capture0();
+            if (result is not null && !result.Empty())
+            {
+                // 成功截图
+                _lastCaptureFailed = false;
+                return result;
+            }
+            else if (result is null)
+            {
+                if (_lastCaptureFailed) return result; // 这不是首次失败,不再进行尝试
+                _lastCaptureFailed = true; // 设置失败标志
+                if (recursive) return result; // 已设置递归标志，说明也不是首次失败
+            }
+        }
+        finally
+        {
+            if (_lockSlim.IsReadLockHeld)
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
+        // 首次出现截图异常会跳到这里
+        // 首次出现错误重试截图，尽可能不出现截图失败(递归)
+        return Capture(true);
+    }
+
+    /// <summary>
+    /// 截图功能的实现。需要加锁后调用，一般只由 Capture 方法调用。
+    /// </summary>
+    /// <returns></returns>
+    private Mat? Capture0()
+    {
+        Mat? mat = null;
+        try
+        {
             if (_session is null)
             {
                 // 没有成功创建会话，直接返回空
                 return null;
             }
-            mat = _session.GetMat();
-            
-            if (mat is not null) // 成功执行
-            {
-                if (!mat.Empty()) // 并且获取到了图
-                {
-                    _needResetSession = false;
-                    return mat;
-                }
-                else // 成功执行但是没有图，可能是截图过快导致的
-                {
-                    mat.Dispose();
-                    mat = null; // 防止二次释放
-                }
-            }
 
-            // 无论没有图还是执行失败都会到这里
-            if (_session is not null && !_session.IsInvalid())
+            mat = _session.GetMat();
+
+            if (mat is null) return null; // 执行失败
+            if (!mat.Empty()) // 成功执行并且获取到了图
             {
-                // _session正确但是截图失败，如果持续出现这个问题需要重置会话
-                _needResetSession = true;
+                return mat;
+            }
+            else // 成功执行但是没有图，可能是截图过快导致的
+            {
+                mat.Dispose();
+                mat = null; // 防止二次释放
             }
 
             return null;
@@ -162,14 +197,8 @@ public class BitBltCapture : IGameCapture
             // 理论这里不应出现异常，除非窗口不存在了或者有什么bug
             // 出现异常的时候释放内存
             mat?.Dispose();
-            // 如果持续出现异常则重置会话
-            _needResetSession = true;
             Error.WriteLine("[BitBlt]Failed to capture image {0}", e);
             return null;
-        }
-        finally
-        {
-            _lockSlim.ExitReadLock();
         }
     }
 

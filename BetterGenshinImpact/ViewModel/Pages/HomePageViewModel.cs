@@ -252,6 +252,7 @@ public partial class HomePageViewModel : ViewModel
                 _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
                 _maskWindow ??= new MaskWindow();
                 _maskWindow.Show();
+                MaskWindow.Instance().RefreshPosition();
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
             }

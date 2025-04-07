@@ -11,6 +11,7 @@ using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.ViewModel.Pages;
+using Fischless.WindowsInput;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -44,7 +45,14 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonDown(0x0001);
                 break;
             default:
-                Simulation.SendInput.Keyboard.KeyDown(vk);
+                if (InputBuilder.IsExtendedKey(vk))
+                {
+                    Simulation.SendInput.Keyboard.KeyDown(false, vk);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyDown(vk);
+                }
                 break;
         }
     }
@@ -70,7 +78,14 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonUp(0x0001);
                 break;
             default:
-                Simulation.SendInput.Keyboard.KeyUp(vk);
+                if (InputBuilder.IsExtendedKey(vk))
+                {
+                    Simulation.SendInput.Keyboard.KeyUp(false, vk);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyUp(vk);
+                }
                 break;
         }
     }
