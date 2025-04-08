@@ -105,21 +105,6 @@ public partial class NotificationConfig : ObservableObject
     // Email 通知配置
     [ObservableProperty] private bool _emailNotificationEnabled;
 
-
-    // 飞书通知
-    /// <summary>
-    ///     飞书通知是否启用
-    /// </summary>
-    [ObservableProperty] private bool _feishuNotificationEnabled;
-
-
-    /// <summary>
-    ///     飞书通知地址
-    /// </summary>
-    [ObservableProperty] private string _feishuWebhookUrl = string.Empty;
-    [ObservableProperty] private string _feishuAppId = string.Empty;
-    [ObservableProperty] private string _feishuAppSecret = string.Empty;
-
     [ObservableProperty] private string _fromEmail = string.Empty;
 
     [ObservableProperty] private string _fromName = string.Empty;
@@ -140,6 +125,37 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _smtpServer = string.Empty;
 
     [ObservableProperty] private string _smtpUsername = string.Empty;
+
+
+    // 飞书通知
+    /// <summary>
+    ///     飞书通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _feishuNotificationEnabled;
+
+
+    /// <summary>
+    ///     飞书通知地址
+    /// </summary>
+    [ObservableProperty] private string _feishuWebhookUrl = string.Empty;
+    [ObservableProperty] private string _feishuAppId = string.Empty;
+    [ObservableProperty] private string _feishuAppSecret = string.Empty;
+
+
+    // OneBot通知
+    /// <summary>
+    ///     OneBot通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _OneBotNotificationEnabled;
+
+
+    /// <summary>
+    ///     OneBot通知地址
+    /// </summary>
+    [ObservableProperty] private string _OneBotEndpoint = string.Empty;
+    [ObservableProperty] private string _OneBotUserId = string.Empty;
+    [ObservableProperty] private string _OneBotGroupId = string.Empty;
+    [ObservableProperty] private string _OneBotToken = string.Empty;
 
     /// <summary>
     ///     Telegram API基础URL(可选，留空使用官方API)
