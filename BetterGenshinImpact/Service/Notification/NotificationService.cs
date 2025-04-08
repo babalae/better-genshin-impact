@@ -98,6 +98,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeWebhookNotifier();
         InitializeWindowsUwpNotifier();
         InitializeFeishuNotifier();
+        InitializeOneBotNotifier();
         InitializeWorkWeixinNotifier();
         InitializeWebSocketNotifier();
         InitializeBarkNotifier();
@@ -143,6 +144,21 @@ public class NotificationService : IHostedService, IDisposable
                 _notificationConfig.FeishuWebhookUrl,
                 _notificationConfig.FeishuAppId,
                 _notificationConfig.FeishuAppSecret
+            ));
+    }
+
+    /// <summary>
+    ///     初始化OneBot通知器
+    /// </summary>
+    private void InitializeOneBotNotifier()
+    {
+        if (_notificationConfig?.OneBotNotificationEnabled == true)
+            _notifierManager.RegisterNotifier(new OneBotNotifier(
+                _notifyHttpClient,
+                _notificationConfig.OneBotEndpoint,
+                _notificationConfig.OneBotUserId,
+                _notificationConfig.OneBotGroupId,
+                _notificationConfig.OneBotToken
             ));
     }
 
