@@ -24,6 +24,8 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _feishuStatus = string.Empty;
 
+    [ObservableProperty] private string _oneBotStatus = string.Empty;
+
     [ObservableProperty] private bool _isLoading;
 
     [ObservableProperty] private string _telegramStatus = string.Empty;
@@ -93,6 +95,25 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         var res = await _notificationService.TestNotifierAsync<FeishuNotifier>();
 
         FeishuStatus = res.Message;
+
+        // 添加Toast提示
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnTestOneBotNotification()
+    {
+        IsLoading = true;
+        OneBotStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<OneBotNotifier>();
+
+        OneBotStatus = res.Message;
 
         // 添加Toast提示
         if (res.IsSuccess)
@@ -216,7 +237,6 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
         IsLoading = false;
     }
-
 
     [RelayCommand]
     private async Task OnTestDingDingWebhookNotification()
