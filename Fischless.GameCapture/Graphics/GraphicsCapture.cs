@@ -311,20 +311,6 @@ public class GraphicsCapture : IGameCapture
 
         _hWnd = IntPtr.Zero;
         IsCapturing = false;
-
-        // 释放最新帧
-        _frameAccessLock.EnterWriteLock();
-        try
-        {
-            _latestFrame?.Dispose();
-            _latestFrame = null;
-        }
-        finally
-        {
-            _frameAccessLock.ExitWriteLock();
-        }
-
-        _frameAccessLock.Dispose();
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)
