@@ -406,8 +406,19 @@ public class NotificationService : IHostedService, IDisposable
 
         try
         {
-            var bitmap = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
-            if (bitmap != null) notificationData.Screenshot = bitmap.ToBitmap();
+            var image = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
+
+            if (image != null)
+            {
+                if (image.Bitmap != null)
+                {
+                    notificationData.Screenshot = image.Bitmap;
+                }
+                else if (image.Mat != null)
+                {
+                    notificationData.Screenshot = image.Mat.ToBitmap();
+                }
+            }
         }
         catch (Exception ex)
         {
