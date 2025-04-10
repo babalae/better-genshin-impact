@@ -256,7 +256,7 @@ public partial class HomePageViewModel : ViewModel
             if (!TaskDispatcherEnabled)
             {
                 _hWnd = hWnd;
-                _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+                _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
                 _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
                 _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
                 _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
@@ -267,6 +267,19 @@ public partial class HomePageViewModel : ViewModel
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
             }
+        }
+    }
+
+    private CaptureModes GetCaptureMode()
+    {
+        try
+        {
+            return Config.CaptureMode.ToCaptureMode();
+        }
+        catch (Exception e)
+        {
+            TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
+            return CaptureModes.BitBlt;
         }
     }
 

@@ -7,7 +7,7 @@ namespace Fischless.GameCapture.BitBlt;
 
 public class BitBltCapture : IGameCapture
 {
-    public CaptureModes Mode => CaptureModes.BitBlt;
+    public CaptureModes Mode => CaptureModes.BitBltNew;
     public bool IsCapturing { get; private set; }
     private readonly Stopwatch _sizeCheckTimer = new();
     private readonly ReaderWriterLockSlim _lockSlim = new();

@@ -7,7 +7,7 @@ public class BitBltOldCapture : IGameCapture
 {
     private nint _hWnd;
 
-    public CaptureModes Mode => CaptureModes.BitBltOld;
+    public CaptureModes Mode => CaptureModes.BitBlt;
 
     public static object LockObject { get; } = new();
 
