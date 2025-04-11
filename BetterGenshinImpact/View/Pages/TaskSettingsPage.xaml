@@ -675,146 +675,32 @@
                         </StackPanel>
                     </ui:CardExpander>
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid Margin="16,10,52,0">
-
-                    <ui:CardExpander Margin="0,0,0,12"
-                                     ContentPadding="0"
-                                     IsExpanded="False">
-
-                        <ui:CardExpander.Header>
-                            <Grid>
-
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="自动拾取掉落物"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
-                                              TextWrapping="Wrap" />
-                                <ui:ToggleSwitch Grid.Row="0"
-                                                 Grid.RowSpan="2"
-                                                 Grid.Column="1"
-                                                 Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoFightConfig.PickDropsAfterFightEnabled}" />
-                            </Grid>
-                        </ui:CardExpander.Header>
-                        <StackPanel>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="前进次数"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="通过往前走来接近掉落物的次数"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="120"
-                                            Text="{Binding Config.AutoFightConfig.PickDropsConfig.ForwardTimes}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="校准次数"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="视角调整次数，理论上越高越好"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="120"
-                                            Text="{Binding Config.AutoFightConfig.PickDropsConfig.CalibrationTimes}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="衰减因子"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="视角调整的精细程度，应在0.5到1之间（数值越小越精细，数值越高校准范围越大）"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="120"
-                                            Text="{Binding Config.AutoFightConfig.PickDropsConfig.DecayFactor}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="前进量"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="每次视角校准后前进的时长（秒）。设置为0时，前进量在1到3秒内随机（大了可能跑到奇奇怪怪的地方去，小了可能采集不到，可以和前进次数配合）"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="120"
-                                            Text="{Binding Config.AutoFightConfig.PickDropsConfig.ForwardSeconds}" />
-                            </Grid>
-
-                        </StackPanel>
-                    </ui:CardExpander>
-
+                <Separator Margin="-18,0"
+                        BorderThickness="0,1,0,0"/>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动拾取掉落物时长"
+                                  TextWrapping="Wrap"/>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="单位为秒。0表示不自动拾取掉落物。"
+                                  TextWrapping="Wrap"/>
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="120"
+                                Text="{Binding Config.AutoFightConfig.PickDropsAfterFightSeconds}"/>
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">

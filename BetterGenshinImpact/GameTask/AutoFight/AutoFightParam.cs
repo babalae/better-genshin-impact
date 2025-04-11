@@ -25,7 +25,7 @@ public class AutoFightParam : BaseTaskParam
         CombatStrategyPath = path;
         Timeout = autoFightConfig.Timeout;
         FightFinishDetectEnabled = autoFightConfig.FightFinishDetectEnabled;
-        PickDropsAfterFightEnabled = autoFightConfig.PickDropsAfterFightEnabled;
+        PickDropsAfterFightSeconds = autoFightConfig.PickDropsAfterFightSeconds;
         KazuhaPickupEnabled = autoFightConfig.KazuhaPickupEnabled;
         ActionSchedulerByCd = autoFightConfig.ActionSchedulerByCd;
        
@@ -45,7 +45,7 @@ public class AutoFightParam : BaseTaskParam
 
     public bool FightFinishDetectEnabled { get; set; } = false;
 
-    public bool PickDropsAfterFightEnabled { get; set; } = false;
+    public int PickDropsAfterFightSeconds { get; set; } = 15;
 
     public int Timeout { get; set; } = 120;
 
