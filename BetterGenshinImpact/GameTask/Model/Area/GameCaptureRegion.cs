@@ -3,6 +3,7 @@ using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Drawing;
+using Fischless.GameCapture;
 using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -11,8 +12,19 @@ namespace BetterGenshinImpact.GameTask.Model.Area;
 /// 游戏捕获区域类
 /// 主要用于转换到遮罩窗口的坐标
 /// </summary>
-public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = null, INodeConverter? converter = null, DrawContent? drawContent = null) : ImageRegion(mat, initX, initY, owner, converter, drawContent)
+public class GameCaptureRegion : ImageRegion
 {
+    public GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = null, INodeConverter? converter = null,
+        DrawContent? drawContent = null) : base(mat, initX, initY, owner, converter, drawContent)
+    {
+    }
+    
+    public GameCaptureRegion(CaptureImageRes image, int initX, int initY, Region? owner = null,
+        INodeConverter? converter = null, DrawContent? drawContent = null) : base(image, initX, initY, owner, converter, drawContent)
+    {
+    }
+
+
     /// <summary>
     /// 在游戏捕获图像的坐标维度进行转换到遮罩窗口的坐标维度
     /// </summary>
@@ -48,6 +60,7 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
         {
             drawable.Pen = pen;
         }
+
         return drawable;
     }
 
@@ -66,6 +79,7 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
         {
             return this;
         }
+
         var scale = Width / 1920d;
 
         var newMat = new Mat();
@@ -109,7 +123,7 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
         var (dx, dy) = deltaFunc(new Size(captureAreaRect.Width, captureAreaRect.Height), assetScale);
         DesktopRegion.DesktopRegionMoveBy(dx, dy);
     }
-    
+
     /// <summary>
     /// 静态方法,输入1080P下的坐标,方法会自动转换到当前游戏捕获区域大小下的坐标并点击
     /// </summary>

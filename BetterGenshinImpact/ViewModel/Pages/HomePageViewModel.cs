@@ -15,22 +15,30 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Windows.System;
+using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Model;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ViewModel
 {
+
     [ObservableProperty]
-    private string[] _modeNames = GameCaptureFactory.ModeNames();
+    private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
     [ObservableProperty]
     private string? _selectedMode = CaptureModes.BitBlt.ToString();
@@ -66,11 +74,14 @@ public partial class HomePageViewModel : ViewModel
         Config = configService.Get();
         ReadGameInstallPath();
 
+
         // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
         // https://github.com/babalae/better-genshin-impact/issues/394
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
-            _modeNames = _modeNames.Where(x => x != CaptureModes.WindowsGraphicsCapture.ToString()).ToArray();
+            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture
+            _modeNames = _modeNames.Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()).ToList();
+
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
             _inferenceDeviceTypes = _inferenceDeviceTypes.Where(x => x != "GPU_DirectML").ToArray();
@@ -245,7 +256,7 @@ public partial class HomePageViewModel : ViewModel
             if (!TaskDispatcherEnabled)
             {
                 _hWnd = hWnd;
-                _taskDispatcher.Start(hWnd, Config.CaptureMode.ToCaptureMode(), Config.TriggerInterval);
+                _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
                 _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
                 _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
                 _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
@@ -256,6 +267,19 @@ public partial class HomePageViewModel : ViewModel
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
             }
+        }
+    }
+
+    private CaptureModes GetCaptureMode()
+    {
+        try
+        {
+            return Config.CaptureMode.ToCaptureMode();
+        }
+        catch (Exception e)
+        {
+            TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
+            return CaptureModes.BitBlt;
         }
     }
 

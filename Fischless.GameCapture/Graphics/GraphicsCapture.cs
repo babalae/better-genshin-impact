@@ -278,7 +278,7 @@ public class GraphicsCapture : IGameCapture
         return sdkMat;
     }
 
-    public Mat? Capture()
+    public CaptureImageRes? Capture()
     {
         // 使用读锁获取最新帧
         _frameAccessLock.EnterReadLock();
@@ -291,7 +291,7 @@ public class GraphicsCapture : IGameCapture
             }
 
             // 返回最新帧的副本（这里我们必须克隆，因为Mat是不线程安全的）
-            return _latestFrame.Clone();
+            return CaptureImageRes.BuildNullable(_latestFrame.Clone());
         }
         finally
         {
@@ -311,20 +311,6 @@ public class GraphicsCapture : IGameCapture
 
         _hWnd = IntPtr.Zero;
         IsCapturing = false;
-
-        // 释放最新帧
-        _frameAccessLock.EnterWriteLock();
-        try
-        {
-            _latestFrame?.Dispose();
-            _latestFrame = null;
-        }
-        finally
-        {
-            _frameAccessLock.ExitWriteLock();
-        }
-
-        _frameAccessLock.Dispose();
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)

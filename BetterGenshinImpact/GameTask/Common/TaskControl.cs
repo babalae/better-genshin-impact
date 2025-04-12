@@ -17,13 +17,13 @@ public class TaskControl
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
-    
-    
+
+
     public static void CheckAndSleep(int millisecondsTimeout)
     {
         TrySuspend();
         CheckAndActivateGameWindow();
-        
+
         Thread.Sleep(millisecondsTimeout);
     }
 
@@ -33,10 +33,10 @@ public class TaskControl
         {
             TrySuspend();
             CheckAndActivateGameWindow();
-            
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
     }
+
     private static bool IsKeyPressed(User32.VK key)
     {
         // 获取按键状态
@@ -45,6 +45,7 @@ public class TaskControl
         // 检查高位是否为 1（表示按键被按下）
         return (state & 0x8000) != 0;
     }
+
     public static void TrySuspend()
     {
         var first = true;
@@ -65,6 +66,7 @@ public class TaskControl
                         Simulation.SendInput.Keyboard.KeyUp(key);
                     }
                 }
+
                 Logger.LogWarning("快捷键触发暂停，等待解除");
                 foreach (var item in RunnerContext.Instance.SuspendableDictionary)
                 {
@@ -76,6 +78,7 @@ public class TaskControl
 
             Thread.Sleep(1000);
         }
+
         //从暂停中解除
         if (isSuspend)
         {
@@ -97,12 +100,12 @@ public class TaskControl
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
         }
-        
+
         var count = 0;
         //未激活则尝试恢复窗口
         while (!SystemControl.IsGenshinImpactActiveByProcess())
         {
-            if (count>=10 && count%10==0)
+            if (count >= 10 && count % 10 == 0)
             {
                 Logger.LogInformation("多次尝试未恢复，尝试最小化后激活窗口！");
                 SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
@@ -112,6 +115,7 @@ public class TaskControl
                 Logger.LogInformation("当前获取焦点的窗口不是原神，尝试恢复窗口");
                 SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
             }
+
             count++;
             Thread.Sleep(1000);
         }
@@ -135,10 +139,9 @@ public class TaskControl
             {
                 throw new NormalEndException("取消自动任务");
             }
+
             TrySuspend();
             CheckAndActivateGameWindow();
-
-            
         }, TimeSpan.FromSeconds(1), 100);
         Thread.Sleep(millisecondsTimeout);
         if (ct.IsCancellationRequested)
@@ -165,9 +168,9 @@ public class TaskControl
             {
                 throw new NormalEndException("取消自动任务");
             }
+
             TrySuspend();
             CheckAndActivateGameWindow();
-
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);
         if (ct is { IsCancellationRequested: true })
@@ -176,7 +179,7 @@ public class TaskControl
         }
     }
 
-    public static Mat CaptureGameImage(IGameCapture? gameCapture)
+    public static CaptureImageRes CaptureGameImage(IGameCapture? gameCapture)
     {
         var image = gameCapture?.Capture();
         if (image == null)
@@ -190,10 +193,10 @@ public class TaskControl
                 {
                     return image;
                 }
-        
+
                 Sleep(30);
             }
-        
+
             throw new Exception("尝试多次后,截图失败!");
         }
         else
@@ -201,8 +204,8 @@ public class TaskControl
             return image;
         }
     }
-    
-    public static Mat? CaptureGameImageNoRetry(IGameCapture? gameCapture)
+
+    public static CaptureImageRes? CaptureGameImageNoRetry(IGameCapture? gameCapture)
     {
         return gameCapture?.Capture();
     }
@@ -213,7 +216,7 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        var image =CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
+        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
         var content = new CaptureContent(image, 0, 0);
         return content.CaptureRectArea;
     }

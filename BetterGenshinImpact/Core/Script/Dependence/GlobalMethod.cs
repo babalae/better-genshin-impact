@@ -8,10 +8,9 @@ using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
-using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.ViewModel.Pages;
 using Fischless.WindowsInput;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -53,6 +52,7 @@ public class GlobalMethod
                 {
                     Simulation.SendInput.Keyboard.KeyDown(vk);
                 }
+
                 break;
         }
     }
@@ -86,6 +86,7 @@ public class GlobalMethod
                 {
                     Simulation.SendInput.Keyboard.KeyUp(vk);
                 }
+
                 break;
         }
     }
@@ -242,13 +243,13 @@ public class GlobalMethod
             return;
         }
 
-        // 保存当前剪贴板内容
-        string originalClipboardText = Clipboard.GetText();
-
+        // 保存当前剪贴板内容 保存恢复的功能不太正常
+        // string? originalClipboardText = null;
+        // UIDispatcherHelper.Invoke(() => originalClipboardText = Clipboard.GetText());
         try
         {
             // 将要输入的文本复制到剪贴板
-            Clipboard.SetText(text);
+            UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(text));
 
             // 模拟Ctrl+V粘贴操作
             Simulation.SendInput.Keyboard.KeyDown(false, VK.VK_CONTROL);
@@ -260,13 +261,17 @@ public class GlobalMethod
             // 等待一小段时间确保粘贴完成
             Sleep(100);
         }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogDebug("输入文本时发生错误: {Msg}",ex.Message);
+        }
         finally
         {
-            // 恢复原始剪贴板内容
-            if (!string.IsNullOrEmpty(originalClipboardText))
-            {
-                Clipboard.SetText(originalClipboardText);
-            }
+            // // 恢复原始剪贴板内容
+            // if (!string.IsNullOrEmpty(originalClipboardText))
+            // {
+            //     UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(originalClipboardText));
+            // }
         }
     }
 

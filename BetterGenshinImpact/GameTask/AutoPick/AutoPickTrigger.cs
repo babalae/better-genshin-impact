@@ -15,6 +15,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
@@ -40,7 +42,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 拾取白名单
     /// </summary>
     private List<string> _whiteList = [];
-    
+
     private RecognitionObject _pickRo;
 
     // 外部配置
@@ -105,127 +107,167 @@ public partial class AutoPickTrigger : ITaskTrigger
     {
         var speedTimer = new SpeedTimer();
 
-        content.CaptureRectArea.Find(_pickRo, foundRectArea =>
-        {
-            speedTimer.Record($"识别到拾取键");
+        using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
 
-            if (_externalConfig is { ForceInteraction: true })
+        if (foundRectArea.IsEmpty())
+        {
+            // 没有识别到F键，先判断是否有滚轮图标信息
+            if (HasScrollIcon(content.CaptureRectArea))
             {
-                LogPick(content, "直接拾取");
-                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
-                return;
+                // 滚轮下
+                Simulation.SendInput.Mouse.VerticalScroll(2);
+                Thread.Sleep(50);
             }
 
-            var scale = TaskContext.Instance().SystemInfo.AssetScale;
-            var config = TaskContext.Instance().Config.AutoPickConfig;
+            return;
+        }
 
-            // 识别到拾取键，开始识别物品图标
-            var isExcludeIcon = false;
-            _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y, (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-            var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
-            speedTimer.Record("识别聊天图标");
-            if (!chatIconRa.IsEmpty())
+        speedTimer.Record($"识别到拾取键");
+
+        if (_externalConfig is { ForceInteraction: true })
+        {
+            LogPick(content, "直接拾取");
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            return;
+        }
+
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        var config = TaskContext.Instance().Config.AutoPickConfig;
+
+        // 识别到拾取键，开始识别物品图标
+        var isExcludeIcon = false;
+        _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
+            foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
+            (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
+        var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+        speedTimer.Record("识别聊天图标");
+        if (!chatIconRa.IsEmpty())
+        {
+            // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
+            isExcludeIcon = true;
+        }
+        else
+        {
+            _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
+            var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+            speedTimer.Record("识别设置图标");
+            if (!settingsIconRa.IsEmpty())
             {
-                // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
+                // 物品图标是设置图标，一般是解谜、活动、电梯等
                 isExcludeIcon = true;
             }
-            else
-            {
-                _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
-                var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
-                speedTimer.Record("识别设置图标");
-                if (!settingsIconRa.IsEmpty())
-                {
-                    // 物品图标是设置图标，一般是解谜、活动、电梯等
-                    isExcludeIcon = true;
-                }
-            }
+        }
 
-            //if (config.FastModeEnabled && !isExcludeIcon)
-            //{
-            //    _fastModePickCount++;
-            //    if (_fastModePickCount > 2)
-            //    {
-            //        _fastModePickCount = 0;
-            //        LogPick(content, "急速拾取");
-            //        Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
-            //    }
-            //    return;
-            //}
+        //if (config.FastModeEnabled && !isExcludeIcon)
+        //{
+        //    _fastModePickCount++;
+        //    if (_fastModePickCount > 2)
+        //    {
+        //        _fastModePickCount = 0;
+        //        LogPick(content, "急速拾取");
+        //        Simulation.SendInput.Keyboard.KeyPress(VirtualKeyCode.VK_F);
+        //    }
+        //    return;
+        //}
 
-            // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
-            // 计算出文字区域
-            var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
-                (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
-            if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width
-                || textRect.Y + textRect.Height > content.CaptureRectArea.SrcGreyMat.Height)
+        // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
+        // 计算出文字区域
+        var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
+            (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
+        if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width
+            || textRect.Y + textRect.Height > content.CaptureRectArea.SrcGreyMat.Height)
+        {
+            Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
+            return;
+        }
+
+        var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+
+        string text;
+        if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
+        {
+            var paddedMat = PreProcessForInference(textMat);
+            text = _pickTextInference.Inference(paddedMat);
+        }
+        else
+        {
+            text = OcrFactory.Paddle.Ocr(textMat);
+        }
+
+        speedTimer.Record("文字识别");
+        if (!string.IsNullOrEmpty(text))
+        {
+            text = PunctuationAndSpacesRegex().Replace(text, "");
+            // 唯一一个动态拾取项，特殊处理，不拾取
+            if (text.Contains("生长时间"))
             {
-                Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
                 return;
             }
 
-            var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
-
-            string text;
-            if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
+            // 纳塔部落中文名特殊处理，不拾取
+            if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
+                                        text.Contains("流泉")))
             {
-                var paddedMat = PreProcessForInference(textMat);
-                text = _pickTextInference.Inference(paddedMat);
-            }
-            else
-            {
-                text = OcrFactory.Paddle.Ocr(textMat);
+                return;
             }
 
-            speedTimer.Record("文字识别");
-            if (!string.IsNullOrEmpty(text))
+            // 单个字符不拾取
+            if (text.Length <= 1)
             {
-                text = PunctuationAndSpacesRegex().Replace(text, "");
-                // 唯一一个动态拾取项，特殊处理，不拾取
-                if (text.Contains("生长时间"))
-                {
-                    return;
-                }
-                // 纳塔部落中文名特殊处理，不拾取
-                if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") || text.Contains("流泉")))
-                {
-                    return;
-                }
+                return;
+            }
 
-                // 单个字符不拾取
-                if (text.Length <= 1)
-                {
-                    return;
-                }
-
-                if (_whiteList.Contains(text))
-                {
-                    LogPick(content, text);
-                    Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
-                    return;
-                }
-
-                speedTimer.Record("白名单判断");
-
-                if (isExcludeIcon)
-                {
-                    //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
-                    return;
-                }
-
-                if (_blackList.Contains(text))
-                {
-                    return;
-                }
-
-                speedTimer.Record("黑名单判断");
-
+            if (_whiteList.Contains(text))
+            {
                 LogPick(content, text);
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                return;
             }
-        });
+
+            speedTimer.Record("白名单判断");
+
+            if (isExcludeIcon)
+            {
+                //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
+                return;
+            }
+
+            if (_blackList.Contains(text))
+            {
+                return;
+            }
+
+            speedTimer.Record("黑名单判断");
+
+            LogPick(content, text);
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+        }
+
         speedTimer.DebugPrint();
     }
+
+
+    private bool HasScrollIcon(ImageRegion captureRectArea)
+    {
+        // 固定区域颜色判断
+        // (1062,537)  (255,233,44) 黄色
+        // (1062,524)  (255,255,255) 白色
+        // (1062,583)  (255,255,255) 白色
+        var mat = captureRectArea.SrcMat;
+        var color1 = mat.At<Vec3b>(537, 1062);
+        var color2 = mat.At<Vec3b>(524, 1062);
+        var color3 = mat.At<Vec3b>(554, 1062);
+        // BGR 的格式
+        if (color1.Item2 == 255 && color1.Item1 == 233 && color1.Item0 == 44
+            && color2.Item2 == 255 && color2.Item1 == 255 && color2.Item0 == 255
+            && color3.Item2 == 255 && color3.Item1 == 255 && color3.Item0 == 255)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
 
     private Mat PreProcessForInference(Mat mat)
     {

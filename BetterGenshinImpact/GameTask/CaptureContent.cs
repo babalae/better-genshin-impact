@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
 using System;
 using System.Drawing;
+using Fischless.GameCapture;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask;
@@ -19,7 +20,7 @@ public class CaptureContent : IDisposable
 
     public ImageRegion CaptureRectArea { get; private set; }
 
-    public CaptureContent(Mat image, int frameIndex, double interval)
+    public CaptureContent(CaptureImageRes image, int frameIndex, double interval)
     {
         FrameIndex = frameIndex;
         TimerInterval = interval;
