@@ -591,7 +591,7 @@ public class PathExecutor
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        var (tpX, tpY) = await new TpTask(ct).Tp(waypoint.GameX, waypoint.GameY, forceTp);
+        var (tpX, tpY) = await new TpTask(ct).Tp(waypoint.GameX, waypoint.GameY, forceTp,true);
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会

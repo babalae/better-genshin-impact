@@ -31,6 +31,11 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 暂停实现
     /// </summary>
     public Dictionary<string, ISuspendable> SuspendableDictionary = new();
+    
+    /// <summary>
+    /// 是否正在自动领取派遣任务
+    /// </summary>
+    public bool isAutoFetchDispatch { get; set; }
 
     /// <summary>
     /// 当前使用队伍名称
@@ -82,6 +87,7 @@ public class RunnerContext : Singleton<RunnerContext>
 
         _combatScenes = null;
         IsSuspend = false;
+        isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
     }
 
@@ -94,6 +100,7 @@ public class RunnerContext : Singleton<RunnerContext>
         PartyName = null;
         _combatScenes = null;
         IsSuspend = false;
+        isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
     }
 }

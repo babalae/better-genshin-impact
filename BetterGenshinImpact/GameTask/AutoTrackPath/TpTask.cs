@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
@@ -165,7 +166,8 @@ public class TpTask(CancellationToken ct)
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
-    private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false)
+    /// <param name="enableAutoFetchDispatch">允许自动领取委托</param>
+    private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false,bool enableAutoFetchDispatch = false)
     {
         // tp 前释放所有按键
         Simulation.ReleaseAllKey();
@@ -173,6 +175,48 @@ public class TpTask(CancellationToken ct)
         // 1. 确认在地图界面
         await CheckInBigMapUi();
 
+            //传送过程中自动判断是否自动领取委托
+            string adventurersGuildCountry =
+                TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
+            if (enableAutoFetchDispatch && !RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry!="无")
+            {
+                var ra1 = CaptureToRectArea();
+                bool hasDelegated = false;
+                var textRect = new Rect(60, 20, 160, 260);
+                var textMat = new Mat(ra1.SrcGreyMat, textRect);
+                string text = OcrFactory.Paddle.Ocr(textMat);
+                Logger.LogInformation("自动领取委托OCR识别文字为:"+text);
+                if (text.Contains("探索派遣奖励"))
+                {
+                    Logger.LogInformation("开始自动领取派遣任务！");
+                    try
+                    {
+                        RunnerContext.Instance.isAutoFetchDispatch = true;
+                        await new GoToAdventurersGuildTask().Start(adventurersGuildCountry,ct,null,true);
+                        Logger.LogInformation("自动领取派遣结束，回归原任务！");
+                        Thread.Sleep(1000);
+                        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                        Thread.Sleep(1000);
+                    }
+                    finally
+                    {
+                        RunnerContext.Instance.isAutoFetchDispatch = false;
+                    }
+                }
+          
+                if (hasDelegated)
+                {
+                    //恢复前置过程
+                    Simulation.ReleaseAllKey();
+                    await Delay(20, ct);
+                    await CheckInBigMapUi();
+                }
+
+            }
+        
+ 
+
+        
         // 2. 传送前的计算准备
         // 获取离目标传送点最近的两个传送点，按距离排序
         var nTpPoints = GetNearestNTpPoints(tpX, tpY, 2);
@@ -376,13 +420,13 @@ public class TpTask(CancellationToken ct)
     }
 
 
-    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false)
+    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false ,bool enableAutoFetchDelegated = false)
     {
         for (var i = 0; i < 3; i++)
         {
             try
             {
-                return await TpOnce(tpX, tpY, force: force);
+                return await TpOnce(tpX, tpY, force: force,enableAutoFetchDelegated);
             }
             catch (TpPointNotActivate e)
             {
