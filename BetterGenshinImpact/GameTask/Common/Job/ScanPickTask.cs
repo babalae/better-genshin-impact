@@ -50,34 +50,30 @@ public class ScanPickTask
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
         TimeSpan finishTime = TimeSpan.FromSeconds(sec);
 
-        await ResetCamera(ct);
         Simulation.SendInput.SimulateAction(GIActions.Drop);
+        await ResetCamera(ct);
+
         while (!ct.IsCancellationRequested && timeoutStopwatch.Elapsed < finishTime)
         {
-
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
-            var (hasItems, pickItems) = DetectPickableItems(ct);
+            var (hasItems, pickItems) = DetectPickableItems();
             // Logger.LogInformation("存在可拾取物品: {0}", hasItems);
             if (!hasItems)
             {
                 Simulation.ReleaseAllKey();
                 await ResetCamera(ct);
-                for (var i = 0; i < 20; i++)
+                for (var i = 0; i < 10; i++)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(600, 0);
-                    await WalkBack(ct, 100);
+                    Simulation.SendInput.Mouse.MoveMouseBy(400, 0);
+                    if (i > 5) //前期不考虑移动扫描
+                        await WalkByDirection(ct, GIActions.MoveForward, 100);
                     Simulation.SendInput.SimulateAction(GIActions.Drop);
-                    (hasItems, pickItems) = DetectPickableItems(ct);
+                    await Delay(300, ct);
+                    (hasItems, pickItems) = DetectPickableItems();
                     if (hasItems) break;
                 }
             }
 
-            if (!hasItems)
-            {
-                Logger.LogInformation("没有可拾取物品，结束扫描");
-                break;
-            }
-
+            if (!hasItems) break;
 
             // Assume 1080p resolution
             // approximate dist=(x-960)**2+14*(y-888.88)**2
@@ -87,8 +83,26 @@ public class ScanPickTask
             var toPickItem = pickItems[0];
             Logger.LogDebug("Fetching: {0}", toPickItem);
             Logger.LogDebug("Using coord: {0} {1}", toPickItem.X, toPickItem.Bottom);
+            MoveTowardsItem(toPickItem);
 
-            // 需要避免两个对向的键同时按下
+            await Delay(200, ct);
+            Simulation.SendInput.SimulateAction(GIActions.Drop);
+        }
+        Logger.LogInformation("超时或视野内没有可拾取物品，结束扫描");
+        Simulation.ReleaseAllKey();
+        Simulation.SendInput.SimulateAction(GIActions.Drop);
+    }
+
+    /// <summary>
+    /// Moves the character towards the specified item by controlling movement keys
+    /// </summary>
+    /// <param name="toPickItem">The item to move towards</param>
+    private static void MoveTowardsItem(Rect toPickItem)
+    {
+        // 对于比较远的物品（Y坐标靠上）先用前进靠近
+        // 需要避免两个对向的键同时按下
+        if (toPickItem.Bottom > 560)
+        {
             if (toPickItem.X < 760)
             {
                 Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
@@ -104,34 +118,31 @@ public class ScanPickTask
                 Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                 Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
             }
-            if (toPickItem.Bottom < 770)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            }
-            else if (toPickItem.Bottom > 900)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-            }
-            else
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-            }
-            await Delay(100, ct);
         }
-        Simulation.ReleaseAllKey();
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
+
+        if (toPickItem.Bottom < 770)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        }
+        else if (toPickItem.Bottom > 900)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+        }
+        else
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+        }
     }
 
     /// <summary>
     /// Detects pickable items in the current view
     /// </summary>
     /// <returns>A tuple containing whether items were found and the list of pickable items</returns>
-    private (bool hasItems, List<Rect> pickItems) DetectPickableItems(CancellationToken ct)
+    private (bool hasItems, List<Rect> pickItems) DetectPickableItems()
     {
-        Delay(100, ct).Wait(ct);
         var ra = CaptureToRectArea();
         var resultDic = _predictor.Detect(ra);
         // 过滤出可拾取物品
@@ -140,21 +151,11 @@ public class ScanPickTask
         return (pickItems.Count > 0, pickItems);
     }
 
-    private static async Task WalkBack(CancellationToken ct, int ms = 1000)
+    private static async Task WalkByDirection(CancellationToken ct, GIActions act, int ms = 1000)
     {
-        Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+        Simulation.SendInput.SimulateAction(act, KeyType.KeyDown);
         await Delay(ms, ct);
-        Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-    }
-
-    private void MoveCursorTo(Rect item, ImageRegion ra)
-    {
-        var centerX = (item.Left + item.Right) / 2;
-        var centerY = (item.Top + item.Bottom) / 2;
-        var dx = centerX - ra.Width / 2;
-        var dy = centerY - ra.Height / 2;
-        var r = _realCaptureRect.Width * 1.0 / ra.Width; // 缩放比例
-        Simulation.SendInput.Mouse.MoveMouseBy((int)(dx * r * _dpi), (int)(dy * r * _dpi));
+        Simulation.SendInput.SimulateAction(act, KeyType.KeyUp);
     }
 
     // 回正 并下移视角
