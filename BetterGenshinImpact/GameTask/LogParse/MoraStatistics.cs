@@ -69,6 +69,9 @@ namespace BetterGenshinImpact.GameTask.LogParse
         public int EliteMora => EliteMonsterActionItems?.Sum(item => item.Num) ?? 0;
         public int SmallMonsterStatistics => SmallMonsterActionItems?.Count ?? 0;
         public int SmallMonsterMora => SmallMonsterActionItems?.Sum(item => item.Num) ?? 0;
+        public string SmallMonsterDetails => string.Join(", ", SmallMonsterActionItems
+            .GroupBy(item => item.Num/10).OrderBy(item => item.Key) // 按 Num 属性分组
+            .Select(group => $"{group.Key}*{group.Count()}"));
         public int TotalMoraKillingMonstersMora => MonsterActionItems.Sum(item => item.Num);
         public int OtherMora => ActionItems.Except(MonsterActionItems).Sum(item => item.Num);
         public int AllMora => ActionItems.Sum(item => item.Num);

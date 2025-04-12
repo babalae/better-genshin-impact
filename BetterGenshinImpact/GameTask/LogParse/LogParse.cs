@@ -166,20 +166,23 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
 
             }
-
-            //无论如何给个结束时间
-            if (configGroupEntity is { EndDate: null })
+            foreach (var groupEntity in configGroupEntities)
             {
-                if (configGroupEntity.ConfigTaskList.Count > 0)
+                //无论如何给个结束时间
+                if (groupEntity is { EndDate: null })
                 {
-                    ConfigTask ct = configGroupEntity.ConfigTaskList[^1];
-                    if (ct != null)
+                    if (groupEntity.ConfigTaskList.Count > 0)
                     {
-                        configGroupEntity.EndDate = ct.EndDate ?? ct.StartDate;
+                        ConfigTask ct = groupEntity.ConfigTaskList[^1];
+                        if (ct != null)
+                        {
+                            groupEntity.EndDate = ct.EndDate ?? ct.StartDate;
+                        }
                     }
-                }
 
+                }
             }
+
 
             return configGroupEntities;
         }
@@ -453,6 +456,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
             {
                 ("日期", ms => ms.Name, "date"),
                 ("小怪数量", ms => GetNumberOrEmptyString(ms.SmallMonsterStatistics), "number"),
+                ("小怪详细(摩拉/10)", ms => ms.SmallMonsterDetails, "string"),
                 ("最后小怪时间", ms => ms.LastSmallTime, "date"),
                 ("精英数量", ms => GetNumberOrEmptyString(ms.EliteGameStatistics), "number"),
                 ("精英详细", ms => ms.EliteDetails, "string"),
@@ -465,6 +469,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
             var col2Configs = new (string name, Func<MoraStatistics, string> value, string sortType)[]
             {
                 ("小怪", ms => GetNumberOrEmptyString(ms.SmallMonsterStatistics), "number"),
+                ("小怪详细(摩拉/10)", ms => ms.SmallMonsterDetails, "string"),
                 ("精英", ms => GetNumberOrEmptyString(ms.EliteGameStatistics), "number"),
                 ("精英详细", ms => ms.EliteDetails, "string"),
                 ("锄地摩拉", ms => ms.TotalMoraKillingMonstersMora.ToString(), "number"),
