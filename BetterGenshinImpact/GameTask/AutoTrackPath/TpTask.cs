@@ -185,18 +185,20 @@ public class TpTask(CancellationToken ct)
                 var textRect = new Rect(60, 20, 160, 260);
                 var textMat = new Mat(ra1.SrcGreyMat, textRect);
                 string text = OcrFactory.Paddle.Ocr(textMat);
-                Logger.LogInformation("自动领取委托OCR识别文字为:"+text);
+                //Logger.LogInformation("自动领取派遣OCR识别文字为:"+text);
                 if (text.Contains("探索派遣奖励"))
                 {
                     Logger.LogInformation("开始自动领取派遣任务！");
                     try
                     {
                         RunnerContext.Instance.isAutoFetchDispatch = true;
+                        hasDelegated = true;
                         await new GoToAdventurersGuildTask().Start(adventurersGuildCountry,ct,null,true);
                         Logger.LogInformation("自动领取派遣结束，回归原任务！");
+                        /*
                         Thread.Sleep(1000);
                         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-                        Thread.Sleep(1000);
+                        Thread.Sleep(1000);*/
                     }
                     finally
                     {
