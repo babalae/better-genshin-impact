@@ -175,7 +175,7 @@ public class TpTask(CancellationToken ct)
         // 1. 确认在地图界面
         await CheckInBigMapUi();
 
-            //传送过程中自动判断是否自动领取委托
+            //传送过程中自动判断是否自动领取派遣奖励
             string adventurersGuildCountry =
                 TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
             if (enableAutoFetchDispatch && !RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry!="无")
@@ -199,6 +199,8 @@ public class TpTask(CancellationToken ct)
                         Thread.Sleep(1000);
                         Simulation.SendInput.SimulateAction(GIActions.OpenMap);
                         Thread.Sleep(1000);*/
+                    } catch (Exception e){
+                        Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
                     }
                     finally
                     {
