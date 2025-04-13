@@ -276,7 +276,7 @@ public class TpTask(CancellationToken ct)
             await Delay(delayMs, ct);
         }
 
-        Logger.LogWarning("传送等待超时，换台电脑吧");
+        Logger.LogWarning("传送等待超时，请检查左上角派蒙头像是否被遮挡！");
     }
 
     /// <summary>
