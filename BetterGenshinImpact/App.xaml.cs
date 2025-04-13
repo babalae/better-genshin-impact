@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Hutao;
+using BetterGenshinImpact.Model.Database;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -26,6 +27,7 @@ using Serilog.Sinks.RichTextBox.Abstraction;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Controls;
+using Microsoft.EntityFrameworkCore;
 
 namespace BetterGenshinImpact;
 
@@ -126,6 +128,10 @@ public partial class App : Application
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<HutaoNamedPipe>();
 
+                // 添加数据库上下文
+                services.AddDbContext<ApplicationDbContext>();
+                services.AddSingleton<DatabaseInitializer>();
+
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }
@@ -169,6 +175,10 @@ public partial class App : Application
             RegisterEvents();
             await _host.StartAsync();
             await UrlProtocolHelper.RegisterAsync();
+
+            // 初始化数据库
+            var dbInitializer = GetService<DatabaseInitializer>();
+            dbInitializer?.Initialize();
         }
         catch (Exception ex)
         {
