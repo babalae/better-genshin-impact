@@ -98,6 +98,13 @@
                                 <ui:SymbolIcon Symbol="DeveloperBoard24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="调度器(新)"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:TaskGroupPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="DeveloperBoard24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                         <!--  WebAsset24 | DocumentJs16 | Script16  -->
                         <ui:NavigationViewItem Content="JS 脚本"
                                                NavigationCacheMode="Enabled"
