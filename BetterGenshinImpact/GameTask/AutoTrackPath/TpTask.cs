@@ -161,66 +161,60 @@ public class TpTask(CancellationToken ct)
     }
 
     /// <summary>
+    ///释放所有按键，并打开大地图界面
+    /// </summary>
+    /// <param name="retryCount">重试次数</param>
+    public async Task OpenBigMapUi(int retryCount = 3)
+    {
+        
+        for (var i = 0; i < retryCount; i++)
+        {
+            try
+            {
+                // 打开地图前释放所有按键
+                Simulation.ReleaseAllKey();
+                await Delay(20, ct);
+                await CheckInBigMapUi();
+                return;
+            }
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                if (retryCount>1)
+                {
+                    Logger.LogError("打开大地图失败，重试 {I} 次", i + 1);
+                    Logger.LogDebug(e, "打开大地图失败，重试 {I} 次", i + 1);
+                }
+                if (i+1>=retryCount)
+                {
+                    throw;
+                }
+            }
+
+        }
+
+
+    }
+
+    /// <summary>
     /// 通过大地图传送到指定坐标最近的传送点，然后移动到指定坐标
     /// </summary>
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
     /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
-    /// <param name="enableAutoFetchDispatch">允许自动领取委托</param>
-    private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false,bool enableAutoFetchDispatch = false)
+    /// <param name="skipOpenBigMapUi">跳过打开地图步骤</param>
+    private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false,bool skipOpenBigMapUi = false)
     {
-        // tp 前释放所有按键
-        Simulation.ReleaseAllKey();
-        await Delay(20, ct);
-        // 1. 确认在地图界面
-        await CheckInBigMapUi();
 
-            //传送过程中自动判断是否自动领取派遣奖励
-            string adventurersGuildCountry =
-                TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
-            if (enableAutoFetchDispatch && !RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry!="无")
+            if (!skipOpenBigMapUi)
             {
-                var ra1 = CaptureToRectArea();
-                bool hasDelegated = false;
-                var textRect = new Rect(60, 20, 160, 260);
-                var textMat = new Mat(ra1.SrcGreyMat, textRect);
-                string text = OcrFactory.Paddle.Ocr(textMat);
-                //Logger.LogInformation("自动领取派遣OCR识别文字为:"+text);
-                if (text.Contains("探索派遣奖励"))
-                {
-                    Logger.LogInformation("开始自动领取派遣任务！");
-                    try
-                    {
-                        RunnerContext.Instance.isAutoFetchDispatch = true;
-                        hasDelegated = true;
-                        await new GoToAdventurersGuildTask().Start(adventurersGuildCountry,ct,null,true);
-                        Logger.LogInformation("自动领取派遣结束，回归原任务！");
-                        /*
-                        Thread.Sleep(1000);
-                        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
-                        Thread.Sleep(1000);*/
-                    } catch (Exception e){
-                        Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
-                    }
-                    finally
-                    {
-                        RunnerContext.Instance.isAutoFetchDispatch = false;
-                    }
-                }
-          
-                if (hasDelegated)
-                {
-                    //恢复前置过程
-                    Simulation.ReleaseAllKey();
-                    await Delay(20, ct);
-                    await CheckInBigMapUi();
-                }
-
+                // 1. 确认在地图界面
+                await OpenBigMapUi(1);
             }
-        
- 
 
-        
         // 2. 传送前的计算准备
         // 获取离目标传送点最近的两个传送点，按距离排序
         var nTpPoints = GetNearestNTpPoints(tpX, tpY, 2);
@@ -424,13 +418,13 @@ public class TpTask(CancellationToken ct)
     }
 
 
-    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false ,bool enableAutoFetchDelegated = false)
+    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false ,bool skipOpenBigMapUi = false)
     {
         for (var i = 0; i < 3; i++)
         {
             try
             {
-                return await TpOnce(tpX, tpY, force: force,enableAutoFetchDelegated);
+                return await TpOnce(tpX, tpY, force: force,skipOpenBigMapUi);
             }
             catch (TpPointNotActivate e)
             {
@@ -448,6 +442,10 @@ public class TpTask(CancellationToken ct)
             {
                 Logger.LogError("传送失败，重试 {I} 次", i + 1);
                 Logger.LogDebug(e, "传送失败，重试 {I} 次", i + 1);
+            }finally
+            {
+                //只要异常过，后续重试都需要打开大地图操作
+                skipOpenBigMapUi = false;
             }
         }
 
