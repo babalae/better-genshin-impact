@@ -84,7 +84,7 @@ public class GoToCraftingBenchTask
             Logger.LogInformation("合成{Text}", "浓缩树脂");
             await Delay(300, ct);
             Bv.ClickBlackConfirmButton(CaptureToRectArea());
-            await Delay(300, ct);
+            await Delay(1300, ct);
             // 直接ESC退出即可
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
         }
