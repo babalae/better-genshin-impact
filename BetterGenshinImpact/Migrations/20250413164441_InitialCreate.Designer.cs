@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BetterGenshinImpact.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250413162606_InitialCreate")]
+    [Migration("20250413164441_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -75,9 +75,6 @@ namespace BetterGenshinImpact.Migrations
                         .HasColumnName("task_params");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OrderIndex")
-                        .IsUnique();
 
                     b.ToTable("task_group");
                 });

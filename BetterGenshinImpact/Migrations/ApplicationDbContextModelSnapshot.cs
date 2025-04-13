@@ -73,9 +73,6 @@ namespace BetterGenshinImpact.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderIndex")
-                        .IsUnique();
-
                     b.ToTable("task_group");
                 });
 #pragma warning restore 612, 618

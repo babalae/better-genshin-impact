@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Model.Database;
 using Microsoft.EntityFrameworkCore;
@@ -21,19 +22,18 @@ public class DatabaseInitializer
     {
         try
         {
-            _logger.LogInformation("正在初始化数据库...");
-            
-            // 确保数据库已创建
-            _context.Database.EnsureCreated();
+            Debug.WriteLine("正在初始化数据库...");
             
             // 应用所有迁移
             _context.Database.Migrate();
             
-            _logger.LogInformation("数据库初始化完成");
+            Debug.WriteLine("数据库初始化完成");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "数据库初始化失败");
+            Debug.WriteLine(ex.Message);
+            Debug.WriteLine(ex.StackTrace);
+            _logger.LogDebug(ex, "数据库初始化失败");
             throw;
         }
     }

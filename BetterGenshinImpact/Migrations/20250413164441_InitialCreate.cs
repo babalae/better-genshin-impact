@@ -32,12 +32,6 @@ namespace BetterGenshinImpact.Migrations
                 {
                     table.PrimaryKey("PK_task_group", x => x.id);
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_task_group_order_index",
-                table: "task_group",
-                column: "order_index",
-                unique: true);
         }
 
         /// <inheritdoc />
