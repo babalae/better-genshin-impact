@@ -183,16 +183,18 @@ public class BitBltSession : IDisposable
                 return null;
             }
 
+            // 这个是bitmap的结构信息，不用手动释放
+            if (bitmap.bmPlanes != 1 || bitmap.bmBitsPixel != 24)
+                // 不支持的位图格式
+                return null;
             // 直接返回转换后的位图
             var success = Gdi32.AlphaBlend(_hdcDest, 0, 0, _width, _height, _hdcSrc, 0, 0,
                 _width, _height, BlendFunction);
             if (!success || !Gdi32.GdiFlush()) return null;
 
-            // 这个是bitmap的结构信息，不用手动释放
-            if (bitmap.bmPlanes != 1 || bitmap.bmBitsPixel != 24)
-                // 不支持的位图格式
-                return null;
+            // return Mat.FromPixelData(bitmap.bmHeight, bitmap.bmWidth, MatType.CV_8UC3, bitmap.bmBits,bitmap.bmWidthBytes);
             return _hBitmap.ToBitmap();
+
             // 原始宏 ((((biWidth * biBitCount) + 31) & ~31) >> 3) => (biWidth * biBitCount + 3) & ~3) (在总位数是8的倍数时，两者等价)
             // 对齐 https://learn.microsoft.com/zh-cn/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
 
