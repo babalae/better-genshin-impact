@@ -136,7 +136,7 @@ public class BitBltCapture : IGameCapture
         {
             _lockSlim.EnterReadLock();
             var result = Capture0();
-            if (result is not null && !result.Empty())
+            if (result is not null)
             {
                 // 成功截图
                 _lastCaptureFailed = false;
@@ -166,9 +166,9 @@ public class BitBltCapture : IGameCapture
     /// 截图功能的实现。需要加锁后调用，一般只由 Capture 方法调用。
     /// </summary>
     /// <returns></returns>
-    private Mat? Capture0()
+    private Bitmap? Capture0()
     {
-        Mat? mat = null;
+        Bitmap? bitmap = null;
         try
         {
             if (_session is null)
@@ -176,27 +176,14 @@ public class BitBltCapture : IGameCapture
                 // 没有成功创建会话，直接返回空
                 return null;
             }
-
-            mat = _session.GetMat();
-
-            if (mat is null) return null; // 执行失败
-            if (!mat.Empty()) // 成功执行并且获取到了图
-            {
-                return mat;
-            }
-            else // 成功执行但是没有图，可能是截图过快导致的
-            {
-                mat.Dispose();
-                mat = null; // 防止二次释放
-            }
-
-            return null;
+            bitmap = _session.GetImage();
+            return bitmap;
         }
         catch (Exception e)
         {
             // 理论这里不应出现异常，除非窗口不存在了或者有什么bug
             // 出现异常的时候释放内存
-            mat?.Dispose();
+            bitmap?.Dispose();
             Error.WriteLine("[BitBlt]Failed to capture image {0}", e);
             return null;
         }
