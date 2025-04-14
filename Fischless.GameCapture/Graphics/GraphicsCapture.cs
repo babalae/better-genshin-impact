@@ -24,7 +24,6 @@ public class GraphicsCapture : IGameCapture
 
     private IDirect3DDevice _d3dDevice = null!;
 
-    public CaptureModes Mode => CaptureModes.WindowsGraphicsCapture;
     public bool IsCapturing { get; private set; }
 
     private ResourceRegion? _region;
