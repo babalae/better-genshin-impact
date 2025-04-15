@@ -119,10 +119,10 @@ public class Avatar
     /// tp 到七天神像恢复
     /// </summary>
     /// <param name="ct"></param>
+    /// <param name="ex"></param>
     /// <exception cref="RetryException"></exception>
     public static void TpForRecover(CancellationToken ct, Exception ex)
     {
-        Simulation.SendInput.SimulateAction(GIActions.OpenMap);
         // tp 到七天神像复活
         var tpTask = new TpTask(ct);
         tpTask.TpToStatueOfTheSeven().Wait(ct);
