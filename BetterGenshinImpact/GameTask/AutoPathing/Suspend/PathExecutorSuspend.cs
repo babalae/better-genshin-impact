@@ -9,6 +9,7 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
 {
     private bool _isSuspended;
 
+    private bool _resuming = false;
     //记录当前相关点位数组
     private (int, List<WaypointForTrack>) _waypoints;
 
@@ -22,16 +23,22 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         _waypoints = pathExecutor.CurWaypoints;
         _waypoint = pathExecutor.CurWaypoint;
         _isSuspended = true;
+        _resuming = false;
     }
 
     //路径过远时，检查地图追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态
     public bool CheckAndResetSuspendPoint()
     {
-        if (_isSuspended)
+        if (_isSuspended || !_resuming)
         {
             return false;
         }
 
+        if (pathExecutor.CurWaypoints == default || pathExecutor.CurWaypoint == default)
+        {
+            Reset();
+            return false;
+        }
         if (pathExecutor.CurWaypoints == _waypoints && (pathExecutor.CurWaypoint == _waypoint || (pathExecutor.CurWaypoint.Item1 - 1) == _waypoint.Item1))
         {
             return true;
@@ -46,10 +53,12 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         //暂定恢复时，重置移动时的时间，防止因暂停而导致超时
         pathExecutor.moveToStartTime = DateTime.UtcNow;
         _isSuspended = false;
+        _resuming = true;
     }
 
     public void Reset()
     {
+        _resuming = false;
         _waypoints = default;
         _waypoint = default;
     }
