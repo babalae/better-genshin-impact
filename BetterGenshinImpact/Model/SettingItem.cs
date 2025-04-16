@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
-using System.Xml.Linq;
 
 namespace BetterGenshinImpact.Model;
 
@@ -30,10 +29,12 @@ public class SettingItem
         };
         list.Add(label);
 
+        var isEmpty = context is IDictionary<string, object?> { Count: 0 };
         var binding = new Binding
         {
             Source = context,
-            Path = new PropertyPath(Name)
+            Path = new PropertyPath(Name),
+            Mode = isEmpty ? BindingMode.OneWayToSource : BindingMode.TwoWay
         };
         switch (Type)
         {
@@ -43,11 +44,12 @@ public class SettingItem
                     Name = Name,
                     Margin = new Thickness(0, 0, 0, 10)
                 };
-                if (Default != null)
+                BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
+                if (isEmpty && Default != null)
                 {
                     textBox.Text = Default.ToString()!;
                 }
-                BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
+
                 list.Add(textBox);
                 break;
 
@@ -64,11 +66,13 @@ public class SettingItem
                         comboBox.Items.Add(option);
                     }
                 }
-                if (Default != null)
-                {
-                    comboBox.SelectedItem = Default;
-                }
+
                 BindingOperations.SetBinding(comboBox, Selector.SelectedItemProperty, binding);
+                if (isEmpty && Default != null)
+                {
+                    comboBox.SelectedItem = Default.ToString()!;
+                }
+
                 list.Add(comboBox);
                 break;
 
@@ -78,17 +82,19 @@ public class SettingItem
                     Name = Name,
                     Margin = new Thickness(0, 0, 0, 10)
                 };
-                if (Default != null)
-                {
-                    checkBox.IsChecked = (bool)Default;
-                }
                 BindingOperations.SetBinding(checkBox, ToggleButton.IsCheckedProperty, binding);
+                if (isEmpty && Default != null)
+                {
+                    checkBox.IsChecked = bool.TryParse(Default.ToString()!, out var value) && value;
+                }
+
                 list.Add(checkBox);
                 break;
 
             default:
                 throw new Exception($"Unknown setting type: {Type}");
         }
+
         return list;
     }
 }
