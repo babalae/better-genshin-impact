@@ -223,6 +223,11 @@ public class GlobalMethod
         Simulation.SendInput.Mouse.MiddleButtonUp();
     }
 
+    public static void VerticalScroll(int scrollAmountInClicks)
+    {
+        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
+    }
+
     #endregion 鼠标操作
 
     #region 识图操作
@@ -263,7 +268,7 @@ public class GlobalMethod
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogDebug("输入文本时发生错误: {Msg}",ex.Message);
+            TaskControl.Logger.LogDebug("输入文本时发生错误: {Msg}", ex.Message);
         }
         finally
         {
