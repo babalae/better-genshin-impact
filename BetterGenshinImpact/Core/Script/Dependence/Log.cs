@@ -8,7 +8,7 @@ public class Log
 
     public void Debug(string? message, params object?[] args)
     {
-        _logger.LogInformation(message, args);
+        _logger.LogDebug(message, args);
     }
 
     public void Info(string? message, params object?[] args)
