@@ -98,6 +98,7 @@ public class EngineExtend
         engine.AddHostObject("middleButtonClick", GlobalMethod.MiddleButtonClick);
         engine.AddHostObject("middleButtonDown", GlobalMethod.MiddleButtonDown);
         engine.AddHostObject("middleButtonUp", GlobalMethod.MiddleButtonUp);
+        engine.AddHostObject("verticalScroll", GlobalMethod.VerticalScroll);
         engine.AddHostObject("captureGameRegion", GlobalMethod.CaptureGameRegion);
         engine.AddHostObject("inputText", GlobalMethod.InputText);
 #pragma warning restore CS8974 // Converting method group to non-delegate type
