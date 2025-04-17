@@ -55,7 +55,7 @@ public class EntireMap : Singleton<EntireMap>
     /// 移动匹配
     /// </summary>
     /// <param name="greyMat">灰度图</param>
-    /// <param name="returnAsPoint3f">如想使用这个Point3f重载，则必须为true，若想使用Point2f重载，则不填写这项参数</param>
+    /// <param name="returnAsPoint3f">如想使用这个Point3f重载，必须为true，若想使用Point2f重载，则不填写这项参数</param>
     /// <param name="mask">遮罩</param>
     /// <returns></returns>
     public Point3f GetMiniMapPositionByFeatureMatch(Mat greyMat, bool returnAsPoint3f, Mat? mask = null)
