@@ -113,6 +113,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
+    
+    [ObservableProperty]
+    private OneDragonFlowViewModel? _oneDragonFlowViewModel;
 
     [ObservableProperty]
     private bool _switchAutoFishingEnabled;
@@ -152,8 +155,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
+        _oneDragonFlowViewModel = new OneDragonFlowViewModel();
     }
 
+    [RelayCommand]
+    private async Task OnSOneDragonFlow()
+    {
+       await _oneDragonFlowViewModel.OnOneKeyExecute();
+    }
+    
+    
     [RelayCommand]
     private async Task OnStopSoloTask()
     {

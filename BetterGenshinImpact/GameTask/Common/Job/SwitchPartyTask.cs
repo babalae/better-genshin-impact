@@ -24,7 +24,7 @@ public class SwitchPartyTask
     public string Name => "切换队伍";
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
-
+    
     public async Task<bool> Start(string partyName, CancellationToken ct)
     {
         Logger.LogInformation("尝试切换至队伍: {Name}", partyName);
@@ -45,24 +45,39 @@ public class SwitchPartyTask
             }
 
             // 尝试打开队伍配置页面
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-
-            // 考虑加载时间 2s，共检查 5s，如果失败则抛出异常
+            const int maxAttempts = 3;
             bool isOpened = false;
-            for (int i = 0; i < 5; i++) // 检查 5 次
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                await Delay(1000, ct);
-                using var raCheck = CaptureToRectArea();
-                if (Bv.IsInPartyViewUi(raCheck))
+                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+
+                // 考虑加载时间 2s，共检查 5s，如果失败则抛出异常
+                
+                for (int i = 0; i < 5; i++) // 检查 5 次
                 {
-                    isOpened = true;
-                    break;
+                    await Delay(1000, ct);
+                    using var raCheck = CaptureToRectArea();
+                    if (Bv.IsInPartyViewUi(raCheck))
+                    {
+                        isOpened = true;
+                        break;
+                    }
+                }
+
+                if (isOpened)
+                {
+                    break; // 页面已打开，跳出循环
+                }
+
+                if (attempt < maxAttempts)
+                {
+                    Logger.LogWarning("尝试打开队伍配置页面失败，正在重试...");
                 }
             }
 
             if (!isOpened)
             {
-                throw new PartySetupFailedException("未能打开队伍配置界面");
+                throw new PartySetupFailedException("未能打开队伍配置界面，已尝试多次");
             }
         }
 

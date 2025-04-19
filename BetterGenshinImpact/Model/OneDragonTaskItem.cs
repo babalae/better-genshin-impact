@@ -29,23 +29,13 @@ public partial class OneDragonTaskItem : ObservableObject
     private OneDragonBaseViewModel? _viewModel;
 
     public Func<Task>? Action { get; private set; }
-
+    
     public OneDragonTaskItem(string name)
     {
         Name = name;
     }
-
-    // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
-    // {
-    //     ViewModel = App.GetService(viewModelType) as OneDragonBaseViewModel;
-    //     if (ViewModel == null)
-    //     {
-    //         throw new ArgumentException("Invalid view model type", nameof(viewModelType));
-    //     }
-    //     Name = ViewModel.Title;
-    //     Action = action;
-    // }
-
+    private readonly ScriptControlViewModel _scriptControlViewModel;
+    
     public void InitAction(OneDragonFlowConfig config)
     {
         if (config.TaskEnabledList.TryGetValue(Name, out _))
@@ -82,22 +72,22 @@ public partial class OneDragonTaskItem : ObservableObject
                     {
                         TaskContext.Instance().Config.AutoFightConfig.StrategyName = "根据队伍自动选择";
                     }
-
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
                     if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
                     {
                         TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
-
                     var (partyName, domainName) = config.GetDomainConfig();
-
-                    if (string.IsNullOrEmpty(domainName))
+                    if (string.IsNullOrEmpty(domainName) || string.IsNullOrEmpty(partyName))
                     {
-                        TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过","未选择");
+                        TaskControl.Logger.LogInformation("自动秘境任务：未配置秘境名称或队伍名称，跳过执行");
                         return;
                     }
-
+                    else
+                    {
+                        TaskControl.Logger.LogInformation("自动秘境任务：执行");
+                    }
                     var autoDomainParam = new AutoDomainParam(0, path)
                     {
                         PartyName = partyName,
