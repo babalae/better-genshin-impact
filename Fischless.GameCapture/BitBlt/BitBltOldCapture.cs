@@ -7,8 +7,6 @@ public class BitBltOldCapture : IGameCapture
 {
     private nint _hWnd;
 
-    public CaptureModes Mode => CaptureModes.BitBlt;
-
     public static object LockObject { get; } = new();
 
     public bool IsCapturing { get; private set; }

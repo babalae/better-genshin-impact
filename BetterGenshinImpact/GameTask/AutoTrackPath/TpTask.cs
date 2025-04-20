@@ -336,6 +336,7 @@ public class TpTask(CancellationToken ct)
         if (!await TryToOpenBigMapUi())
         {
             await new ReturnMainUiTask().Start(ct);
+            await Delay(500, ct);
             if (!await TryToOpenBigMapUi())
             {
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
