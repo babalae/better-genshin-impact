@@ -3,7 +3,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -14,7 +13,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
-using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -31,14 +29,12 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Kernel32;
-using static Vanara.PInvoke.User32;
 using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using Compunet.YoloSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -48,7 +44,7 @@ public class AutoDomainTask : ISoloTask
 
     private readonly AutoDomainParam _taskParam;
 
-    private readonly YoloV8Predictor _predictor;
+    private readonly BgiYoloPredictor _predictor;
 
     private readonly AutoDomainConfig _config;
 
@@ -66,10 +62,7 @@ public class AutoDomainTask : ISoloTask
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
-        _predictor = YoloV8Builder.CreateDefaultBuilder()
-            .UseOnnxModel(Global.Absolute(@"Assets\Model\Domain\bgi_tree.onnx"))
-            .WithSessionOptions(BgiSessionOption.Instance.Options)
-            .Build();
+        _predictor = BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Domain\bgi_tree.onnx");
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
@@ -822,9 +815,9 @@ public class AutoDomainTask : ISoloTask
         using var memoryStream = new MemoryStream();
         region.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
         memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = _predictor.Detect(memoryStream);
+        var result = _predictor.Predictor.Detect(memoryStream);
         var list = new List<RectDrawable>();
-        foreach (var box in result.Boxes)
+        foreach (var box in result)
         {
             var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
             list.Add(region.ToRectDrawable(rect, "tree"));
@@ -834,7 +827,7 @@ public class AutoDomainTask : ISoloTask
 
         if (list.Count > 0)
         {
-            var box = result.Boxes[0];
+            var box = result[0];
             return new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
         }
 

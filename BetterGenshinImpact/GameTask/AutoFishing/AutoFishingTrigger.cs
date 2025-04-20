@@ -16,7 +16,6 @@ using Fischless.WindowsInput;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using Compunet.YoloV8;
 using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.Core.Recognition.OCR;
 
@@ -39,6 +38,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool IsExclusive { get; set; }
 
         private Blackboard blackboard;
+        
+        private readonly  BgiYoloPredictor _predictor = BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Fish\bgi_fish.onnx");
 
         /// <summary>
         /// 辣条（误）
@@ -50,9 +51,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             AutoFishingTaskParam autoFishingTaskParam = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
             IOcrService ocrService = OcrFactory.Paddle;
             IStringLocalizer<AutoFishingImageRecognition> stringLocalizer = App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
-
-            var predictor = YoloV8Builder.CreateDefaultBuilder().UseOnnxModel(Global.Absolute(@"Assets\Model\Fish\bgi_fish.onnx")).WithSessionOptions(BgiSessionOption.Instance.Options).Build();
-            this.blackboard = new Blackboard(predictor, this.Sleep, AutoFishingAssets.Instance);
+          this.blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)

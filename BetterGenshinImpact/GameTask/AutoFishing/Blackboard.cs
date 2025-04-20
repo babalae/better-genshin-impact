@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
-using Compunet.YoloV8;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
@@ -73,8 +72,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         internal bool pitchReset = true;
 
         #region 分层暂放
-        private readonly YoloV8Predictor? predictor;
-        internal YoloV8Predictor Predictor
+        private readonly BgiYoloPredictor? predictor;
+        internal BgiYoloPredictor Predictor
         {
             get
             {
@@ -93,7 +92,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         }
 
 
-        public Blackboard(YoloV8Predictor? predictor = null, Action<int>? sleep = null, AutoFishingAssets? autoFishingAssets = null)
+        public Blackboard(BgiYoloPredictor? predictor = null, Action<int>? sleep = null, AutoFishingAssets? autoFishingAssets = null)
         {
             this.predictor = predictor;
             this.Sleep = sleep ?? (_ => throw new NotImplementedException());

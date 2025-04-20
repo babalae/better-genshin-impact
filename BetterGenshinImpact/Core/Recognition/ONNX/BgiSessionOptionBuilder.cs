@@ -5,7 +5,7 @@ using System.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
-public class BgiSessionOption : Singleton<BgiSessionOption>
+public class BgiSessionOptionBuilder : Singleton<BgiSessionOptionBuilder>
 {
     public static string[] InferenceDeviceTypes { get; } = ["CPU", "GPU_DirectML"];
 
@@ -22,14 +22,8 @@ public class BgiSessionOption : Singleton<BgiSessionOption>
         sessionOptions.AppendExecutionProvider_DML(0);
         return sessionOptions;
     }
-
-    // /// <summary>
-    // /// 重新加载每个推理器（测试没用，只能重启）
-    // /// </summary>
-    // public void RefreshInference()
-    // {
-    //     // 自动秘境每次都会NEW不用管
-    //     // Yap、自动钓鱼
-    //     GameTaskManager.RefreshTriggerConfigs();
-    // }
+    public SessionOptions BuildWithRelativePath(string relativePath)
+    {
+        return Options;
+    }
 }

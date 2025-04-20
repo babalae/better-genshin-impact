@@ -5,7 +5,6 @@ using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
-using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -22,6 +21,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
 using System.Globalization;
+using Compunet.YoloSharp;
 using Microsoft.Extensions.Localization;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
@@ -60,8 +60,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = blackboard.Predictor.Detect(memoryStream);
-            Debug.WriteLine($"YOLOv8识别: {result.Speed}");
+            var result = blackboard.Predictor.Predictor.Detect(memoryStream);
+            Debug.WriteLine($"YOLO识别: {result.Speed}");
             var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == default)
             {
@@ -308,7 +308,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             using var memoryStream = new MemoryStream();
             imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
             memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = blackboard.Predictor.Detect(memoryStream);
+            var result = blackboard.Predictor.Predictor.Detect(memoryStream);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
             blackboard.fishpond = fishpond;

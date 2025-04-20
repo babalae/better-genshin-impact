@@ -1,12 +1,10 @@
-﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
-using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -21,6 +19,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Core.Simulator;
+using Compunet.YoloSharp;
+using Compunet.YoloSharp.Data;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -38,12 +38,8 @@ public class CombatScenes : IDisposable
     public int AvatarCount => Avatars.Length;
 
 
-    private readonly YoloV8Predictor _predictor =
-        YoloV8Builder.CreateDefaultBuilder()
-            .UseOnnxModel(Global.Absolute(@"Assets\Model\Common\avatar_side_classify_sim.onnx"))
-            .WithSessionOptions(BgiSessionOption.Instance.Options)
-            .Build();
-
+    private readonly BgiYoloPredictor _predictor =
+        BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Common\avatar_side_classify_sim.onnx");
     public int ExpectedTeamAvatarNum { get; private set; } = 4;
 
     /// <summary>
@@ -167,32 +163,32 @@ public class CombatScenes : IDisposable
         src.Save(memoryStream, ImageFormat.Bmp);
         memoryStream.Seek(0, SeekOrigin.Begin);
         speedTimer.Record("角色侧面头像图像转换");
-        var result = _predictor.Classify(memoryStream);
+        var result = _predictor.Predictor.Classify(memoryStream);
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
-
-        if (result.TopClass.Name.Name.StartsWith("Qin") || result.TopClass.Name.Name.Contains("Costume"))
+        var topClass = result.GetTopClass();
+        if (topClass.Name.Name.StartsWith("Qin") || topClass.Name.Name.Contains("Costume"))
         {
             // 降低琴和衣装角色的识别率要求
-            if (result.TopClass.Confidence < 0.51)
+            if (topClass.Confidence < 0.51)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
                 throw new Exception(
-                    $"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
+                    $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
         else
         {
-            if (result.TopClass.Confidence < 0.7)
+            if (topClass.Confidence < 0.7)
             {
                 Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
                 throw new Exception(
-                    $"无法识别第{index}位角色，置信度{result.TopClass.Confidence:F1}，结果：{result.TopClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
+                    $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
 
-        return result.TopClass.Name.Name;
+        return topClass.Name.Name;
     }
 
     private void InitializeTeamFromConfig(string teamNames)

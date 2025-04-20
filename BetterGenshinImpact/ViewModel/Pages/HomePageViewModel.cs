@@ -66,7 +66,7 @@ public partial class HomePageViewModel : ViewModel
     private IntPtr _hWnd;
 
     [ObservableProperty]
-    private string[] _inferenceDeviceTypes = BgiSessionOption.InferenceDeviceTypes;
+    private string[] _inferenceDeviceTypes = BgiSessionOptionBuilder.InferenceDeviceTypes;
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
