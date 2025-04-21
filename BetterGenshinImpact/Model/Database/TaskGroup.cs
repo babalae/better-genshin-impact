@@ -13,6 +13,10 @@ public class TaskGroup
 
     [Column("order_index")]
     public int OrderIndex { get; set; }
+    
+    [Column("checked")]
+    [MaxLength(50)]
+    public bool Checked { get; set; }
 
     [Column("task_name")]
     [Required]
@@ -29,6 +33,10 @@ public class TaskGroup
     [Column("schedule_type")]
     [MaxLength(50)]
     public string? ScheduleType { get; set; }
+    
+    [Column("schedule_enabled")]
+    [MaxLength(50)]
+    public bool ScheduleEnabled { get; set; }
 
     [Column("next_run_time")]
     public DateTime? NextRunTime { get; set; }
@@ -37,14 +45,14 @@ public class TaskGroup
     public DateTime? LastRunTime { get; set; }
 
     [Column("hotkey")]
-    [MaxLength(50)]
+    [MaxLength(128)]
     public string? Hotkey { get; set; }
-
-    [Column("hotkey_")]
-    [MaxLength(50)]
-    public string? Hotkey2 { get; set; }
+    
+    [Column("hotkey_enabled")]
+    [MaxLength(128)]
+    public string? HotkeyEnabled { get; set; }
 
     [Column("category")]
-    [MaxLength(50)]
+    [MaxLength(128)]
     public string? Category { get; set; }
 }
