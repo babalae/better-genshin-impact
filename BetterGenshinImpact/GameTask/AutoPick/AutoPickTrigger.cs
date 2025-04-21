@@ -105,6 +105,10 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        while (RunnerContext.Instance.AutoPickTriggerStopCount > 0)
+        {
+            Thread.Sleep(1000);
+        }
         var speedTimer = new SpeedTimer();
 
         using var foundRectArea = content.CaptureRectArea.Find(_pickRo);

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
@@ -42,6 +43,14 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 游戏内定义的队伍名称
     /// </summary>
     public string? PartyName { get; set; }
+
+
+    /// <summary>
+    /// 自动拾取暂停计数，当大于0时暂停，等于0时不限制。
+    /// </summary>
+    public int AutoPickTriggerStopCount { get; private set; } = 0;
+
+
 
     /// <summary>
     /// 当前队伍角色信息
@@ -102,5 +111,69 @@ public class RunnerContext : Singleton<RunnerContext>
         IsSuspend = false;
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
+        AutoPickTriggerStopCount = 0;
+    }
+
+    /// <summary>
+    /// 暂停自动拾取，如果传入时间大于0(单位秒)，则在该时间之后自动取消此次暂停（暂停自动拾取计数器-1）,反之暂停拾取（暂停自动拾取计数器+1），此时需要恢复需要手动调用ResumeAutoPick。
+    /// </summary>
+    public void StopAutoPick(int time = 0)
+    {
+
+        if (time>0)
+        {
+            AutoPickTriggerStopCount++;
+            new Thread(() =>
+            {
+                while (time<=0)
+                {
+                    if (AutoPickTriggerStopCount == 0)
+                    {
+                        return;
+                    }
+                    Thread.Sleep(1000);
+                    time--;
+                }
+
+                ResumeAutoPick();
+
+            }).Start();
+        }
+        else
+        {
+            AutoPickTriggerStopCount ++;
+        }
+
+    }
+    /// <summary>
+    /// 恢复自动拾取（暂停自动拾取计数器-1）。
+    /// </summary>
+    public void ResumeAutoPick()
+    {
+        if (AutoPickTriggerStopCount>0)
+        {
+            AutoPickTriggerStopCount--;
+        }
+    }
+    /// <summary>
+    /// 在暂停拾取情况下，执行任务
+    /// </summary>
+    public async Task StopAutoPickRunTask(Thread thread)
+    {
+        try
+        {
+            AutoPickTriggerStopCount++;
+            thread.Start();
+            thread.Join();
+        }
+        finally
+        {
+            ResumeAutoPick();
+        }
+
+    }
+    public void stop()
+    {
+        _combatScenes = null;
     }
 }

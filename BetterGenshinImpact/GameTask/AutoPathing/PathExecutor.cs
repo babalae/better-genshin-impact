@@ -616,6 +616,7 @@ public class PathExecutor
                 Logger.LogInformation("开始自动领取派遣任务！");
                 try
                 {
+                    RunnerContext.Instance.StopAutoPick();//暂停拾取
                     RunnerContext.Instance.isAutoFetchDispatch = true;
                     await new GoToAdventurersGuildTask().Start(adventurersGuildCountry,ct,null,true);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
@@ -624,7 +625,10 @@ public class PathExecutor
                 }
                 finally
                 {
+                    
                     RunnerContext.Instance.isAutoFetchDispatch = false;
+                    RunnerContext.Instance.StopAutoPick(5);//暂停拾取5秒，由于派遣结束防止在未触发下一步时，依旧在当前位置而卡住
+                    RunnerContext.Instance.ResumeAutoPick();//恢复拾取（由于上一步操作，其实5秒后才真正结束），由于采用计时器方式，所以需要多次调用来恢复
                 }
             }
           
