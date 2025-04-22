@@ -628,4 +628,26 @@ public partial class OneDragonFlowViewModel : ViewModel
         SaveConfig();
         InputScriptGroupName = null;
     }
+    
+    [RelayCommand]
+    private void OnAddConfig()
+    {
+        // 添加配置
+        var str = PromptDialog.Prompt("请输入一条龙配置名称", "新增一条龙配置");
+        if (!string.IsNullOrEmpty(str))
+        {
+            // 检查是否已存在
+            if (ConfigList.Any(x => x.Name == str))
+            {
+                Toast.Warning($"一条龙配置 {str} 已经存在，请勿重复添加");
+            }
+            else
+            {
+                var nc = new OneDragonFlowConfig { Name = str };
+                ConfigList.Insert(0, nc);
+                SelectedConfig = nc;
+            }
+        }
+        SaveConfig();
+    }
 }
