@@ -91,13 +91,15 @@ public partial class OneDragonTaskItem : ObservableObject
                     }
 
                     var (partyName, domainName) = config.GetDomainConfig();
-
-                    if (string.IsNullOrEmpty(domainName))
+                    if (string.IsNullOrEmpty(domainName) || string.IsNullOrEmpty(partyName) || partyName == "地脉花")
                     {
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过","未选择");
                         return;
                     }
-
+                    else
+                    {
+                        TaskControl.Logger.LogInformation("自动秘境任务：执行");
+                    }
                     var autoDomainParam = new AutoDomainParam(0, path)
                     {
                         PartyName = partyName,

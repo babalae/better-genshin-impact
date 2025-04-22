@@ -18,6 +18,8 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
+using Vanara.PInvoke;
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -203,7 +205,9 @@ public class AutoFightTask : ISoloTask
         var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
-            throw new Exception("识别队伍角色失败");
+            Logger.LogInformation("识别队伍角色失败LCB");//LCB_TODO: 改成抛异常，不然会自动退出
+            //throw new Exception("识别队伍角色失败");
+
         }
 
 
