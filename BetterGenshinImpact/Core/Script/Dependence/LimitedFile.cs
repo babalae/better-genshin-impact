@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Script.Utils;
+using BetterGenshinImpact.Core.Script.Utils;
 using System;
 using System.IO;
 using System.Threading.Tasks;
