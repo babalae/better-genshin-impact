@@ -117,15 +117,35 @@ public class RunnerContext : Singleton<RunnerContext>
     /// <summary>
     /// 暂停自动拾取，如果传入时间大于0(单位秒)，则在该时间之后自动取消此次暂停（暂停自动拾取计数器-1）,反之暂停拾取（暂停自动拾取计数器+1），此时需要恢复需要手动调用ResumeAutoPick。
     /// </summary>
-    public void StopAutoPick(int time = 0)
+    public void StopAutoPick(int time = -1)
     {
-
-        if (time>0)
+        AutoPickTriggerStopCount++;
+        Logger.LogInformation("暂停自动拾取拾取:"+AutoPickTriggerStopCount);
+        ResumeAutoPick(time);
+    }
+    /// <summary>
+    /// 恢复自动拾取（暂停自动拾取计数器-1）。传入参数决定几秒后恢复
+    /// </summary>
+    public void ResumeAutoPick(int time=0)
+    {
+        if (time == -1)
         {
-            AutoPickTriggerStopCount++;
+            return;
+        }
+        Logger.LogInformation(time+"秒后恢复自动拾取:"+AutoPickTriggerStopCount);
+        if (time <= 0)
+        {
+            if (AutoPickTriggerStopCount>0)
+            {
+                AutoPickTriggerStopCount--;
+                Logger.LogInformation("恢复自动拾取:"+AutoPickTriggerStopCount);
+            }
+        }
+        else
+        {
             new Thread(() =>
             {
-                while (time<=0)
+                while (time>0)
                 {
                     if (AutoPickTriggerStopCount == 0)
                     {
@@ -139,36 +159,21 @@ public class RunnerContext : Singleton<RunnerContext>
 
             }).Start();
         }
-        else
-        {
-            AutoPickTriggerStopCount ++;
-        }
 
-    }
-    /// <summary>
-    /// 恢复自动拾取（暂停自动拾取计数器-1）。
-    /// </summary>
-    public void ResumeAutoPick()
-    {
-        if (AutoPickTriggerStopCount>0)
-        {
-            AutoPickTriggerStopCount--;
-        }
     }
     /// <summary>
     /// 在暂停拾取情况下，执行任务
     /// </summary>
-    public async Task StopAutoPickRunTask(Thread thread)
+    public async Task StopAutoPickRunTask(Func<Task> taskFactory,int time=0)
     {
         try
         {
             AutoPickTriggerStopCount++;
-            thread.Start();
-            thread.Join();
+            await taskFactory();
         }
         finally
         {
-            ResumeAutoPick();
+            ResumeAutoPick(time);
         }
 
     }
