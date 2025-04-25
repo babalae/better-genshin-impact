@@ -3,11 +3,38 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using OpenCvSharp;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class LimitedFile(string rootPath)
 {
+    /// <summary>
+    /// 读取指定文件夹内所有文件的路径（非递归方式）。
+    /// </summary>
+    /// <param name="folderPath">文件夹路径（相对于根目录）</param>
+    /// <returns>文件夹内所有文件的路径数组</returns>
+    public string[] ReadPathSync(string folderPath)
+    {
+        // 对传入的文件夹路径进行标准化
+        string normalizedFolderPath = NormalizePath(folderPath);
+
+        // 确保目录存在
+        if (!Directory.Exists(normalizedFolderPath))
+        {
+            Directory.CreateDirectory(normalizedFolderPath);
+        }
+
+        // 获取指定文件夹下的所有文件（非递归）
+        string[] absoluteFiles = Directory.GetFiles(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+
+        // 将绝对路径转换为相对于 rootPath 的相对路径
+        return absoluteFiles
+            .Select(file => Path.GetRelativePath(rootPath, file))
+            .ToArray();
+    }
+
+
     /// <summary>
     /// Normalize and validate a path.
     /// </summary>

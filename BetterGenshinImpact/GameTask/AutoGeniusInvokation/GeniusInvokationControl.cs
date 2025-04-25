@@ -512,7 +512,7 @@ public class GeniusInvokationControl
     }
 
     /// <summary>
-    /// 计算当前有那些骰子
+    /// 计算当前有哪些骰子
     /// </summary>
     /// <returns></returns>
     public Dictionary<string, int> ActionPhaseDice()
