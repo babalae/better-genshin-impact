@@ -10,10 +10,10 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 public class LimitedFile(string rootPath)
 {
     /// <summary>
-    /// 读取指定文件夹内所有文件的路径（非递归方式）。
+    /// 读取指定文件夹内所有文件和文件夹的路径（非递归方式）。
     /// </summary>
     /// <param name="folderPath">文件夹路径（相对于根目录）</param>
-    /// <returns>文件夹内所有文件的路径数组</returns>
+    /// <returns>文件夹内所有文件和文件夹的路径数组</returns>
     public string[] ReadPathSync(string folderPath)
     {
         // 对传入的文件夹路径进行标准化
@@ -26,14 +26,31 @@ public class LimitedFile(string rootPath)
         }
 
         // 获取指定文件夹下的所有文件（非递归）
-        string[] absoluteFiles = Directory.GetFiles(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+        string[] files = Directory.GetFiles(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+
+        // 获取指定文件夹下的所有子文件夹（非递归）
+        string[] directories = Directory.GetDirectories(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+
+        // 合并文件和文件夹路径
+        string[] combined = files.Concat(directories).ToArray();
 
         // 将绝对路径转换为相对于 rootPath 的相对路径
-        return absoluteFiles
-            .Select(file => Path.GetRelativePath(rootPath, file))
-            .ToArray();
+        return combined.Select(path => Path.GetRelativePath(rootPath, path)).ToArray();
     }
 
+    /// <summary>
+    /// 判断指定路径是否为文件夹。
+    /// </summary>
+    /// <param name="path">文件或文件夹路径（相对于根目录）。</param>
+    /// <returns>如果该路径是文件夹则返回 true，否则返回 false。</returns>
+    public bool IsFolder(string path)
+    {
+        // 对传入的路径进行标准化处理
+        string normalizedPath = NormalizePath(path);
+
+        // 使用 Directory.Exists 判断标准化路径是否为文件夹
+        return Directory.Exists(normalizedPath);
+    }
 
     /// <summary>
     /// Normalize and validate a path.
