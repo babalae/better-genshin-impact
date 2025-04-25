@@ -132,7 +132,12 @@ public class RunnerContext : Singleton<RunnerContext>
         {
             return;
         }
-        Logger.LogInformation(time+"秒后恢复自动拾取:"+AutoPickTriggerStopCount);
+
+        if (time>0)
+        {
+            Logger.LogInformation(time+"秒后恢复自动拾取:"+AutoPickTriggerStopCount);
+        }
+       
         if (time <= 0)
         {
             if (AutoPickTriggerStopCount>0)
