@@ -9,5 +9,10 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// </summary>
 public class IndependentMap
 {
-    List<BaseMapLayer> layers = [];
+    public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 0 是主地图
+    /// </summary>
+    public List<BaseMapLayer> Layers { get; set; } = [];
 }
