@@ -29,6 +29,7 @@ using Wpf.Ui;
 using StackPanel = Wpf.Ui.Controls.StackPanel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Service.Interface;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -137,8 +138,6 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
-    [ObservableProperty] private ScriptGroup? _selectedScriptGroup;
-
     private async void SaveNewTask()
     {
         ReadScriptGroup();
@@ -153,7 +152,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             IsEnabled = true
         };
-        if (!TaskList.Any(task => task.Name == taskItem.Name))
+        if (TaskList.All(task => task.Name != taskItem.Name))
         {
             var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(name => name.Trim())
@@ -600,13 +599,10 @@ public partial class OneDragonFlowViewModel : ViewModel
                         {
                             _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
                             await Task.Delay(500);
-                            var snackbarService = new SnackbarService();
-                            var scriptService = new ScriptService();
-                            var viewModel = new ScriptControlViewModel(snackbarService, scriptService);
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
-                            viewModel.SelectedScriptGroup = new ScriptGroup { Name = $"{task.Name}" };
-                            viewModel.SelectedScriptGroup = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
-                            await viewModel.StartScriptGroupCommand.ExecuteAsync(viewModel.SelectedScriptGroup);
+                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
+                            IScriptService? scriptService = App.GetService<IScriptService>();
+                            await scriptService!.RunMulti(group.Projects, group.Name);
                             await Task.Delay(1000);
                         }
                     }
