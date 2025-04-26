@@ -48,6 +48,7 @@ public class TaskControl
 
     public static void TrySuspend()
     {
+        
         var first = true;
         //此处为了记录最开始的暂停状态
         var isSuspend = RunnerContext.Instance.IsSuspend;
@@ -55,6 +56,7 @@ public class TaskControl
         {
             if (first)
             {
+                RunnerContext.Instance.StopAutoPick();
                 //使快捷键本身释放
                 Thread.Sleep(300);
                 foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
@@ -83,6 +85,7 @@ public class TaskControl
         if (isSuspend)
         {
             Logger.LogWarning("暂停已经解除");
+            RunnerContext.Instance.ResumeAutoPick();
             foreach (var item in RunnerContext.Instance.SuspendableDictionary)
             {
                 item.Value.Resume();

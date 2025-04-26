@@ -40,7 +40,7 @@ public class GoToAdventurersGuildTask
         this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
     }
 
-    public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null)
+    public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null ,bool onlyDoOnce = false)
     {
         Logger.LogInformation("→ {Name} 开始", Name);
         for (int i = 0; i < _retryTimes; i++)
@@ -53,8 +53,11 @@ public class GoToAdventurersGuildTask
                     await new SwitchPartyTask().Start(dailyRewardPartyName, ct);
                 }
 
-                // F1领取奖励
-                await new ClaimEncounterPointsRewardsTask().Start(ct);
+                if (!onlyDoOnce)
+                {
+                    // F1领取奖励
+                    await new ClaimEncounterPointsRewardsTask().Start(ct);
+                }
 
                 await DoOnce(country, ct);
                 break;

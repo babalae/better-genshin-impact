@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
@@ -211,7 +212,7 @@ public class PathExecutor
                 catch (NormalEndException normalEndException)
                 {
                     Logger.LogInformation(normalEndException.Message);
-                    if (RunnerContext.Instance.IsContinuousRunGroup)
+                    if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
                         throw;
                     }
@@ -222,7 +223,7 @@ public class PathExecutor
                 }
                 catch (TaskCanceledException e)
                 {
-                    if (RunnerContext.Instance.IsContinuousRunGroup)
+                    if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
                         throw;
                     }
@@ -584,14 +585,61 @@ public class PathExecutor
     {
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
-        await tpTask.TpToStatueOfTheSeven();
+        await RunnerContext.Instance.StopAutoPickRunTask(async () =>await tpTask.TpToStatueOfTheSeven(),5);
         Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+
+
+    }
+    /// <summary>
+    /// 尝试自动领取派遣奖励，
+    /// </summary>
+    /// <returns>是否可以领取派遣奖励</returns>
+    private async Task<bool> TryAutoFetchDispatch(TpTask? tpTask = null)
+    {
+        if (tpTask == null)
+        {
+            tpTask = new TpTask(ct);
+        }
+        //打开大地图操作
+        await tpTask.OpenBigMapUi();
+        bool changeBigMap = false;
+        string adventurersGuildCountry =
+            TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
+        if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry!="无")
+        {
+            var ra1 = CaptureToRectArea();
+            
+            var textRect = new Rect(60, 20, 160, 260);
+            var textMat = new Mat(ra1.SrcGreyMat, textRect);
+            string text = OcrFactory.Paddle.Ocr(textMat);
+            if (text.Contains("探索派遣奖励"))
+            {
+                changeBigMap = true;
+                Logger.LogInformation("开始自动领取派遣任务！");
+                try
+                {
+                   
+                    RunnerContext.Instance.isAutoFetchDispatch = true;
+                    await RunnerContext.Instance.StopAutoPickRunTask(async () =>await new GoToAdventurersGuildTask().Start(adventurersGuildCountry,ct,null,true),5);
+                    Logger.LogInformation("自动领取派遣结束，回归原任务！");
+                } catch (Exception e){
+                    Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
+                }
+                finally
+                {
+                    RunnerContext.Instance.isAutoFetchDispatch = false;
+                }
+            }
+          
+        }
+        return changeBigMap;
     }
 
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        var (tpX, tpY) = await new TpTask(ct).Tp(waypoint.GameX, waypoint.GameY, forceTp);
+        TpTask tpTask = new TpTask(ct);
+        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, forceTp,!await TryAutoFetchDispatch(tpTask));
         var (tprX, tprY) = MapCoordinate.GameToMain2048(tpX, tpY);
         EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会

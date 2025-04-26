@@ -42,7 +42,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
 
     private string _selectedCountry = string.Empty;
-
+    [ObservableProperty]
+    private List<string> _adventurersGuildCountry = ["无","枫丹", "稻妻", "璃月", "蒙德"];
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)
     {
