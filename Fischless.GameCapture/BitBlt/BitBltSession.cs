@@ -1,23 +1,11 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using OpenCvSharp;
 using Vanara.PInvoke;
 
 namespace Fischless.GameCapture.BitBlt;
 
 public class BitBltSession : IDisposable
 {
-    // 用于过滤alpha通道
-    private static readonly Gdi32.BLENDFUNCTION BlendFunction = new()
-    {
-        BlendOp = 0, //Gdi32.BlendOperation.AC_SRC_OVER,
-        BlendFlags = 0,
-        SourceConstantAlpha = 255,
-        AlphaFormat = 0
-    };
-
-    private readonly int _height;
-
     // 窗口句柄
     private readonly HWND _hWnd;
 
@@ -25,6 +13,7 @@ public class BitBltSession : IDisposable
 
     // 大小计算好的宽高，截图用这个不会爆炸
     private readonly int _width;
+    private readonly int _height;
 
     // 位图指针，这个指针会在位图释放时自动释放
     private IntPtr _bitsPtr;
@@ -67,7 +56,7 @@ public class BitBltSession : IDisposable
             try
             {
                 _hdcSrc = User32.GetDC(_hWnd);
-                if (_hdcSrc.IsInvalid) throw new Exception("Failed to get DC for {_hWnd}");
+                if (_hdcSrc.IsInvalid) throw new Exception($"Failed to get DC for {_hWnd}");
 
                 var hdcSrcPixel = Gdi32.GetDeviceCaps(_hdcSrc, Gdi32.DeviceCap.BITSPIXEL);
                 // 颜色位数
@@ -101,7 +90,7 @@ public class BitBltSession : IDisposable
                 if (_hdcSrc.IsInvalid)
                 {
                     Debug.Fail("Failed to create CompatibleDC");
-                    throw new Exception("Failed to create CompatibleDC for {_hWnd}");
+                    throw new Exception($"Failed to create CompatibleDC for {_hWnd}");
                 }
 
 
@@ -111,10 +100,10 @@ public class BitBltSession : IDisposable
                     {
                         biSize = (uint)Marshal.SizeOf<Gdi32.BITMAPINFOHEADER>(),
                         biWidth = _width,
-                        biHeight = -_height, // Top-down image
+                        biHeight = _height, // Bottom-up image
                         biPlanes = (ushort)hdcSrcPlanes,
                         biBitCount = (ushort)(hdcSrcPixel - 8), //RGBA->RGB
-                        biCompression = 0, // BI_RGB
+                        biCompression = Gdi32.BitmapCompressionMode.BI_RGB,
                         biSizeImage = 0
                     }
                 };
@@ -125,7 +114,7 @@ public class BitBltSession : IDisposable
                 {
                     if (!_hBitmap.IsInvalid) Gdi32.DeleteObject(_hBitmap);
 
-                    throw new Exception($"Failed to create dIB section for {_hWnd}");
+                    throw new Exception($"Failed to create dIB section for {_hdcDest}");
                 }
 
                 _bitsPtr = bits;
@@ -188,18 +177,11 @@ public class BitBltSession : IDisposable
                 // 不支持的位图格式
                 return null;
             // 直接返回转换后的位图
-            var success = Gdi32.AlphaBlend(_hdcDest, 0, 0, _width, _height, _hdcSrc, 0, 0,
-                _width, _height, BlendFunction);
+            var success = Gdi32.StretchBlt(_hdcDest, 0, 0, _width, _height,
+                _hdcSrc, 0, 0, _width, _height, Gdi32.RasterOperationMode.SRCCOPY);
             if (!success || !Gdi32.GdiFlush()) return null;
 
-            // return Mat.FromPixelData(bitmap.bmHeight, bitmap.bmWidth, MatType.CV_8UC3, bitmap.bmBits,bitmap.bmWidthBytes);
             return _hBitmap.ToBitmap();
-
-            // 原始宏 ((((biWidth * biBitCount) + 31) & ~31) >> 3) => (biWidth * biBitCount + 3) & ~3) (在总位数是8的倍数时，两者等价)
-            // 对齐 https://learn.microsoft.com/zh-cn/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
-
-            //  适用于32位(RGBA)
-            //  return Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height, _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY ) ? Mat.FromPixelData(Height, Width, MatType.CV_8UC3, _bitsPtr) : null;
         }
     }
 

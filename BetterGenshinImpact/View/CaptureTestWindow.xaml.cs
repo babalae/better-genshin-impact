@@ -1,13 +1,13 @@
 ﻿using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers.Extensions;
 using Fischless.GameCapture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers;
-using OpenCvSharp.WpfExtensions;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View;
@@ -57,6 +57,42 @@ public partial class CaptureTestWindow : Window
         CompositionTarget.Rendering += Loop;
     }
 
+    private static BitmapSource ConvertToBitmapSource(Bitmap bitmap, out bool bottomUp)
+    {
+        var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+            System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+
+        var stride = bitmapData.Stride;
+        var buffer = bitmapData.Scan0;
+        if (stride < 0)
+        {
+            bottomUp = true;
+            stride = -stride;
+            buffer -= stride * (bitmapData.Height - 1);
+        }
+        else
+        {
+            bottomUp = false;
+        }
+
+        var pixelFormat = bitmap.PixelFormat switch
+        {
+            System.Drawing.Imaging.PixelFormat.Format24bppRgb => PixelFormats.Bgr24,
+            System.Drawing.Imaging.PixelFormat.Format32bppArgb => PixelFormats.Bgra32,
+            _ => throw new NotSupportedException($"Unsupported pixel format {bitmap.PixelFormat}")
+        };
+
+        var bitmapSource = BitmapSource.Create(
+            bitmapData.Width, bitmapData.Height,
+            bitmap.HorizontalResolution, bitmap.VerticalResolution,
+            pixelFormat, null,
+            buffer, stride * bitmapData.Height, stride);
+
+        bitmap.UnlockBits(bitmapData);
+
+        return bitmapSource;
+    }
+
     private void Loop(object? sender, EventArgs e)
     {
         var sw = new Stopwatch();
@@ -73,10 +109,20 @@ public partial class CaptureTestWindow : Window
             _captureCount++;
             sw.Reset();
             sw.Start();
-            DisplayCaptureResultImage.Source = bitmap.ToBitmapSource();
+            DisplayCaptureResultImage.Source = ConvertToBitmapSource(bitmap, out var bottomUp);
             sw.Stop();
             Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
             _transferTime += sw.ElapsedMilliseconds;
+
+            // 上下翻转渲染 bottom-up bitmap
+            if (bottomUp && Transform.ScaleY > 0)
+            {
+                Transform.ScaleY = -1;
+            }
+            else if (!bottomUp && Transform.ScaleY < 0)
+            {
+                Transform.ScaleY = 1;
+            }
         }
         else
         {
