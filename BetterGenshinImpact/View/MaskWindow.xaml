@@ -64,6 +64,9 @@
                             Width="477"
                             Height="188"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
+                <ContentControl.Effect>
+                    <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
+                </ContentControl.Effect>
                 <RichTextBox x:Name="LogTextBox"
                              Padding="0,5,0,0"
                              Background="Transparent"
@@ -83,6 +86,9 @@
                             Width="477"
                             Height="24"
                             Style="{StaticResource OuterDraggableResizableItemStyle}">
+                <ContentControl.Effect>
+                    <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" Color="LightGray" />
+                </ContentControl.Effect>
                 <ui:ListView ItemsSource="{Binding StatusList}" Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
@@ -167,42 +173,47 @@
                        Visibility="{Binding Config.MaskWindowConfig.UidCoverEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!--  方位  -->
-            <TextBlock Canvas.Left="{Binding EastPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding EastPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="东"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Canvas.Left="{Binding SouthPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding SouthPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="南"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Canvas.Left="{Binding WestPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding WestPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="西"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Canvas.Left="{Binding NorthPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding NorthPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="北"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <Canvas>
+                <Canvas.Effect>
+                    <DropShadowEffect Opacity="0.4" BlurRadius="8" ShadowDepth="0" />
+                </Canvas.Effect>
+                <TextBlock Canvas.Left="{Binding EastPoint.X, Mode=OneWay}"
+                           Canvas.Top="{Binding EastPoint.Y, Mode=OneWay}"
+                           HorizontalAlignment="Center"
+                           FontSize="38"
+                           FontStretch="Medium"
+                           FontWeight="DemiBold"
+                           Foreground="White"
+                           Text="东"
+                           Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <TextBlock Canvas.Left="{Binding SouthPoint.X, Mode=OneWay}"
+                           Canvas.Top="{Binding SouthPoint.Y, Mode=OneWay}"
+                           HorizontalAlignment="Center"
+                           FontSize="38"
+                           FontStretch="Medium"
+                           FontWeight="DemiBold"
+                           Foreground="White"
+                           Text="南"
+                           Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <TextBlock Canvas.Left="{Binding WestPoint.X, Mode=OneWay}"
+                           Canvas.Top="{Binding WestPoint.Y, Mode=OneWay}"
+                           HorizontalAlignment="Center"
+                           FontSize="38"
+                           FontStretch="Medium"
+                           FontWeight="DemiBold"
+                           Foreground="White"
+                           Text="西"
+                           Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <TextBlock Canvas.Left="{Binding NorthPoint.X, Mode=OneWay}"
+                           Canvas.Top="{Binding NorthPoint.Y, Mode=OneWay}"
+                           HorizontalAlignment="Center"
+                           FontSize="38"
+                           FontStretch="Medium"
+                           FontWeight="DemiBold"
+                           Foreground="White"
+                           Text="北"
+                           Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Canvas>
 
             <!--  展示FPS  -->
             <Border Margin="4,4,0,0"
