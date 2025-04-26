@@ -275,7 +275,7 @@ namespace BetterGenshinImpact.GameTask
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
-                    Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
+                    // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
                 
