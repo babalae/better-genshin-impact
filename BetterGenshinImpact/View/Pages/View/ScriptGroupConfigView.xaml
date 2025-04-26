@@ -668,7 +668,7 @@
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
                                     MinWidth="120"
-                                    Text="{Binding Config.AutoFightConfig.PickDropsAfterFightSeconds}"/>
+                                    Text="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightSeconds}"/>
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
