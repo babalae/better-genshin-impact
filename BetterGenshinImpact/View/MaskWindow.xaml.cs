@@ -5,8 +5,6 @@ using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Drawable;
-using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
@@ -94,15 +92,7 @@ public partial class MaskWindow : Window
             Top = currentRect.Top / dpiScale;
             Width = currentRect.Width / dpiScale;
             Height = currentRect.Height / dpiScale;
-
-            Canvas.SetTop(LogTextBoxWrapper, Height - LogTextBoxWrapper.Height - 65);
-            Canvas.SetLeft(LogTextBoxWrapper, 20);
-            Canvas.SetTop(StatusWrapper, Height - LogTextBoxWrapper.Height - 90);
-            Canvas.SetLeft(StatusWrapper, 20);
         });
-        // 重新计算控件位置
-        // shit code 预定了
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
     public void RefreshPositionForSubform()
@@ -111,18 +101,6 @@ public partial class MaskWindow : Window
         _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
         float x = DpiHelper.GetScale(targetHWnd).X;
         _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
-
-        Invoke(() =>
-        {
-            Canvas.SetTop(LogTextBoxWrapper, Height * 1d / DpiHelper.ScaleY - LogTextBoxWrapper.Height * 1d / DpiHelper.ScaleY - 65);
-            Canvas.SetLeft(LogTextBoxWrapper, 20);
-            Canvas.SetTop(StatusWrapper, Height * 1d / DpiHelper.ScaleY - LogTextBoxWrapper.Height * 1d / DpiHelper.ScaleY - 90);
-            Canvas.SetLeft(StatusWrapper, 20);
-        });
-
-        // 重新计算控件位置
-        // shit code 预定了
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
     }
 
     public MaskWindow()

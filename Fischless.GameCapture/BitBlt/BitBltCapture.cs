@@ -7,7 +7,6 @@ namespace Fischless.GameCapture.BitBlt;
 
 public class BitBltCapture : IGameCapture
 {
-    public CaptureModes Mode => CaptureModes.BitBlt;
     public bool IsCapturing { get; private set; }
     private readonly Stopwatch _sizeCheckTimer = new();
     private readonly ReaderWriterLockSlim _lockSlim = new();
@@ -18,7 +17,7 @@ public class BitBltCapture : IGameCapture
 
     public void Dispose() => Stop();
 
-    public Mat? Capture() => Capture(false);
+    public CaptureImageRes? Capture() => Capture(false);
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -111,7 +110,7 @@ public class BitBltCapture : IGameCapture
     /// </summary>
     /// <param name="recursive">递归标志</param>
     /// <returns>截图</returns>
-    private Mat? Capture(bool recursive)
+    private CaptureImageRes? Capture(bool recursive)
     {
         if (_hWnd == IntPtr.Zero)
         {
@@ -136,17 +135,17 @@ public class BitBltCapture : IGameCapture
         {
             _lockSlim.EnterReadLock();
             var result = Capture0();
-            if (result is not null && !result.Empty())
+            if (result is not null)
             {
                 // 成功截图
                 _lastCaptureFailed = false;
-                return result;
+                return CaptureImageRes.BuildNullable(result);
             }
             else if (result is null)
             {
-                if (_lastCaptureFailed) return result; // 这不是首次失败,不再进行尝试
+                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result); // 这不是首次失败,不再进行尝试
                 _lastCaptureFailed = true; // 设置失败标志
-                if (recursive) return result; // 已设置递归标志，说明也不是首次失败
+                if (recursive) return CaptureImageRes.BuildNullable(result); // 已设置递归标志，说明也不是首次失败
             }
         }
         finally
@@ -166,9 +165,9 @@ public class BitBltCapture : IGameCapture
     /// 截图功能的实现。需要加锁后调用，一般只由 Capture 方法调用。
     /// </summary>
     /// <returns></returns>
-    private Mat? Capture0()
+    private Bitmap? Capture0()
     {
-        Mat? mat = null;
+        Bitmap? bitmap = null;
         try
         {
             if (_session is null)
@@ -176,27 +175,14 @@ public class BitBltCapture : IGameCapture
                 // 没有成功创建会话，直接返回空
                 return null;
             }
-
-            mat = _session.GetMat();
-
-            if (mat is null) return null; // 执行失败
-            if (!mat.Empty()) // 成功执行并且获取到了图
-            {
-                return mat;
-            }
-            else // 成功执行但是没有图，可能是截图过快导致的
-            {
-                mat.Dispose();
-                mat = null; // 防止二次释放
-            }
-
-            return null;
+            bitmap = _session.GetImage();
+            return bitmap;
         }
         catch (Exception e)
         {
             // 理论这里不应出现异常，除非窗口不存在了或者有什么bug
             // 出现异常的时候释放内存
-            mat?.Dispose();
+            bitmap?.Dispose();
             Error.WriteLine("[BitBlt]Failed to capture image {0}", e);
             return null;
         }

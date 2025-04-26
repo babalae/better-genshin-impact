@@ -267,7 +267,7 @@ public class AutoDomainTask : ISoloTask
                 else if ("苍白的遗荣".Equals(_taskParam.DomainName))
                 {
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    Thread.Sleep(1000);
+                    Thread.Sleep(2000);
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
                 else if ("太山府".Equals(_taskParam.DomainName))

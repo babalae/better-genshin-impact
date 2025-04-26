@@ -12,10 +12,12 @@ using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -116,6 +118,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 自动处理目录配置
         await Patch1();
 
+        // 删除多余特征点
+        Patch2();
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
@@ -214,6 +218,26 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
     }
 
+    /**
+     * 0.45版本开始
+     * 地图特征的存储格式变化
+     */
+    private void Patch2()
+    {
+        List<string> files =[
+            Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.kp"),
+            Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.mat"),
+            Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.kp"),
+            Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.mat"),
+        ];
+        
+        // 循环删除
+        foreach (var file in files.Where(File.Exists))
+        {
+            File.Delete(file);
+        }
+    }
+
     private async Task OcrPreheating()
     {
         try
@@ -230,11 +254,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常，解决方案：https://bettergi.com/faq.html：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                    _logger.LogError("PaddleOcr预热异常，解决方案：【https://bettergi.com/faq.html】\r\n" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError("PaddleOcr预热内部异常，解决方案：https://bettergi.com/faq.html：" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：【https://bettergi.com/faq.html】\r\n" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
                         throw innerException;
                     }
                     else
@@ -246,7 +270,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            MessageBox.Warning("PaddleOcr预热失败，解决方案：https://bettergi.com/faq.html，" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            MessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            Process.Start(new ProcessStartInfo("https://bettergi.com/faq.html#%E2%9D%93%E6%8F%90%E7%A4%BA-paddleocr%E9%A2%84%E7%83%AD%E5%A4%B1%E8%B4%A5-%E5%BA%94%E8%AF%A5%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3") { UseShellExecute = true });
         }
     }
 

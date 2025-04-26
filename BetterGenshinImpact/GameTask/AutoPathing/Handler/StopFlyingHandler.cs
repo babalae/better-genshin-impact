@@ -31,7 +31,7 @@ public class StopFlyingHandler : IActionHandler
             var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             if (isFlying)
             {
-                await Delay(200, ct);
+                await Delay(300, ct);
             }
             else
             {

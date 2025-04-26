@@ -1,7 +1,10 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using OpenCvSharp;
+using OpenCvSharp.Internal.Vectors;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
@@ -27,27 +30,32 @@ public class FeatureStorage
 
     public string TypeName { get; set; } = "UNKNOWN";
 
-    public KeyPoint[]? LoadKeyPointArray()
+    public unsafe KeyPoint[]? LoadKeyPointArray()
     {
         CreateFolder();
-        string kpPath = Path.Combine(_rootPath, $"{_name}_{TypeName}.kp");
+        var kpPath = Path.Combine(_rootPath, $"{_name}_{TypeName}.kp.bin");
         if (File.Exists(kpPath))
         {
-            FileStorage fs = new(kpPath, FileStorage.Modes.Read);
-            var kpArray = fs["kp"]?.ReadKeyPoints();
-            fs.Release();
-            return kpArray;
+            using var fs = File.Open(kpPath, FileMode.Open);
+            var sizeOfKeyPoint = Marshal.SizeOf<KeyPoint>();
+            if (fs.Length % sizeOfKeyPoint != 0) throw new FileFormatException("无法识别的KeyPoint格式");
+            using var kpVector = new VectorOfKeyPoint((nuint)(fs.Length / sizeOfKeyPoint));
+            using var ms = new UnmanagedMemoryStream((byte*)kpVector.ElemPtr, fs.Length, fs.Length, FileAccess.Write);
+            fs.CopyTo(ms);
+            return kpVector.ToArray();
         }
         return null;
     }
 
-    public void SaveKeyPointArray(KeyPoint[] kpArray)
+    public unsafe void SaveKeyPointArray(KeyPoint[] kpArray)
     {
         CreateFolder();
-        string kpPath = Path.Combine(_rootPath, $"{_name}_{TypeName}.kp");
-        FileStorage fs = new(kpPath, FileStorage.Modes.Write);
-        fs.Write("kp", kpArray);
-        fs.Release();
+        var kpPath = Path.Combine(_rootPath, $"{_name}_{TypeName}.kp.bin");
+        var kpVector = new VectorOfKeyPoint(kpArray);
+        var sizeOfKeyPoint = Marshal.SizeOf<KeyPoint>();
+        var kpSpan = new ReadOnlySpan<byte>((byte*)kpVector.ElemPtr, kpArray.Length * sizeOfKeyPoint);
+        using var fs = new FileStream(kpPath, FileMode.Create);
+        fs.Write(kpSpan);
     }
 
     private void CreateFolder()
@@ -61,7 +69,7 @@ public class FeatureStorage
     public Mat? LoadDescMat()
     {
         CreateFolder();
-        var files = Directory.GetFiles(_rootPath, $"{_name}_{TypeName}.mat", SearchOption.AllDirectories);
+        var files = Directory.GetFiles(_rootPath, $"{_name}_{TypeName}.mat.png", SearchOption.AllDirectories);
         if (files.Length == 0)
         {
             return null;
@@ -70,9 +78,9 @@ public class FeatureStorage
         {
             Debug.WriteLine($"[FeatureSerializer] Found multiple files: {string.Join(", ", files)}");
         }
-        FileStorage fs = new(files[0], FileStorage.Modes.Read);
-        var mat = fs["desc"]?.ReadMat();
-        fs.Release();
+        using var img = new Mat(files[0], ImreadModes.Grayscale);
+        var mat = new Mat(img.Size(), MatType.CV_32FC1);
+        img.ConvertTo(mat, MatType.CV_32FC1);
         return mat;
     }
 
@@ -80,15 +88,13 @@ public class FeatureStorage
     {
         CreateFolder();
         // 删除旧文件
-        var fileName = $"{_name}_{TypeName}.mat";
+        var fileName = $"{_name}_{TypeName}.mat.png";
         var files = Directory.GetFiles(_rootPath, fileName, SearchOption.AllDirectories);
         foreach (var file in files)
         {
             File.Delete(file);
         }
         var descPath = Path.Combine(_rootPath, fileName);
-        FileStorage fs = new(descPath, FileStorage.Modes.Write);
-        fs.Write("desc", descMat);
-        fs.Release();
+        descMat.SaveImage(descPath);
     }
 }

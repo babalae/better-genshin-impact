@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 
@@ -23,7 +24,7 @@ namespace BetterGenshinImpact.Service;
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
-
+    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private static bool IsCurrentHourEqual(string input)
     {
         // 尝试将输入字符串转换为整数
@@ -86,7 +87,8 @@ public partial class ScriptService : IScriptService
                         _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                         continue;
                     }
-
+                    //月卡检测
+                    await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
                     if (project.Status != "Enabled")
                     {
                         _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);

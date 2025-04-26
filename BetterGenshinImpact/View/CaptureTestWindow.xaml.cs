@@ -61,11 +61,12 @@ public partial class CaptureTestWindow : Window
     {
         var sw = new Stopwatch();
         sw.Start();
-        var bitmap = _capture?.Capture();
+        var image = _capture?.Capture();
         sw.Stop();
         Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
         _captureTime += sw.ElapsedMilliseconds;
 
+        var bitmap = image?.ForceGetBitmap();
         if (bitmap != null)
         {
             Debug.WriteLine($"Bitmap:{bitmap.Width}x{bitmap.Height}");

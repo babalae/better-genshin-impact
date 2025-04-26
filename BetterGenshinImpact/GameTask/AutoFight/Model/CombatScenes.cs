@@ -318,8 +318,9 @@ public class CombatScenes : IDisposable
     /// <returns></returns>
     public Avatar? SelectAvatar(int avatarIndex)
     {
-        if (avatarIndex < 1 || avatarIndex >= AvatarCount)
+        if (avatarIndex < 1 || avatarIndex > AvatarCount)
         {
+            Logger.LogError("切换角色编号错误，当前角色数量{Count}，编号{Index}", AvatarCount, avatarIndex);
             return null;
         }
 

@@ -45,24 +45,39 @@ public class SwitchPartyTask
             }
 
             // 尝试打开队伍配置页面
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-
-            // 考虑加载时间 2s，共检查 5s，如果失败则抛出异常
+            const int maxAttempts = 3;
             bool isOpened = false;
-            for (int i = 0; i < 5; i++) // 检查 5 次
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                await Delay(1000, ct);
-                using var raCheck = CaptureToRectArea();
-                if (Bv.IsInPartyViewUi(raCheck))
+                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+
+                // 考虑加载时间 2s，共检查 5s，如果失败则抛出异常
+                
+                for (int i = 0; i < 5; i++) // 检查 5 次
                 {
-                    isOpened = true;
-                    break;
+                    await Delay(1000, ct);
+                    using var raCheck = CaptureToRectArea();
+                    if (Bv.IsInPartyViewUi(raCheck))
+                    {
+                        isOpened = true;
+                        break;
+                    }
+                }
+
+                if (isOpened)
+                {
+                    break; // 页面已打开，跳出循环
+                }
+
+                if (attempt < maxAttempts)
+                {
+                    Logger.LogWarning("尝试打开队伍配置页面失败，正在重试...");
                 }
             }
 
             if (!isOpened)
             {
-                throw new PartySetupFailedException("未能打开队伍配置界面");
+                Logger.LogWarning("未能打开队伍配置界面");
             }
         }
 
@@ -180,7 +195,16 @@ public class SwitchPartyTask
     private async Task ConfirmParty(ImageRegion page, CancellationToken ct)
     {
         var r1 = Bv.ClickWhiteConfirmButton(page.DeriveCrop(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
-        await Delay(1000, ct);
+        var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
+        {
+            using var ra2 = CaptureToRectArea();
+            return ra2.Find(ElementAssets.Instance.PartyBtnDelete).IsEmpty();
+        }, ct, 10);
+        if (!partyChooseUiClosed)
+        {
+            throw new PartySetupFailedException("选择队伍失败，等待队伍切换超时！");
+        }
+        await Delay(200, ct);
         using var ra = CaptureToRectArea();
         var r2 = Bv.ClickWhiteConfirmButton(ra.DeriveCrop(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);

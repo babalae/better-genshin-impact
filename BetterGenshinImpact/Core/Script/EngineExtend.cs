@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
@@ -34,6 +35,10 @@ public class EngineExtend
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
+        
+        // 添加取消令牌相关类型
+        engine.AddHostType("CancellationTokenSource", typeof(CancellationTokenSource));
+        engine.AddHostType("CancellationToken", typeof(CancellationToken));
 
         // PostMessage 作为类型实例化
         engine.AddHostType("PostMessage", typeof(Dependence.Simulator.PostMessage));
@@ -93,6 +98,7 @@ public class EngineExtend
         engine.AddHostObject("middleButtonClick", GlobalMethod.MiddleButtonClick);
         engine.AddHostObject("middleButtonDown", GlobalMethod.MiddleButtonDown);
         engine.AddHostObject("middleButtonUp", GlobalMethod.MiddleButtonUp);
+        engine.AddHostObject("verticalScroll", GlobalMethod.VerticalScroll);
         engine.AddHostObject("captureGameRegion", GlobalMethod.CaptureGameRegion);
         engine.AddHostObject("inputText", GlobalMethod.InputText);
 #pragma warning restore CS8974 // Converting method group to non-delegate type

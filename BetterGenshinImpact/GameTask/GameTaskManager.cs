@@ -115,8 +115,6 @@ internal class GameTaskManager
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             // 清理画布
-            WeakReferenceMessenger.Default.Send(
-                new PropertyChangedMessage<object>(new object(), "RemoveAllButton", new object(), ""));
             VisionContext.Instance().DrawContent.ClearAll();
         }
 

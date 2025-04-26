@@ -44,7 +44,7 @@
                 </Hyperlink>
                 <LineBreak />
                 
-                <ui:TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Name="RzTextBlock" Visibility="Visible">
+                <ui:TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Name="RzTextBlock" Visibility="Collapsed">
                     <ui:TextBlock  FontSize="16" FontWeight="Bold" Name="Line1" />
                     <LineBreak />
                     <Run Name="Line2" />

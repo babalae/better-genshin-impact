@@ -275,7 +275,7 @@ namespace BetterGenshinImpact.GameTask
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
-                    Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
+                    // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
                 
@@ -386,19 +386,28 @@ namespace BetterGenshinImpact.GameTask
                     Directory.CreateDirectory(path);
                 }
 
-                var bitmap = TaskControl.CaptureGameImage(GameCapture);
+                var image = TaskControl.CaptureGameImage(GameCapture);
+                var mat = image.ForceGetMat();
+                if (mat == null)
+                {
+                    _logger.LogInformation("截图失败，未获取到图像");
+                    return;
+                }
                 var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
                 var savePath = Global.Absolute($@"log\screenshot\{name}");
-
                 if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
                 {
-                    var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
-                    bitmap.Rectangle(rect, Scalar.White, -1);
-                    Cv2.ImWrite(savePath, bitmap);
+                    var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+                    var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
+                        (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
+                    mat.Rectangle(rect, Scalar.White, -1);
+                    Cv2.ImWrite(savePath, mat);
                 }
                 else
                 {
-                    Cv2.ImWrite(savePath, bitmap);
+                    Cv2.ImWrite(savePath, mat);
                 }
 
                 _logger.LogInformation("截图已保存: {Name}", name);

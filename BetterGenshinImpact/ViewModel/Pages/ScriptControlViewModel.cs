@@ -48,7 +48,7 @@ public partial class ScriptControlViewModel : ViewModel
     private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
 
     private readonly IScriptService _scriptService;
-
+    
     /// <summary>
     /// 配置组配置
     /// </summary>
@@ -59,7 +59,7 @@ public partial class ScriptControlViewModel : ViewModel
     /// 当前选中的配置组
     /// </summary>
     [ObservableProperty]
-    private ScriptGroup? _selectedScriptGroup;
+    private ScriptGroup? _selectedScriptGroup = null;
 
     public readonly string ScriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     public readonly string LogPath = Global.Absolute(@"log");
@@ -1429,7 +1429,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private async Task StartGroups(List<ScriptGroup> scriptGroups)
+    public async Task StartGroups(List<ScriptGroup> scriptGroups)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
         try

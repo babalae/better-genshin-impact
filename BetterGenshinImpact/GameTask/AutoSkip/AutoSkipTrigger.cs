@@ -23,6 +23,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
 using Region = BetterGenshinImpact.GameTask.Model.Area.Region;
 
@@ -700,13 +701,16 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             return;
         }
-
+        
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
-            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+            if (!Bv.IsInBigMapUi(content.CaptureRectArea))
+            {
+                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
 
-            AutoSkipLog("关闭弹出页");
-            pageCloseRoRa.Dispose();
+                AutoSkipLog("关闭弹出页");
+                pageCloseRoRa.Dispose();
+            }
         });
     }
 

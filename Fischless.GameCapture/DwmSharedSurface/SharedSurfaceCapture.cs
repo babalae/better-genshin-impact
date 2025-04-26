@@ -22,7 +22,6 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         private ResourceRegion? _region;
 
-        public CaptureModes Mode => CaptureModes.DwmGetDxSharedSurface;
 
         public void Start(nint hWnd, Dictionary<string, object>? settings = null)
         {
@@ -67,7 +66,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
             return region;
         }
 
-        public Mat? Capture()
+        public CaptureImageRes? Capture()
         {
             if (_hWnd == nint.Zero)
             {
@@ -98,7 +97,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
                 }
                 var bgrMat = new Mat();
                 Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-                return bgrMat;
+                return CaptureImageRes.BuildNullable(bgrMat);
             }
         }
         
