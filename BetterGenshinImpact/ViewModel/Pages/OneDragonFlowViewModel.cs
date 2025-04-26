@@ -39,9 +39,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     public static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
 
     private readonly ScriptService _scriptService;
-    
-    [ObservableProperty]
-    private ObservableCollection<OneDragonTaskItem> _taskList =
+
+    [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
     [
         new("领取邮件"),
         new("合成树脂"),
@@ -53,10 +52,10 @@ public partial class OneDragonFlowViewModel : ViewModel
         // new ("领取尘歌壶奖励"),
         // new ("自动七圣召唤"),
     ];
-    
-    
-    [ObservableProperty]
-    private OneDragonTaskItem _selectedTask;
+
+
+    [ObservableProperty] private OneDragonTaskItem _selectedTask;
+
     partial void OnSelectedTaskChanged(OneDragonTaskItem value)
     {
         if (value != null)
@@ -64,27 +63,28 @@ public partial class OneDragonFlowViewModel : ViewModel
             InputScriptGroupName = value.Name;
         }
     }
-    
+
     // 其他属性和方法...
-    [ObservableProperty]
-    private string _inputScriptGroupName = string.Empty;
-   
+    [ObservableProperty] private string _inputScriptGroupName = string.Empty;
+
     [ObservableProperty]
     private ObservableCollection<OneDragonTaskItem> _playTaskList = new ObservableCollection<OneDragonTaskItem>();
 
     [ObservableProperty]
     private ObservableCollection<ScriptGroup> _scriptGroups = new ObservableCollection<ScriptGroup>();
-    [ObservableProperty]
-    private ObservableCollection<ScriptGroup> _scriptGroupsdefault = new ObservableCollection<ScriptGroup>()
-    {
-        new() { Name = "领取邮件" },
-        new() { Name = "合成树脂" },
-        new() { Name = "自动秘境" },
-        new() { Name = "领取每日奖励" }
-    };
-    
+
+    [ObservableProperty] private ObservableCollection<ScriptGroup> _scriptGroupsdefault =
+        new ObservableCollection<ScriptGroup>()
+        {
+            new() { Name = "领取邮件" },
+            new() { Name = "合成树脂" },
+            new() { Name = "自动秘境" },
+            new() { Name = "领取每日奖励" }
+        };
+
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     private readonly string _basePath = AppDomain.CurrentDomain.BaseDirectory;
+
     private void ReadScriptGroup()
     {
         try
@@ -93,11 +93,13 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 Directory.CreateDirectory(_scriptGroupPath);
             }
+
             ScriptGroups.Clear();
             foreach (var group in _scriptGroupsdefault)
             {
                 ScriptGroups.Add(group);
             }
+
             var files = Directory.GetFiles(_scriptGroupPath, "*.json");
             foreach (var file in files)
             {
@@ -105,7 +107,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 {
                     var json = File.ReadAllText(file);
                     var group = ScriptGroup.FromJson(json);
-                    
+
                     var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
                     foreach (var item in group.Projects)
                     {
@@ -118,6 +120,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                             }
                         }
                     }
+
                     ScriptGroups.Add(group);
                 }
                 catch (Exception e)
@@ -125,6 +128,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     _logger.LogInformation(e, "读取配置组配置时失败");
                 }
             }
+
             ScriptGroups = new ObservableCollection<ScriptGroup>(ScriptGroups.OrderBy(g => g.Index));
         }
         catch (Exception e)
@@ -132,10 +136,9 @@ public partial class OneDragonFlowViewModel : ViewModel
             _logger.LogInformation(e, "读取配置组配置时失败");
         }
     }
-     
-    [ObservableProperty]
-    private ScriptGroup? _selectedScriptGroup;
-    
+
+    [ObservableProperty] private ScriptGroup? _selectedScriptGroup;
+
     private async void SaveNewTask()
     {
         ReadScriptGroup();
@@ -145,6 +148,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             Toast.Warning("选择为空，请重新选择");
             return;
         }
+
         var taskItem = new OneDragonTaskItem(selectedGroupName)
         {
             IsEnabled = true
@@ -154,7 +158,8 @@ public partial class OneDragonFlowViewModel : ViewModel
             var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(name => name.Trim())
                 .ToList();
-            bool containsAnyDefaultGroup = names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
+            bool containsAnyDefaultGroup =
+                names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
             if (containsAnyDefaultGroup)
             {
                 int lastDefaultGroupIndex = -1;
@@ -166,6 +171,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                         break;
                     }
                 }
+
                 if (lastDefaultGroupIndex >= 0)
                 {
                     TaskList.Insert(lastDefaultGroupIndex + 1, taskItem);
@@ -174,12 +180,13 @@ public partial class OneDragonFlowViewModel : ViewModel
                 {
                     TaskList.Insert(0, taskItem);
                 }
+
                 Toast.Success("一条龙任务添加成功");
             }
             else
             {
                 TaskList.Add(taskItem);
-                Toast.Success("配置组添加成功");    
+                Toast.Success("配置组添加成功");
             }
         }
         else
@@ -187,9 +194,9 @@ public partial class OneDragonFlowViewModel : ViewModel
             Toast.Warning("任务或配置组已存在");
         }
     }
-    
+
     public async Task<string?> OnStartMultiScriptGroupAsync()
-    {   
+    {
         var stackPanel = new StackPanel();
         var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
         CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
@@ -204,11 +211,12 @@ public partial class OneDragonFlowViewModel : ViewModel
             checkBox.Checked += (sender, args) =>
             {
                 var currentCheckBox = sender as CheckBox;
-                
+
                 if (selectedCheckBox != null && selectedCheckBox != currentCheckBox)
                 {
                     selectedCheckBox.IsChecked = false; // 取消之前选中的 CheckBox
                 }
+
                 selectedCheckBox = currentCheckBox; // 更新当前选中的 CheckBox
             };
             checkBox.Unchecked += (sender, args) =>
@@ -222,6 +230,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             checkBoxes[scriptGroup] = checkBox;
             stackPanel.Children.Add(checkBox);
         }
+
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = "选择增加的配置组（单选）",
@@ -229,7 +238,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 Content = stackPanel,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Height = 400 
+                Height = 400
             },
             CloseButtonText = "关闭",
             PrimaryButtonText = "确认",
@@ -248,36 +257,32 @@ public partial class OneDragonFlowViewModel : ViewModel
                     if (scriptGroup != null)
                     {
                         return scriptGroup.Name;
-                    }else
+                    }
+                    else
                     {
                         Toast.Error("配置组加载失败");
                     }
                 }
             }
         }
+
         return null;
     }
-    
-    [ObservableProperty]
-    private ObservableCollection<OneDragonFlowConfig> _configList = [];
+
+    [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
 
     /// <summary>
     /// 当前生效配置
     /// </summary>
-    [ObservableProperty]
-    private OneDragonFlowConfig? _selectedConfig;
+    [ObservableProperty] private OneDragonFlowConfig? _selectedConfig;
 
-    [ObservableProperty]
-    private List<string> _craftingBenchCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _craftingBenchCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
 
-    [ObservableProperty]
-    private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
 
-    [ObservableProperty]
-    private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
+    [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
-    [ObservableProperty]
-    private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
+    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
 
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
@@ -301,7 +306,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 }
             }
         };
-        
+
         TaskList.CollectionChanged += (sender, e) =>
         {
             if (e.NewItems != null)
@@ -309,9 +314,9 @@ public partial class OneDragonFlowViewModel : ViewModel
                 foreach (OneDragonTaskItem newItem in e.NewItems)
                 {
                     newItem.PropertyChanged += TaskPropertyChanged;
-        
                 }
             }
+
             if (e.OldItems != null)
             {
                 foreach (OneDragonTaskItem oldItem in e.OldItems)
@@ -323,7 +328,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         SaveConfig();
         InitConfigList();
     }
-    
+
     public override void OnNavigatedTo()
     {
         InitConfigList();
@@ -379,13 +384,14 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     // 新增方法：从配置文件加载 DisplayTaskList
- 
+
     public void LoadDisplayTaskListFromConfig()
     {
         if (SelectedConfig == null || SelectedConfig.TaskEnabledList == null)
         {
             return;
         }
+
         TaskList.Clear();
         foreach (var kvp in SelectedConfig.TaskEnabledList)
         {
@@ -397,15 +403,17 @@ public partial class OneDragonFlowViewModel : ViewModel
             _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
         }
     }
-    
+
     [RelayCommand]
     private void DeleteConfigDisplayTaskListFromConfig()
     {
-        if (SelectedConfig == null || SelectedTask == null || SelectedConfig.TaskEnabledList == null)//|| SelectedConfig.TaskEnabledList == null 
+        if (SelectedConfig == null || SelectedTask == null ||
+            SelectedConfig.TaskEnabledList == null) //|| SelectedConfig.TaskEnabledList == null 
         {
             Toast.Warning("请先选择配置组和任务");
             return;
         }
+
         TaskList.Clear();
         foreach (var kvp in SelectedConfig.TaskEnabledList)
         {
@@ -415,49 +423,51 @@ public partial class OneDragonFlowViewModel : ViewModel
             };
             if (taskItem.Name != InputScriptGroupName)
             {
-                TaskList.Add(taskItem);  
-                taskItem=null;
+                TaskList.Add(taskItem);
+                taskItem = null;
                 Toast.Information("已经删除");
             }
         }
     }
-    
+
     [RelayCommand]
     private void OnConfigDropDownChanged()
     {
         SetSomeSelectedConfig(SelectedConfig);
         SelectedTask = null;
     }
-    
+
     public void SaveConfig()
     {
         if (SelectedConfig == null)
         {
             return;
         }
+
         SelectedConfig.TaskEnabledList.Clear();
         foreach (var task in TaskList)
         {
             SelectedConfig.TaskEnabledList[task.Name] = task.IsEnabled;
         }
+
         WriteConfig(SelectedConfig);
     }
-    
+
     [RelayCommand]
     private void SaveConfigCommandExecute()
     {
         SaveNewTask();
         SaveConfig();
-        SelectedTask =  null;
+        SelectedTask = null;
     }
-    
+
     [RelayCommand]
     private void Save_actionConfig()
-    { 
+    {
         SaveConfig();
         Toast.Information("排序已保存");
     }
-    
+
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
     {
         if (SelectedConfig != null)
@@ -470,27 +480,30 @@ public partial class OneDragonFlowViewModel : ViewModel
                     task.IsEnabled = value;
                 }
             }
+
             LoadDisplayTaskListFromConfig();
         }
     }
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    { 
-        await Task.Delay(100);//等会加载完再保存
+    {
+        await Task.Delay(100); //等会加载完再保存
         SaveConfig();
     }
-    
+
     private void ConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    { 
+    {
         SaveConfig();
         WriteConfig(SelectedConfig);
     }
+
     public void WriteConfig(OneDragonFlowConfig? config)
     {
         if (config == null)
         {
             return;
         }
+
         try
         {
             Directory.CreateDirectory(OneDragonFlowConfigFolder);
@@ -512,56 +525,66 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        foreach (var task in TaskList)  
+        foreach (var task in TaskList)
         {
             task.InitAction(SelectedConfig);
         }
+
         int finishOneTaskcount = 1;
         int finishTaskcount = 1;
         int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
         _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
-        
+
         await ScriptService.StartGameTask();
-        
+
         ReadScriptGroup();
         foreach (var task in ScriptGroupsdefault)
-        {ScriptGroups.Remove(task);}
-         
-        foreach (var scriptGroup in ScriptGroups) 
-        {SelectedConfig.TaskEnabledList.Remove(scriptGroup.Name);}
-        
+        {
+            ScriptGroups.Remove(task);
+        }
+
+        foreach (var scriptGroup in ScriptGroups)
+        {
+            SelectedConfig.TaskEnabledList.Remove(scriptGroup.Name);
+        }
+
         if (SelectedConfig == null || TaskList.Count(t => t.IsEnabled) == 0)
-        { Toast.Warning("请先选择任务");    
+        {
+            Toast.Warning("请先选择任务");
             _logger.LogInformation("没有配置,退出执行!");
             return;
         }
 
         int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
-        
+
         await ScriptService.StartGameTask();
         SaveConfig();
-        int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value && !ScriptGroupsdefault.Any(defaultTask => defaultTask.Name == t.Key));
+        int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
+            t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
         _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
-        
-        if ( enabledoneTaskCount<= 0)
+
+        if (enabledoneTaskCount <= 0)
         {
             _logger.LogInformation("没有一条龙任务!");
         }
+
         Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
         foreach (var task in TaskList)
         {
             if (task is { IsEnabled: true, Action: not null })
             {
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
-                {  
+                {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
-                    await new TaskRunner().RunThreadAsync(async () => {
-                    await task.Action();
-                    await Task.Delay(1000);
-                    Notify.Event(NotificationEvent.DragonEnd).Success("一条龙结束"); 
+                    await new TaskRunner().RunThreadAsync(async () =>
+                    {
+                        await task.Action();
+                        await Task.Delay(1000);
+                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙结束");
                     });
-                }else
+                }
+                else
                 {
                     try
                     {
@@ -570,18 +593,19 @@ public partial class OneDragonFlowViewModel : ViewModel
                             _logger.LogInformation("没有配置组任务,退出执行!");
                             return;
                         }
+
                         Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
-                       
-                        if (SelectedConfig.TaskEnabledList[task.Name] == true)
-                        { 
+
+                        if (SelectedConfig.TaskEnabledList[task.Name])
+                        {
                             _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
                             await Task.Delay(500);
                             var snackbarService = new SnackbarService();
                             var scriptService = new ScriptService();
                             var viewModel = new ScriptControlViewModel(snackbarService, scriptService);
-                            string filePath = Path.Combine(_basePath,_scriptGroupPath,$"{task.Name}.json");
+                            string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             viewModel.SelectedScriptGroup = new ScriptGroup { Name = $"{task.Name}" };
-                            viewModel.SelectedScriptGroup = ScriptGroup.FromJson(File.ReadAllText(filePath));
+                            viewModel.SelectedScriptGroup = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
                             await viewModel.StartScriptGroupCommand.ExecuteAsync(viewModel.SelectedScriptGroup);
                             await Task.Delay(1000);
                         }
@@ -591,15 +615,17 @@ public partial class OneDragonFlowViewModel : ViewModel
                         _logger.LogDebug(e, "执行配置组任务时失败");
                         Toast.Error("执行配置组任务时失败");
                     }
-                } 
+                }
             }
         }
-        await new TaskRunner().RunThreadAsync(async () => {
+
+        await new TaskRunner().RunThreadAsync(async () =>
+        {
             await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
             await Task.Delay(500);
-            Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束"); 
+            Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
             _logger.LogInformation("一条龙和配置组任务结束");
-            
+
             // 执行完成后操作
             if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
             {
@@ -620,15 +646,15 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
         });
     }
-    
+
     [RelayCommand]
     private void OndeleteTask()
     {
-        DeleteConfigDisplayTaskListFromConfig(); 
+        DeleteConfigDisplayTaskListFromConfig();
         SaveConfig();
         InputScriptGroupName = null;
     }
-    
+
     [RelayCommand]
     private void OnAddConfig()
     {
@@ -648,6 +674,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 SelectedConfig = nc;
             }
         }
+
         SaveConfig();
     }
 }
