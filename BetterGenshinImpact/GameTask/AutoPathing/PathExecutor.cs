@@ -585,8 +585,10 @@ public class PathExecutor
     {
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
-        await tpTask.TpToStatueOfTheSeven();
+        await RunnerContext.Instance.StopAutoPickRunTask(async () =>await tpTask.TpToStatueOfTheSeven(),5);
         Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+
+
     }
     /// <summary>
     /// 尝试自动领取派遣奖励，
