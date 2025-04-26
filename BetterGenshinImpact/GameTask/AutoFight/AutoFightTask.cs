@@ -18,6 +18,8 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
+using Vanara.PInvoke;
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 

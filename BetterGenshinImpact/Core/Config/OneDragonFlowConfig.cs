@@ -41,25 +41,51 @@ public partial class OneDragonFlowConfig : ObservableObject
 
 
     #region 每周秘境配置
-
+    //=====================================================lcb
+    //周一LCB
     [ObservableProperty]
-    private string _mondayThursdayPartyName = string.Empty;
-
+    private string _mondayPartyName = string.Empty;
+    
     [ObservableProperty]
-    private string _mondayThursdayDomainName = string.Empty;
-
+    private string _mondayDomainName = string.Empty;
+    
+    
+    //周二
     [ObservableProperty]
-    private string _tuesdayFridayPartyName = string.Empty;
-
+    private string _tuesdayPartyName = string.Empty;
+    
     [ObservableProperty]
-    private string _tuesdayFridayDomainName = string.Empty;
-
+    private string _tuesdayDomainName = string.Empty;
+    
+    //周三
     [ObservableProperty]
-    private string _wednesdaySaturdayPartyName = string.Empty;
-
+    private string _wednesdayPartyName = string.Empty;
+    
     [ObservableProperty]
-    private string _wednesdaySaturdayDomainName = string.Empty;
-
+    private string _wednesdayDomainName = string.Empty;
+    
+    //周四
+    [ObservableProperty]
+    private string _thursdayPartyName = string.Empty;
+    
+    [ObservableProperty]
+    private string _thursdayDomainName = string.Empty;
+    
+    //周五
+    [ObservableProperty]
+    private string _fridayPartyName = string.Empty;
+    
+    [ObservableProperty]
+    private string _fridayDomainName = string.Empty;
+    
+    //周六
+    [ObservableProperty]
+    private string _saturdayPartyName = string.Empty;
+    
+    [ObservableProperty]
+    private string _saturdayDomainName = string.Empty;
+    
+    //周日
     [ObservableProperty]
     private string _sundayPartyName = string.Empty;
 
@@ -69,7 +95,7 @@ public partial class OneDragonFlowConfig : ObservableObject
     // 完成后操作
     [ObservableProperty]
     private string _completionAction = string.Empty;
-
+    
     // 通过当天是哪一天来返回配置
     public (string partyName, string domainName) GetDomainConfig()
     {
@@ -78,12 +104,12 @@ public partial class OneDragonFlowConfig : ObservableObject
             var dayOfWeek = DateTime.Now.DayOfWeek;
             return dayOfWeek switch
             {
-                DayOfWeek.Monday => (MondayThursdayPartyName, MondayThursdayDomainName),
-                DayOfWeek.Tuesday => (TuesdayFridayPartyName, TuesdayFridayDomainName),
-                DayOfWeek.Wednesday => (WednesdaySaturdayPartyName, WednesdaySaturdayDomainName),
-                DayOfWeek.Thursday => (MondayThursdayPartyName, MondayThursdayDomainName),
-                DayOfWeek.Friday => (TuesdayFridayPartyName, TuesdayFridayDomainName),
-                DayOfWeek.Saturday => (WednesdaySaturdayPartyName, WednesdaySaturdayDomainName),
+                DayOfWeek.Monday => (MondayPartyName, MondayDomainName),
+                DayOfWeek.Tuesday => (TuesdayPartyName, TuesdayDomainName),
+                DayOfWeek.Wednesday => (WednesdayPartyName, WednesdayDomainName),
+                DayOfWeek.Thursday => (ThursdayPartyName, ThursdayDomainName),
+                DayOfWeek.Friday => (FridayPartyName, FridayDomainName),
+                DayOfWeek.Saturday => (SaturdayPartyName, SaturdayDomainName),
                 DayOfWeek.Sunday => (SundayPartyName, SundayDomainName),
                 _ => (PartyName, DomainName)
             };

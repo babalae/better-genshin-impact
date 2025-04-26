@@ -2,13 +2,13 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
+using System.Threading;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
