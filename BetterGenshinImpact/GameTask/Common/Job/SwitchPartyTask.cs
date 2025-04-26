@@ -195,7 +195,16 @@ public class SwitchPartyTask
     private async Task ConfirmParty(ImageRegion page, CancellationToken ct)
     {
         var r1 = Bv.ClickWhiteConfirmButton(page.DeriveCrop(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
-        await Delay(1000, ct);
+        var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
+        {
+            using var ra2 = CaptureToRectArea();
+            return ra2.Find(ElementAssets.Instance.PartyBtnDelete).IsEmpty();
+        }, ct, 10);
+        if (!partyChooseUiClosed)
+        {
+            throw new PartySetupFailedException("选择队伍失败，等待队伍切换超时！");
+        }
+        await Delay(200, ct);
         using var ra = CaptureToRectArea();
         var r2 = Bv.ClickWhiteConfirmButton(ra.DeriveCrop(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);
