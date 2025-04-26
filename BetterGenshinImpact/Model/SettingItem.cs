@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
-using System.Xml.Linq;
 
 namespace BetterGenshinImpact.Model;
 
@@ -45,8 +44,12 @@ public class SettingItem
                 };
                 if (Default != null)
                 {
-                    textBox.Text = Default.ToString()!;
+                    if (context is IDictionary<string, object?> ctx)
+                    {
+                        ctx.TryAdd(Name, Default.ToString());
+                    }
                 }
+
                 BindingOperations.SetBinding(textBox, TextBox.TextProperty, binding);
                 list.Add(textBox);
                 break;
@@ -64,10 +67,15 @@ public class SettingItem
                         comboBox.Items.Add(option);
                     }
                 }
+
                 if (Default != null)
                 {
-                    comboBox.SelectedItem = Default;
+                    if (context is IDictionary<string, object?> ctx)
+                    {
+                        ctx.TryAdd(Name, Default.ToString());
+                    }
                 }
+
                 BindingOperations.SetBinding(comboBox, Selector.SelectedItemProperty, binding);
                 list.Add(comboBox);
                 break;
@@ -80,8 +88,15 @@ public class SettingItem
                 };
                 if (Default != null)
                 {
-                    checkBox.IsChecked = (bool)Default;
+                    if (context is IDictionary<string, object?> ctx)
+                    {
+                        if (bool.TryParse(Default.ToString(), out var value))
+                        {
+                            ctx.TryAdd(Name, value);
+                        }
+                    }
                 }
+
                 BindingOperations.SetBinding(checkBox, ToggleButton.IsCheckedProperty, binding);
                 list.Add(checkBox);
                 break;
@@ -89,6 +104,7 @@ public class SettingItem
             default:
                 throw new Exception($"Unknown setting type: {Type}");
         }
+
         return list;
     }
 }
