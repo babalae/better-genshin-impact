@@ -40,7 +40,7 @@
                     VerticalAlignment="Center"
                     FontSize="16"
                     FontWeight="Bold"
-                    Text="任务列表" />
+                    Text="任务" />
                 <ui:Button
                     Grid.Column="1"
                     Grid.Row="0"
@@ -52,7 +52,7 @@
                            Grid.Row="0"
                            Margin="50,0,12,0"
                            Icon="{ui:SymbolIcon Save24}"
-                           Command="{Binding Save_actionConfigCommand}"
+                           Command="{Binding SaveActionConfigCommand}"
                            Content="保存排序" />
             </Grid>
                 <Grid
@@ -76,8 +76,8 @@
                             
                 <ui:ListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding SaveConfigCommandExecuteCommand}" Header="新增配置" />
-                            <MenuItem Command="{Binding OndeleteTaskCommand}"
+                            <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
+                            <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                                       CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
                                       Header="删除配置" />
                         </ContextMenu>

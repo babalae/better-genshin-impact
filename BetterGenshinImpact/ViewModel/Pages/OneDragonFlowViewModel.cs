@@ -138,13 +138,12 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
-    private async void SaveNewTask()
+    private async void AddNewTaskGroup()
     {
         ReadScriptGroup();
         var selectedGroupName = await OnStartMultiScriptGroupAsync();
         if (selectedGroupName == null)
         {
-            Toast.Warning("选择为空，请重新选择");
             return;
         }
 
@@ -399,7 +398,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 IsEnabled = kvp.Value
             };
             TaskList.Add(taskItem);
-            _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
+            // _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
         }
     }
 
@@ -453,15 +452,15 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void SaveConfigCommandExecute()
+    private void AddTaskGroup()
     {
-        SaveNewTask();
+        AddNewTaskGroup();
         SaveConfig();
         SelectedTask = null;
     }
 
     [RelayCommand]
-    private void Save_actionConfig()
+    private void SaveActionConfig()
     {
         SaveConfig();
         Toast.Information("排序已保存");
@@ -515,10 +514,6 @@ public partial class OneDragonFlowViewModel : ViewModel
             _logger.LogDebug(e, "保存配置时失败");
             Toast.Error("保存配置时失败");
         }
-    }
-
-    public void OnNavigatedFrom()
-    {
     }
 
     [RelayCommand]
@@ -580,7 +575,6 @@ public partial class OneDragonFlowViewModel : ViewModel
                     {
                         await task.Action();
                         await Task.Delay(1000);
-                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙结束");
                     });
                 }
                 else
@@ -612,9 +606,17 @@ public partial class OneDragonFlowViewModel : ViewModel
                         Toast.Error("执行配置组任务时失败");
                     }
                 }
+                // 如果任务已经被取消，中断所有任务
+                if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                {
+                    _logger.LogInformation("任务被取消，退出执行");
+                    Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                    return; // 后续的检查任务也不执行
+                }
             }
         }
 
+        // 检查和最终结束的任务
         await new TaskRunner().RunThreadAsync(async () =>
         {
             await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
@@ -644,7 +646,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OndeleteTask()
+    private void DeleteTaskGroup()
     {
         DeleteConfigDisplayTaskListFromConfig();
         SaveConfig();
