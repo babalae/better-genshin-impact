@@ -473,7 +473,7 @@ public class AutoFightTask : ISoloTask
             }
         }
 
-        if (_taskParam is { PickDropsAfterFightEnabled: true })
+        if (_taskParam is not { PickDropsAfterFightSeconds: 0 })
         {
             // 执行自动拾取掉落物的功能
             await new ScanPickTask().Start(ct);
@@ -542,6 +542,8 @@ public class AutoFightTask : ISoloTask
            )
         {
             Logger.LogInformation("识别到战斗结束");
+            //取消正在进行的换队
+            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
             return true;
         }
 
