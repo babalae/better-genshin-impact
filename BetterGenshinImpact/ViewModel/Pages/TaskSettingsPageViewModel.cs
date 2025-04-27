@@ -113,6 +113,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
+    
+    [ObservableProperty]
+    private OneDragonFlowViewModel? _oneDragonFlowViewModel;
 
     [ObservableProperty]
     private bool _switchAutoFishingEnabled;
@@ -152,6 +155,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
+        _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+    }
+  
+    
+    [RelayCommand]
+    private async Task OnSOneDragonFlow()
+    {   
+        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+        {
+            Toast.Warning("未设置任务!");
+            return;
+        }
+        OneDragonFlowViewModel.OnNavigatedTo();
+        await OneDragonFlowViewModel.OnOneKeyExecute();
     }
 
     [RelayCommand]

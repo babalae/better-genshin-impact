@@ -275,7 +275,7 @@ namespace BetterGenshinImpact.GameTask
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
                 {
-                    Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
+                    // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
                 
@@ -397,7 +397,11 @@ namespace BetterGenshinImpact.GameTask
                 var savePath = Global.Absolute($@"log\screenshot\{name}");
                 if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
                 {
-                    var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
+                    var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+                    var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
+                        (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
                     mat.Rectangle(rect, Scalar.White, -1);
                     Cv2.ImWrite(savePath, mat);
                 }

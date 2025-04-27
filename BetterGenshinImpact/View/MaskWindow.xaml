@@ -3,16 +3,20 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         Title="MaskWindow"
         Width="500"
         Height="800"
+        d:DesignWidth="1920"
+        d:DesignHeight="1080"
         AllowsTransparency="True"
         FontFamily="{DynamicResource TextThemeFontFamily}"
         ShowInTaskbar="False"
         Topmost="True"
-        WindowStyle="None">
+        WindowStyle="None"
+        mc:Ignorable="d">
     <Window.DataContext>
         <viewModel:MaskWindowViewModel />
     </Window.DataContext>
@@ -48,166 +52,189 @@
 
 
     <AdornerDecorator ClipToBounds="True">
-        <Canvas x:Name="WholeCanvas" SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="20*" />
+                <ColumnDefinition Width="23*" />
+                <ColumnDefinition Width="250*" />
+                <ColumnDefinition Width="1392*" />
+                <ColumnDefinition Width="178*" />
+                <ColumnDefinition Width="57*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1020*" />
+                <RowDefinition Height="33*" />
+                <RowDefinition Height="22*" />
+                <RowDefinition Height="5*" />
+            </Grid.RowDefinitions>
 
-            <!--<CheckBox x:Name="TestChk" Click="OnClick"
-                      Content=" select"
-                      Foreground="LightGray"
-                      FontFamily="UISegoe"
-                      FontSize="15"
-                      HorizontalAlignment="Left"
-                      VerticalAlignment="Top" Canvas.Left="27" Canvas.Top="409" />-->
+            <!--  日志和状态  -->
+            <Grid Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="5"
+                  HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                  Height="213" Width="477">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="25" />
+                    <RowDefinition Height="188" />
+                </Grid.RowDefinitions>
+                <ContentControl x:Name="LogTextBoxWrapper"
+                                Grid.Row="1"
+                                Width="477" Height="188"
+                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Style="{StaticResource OuterDraggableResizableItemStyle}">
+                    <ContentControl.Effect>
+                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
+                    </ContentControl.Effect>
+                    <RichTextBox x:Name="LogTextBox"
+                                 Padding="0,5,0,0"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Assets/Fonts/MiSans-Regular.ttf#MiSans"
+                                 FontSize="12"
+                                 Foreground="LightGray"
+                                 IsHitTestVisible="False"
+                                 VerticalScrollBarVisibility="Hidden"
+                                 Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}" FontSize="{Binding FontSize, ElementName=LogTextBox}">
+                            <Paragraph>
+                                <Run>[00:00:00 INF] 更好的原神</Run>
+                                <LineBreak/>
+                                <Run>[00:00:00 INF] 遮罩窗口已启动，游戏大小1920x1080，素材缩放1.00，DPI缩放1</Run>
+                                <LineBreak/>
+                                <Run>[00:00:01 INF] Never gonna give you up</Run>
+                                <LineBreak/>
+                                <Run>[00:00:01 INF] Never gonna let you down</Run>
+                            </Paragraph>
+                        </d:FlowDocument>
+                    </RichTextBox>
+                </ContentControl>
 
-            <ContentControl x:Name="LogTextBoxWrapper"
-                            Canvas.Left="-500"
-                            Canvas.Top="-500"
-                            Width="477"
-                            Height="188"
-                            Style="{StaticResource OuterDraggableResizableItemStyle}">
-                <RichTextBox x:Name="LogTextBox"
-                             Padding="0,5,0,0"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Assets/Fonts/MiSans-Regular.ttf#MiSans"
-                             FontSize="12"
-                             Foreground="LightGray"
-                             IsHitTestVisible="False"
-                             VerticalScrollBarVisibility="Hidden"
-                             Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            </ContentControl>
-
-
-            <ContentControl x:Name="StatusWrapper"
-                            Canvas.Left="-476"
-                            Canvas.Top="-476"
-                            Width="477"
-                            Height="24"
-                            Style="{StaticResource OuterDraggableResizableItemStyle}">
-                <ui:ListView ItemsSource="{Binding StatusList}" Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="Focusable" Value="False" />
-                            <Setter Property="IsHitTestVisible" Value="False" />
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                    <ListView.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ListView.ItemsPanel>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <StackPanel.Resources>
-                                    <Style TargetType="{x:Type TextBlock}">
-                                        <Setter Property="Margin" Value="0,0,8,0" />
-                                    </Style>
-                                </StackPanel.Resources>
-                                <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
-                                           FontSize="12"
-                                           Text="{Binding Name}">
-                                    <TextBlock.Style>
+                <ContentControl x:Name="StatusWrapper"
+                                Grid.Row="0"
+                                Width="477" Height="24"
+                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Style="{StaticResource OuterDraggableResizableItemStyle}">
+                    <ContentControl.Effect>
+                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" Color="LightGray" />
+                    </ContentControl.Effect>
+                    <ui:ListView ItemsSource="{Binding StatusList}"
+                                     Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                     d:ItemsSource="{d:SampleData}">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Focusable" Value="False" />
+                                <Setter Property="IsHitTestVisible" Value="False" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <StackPanel.Resources>
                                         <Style TargetType="{x:Type TextBlock}">
-                                            <Setter Property="Foreground" Value="LightGray" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsEnabled}" Value="True">
-                                                    <Setter Property="Foreground" Value="LightGreen" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
+                                            <Setter Property="Margin" Value="0,0,8,0" />
                                         </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ui:ListView>
-            </ContentControl>
-
-            <!--<ContentControl Width="230"
-                            Height="130"
-                            Canvas.Top="150"
-                            Canvas.Left="470"
-                            Style="{StaticResource DraggableResizableItemStyle}">
-                    <Rectangle Fill="White" IsHitTestVisible="False" Opacity="0.2" />
-                    <TextBlock Text="识别窗口" Foreground="White" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                </Grid>
-            </ContentControl>-->
-
-            <ItemsControl ItemsSource="{Binding MaskButtons, Mode=TwoWay}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas IsItemsHost="True" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style>
-                        <Setter Property="Canvas.Left" Value="{Binding X}" />
-                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Button Name="btn"
-                                Width="{Binding Width}"
-                                Height="{Binding Height}"
-                                Command="{Binding ClickAction}"
-                                Content="{Binding Name}"
-                                Opacity="0.5" />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                                    </StackPanel.Resources>
+                                    <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
+                                                   FontSize="12"
+                                                   Text="{Binding Name}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="{x:Type TextBlock}">
+                                                <Setter Property="Foreground" Value="LightGray" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="True">
+                                                        <Setter Property="Foreground" Value="LightGreen" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ui:ListView>
+                </ContentControl>
+            </Grid>
 
             <!--  uid遮盖  -->
-            <Rectangle Canvas.Left="{Binding UidCoverRect.X, Mode=OneWay}"
-                       Canvas.Top="{Binding UidCoverRect.Y, Mode=OneWay}"
-                       Width="{Binding UidCoverRect.Width, Mode=OneWay}"
-                       Height="{Binding UidCoverRect.Height, Mode=OneWay}"
+            <Rectangle Grid.Column="4"
+                       Grid.Row="2"
                        Fill="White"
                        IsHitTestVisible="False"
                        Visibility="{Binding Config.MaskWindowConfig.UidCoverEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <!--  方位  -->
-            <TextBlock Canvas.Left="{Binding EastPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding EastPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="东"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Canvas.Left="{Binding SouthPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding SouthPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="南"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Canvas.Left="{Binding WestPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding WestPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="西"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
-            <TextBlock Canvas.Left="{Binding NorthPoint.X, Mode=OneWay}"
-                       Canvas.Top="{Binding NorthPoint.Y, Mode=OneWay}"
-                       HorizontalAlignment="Center"
-                       FontSize="38"
-                       FontStretch="Medium"
-                       FontWeight="DemiBold"
-                       Foreground="White"
-                       Text="北"
-                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <Viewbox Grid.Column="2" Grid.Row="0"
+                     HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid Width="250" Height="250"
+                      Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.Effect>
+                        <DropShadowEffect Opacity="0.4" BlurRadius="8" ShadowDepth="0" />
+                    </Grid.Effect>
+                    <TextBlock Grid.Column="0"
+                               Grid.Row="2"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="-24,0,0,0"
+                               FontSize="34"
+                               FontStretch="Medium"
+                               FontWeight="DemiBold"
+                               Foreground="White"
+                               Text="东" />
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="4"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="0,0,0,-24"
+                               FontSize="34"
+                               FontStretch="Medium"
+                               FontWeight="DemiBold"
+                               Foreground="White"
+                               Text="南" />
+                    <TextBlock Grid.Column="4"
+                               Grid.Row="2"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="0,0,-24,0"
+                               FontSize="34"
+                               FontStretch="Medium"
+                               FontWeight="DemiBold"
+                               Foreground="White"
+                               Text="西" />
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="0"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="0,-24,0,0"
+                               FontSize="34"
+                               FontStretch="Medium"
+                               FontWeight="DemiBold"
+                               Foreground="White"
+                               Text="北" />
+                </Grid>
+            </Viewbox>
 
             <!--  展示FPS  -->
             <Border Margin="4,4,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
+                    Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="3"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
                     Background="#00000000"
                     CornerRadius="4"
                     Opacity="0.5"
@@ -219,7 +246,7 @@
                            Foreground="White"
                            Text="{Binding Fps}" />
             </Border>
-        </Canvas>
+        </Grid>
     </AdornerDecorator>
 
 </Window>

@@ -12,10 +12,12 @@ using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -116,6 +118,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 自动处理目录配置
         await Patch1();
 
+        // 删除多余特征点
+        Patch2();
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
@@ -211,6 +215,26 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     Application.Current.Shutdown();
                 }
             }
+        }
+    }
+
+    /**
+     * 0.45版本开始
+     * 地图特征的存储格式变化
+     */
+    private void Patch2()
+    {
+        List<string> files =[
+            Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.kp"),
+            Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.mat"),
+            Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.kp"),
+            Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.mat"),
+        ];
+        
+        // 循环删除
+        foreach (var file in files.Where(File.Exists))
+        {
+            File.Delete(file);
         }
     }
 

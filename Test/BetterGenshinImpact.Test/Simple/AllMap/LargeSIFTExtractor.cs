@@ -1,9 +1,11 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using OpenCvSharp;
 using OpenCvSharp.Features2D;
+using OpenCvSharp.Internal.Vectors;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 
@@ -17,8 +19,8 @@ public class LargeSiftExtractor
     private const int OVERLAP_SIZE = BLOCK_SIZE * 3;
 
     private readonly Feature2D _sift = SIFT.Create();
-    
-    
+
+
     public static void Gen1024()
     {
         var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5";
@@ -26,7 +28,8 @@ public class LargeSiftExtractor
         // 缩小 2048/1024 = 2
         var targetFilePath = $@"{rootPath}\1024_map.png";
         // opencv 缩小
-        var mainMap1024BlockMat = mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 2, mainMap2048BlockMat.Height / 2));
+        var mainMap1024BlockMat =
+            mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 2, mainMap2048BlockMat.Height / 2));
         // 转化为灰度图
         mainMap1024BlockMat.SaveImage(targetFilePath);
         Debug.WriteLine("done!");
@@ -39,22 +42,24 @@ public class LargeSiftExtractor
         // 缩小 2048/256 = 8
         var targetFilePath = $@"{rootPath}\mainMap256Block.png";
         // opencv 缩小
-        var mainMap256BlockMat = mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 8, mainMap2048BlockMat.Height / 8));
+        var mainMap256BlockMat =
+            mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 8, mainMap2048BlockMat.Height / 8));
         // 转化为灰度图
         mainMap256BlockMat = mainMap256BlockMat.CvtColor(ColorConversionCodes.BGR2GRAY);
         mainMap256BlockMat.SaveImage(targetFilePath);
-        FeatureMatcher featureMatcher = new( new Mat(targetFilePath, ImreadModes.Grayscale),
-            new FeatureStorage("mainMap256Block",  rootPath));
+        FeatureMatcher featureMatcher = new(new Mat(targetFilePath, ImreadModes.Grayscale),
+            new FeatureStorage("mainMap256Block", rootPath));
 
         Debug.WriteLine("done!");
     }
-    
+
     public static void GenLargeSift()
     {
         var extractor = new LargeSiftExtractor();
-        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5\map_55_2048.png", @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5\");
+        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5\map_55_2048.png",
+            @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5\");
     }
-    
+
     public void ExtractAndSaveSift(string imagePath, string outputPath)
     {
         Debug.WriteLine($"开始提取图像的SIFT特征: {imagePath}");
@@ -136,7 +141,7 @@ public class LargeSiftExtractor
             // 找出中心区域关键点的索引
             var centralKeypointIndices = new List<int>();
             var centralKeypoints = new List<KeyPoint>();
-            
+
             for (int i = 0; i < kps.Length; i++)
             {
                 if (kps[i].Pt.X >= BLOCK_SIZE && kps[i].Pt.X < BLOCK_SIZE * 2 &&
@@ -179,15 +184,38 @@ public class LargeSiftExtractor
         }
     }
 
+    // private void SaveFeaturesOld(List<KeyPoint> keypoints, Mat descriptors, string outputPath)
+    // {
+    //     Debug.WriteLine($"保存 {keypoints.Count} 个关键点和描述符到 {outputPath}");
+    //     using var fs1 = new FileStorage(Path.Combine(outputPath, "mainMap2048Block_SIFT.kp"), FileStorage.Modes.Write);
+    //     fs1.Write("kp", keypoints.ToArray());
+    //     fs1.Release();
+    //     using var fs2 = new FileStorage(Path.Combine(outputPath, "mainMap2048Block_SIFT.mat"), FileStorage.Modes.Write);
+    //     fs2.Write("desc", descriptors);
+    //     fs2.Release();
+    //     Debug.WriteLine("特征保存成功。");
+    // }
+
     private void SaveFeatures(List<KeyPoint> keypoints, Mat descriptors, string outputPath)
     {
         Debug.WriteLine($"保存 {keypoints.Count} 个关键点和描述符到 {outputPath}");
-        using var fs1 = new FileStorage(Path.Combine(outputPath, "mainMap2048Block_SIFT.kp"), FileStorage.Modes.Write);
-        fs1.Write("kp", keypoints.ToArray());
-        fs1.Release();
-        using var fs2 = new FileStorage(Path.Combine(outputPath, "mainMap2048Block_SIFT.mat"), FileStorage.Modes.Write);
-        fs2.Write("desc", descriptors);
-        fs2.Release();
+        SaveKeyPointArray2(keypoints.ToArray(), Path.Combine(outputPath, "mainMap2048Block_SIFT.kp.bin"));
+        SaveDescMat2(descriptors, Path.Combine(outputPath, "mainMap2048Block_SIFT.mat.png"));
         Debug.WriteLine("特征保存成功。");
+    }
+
+
+    public static void SaveDescMat2(Mat descMat, string outputPath)
+    {
+        descMat.SaveImage(outputPath);
+    }
+
+    public static unsafe void SaveKeyPointArray2(KeyPoint[] kpArray, string outputPath)
+    {
+        var kpVector = new VectorOfKeyPoint(kpArray);
+        var sizeOfKeyPoint = Marshal.SizeOf<KeyPoint>();
+        var kpSpan = new ReadOnlySpan<byte>((byte*)kpVector.ElemPtr, kpArray.Length * sizeOfKeyPoint);
+        using var fs = new FileStream(outputPath, FileMode.Create);
+        fs.Write(kpSpan);
     }
 }

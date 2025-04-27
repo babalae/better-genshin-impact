@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using OpenCvSharp;
 using System;
-using Point = System.Windows.Point;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -11,12 +10,6 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class MaskWindowConfig : ObservableObject
 {
-    /// <summary>
-    ///     控件是否锁定（拖拽移动等）
-    /// </summary>
-    [ObservableProperty]
-    private bool _controlLocked = true;
-
     /// <summary>
     ///     方位提示是否启用
     /// </summary>
@@ -28,12 +21,6 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _displayRecognitionResultsOnMask = true;
-
-    /// <summary>
-    ///     日志窗口位置与大小
-    /// </summary>
-    [ObservableProperty]
-    private Rect _logBoxLocation;
 
     /// <summary>
     ///     是否启用遮罩窗口
@@ -67,17 +54,8 @@ public partial class MaskWindowConfig : ObservableObject
     /// <summary>
     ///     1080p下UID遮盖的位置与大小
     /// </summary>
-    public Rect UidCoverRect { get; set; } = new(1690, 1052, 173, 22);
-
-    /// <summary>
-    ///     1080p下UID遮盖的位置与大小
-    /// </summary>
-    public Rect UidCoverRightBottomRect { get; set; } = new(1920 - 1690, 1080 - 1052, 173, 22);
-
-    public Point EastPoint { get; set; } = new(274, 109);
-    public Point SouthPoint { get; set; } = new(150, 233);
-    public Point WestPoint { get; set; } = new(32, 109);
-    public Point NorthPoint { get; set; } = new(150, -9);
+    [NonSerialized]
+    public static readonly Rect UidCoverRightBottomRect = new(1920 - 1685, 1080 - 1053, 178, 22);
 
     /// <summary>
     /// 显示FPS
