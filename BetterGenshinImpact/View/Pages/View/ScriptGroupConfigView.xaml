@@ -21,7 +21,7 @@
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
                              Icon="{ui:SymbolIcon Map24}"
-                             IsExpanded="True">
+                             IsExpanded="False">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -480,7 +480,7 @@
                     </Grid>
                     <Grid Margin="16">
 
-                        <ui:CardExpander Margin="0,0,0,12"
+                        <ui:CardExpander Margin="0,0,36,12"
                                          ContentPadding="0"
                                          IsExpanded="False">
 
@@ -645,31 +645,70 @@
                         </ui:CardExpander>
 
                     </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="自动拾取掉落物时长（秒）"
-                                      TextWrapping="Wrap"/>
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text=""
-                                      TextWrapping="Wrap"/>
-                        <ui:TextBox Grid.Row="0"
-                                    Grid.RowSpan="2"
-                                    Grid.Column="1"
-                                    MinWidth="120"
-                                    Text="{Binding Config.AutoFightConfig.PickDropsAfterFightSeconds}"/>
-                    </Grid>
+                    <Grid Margin="16,10,52,0">
+
+                    <ui:CardExpander Margin="0,0,0,12"
+                                     ContentPadding="0"
+                                     IsExpanded="False">
+
+                        <ui:CardExpander.Header>
+                            <Grid>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="自动拾取掉落物"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,36,0"
+                                                 IsChecked="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled}" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="自动拾取掉落物时长"
+                                              TextWrapping="Wrap"/>
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="单位为秒。0表示不自动拾取掉落物。"
+                                              TextWrapping="Wrap"/>
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            Margin="0,0,36,0"
+                                            MinWidth="120"
+                                            Text="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightSeconds}"/>
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+                </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -682,12 +721,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="战斗结束后，如果存在枫原万叶，则使用该角色捡材料"
+                                      Text="战斗结束后执行万叶长E"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text=""
+                                      Text="战斗结束后，如果存在枫原万叶，则战斗结束后执行万叶长E，使用该角色捡材料"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -718,6 +757,7 @@
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
                                     MinWidth="120"
+                                    Margin="0,0,36,0"
                                     Text="{Binding PathingConfig.AutoFightConfig.Timeout}" />
                     </Grid>
                 </StackPanel>
