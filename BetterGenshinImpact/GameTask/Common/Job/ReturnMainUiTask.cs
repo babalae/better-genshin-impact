@@ -18,7 +18,7 @@ public class ReturnMainUiTask
             return;
         }
 
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < 8; i++)
         {
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             await Delay(1000, ct);

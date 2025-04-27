@@ -65,20 +65,15 @@ public class SetTimeTask
             await Delay(1000, ct);
             GameCaptureRegion.GameRegion1080PPosClick(45, 715);
             await Delay(600, ct);
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            await _returnMainUiTask.Start(ct);
         }
         else
         {
             await Delay(3000, ct);
-
             // 出现X的时候代表时间切换成功
             await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
+            await _returnMainUiTask.Start(ct);
         }
-
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(2000, ct);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(2000, ct);
     }
 
     // 取消动画函数
