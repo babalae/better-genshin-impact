@@ -472,8 +472,7 @@ public class AutoFightTask : ISoloTask
                 }
             }
         }
-
-        if (_taskParam is not { PickDropsAfterFightSeconds: 0 })
+        if (_taskParam is { PickDropsAfterFightEnabled: true })
         {
             // 执行自动拾取掉落物的功能
             await new ScanPickTask().Start(ct);

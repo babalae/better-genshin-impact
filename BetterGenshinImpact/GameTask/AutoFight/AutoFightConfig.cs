@@ -78,7 +78,12 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>   
     [ObservableProperty]
     private FightFinishDetectConfig _finishDetectConfig = new();
-
+    
+    /// <summary>
+    /// 检测战斗结束，默认为每轮脚本后检查
+    /// </summary>
+    [ObservableProperty]
+    private bool _pickDropsAfterFightEnabled = false;
     /// <summary>
     /// 检测战斗结束，默认为每轮脚本后检查
     /// </summary>
