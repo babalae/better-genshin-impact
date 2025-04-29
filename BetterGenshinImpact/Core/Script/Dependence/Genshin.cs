@@ -159,9 +159,16 @@ public class Genshin
     /// </summary>
     /// <param name="partyName">队伍界面自定义的队伍名称</param>
     /// <returns></returns>
-    public async Task SwitchParty(string partyName)
+    public async Task<bool> SwitchParty(string partyName)
     {
-        await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
+        try
+        {
+            return await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
+        }
+        catch (Exception ex)
+        {
+            return false;//释放失败状态到JS，否则失败后会退出任务。
+        }
     }
 
 

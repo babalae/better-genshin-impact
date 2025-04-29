@@ -77,7 +77,7 @@ public class SwitchPartyTask
 
             if (!isOpened)
             {
-                Logger.LogWarning("未能打开队伍配置界面");
+                throw new PartySetupFailedException("未能打开队伍配置界面");
             }
         }
 
