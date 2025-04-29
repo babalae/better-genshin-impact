@@ -23,7 +23,7 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
     
     public static readonly ActionEnum Fishing = new("fishing", "钓鱼", ActionUseWaypointTypeEnum.Custom);
     public static readonly ActionEnum ExitAndRelogin = new("exit_and_relogin", "退出重新登录", ActionUseWaypointTypeEnum.Custom);
-
+    public static readonly ActionEnum SetTime = new("set_time", "设置时间", ActionUseWaypointTypeEnum.Custom);
 
     // 还有要加入的其他动作
     // 滚轮F
