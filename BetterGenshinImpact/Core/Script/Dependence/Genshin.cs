@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
@@ -165,7 +166,7 @@ public class Genshin
         {
             return await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
         }
-        catch (Exception ex)
+        catch (PartySetupFailedException ex)
         {
             return false;//释放失败状态到JS，否则失败后会退出任务。
         }
