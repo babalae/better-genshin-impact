@@ -519,7 +519,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        foreach (var task in TaskList)
+        var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
+        foreach (var task in taskListCopy)
         {
             task.InitAction(SelectedConfig);
         }
@@ -593,10 +594,12 @@ public partial class OneDragonFlowViewModel : ViewModel
                         {
                             _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
                             await Task.Delay(500);
+                            var snackbarService = new SnackbarService();
+                            var scriptService = new ScriptService();
+                            var viewModel = new ScriptControlViewModel(snackbarService, scriptService);
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
-                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
-                            IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(group.Projects, group.Name);
+                            viewModel.SelectedScriptGroup = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
+                            await viewModel.StartScriptGroupCommand.ExecuteAsync(viewModel.SelectedScriptGroup);
                             await Task.Delay(1000);
                         }
                     }
