@@ -333,7 +333,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             }
             catch (Exception e)
             {
-                Logger.LogWarning("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type), e.Message);
+                Logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type), e.Message);
             }
         }
 
