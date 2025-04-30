@@ -7,6 +7,18 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
 public class BgiOnnxModel
 {
+    /// <summary>
+    /// 模型使用的缓存文件的相对目录
+    /// </summary>
+    public static readonly string ModelCacheRelativePath = Path.Combine("Cache", Global.Version, "Model");
+    
+    private static readonly List<BgiOnnxModel> RegisteredModels = [];
+    public string Name { get; private init; }
+    public string ModelRelativePath { get; private init; }
+    public string ModalPath => Global.Absolute(ModelRelativePath);
+    public string CacheRelativePath { get; private init; }
+    public string CachePath => Global.Absolute(CacheRelativePath);
+
     #region 模型注册
 
     // 模型注册在这里，这样可以方便预先对模型预热和缓存管理等操作，避免冲突。
@@ -39,19 +51,6 @@ public class BgiOnnxModel
         Register("BgiAvatarSide", @"Assets\Model\Common\avatar_side_classify_sim.onnx");
 
     #endregion
-
-
-    private static readonly List<BgiOnnxModel> RegisteredModels = [];
-    public string Name { get; private init; }
-    public string ModelRelativePath { get; private init; }
-    public string ModalPath => Global.Absolute(ModelRelativePath);
-    public string CacheRelativePath { get; private init; }
-    public string CachePath => Global.Absolute(CacheRelativePath);
-
-    /// <summary>
-    /// 模型使用的缓存文件的相对目录
-    /// </summary>
-    public static readonly string ModelCacheRelativePath = Path.Combine("Cache", Global.Version, "Model");
 
     private BgiOnnxModel(string name, string modelRelativePath, string cacheRelativePath)
     {
