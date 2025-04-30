@@ -36,7 +36,6 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ViewModel
 {
-
     [ObservableProperty]
     private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
@@ -66,7 +65,7 @@ public partial class HomePageViewModel : ViewModel
     private IntPtr _hWnd;
 
     [ObservableProperty]
-    private string[] _inferenceDeviceTypes = BgiSessionOptionBuilder.InferenceDeviceTypes;
+    private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -84,7 +83,9 @@ public partial class HomePageViewModel : ViewModel
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
-            _inferenceDeviceTypes = _inferenceDeviceTypes.Where(x => x != "GPU_DirectML").ToArray();
+            _inferenceDeviceTypes = _inferenceDeviceTypes
+                .Where(x => x != InferenceDeviceType.GpuDirectMl)
+                .ToArray();
         }
 
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -157,10 +158,10 @@ public partial class HomePageViewModel : ViewModel
         }
     }
 
-    [RelayCommand]
-    private void OnInferenceDeviceTypeDropDownChanged(string value)
-    {
-    }
+    // [RelayCommand]
+    // private void OnInferenceDeviceTypeDropDownChanged(string value)
+    // {
+    // }
 
     [RelayCommand]
     private void OnStartCaptureTest()

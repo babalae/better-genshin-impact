@@ -1,21 +1,22 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.HomePage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-      xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
-      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      Title="HomePage"
-      d:DataContext="{d:DesignInstance Type=pages:HomePageViewModel}"
-      d:DesignHeight="850"
-      d:DesignWidth="800"
-      ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
-      ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      FontFamily="{StaticResource TextThemeFontFamily}"
-      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      mc:Ignorable="d">
+﻿<Page
+    FontFamily="{StaticResource TextThemeFontFamily}"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    Title="HomePage"
+    d:DataContext="{d:DesignInstance Type=pages:HomePageViewModel}"
+    d:DesignHeight="850"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+    ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    x:Class="BetterGenshinImpact.View.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
@@ -25,34 +26,38 @@
 
     <StackPanel Margin="42,16,42,12">
 
-        <Border Height="200" CornerRadius="8">
+        <Border CornerRadius="8" Height="200">
             <Grid>
                 <Border ClipToBounds="True" CornerRadius="8">
                     <Border.Background>
-                        <ImageBrush ImageSource="pack://application:,,,/Assets/Images/banner.jpg"
-                                    RenderOptions.BitmapScalingMode="HighQuality"
-                                    Stretch="UniformToFill" />
+                        <ImageBrush
+                            ImageSource="pack://application:,,,/Assets/Images/banner.jpg"
+                            RenderOptions.BitmapScalingMode="HighQuality"
+                            Stretch="UniformToFill" />
                     </Border.Background>
                     <Border.OpacityMask>
-                        <LinearGradientBrush StartPoint="0,1" EndPoint="1,0">
+                        <LinearGradientBrush EndPoint="1,0" StartPoint="0,1">
                             <GradientStop Color="Transparent" />
-                            <GradientStop Offset="0.7" Color="White" />
+                            <GradientStop Color="White" Offset="0.7" />
                         </LinearGradientBrush>
                     </Border.OpacityMask>
                 </Border>
                 <Grid>
-                    <StackPanel Margin="52,0,0,26"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Bottom"
-                                Background="Transparent">
+                    <StackPanel
+                        Background="Transparent"
+                        HorizontalAlignment="Left"
+                        Margin="52,0,0,26"
+                        VerticalAlignment="Bottom">
                         <ui:TextBlock FontTypography="Title" Text="BetterGI" />
-                        <ui:TextBlock FontTypography="Subtitle"
-                                      Opacity="0.8"
-                                      Text="更好的原神，免费且开源" />
+                        <ui:TextBlock
+                            FontTypography="Subtitle"
+                            Opacity="0.8"
+                            Text="更好的原神，免费且开源" />
                         <ui:TextBlock FontTypography="BodyStrong" Opacity="0.6">
-                            <Hyperlink Command="{Binding GoToWikiUrlCommand}"
-                                       Foreground="#B7FFFFFF"
-                                       TextDecorations="None">
+                            <Hyperlink
+                                Command="{Binding GoToWikiUrlCommand}"
+                                Foreground="#B7FFFFFF"
+                                TextDecorations="None">
                                 <Run>点击查看文档与教程</Run>
                                 <Run FontFamily="{StaticResource FluentSystemIcons}" FontWeight="Light">&#xEE7A;</Run>
                             </Hyperlink>
@@ -64,9 +69,10 @@
         </Border>
 
         <!--  更好的原神，启动！  -->
-        <ui:CardExpander Margin="0,12,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon Play24}">
+        <ui:CardExpander
+            ContentPadding="0"
+            Icon="{ui:SymbolIcon Play24}"
+            Margin="0,12,0,12">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -77,33 +83,35 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="BetterGI 截图器，启动！"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        截图器启动后才能使用各项功能，
-                        <Run FontWeight="Bold" TextDecorations="Underline">
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="BetterGI 截图器，启动！"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        TextWrapping="Wrap">
+                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
                             点击展开启动相关配置
                         </Run>
-                        。
-                    </ui:TextBlock>
-                    <StackPanel Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                Margin="0,0,24,0"
-                                Orientation="Horizontal">
-                        <controls:TwoStateButton DisableCommand="{Binding StopTriggerCommand}"
-                                                 DisableContent="停止"
-                                                 DisableIcon="{ui:SymbolIcon Dismiss24}"
-                                                 EnableCommand="{Binding StartTriggerCommand}"
-                                                 EnableContent="启动"
-                                                 EnableIcon="{ui:SymbolIcon Play24}"
-                                                 IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
+                        。</ui:TextBlock>
+                    <StackPanel
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,24,0"
+                        Orientation="Horizontal">
+                        <controls:TwoStateButton
+                            DisableCommand="{Binding StopTriggerCommand}"
+                            DisableContent="停止"
+                            DisableIcon="{ui:SymbolIcon Dismiss24}"
+                            EnableCommand="{Binding StartTriggerCommand}"
+                            EnableContent="启动"
+                            EnableIcon="{ui:SymbolIcon Play24}"
+                            IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
                         <!--  <ui:Button Command="{Binding StartTriggerCommand}"  -->
                         <!--  Content="启动"  -->
                         <!--  Icon="{ui:SymbolIcon Play24}"  -->
@@ -116,7 +124,7 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -126,24 +134,27 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="截图模式"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="推荐选择 BitBlt(稳定)，问题较少"
-                                  TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Margin="0,0,36,0"
-                              ItemsSource="{Binding ModeNames, Mode=OneWay}"
-                              DisplayMemberPath="DisplayName"
-                              SelectedValuePath="EnumName"
-                              SelectedValue="{Binding Config.CaptureMode, Mode=TwoWay}">
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="截图模式"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="推荐选择 BitBlt(稳定)，问题较少"
+                        TextWrapping="Wrap" />
+                    <ComboBox
+                        DisplayMemberPath="DisplayName"
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        ItemsSource="{Binding ModeNames, Mode=OneWay}"
+                        Margin="0,0,36,0"
+                        SelectedValue="{Binding Config.CaptureMode, Mode=TwoWay}"
+                        SelectedValuePath="EnumName">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="SelectionChanged">
                                 <b:InvokeCommandAction Command="{Binding CaptureModeDropDownChangedCommand}" CommandParameter="GeniusInvocation" />
@@ -151,7 +162,7 @@
                         </b:Interaction.Triggers>
                     </ComboBox>
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -161,22 +172,25 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="触发器间隔（毫秒）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认50ms，普通用户不建议调整这个值，具体调整方式见文档"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="触发器间隔（毫秒）"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="默认50ms，普通用户不建议调整这个值，具体调整方式见文档"
+                        TextWrapping="Wrap" />
+                    <ui:TextBox
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,36,0"
+                        MinWidth="90"
+                        Text="{Binding Config.TriggerInterval, Mode=TwoWay}" />
                 </Grid>
                 <!--<Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -204,7 +218,7 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.WgcUseBitmapCache, Mode=TwoWay}" />
                 </Grid>-->
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -214,30 +228,33 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="切换AI推理设备"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="切换后需要重启程序生效"
-                                  TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Margin="0,0,36,0"
-                              ItemsSource="{Binding InferenceDeviceTypes}"
-                              SelectedItem="{Binding Config.InferenceDevice, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="SelectionChanged">
-                                <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="切换AI推理设备"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="切换后需要重启程序生效"
+                        TextWrapping="Wrap" />
+                    <ComboBox
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        ItemsSource="{Binding InferenceDeviceTypes}"
+                        Margin="0,0,36,0"
+                        SelectedItem="{Binding Config.HardwareAccelerationConfig.InferenceDevice, Mode=TwoWay}">
+                        <!-- <b:Interaction.Triggers> -->
+                        <!--     <b:EventTrigger EventName="SelectionChanged"> -->
+                        <!--         <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" /> -->
+                        <!--     </b:EventTrigger> -->
+                        <!-- </b:Interaction.Triggers> -->
                     </ComboBox>
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -247,24 +264,27 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="测试图像捕获"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="测试功能，测试几种截图模式的效果"
-                                  TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding StartCaptureTestCommand}"
-                               Content="测试图像捕获" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="测试图像捕获"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="测试功能，测试几种截图模式的效果"
+                        TextWrapping="Wrap" />
+                    <ui:Button
+                        Command="{Binding StartCaptureTestCommand}"
+                        Content="测试图像捕获"
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,36,0" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -274,24 +294,27 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="手动选择窗口（无法找到原神窗口时使用）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神已经启动的情况下，点击“启动”仍旧提示无法找到窗口时使用"
-                                  TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding ManualPickWindowCommand}"
-                               Content="选择捕获窗口" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="手动选择窗口（无法找到原神窗口时使用）"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="原神已经启动的情况下，点击“启动”仍旧提示无法找到窗口时使用"
+                        TextWrapping="Wrap" />
+                    <ui:Button
+                        Command="{Binding ManualPickWindowCommand}"
+                        Content="选择捕获窗口"
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,36,0" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -302,35 +325,40 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="自动关闭 Windows11 窗口化优化以支持 BitBlt"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改设置后重启游戏生效"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,10,0"
-                                     IsChecked="{Binding Config.AutoFixWin11BitBlt, Mode=TwoWay}" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="2"
-                               Margin="0,0,36,0"
-                               Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
-                               Content="手动设置" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="自动关闭 Windows11 窗口化优化以支持 BitBlt"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="修改设置后重启游戏生效"
+                        TextWrapping="Wrap" />
+                    <ui:ToggleSwitch
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        IsChecked="{Binding Config.AutoFixWin11BitBlt, Mode=TwoWay}"
+                        Margin="0,0,10,0" />
+                    <ui:Button
+                        Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
+                        Content="手动设置"
+                        Grid.Column="2"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,36,0" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
 
         <!--  原神，启动！  -->
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         Icon="{ui:SymbolIcon LinkSquare24}">
+        <ui:CardExpander
+            ContentPadding="0"
+            Icon="{ui:SymbolIcon LinkSquare24}"
+            Margin="0,0,0,12">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -341,25 +369,28 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="同时启动原神"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动截图器时，如果原神未启动，则自动启动原神。"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,24,0"
-                                     IsChecked="{Binding Config.GenshinStartConfig.LinkedStartEnabled, Mode=TwoWay}" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="同时启动原神"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="启动截图器时，如果原神未启动，则自动启动原神。"
+                        TextWrapping="Wrap" />
+                    <ui:ToggleSwitch
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        IsChecked="{Binding Config.GenshinStartConfig.LinkedStartEnabled, Mode=TwoWay}"
+                        Margin="0,0,24,0" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -369,24 +400,27 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="原神安装位置（不支持云原神的联动启动）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding Config.GenshinStartConfig.InstallPath, Mode=TwoWay}"
-                                  TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding SelectInstallPathCommand}"
-                               Content="浏览" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="原神安装位置（不支持云原神的联动启动）"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="{Binding Config.GenshinStartConfig.InstallPath, Mode=TwoWay}"
+                        TextWrapping="Wrap" />
+                    <ui:Button
+                        Command="{Binding SelectInstallPathCommand}"
+                        Content="浏览"
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,36,0" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -397,40 +431,44 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  TextWrapping="Wrap">
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        TextWrapping="Wrap">
                         <ui:TextBlock.Inlines>
                             <Run Text="启动参数" />
-                            <ui:HyperlinkButton Grid.Row="1"
-                                                Margin="0,0,0,0"
-                                                Padding="0"
-                                                Command="{Binding OpenGameCommandLineDocumentCommand}"
-                                                Cursor="Hand">
+                            <ui:HyperlinkButton
+                                Command="{Binding OpenGameCommandLineDocumentCommand}"
+                                Cursor="Hand"
+                                Grid.Row="1"
+                                Margin="0,0,0,0"
+                                Padding="0">
                                 <ui:HyperlinkButton.Content>
                                     <TextBlock FontSize="11" Text="打开文档" />
                                 </ui:HyperlinkButton.Content>
                             </ui:HyperlinkButton>
                         </ui:TextBlock.Inlines>
                     </ui:TextBlock>
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你不知道什么是启动参数请不要填写。"
-                                  TextWrapping="Wrap"/>
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="如果你不知道什么是启动参数请不要填写。"
+                        TextWrapping="Wrap" />
                     <!--  常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080  -->
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                PlaceholderText="示例：-screen-width 1920"
-                                Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
-                                TextWrapping="Wrap" />
+                    <ui:TextBox
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Margin="0,0,36,0"
+                        MaxWidth="800"
+                        MinWidth="300"
+                        PlaceholderText="示例：-screen-width 1920"
+                        Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
+                        TextWrapping="Wrap" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -440,23 +478,26 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="自动进入游戏"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.GenshinStartConfig.AutoEnterGameEnabled, Mode=TwoWay}" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="自动进入游戏"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="原神启动后自动进入游戏（自动开门、领取月卡）"
+                        TextWrapping="Wrap" />
+                    <ui:ToggleSwitch
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        IsChecked="{Binding Config.GenshinStartConfig.AutoEnterGameEnabled, Mode=TwoWay}"
+                        Margin="0,0,36,0" />
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Separator BorderThickness="0,1,0,0" Margin="-18,0" />
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -466,21 +507,24 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="使用Starward记录游戏时间"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动游戏后Starward将同步记录时间"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.GenshinStartConfig.RecordGameTimeEnabled, Mode=TwoWay}" />
+                    <ui:TextBlock
+                        FontTypography="Body"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Text="使用Starward记录游戏时间"
+                        TextWrapping="Wrap" />
+                    <ui:TextBlock
+                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                        Grid.Column="0"
+                        Grid.Row="1"
+                        Text="启动游戏后Starward将同步记录时间"
+                        TextWrapping="Wrap" />
+                    <ui:ToggleSwitch
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        IsChecked="{Binding Config.GenshinStartConfig.RecordGameTimeEnabled, Mode=TwoWay}"
+                        Margin="0,0,36,0" />
                 </Grid>
 
 

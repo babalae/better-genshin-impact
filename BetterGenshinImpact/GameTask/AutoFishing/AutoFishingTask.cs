@@ -43,7 +43,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly AutoFishingTaskParam param;
 
         private readonly BgiYoloPredictor _predictor =
-            BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Fish\bgi_fish.onnx");
+            BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish);
 
         public AutoFishingTask(AutoFishingTaskParam param)
         {

@@ -62,7 +62,7 @@ public class AutoDomainTask : ISoloTask
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
-        _predictor = BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Domain\bgi_tree.onnx");
+        _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 

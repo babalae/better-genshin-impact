@@ -38,8 +38,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public bool IsExclusive { get; set; }
 
         private Blackboard blackboard;
-        
-        private readonly  BgiYoloPredictor _predictor = BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Fish\bgi_fish.onnx");
+
+        private readonly BgiYoloPredictor _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish);
 
         /// <summary>
         /// 辣条（误）
@@ -48,21 +48,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public AutoFishingTrigger()
         {
-            AutoFishingTaskParam autoFishingTaskParam = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
+            AutoFishingTaskParam autoFishingTaskParam =
+                AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
             IOcrService ocrService = OcrFactory.Paddle;
-            IStringLocalizer<AutoFishingImageRecognition> stringLocalizer = App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
-          this.blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
+            IStringLocalizer<AutoFishingImageRecognition> stringLocalizer =
+                App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ??
+                throw new NullReferenceException(nameof(stringLocalizer));
+            this.blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                    .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
-                    .UntilSuccess("拉条循环")
-                        .Sequence("拉条")
-                            .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, false, input, ocrService, cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: stringLocalizer))
-                            .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
-                            .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
-                        .End()
-                    .End()
+                .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
+                .UntilSuccess("拉条循环")
+                .Sequence("拉条")
+                .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, false, input, ocrService,
+                    cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: stringLocalizer))
+                .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
+                .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
+                .End()
+                .End()
                 .End()
                 .Build();
         }
@@ -198,7 +202,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// 1. 观察周围环境，判断鱼塘位置，视角对上鱼塘位置中心
         /// 2. 根据第一步的观察结果，提前选择鱼饵
         /// </summary>
-
         [Obsolete]
         private (int, int) MoveMouseToFish(Rect rect1, Rect rect2)
         {
@@ -359,6 +362,5 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         //{
         //    ClearDraw();
         //}
-
     }
 }

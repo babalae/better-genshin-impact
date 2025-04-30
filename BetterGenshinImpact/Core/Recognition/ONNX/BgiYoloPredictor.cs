@@ -10,12 +10,13 @@ using System.Linq;
 using System.Text.Json;
 using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
+using Microsoft.ML.OnnxRuntime;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
 public class BgiYoloPredictor : IDisposable
 {
-    private readonly string _modelRelativePath;
+    private readonly BgiOnnxModel _model;
 
 
     private readonly Lazy<YoloPredictor> _lazyPredictor;
@@ -23,14 +24,16 @@ public class BgiYoloPredictor : IDisposable
     /// <summary>
     /// 使用 BgiOnnxFactory 创建这个类的实例
     /// </summary>
-    /// <param name="modelRelativePath">模型相对路径</param>
-    protected internal BgiYoloPredictor(string modelRelativePath)
+    /// <param name="onnxModel">模型</param>
+    /// <param name="modelPath">实际要加载的模型文件的绝对路径，在使用模型缓存的场景下可能有差别</param>
+    /// <param name="sessionOptions">sessionOptions</param>
+    protected internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions)
     {
-        _modelRelativePath = modelRelativePath;
-        _lazyPredictor = new Lazy<YoloPredictor>(() => new YoloPredictor(_modelRelativePath,
+        _model = onnxModel;
+        _lazyPredictor = new Lazy<YoloPredictor>(() => new YoloPredictor(modelPath,
             new YoloPredictorOptions
             {
-                SessionOptions = BgiSessionOptionBuilder.Instance.BuildWithRelativePath(_modelRelativePath)
+                SessionOptions = sessionOptions
             }));
     }
 
@@ -66,9 +69,9 @@ public class BgiYoloPredictor : IDisposable
 
         var list = result
             .Select(box => new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height))
-            .Select(rect => region.ToRectDrawable(rect, _modelRelativePath)).ToList();
+            .Select(rect => region.ToRectDrawable(rect, _model.Name)).ToList();
 
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList(_modelRelativePath, list);
+        VisionContext.Instance().DrawContent.PutOrRemoveRectList(_model.Name, list);
 
         return dict;
     }

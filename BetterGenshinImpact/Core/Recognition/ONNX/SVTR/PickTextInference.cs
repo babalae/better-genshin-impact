@@ -23,17 +23,14 @@ public class PickTextInference : ITextInference
 
     public PickTextInference()
     {
-        var relativePath = @"Assets\Model\Yap\model_training.onnx";
-
-        if (!BgiOnnxFactory.IsModelExist(relativePath)) throw new FileNotFoundException("Yap模型文件不存在", relativePath);
-
-        _session = BgiOnnxFactory.CreateInferenceSession(relativePath);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(BgiOnnxModel.YapModelTraining);
 
         var wordJsonPath = Global.Absolute(@"Assets\Model\Yap\index_2_word.json");
         if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);
 
         var json = File.ReadAllText(wordJsonPath);
-        _wordDictionary = JsonSerializer.Deserialize<Dictionary<int, string>>(json) ?? throw new Exception("index_2_word.json deserialize failed");
+        _wordDictionary = JsonSerializer.Deserialize<Dictionary<int, string>>(json) ??
+                          throw new Exception("index_2_word.json deserialize failed");
     }
 
     public string Inference(Mat mat)

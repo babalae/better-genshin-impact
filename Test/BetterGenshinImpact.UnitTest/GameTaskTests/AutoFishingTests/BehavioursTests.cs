@@ -24,7 +24,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             get
             {
-                return LazyInitializer.EnsureInitialized(ref predictor,()=>BgiOnnxFactory.CreateYoloPredictor(@"Assets\Model\Fish\bgi_fish.onnx"));
+                return LazyInitializer.EnsureInitialized(ref predictor,()=>BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish));
             }
         }
     }
