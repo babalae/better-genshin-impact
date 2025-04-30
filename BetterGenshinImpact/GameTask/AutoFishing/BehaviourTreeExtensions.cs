@@ -176,7 +176,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var mat = imageRegion.SrcMat;
             if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
             {
-                var rect = TaskContext.Instance().Config.MaskWindowConfig.UidCoverRect;
+                var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+                var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
+                    (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
+                    (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
+                    (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
                 mat.Rectangle(rect, Scalar.White, -1);
             }
             new Task(() =>

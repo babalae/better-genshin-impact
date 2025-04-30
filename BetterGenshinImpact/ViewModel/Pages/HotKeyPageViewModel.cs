@@ -357,6 +357,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
+            "启动/停止一条龙",
+            nameof(Config.HotKeyConfig.OnedragonHotkey),
+            Config.HotKeyConfig.OnedragonHotkey,
+            Config.HotKeyConfig.OnedragonHotkeyType,
+            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SOneDragonFlowCommand); }
+        ));
+        
+        soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动七圣召唤",
             nameof(Config.HotKeyConfig.AutoGeniusInvokationHotkey),
             Config.HotKeyConfig.AutoGeniusInvokationHotkey,

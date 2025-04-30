@@ -36,29 +36,52 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock
                     Grid.Column="0"
+                    Grid.Row="0"
                     VerticalAlignment="Center"
                     FontSize="16"
                     FontWeight="Bold"
-                    Text="任务列表" />
+                    Text="任务" />
                 <ui:Button
                     Grid.Column="1"
-                    Margin="0,0,8,0"
+                    Grid.Row="0"
+                    Margin="0,0,15,0"
                     Appearance="Primary"
                     Icon="{ui:SymbolIcon Play24}"
                     Command="{Binding OneKeyExecuteCommand}" />
-                <ui:Button
-                    Grid.Column="2"
-                    Margin="0,0,14,0"
-                    Icon="{ui:SymbolIcon Add24}"
-                    Command="{Binding AddTaskCommand}" />
+                <ui:Button Grid.Column="1"
+                           Grid.Row="0"
+                           Margin="50,0,12,0"
+                           Icon="{ui:SymbolIcon Save24}"
+                           Command="{Binding SaveActionConfigCommand}"
+                           Content="保存排序" />
             </Grid>
-
+                <Grid
+                    DockPanel.Dock="Top"
+                    Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="220" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Separator Grid.Row="0" Margin="0,1.5,0,0" BorderThickness="0,1,0,0" />
+                </Grid>
             <ui:ListView dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"
                          dd:DragDrop.UseDefaultDragAdorner="True"
                          ItemsSource="{Binding TaskList}"
                          SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
                          SelectionMode="Single">
+                            
+                <ui:ListView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
+                            <MenuItem Command="{Binding DeleteTaskGroupCommand}"
+                                      CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                                      Header="删除配置" />
+                        </ContextMenu>
+                    </ui:ListView.ContextMenu>
                 <ui:ListView.ItemTemplate>
                     <DataTemplate>
                         <ui:Card Margin="0,2,14,2">
@@ -81,9 +104,9 @@
                                 <TextBlock Grid.Column="2"
                                            VerticalAlignment="Center"
                                            IsHitTestVisible="False"
-                                           Text="{Binding Name}" />
-                                <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
-                            </Grid>
+                                           Text="{Binding Name}" Width="100"/>
+                               <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                </Grid>
                         </ui:Card>
                     </DataTemplate>
                 </ui:ListView.ItemTemplate>
@@ -362,7 +385,7 @@
                                                  Grid.Column="1"
                                                  Margin="0,0,20,0"
                                                  IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}" />
-                            </Grid>
+                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
                             <Grid Margin="16">
@@ -373,22 +396,22 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Text="周一/周四"
+                                              Text="周一"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding SelectedConfig.MondayThursdayPartyName, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.MondayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
-                                            PlaceholderText="填写队伍名称" />
+                                            PlaceholderText="填写队伍名称 " />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.MondayThursdayDomainName, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -399,14 +422,14 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="周二/周五"
+                                              Text="周二"
                                               TextWrapping="Wrap"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding SelectedConfig.TuesdayFridayPartyName, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.TuesdayPartyName, Mode=TwoWay}"
                                             PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
@@ -414,7 +437,7 @@
                                           Width="140"
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.TuesdayFridayDomainName, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -425,14 +448,14 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="周三/周六"
+                                              Text="周三"
                                               TextWrapping="Wrap"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
                                             MinWidth="140"
                                             Margin="0,0,12,0"
-                                            Text="{Binding SelectedConfig.WednesdaySaturdayPartyName, Mode=TwoWay}"
+                                            Text="{Binding SelectedConfig.WednesdayPartyName, Mode=TwoWay}"
                                             PlaceholderText="填写队伍名称"
                                             TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
@@ -440,7 +463,90 @@
                                           Width="140"
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.WednesdaySaturdayDomainName, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}" />
+                                
+                            </Grid>
+                            <Grid Margin="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="周四"
+                                              TextWrapping="Wrap"
+                                              VerticalAlignment="Center" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
+                                            Text="{Binding SelectedConfig.ThursdayPartyName, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
+                                            TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}" />
+                                
+                            </Grid>
+                            <Grid Margin="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="周五"
+                                              TextWrapping="Wrap"
+                                              VerticalAlignment="Center" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
+                                            Text="{Binding SelectedConfig.FridayPartyName, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
+                                            TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}" />
+                                
+                                
+                            </Grid>
+                            <Grid Margin="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="周六"
+                                              TextWrapping="Wrap"
+                                              VerticalAlignment="Center" />
+                                <ui:TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            MinWidth="140"
+                                            Margin="0,0,12,0"
+                                            Text="{Binding SelectedConfig.SaturdayPartyName, Mode=TwoWay}"
+                                            PlaceholderText="填写队伍名称"
+                                            TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="2"
+                                          Width="140"
+                                          Margin="0,0,36,0"
+                                          ItemsSource="{Binding DomainNameList}"
+                                          SelectedItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}" />
+                                
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>

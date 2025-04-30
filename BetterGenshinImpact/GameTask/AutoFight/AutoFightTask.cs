@@ -18,6 +18,8 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
+using Vanara.PInvoke;
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -470,7 +472,6 @@ public class AutoFightTask : ISoloTask
                 }
             }
         }
-
         if (_taskParam is { PickDropsAfterFightEnabled: true })
         {
             // 执行自动拾取掉落物的功能
@@ -540,6 +541,8 @@ public class AutoFightTask : ISoloTask
            )
         {
             Logger.LogInformation("识别到战斗结束");
+            //取消正在进行的换队
+            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
             return true;
         }
 

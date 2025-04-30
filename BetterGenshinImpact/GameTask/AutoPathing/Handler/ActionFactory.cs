@@ -27,6 +27,7 @@ public class ActionFactory
                 "mining" => new MiningHandler(),
                 "fishing" => new FishingHandler(),
                 "exit_and_relogin" => new ExitAndReloginHandler(),
+                "set_time" => new SetTimeHandler(),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });

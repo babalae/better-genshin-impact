@@ -10,6 +10,9 @@ public partial class OtherConfig : ObservableObject
     //调度器任务和部分独立任务，失去焦点，自动激活游戏窗口
     [ObservableProperty]
     private bool _restoreFocusOnLostEnabled = false;
+    //自动领取派遣任务城市
+    [ObservableProperty]
+    private string _autoFetchDispatchAdventurersGuildCountry = "无";
 
     /// <summary>
     /// 游戏语言名称
