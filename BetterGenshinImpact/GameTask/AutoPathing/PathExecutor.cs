@@ -178,7 +178,6 @@ public class PathExecutor
                         else
                         {
                             await BeforeMoveToTarget(waypoint);
-
                             // Path不用走得很近，Target需要接近，但都需要先移动到对应位置
                             if (waypoint.Type == WaypointType.Orientation.Code)
                             {
@@ -186,7 +185,7 @@ public class PathExecutor
                                 // 考虑到方位点大概率是作为执行action的最后一个点，所以放在此处处理，不和传送点一样单独处理
                                 await FaceTo(waypoint);
                             }
-                            else
+                            else if(waypoint.Action != ActionEnum.UpDownGrabLeaf.Code)
                             {
                                 await MoveTo(waypoint);
                             }
@@ -257,10 +256,11 @@ public class PathExecutor
     private bool IsTargetPoint(WaypointForTrack waypoint)
     {
         // 方位点不需要接近
-        if (waypoint.Type == WaypointType.Orientation.Code)
+        if (waypoint.Type == WaypointType.Orientation.Code || waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
             return false;
         }
+        
 
         var action = ActionEnum.GetEnumByCode(waypoint.Action);
         if (action is not null && action.UseWaypointTypeEnum != ActionUseWaypointTypeEnum.Custom)
@@ -645,7 +645,7 @@ public class PathExecutor
         await Delay(500, ct); // 多等一会
     }
 
-    private async Task FaceTo(WaypointForTrack waypoint)
+    public async Task FaceTo(WaypointForTrack waypoint)
     {
         var screen = CaptureToRectArea();
         var position = await GetPosition(screen);
@@ -948,9 +948,13 @@ public class PathExecutor
     {
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+            var screen = CaptureToRectArea();
+            var position = await GetPosition(screen);
+            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
             await handler.RunAsync(ct, waypoint);
-            await Delay(800, ct);
         }
         else if (waypoint.Action == ActionEnum.LogOutput.Code)
         {
