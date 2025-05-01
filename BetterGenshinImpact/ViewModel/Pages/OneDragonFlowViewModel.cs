@@ -519,7 +519,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        foreach (var task in TaskList)
+        var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
+        foreach (var task in taskListCopy)
         {
             task.InitAction(SelectedConfig);
         }
@@ -542,7 +543,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             SelectedConfig.TaskEnabledList.Remove(scriptGroup.Name);
         }
 
-        if (SelectedConfig == null || TaskList.Count(t => t.IsEnabled) == 0)
+        if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
         {
             Toast.Warning("请先选择任务");
             _logger.LogInformation("没有配置,退出执行!");
@@ -564,7 +565,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
-        foreach (var task in TaskList)
+        foreach (var task in taskListCopy)
         {
             if (task is { IsEnabled: true, Action: not null })
             {
