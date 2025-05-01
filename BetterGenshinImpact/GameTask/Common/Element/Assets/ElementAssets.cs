@@ -56,6 +56,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject SereniteapotPageClose;
     public RecognitionObject SereniteapotShopNumberBtn;
     public RecognitionObject SereniteapotExpBookRo;
+    public RecognitionObject SereniteapotExpBookSmallRo;
     public RecognitionObject AYuanByeRo;
     public RecognitionObject AYuanHeyRo;
 
@@ -406,6 +407,14 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_hey.png"),
             RegionOfInterest = new Rect(CaptureRect.Width/2, 0, CaptureRect.Width/2, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteapotExpBookSmallRo = new RecognitionObject
+        {
+            Name = "SereniteapotExpBookSmallRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book_small.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
 

@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact;
 
 namespace GameTask.Common.Job;
 
@@ -24,6 +25,7 @@ internal class GoToSereniteaPotTask
 {
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private readonly QuickTeleportAssets _teleportAssets;
+    private readonly ILogger<GoToSereniteaPotTask> _logger = App.GetLogger<GoToSereniteaPotTask>();
 
     public string Name => "领取尘歌壶奖励";
 
@@ -169,49 +171,28 @@ internal class GoToSereniteaPotTask
             //Simulation.SendInput.Mouse.MoveMouseTo(numberBtn.X + numberBtn.Width / 2, numberBtn.Y + numberBtn.Height / 2);
             await Delay(300, ct);
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(900, ct);
+            await Delay(300, ct);
             Simulation.SendInput.Mouse.MoveMouseBy(numberBtn.Width * 15, 0);
-            await Delay(900, ct);
+            await Delay(300, ct);
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
        
         await Delay(300, ct);
         ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
-        await Delay(900, ct);
+        await Delay(500, ct);
         ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
-        await Delay(900, ct);
-    }
-
-    private async Task<bool> waitRo(RecognitionObject ro, CancellationToken ct)
-    {
-        for(int i = 0; i < 100 && !ct.IsCancellationRequested; i++) {
-            if (CaptureToRectArea().Find(ro).IsExist())
-            {
-                return true;
-            }
-            await Delay(100,ct);
-        }
-        return false;
     }
 
     private async Task GetReward(CancellationToken ct)
     {
         var ra = CaptureToRectArea();
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract);
-        await Delay(2000, ct);
-        for(int i = 0; i < 10; i++)
-        {
-            ra.Click();
-            await Delay(500, ct);
-            if (CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist())
-            {
-                break;
-            }
-        }
+        //await Delay(2000, ct);
+        await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist(), ct);
 
         // 领取奖励
         //ra = CaptureToRectArea();
-        if(await waitRo(ElementAssets.Instance.AYuanBelieveLevelRo, ct))
+        if(await NewRetry.WaitForAction(()=> CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist(), ct,50, 100))
         {
             await Delay(900, ct);
             CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo, a => a.Click());
@@ -229,25 +210,28 @@ internal class GoToSereniteaPotTask
         }
 
         // 商店购买
-        if (await waitRo(ElementAssets.Instance.AYuanShopRo, ct))
+        if (await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo).IsExist(), ct,50, 100))
         {
             CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo, a => a.Click());
             await Delay(500, ct);
+            // 购买的物品清单
             var buy = new List<RecognitionObject>()
                 {
                 ElementAssets.Instance.AYuanExpBottleBigRo,
                 ElementAssets.Instance.AYuanExpBottleSmallRo,
-                ElementAssets.Instance.SereniteapotExpBookRo
+                ElementAssets.Instance.SereniteapotExpBookRo,
+                ElementAssets.Instance.SereniteapotExpBookSmallRo,
                 };
+            // 直接购买最大数量
             foreach (var item in buy)
             {
                 var itemRo = CaptureToRectArea().Find(item);
                 if (itemRo.IsExist())
                 {
                     itemRo.Click();
-                    await Delay(400, ct);
+                    await Delay(200, ct);
                     await BuyMaxNumber(ct);
-                    await Delay(300, ct);
+                    await Delay(500, ct);
                 }
             }
         }
@@ -258,24 +242,19 @@ internal class GoToSereniteaPotTask
         await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist(), ct, retryTimes: 20, delayMs: 100);
         await Delay(300, ct);
 
-        //Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_W);
-        //await Delay(500, ct);
-        //TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract);
         CaptureToRectArea().Find(ElementAssets.Instance.AYuanByeRo, a => a.Click());
         await Delay(300, ct);
 
-
-        for(int i = 0; i < 10 && !ct.IsCancellationRequested; i++)
-        {
+        await NewRetry.WaitForAction(() => {
             ra = CaptureToRectArea();
-            ra.Click();
-            await Delay(300, ct);
-            if (Bv.IsInMainUi(ra))
+            if (!Bv.IsInMainUi(ra))
             {
-                break;
+                ra.Click();
+                return false;
             }
-
-        }
+            else 
+                return true;
+        }, ct);
        
 
     }
