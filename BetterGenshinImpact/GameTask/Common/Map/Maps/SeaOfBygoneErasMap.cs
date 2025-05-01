@@ -4,25 +4,25 @@ using OpenCvSharp;
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 
 /// <summary>
-/// 层岩巨渊
+/// 旧日之海
 /// </summary>
-public class TheChasmMap : IndependentBaseMap
+public class SeaOfBygoneErasMap : IndependentBaseMap
 {
-    #region 每次地图扩大都要更新的参数(层岩巨渊无需更新)
+    #region 地图参数
 
     static readonly int GameMapRows = 3; // 游戏坐标下地图块的行数
     static readonly int GameMapCols = 3; // 游戏坐标下地图块的列数
     static readonly int GameMapUpRows = 1; // 游戏坐标下 左上角离地图原点的行数(注意原点在块的右下角)
     static readonly int GameMapLeftCols = 1; // 游戏坐标下 左上角离地图原点的列数(注意原点在块的右下角)
 
-    #endregion 每次地图扩大都要更新的参数(层岩巨渊无需更新)
+    #endregion 地图参数
 
-    static readonly int TheChasmMapImageBlockWidth = 1024;
+    static readonly int SeaOfBygoneErasMapImageBlockWidth = 1024;
 
-    public TheChasmMap() : base(type: IndependentMapTypes.TheChasm,
-        mapSize: new Size(GameMapCols * TheChasmMapImageBlockWidth, GameMapRows * TheChasmMapImageBlockWidth),
-        mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TheChasmMapImageBlockWidth, (GameMapUpRows + 1) * TheChasmMapImageBlockWidth),
-        mapImageBlockWidth: TheChasmMapImageBlockWidth,
+    public SeaOfBygoneErasMap() : base(type: IndependentMapTypes.SeaOfBygoneEras,
+        mapSize: new Size(GameMapCols * SeaOfBygoneErasMapImageBlockWidth, GameMapRows * SeaOfBygoneErasMapImageBlockWidth),
+        mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * SeaOfBygoneErasMapImageBlockWidth, (GameMapUpRows + 1) * SeaOfBygoneErasMapImageBlockWidth),
+        mapImageBlockWidth: SeaOfBygoneErasMapImageBlockWidth,
         splitRow: GameMapRows * 2,
         splitCol: GameMapCols * 2)
     {
