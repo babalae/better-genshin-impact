@@ -30,12 +30,12 @@ public abstract class IndependentBaseMap : IIndependentMap
     /// <summary>
     /// 特征点拆分行数
     /// </summary>
-    public int SplitRow;
+    public readonly int SplitRow;
 
     /// <summary>
     /// 特征点拆分列数
     /// </summary>
-    public int SplitCol;
+    public readonly int SplitCol;
 
     /// <summary>
     /// 特征地图图像的块大小 / 1024 的值，用于坐标系转换
@@ -93,7 +93,12 @@ public abstract class IndependentBaseMap : IIndependentMap
     {
         foreach (var layer in Layers)
         {
-            var (keyPoints, descriptors) = layer.ChooseBlocks(prevX, prevY);
+            var (keyPoints, descriptors) = (layer.TrainKeyPoints, layer.TrainDescriptors);
+            if (SplitRow > 0 || SplitCol > 0)
+            {
+                (keyPoints, descriptors) = layer.ChooseBlocks(prevX, prevY);
+            }
+
             var result = SiftMatcher.Match(keyPoints, descriptors, greyMiniMapMat);
             if (result != default)
             {

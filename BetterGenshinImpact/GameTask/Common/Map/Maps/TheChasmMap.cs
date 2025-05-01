@@ -23,8 +23,8 @@ public class TheChasmMap : IndependentBaseMap
         mapSize: new Size(GameMapCols * TheChasmMapImageBlockWidth, GameMapRows * TheChasmMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TheChasmMapImageBlockWidth, (GameMapUpRows + 1) * TheChasmMapImageBlockWidth),
         mapImageBlockWidth: TheChasmMapImageBlockWidth,
-        splitRow: GameMapRows * 2,
-        splitCol: GameMapCols * 2)
+        splitRow: 0,
+        splitCol: 0)
     {
         Layers = BaseMapLayer.LoadLayers(this);
     }

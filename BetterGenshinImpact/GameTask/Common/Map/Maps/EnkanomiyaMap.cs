@@ -23,8 +23,8 @@ public class EnkanomiyaMap : IndependentBaseMap
         mapSize: new Size(GameMapCols * EnkanomiyaMapImageBlockWidth, GameMapRows * EnkanomiyaMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * EnkanomiyaMapImageBlockWidth, (GameMapUpRows + 1) * EnkanomiyaMapImageBlockWidth),
         mapImageBlockWidth: EnkanomiyaMapImageBlockWidth,
-        splitRow: GameMapRows * 2,
-        splitCol: GameMapCols * 2)
+        splitRow: 0,
+        splitCol: 0)
     {
         Layers = BaseMapLayer.LoadLayers(this);
     }

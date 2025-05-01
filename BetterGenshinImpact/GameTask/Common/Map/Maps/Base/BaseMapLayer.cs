@@ -96,8 +96,11 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
             speedTimer.Record("特征描述");
 
             // 切割特征数据
-            layer.SplitBlocks = KeyPointFeatureBlockHelper.SplitFeatures(baseMap.MapSize, baseMap.SplitRow, baseMap.SplitCol, layer.TrainKeyPoints, layer.TrainDescriptors);
-            speedTimer.Record("切割特征点");
+            if (baseMap.SplitRow > 0 || baseMap.SplitCol > 0)
+            {
+                layer.SplitBlocks = KeyPointFeatureBlockHelper.SplitFeatures(baseMap.MapSize, baseMap.SplitRow, baseMap.SplitCol, layer.TrainKeyPoints, layer.TrainDescriptors);
+                speedTimer.Record("切割特征点");
+            }
             speedTimer.DebugPrint();
 
             layers.Add(layer);
@@ -124,6 +127,11 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
     /// <returns></returns>
     public (KeyPoint[], Mat) ChooseBlocks(float prevX, float prevY)
     {
+        if (baseMap.SplitRow <= 0 || baseMap.SplitCol <= 0 || SplitBlocks.Length == 0)
+        {
+            return (TrainKeyPoints, TrainDescriptors);
+        }
+
         var (cellRow, cellCol) = KeyPointFeatureBlockHelper.GetCellIndex(baseMap.MapSize, baseMap.SplitRow, baseMap.SplitCol, prevX, prevY);
         Debug.WriteLine($"当前坐标({prevX},{prevY})在特征块({cellRow},{cellCol})中");
         if (_lastMergedBlock == null || _lastMergedBlock.MergedCenterCellRow != cellRow || _lastMergedBlock.MergedCenterCellCol != cellCol)
