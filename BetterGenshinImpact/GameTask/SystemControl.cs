@@ -17,6 +17,11 @@ public class SystemControl
 
     public static async Task<nint> StartFromLocalAsync(string path)
     {
+        if (!File.Exists(path))
+        {
+           throw new Exception($"原神启动路径 {path} 不存在，请前往 启动——同时启动原神——原神安装路径 重新进行配置！");
+        }
+        
         // 直接exe启动
         Process.Start(new ProcessStartInfo(path)
         {
