@@ -3,7 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
+namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 /// <summary>
 /// 每层的特征

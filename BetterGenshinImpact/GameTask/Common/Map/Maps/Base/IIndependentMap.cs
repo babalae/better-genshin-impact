@@ -1,6 +1,6 @@
 ﻿using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
+namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 public interface IIndependentMap
 {
@@ -34,4 +34,24 @@ public interface IIndependentMap
     /// <param name="prevY"></param>
     /// <returns></returns>
     Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY);
+
+    #region 坐标系转换
+
+    /// <summary>
+    /// 地图图像坐标系 -> 原神游戏坐标系
+    /// </summary>
+    /// <param name="imageCoordinates"></param>
+    /// <returns></returns>
+    Point2f ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates);
+
+    /// <summary>
+    /// 原神游戏坐标系 -> 地图图像坐标系
+    /// </summary>
+    /// <param name="genshinMapCoordinates"></param>
+    /// <returns></returns>
+    Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates);
+
+    (float x, float y) ConvertGenshinMapCoordinatesToImageCoordinates(float c, float a);
+
+    #endregion
 }

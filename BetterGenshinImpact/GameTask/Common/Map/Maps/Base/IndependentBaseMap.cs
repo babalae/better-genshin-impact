@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
+namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 /// <summary>
 /// 独立地图
@@ -17,6 +17,17 @@ public abstract class IndependentBaseMap : IIndependentMap
     public Size MapSize { get; set; }
 
     /// <summary>
+    /// 地图原点位置 (在图像坐标系中)
+    /// </summary>
+    public Point2f MapOriginInImageCoordinate { get; set; }
+
+    /// <summary>
+    /// 特征地图图像的块大小
+    /// 2048 或者 1024
+    /// </summary>
+    public Point2f MapImageBlockWidth { get; set; }
+
+    /// <summary>
     /// 特征点拆分行数
     /// </summary>
     public int SplitRow;
@@ -25,13 +36,20 @@ public abstract class IndependentBaseMap : IIndependentMap
     /// 特征点拆分列数
     /// </summary>
     public int SplitCol;
-    
-    
+
+    /// <summary>
+    /// 特征地图图像的块大小 / 1024 的值，用于坐标系转换
+    /// </summary>
+    private readonly float _mapImageBlockWidthScale = 0;
+
+
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected IndependentBaseMap(string name, Size mapSize, int splitRow, int splitCol)
+    protected IndependentBaseMap(string name, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
     {
         Name = name;
         MapSize = mapSize;
+        MapOriginInImageCoordinate = mapOriginInImageCoordinate;
+        _mapImageBlockWidthScale = mapImageBlockWidth / 1024f;
         SplitRow = splitRow;
         SplitCol = splitCol;
     }
@@ -85,4 +103,27 @@ public abstract class IndependentBaseMap : IIndependentMap
 
         return default;
     }
+
+    #region 坐标系转换
+
+    public Point2f ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates)
+    {
+        // 原神坐标系是 1024 级别的，当图像坐标系不是 1024 级别的时候要做转换
+        return new Point2f((MapOriginInImageCoordinate.X - imageCoordinates.X) / _mapImageBlockWidthScale,
+            (MapOriginInImageCoordinate.Y - imageCoordinates.Y) / _mapImageBlockWidthScale);
+    }
+
+    public Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates)
+    {
+        return new Point2f((MapOriginInImageCoordinate.X - genshinMapCoordinates.X) * _mapImageBlockWidthScale,
+            (MapOriginInImageCoordinate.Y - genshinMapCoordinates.Y) * _mapImageBlockWidthScale);
+    }
+
+    public (float x, float y) ConvertGenshinMapCoordinatesToImageCoordinates(float c, float a)
+    {
+        return new((MapOriginInImageCoordinate.X - c) * _mapImageBlockWidthScale,
+            (MapOriginInImageCoordinate.Y - a) * _mapImageBlockWidthScale);
+    }
+
+    #endregion
 }
