@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using BetterGenshinImpact.Core.Recognition.OCR;
 using OpenCvSharp;
 using OpenCvSharp.Features2D;
 using OpenCvSharp.XFeatures2D;

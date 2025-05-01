@@ -176,5 +176,72 @@ public static class Feature2DExtensions
         return transformedCenter[0];
     }
 
+    public static Point2f[] KnnMatchCorners(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
+        DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
+    {
+        SpeedTimer speedTimer = new();
+        using var queryDescriptors = new Mat();
+#pragma warning disable CS8604 // 引用类型参数可能为 null。
+        feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
+#pragma warning restore CS8604 // 引用类型参数可能为 null。
+        speedTimer.Record("模板生成KeyPoint");
+        var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
+        speedTimer.Record("FlannMatch");
+
+        // 应用比例测试来过滤匹配点
+        List<DMatch> goodMatches = [];
+        foreach (var match in matches)
+        {
+            if (match.Length == 2 && match[0].Distance < 0.75 * match[1].Distance)
+            {
+                goodMatches.Add(match[0]);
+            }
+        }
+
+        if (goodMatches.Count < 7)
+        {
+            return [];
+        }
+
+        // 获取匹配点的坐标
+        var srcPts = goodMatches.Select(m => queryKeyPoints[m.QueryIdx].Pt).ToArray();
+        var dstPts = goodMatches.Select(m => trainKeyPoints[m.TrainIdx].Pt).ToArray();
+
+        speedTimer.Record("GetGoodMatchPoints");
+
+        // 使用RANSAC找到变换矩阵
+        var mask = new Mat();
+        var hMat = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
+        if (hMat.Empty())
+        {
+            return [];
+        }
+
+        speedTimer.Record("FindHomography");
+
+        // 返回四个角点
+        var objCorners = new Point2f[4];
+        objCorners[0] = new Point2f(0, 0);
+        objCorners[1] = new Point2f(0, queryMat.Rows);
+        objCorners[2] = new Point2f(queryMat.Cols, queryMat.Rows);
+        objCorners[3] = new Point2f(queryMat.Cols, 0);
+
+        var sceneCorners = Cv2.PerspectiveTransform(objCorners, hMat);
+        speedTimer.Record("PerspectiveTransform");
+        speedTimer.DebugPrint();
+        return sceneCorners;
+    }
+
+    public static Rect KnnMatchRect(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null)
+    {
+        var corners = KnnMatchCorners(feature2D, trainKeyPoints, trainDescriptors, queryMat, queryMatMask);
+        if (corners.Length == 0)
+        {
+            return default;
+        }
+
+        return Cv2.BoundingRect(corners);
+    }
+
     #endregion Knn匹配
 }
