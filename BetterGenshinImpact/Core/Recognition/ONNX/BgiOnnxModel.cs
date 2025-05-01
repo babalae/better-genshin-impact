@@ -11,7 +11,7 @@ public class BgiOnnxModel
     /// 模型使用的缓存文件的相对目录
     /// </summary>
     public static readonly string ModelCacheRelativePath = Path.Combine("Cache", Global.Version, "Model");
-    
+
     private static readonly List<BgiOnnxModel> RegisteredModels = [];
     public string Name { get; private init; }
     public string ModelRelativePath { get; private init; }
@@ -49,6 +49,36 @@ public class BgiOnnxModel
     /// </summary>
     public static readonly BgiOnnxModel BgiAvatarSide =
         Register("BgiAvatarSide", @"Assets\Model\Common\avatar_side_classify_sim.onnx");
+
+    /// <summary>
+    /// paddleOCR V4 简体中文 检测模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrChDet =
+        Register("ch_PP-OCRv4_det", @"Assets\Model\PaddleOCR\ch_PP-OCRv4_det\slim_model.onnx");
+
+    /// <summary>
+    /// paddleOCR V4 简体中文 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrChRec =
+        Register("ch_PP-OCRv4_rec", @"Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\slim_model.onnx");
+
+    /// <summary>
+    /// paddleOCR V3 繁体中文 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrChtDet =
+        Register("chinese_cht_PP-OCRv3_rec", @"Assets\Model\PaddleOCR\chinese_cht_PP-OCRv3_rec_infer\slim_model.onnx");
+
+    /// <summary>
+    /// paddleOCR V3 英文 检测模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrEnDet =
+        Register("en_PP-OCRv3_det", @"Assets\Model\PaddleOCR\en_PP-OCRv3_det_infer\slim_model.onnx");
+
+    /// <summary>
+    /// paddleOCR V3 拉丁文 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrLatinRec =
+        Register("latin_PP-OCRv3_rec", @"Assets\Model\PaddleOCR\latin_PP-OCRv3_rec_infer\slim_model.onnx");
 
     #endregion
 

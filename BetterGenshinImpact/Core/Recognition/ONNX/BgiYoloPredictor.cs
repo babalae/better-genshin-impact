@@ -1,5 +1,4 @@
 ﻿using System;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System.Collections.Generic;
