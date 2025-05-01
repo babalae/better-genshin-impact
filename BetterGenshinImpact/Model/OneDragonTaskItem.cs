@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
+using GameTask.Common.Job;
 
 namespace BetterGenshinImpact.Model;
 
@@ -114,6 +115,9 @@ public partial class OneDragonTaskItem : ObservableObject
                     await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry, CancellationContext.Instance.Cts.Token, config.DailyRewardPartyName);
                     await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
+                break;
+            case "领取尘歌壶奖励":
+                Action = async () => { await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token); };
                 break;
             default:
                 Action = () => Task.CompletedTask;

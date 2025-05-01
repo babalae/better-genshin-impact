@@ -1,0 +1,305 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
+using BetterGenshinImpact.GameTask.Common.Job;
+using Microsoft.Extensions.Logging;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.Common;
+
+namespace GameTask.Common.Job;
+
+internal class GoToSereniteaPotTask
+{
+    private readonly ReturnMainUiTask _returnMainUiTask = new();
+    private readonly QuickTeleportAssets _teleportAssets;
+
+    public string Name => "领取尘歌壶奖励";
+
+    private bool fail = false;
+
+    public GoToSereniteaPotTask()
+    {
+        _teleportAssets = QuickTeleportAssets.Instance;
+    }
+
+    public async Task Start( CancellationToken ct)
+    {
+        try
+        {
+            await DoOnce(ct);
+        }
+        catch (Exception e)
+        {
+            Logger.LogDebug(e, "领取尘歌壶奖励异常");
+            Logger.LogError("领取尘歌壶奖励异常: {Msg}", e.Message);
+        }
+
+    }
+
+    private async Task IntoSereniteaPot(CancellationToken ct) {
+        // 退出到主页面
+        await _returnMainUiTask.Start(ct);
+
+        await Delay(200, ct);
+
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
+        await Delay(900, ct);
+        // 进入 壶
+        var ra = CaptureToRectArea();
+        var click_w = ra.Width * 0.958;
+        var click_h = ra.Height * 0.944;
+        ra.ClickTo(click_w, click_h);
+        await Delay(500, ct);
+
+        ra = CaptureToRectArea();
+        var SereniteaPotIcon = ra.Find(ElementAssets.Instance.SereniteaPotRo);
+        if (SereniteaPotIcon.IsExist())
+        {
+            SereniteaPotIcon.Click();
+            await Delay(500, ct);
+        }
+        // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是yi在尘歌壶了
+        ra = CaptureToRectArea();
+        for (int i = 0; i < 3; i++)
+        {
+            var SereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
+            if (!SereniteaPotHomeIcon.IsExist())
+            {
+                await new Genshin().SetBigMapZoomLevel(3.0);
+            }
+            else
+            {
+                SereniteaPotHomeIcon.Click(); await Delay(500, ct);
+                break;
+            }
+        }
+        ra = CaptureToRectArea();
+        var teleportBtn = ra.Find(_teleportAssets.TeleportButtonRo);
+        if (!teleportBtn.IsExist())
+        {
+            var TeleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
+            if (TeleportSereniteaPotHome.IsExist()) { TeleportSereniteaPotHome.Click(); }
+        }
+        ra = CaptureToRectArea();
+        teleportBtn = ra.Find(_teleportAssets.TeleportButtonRo);
+        if (teleportBtn.IsExist()) { teleportBtn.Click(); }
+        for(int i = 0; i < 20; i++) { 
+            await Delay(1000,ct);
+            if (ct.IsCancellationRequested || Bv.IsInMainUi(CaptureToRectArea()))
+            {
+                break;
+            }
+        }
+    }
+
+
+    // 寻找阿圆并靠近
+    private async Task FindAYuan(CancellationToken ct)
+    {
+        CancellationTokenSource treeCts = new();
+        ct.Register(treeCts.Cancel);
+        // 中键回正视角
+        Simulation.SendInput.Mouse.MiddleButtonClick();
+        Sleep(900, ct);
+        int continuousCount = 0;
+        while (!ct.IsCancellationRequested)
+        {
+            var ra = CaptureToRectArea();
+            var ayuanIcon = ra.Find(ElementAssets.Instance.AYuanIconRo);
+            if (!ayuanIcon.IsExist()) { Simulation.SendInput.Mouse.MoveMouseBy(ra.Width/3, 0); continuousCount++; }
+            else
+            {
+                var middle = ra.Width / 2;
+                var ayuanMiddle = ayuanIcon.X + ayuanIcon.Width / 2;
+                if(Math.Abs(middle - ayuanMiddle) > ayuanIcon.Width / 4)
+                {
+                    Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle)/2, 0);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            await Delay(300, ct);
+            if (continuousCount > 24) {
+                fail = true;
+                return;
+            }
+        }
+
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward,KeyType.KeyDown); // 向前走
+        var findDialog = new Task(async () =>
+        {
+            while (!treeCts.IsCancellationRequested) {
+                var aYuanDialog = CaptureToRectArea().Find(ElementAssets.Instance.AYuanHeyRo);
+                if (aYuanDialog.IsExist())
+                {
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    treeCts.Cancel();
+                    break;
+                    //TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract);
+                }
+                await Delay(50, treeCts.Token);
+            }
+        }, treeCts.Token);
+        findDialog.Start();
+        await Task.WhenAll(findDialog);
+        
+    }
+
+    private async Task BuyMaxNumber(CancellationToken ct)
+    {
+        var ra = CaptureToRectArea();
+        var numberBtn = ra.Find(ElementAssets.Instance.SereniteapotShopNumberBtn);
+        if (numberBtn.IsExist())
+        {
+            numberBtn.Move();
+            //Simulation.SendInput.Mouse.MoveMouseTo(numberBtn.X + numberBtn.Width / 2, numberBtn.Y + numberBtn.Height / 2);
+            await Delay(300, ct);
+            Simulation.SendInput.Mouse.LeftButtonDown();
+            await Delay(900, ct);
+            Simulation.SendInput.Mouse.MoveMouseBy(numberBtn.Width * 15, 0);
+            await Delay(900, ct);
+            Simulation.SendInput.Mouse.LeftButtonUp();
+        }
+       
+        await Delay(300, ct);
+        ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
+        await Delay(900, ct);
+        ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
+        await Delay(900, ct);
+    }
+
+    private async Task<bool> waitRo(RecognitionObject ro, CancellationToken ct)
+    {
+        for(int i = 0; i < 100 && !ct.IsCancellationRequested; i++) {
+            if (CaptureToRectArea().Find(ro).IsExist())
+            {
+                return true;
+            }
+            await Delay(100,ct);
+        }
+        return false;
+    }
+
+    private async Task GetReward(CancellationToken ct)
+    {
+        var ra = CaptureToRectArea();
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract);
+        await Delay(2000, ct);
+        for(int i = 0; i < 10; i++)
+        {
+            ra.Click();
+            await Delay(500, ct);
+            if (CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist())
+            {
+                break;
+            }
+        }
+
+        // 领取奖励
+        //ra = CaptureToRectArea();
+        if(await waitRo(ElementAssets.Instance.AYuanBelieveLevelRo, ct))
+        {
+            await Delay(900, ct);
+            CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo, a => a.Click());
+            await Delay(1000, ct);
+            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+            await Delay(500, ct);
+            CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click());
+            await Delay(500, ct);
+            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotMoneyRo, a => a.Click());
+            await Delay(500, ct);
+            CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click());
+            await Delay(500, ct);
+            CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).Click();
+            await Delay(3000, ct);
+        }
+
+        // 商店购买
+        if (await waitRo(ElementAssets.Instance.AYuanShopRo, ct))
+        {
+            CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo, a => a.Click());
+            await Delay(500, ct);
+            var buy = new List<RecognitionObject>()
+                {
+                ElementAssets.Instance.AYuanExpBottleBigRo,
+                ElementAssets.Instance.AYuanExpBottleSmallRo,
+                ElementAssets.Instance.SereniteapotExpBookRo
+                };
+            foreach (var item in buy)
+            {
+                var itemRo = CaptureToRectArea().Find(item);
+                if (itemRo.IsExist())
+                {
+                    itemRo.Click();
+                    await Delay(400, ct);
+                    await BuyMaxNumber(ct);
+                    await Delay(300, ct);
+                }
+            }
+        }
+        await Delay(2000, ct);
+
+        CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo, a => a.Click());
+        await Delay(500, ct);
+        await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist(), ct, retryTimes: 20, delayMs: 100);
+        await Delay(300, ct);
+
+        //Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_W);
+        //await Delay(500, ct);
+        //TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract);
+        CaptureToRectArea().Find(ElementAssets.Instance.AYuanByeRo, a => a.Click());
+        await Delay(300, ct);
+
+
+        for(int i = 0; i < 10 && !ct.IsCancellationRequested; i++)
+        {
+            ra = CaptureToRectArea();
+            ra.Click();
+            await Delay(300, ct);
+            if (Bv.IsInMainUi(ra))
+            {
+                break;
+            }
+
+        }
+       
+
+    }
+
+
+    public async Task DoOnce(CancellationToken ct)
+    {
+        /**
+         * 1. 首先退出到主页面
+         * 2. 进入尘歌壶
+         * 3. 旋转视角寻找 阿圆
+         * 4. 贴近阿圆到能对话的地方，并对话
+         * 5. 领取奖励
+         */
+        // 进入尘歌壶
+        await IntoSereniteaPot(ct);
+        // 寻找阿圆并靠近
+        await FindAYuan(ct);
+        // 领取奖励
+        if (fail) { 
+            return;
+        }
+        await Delay(500, ct);
+        await GetReward(ct);
+
+    }
+}
