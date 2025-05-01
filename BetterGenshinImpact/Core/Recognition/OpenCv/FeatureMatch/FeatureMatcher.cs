@@ -234,7 +234,6 @@ public class FeatureMatcher
             // 3. 获取变换后的中心点
             var trainCenterPoint = transformedCenterPoints[0];
             speedTimer.Record("PerspectiveTransform");
-            speedTimer.DebugPrint();
             return trainCenterPoint;
         }
 

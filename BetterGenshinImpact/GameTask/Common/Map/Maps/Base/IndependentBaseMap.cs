@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 /// </summary>
 public abstract class IndependentBaseMap : IIndependentMap
 {
-    public string Name { get; set; }
+    public IndependentMapTypes Type { get; set; }
 
     /// <summary>
     /// 地图大小
@@ -44,9 +44,9 @@ public abstract class IndependentBaseMap : IIndependentMap
 
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected IndependentBaseMap(string name, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
+    protected IndependentBaseMap(IndependentMapTypes type, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
     {
-        Name = name;
+        Type = type;
         MapSize = mapSize;
         MapOriginInImageCoordinate = mapOriginInImageCoordinate;
         _mapImageBlockWidthScale = mapImageBlockWidth / 1024f;
