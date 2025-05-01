@@ -637,9 +637,9 @@ public class TpTask(CancellationToken ct)
 
     private async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
     {
-
-        int[] stepX = GenerateSteps(pixelDeltaX, steps);
-        int[] stepY = GenerateSteps(pixelDeltaY, steps);
+        double dpi = TaskContext.Instance().DpiScale;
+        int[] stepX = GenerateSteps((int)(pixelDeltaX / dpi), steps);
+        int[] stepY = GenerateSteps((int)(pixelDeltaY / dpi), steps);
 
         // 随机起点以避免地图移动无效
         GameCaptureRegion.GameRegionMove((rect, _) =>

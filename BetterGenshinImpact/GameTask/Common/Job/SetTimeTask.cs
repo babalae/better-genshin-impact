@@ -20,12 +20,12 @@ public class SetTimeTask
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    public async Task Start(int hour, int minute, CancellationToken ct)
+    public async Task Start(int hour, int minute, CancellationToken ct, bool skipTimeAdjustmentAnimation = false)
     {
         try
         {
             await _returnMainUiTask.Start(ct);
-            await DoOnce(hour, minute, ct);
+            await DoOnce(hour, minute, ct, skipTimeAdjustmentAnimation);
         }
         catch (Exception e)
         {
@@ -38,7 +38,7 @@ public class SetTimeTask
         }
     }
 
-    public async Task DoOnce(int hour, int minute, CancellationToken ct)
+    public async Task DoOnce(int hour, int minute, CancellationToken ct, bool skipTimeAdjustmentAnimation = false)
     {
         // 半径
         const int r1 = 30;
@@ -56,15 +56,33 @@ public class SetTimeTask
         await SetTime(h, m, r1, r2, r3, stepDuration, ct);
         await Delay(1000, ct);
         GameCaptureRegion.GameRegion1080PPosClick(1500, 1000); // 确认
-        await Delay(3000, ct);
+        
+        if (skipTimeAdjustmentAnimation)
+        {
+            // 跳过调整动画
+            await Delay(1, ct);
+            await CancelAnimation(ct);
+            await Delay(1000, ct);
+            GameCaptureRegion.GameRegion1080PPosClick(45, 715);
+            await Delay(600, ct);
+            await _returnMainUiTask.Start(ct);
+        }
+        else
+        {
+            await Delay(3000, ct);
+            // 出现X的时候代表时间切换成功
+            await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
+            await _returnMainUiTask.Start(ct);
+        }
+    }
 
-        // 出现X的时候代表时间切换成功
-        await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
-
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(2000, ct);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(2000, ct);
+    // 取消动画函数
+    private async Task CancelAnimation(CancellationToken ct)
+    {
+        GameCaptureRegion.GameRegion1080PPosMove(200, 200);
+        Simulation.SendInput.Mouse.LeftButtonDown();
+        await Delay(10, ct);
+        Simulation.SendInput.Mouse.LeftButtonUp();
     }
 
     double[] GetPosition(double r, double index)
