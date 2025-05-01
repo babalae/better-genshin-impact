@@ -42,23 +42,17 @@ public class ElementAssets : BaseAssets<ElementAssets>
     
     public RecognitionObject PageCloseWhiteRo;
 
-    public RecognitionObject SereniteaPotRo;
     public RecognitionObject SereniteaPotHomeRo;
     public RecognitionObject TeleportSereniteaPotHomeRo;
     public RecognitionObject AYuanIconRo;
-    public RecognitionObject AYuanDialogRo;
-    public RecognitionObject AYuanBelieveLevelRo;
     public RecognitionObject SereniteaPotLoveRo;
     public RecognitionObject SereniteaPotMoneyRo;
-    public RecognitionObject AYuanShopRo;
-    public RecognitionObject AYuanExpBottleBigRo;
-    public RecognitionObject AYuanExpBottleSmallRo;
     public RecognitionObject SereniteapotPageClose;
     public RecognitionObject SereniteapotShopNumberBtn;
+    public RecognitionObject AYuanExpBottleBigRo;
+    public RecognitionObject AYuanExpBottleSmallRo;
     public RecognitionObject SereniteapotExpBookRo;
     public RecognitionObject SereniteapotExpBookSmallRo;
-    public RecognitionObject AYuanByeRo;
-    public RecognitionObject AYuanHeyRo;
 
 
     private ElementAssets()
@@ -279,14 +273,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
 
         // 尘歌壶
-        SereniteaPotRo = new RecognitionObject
-        {
-            Name = "SereniteaPot",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "SereniteaPot.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2, 0 , CaptureRect.Width / 2, CaptureRect.Height),
-            DrawOnWindow = false
-        }.InitTemplate();
         SereniteaPotHomeRo = new RecognitionObject
         {
             Name = "SereniteaPotHome",
@@ -312,22 +298,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
             DrawOnWindow = false
         }.InitTemplate();
 
-        AYuanDialogRo = new RecognitionObject
-        {
-            Name = "AYuanDialogRo",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_dialog.png"),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
-            DrawOnWindow = false
-        }.InitTemplate();
-        AYuanBelieveLevelRo = new RecognitionObject
-        {
-            Name = "AYuanBelieveLevelRo",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_believe_level.png"),
-            RegionOfInterest = new Rect( CaptureRect.Width / 2, 0, CaptureRect.Width / 2, CaptureRect.Height),
-            DrawOnWindow = false
-        }.InitTemplate();
 
         SereniteaPotLoveRo = new RecognitionObject
         {
@@ -343,14 +313,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_money.png"),
             RegionOfInterest = new Rect( CaptureRect.Width / 2, CaptureRect.Height - CaptureRect.Height / 4, CaptureRect.Width / 4, CaptureRect.Height / 4),
-            DrawOnWindow = false
-        }.InitTemplate();
-        AYuanShopRo = new RecognitionObject
-        {
-            Name = "AYuanShopRo",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_shop.png"),
-            RegionOfInterest = new Rect( CaptureRect.Width / 2, 0, CaptureRect.Width / 2, CaptureRect.Height ),
             DrawOnWindow = false
         }.InitTemplate();
         AYuanExpBottleBigRo = new RecognitionObject
@@ -391,22 +353,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
-            DrawOnWindow = false
-        }.InitTemplate();
-        AYuanByeRo = new RecognitionObject
-        {
-            Name = "AYuanByeRo",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_bye.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width/2, 0, CaptureRect.Width/2, CaptureRect.Height),
-            DrawOnWindow = false
-        }.InitTemplate();
-        AYuanHeyRo = new RecognitionObject
-        {
-            Name = "AYuanHeyRo",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_hey.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width/2, 0, CaptureRect.Width/2, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
         SereniteapotExpBookSmallRo = new RecognitionObject

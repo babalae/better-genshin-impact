@@ -18,21 +18,40 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Microsoft.Extensions.Localization;
+using System.Globalization;
+using System.Linq;
+using BetterGenshinImpact.Helpers;
+using OpenCvSharp;
 
 namespace GameTask.Common.Job;
 
 internal class GoToSereniteaPotTask
 {
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
-    private readonly QuickTeleportAssets _teleportAssets;
 
     public string Name => "领取尘歌壶奖励";
 
     private bool fail = false;
+    private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
+
+    private readonly string ayuanHeyString;
+    private readonly string ayuanBelieveString;
+    private readonly string ayuanShopString;
+    private readonly string ayuanByeString;
+    private readonly string SereniteaPotString;
+    private readonly string MapZoonString;
 
     public GoToSereniteaPotTask()
     {
-        _teleportAssets = QuickTeleportAssets.Instance;
+        IStringLocalizer<GoToSereniteaPotTask> stringLocalizer = App.GetService<IStringLocalizer<GoToSereniteaPotTask>>() ?? throw new NullReferenceException();
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.ayuanHeyString = stringLocalizer.WithCultureGet(cultureInfo, "阿圆");
+        this.ayuanBelieveString = stringLocalizer.WithCultureGet(cultureInfo, "信任");
+        this.ayuanShopString = stringLocalizer.WithCultureGet(cultureInfo, "洞天百宝");
+        this.ayuanByeString = stringLocalizer.WithCultureGet(cultureInfo, "再见");
+        this.SereniteaPotString = stringLocalizer.WithCultureGet(cultureInfo, "尘歌壶");
+        this.SereniteaPotString = stringLocalizer.WithCultureGet(cultureInfo, "尘歌壶");
     }
 
     public async Task Start( CancellationToken ct)
@@ -51,28 +70,31 @@ internal class GoToSereniteaPotTask
 
     private async Task IntoSereniteaPot(CancellationToken ct) {
         // 退出到主页面
-        await _returnMainUiTask.Start(ct);
+        await new ReturnMainUiTask().Start(ct);
 
         await Delay(200, ct);
 
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
         await Delay(900, ct);
         // 进入 壶
-        var ra = CaptureToRectArea();
-        var click_w = ra.Width * 0.958;
-        var click_h = ra.Height * 0.944;
-        ra.ClickTo(click_w, click_h);
-        await Delay(500, ct);
+        //GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        //await Delay(300, ct);
+        //var ra = CaptureToRectArea();
+        //var click_w = ra.Width * 0.958;
+        //var click_h = ra.Height * 0.944;
+        //ra.ClickTo(click_w, click_h);
+        //await Delay(500, ct);
 
-        ra = CaptureToRectArea();
-        var SereniteaPotIcon = ra.Find(ElementAssets.Instance.SereniteaPotRo);
-        if (SereniteaPotIcon.IsExist())
-        {
-            SereniteaPotIcon.Click();
-            await Delay(500, ct);
-        }
+        //var ra = CaptureToRectArea();
+        //var SereniteaPotIcon = ra.Find(ElementAssets.Instance.SereniteaPotRo);
+        //if (SereniteaPotIcon.IsExist())
+        //{
+        //    SereniteaPotIcon.Click();
+        //    await Delay(500, ct);
+        //}
+        await ChangeCountryForce("尘歌壶",ct);
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
-        ra = CaptureToRectArea();
+        var ra = CaptureToRectArea();
         for (int i = 0; i < 3; i++)
         {
             var SereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
@@ -88,14 +110,14 @@ internal class GoToSereniteaPotTask
             }
         }
         ra = CaptureToRectArea();
-        var teleportBtn = ra.Find(_teleportAssets.TeleportButtonRo);
+        var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
         if (!teleportBtn.IsExist())
         {
             var TeleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (TeleportSereniteaPotHome.IsExist()) { TeleportSereniteaPotHome.Click(); }
         }
         ra = CaptureToRectArea();
-        teleportBtn = ra.Find(_teleportAssets.TeleportButtonRo);
+        teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
         if (teleportBtn.IsExist()) { teleportBtn.Click(); }
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
     }
@@ -143,10 +165,10 @@ internal class GoToSereniteaPotTask
         var findDialog = new Task(async () =>
         {
             while (!treeCts.IsCancellationRequested) {
-                var aYuanDialog = CaptureToRectArea().Find(ElementAssets.Instance.AYuanHeyRo);
-                if (aYuanDialog.IsExist())
+                if (Bv.FindF(CaptureToRectArea(), text: this.ayuanHeyString))
                 {
                     TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆成功");
                     treeCts.Cancel();
                     break;
                     //TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract);
@@ -184,18 +206,24 @@ internal class GoToSereniteaPotTask
     private async Task GetReward(CancellationToken ct)
     {
         var ra = CaptureToRectArea();
-        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract); // 开始对话
-        await NewRetry.WaitForAction(() => {
-            ra.Click();
-            return CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist();
-            }, ct); // 等待对话选项
+        //TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.PickUpOrInteract); // 开始对话
+        Bv.FindFAndPress(ra,text:this.ayuanHeyString); // 开始对话
+
+        //await NewRetry.WaitForAction(() => {
+        //    ra.Click();
+        //    return Bv.FindF(CaptureToRectArea(), text: this.ayuanBelieveString);
+        //    //return CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist();
+        //}, ct); // 等待对话选项
 
         // 领取奖励
-        if(await NewRetry.WaitForAction(()=> CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist(), ct,50, 100))
+        //if(await NewRetry.WaitForAction(()=> CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo).IsExist(), ct,50, 100))
+        var rewardOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanBelieveString, ct);
+        if (rewardOption == TalkOptionRes.FoundAndClick)
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
-            await Delay(900, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo, a => a.Click());
+            //await Delay(900, ct);
+            //CaptureToRectArea().Find(ElementAssets.Instance.AYuanBelieveLevelRo, a => a.Click());
+            //Bv.FindFAndPress(ra, text: this.ayuanBelieveString);
             await Delay(1000, ct);
             CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
             await Delay(500, ct);
@@ -209,11 +237,13 @@ internal class GoToSereniteaPotTask
         }
 
         // 商店购买
-        if (await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo).IsExist(), ct,50, 100))
+        //if (await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo).IsExist(), ct,50, 100))
+        var shopOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanShopString, ct);
+        if (shopOption == TalkOptionRes.FoundAndClick)
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品");
-            await Delay(300, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo, a => a.Click());
+            //await Delay(300, ct);
+            //CaptureToRectArea().Find(ElementAssets.Instance.AYuanShopRo, a => a.Click());
             await Delay(500, ct);
             // 购买的物品清单
             var buy = new List<RecognitionObject>()
@@ -245,32 +275,69 @@ internal class GoToSereniteaPotTask
     // 处理最后收尾操作
     private async Task Finished(CancellationToken ct)
     {
+        var isMainUi = false;
         Logger.LogInformation("领取尘歌壶奖励:{text}", "退出到主页");
         // 识别page 关闭按钮。
         if (CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo, a => a.Click()).IsExist())
         {
             await Delay(1000, ct);
-        } 
-        if (!await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.AYuanByeRo, a => a.Click()).IsExist(), ct))
-        {
-            Logger.LogError("领取尘歌壶奖励:{text}","阿圆对话框退出出错。");
-            return;
         }
-        await Delay(300, ct);
-
-        await NewRetry.WaitForAction(() => {
-            var ra = CaptureToRectArea();
-            if (!Bv.IsInMainUi(ra))
-            {
-                ra.Click();
-                return false;
+        var quitOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanByeString, ct);
+        if (quitOption != TalkOptionRes.FoundAndClick)
+        {  
+            if(!Bv.IsInMainUi(CaptureToRectArea())){
+                Logger.LogError("领取尘歌壶奖励:{text}","阿圆对话框退出出错。");
+                return;
             }
-            else
-                return true;
-        }, ct);
+            else { isMainUi = true; }
+        }
+        if (!isMainUi) { 
+            await Delay(300, ct);
+            await NewRetry.WaitForAction(() => {
+                var ra = CaptureToRectArea();
+                if (!Bv.IsInMainUi(ra))
+                {
+                    ra.Click();
+                    return false;
+                }
+                else
+                    return true;
+            }, ct);
+        }
 
-        // 是否要传送到提瓦特大陆？
+        // 尘歌壶无法直接使用tp函数传送到提瓦特，会导致后续需要TP的任务无法正确执行。
+        var tp = new TpTask(ct);
+        await tp.OpenBigMapUi();
+        await ChangeCountryForce("枫丹", ct);
+        await tp.Tp(4508.97509765625, 3630.557373046875,skipOpenBigMapUi:true);
 
+    }
+
+    private async Task ChangeCountryForce(string country,CancellationToken ct)
+    {
+        GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        await Delay(500, ct);
+        using var ra = CaptureToRectArea();
+        var list = ra.FindMulti(new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
+        });
+        IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, country);
+        string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+        Region? matchRect = list.FirstOrDefault(r => r.Text.Length == minCountryLocalized.Length && !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
+        if (matchRect == null)
+        {
+            Logger.LogWarning("切换区域失败：{Country}", country);
+        }
+        else
+        {
+            matchRect.Click();
+            Logger.LogInformation("切换到区域：{Country}", country);
+        }
+        await Delay(500, ct);
     }
 
     public async Task DoOnce(CancellationToken ct)
@@ -293,7 +360,7 @@ internal class GoToSereniteaPotTask
         await Delay(500, ct);
         await GetReward(ct);
 
-        // 收尾操作 - 退出到主页面
+        // 收尾操作 - 退出到主页面 - 传送到提瓦特大陆
         await Finished(ct);
     }
 }
