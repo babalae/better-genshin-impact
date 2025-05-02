@@ -43,6 +43,10 @@ public interface IIndependentMap
     /// <param name="imageCoordinates"></param>
     /// <returns></returns>
     Point2f ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates);
+    
+    (float x, float y) ConvertImageCoordinatesToGenshinMapCoordinates(float x, float y);
+    
+    Rect ConvertImageCoordinatesToGenshinMapCoordinates(Rect rect);
 
     /// <summary>
     /// 原神游戏坐标系 -> 地图图像坐标系

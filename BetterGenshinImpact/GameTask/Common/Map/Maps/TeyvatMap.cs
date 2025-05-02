@@ -49,13 +49,13 @@ public class TeyvatMap : IndependentBaseMap
     // 大地图使用256  相对 2048 区块的缩放比例  2048/256=8
     public const int BigMap256ScaleTo2048 = 8;
 
-    public new Point2f GetBigMapPosition(Mat greyBigMapMat)
+    public override Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
         greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
         return SiftMatcher.Match(_teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors, greyBigMapMat);
     }
 
-    public new Rect GetBigMapRect(Mat greyBigMapMat)
+    public override Rect GetBigMapRect(Mat greyBigMapMat)
     {
         greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
         return SiftMatcher.KnnMatchRect(_teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors, greyBigMapMat);

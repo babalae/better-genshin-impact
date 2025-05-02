@@ -66,12 +66,12 @@ public abstract class IndependentBaseMap : IIndependentMap
 
     protected readonly Feature2D SiftMatcher = Feature2DFactory.Get(Feature2DType.SIFT);
 
-    public Point2f GetBigMapPosition(Mat greyBigMapMat)
+    public virtual Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
         return SiftMatcher.Match(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
     }
 
-    public Rect GetBigMapRect(Mat greyBigMapMat)
+    public virtual Rect GetBigMapRect(Mat greyBigMapMat)
     {
         return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
     }
