@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
@@ -26,6 +27,7 @@ public class EnkanomiyaMap : IndependentBaseMap
         splitRow: 0,
         splitCol: 0)
     {
+        ExtractAndSaveFeature(Global.Absolute("Assets/Map/Enkanomiya/Enkanomiya_0_1024.png"));
         Layers = BaseMapLayer.LoadLayers(this);
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using OpenCvSharp;
@@ -67,6 +68,22 @@ public abstract class IndependentBaseMap : IIndependentMap
     protected BaseMapLayer MainLayer => Layers[0];
 
     protected readonly Feature2D SiftMatcher = Feature2DFactory.Get(Feature2DType.SIFT);
+
+    protected void ExtractAndSaveFeature(string basePath)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(basePath);
+        var folder = Path.GetDirectoryName(basePath)!;
+
+        string trainKeyPointsPath = Path.Combine(folder, $"{fileName}_SIFT.kp.bin");
+        string trainDescriptorsPath = Path.Combine(folder, $"{fileName}_SIFT.mat.png");
+
+        if (File.Exists(trainKeyPointsPath) && File.Exists(trainDescriptorsPath))
+        {
+            return;
+        }
+
+        SiftMatcher.SaveFeatures(basePath, trainKeyPointsPath, trainDescriptorsPath);
+    }
 
     public virtual Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
@@ -171,10 +188,10 @@ public abstract class IndependentBaseMap : IIndependentMap
     {
         var center = rect.GetCenterPoint();
         var (x, y) = ConvertGenshinMapCoordinatesToImageCoordinates(center.X, center.Y);
-        return new Rect((int)Math.Round(x - rect.Width / 2f * _mapImageBlockWidthScale), 
-            (int)Math.Round(y - rect.Height / 2f * _mapImageBlockWidthScale), 
-            (int)Math.Round(rect.Width * _mapImageBlockWidthScale), 
-                (int)Math.Round(rect.Height * _mapImageBlockWidthScale));
+        return new Rect((int)Math.Round(x - rect.Width / 2f * _mapImageBlockWidthScale),
+            (int)Math.Round(y - rect.Height / 2f * _mapImageBlockWidthScale),
+            (int)Math.Round(rect.Width * _mapImageBlockWidthScale),
+            (int)Math.Round(rect.Height * _mapImageBlockWidthScale));
     }
 
     #endregion

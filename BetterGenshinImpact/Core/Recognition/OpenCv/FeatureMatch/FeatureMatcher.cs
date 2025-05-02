@@ -11,6 +11,7 @@ using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
+[Obsolete]
 public class FeatureMatcher
 {
     private readonly double _threshold = 100; // SURF 100

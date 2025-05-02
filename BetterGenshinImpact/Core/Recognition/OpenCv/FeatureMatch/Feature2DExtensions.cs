@@ -19,6 +19,21 @@ public static class Feature2DExtensions
         return MatcherFactory[type];
     }
 
+    #region 生成并保存特征
+
+    public static void SaveFeatures(this Feature2D feature2D, string trainImagePath, string trainKeyPointsPath, string trainDescriptorsPath)
+    {
+        Mat trainDescriptors = new();
+        var img = Cv2.ImRead(trainImagePath, ImreadModes.Grayscale);
+
+        feature2D.DetectAndCompute(img, null, out var trainKeyPoints, trainDescriptors);
+
+        FeatureStorageHelper.SaveKeyPointArray(trainKeyPoints, trainKeyPointsPath);
+        FeatureStorageHelper.SaveDescMat(trainDescriptors, trainDescriptorsPath);
+    }
+
+    #endregion
+
     #region 普通匹配
 
     /// <summary>
