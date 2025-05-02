@@ -952,7 +952,7 @@ public class PathExecutor
         {
             Simulation.SendInput.Mouse.MiddleButtonClick();
             var screen = CaptureToRectArea();
-            var position = await GetPosition(screen);
+            var position = await GetPosition(screen, waypoint.MapName);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             await _rotateTask.WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
