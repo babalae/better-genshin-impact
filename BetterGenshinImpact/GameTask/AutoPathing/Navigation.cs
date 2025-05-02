@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
+using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using CommunityToolkit.Mvvm.Messaging;
@@ -46,6 +47,12 @@ public class Navigation
     {
         var greyMat = new Mat(imageRegion.SrcGreyMat, MapAssets.Instance.MimiMapRect);
         var p = MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);
+        if (p == new Point2f())
+        {
+            Debug.WriteLine("局部匹配失败, 重新从全地图进行特征匹配");
+            Reset();
+            p = MapManager.GetMap(mapName).GetMiniMapPosition(greyMat);
+        }
 
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
             "SendCurrentPosition", new object(), p));

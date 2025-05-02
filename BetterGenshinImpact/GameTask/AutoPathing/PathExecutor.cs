@@ -641,7 +641,7 @@ public class PathExecutor
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
         TpTask tpTask = new TpTask(ct);
         await TryAutoFetchDispatch(tpTask);
-        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, forceTp);
+        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = TeyvatMapCoordinate.GameToMain2048(tpX, tpY);
         Navigation.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会

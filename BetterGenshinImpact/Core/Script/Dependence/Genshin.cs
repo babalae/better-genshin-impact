@@ -50,9 +50,15 @@ public class Genshin
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y);
     }
 
+    public async Task Tp(double x, double y, string mapName, bool force)
+    {
+        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, mapName, force);
+    }
+
+
     public async Task Tp(double x, double y, bool force)
     {
-        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, force);
+        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, MapTypes.Teyvat.ToString(), force);
     }
 
     /// <summary>
@@ -75,8 +81,9 @@ public class Genshin
         await Tp(dx, dy, force);
     }
 
-        
+
     #region 大地图操作
+
     /// <summary>
     /// 移动大地图到指定坐标
     /// </summary>
@@ -94,7 +101,7 @@ public class Genshin
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
     }
-    
+
     /// <summary>
     /// 移动大地图到指定坐标
     /// </summary>
@@ -120,7 +127,7 @@ public class Genshin
     /// <returns>当前大地图缩放等级，范围1.0-6.0</returns>
     public double GetBigMapZoomLevel()
     {
-        TpTask tpTask = new(CancellationContext.Instance.Cts.Token);        
+        TpTask tpTask = new(CancellationContext.Instance.Cts.Token);
         return tpTask.GetBigMapZoomLevel(CaptureToRectArea());
     }
 
@@ -141,7 +148,7 @@ public class Genshin
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
     }
-    
+
     /// <summary>
     /// 传送到用户指定的七天神像
     /// </summary>
@@ -160,7 +167,7 @@ public class Genshin
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
     }
-    
+
     /// <summary>
     /// 获取当前在大地图上的位置坐标
     /// </summary>
@@ -176,25 +183,29 @@ public class Genshin
     /// 获取当前在小地图上的位置坐标
     /// </summary>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap(){
-        return GetPositionFromMap( MapTypes.Teyvat.ToString());
+    public Point2f GetPositionFromMap()
+    {
+        return GetPositionFromMap(MapTypes.Teyvat.ToString());
     }
-    
+
     /// <summary>
     /// 获取当前在小地图上的位置坐标
     /// </summary>
     /// <param name="mapName">大地图名称</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap(string mapName){
+    public Point2f GetPositionFromMap(string mapName)
+    {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
+
         return TeyvatMapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion, mapName));
     }
 
     #endregion 大地图操作
+
     /// <summary>
     /// 切换队伍
     /// </summary>
@@ -290,7 +301,7 @@ public class Genshin
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
         await new AutoFishingTask(param).Start(CancellationContext.Instance.Cts.Token);
     }
-    
+
     /// <summary>
     /// 重新登录原神
     /// </summary>

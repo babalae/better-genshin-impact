@@ -96,7 +96,7 @@ public class TpTask(CancellationToken ct)
         }
 
         Logger.LogInformation("将传送至 {country} {area} 七天神像", country, area);
-        await Tp(x, y, false, MapTypes.Teyvat.ToString());
+        await Tp(x, y, MapTypes.Teyvat.ToString(), false);
         if (_tpConfig.ShouldMove || _tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
             (x, y) = GetClosestPoint(revivePoint.TranX, revivePoint.TranY, x, y, 5);
@@ -207,9 +207,9 @@ public class TpTask(CancellationToken ct)
     /// </summary>
     /// <param name="tpX"></param>
     /// <param name="tpY"></param>
-    /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
     /// <param name="mapName">独立地图名称</param>
-    private async Task<(double, double)> TpOnce(double tpX, double tpY, bool force = false, string mapName = "Teyvat")
+    /// <param name="force">强制以当前的tpX,tpY坐标进行自动传送</param>
+    private async Task<(double, double)> TpOnce(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
         // 1. 确认在地图界面
         await OpenBigMapUi(1);
@@ -421,13 +421,13 @@ public class TpTask(CancellationToken ct)
     }
 
 
-    public async Task<(double, double)> Tp(double tpX, double tpY, bool force = false, string mapName = "Teyvat")
+    public async Task<(double, double)> Tp(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
         for (var i = 0; i < 3; i++)
         {
             try
             {
-                return await TpOnce(tpX, tpY, force, mapName);
+                return await TpOnce(tpX, tpY, mapName, force);
             }
             catch (TpPointNotActivate e)
             {
