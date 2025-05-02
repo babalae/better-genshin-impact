@@ -609,7 +609,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="过大可能会导致鼠标移动出窗口"
+                                  Text="【100-2000】 过大可能会导致鼠标移动出窗口"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -617,7 +617,6 @@
                                 MinWidth="90"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.TpConfig.MaxMouseMove, Mode=TwoWay, 
-                                UpdateSourceTrigger=PropertyChanged,
                                 ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
                 <Grid Margin="16">
@@ -637,15 +636,14 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="大于这个距离会缩小地图以加快传送"
+                                  Text="【>600】大于这个距离会缩小地图以加快传送"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay, 
-                                UpdateSourceTrigger=PropertyChanged,
+                                Text="{Binding Config.TpConfig.MapZoomOutDistance, Mode=TwoWay,                                 
                                 ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
                 <Grid Margin="16">
@@ -665,7 +663,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="小于这个距离会放大地图以提高移动的精度"
+                                  Text="【200-600】小于这个距离会放大地图以提高移动的精度"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -673,7 +671,6 @@
                                 MinWidth="90"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.TpConfig.MapZoomInDistance, Mode=TwoWay, 
-                                UpdateSourceTrigger=PropertyChanged,
                                 ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
                 <Grid Margin="16">
@@ -693,7 +690,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
+                                  Text="【2-100】数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -702,7 +699,6 @@
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.TpConfig.StepIntervalMilliseconds,
                                 Mode=TwoWay, 
-                                UpdateSourceTrigger=PropertyChanged,
                                 ValidatesOnNotifyDataErrors=True}" />
                 </Grid>
             </StackPanel>
@@ -831,7 +827,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="传送到七天神像之后需要等待多久恢复血量"
+                                  Text="【1.0-30.0】传送到七天神像之后需要等待多久恢复血量"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"

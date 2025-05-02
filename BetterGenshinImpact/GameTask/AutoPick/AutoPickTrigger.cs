@@ -186,6 +186,13 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+        var gradMat = new Mat(textMat, new Rect(0, 0, textRect.Width, Math.Min(textRect.Height, 3)));
+        var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
+        if (avgGrad < -3)
+        {
+            Debug.WriteLine($"AutoPickTrigger: 已在拾取中，跳过本次拾取 {avgGrad}");
+            return;
+        }
 
         string text;
         if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())

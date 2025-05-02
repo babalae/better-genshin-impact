@@ -27,7 +27,7 @@ public partial class TpConfig : ObservableValidator
     
     [ObservableProperty]
     [NotifyDataErrorInfo] 
-    [Range(200, 600, ErrorMessage = "恰当的地图缩小的最小距离:200-500")]
+    [Range(200, 600, ErrorMessage = "恰当的地图缩小的最小距离:200-600")]
     private int _mapZoomInDistance = 400; // 地图放大的最大距离，单位：像素
     partial void OnMapZoomInDistanceChanged(int value)
     {
@@ -138,7 +138,7 @@ public partial class TpConfig : ObservableValidator
     }
     
     [ObservableProperty]
-    private double _mapScaleFactor = 2.661;  // 游戏坐标和 mapZoomLevel=1 时的像素比例因子。
+    private double _mapScaleFactor = 2.361;  // 游戏坐标和 mapZoomLevel=1 时的像素比例因子。
     
     [ObservableProperty]
     [property: JsonIgnore]
