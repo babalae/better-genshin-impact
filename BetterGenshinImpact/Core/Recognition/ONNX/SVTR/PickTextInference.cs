@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
@@ -37,7 +38,7 @@ public class PickTextInference : ITextInference
     {
         long startTime = Stopwatch.GetTimestamp();
         // 将输入数据调整为 (1, 1, 32, 384) 形状的张量
-        var reshapedInputData = ToTensorUnsafe(mat, out var owner);
+        var reshapedInputData  = OcrUtils.ToTensorYapDnn(mat, out var owner);
 
         IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results;
 
@@ -84,6 +85,8 @@ public class PickTextInference : ITextInference
         }
     }
 
+
+    [Obsolete("使用CV DNN替代")]
     public static Tensor<float> ToTensorUnsafe(Mat src, out IMemoryOwner<float> tensorMemoryOwnser)
     {
         var channels = src.Channels();
