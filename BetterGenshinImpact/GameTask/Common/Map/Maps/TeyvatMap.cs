@@ -1,4 +1,7 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+﻿using System.IO;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using OpenCvSharp;
 
@@ -23,6 +26,8 @@ public class TeyvatMap : IndependentBaseMap
     static readonly int ImageMap256Width = GameMapCols * 256;
     static readonly int ImageMap256Height = GameMapRows * 256;
 
+    private readonly BaseMapLayer _teyvat256MapLayer;
+
     public TeyvatMap() : base(type: IndependentMapTypes.Teyvat,
         mapSize: new Size(GameMapCols * TeyvatMapImageBlockWidth, GameMapRows * TeyvatMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TeyvatMapImageBlockWidth, (GameMapUpRows + 1) * TeyvatMapImageBlockWidth),
@@ -31,17 +36,22 @@ public class TeyvatMap : IndependentBaseMap
         splitCol: GameMapCols * 2)
     {
         Layers = BaseMapLayer.LoadLayers(this);
+        var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
+
+        // 256用于大地图匹配
+        _teyvat256MapLayer = BaseMapLayer.LoadLayer(this, Path.Combine(layerDir, "Teyvat_0_256_SIFT.kp.bin"), Path.Combine(layerDir, "Teyvat_0_256_SIFT.mat.png"));
     }
 
 
     public new Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
-        // TODO: 跟换地图
-        return SiftMatcher.Match(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
+        greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
+        return SiftMatcher.Match(_teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors, greyBigMapMat);
     }
 
     public new Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
+        greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
+        return SiftMatcher.KnnMatchRect(_teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors, greyBigMapMat);
     }
 }

@@ -65,7 +65,9 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
         }
 
         var files = Directory.GetFiles(layerDir);
-        var validFiles = files.Where(f => f.EndsWith(".kp.bin") || f.EndsWith(".mat.png"));
+        var validFiles = files.Where(f => (f.EndsWith(".kp.bin") || f.EndsWith(".mat.png"))
+                                          && !f.EndsWith("Teyvat_0_256_SIFT.kp.bin")
+                                          && !f.EndsWith("Teyvat_0_256_SIFT.mat.png"));
         // 解析后按 floor 分组，然后按 floor 创建BaseMapLayer
         var groupedFiles = validFiles.GroupBy(file =>
         {
@@ -101,6 +103,7 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
                 layer.SplitBlocks = KeyPointFeatureBlockHelper.SplitFeatures(baseMap.MapSize, baseMap.SplitRow, baseMap.SplitCol, layer.TrainKeyPoints, layer.TrainDescriptors);
                 speedTimer.Record("切割特征点");
             }
+
             speedTimer.DebugPrint();
 
             layers.Add(layer);
@@ -117,6 +120,14 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
             return a.Floor > b.Floor ? 1 : -1;
         });
         return layers;
+    }
+    
+    public static BaseMapLayer LoadLayer(IndependentBaseMap baseMap, string kpFilePath, string matFilePath)
+    {
+        var layer = new BaseMapLayer(baseMap) { Floor = 0 };
+        layer.TrainKeyPoints = FeatureStorageHelper.LoadKeyPointArray(kpFilePath) ?? throw new Exception($"地图数据加载失败，文件: {kpFilePath}");
+        layer.TrainDescriptors = FeatureStorageHelper.LoadDescriptorMat(matFilePath) ?? throw new Exception($"地图数据加载失败，文件: {matFilePath}");
+        return layer;
     }
 
     /// <summary>
