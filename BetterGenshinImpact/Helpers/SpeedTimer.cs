@@ -34,7 +34,7 @@ public class SpeedTimer
     public void DebugPrint()
     {
         var msg = _name;
-        if (string.IsNullOrEmpty(msg))
+        if (!string.IsNullOrEmpty(msg))
         {
             msg += " : ";
         }

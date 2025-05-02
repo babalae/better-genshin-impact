@@ -36,7 +36,7 @@ public partial class MapViewerViewModel : ObservableObject
     public MapViewerViewModel()
     {
         var center = MapManager.GetMap(MapTypes.Teyvat).ConvertGenshinMapCoordinatesToImageCoordinates(0, 0);
-        _mapBitmap = ClipMat(new Point2f((float)center.x, (float)center.y)).ToWriteableBitmap();
+        _mapBitmap = ClipMat(new Point2f(center.x, center.y)).ToWriteableBitmap();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "SendCurrentPosition")

@@ -11,6 +11,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Model;
 using Microsoft.Web.WebView2.Core;
 
@@ -40,7 +41,7 @@ public class PathRecorder : Singleton<PathRecorder>
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, mapName);
-        position = TeyvatMapCoordinate.Main2048ToGame(position);
+        position = MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = WaypointType.Teleport.Code;
@@ -62,7 +63,7 @@ public class PathRecorder : Singleton<PathRecorder>
         Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, mapName);
-        position = TeyvatMapCoordinate.Main2048ToGame(position);
+        position = MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;

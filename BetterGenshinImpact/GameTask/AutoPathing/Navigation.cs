@@ -75,6 +75,10 @@ public class Navigation
             Reset();
             p = MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);
         }
+        if (p != default)
+        {
+            (_prevX, _prevY) = (p.X, p.Y);
+        }
 
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
             "SendCurrentPosition", new object(), p));
