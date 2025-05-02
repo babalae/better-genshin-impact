@@ -177,12 +177,21 @@ public class Genshin
     /// </summary>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f GetPositionFromMap(){
+        return GetPositionFromMap( MapTypes.Teyvat.ToString());
+    }
+    
+    /// <summary>
+    /// 获取当前在小地图上的位置坐标
+    /// </summary>
+    /// <param name="mapName">大地图名称</param>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromMap(string mapName){
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        return TeyvatMapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
+        return TeyvatMapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion, mapName));
     }
 
     #endregion 大地图操作

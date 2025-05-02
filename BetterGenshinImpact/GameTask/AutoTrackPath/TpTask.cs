@@ -107,7 +107,7 @@ public class TpTask(CancellationToken ct)
                 Type = WaypointType.Path.Code,
                 MoveMode = MoveModeEnum.Walk.Code
             };
-            var waypointForTrack = new WaypointForTrack(waypoint);
+            var waypointForTrack = new WaypointForTrack(waypoint, MapTypes.Teyvat.ToString());
             await new PathExecutor(ct).MoveTo(waypointForTrack);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }

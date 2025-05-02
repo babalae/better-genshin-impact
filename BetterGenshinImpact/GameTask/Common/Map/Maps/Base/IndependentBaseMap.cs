@@ -93,6 +93,11 @@ public abstract class IndependentBaseMap : IIndependentMap
 
     public Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY)
     {
+        if (prevX <= 0 && prevY <= 0)
+        {
+            return GetMiniMapPosition(greyMiniMapMat);
+        }
+        
         foreach (var layer in Layers)
         {
             var (keyPoints, descriptors) = (layer.TrainKeyPoints, layer.TrainDescriptors);

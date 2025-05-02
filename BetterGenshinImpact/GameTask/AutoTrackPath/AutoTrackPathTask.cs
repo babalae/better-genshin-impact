@@ -24,6 +24,8 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -208,7 +210,7 @@ public class AutoTrackPathTask
                 var miniMapMat = GetMiniMapMat(ra) ?? throw new InvalidOperationException("当前不在主界面");
 
                 // 注意游戏坐标系的角度是顺时针的
-                var currMapImageAvatarPos = EntireMap.Instance.GetMiniMapPositionByFeatureMatch(miniMapMat);
+                var currMapImageAvatarPos = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(miniMapMat);
                 if (currMapImageAvatarPos.IsEmpty())
                 {
                     Debug.WriteLine("识别小地图位置失败");

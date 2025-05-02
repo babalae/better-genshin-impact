@@ -32,14 +32,14 @@ public class PathRecorder : Singleton<PathRecorder>
 
     private PathingTask _pathingTask = new();
 
-    public void Start()
+    public void Start(string mapName)
     {
         Navigation.WarmUp();
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen);
+        var position = Navigation.GetPositionStable(screen, mapName);
         position = TeyvatMapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
@@ -57,11 +57,11 @@ public class PathRecorder : Singleton<PathRecorder>
         }
     }
 
-    public void AddWaypoint(string waypointType = "")
+    public void AddWaypoint(string mapName, string waypointType = "")
     {
         Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen);
+        var position = Navigation.GetPositionStable(screen, mapName);
         position = TeyvatMapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;

@@ -151,7 +151,7 @@ public class PathExecutor
 
         InitializePathing(task);
         // 转换、按传送点分割路径
-        var waypointsList = ConvertWaypointsForTrack(task.Positions);
+        var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
 
         await Delay(100, ct);
         Navigation.WarmUp(); // 提前加载地图特征点
@@ -473,10 +473,10 @@ public class PathExecutor
         }
     }
 
-    private List<List<WaypointForTrack>> ConvertWaypointsForTrack(List<Waypoint> positions)
+    private List<List<WaypointForTrack>> ConvertWaypointsForTrack(List<Waypoint> positions, PathingTask task)
     {
         // 把 X Y 转换为 MatX MatY
-        var allList = positions.Select(waypoint => new WaypointForTrack(waypoint)).ToList();
+        var allList = positions.Select(waypoint => new WaypointForTrack(waypoint, task.Info.MapName)).ToList();
 
         // 按照WaypointType.Teleport.Code切割数组
         var result = new List<List<WaypointForTrack>>();
@@ -585,11 +585,10 @@ public class PathExecutor
     {
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
-        await RunnerContext.Instance.StopAutoPickRunTask(async () =>await tpTask.TpToStatueOfTheSeven(),5);
+        await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
         Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
-
-
     }
+
     /// <summary>
     /// 尝试自动领取派遣奖励，
     /// </summary>
@@ -600,15 +599,16 @@ public class PathExecutor
         {
             tpTask = new TpTask(ct);
         }
+
         //打开大地图操作
         await tpTask.OpenBigMapUi();
         bool changeBigMap = false;
         string adventurersGuildCountry =
             TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
-        if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry!="无")
+        if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry != "无")
         {
             var ra1 = CaptureToRectArea();
-            
+
             var textRect = new Rect(60, 20, 160, 260);
             var textMat = new Mat(ra1.SrcGreyMat, textRect);
             string text = OcrFactory.Paddle.Ocr(textMat);
@@ -618,11 +618,12 @@ public class PathExecutor
                 Logger.LogInformation("开始自动领取派遣任务！");
                 try
                 {
-                   
                     RunnerContext.Instance.isAutoFetchDispatch = true;
-                    await RunnerContext.Instance.StopAutoPickRunTask(async () =>await new GoToAdventurersGuildTask().Start(adventurersGuildCountry,ct,null,true),5);
+                    await RunnerContext.Instance.StopAutoPickRunTask(async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, ct, null, true), 5);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
-                } catch (Exception e){
+                }
+                catch (Exception e)
+                {
                     Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
                 }
                 finally
@@ -630,8 +631,8 @@ public class PathExecutor
                     RunnerContext.Instance.isAutoFetchDispatch = false;
                 }
             }
-          
         }
+
         return changeBigMap;
     }
 
@@ -642,14 +643,14 @@ public class PathExecutor
         await TryAutoFetchDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, forceTp);
         var (tprX, tprY) = TeyvatMapCoordinate.GameToMain2048(tpX, tpY);
-        EntireMap.Instance.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
+        Navigation.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
     }
 
     private async Task FaceTo(WaypointForTrack waypoint)
     {
         var screen = CaptureToRectArea();
-        var position = await GetPosition(screen);
+        var position = await GetPosition(screen, waypoint.MapName);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
@@ -664,7 +665,7 @@ public class PathExecutor
         await SwitchAvatar(PartyConfig.MainAvatarIndex);
 
         var screen = CaptureToRectArea();
-        var position = await GetPosition(screen);
+        var position = await GetPosition(screen, waypoint.MapName);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
@@ -683,7 +684,7 @@ public class PathExecutor
             {
                 Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             }
-            
+
             num++;
             if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
@@ -695,7 +696,7 @@ public class PathExecutor
 
             EndJudgment(screen);
 
-            position = await GetPosition(screen);
+            position = await GetPosition(screen, waypoint.MapName);
             var distance = Navigation.GetDistance(waypoint, position);
             Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
@@ -869,7 +870,7 @@ public class PathExecutor
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex,true);
+        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex, true);
         if (avatar == null)
         {
             return;
@@ -883,7 +884,7 @@ public class PathExecutor
             Simulation.SendInput.SimulateAction(GIActions.MoveBackward);
             await Delay(200, ct);
         }
-        
+
         avatar.UseSkill(PartyConfig.GuardianElementalSkillLongPress);
 
         // 钟离往身后放柱子 后继续走路
@@ -914,7 +915,7 @@ public class PathExecutor
 
             EndJudgment(screen);
 
-            position = await GetPosition(screen);
+            position = await GetPosition(screen, waypoint.MapName);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
                 Logger.LogInformation("已到达路径点");
@@ -981,7 +982,7 @@ public class PathExecutor
         }
     }
 
-    private async Task<Avatar?> SwitchAvatar(string index,bool needSkill = false)
+    private async Task<Avatar?> SwitchAvatar(string index, bool needSkill = false)
     {
         if (string.IsNullOrEmpty(index))
         {
@@ -995,19 +996,21 @@ public class PathExecutor
             Logger.LogInformation("角色{Name}技能未冷却，跳过。", avatar.Name);
             return null;
         }
+
         var success = avatar.TrySwitch();
         if (success)
         {
             await Delay(100, ct);
             return avatar;
         }
+
         Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
         return null;
     }
 
-    private async Task<Point2f> GetPosition(ImageRegion imageRegion)
+    private async Task<Point2f> GetPosition(ImageRegion imageRegion, string mapName)
     {
-        var position = Navigation.GetPosition(imageRegion);
+        var position = Navigation.GetPosition(imageRegion, mapName);
 
         if (position == new Point2f())
         {
@@ -1043,7 +1046,7 @@ public class PathExecutor
             {
                 return;
             }
-            
+
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             await Delay(1000, ct); // 等待界面关闭

@@ -41,6 +41,8 @@ public class TeyvatMap : IndependentBaseMap
 
         // 256用于大地图匹配
         _teyvat256MapLayer = BaseMapLayer.LoadLayer(this, Path.Combine(layerDir, "Teyvat_0_256_SIFT.kp.bin"), Path.Combine(layerDir, "Teyvat_0_256_SIFT.mat.png"));
+        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+
     }
     
 
