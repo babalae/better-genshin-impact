@@ -45,17 +45,17 @@ public class SwitchPartyTask
             }
 
             // 尝试打开队伍配置页面
-            const int maxAttempts = 3;
+            const int maxAttempts = 2;
             bool isOpened = false;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
                 Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
 
-                // 考虑加载时间 2s，共检查 5s，如果失败则抛出异常
+                // 考虑加载时间 2s，共检查 2.5s，如果失败则抛出异常
                 
-                for (int i = 0; i < 5; i++) // 检查 5 次
+                for (int i = 0; i < 3; i++) // 检查 3 次
                 {
-                    await Delay(1000, ct);
+                    await Delay(850, ct);
                     using var raCheck = CaptureToRectArea();
                     if (Bv.IsInPartyViewUi(raCheck))
                     {
@@ -77,7 +77,7 @@ public class SwitchPartyTask
 
             if (!isOpened)
             {
-                Logger.LogWarning("未能打开队伍配置界面");
+                throw new PartySetupFailedException("未能打开队伍配置界面");
             }
         }
 
