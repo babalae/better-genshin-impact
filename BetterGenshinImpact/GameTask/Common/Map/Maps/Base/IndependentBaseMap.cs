@@ -157,14 +157,14 @@ public abstract class IndependentBaseMap : IIndependentMap
 
     public Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates)
     {
-        return new Point2f((MapOriginInImageCoordinate.X - genshinMapCoordinates.X) * _mapImageBlockWidthScale,
-            (MapOriginInImageCoordinate.Y - genshinMapCoordinates.Y) * _mapImageBlockWidthScale);
+        return new Point2f(MapOriginInImageCoordinate.X - genshinMapCoordinates.X * _mapImageBlockWidthScale,
+            MapOriginInImageCoordinate.Y - genshinMapCoordinates.Y * _mapImageBlockWidthScale);
     }
 
     public (float x, float y) ConvertGenshinMapCoordinatesToImageCoordinates(float c, float a)
     {
-        return new((MapOriginInImageCoordinate.X - c) * _mapImageBlockWidthScale,
-            (MapOriginInImageCoordinate.Y - a) * _mapImageBlockWidthScale);
+        return new(MapOriginInImageCoordinate.X - c * _mapImageBlockWidthScale,
+            MapOriginInImageCoordinate.Y - a * _mapImageBlockWidthScale);
     }
 
     public Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect rect)
