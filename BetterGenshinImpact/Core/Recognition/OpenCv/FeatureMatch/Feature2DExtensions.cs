@@ -120,7 +120,7 @@ public static class Feature2DExtensions
     /// Copilot 生成
     /// </summary>
     /// <returns></returns>
-    private static Point2f KnnMatch(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
+    public static Point2f KnnMatch(this Feature2D feature2D, KeyPoint[] trainKeyPoints, Mat trainDescriptors, Mat queryMat, Mat? queryMatMask = null,
         DescriptorMatcherType matcherType = DescriptorMatcherType.FlannBased)
     {
         SpeedTimer speedTimer = new();

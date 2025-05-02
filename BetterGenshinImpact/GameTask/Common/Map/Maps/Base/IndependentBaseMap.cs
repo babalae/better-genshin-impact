@@ -85,7 +85,7 @@ public abstract class IndependentBaseMap : IIndependentMap
         {
             try
             {
-                var result = SiftMatcher.Match(layer.TrainKeyPoints, layer.TrainDescriptors, greyMiniMapMat);
+                var result = SiftMatcher.KnnMatch(layer.TrainKeyPoints, layer.TrainDescriptors, greyMiniMapMat);
                 if (result != default)
                 {
                     return result;
@@ -117,7 +117,7 @@ public abstract class IndependentBaseMap : IIndependentMap
                     (keyPoints, descriptors) = layer.ChooseBlocks(prevX, prevY);
                 }
 
-                var result = SiftMatcher.Match(keyPoints, descriptors, greyMiniMapMat, null, DescriptorMatcherType.BruteForce);
+                var result = SiftMatcher.KnnMatch(keyPoints, descriptors, greyMiniMapMat, null, DescriptorMatcherType.BruteForce);
                 if (result != default)
                 {
                     return result;
