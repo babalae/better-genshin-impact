@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using OpenCvSharp;
@@ -81,10 +83,17 @@ public abstract class IndependentBaseMap : IIndependentMap
         // 从表到里逐层匹配
         foreach (var layer in Layers)
         {
-            var result = SiftMatcher.Match(layer.TrainKeyPoints, layer.TrainDescriptors, greyMiniMapMat);
-            if (result != default)
+            try
             {
-                return result;
+                var result = SiftMatcher.Match(layer.TrainKeyPoints, layer.TrainDescriptors, greyMiniMapMat);
+                if (result != default)
+                {
+                    return result;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine($"地图{Type}层数{layer.Floor},特征匹配失败:{e.Message}");
             }
         }
 
@@ -97,19 +106,26 @@ public abstract class IndependentBaseMap : IIndependentMap
         {
             return GetMiniMapPosition(greyMiniMapMat);
         }
-        
+
         foreach (var layer in Layers)
         {
-            var (keyPoints, descriptors) = (layer.TrainKeyPoints, layer.TrainDescriptors);
-            if (SplitRow > 0 || SplitCol > 0)
+            try
             {
-                (keyPoints, descriptors) = layer.ChooseBlocks(prevX, prevY);
-            }
+                var (keyPoints, descriptors) = (layer.TrainKeyPoints, layer.TrainDescriptors);
+                if (SplitRow > 0 || SplitCol > 0)
+                {
+                    (keyPoints, descriptors) = layer.ChooseBlocks(prevX, prevY);
+                }
 
-            var result = SiftMatcher.Match(keyPoints, descriptors, greyMiniMapMat);
-            if (result != default)
+                var result = SiftMatcher.Match(keyPoints, descriptors, greyMiniMapMat, null, DescriptorMatcherType.BruteForce);
+                if (result != default)
+                {
+                    return result;
+                }
+            }
+            catch (Exception e)
             {
-                return result;
+                Debug.WriteLine($"地图{Type}层数{layer.Floor},特征匹配失败:{e.Message}");
             }
         }
 
@@ -149,6 +165,16 @@ public abstract class IndependentBaseMap : IIndependentMap
     {
         return new((MapOriginInImageCoordinate.X - c) * _mapImageBlockWidthScale,
             (MapOriginInImageCoordinate.Y - a) * _mapImageBlockWidthScale);
+    }
+
+    public Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect rect)
+    {
+        var center = rect.GetCenterPoint();
+        var (x, y) = ConvertGenshinMapCoordinatesToImageCoordinates(center.X, center.Y);
+        return new Rect((int)Math.Round(x - rect.Width / 2f * _mapImageBlockWidthScale), 
+            (int)Math.Round(y - rect.Height / 2f * _mapImageBlockWidthScale), 
+            (int)Math.Round(rect.Width * _mapImageBlockWidthScale), 
+                (int)Math.Round(rect.Height * _mapImageBlockWidthScale));
     }
 
     #endregion

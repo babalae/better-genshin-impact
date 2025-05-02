@@ -36,6 +36,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -642,8 +643,8 @@ public class PathExecutor
         TpTask tpTask = new TpTask(ct);
         await TryAutoFetchDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
-        var (tprX, tprY) = TeyvatMapCoordinate.GameToMain2048(tpX, tpY);
-        Navigation.SetPrevPosition((float)tprX, (float)tprY); // 通过上一个位置直接进行局部特征匹配
+        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
+        Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
     }
 

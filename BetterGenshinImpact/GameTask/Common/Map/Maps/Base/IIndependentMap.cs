@@ -56,6 +56,8 @@ public interface IIndependentMap
     Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates);
 
     (float x, float y) ConvertGenshinMapCoordinatesToImageCoordinates(float c, float a);
+    
+    Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect rect);
 
     #endregion
 }

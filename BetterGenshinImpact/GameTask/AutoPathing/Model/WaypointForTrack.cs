@@ -41,7 +41,7 @@ public class WaypointForTrack : Waypoint
         GameY = waypoint.Y;
         MapName = mapName;
         // 坐标系转换
-        (MatX, MatY) = TeyvatMapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+        (MatX, MatY) = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)waypoint.X, (float)waypoint.Y);
         X = MatX;
         Y = MatY;
         if (waypoint.Action == ActionEnum.CombatScript.Code)

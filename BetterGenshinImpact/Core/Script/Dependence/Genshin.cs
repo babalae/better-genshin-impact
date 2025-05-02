@@ -14,6 +14,8 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 using BetterGenshinImpact.GameTask.Common.Exceptions;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
@@ -202,7 +204,7 @@ public class Genshin
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
-        return TeyvatMapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion, mapName));
+        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(Navigation.GetPositionStable(imageRegion, mapName));
     }
 
     #endregion 大地图操作

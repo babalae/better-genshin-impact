@@ -271,7 +271,7 @@ public class TpTask(CancellationToken ct)
         var retryCount = 0;
         do
         {
-            if (IsPointInBigMapWindow(bigMapInAllMapRect, x, y)) break;
+            if (IsPointInBigMapWindow(mapName, bigMapInAllMapRect, x, y)) break;
             if (retryCount++ >= 5) // 防止死循环
             {
                 Logger.LogWarning("多次尝试未移动到目标传送点，传送失败");
@@ -287,7 +287,7 @@ public class TpTask(CancellationToken ct)
         // 6. 计算传送点位置并点击
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
         // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
-        var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
+        var (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, x, y);
         Logger.LogInformation("点击传送点");
         CaptureToRectArea().ClickTo((int)clickX, (int)clickY);
 
@@ -326,11 +326,12 @@ public class TpTask(CancellationToken ct)
     /// <summary>
     /// 传送点是否在大地图窗口内
     /// </summary>
+    /// <param name="mapName"></param>
     /// <param name="bigMapInAllMapRect">大地图在整个游戏地图中的矩形位置（原神坐标系）</param>
     /// <param name="x">传送点x坐标（原神坐标系）</param>
     /// <param name="y">传送点y坐标（原神坐标系）</param>
     /// <returns></returns>
-    private bool IsPointInBigMapWindow(Rect bigMapInAllMapRect, double x, double y)
+    private bool IsPointInBigMapWindow(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
         // 坐标不包含直接返回
         if (!bigMapInAllMapRect.Contains(x, y))
@@ -338,7 +339,7 @@ public class TpTask(CancellationToken ct)
             return false;
         }
 
-        var (clickX, clickY) = ConvertToGameRegionPosition(bigMapInAllMapRect, x, y);
+        var (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, x, y);
         // 屏蔽左上角360x400区域
         if (clickX < 360 * _zoomOutMax1080PRatio && clickY < 400 * _zoomOutMax1080PRatio)
         {
@@ -360,14 +361,15 @@ public class TpTask(CancellationToken ct)
     /// <summary>
     /// 转换传送点坐标到窗体内需要点击的坐标
     /// </summary>
+    /// <param name="mapName"></param>
     /// <param name="bigMapInAllMapRect">大地图在整个游戏地图中的矩形位置（原神坐标系）</param>
     /// <param name="x">传送点x坐标（原神坐标系）</param>
     /// <param name="y">传送点y坐标（原神坐标系）</param>
     /// <returns></returns>
-    private (double clickX, double clickY) ConvertToGameRegionPosition(Rect bigMapInAllMapRect, double x, double y)
+    private (double clickX, double clickY) ConvertToGameRegionPosition(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
-        var (picX, picY) = TeyvatMapCoordinate.GameToMain2048(x, y);
-        var picRect = TeyvatMapCoordinate.GameToMain2048(bigMapInAllMapRect);
+        var (picX, picY) = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)x, (float)y);
+        var picRect = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
         Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
         var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
         var clickY = (picY - picRect.Y) / picRect.Height * _captureRect.Height;

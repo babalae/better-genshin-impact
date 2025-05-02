@@ -14,9 +14,14 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Helpers;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
+/// <summary>
+/// TODO 需要支持更多地图
+/// </summary>
 public partial class MapViewerViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -24,13 +29,13 @@ public partial class MapViewerViewModel : ObservableObject
 
     private readonly Mat _all256Map = new(Global.Absolute(@"Assets/Map/mainMap256Block.png"));
 
-    private Mat _currentPathingMap = new();  // 2048级别
+    private Mat _currentPathingMap = new(); // 2048级别
 
     private Rect _currentPathingRect = new(); // 2048级别
 
     public MapViewerViewModel()
     {
-        var center = TeyvatMapCoordinate.GameToMain2048(0, 0);
+        var center = MapManager.GetMap(MapTypes.Teyvat).ConvertGenshinMapCoordinatesToImageCoordinates(0, 0);
         _mapBitmap = ClipMat(new Point2f((float)center.x, (float)center.y)).ToWriteableBitmap();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
@@ -141,7 +146,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private Point ConvertToMapPoint(Waypoint point)
     {
-        var (x, y) = TeyvatMapCoordinate.GameToMain2048(point.X, point.Y);
+        var (x, y) = MapManager.GetMap(MapTypes.Teyvat).ConvertGenshinMapCoordinatesToImageCoordinates((float)point.X, (float)point.Y);
         return new Point(x, y);
     }
 
