@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View;
@@ -492,7 +493,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(new CancellationToken()).GetPositionFromBigMap();
+                var p = new TpTask(new CancellationToken()).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
                 _logger.LogInformation("大地图位置：{Position}", p);
             }
         ));

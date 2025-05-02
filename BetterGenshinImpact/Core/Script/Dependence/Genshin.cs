@@ -11,6 +11,8 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
@@ -90,7 +92,26 @@ public class Genshin
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
-        await tpTask.MoveMapTo(x, y);
+        await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
+    }
+    
+    /// <summary>
+    /// 移动大地图到指定坐标
+    /// </summary>
+    /// <remarks>
+    /// 与内置传送功能不同，此方法不会多次重试。
+    /// 为避免初次中心点识别失败，建议先使用 SetBigMapZoomLevel 设置合适的大地图缩放等级。
+    /// </remarks>
+    /// <param name="x">目标X坐标</param>
+    /// <param name="y">目标Y坐标</param>
+    /// <param name="mapName">指定要移动的大地图</param>
+    public async Task MoveIndependentMapTo(int x, int y, string mapName)
+    {
+        // TODO SwitchRecentlyCountryMap 需要重写
+        // TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        // await tpTask.CheckInBigMapUi();
+        // await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+        // await tpTask.MoveMapTo(x, y, mapName);
     }
 
     /// <summary>
@@ -137,7 +158,18 @@ public class Genshin
     public Point2f GetPositionFromBigMap()
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
-        return tpTask.GetPositionFromBigMap();
+        return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+    }
+    
+    /// <summary>
+    /// 获取当前在大地图上的位置坐标
+    /// </summary>
+    /// <param name="mapName">大地图名称</param>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromBigMap(string mapName)
+    {
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        return tpTask.GetPositionFromBigMap(mapName);
     }
 
     /// <summary>
@@ -150,7 +182,7 @@ public class Genshin
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        return MapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
+        return TeyvatMapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
     }
 
     #endregion 大地图操作

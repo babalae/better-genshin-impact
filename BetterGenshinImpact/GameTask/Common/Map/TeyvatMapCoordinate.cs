@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map;
 /// 1. 原神游戏坐标系 Game
 /// 2. BetterGI主地图1024区块坐标系 Main1024
 /// </summary>
-public class MapCoordinate
+public class TeyvatMapCoordinate
 {
     #region 每次地图扩大都要更新的参数
 

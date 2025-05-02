@@ -24,7 +24,7 @@ public class MapTeleportPointDraw
     {
         foreach (var point in points)
         {
-            var p = MapCoordinate.GameToMain1024(point.Position);
+            var p = TeyvatMapCoordinate.GameToMain1024(point.Position);
             Cv2.Circle(map, p, 4, Scalar.Red, 2);
             // 写文字
             Cv2.PutText(map, $"[{point.X:F2},{point.Y:F2}]", new Point(p.X + 10, p.Y + 5), HersheyFonts.HersheySimplex, 1, Scalar.Red, 2);

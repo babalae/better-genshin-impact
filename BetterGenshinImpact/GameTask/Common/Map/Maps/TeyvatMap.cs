@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
@@ -26,20 +27,25 @@ public class TeyvatMap : IndependentBaseMap
 
     private readonly BaseMapLayer _teyvat256MapLayer;
 
-    public TeyvatMap() : base(type: IndependentMapTypes.Teyvat,
+    public TeyvatMap() : base(type: MapTypes.Teyvat,
         mapSize: new Size(GameMapCols * TeyvatMapImageBlockWidth, GameMapRows * TeyvatMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TeyvatMapImageBlockWidth, (GameMapUpRows + 1) * TeyvatMapImageBlockWidth),
         mapImageBlockWidth: TeyvatMapImageBlockWidth,
         splitRow: GameMapRows * 2,
         splitCol: GameMapCols * 2)
     {
+        TaskControl.Logger.LogInformation("提瓦特大陆地图特征点加载中，由于体积较大，首次加载速度可能较慢，请耐心等待...");
+        
         Layers = BaseMapLayer.LoadLayers(this);
         var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
 
         // 256用于大地图匹配
         _teyvat256MapLayer = BaseMapLayer.LoadLayer(this, Path.Combine(layerDir, "Teyvat_0_256_SIFT.kp.bin"), Path.Combine(layerDir, "Teyvat_0_256_SIFT.mat.png"));
     }
+    
 
+    // 大地图使用256  相对 2048 区块的缩放比例  2048/256=8
+    public const int BigMap256ScaleTo2048 = 8;
 
     public new Point2f GetBigMapPosition(Mat greyBigMapMat)
     {

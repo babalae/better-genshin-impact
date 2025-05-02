@@ -20,7 +20,7 @@ public class AncientSacredMountainMap : IndependentBaseMap
 
     static readonly int AncientSacredMountainMapImageBlockWidth = 1024;
 
-    public AncientSacredMountainMap() : base(type: IndependentMapTypes.AncientSacredMountain,
+    public AncientSacredMountainMap() : base(type: MapTypes.AncientSacredMountain,
         mapSize: new Size(GameMapCols * AncientSacredMountainMapImageBlockWidth, GameMapRows * AncientSacredMountainMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * AncientSacredMountainMapImageBlockWidth, (GameMapUpRows + 1) * AncientSacredMountainMapImageBlockWidth),
         mapImageBlockWidth: AncientSacredMountainMapImageBlockWidth,

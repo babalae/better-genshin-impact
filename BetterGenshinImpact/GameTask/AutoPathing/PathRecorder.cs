@@ -40,7 +40,7 @@ public class PathRecorder : Singleton<PathRecorder>
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen);
-        position = MapCoordinate.Main2048ToGame(position);
+        position = TeyvatMapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = WaypointType.Teleport.Code;
@@ -62,7 +62,7 @@ public class PathRecorder : Singleton<PathRecorder>
         Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen);
-        position = MapCoordinate.Main2048ToGame(position);
+        position = TeyvatMapCoordinate.Main2048ToGame(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;

@@ -30,7 +30,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     public MapViewerViewModel()
     {
-        var center = MapCoordinate.GameToMain2048(0, 0);
+        var center = TeyvatMapCoordinate.GameToMain2048(0, 0);
         _mapBitmap = ClipMat(new Point2f((float)center.x, (float)center.y)).ToWriteableBitmap();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
@@ -141,7 +141,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private Point ConvertToMapPoint(Waypoint point)
     {
-        var (x, y) = MapCoordinate.GameToMain2048(point.X, point.Y);
+        var (x, y) = TeyvatMapCoordinate.GameToMain2048(point.X, point.Y);
         return new Point(x, y);
     }
 

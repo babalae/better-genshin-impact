@@ -21,7 +21,7 @@ public class SeaOfBygoneErasMap : IndependentBaseMap
 
     static readonly int SeaOfBygoneErasMapImageBlockWidth = 1024;
 
-    public SeaOfBygoneErasMap() : base(type: IndependentMapTypes.SeaOfBygoneEras,
+    public SeaOfBygoneErasMap() : base(type: MapTypes.SeaOfBygoneEras,
         mapSize: new Size(GameMapCols * SeaOfBygoneErasMapImageBlockWidth, GameMapRows * SeaOfBygoneErasMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * SeaOfBygoneErasMapImageBlockWidth, (GameMapUpRows + 1) * SeaOfBygoneErasMapImageBlockWidth),
         mapImageBlockWidth: SeaOfBygoneErasMapImageBlockWidth,

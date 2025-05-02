@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using OpenCvSharp;
 
@@ -9,7 +10,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 /// </summary>
 public abstract class IndependentBaseMap : IIndependentMap
 {
-    public IndependentMapTypes Type { get; set; }
+    public MapTypes Type { get; set; }
 
     /// <summary>
     /// 地图大小
@@ -45,7 +46,7 @@ public abstract class IndependentBaseMap : IIndependentMap
 
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected IndependentBaseMap(IndependentMapTypes type, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
+    protected IndependentBaseMap(MapTypes type, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
     {
         Type = type;
         MapSize = mapSize;
@@ -117,6 +118,20 @@ public abstract class IndependentBaseMap : IIndependentMap
         // 原神坐标系是 1024 级别的，当图像坐标系不是 1024 级别的时候要做转换
         return new Point2f((MapOriginInImageCoordinate.X - imageCoordinates.X) / _mapImageBlockWidthScale,
             (MapOriginInImageCoordinate.Y - imageCoordinates.Y) / _mapImageBlockWidthScale);
+    }
+
+    public (float x, float y) ConvertImageCoordinatesToGenshinMapCoordinates(float x, float y)
+    {
+        return new((MapOriginInImageCoordinate.X - x) / _mapImageBlockWidthScale,
+            (MapOriginInImageCoordinate.Y - y) / _mapImageBlockWidthScale);
+    }
+
+    public Rect ConvertImageCoordinatesToGenshinMapCoordinates(Rect rect)
+    {
+        var center = rect.GetCenterPoint();
+        var (x, y) = ConvertImageCoordinatesToGenshinMapCoordinates(center.X, center.Y);
+        return new Rect((int)(x - rect.Width / 2f / _mapImageBlockWidthScale), (int)(y - rect.Height / 2f / _mapImageBlockWidthScale),
+            (int)(rect.Width / _mapImageBlockWidthScale), (int)(rect.Height / _mapImageBlockWidthScale));
     }
 
     public Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates)

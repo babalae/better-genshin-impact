@@ -23,7 +23,7 @@ public class EntireMap : Singleton<EntireMap>
 
     public EntireMap()
     {
-        _featureMatcher = new FeatureMatcher(new Size(MapCoordinate.Main2048Width, MapCoordinate.Main2048Height), new FeatureStorage("mainMap2048Block"));
+        _featureMatcher = new FeatureMatcher(new Size(TeyvatMapCoordinate.Main2048Width, TeyvatMapCoordinate.Main2048Height), new FeatureStorage("mainMap2048Block"));
     }
 
     public FeatureMatcher GetFeatureMatcher()

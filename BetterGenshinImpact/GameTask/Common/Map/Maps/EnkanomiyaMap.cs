@@ -19,7 +19,7 @@ public class EnkanomiyaMap : IndependentBaseMap
 
     static readonly int EnkanomiyaMapImageBlockWidth = 1024;
 
-    public EnkanomiyaMap() : base(type: IndependentMapTypes.Enkanomiya,
+    public EnkanomiyaMap() : base(type: MapTypes.Enkanomiya,
         mapSize: new Size(GameMapCols * EnkanomiyaMapImageBlockWidth, GameMapRows * EnkanomiyaMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * EnkanomiyaMapImageBlockWidth, (GameMapUpRows + 1) * EnkanomiyaMapImageBlockWidth),
         mapImageBlockWidth: EnkanomiyaMapImageBlockWidth,

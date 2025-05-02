@@ -20,7 +20,7 @@ public class TheChasmMap : IndependentBaseMap
 
     static readonly int TheChasmMapImageBlockWidth = 1024;
 
-    public TheChasmMap() : base(type: IndependentMapTypes.TheChasm,
+    public TheChasmMap() : base(type: MapTypes.TheChasm,
         mapSize: new Size(GameMapCols * TheChasmMapImageBlockWidth, GameMapRows * TheChasmMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TheChasmMapImageBlockWidth, (GameMapUpRows + 1) * TheChasmMapImageBlockWidth),
         mapImageBlockWidth: TheChasmMapImageBlockWidth,

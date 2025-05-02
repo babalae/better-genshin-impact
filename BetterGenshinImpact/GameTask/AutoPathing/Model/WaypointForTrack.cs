@@ -37,7 +37,7 @@ public class WaypointForTrack : Waypoint
         GameX = waypoint.X;
         GameY = waypoint.Y;
         // 坐标系转换
-        (MatX, MatY) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+        (MatX, MatY) = TeyvatMapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
         X = MatX;
         Y = MatY;
         if (waypoint.Action == ActionEnum.CombatScript.Code)

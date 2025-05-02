@@ -23,7 +23,7 @@ public class GiPathPoint
 
     public static GiPathPoint BuildFrom(Point2f point, int index)
     {
-        var pt = MapCoordinate.Main2048ToGame(point);
+        var pt = TeyvatMapCoordinate.Main2048ToGame(point);
         return new GiPathPoint
         {
             Pt = pt,
