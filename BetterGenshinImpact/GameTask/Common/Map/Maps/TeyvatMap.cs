@@ -23,8 +23,6 @@ public class TeyvatMap : IndependentBaseMap
 
 
     static readonly int TeyvatMapImageBlockWidth = 2048;
-    static readonly int ImageMap256Width = GameMapCols * 256;
-    static readonly int ImageMap256Height = GameMapRows * 256;
 
     private readonly BaseMapLayer _teyvat256MapLayer;
 

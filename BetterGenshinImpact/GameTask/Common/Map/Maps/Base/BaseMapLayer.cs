@@ -124,9 +124,12 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
     
     public static BaseMapLayer LoadLayer(IndependentBaseMap baseMap, string kpFilePath, string matFilePath)
     {
-        var layer = new BaseMapLayer(baseMap) { Floor = 0 };
-        layer.TrainKeyPoints = FeatureStorageHelper.LoadKeyPointArray(kpFilePath) ?? throw new Exception($"地图数据加载失败，文件: {kpFilePath}");
-        layer.TrainDescriptors = FeatureStorageHelper.LoadDescriptorMat(matFilePath) ?? throw new Exception($"地图数据加载失败，文件: {matFilePath}");
+        var layer = new BaseMapLayer(baseMap)
+        {
+            Floor = 0,
+            TrainKeyPoints = FeatureStorageHelper.LoadKeyPointArray(kpFilePath) ?? throw new Exception($"地图数据加载失败，文件: {kpFilePath}"),
+            TrainDescriptors = FeatureStorageHelper.LoadDescriptorMat(matFilePath) ?? throw new Exception($"地图数据加载失败，文件: {matFilePath}")
+        };
         return layer;
     }
 

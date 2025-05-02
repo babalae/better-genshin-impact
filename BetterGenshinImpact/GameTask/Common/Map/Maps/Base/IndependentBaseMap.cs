@@ -13,6 +13,7 @@ public abstract class IndependentBaseMap : IIndependentMap
 
     /// <summary>
     /// 地图大小
+    /// 当前只用于切割特征点
     /// </summary>
     public Size MapSize { get; set; }
 
