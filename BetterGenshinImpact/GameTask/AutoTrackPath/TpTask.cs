@@ -215,7 +215,7 @@ public class TpTask(CancellationToken ct)
         await OpenBigMapUi(1);
         // 2. 传送前的计算准备
         // 获取离目标传送点最近的两个传送点，按距离排序
-        var nTpPoints = GetNearestNTpPoints(tpX, tpY, 2);
+        var nTpPoints = GetNearestNTpPoints(tpX, tpY, mapName, 2);
         // 获取最近的传送点与区域
         var (x, y, country) = force ? (tpX, tpY, null) : (nTpPoints[0].X, nTpPoints[0].Y, nTpPoints[0].Country);
         var disBetweenTpPoints = Math.Sqrt(Math.Pow(nTpPoints[0].X - nTpPoints[1].X, 2) +
@@ -787,41 +787,13 @@ public class TpTask(CancellationToken ct)
     }
 
     /// <summary>
-    /// 获取最近的传送点位置和所处区域
-    /// </summary>
-    /// <param name="x"></param>
-    /// <param name="y"></param>
-    /// <returns></returns>
-    [Obsolete]
-    public (double x, double y, string? country) GetRecentlyTpPoint(double x, double y)
-    {
-        double recentX = 0;
-        double recentY = 0;
-        string? country = "";
-        var minDistance = double.MaxValue;
-        foreach (var tpPosition in MapLazyAssets.Instance.TpPositions)
-        {
-            var distance = Math.Sqrt(Math.Pow(tpPosition.X - x, 2) + Math.Pow(tpPosition.Y - y, 2));
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                recentX = tpPosition.X;
-                recentY = tpPosition.Y;
-                country = tpPosition.Country;
-            }
-        }
-
-        return (recentX, recentY, country);
-    }
-
-    /// <summary>
     /// 获取最接近的N个传送点坐标和所处区域
     /// </summary>
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <param name="n">获取最近的 n 个传送点</param>
     /// <returns></returns>
-    public List<GiTpPosition> GetNearestNTpPoints(double x, double y, int n = 1)
+    public List<GiTpPosition> GetNearestNTpPoints(double x, double y, string mapName, int n = 1)
     {
         // 检查 n 的合法性
         if (n < 1)
@@ -830,7 +802,7 @@ public class TpTask(CancellationToken ct)
         }
 
         // 按距离排序并选择前 n 个点
-        return MapLazyAssets.Instance.TpPositions
+        return MapLazyAssets.Instance.ScenesDic[mapName].Points
             .OrderBy(tp => Math.Pow(tp.X - x, 2) + Math.Pow(tp.Y - y, 2))
             .Take(n)
             .ToList();

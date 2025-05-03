@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.Test.Simple.AllMap;
 
@@ -16,7 +17,7 @@ public class MapTeleportPointDraw
         // var pList = LoadTeleportPoint(@"E:\HuiTask\更好的原神\地图匹配\地图点位\5.0");
         // pList.AddRange(MapAssets.Instance.TpPositions);
         var map = new Mat(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\mainMap1024BlockColor.png");
-        DrawTeleportPoint(map, MapLazyAssets.Instance.TpPositions);
+        DrawTeleportPoint(map, MapLazyAssets.Instance.ScenesDic[MapTypes.Teyvat.ToString()].Points);
         Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\有用的素材\5.0\传送点_1024_0.34.3.png", map);
     }
 
