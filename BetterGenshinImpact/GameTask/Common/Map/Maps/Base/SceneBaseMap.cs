@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 /// <summary>
 /// 独立地图
 /// </summary>
-public abstract class IndependentBaseMap : IIndependentMap
+public abstract class SceneBaseMap : ISceneMap
 {
     public MapTypes Type { get; set; }
 
@@ -49,7 +49,7 @@ public abstract class IndependentBaseMap : IIndependentMap
 
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    protected IndependentBaseMap(MapTypes type, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
+    protected SceneBaseMap(MapTypes type, Size mapSize, Point2f mapOriginInImageCoordinate, int mapImageBlockWidth, int splitRow, int splitCol)
     {
         Type = type;
         MapSize = mapSize;

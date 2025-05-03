@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// 层岩巨渊
 /// 地图大小从3x3改到了2x2
 /// </summary>
-public class TheChasmMap : IndependentBaseMap
+public class TheChasmMap : SceneBaseMap
 {
     #region 每次地图扩大都要更新的参数(层岩巨渊无需更新)
 

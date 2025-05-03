@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// <summary>
 /// 渊下宫
 /// </summary>
-public class EnkanomiyaMap : IndependentBaseMap
+public class EnkanomiyaMap : SceneBaseMap
 {
     #region 地图参数
 

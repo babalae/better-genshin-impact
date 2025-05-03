@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// <summary>
 /// 提瓦特大陆
 /// </summary>
-public class TeyvatMap : IndependentBaseMap
+public class TeyvatMap : SceneBaseMap
 {
     #region 每次地图扩大都要更新的参数
 

@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// 远古圣山
 /// 地图大小从4x4改到了2x2
 /// </summary>
-public class AncientSacredMountainMap : IndependentBaseMap
+public class AncientSacredMountainMap : SceneBaseMap
 {
     #region 地图参数
 

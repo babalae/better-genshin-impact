@@ -5,10 +5,10 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 
 public static class MapManager
 {
-    private static readonly Dictionary<MapTypes, IIndependentMap> _maps = new();
+    private static readonly Dictionary<MapTypes, ISceneMap> _maps = new();
     private static readonly object LockObject = new();
 
-    public static IIndependentMap GetMap(string mapName)
+    public static ISceneMap GetMap(string mapName)
     {
         return GetMap(MapTypesExtensions.ParseFromName(mapName));
     }
@@ -19,7 +19,7 @@ public static class MapManager
     /// </summary>
     /// <param name="mapType">地图类型</param>
     /// <returns>地图实例</returns>
-    public static IIndependentMap GetMap(MapTypes mapType)
+    public static ISceneMap GetMap(MapTypes mapType)
     {
         if (_maps.TryGetValue(mapType, out var map))
         {
@@ -40,7 +40,7 @@ public static class MapManager
         }
     }
 
-    private static IIndependentMap CreateMap(MapTypes mapType)
+    private static ISceneMap CreateMap(MapTypes mapType)
     {
         return mapType switch
         {

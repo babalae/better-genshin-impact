@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 /// 从3x4改成了1x2
 /// 大地图都是半黑的,传送可能有问题
 /// </summary>
-public class SeaOfBygoneErasMap : IndependentBaseMap
+public class SeaOfBygoneErasMap : SceneBaseMap
 {
     #region 地图参数
 

@@ -2,7 +2,12 @@
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
-public interface IIndependentMap
+/// <summary>
+/// 独立地图接口
+/// 使用 Scene（场景） 命名是和原神内部命名保持一致
+/// 每个独立地图都是一个场景
+/// </summary>
+public interface ISceneMap
 {
     /// <summary>
     /// 获取大地图在整张地图上的位置

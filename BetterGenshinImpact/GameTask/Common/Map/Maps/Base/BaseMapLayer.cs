@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 /// <summary>
 /// 每层的特征
 /// </summary>
-public class BaseMapLayer(IndependentBaseMap baseMap)
+public class BaseMapLayer(SceneBaseMap baseMap)
 {
     // public string Name { get; set; } = string.Empty;
     //
@@ -55,7 +55,7 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
     /// </summary>
     /// <param name="baseMap"></param>
     /// <returns></returns>
-    public static List<BaseMapLayer> LoadLayers(IndependentBaseMap baseMap)
+    public static List<BaseMapLayer> LoadLayers(SceneBaseMap baseMap)
     {
         var layers = new List<BaseMapLayer>();
         var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), baseMap.Type.ToString());
@@ -122,7 +122,7 @@ public class BaseMapLayer(IndependentBaseMap baseMap)
         return layers;
     }
     
-    public static BaseMapLayer LoadLayer(IndependentBaseMap baseMap, string kpFilePath, string matFilePath)
+    public static BaseMapLayer LoadLayer(SceneBaseMap baseMap, string kpFilePath, string matFilePath)
     {
         var layer = new BaseMapLayer(baseMap)
         {
