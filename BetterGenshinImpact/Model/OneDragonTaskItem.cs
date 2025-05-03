@@ -11,7 +11,6 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
-using GameTask.Common.Job;
 
 namespace BetterGenshinImpact.Model;
 
