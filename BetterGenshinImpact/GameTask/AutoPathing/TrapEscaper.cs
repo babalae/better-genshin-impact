@@ -35,7 +35,7 @@ public class TrapEscaper(CancellationToken ct)
         var startTime = DateTime.UtcNow;
         bool left = false;
         var screen = CaptureToRectArea();
-        var position = Navigation.GetPosition(screen);
+        var position = Navigation.GetPosition(screen, waypoint.MapName);
         LastActionTime = DateTime.UtcNow;
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
@@ -56,7 +56,7 @@ public class TrapEscaper(CancellationToken ct)
             }
 
             screen = CaptureToRectArea();
-            position = Navigation.GetPosition(screen);
+            position = Navigation.GetPosition(screen, waypoint.MapName);
 
             // 旋转视角
             /* 这里的角度增加了一个randomAngle角度，用来在原角度不适用的情况下修改角度以适应复杂环境
