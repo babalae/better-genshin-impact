@@ -270,6 +270,12 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(2000);
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
+                else if ("塞西莉亚苗圃".Equals(_taskParam.DomainName))
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    Thread.Sleep(2300);
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                }
                 else if ("太山府".Equals(_taskParam.DomainName))
                 {
                     // 直接F即可
