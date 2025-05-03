@@ -109,6 +109,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             Thread.Sleep(1000);
         }
+
         var speedTimer = new SpeedTimer();
 
         using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
@@ -185,16 +186,17 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+       
 
         string text;
         if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
         {
-            var paddedMat = PreProcessForInference(textMat);
-            text = _pickTextInference.Inference(paddedMat);
+            var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+            text = _pickTextInference.Inference(TextInferenceFactory.PreProcessForInference(textMat));
         }
         else
         {
+            var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
             text = OcrFactory.Paddle.Ocr(textMat);
         }
 
@@ -273,21 +275,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     }
 
 
-    private Mat PreProcessForInference(Mat mat)
-    {
-        // Yap 已经改用灰度图了 https://github.com/Alex-Beng/Yap/commit/c2ad1e7b1442aaf2d80782a032e00876cd1c6c84
-        // 二值化
-        // Cv2.Threshold(mat, mat, 0, 255, ThresholdTypes.Otsu | ThresholdTypes.Binary);
-        //Cv2.AdaptiveThreshold(mat, mat, 255, AdaptiveThresholdTypes.GaussianC, ThresholdTypes.Binary, 31, 3); // 效果不错 但是和模型不搭
-        //mat = OpenCvCommonHelper.Threshold(mat, Scalar.FromRgb(235, 235, 235), Scalar.FromRgb(255, 255, 255)); // 识别物品不太行
-        // 不知道为什么要强制拉伸到 221x32
-        mat = ResizeHelper.ResizeTo(mat, 221, 32);
-        // 填充到 384x32
-        var padded = new Mat(new Size(384, 32), MatType.CV_8UC1, Scalar.Black);
-        padded[new Rect(0, 0, mat.Width, mat.Height)] = mat;
-        //Cv2.ImWrite(Global.Absolute("padded.png"), padded);
-        return padded;
-    }
+    
 
     /// <summary>
     /// 相同文字前后3帧内只输出一次

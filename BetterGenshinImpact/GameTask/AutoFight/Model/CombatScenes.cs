@@ -8,7 +8,6 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -390,7 +389,7 @@ public class CombatScenes : IDisposable
     }
 
     [Obsolete]
-    private void ParseTeamOcrResult(PaddleOcrResult result, ImageRegion rectArea)
+    private void ParseTeamOcrResult(OcrResult result, ImageRegion rectArea)
     {
         List<string> names = [];
         List<Rect> nameRects = [];

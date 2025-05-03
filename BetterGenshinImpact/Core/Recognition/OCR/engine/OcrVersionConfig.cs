@@ -1,0 +1,35 @@
+using System;
+using BetterGenshinImpact.Core.Recognition.OCR.paddle.data;
+
+namespace BetterGenshinImpact.Core.Recognition.OCR;
+
+public readonly record struct OcrVersionConfig(
+    string Name,
+    OcrImgMode Mode,
+    bool ChannelFirst,
+    OcrNormalizeImage NormalizeImage,
+    OcrShape Shape)
+{
+    // 参数来自 https://github.com/PaddlePaddle/PaddleOCR/tree/main/configs/det/PP-OCRv3
+
+    public static OcrVersionConfig PpOcrV3 = new OcrVersionConfig(
+        "PP-OCRv3-det",
+        OcrImgMode.BGR,
+        false,
+        new OcrNormalizeImage(
+            Scale: 1.0f / 255.0f,
+            Mean: [0.485f, 0.456f, 0.406f],
+            Std: [0.229f, 0.224f, 0.225f]
+        ), new OcrShape(3, 320, 48)
+    );
+
+    public static OcrVersionConfig PpOcrV4 = new OcrVersionConfig(
+        "PP-OCRv4-det",
+        OcrImgMode.BGR,
+        false,
+        new OcrNormalizeImage(
+            Scale: 1.0f / 255.0f,
+            Mean: [0.485f, 0.456f, 0.406f],
+            Std: [0.229f, 0.224f, 0.225f]
+        ), new OcrShape(3, 320, 48));
+}

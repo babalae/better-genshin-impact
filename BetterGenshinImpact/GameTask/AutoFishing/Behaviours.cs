@@ -733,8 +733,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             // OCR 提竿判断
-            using Mat wordCaptureGreyMat = new Mat(imageRegion.SrcGreyMat, liftingWordsAreaRect);
-            var text = ocrService.Ocr(wordCaptureGreyMat);
+            var text = ocrService.Ocr(wordCaptureMat);
 
             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains(this.getABiteLocalizedString))
             {

@@ -65,7 +65,7 @@ public class BgiOnnxModel
     /// <summary>
     /// paddleOCR V3 繁体中文 识别模型
     /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrChtDet =
+    public static readonly BgiOnnxModel PaddleOcrChtRec =
         Register("chinese_cht_PP-OCRv3_rec", @"Assets\Model\PaddleOCR\chinese_cht_PP-OCRv3_rec_infer\slim_model.onnx");
 
     /// <summary>

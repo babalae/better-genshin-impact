@@ -561,7 +561,7 @@ public class AutoDomainTask : ISoloTask
         using var ra = CaptureToRectArea();
 
         var endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsUpperRect);
-        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.challengeCompletedLocalizedString))
         {
             Logger.LogInformation("检测到秘境结束提示(挑战达成)，结束秘境");
@@ -569,7 +569,7 @@ public class AutoDomainTask : ISoloTask
         }
 
         endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsRect);
-        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.autoLeavingLocalizedString))
         {
             Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
@@ -1030,7 +1030,7 @@ public class AutoDomainTask : ISoloTask
             // 图像右侧就是脆弱树脂数量
             var countArea = ra.DeriveCrop(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y,
                 (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height);
-            var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.Ocr(countArea.SrcMat);
             fragileResinCount = StringUtils.TryParseInt(count);
         }
 
