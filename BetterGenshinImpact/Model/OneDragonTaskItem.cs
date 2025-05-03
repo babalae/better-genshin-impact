@@ -115,6 +115,9 @@ public partial class OneDragonTaskItem : ObservableObject
                     await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
+            case "领取尘歌壶奖励":
+                Action = async () => { await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token); };
+                break;
             default:
                 Action = () => Task.CompletedTask;
                 break;

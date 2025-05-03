@@ -42,6 +42,18 @@ public class ElementAssets : BaseAssets<ElementAssets>
     
     public RecognitionObject PageCloseWhiteRo;
 
+    public RecognitionObject SereniteaPotHomeRo;
+    public RecognitionObject TeleportSereniteaPotHomeRo;
+    public RecognitionObject AYuanIconRo;
+    public RecognitionObject SereniteaPotLoveRo;
+    public RecognitionObject SereniteaPotMoneyRo;
+    public RecognitionObject SereniteapotPageClose;
+    public RecognitionObject SereniteapotShopNumberBtn;
+    public RecognitionObject AYuanExpBottleBigRo;
+    public RecognitionObject AYuanExpBottleSmallRo;
+    public RecognitionObject SereniteapotExpBookRo;
+    public RecognitionObject SereniteapotExpBookSmallRo;
+
 
     private ElementAssets()
     {
@@ -259,5 +271,100 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 8, 0, CaptureRect.Width / 8, CaptureRect.Height / 8),
             DrawOnWindow = true
         }.InitTemplate();
-    }
+
+        // 尘歌壶
+        SereniteaPotHomeRo = new RecognitionObject
+        {
+            Name = "SereniteaPotHome",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_home.png"),
+            RegionOfInterest = new Rect(0, 0 , CaptureRect.Width, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        TeleportSereniteaPotHomeRo = new RecognitionObject
+        {
+            Name = "TeleportSereniteaPotHome",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_home.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width/2, CaptureRect.Height / 2, CaptureRect.Width/2, CaptureRect.Height/2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        AYuanIconRo = new RecognitionObject
+        {
+            Name = "AYuanIconRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+
+        SereniteaPotLoveRo = new RecognitionObject
+        {
+            Name = "SereniteaPotLoveRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_love.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 8, CaptureRect.Height / 2, CaptureRect.Width / 8, CaptureRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteaPotMoneyRo = new RecognitionObject
+        {
+            Name = "SereniteaPotMoneyRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_money.png"),
+            RegionOfInterest = new Rect( CaptureRect.Width / 2, CaptureRect.Height - CaptureRect.Height / 4, CaptureRect.Width / 4, CaptureRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
+        AYuanExpBottleBigRo = new RecognitionObject
+        {
+            Name = "AYuanExpBottleBigRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_big.png"),
+            RegionOfInterest = new Rect( 0, 0, CaptureRect.Width , CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        AYuanExpBottleSmallRo = new RecognitionObject
+        {
+            Name = "AYuanExpBottleSmallRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_small.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteapotPageClose = new RecognitionObject
+        {
+            Name = "SereniteapotPageClose",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_page_close.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2 , CaptureRect.Height /5, CaptureRect.Width/4, CaptureRect.Height/8),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteapotShopNumberBtn = new RecognitionObject
+        {
+            Name = "SereniteapotShopNumberBtn",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "sereniteapot_shop_number_btn.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2 , CaptureRect.Height /2, CaptureRect.Width/2, CaptureRect.Height/2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteapotExpBookRo = new RecognitionObject
+        {
+            Name = "SereniteapotExpBookRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteapotExpBookSmallRo = new RecognitionObject
+        {
+            Name = "SereniteapotExpBookSmallRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book_small.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+
+
+}
 }
