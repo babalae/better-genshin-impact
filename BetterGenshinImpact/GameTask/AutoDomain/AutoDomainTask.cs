@@ -41,8 +41,6 @@ using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
-using Newtonsoft.Json;
 using BetterGenshinImpact.Core.Script.Dependence;
 
 
@@ -64,7 +62,6 @@ public class AutoDomainTask : ISoloTask
 
     private CancellationToken _ct;
     
-    private  OneDragonFlowConfig? SelectedConfig;
     private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
 
     private readonly string challengeCompletedLocalizedString;
@@ -349,14 +346,14 @@ public class AutoDomainTask : ISoloTask
             }
         }
         
-        DateTime now = DateTime.Now;
-        if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4)
+        DateTime now = DateTime.Now;        
+        if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Sunday && now.Hour < 4)
         {
             using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa);//检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
             {
-                InitConfigList();
-                if (int.TryParse(SelectedConfig.SundaySelectedValue, out int sundaySelectedValue))
+                
+                if (int.TryParse(_taskParam.SundaySelectedValue, out int sundaySelectedValue))
                 {
                     if (sundaySelectedValue > 0)
                     {
@@ -1152,52 +1149,5 @@ public class AutoDomainTask : ISoloTask
         }
 
         await new AutoArtifactSalvageTask(star).Start(_ct);
-    }
-    
-    private void InitConfigList()
-    {
-        Directory.CreateDirectory(OneDragonFlowConfigFolder);
-        // 读取文件夹内所有json配置，按创建时间正序
-        var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
-        var configs = new List<OneDragonFlowConfig>();
-
-        OneDragonFlowConfig? selected = null;
-        foreach (var configFile in configFiles)
-        {
-            var json = File.ReadAllText(configFile);
-            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
-            if (config != null)
-            {
-                configs.Add(config);
-                if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
-                {
-                    selected = config;
-                }
-            }
-        }
-
-        if (selected == null)
-        {
-            if (configs.Count > 0)
-            {
-                selected = configs[0];
-            }
-            else
-            {
-                selected = new OneDragonFlowConfig
-                {
-                    Name = "默认配置"
-                };
-                configs.Add(selected);
-            }
-        }
-
-        ConfigList.Clear();
-        foreach (var config in configs)
-        {
-            ConfigList.Add(config);
-        }
-
-        SelectedConfig = selected;
     }
 }

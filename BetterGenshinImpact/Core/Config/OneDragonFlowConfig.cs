@@ -40,10 +40,16 @@ public partial class OneDragonFlowConfig : ObservableObject
     private string _dailyRewardPartyName = string.Empty;
     
     // 合成浓缩后保留原粹树脂的数量
-    public int MinResinToKeep { get; set; } = 0;
+    [ObservableProperty]
+    private int _minResinToKeep = 0;
     
     // 领取每日奖励的好感数量
-    public string SundaySelectedValue { get; set; } = "0";
+    [ObservableProperty]
+    private string _sundayEverySelectedValue = "0";
+    
+    // 领取每日奖励的好感数量
+    [ObservableProperty]
+    private string _sundaySelectedValue = "0";
 
     #region 每周秘境配置
 
@@ -102,26 +108,26 @@ public partial class OneDragonFlowConfig : ObservableObject
     private string _completionAction = string.Empty;
     
     // 通过当天是哪一天来返回配置
-    public (string partyName, string domainName) GetDomainConfig()
+    public (string partyName, string domainName, string sundaySelectedValue) GetDomainConfig()
     {
         if (WeeklyDomainEnabled)
         {
             var dayOfWeek = DateTime.Now.DayOfWeek;
             return dayOfWeek switch
             {
-                DayOfWeek.Monday => (MondayPartyName, MondayDomainName),
-                DayOfWeek.Tuesday => (TuesdayPartyName, TuesdayDomainName),
-                DayOfWeek.Wednesday => (WednesdayPartyName, WednesdayDomainName),
-                DayOfWeek.Thursday => (ThursdayPartyName, ThursdayDomainName),
-                DayOfWeek.Friday => (FridayPartyName, FridayDomainName),
-                DayOfWeek.Saturday => (SaturdayPartyName, SaturdayDomainName),
-                DayOfWeek.Sunday => (SundayPartyName, SundayDomainName),
-                _ => (PartyName, DomainName)
+                DayOfWeek.Monday => (MondayPartyName, MondayDomainName,SundaySelectedValue),
+                DayOfWeek.Tuesday => (TuesdayPartyName, TuesdayDomainName,SundaySelectedValue),
+                DayOfWeek.Wednesday => (WednesdayPartyName, WednesdayDomainName,SundaySelectedValue),
+                DayOfWeek.Thursday => (ThursdayPartyName, ThursdayDomainName,SundaySelectedValue),
+                DayOfWeek.Friday => (FridayPartyName, FridayDomainName,SundaySelectedValue),
+                DayOfWeek.Saturday => (SaturdayPartyName, SaturdayDomainName,SundaySelectedValue),
+                DayOfWeek.Sunday => (SundayPartyName, SundayDomainName,SundaySelectedValue),
+                _ => (PartyName, DomainName,SundaySelectedValue)
             };
         }
         else
         {
-            return (PartyName, DomainName);
+            return (PartyName, DomainName,SundayEverySelectedValue);
         }
     }
 

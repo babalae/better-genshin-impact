@@ -90,7 +90,7 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
-                    var (partyName, domainName) = config.GetDomainConfig();
+                    var (partyName, domainName,sundaySelectedValue) = config.GetDomainConfig();
                     if (string.IsNullOrEmpty(domainName) || string.IsNullOrEmpty(partyName) || partyName == "地脉花")
                     {
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过","未选择");
@@ -103,7 +103,8 @@ public partial class OneDragonTaskItem : ObservableObject
                     var autoDomainParam = new AutoDomainParam(0, path)
                     {
                         PartyName = partyName,
-                        DomainName = domainName
+                        DomainName = domainName,
+                        SundaySelectedValue = sundaySelectedValue
                     };
                     await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };

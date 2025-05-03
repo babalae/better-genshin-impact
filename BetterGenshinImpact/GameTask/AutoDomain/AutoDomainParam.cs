@@ -14,6 +14,9 @@ public class AutoDomainParam : BaseTaskParam
 
     // 需要刷取的副本名称
     public string DomainName { get; set; } = string.Empty;
+    
+    // 需要刷取的副本名称
+    public string SundaySelectedValue { get; set; } = string.Empty;
 
     // 结束后是否自动分解圣遗物
     public bool AutoArtifactSalvage { get; set; } = false;
@@ -39,6 +42,7 @@ public class AutoDomainParam : BaseTaskParam
         var config = TaskContext.Instance().Config.AutoDomainConfig;
         PartyName = config.PartyName;
         DomainName = config.DomainName;
+        SundaySelectedValue = config.SundaySelectedValue;
         AutoArtifactSalvage = config.AutoArtifactSalvage;
         MaxArtifactStar = TaskContext.Instance().Config.AutoArtifactSalvageConfig.MaxArtifactStar;
     }
