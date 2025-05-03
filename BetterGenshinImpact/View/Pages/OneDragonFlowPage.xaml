@@ -33,6 +33,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock
                     Grid.Column="0"
@@ -44,44 +45,49 @@
                 <ui:Button
                     Grid.Column="1"
                     Grid.Row="0"
-                    Margin="0,0,15,0"
+                    Margin="0,0,5,0"
                     Appearance="Primary"
                     Icon="{ui:SymbolIcon Play24}"
                     Command="{Binding OneKeyExecuteCommand}" />
-                <ui:Button Grid.Column="1"
+                <ui:Button
+                    Grid.Column="2"
+                    Grid.Row="0"
+                    Margin="0,0,5,0"
+                    Icon="{ui:SymbolIcon Add24}"
+                    Command="{Binding AddTaskGroupCommand}" />
+                <ui:Button Grid.Column="3"
                            Grid.Row="0"
-                           Margin="50,0,12,0"
                            Icon="{ui:SymbolIcon Save24}"
                            Command="{Binding SaveActionConfigCommand}"
                            Content="保存排序" />
+
             </Grid>
-                <Grid
-                    DockPanel.Dock="Top"
-                    Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="220" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Separator Grid.Row="0" Margin="0,1.5,0,0" BorderThickness="0,1,0,0" />
-                </Grid>
+            <Grid
+                DockPanel.Dock="Top"
+                Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Separator Grid.Row="0" Margin="0,1.5,0,0" BorderThickness="0,1,0,0" />
+            </Grid>
             <ui:ListView dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"
                          dd:DragDrop.UseDefaultDragAdorner="True"
                          ItemsSource="{Binding TaskList}"
                          SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
                          SelectionMode="Single">
-                            
                 <ui:ListView.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
-                            <MenuItem Command="{Binding DeleteTaskGroupCommand}"
-                                      CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                                      Header="删除配置" />
-                        </ContextMenu>
-                    </ui:ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
+                        <MenuItem Command="{Binding DeleteTaskGroupCommand}"
+                                  CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                                  Header="删除配置" />
+                    </ContextMenu>
+                </ui:ListView.ContextMenu>
                 <ui:ListView.ItemTemplate>
                     <DataTemplate>
                         <ui:Card Margin="0,2,14,2">
@@ -104,9 +110,9 @@
                                 <TextBlock Grid.Column="2"
                                            VerticalAlignment="Center"
                                            IsHitTestVisible="False"
-                                           Text="{Binding Name}" Width="100"/>
-                               <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
-                                </Grid>
+                                           Text="{Binding Name}" Width="100" />
+                                <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                            </Grid>
                         </ui:Card>
                     </DataTemplate>
                 </ui:ListView.ItemTemplate>
@@ -385,7 +391,7 @@
                                                  Grid.Column="1"
                                                  Margin="0,0,20,0"
                                                  IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}" />
-                             </Grid>
+                            </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
                             <Grid Margin="16">
@@ -464,7 +470,7 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}" />
-                                
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -491,7 +497,7 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}" />
-                                
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -518,8 +524,8 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}" />
-                                
-                                
+
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -546,7 +552,7 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}" />
-                                
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -600,15 +606,15 @@
                             </Grid>
                         </ui:CardControl.Header>
                         <StackPanel Orientation="Horizontal">
-                            <ComboBox 
-                                      Width="80"
-                                      Margin="0,0,10,0"
-                                      ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
-                                      SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                            <ComboBox
+                                Width="80"
+                                Margin="0,0,10,0"
+                                ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
+                                SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
                             </ComboBox>
-                            <ui:ToggleSwitch 
-                                             Margin="0,0,36,0"
-                                             IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+                            <ui:ToggleSwitch
+                                Margin="0,0,36,0"
+                                IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
                         </StackPanel>
                     </ui:CardControl>
 

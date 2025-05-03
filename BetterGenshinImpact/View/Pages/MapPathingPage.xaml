@@ -70,11 +70,8 @@
                        Content="设置"
                        Icon="{ui:SymbolIcon Settings24}" />
             <ui:Button Margin="10,0,0,0"
-                       Command="{Binding OpenMapViewerCommand}"
-                       Content="查看实时追踪地图" />
-            <ui:Button Margin="10,0,0,0"
-                       Command="{Binding OpenMapEditorCommand}"
-                       Content="录制编辑器" />
+                       Command="{Binding OpenDevToolsCommand}"
+                       Content="开发者工具" />
         </StackPanel>
 
         <Separator Grid.Row="3"

@@ -11,6 +11,12 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+
+using BetterGenshinImpact.GameTask.Common.Exceptions;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.Helpers.Extensions;
+
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
@@ -48,9 +54,15 @@ public class Genshin
         await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y);
     }
 
+    public async Task Tp(double x, double y, string mapName, bool force)
+    {
+        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, mapName, force);
+    }
+
+
     public async Task Tp(double x, double y, bool force)
     {
-        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, force);
+        await new TpTask(CancellationContext.Instance.Cts.Token).Tp(x, y, MapTypes.Teyvat.ToString(), force);
     }
 
     /// <summary>
@@ -73,8 +85,9 @@ public class Genshin
         await Tp(dx, dy, force);
     }
 
-        
+
     #region 大地图操作
+
     /// <summary>
     /// 移动大地图到指定坐标
     /// </summary>
@@ -90,7 +103,35 @@ public class Genshin
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
-        await tpTask.MoveMapTo(x, y);
+        await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
+    }
+
+    /// <summary>
+    /// 移动大地图到指定坐标
+    /// </summary>
+    /// <remarks>
+    /// 与内置传送功能不同，此方法不会多次重试。
+    /// 为避免初次中心点识别失败，建议先使用 SetBigMapZoomLevel 设置合适的大地图缩放等级。
+    /// </remarks>
+    /// <param name="x">目标X坐标</param>
+    /// <param name="y">目标Y坐标</param>
+    /// <param name="mapName">指定要移动的大地图</param>
+    public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
+    {
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        await tpTask.CheckInBigMapUi();
+        // 切换地区
+        if (mapName == MapTypes.Teyvat.ToString())
+        {
+            // 计算传送点位置离哪张地图切换后的中心点最近，切换到该地图
+            await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+        }
+        else
+        {
+            // 直接切换地区
+            await tpTask.SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
+        }
+        await tpTask.MoveMapTo(x, y, mapName);
     }
 
     /// <summary>
@@ -99,7 +140,7 @@ public class Genshin
     /// <returns>当前大地图缩放等级，范围1.0-6.0</returns>
     public double GetBigMapZoomLevel()
     {
-        TpTask tpTask = new(CancellationContext.Instance.Cts.Token);        
+        TpTask tpTask = new(CancellationContext.Instance.Cts.Token);
         return tpTask.GetBigMapZoomLevel(CaptureToRectArea());
     }
 
@@ -120,7 +161,7 @@ public class Genshin
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
     }
-    
+
     /// <summary>
     /// 传送到用户指定的七天神像
     /// </summary>
@@ -137,31 +178,62 @@ public class Genshin
     public Point2f GetPositionFromBigMap()
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
-        return tpTask.GetPositionFromBigMap();
+        return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+    }
+
+    /// <summary>
+    /// 获取当前在大地图上的位置坐标
+    /// </summary>
+    /// <param name="mapName">大地图名称</param>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromBigMap(string mapName)
+    {
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        return tpTask.GetPositionFromBigMap(mapName);
     }
 
     /// <summary>
     /// 获取当前在小地图上的位置坐标
     /// </summary>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap(){
+    public Point2f GetPositionFromMap()
+    {
+        return GetPositionFromMap(MapTypes.Teyvat.ToString());
+    }
+
+    /// <summary>
+    /// 获取当前在小地图上的位置坐标
+    /// </summary>
+    /// <param name="mapName">大地图名称</param>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromMap(string mapName)
+    {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        return MapCoordinate.Main2048ToGame(Navigation.GetPositionStable(imageRegion));
+
+        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(Navigation.GetPositionStable(imageRegion, mapName));
     }
 
     #endregion 大地图操作
+
     /// <summary>
     /// 切换队伍
     /// </summary>
     /// <param name="partyName">队伍界面自定义的队伍名称</param>
     /// <returns></returns>
-    public async Task SwitchParty(string partyName)
+    public async Task<bool> SwitchParty(string partyName)
     {
-        await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
+        try
+        {
+            return await new SwitchPartyTask().Start(partyName, CancellationContext.Instance.Cts.Token);
+        }
+        catch (PartySetupFailedException ex)
+        {
+            return false;//释放失败状态到JS，否则失败后会退出任务。
+        }
     }
 
 
@@ -249,7 +321,7 @@ public class Genshin
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
         await new AutoFishingTask(param).Start(CancellationContext.Instance.Cts.Token);
     }
-    
+
     /// <summary>
     /// 重新登录原神
     /// </summary>

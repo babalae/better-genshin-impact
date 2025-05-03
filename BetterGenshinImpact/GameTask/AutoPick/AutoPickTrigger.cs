@@ -109,7 +109,6 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             Thread.Sleep(1000);
         }
-
         var speedTimer = new SpeedTimer();
 
         using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
@@ -186,7 +185,14 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-       
+       // var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+        var gradMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(textRect.X, textRect.Y, textRect.Width, Math.Min(textRect.Height, 3)));
+        var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
+        if (avgGrad < -3)
+        {
+            Debug.WriteLine($"AutoPickTrigger: 已在拾取中，跳过本次拾取 {avgGrad}");
+            return;
+        }
 
         string text;
         if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())

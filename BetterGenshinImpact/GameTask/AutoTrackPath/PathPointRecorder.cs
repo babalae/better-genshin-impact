@@ -16,6 +16,8 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -23,8 +25,6 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 [Obsolete]
 public class PathPointRecorder : Singleton<PathPointRecorder>
 {
-    private readonly EntireMap _bigMap = EntireMap.Instance;
-
     private Task? _recordTask;
     private CancellationTokenSource? _recordTaskCts;
 
@@ -76,7 +76,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                         continue;
                     }
 
-                    var p2 = _bigMap.GetMiniMapPositionByFeatureMatch(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    var p2 = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
                     if (!p2.IsEmpty())
                     {
                         way.AddPoint(p2);

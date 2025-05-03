@@ -182,16 +182,20 @@ public partial class AllConfig : ObservableObject
     /// 原神按键绑定配置
     /// </summary>
     public KeyBindingsConfig KeyBindingsConfig { get; set; } = new();
-
     /// <summary>
     /// 其他配置
     /// </summary>
     public OtherConfig OtherConfig { get; set; } = new();
-
     /// <summary>
     /// 传送相关配置
     /// </summary>
     public TpConfig TpConfig { get; set; } = new();
+    
+    /// <summary>
+    /// 开发者配置
+    /// </summary>
+    public DevConfig DevConfig { get; set; } = new();
+    
 
     /// <summary>
     /// 硬件加速设置
@@ -225,6 +229,7 @@ public partial class AllConfig : ObservableObject
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
+        DevConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

@@ -2,6 +2,7 @@
 using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -17,6 +18,8 @@ public class WaypointForTrack : Waypoint
     public double MatX { get; set; }
 
     public double MatY { get; set; }
+    
+    public string MapName { get; set; }
 
     /// <summary>
     /// 存在 combat_script 的 action 的话，这个值会存在
@@ -28,7 +31,7 @@ public class WaypointForTrack : Waypoint
     /// </summary>
     public string? LogInfo { get; set; }
 
-    public WaypointForTrack(Waypoint waypoint)
+    public WaypointForTrack(Waypoint waypoint, string mapName)
     {
         Type = waypoint.Type;
         MoveMode = waypoint.MoveMode;
@@ -36,8 +39,9 @@ public class WaypointForTrack : Waypoint
         ActionParams = waypoint.ActionParams;
         GameX = waypoint.X;
         GameY = waypoint.Y;
+        MapName = mapName;
         // 坐标系转换
-        (MatX, MatY) = MapCoordinate.GameToMain2048(waypoint.X, waypoint.Y);
+        (MatX, MatY) = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)waypoint.X, (float)waypoint.Y);
         X = MatX;
         Y = MatY;
         if (waypoint.Action == ActionEnum.CombatScript.Code)
