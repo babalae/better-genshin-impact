@@ -1,12 +1,11 @@
-﻿using BetterGenshinImpact.Core.Config;
-using OpenCvSharp;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.paddle;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using static Vanara.PInvoke.Gdi32;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
@@ -50,14 +49,15 @@ public class PaddleOcrService : IOcrService
     }
 
     /// <summary>
-    /// 推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
+    ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
     public string Ocr(Mat mat)
     {
         return OcrResult(mat).Text;
     }
+
     /// <summary>
-    /// 推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
+    ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
     public OcrResult OcrResult(Mat mat)
     {
@@ -70,19 +70,8 @@ public class PaddleOcrService : IOcrService
         return _OcrResult(mat);
     }
 
-    private OcrResult _OcrResult(Mat mat)
-    {
-        lock (locker)
-        {
-            long startTime = Stopwatch.GetTimestamp();
-            var result = RunAll(mat);
-            TimeSpan time = Stopwatch.GetElapsedTime(startTime);
-            Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
-            return result;
-        }
-    }
     /// <summary>
-    /// 推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
+    ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
     public string OcrWithoutDetector(Mat mat)
     {
@@ -93,17 +82,30 @@ public class PaddleOcrService : IOcrService
             return str;
         }
     }
+
+    private OcrResult _OcrResult(Mat mat)
+    {
+        lock (locker)
+        {
+            var startTime = Stopwatch.GetTimestamp();
+            var result = RunAll(mat);
+            var time = Stopwatch.GetElapsedTime(startTime);
+            Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
+            return result;
+        }
+    }
+
     /// <summary>
-    /// 推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
+    ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
     public OcrResult RunAll(Mat src, int recognizeBatchSize = 0)
     {
-        long startTime = Stopwatch.GetTimestamp();
-        RotatedRect[] rects = localDetModel.Run(src);
+        var startTime = Stopwatch.GetTimestamp();
+        var rects = localDetModel.Run(src);
         Mat[] mats =
             rects.Select(rect =>
                 {
-                    Mat roi = src[GetCropedRect(rect.BoundingRect(), src.Size())];
+                    var roi = src[GetCropedRect(rect.BoundingRect(), src.Size())];
                     return roi;
                 })
                 .ToArray();
@@ -115,15 +117,13 @@ public class PaddleOcrService : IOcrService
         }
         finally
         {
-            foreach (Mat mat in mats)
-            {
-                mat.Dispose();
-            }
+            foreach (var mat in mats) mat.Dispose();
         }
     }
 
     /// <summary>
-    /// Gets the cropped region of the source image specified by the given rectangle, clamping the rectangle coordinates to the image bounds.
+    ///     Gets the cropped region of the source image specified by the given rectangle, clamping the rectangle coordinates to
+    ///     the image bounds.
     /// </summary>
     /// <param name="rect">The rectangle to crop.</param>
     /// <param name="size">The size of the source image.</param>

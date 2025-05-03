@@ -15,17 +15,9 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.paddle;
 
 public class Rec
 {
-    private readonly InferenceSession _session;
-    private readonly IReadOnlyList<string> _labels;
     private readonly OcrVersionConfig _config;
-
-    ~Rec()
-    {
-        lock (_session)
-        {
-            _session.Dispose();
-        }
-    }
+    private readonly IReadOnlyList<string> _labels;
+    private readonly InferenceSession _session;
 
     public Rec(BgiOnnxModel model, string labelFilePath, OcrVersionConfig config)
     {
@@ -36,18 +28,23 @@ public class Rec
         _labels = File.ReadAllLines(labelFilePath);
     }
 
+    ~Rec()
+    {
+        lock (_session)
+        {
+            _session.Dispose();
+        }
+    }
+
     /// <summary>
-    /// Run OCR recognition on multiple images in batches.
+    ///     Run OCR recognition on multiple images in batches.
     /// </summary>
     /// <param name="srcs">Array of images for OCR recognition.</param>
     /// <param name="batchSize">Size of the batch to run OCR recognition on.</param>
-    /// <returns>Array of <see cref="OcrRecognizerResult"/> instances corresponding to OCR recognition results of the images.</returns>
+    /// <returns>Array of <see cref="OcrRecognizerResult" /> instances corresponding to OCR recognition results of the images.</returns>
     public OcrRecognizerResult[] Run(Mat[] srcs, int batchSize = 0)
     {
-        if (srcs.Length == 0)
-        {
-            return [];
-        }
+        if (srcs.Length == 0) return [];
 
         var chooseBatchSize = batchSize != 0 ? batchSize : Math.Min(8, Environment.ProcessorCount);
 
@@ -62,22 +59,20 @@ public class Rec
             .ToArray();
     }
 
-    public OcrRecognizerResult Run(Mat src) => RunMulti([src]).Single();
+    public OcrRecognizerResult Run(Mat src)
+    {
+        return RunMulti([src]).Single();
+    }
 
     private OcrRecognizerResult[] RunMulti(Mat[] srcs)
     {
-        if (srcs.Length == 0)
-        {
-            return [];
-        }
+        if (srcs.Length == 0) return [];
 
         for (var i = 0; i < srcs.Length; ++i)
         {
             var src = srcs[i];
             if (src.Empty())
-            {
                 throw new ArgumentException($"src[{i}] size should not be 0, wrong input picture provided?");
-            }
         }
 
         var modelHeight = _config.Shape.Height;
@@ -120,14 +115,10 @@ public class Rec
                             ]);
                             var output = results[0];
                             if (output.ElementType is not TensorElementType.Float)
-                            {
                                 throw new Exception($"Unexpected output tensor type: {output.ElementType}");
-                            }
 
                             if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
-                            {
                                 throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-                            }
 
                             return output.AsTensor<float>();
                         }
@@ -165,7 +156,7 @@ public class Rec
                                 var maxIdx = new int[2];
                                 mat.MinMaxIdx(out _, out var maxVal, [], maxIdx);
 
-                                if (maxIdx[1] > 0 && (!(n > 0 && maxIdx[1] == lastIndex)))
+                                if (maxIdx[1] > 0 && !(n > 0 && maxIdx[1] == lastIndex))
                                 {
                                     score += (float)maxVal;
                                     sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));

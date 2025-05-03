@@ -1,4 +1,3 @@
-using System;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
@@ -6,8 +5,8 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
 public class OcrOperationImpl
 {
     /// <summary>
-    /// 不支持 chw 之类的顺序
-    /// https://github.com/PaddlePaddle/PaddleOCR/blob/0ee4094988c568077bba35ddb239030ced1ff270/ppocr/data/imaug/operators.py#L62
+    ///     不支持 chw 之类的顺序
+    ///     https://github.com/PaddlePaddle/PaddleOCR/blob/0ee4094988c568077bba35ddb239030ced1ff270/ppocr/data/imaug/operators.py#L62
     /// </summary>
     public static Mat NormalizeImageOperation(Mat data,
         float? scale, // scale float32
@@ -25,19 +24,15 @@ public class OcrOperationImpl
         {
             bgr = result.Split();
             for (var i = 0; i < bgr.Length; ++i)
-            {
                 bgr[i].ConvertTo(bgr[i], MatType.CV_32FC1, 1 / std[i], (0.0 - mean[i]) / std[i]);
-            }
 
             Cv2.Merge(bgr, result);
         }
         finally
         {
-            foreach (var channel in bgr)
-            {
-                channel.Dispose();
-            }
+            foreach (var channel in bgr) channel.Dispose();
         }
+
         return result;
     }
 }

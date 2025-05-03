@@ -10,6 +10,16 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.paddle;
 
 public class Det
 {
+    private static readonly ILogger<Det> Logger = App.GetLogger<Det>();
+    private readonly OcrVersionConfig _config;
+    private readonly InferenceSession _session;
+
+    public Det(BgiOnnxModel model, OcrVersionConfig config)
+    {
+        _config = config;
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model);
+    }
+
     /// <summary>Gets or sets the maximum size for resizing the input image.</summary>
     public int? MaxSize { get; set; } = 1536;
 
@@ -28,19 +38,9 @@ public class Det
     /// <summary>Gets or sets the ratio for enlarging text boxes during post-processing.</summary>
     public float UnclipRatio { get; set; } = 2.0f;
 
-    private static readonly ILogger<Det> Logger = App.GetLogger<Det>();
-    private readonly InferenceSession _session;
-    private readonly OcrVersionConfig _config;
-
     ~Det()
     {
         _session.Dispose();
-    }
-
-    public Det(BgiOnnxModel model, OcrVersionConfig config)
-    {
-        _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model);
     }
 
     public RotatedRect[] Run(Mat src)
@@ -56,7 +56,7 @@ public class Det
             : cbuf;
         if (DilatedSize != null)
         {
-            using Mat ones =
+            using var ones =
                 Cv2.GetStructuringElement(MorphShapes.Rect, new Size(DilatedSize.Value, DilatedSize.Value));
             Cv2.Dilate(binary, dilated, ones);
         }
@@ -95,20 +95,20 @@ public class Det
 
     public Mat RunRaw(Mat src, out Size resizedSize)
     {
-        Mat padded = src.Channels() switch
+        var padded = src.Channels() switch
         {
             4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
             1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
             3 => src,
             var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
         };
-        using (Mat resized = MatResize(padded, MaxSize))
+        using (var resized = MatResize(padded, MaxSize))
         {
             resizedSize = new Size(resized.Width, resized.Height);
             padded = MatPadding32(resized);
         }
 
-        using (Mat _ = padded)
+        using (var _ = padded)
         {
             var inputTensor = OcrUtils.NormalizeToTensorDnn(padded, _config.NormalizeImage.Scale,
                 _config.NormalizeImage.Mean, _config.NormalizeImage.Std, out var owner);
@@ -121,14 +121,10 @@ public class Det
                     ]);
                     var output = results[0];
                     if (output.ElementType is not TensorElementType.Float)
-                    {
                         throw new Exception($"Unexpected output tensor type: {output.ElementType}");
-                    }
 
                     if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
-                    {
                         throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-                    }
 
                     Logger.LogDebug(output.Name);
                     var outputTensor = output.AsTensor<float>();
@@ -144,7 +140,7 @@ public class Det
 
     private static Mat MatPadding32(Mat src)
     {
-        Size size = src.Size();
+        var size = src.Size();
         Size newSize = new(
             32 * Math.Ceiling(1.0 * size.Width / 32),
             32 * Math.Ceiling(1.0 * size.Height / 32));
@@ -156,32 +152,32 @@ public class Det
     {
         if (maxSize == null) return src.Clone();
 
-        Size size = src.Size();
-        int longEdge = Math.Max(size.Width, size.Height);
-        double scaleRate = 1.0 * maxSize.Value / longEdge;
+        var size = src.Size();
+        var longEdge = Math.Max(size.Width, size.Height);
+        var scaleRate = 1.0 * maxSize.Value / longEdge;
         return scaleRate < 1.0 ? src.Resize(default, scaleRate, scaleRate) : src.Clone();
     }
 
     private static float GetScore(Point[] contour, Mat pred)
     {
-        int width = pred.Width;
-        int height = pred.Height;
-        int[] boxX = contour.Select(v => v.X).ToArray();
-        int[] boxY = contour.Select(v => v.Y).ToArray();
+        var width = pred.Width;
+        var height = pred.Height;
+        var boxX = contour.Select(v => v.X).ToArray();
+        var boxY = contour.Select(v => v.Y).ToArray();
 
-        int xmin = Math.Clamp(boxX.Min(), 0, width - 1);
-        int xmax = Math.Clamp(boxX.Max(), 0, width - 1);
-        int ymin = Math.Clamp(boxY.Min(), 0, height - 1);
-        int ymax = Math.Clamp(boxY.Max(), 0, height - 1);
+        var xmin = Math.Clamp(boxX.Min(), 0, width - 1);
+        var xmax = Math.Clamp(boxX.Max(), 0, width - 1);
+        var ymin = Math.Clamp(boxY.Min(), 0, height - 1);
+        var ymax = Math.Clamp(boxY.Max(), 0, height - 1);
 
-        Point[] rootPoints = contour
+        var rootPoints = contour
             .Select(v => new Point(v.X - xmin, v.Y - ymin))
             .ToArray();
         using Mat mask = new(ymax - ymin + 1, xmax - xmin + 1, MatType.CV_8UC1, Scalar.Black);
         mask.FillPoly(new[] { rootPoints }, new Scalar(1));
 
-        using Mat croppedMat = pred[ymin, ymax + 1, xmin, xmax + 1];
-        float score = (float)croppedMat.Mean(mask).Val0;
+        using var croppedMat = pred[ymin, ymax + 1, xmin, xmax + 1];
+        var score = (float)croppedMat.Mean(mask).Val0;
 
         // Debug
         //{
