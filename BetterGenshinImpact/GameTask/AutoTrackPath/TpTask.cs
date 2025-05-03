@@ -222,10 +222,16 @@ public class TpTask(CancellationToken ct)
                                            Math.Pow(nTpPoints[0].Y - nTpPoints[1].Y, 2));
         // 确保不会点错传送点的最小缩放，保证至少为 1.0
         var minZoomLevel = Math.Max(disBetweenTpPoints / 20, 1.0);
-        // 计算传送点位置离哪张地图切换后的中心点最近，切换到该地图
+        // 切换地区
         if (mapName == MapTypes.Teyvat.ToString())
         {
+            // 计算传送点位置离哪张地图切换后的中心点最近，切换到该地图
             await SwitchRecentlyCountryMap(x, y, country);
+        }
+        else
+        {
+            // 直接切换地区
+            await SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
         }
 
 
@@ -875,34 +881,39 @@ public class TpTask(CancellationToken ct)
                 minCountry = forceCountry;
             }
 
-            GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-            await Delay(300, ct);
-            using var ra = CaptureToRectArea();
-            var list = ra.FindMulti(new RecognitionObject
-            {
-                RecognitionType = RecognitionTypes.Ocr,
-                RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
-            });
-            IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
-            CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-            string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, minCountry);
-            string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
-            Region? matchRect = list.FirstOrDefault(r => r.Text.Length == minCountryLocalized.Length && !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
-            if (matchRect == null)
-            {
-                Logger.LogWarning("切换区域失败：{Country}", minCountry);
-            }
-            else
-            {
-                matchRect.Click();
-                Logger.LogInformation("切换到区域：{Country}", minCountry);
-            }
-
-            await Delay(500, ct);
+            await SwitchArea(minCountry);
             return true;
         }
 
         return false;
+    }
+
+    public async Task SwitchArea(string areaName)
+    {
+        GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        await Delay(300, ct);
+        using var ra = CaptureToRectArea();
+        var list = ra.FindMulti(new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
+        });
+        IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
+        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, areaName);
+        string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+        Region? matchRect = list.FirstOrDefault(r => r.Text.Length == minCountryLocalized.Length && !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
+        if (matchRect == null)
+        {
+            Logger.LogWarning("切换区域失败：{Country}", areaName);
+        }
+        else
+        {
+            matchRect.Click();
+            Logger.LogInformation("切换到区域：{Country}", areaName);
+        }
+
+        await Delay(500, ct);
     }
 
 

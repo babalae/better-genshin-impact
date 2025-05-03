@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.Helpers.Extensions;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -115,13 +116,22 @@ public class Genshin
     /// <param name="x">目标X坐标</param>
     /// <param name="y">目标Y坐标</param>
     /// <param name="mapName">指定要移动的大地图</param>
-    public async Task MoveIndependentMapTo(int x, int y, string mapName)
+    public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
-        // TODO SwitchRecentlyCountryMap 需要重写
-        // TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
-        // await tpTask.CheckInBigMapUi();
-        // await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
-        // await tpTask.MoveMapTo(x, y, mapName);
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        await tpTask.CheckInBigMapUi();
+        // 切换地区
+        if (mapName == MapTypes.Teyvat.ToString())
+        {
+            // 计算传送点位置离哪张地图切换后的中心点最近，切换到该地图
+            await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
+        }
+        else
+        {
+            // 直接切换地区
+            await tpTask.SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
+        }
+        await tpTask.MoveMapTo(x, y, mapName);
     }
 
     /// <summary>
