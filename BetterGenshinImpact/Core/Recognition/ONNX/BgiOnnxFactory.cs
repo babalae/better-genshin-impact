@@ -46,6 +46,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         _dmlDeviceId = config.GpuDevice;
         _trtUseEmbedMode = config.EmbedTensorRtCache;
         _enableCache = config.EnableTensorRtCache;
+        Logger.LogDebug("[ONNX]启用的provider: {Device}", string.Join(",", _providerTypes.Select(Enum.GetName)));
     }
 
     /// <summary>
@@ -333,7 +334,8 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             }
             catch (Exception e)
             {
-                Logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type), e.Message);
+                Logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
+                    e.Message);
             }
         }
 
