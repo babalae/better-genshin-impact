@@ -10,7 +10,6 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.paddle;
 
 public class Det
 {
-    private static readonly ILogger<Det> Logger = App.GetLogger<Det>();
     private readonly OcrVersionConfig _config;
     private readonly InferenceSession _session;
 
@@ -125,8 +124,7 @@ public class Det
 
                     if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
                         throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-
-                    Logger.LogDebug(output.Name);
+                    
                     var outputTensor = output.AsTensor<float>();
                     var dimensions = outputTensor.Dimensions;
                     var labelCount = dimensions[2];
