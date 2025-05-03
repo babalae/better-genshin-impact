@@ -28,6 +28,9 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject PartyBtnDelete;
 
     public RecognitionObject CraftCondensedResin;
+    public RecognitionObject fragileResinCount;
+    public RecognitionObject Keyreduce;
+    public RecognitionObject Keyincrease;
 
     public RecognitionObject BagArtifactUnchecked;
     public RecognitionObject BagArtifactChecked;
@@ -187,6 +190,33 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "craft_condensed_resin.png"),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width / 2, CaptureRect.Height / 3 * 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 树脂数量
+        fragileResinCount = new RecognitionObject
+        {
+            Name = "fragileResinCount",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "fragile_resin_count.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 减少合成
+        Keyreduce = new RecognitionObject
+        {
+            Name = "Keyreduce",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_reduce.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 增加合成
+        Keyincrease = new RecognitionObject
+        {
+            Name = "Keyincrease",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_increase.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 

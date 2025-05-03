@@ -15,7 +15,7 @@ public partial class OneDragonFlowConfig : ObservableObject
     /// 所有任务的开关状态
     /// </summary>
     public Dictionary<string, bool> TaskEnabledList { get; set; } = new();
-
+   
     // 合成树脂的国家
     [ObservableProperty]
     private string _craftingBenchCountry = "枫丹";
@@ -38,11 +38,16 @@ public partial class OneDragonFlowConfig : ObservableObject
     // 领取每日奖励的好感队伍名称
     [ObservableProperty]
     private string _dailyRewardPartyName = string.Empty;
-
+    
+    // 合成浓缩后保留原粹树脂的数量
+    public int MinResinToKeep { get; set; } = 0;
+    
+    // 领取每日奖励的好感数量
+    public string SundaySelectedValue { get; set; } = "0";
 
     #region 每周秘境配置
-    //=====================================================lcb
-    //周一LCB
+
+    //周一
     [ObservableProperty]
     private string _mondayPartyName = string.Empty;
     

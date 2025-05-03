@@ -18,6 +18,37 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 public static partial class Bv
 {
     /// <summary>
+    /// 点击减少按钮
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool ClickReduceButton(ImageRegion captureRa)
+    {
+        var ra = captureRa.Find(ElementAssets.Instance.Keyreduce);
+        if (ra.IsExist())
+        {
+            ra.Click();
+            return true;
+        }         
+        return false;
+    }
+    
+    /// <summary>
+    /// 点击增加按钮
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool ClickAddButton(ImageRegion captureRa)
+    {
+        var ra = captureRa.Find(ElementAssets.Instance.Keyincrease);
+        if (ra.IsExist())
+        {
+            ra.Click();
+            return true;
+        }         
+        return false;
+    }
+    
+    /// <summary>
     /// 点击白色确认按钮
     /// </summary>
     /// <param name="captureRa"></param>

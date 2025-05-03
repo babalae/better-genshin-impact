@@ -39,12 +39,20 @@ using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using Newtonsoft.Json;
+using BetterGenshinImpact.Core.Script.Dependence;
+
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask : ISoloTask
 {
     public string Name => "自动秘境";
+    
+    private static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
 
     private readonly AutoDomainParam _taskParam;
 
@@ -55,6 +63,9 @@ public class AutoDomainTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
+    
+    private  OneDragonFlowConfig? SelectedConfig;
+    private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
 
     private readonly string challengeCompletedLocalizedString;
     private readonly string autoLeavingLocalizedString;
@@ -337,7 +348,72 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
+        
+        DateTime now = DateTime.Now;
+        if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4)
+        {
+            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa);//检测是否为圣遗物副本
+            if (artifactArea.IsEmpty())
+            {
+                InitConfigList();
+                if (int.TryParse(SelectedConfig.SundaySelectedValue, out int sundaySelectedValue))
+                {
+                    if (sundaySelectedValue > 0)
+                    {
+                        Logger.LogInformation("周日设置了秘境奖励序号 {sundaySelectedValue}", sundaySelectedValue);
+                        using var abnormalscreenRa = CaptureToRectArea();
+                        GlobalMethod.MoveMouseTo(abnormalscreenRa.Width/4,abnormalscreenRa.Height/2);//移到左侧
+                        for (var i = 0; i < 150; i++)
+                        {
+                            Simulation.SendInput.Mouse.VerticalScroll(-1);
+                            await Delay(10, _ct);
+                        }
+                        await Delay(400, _ct);
+                        
+                        using var abnormalRa = CaptureToRectArea();
+                        var ocrList = abnormalRa.FindMulti(RecognitionObject.Ocr(0, 0, abnormalRa.Width*0.5, abnormalRa.Height));
+                        var done = ocrList.LastOrDefault(t =>
+                            Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString));
+                        if (done != null)
+                        {
+                            await Delay(300, _ct);
 
+                            switch (sundaySelectedValue)
+                            {
+                                case 1:
+                                    GlobalMethod.Click(done.X, done.Y-abnormalRa.Height/5);
+                                    break;
+                                case 2:
+                                    GlobalMethod.Click(done.X, done.Y-abnormalRa.Height/10);
+                                    break;
+                                case 3:
+                                    GlobalMethod.Click(done.X, done.Y);
+                                    break;
+                                default:
+                                    Logger.LogWarning("无效的 sundaySelectedValue 值: {sundaySelectedValue}",
+                                        sundaySelectedValue);
+                                    break;
+                            }
+                        }
+                        //await Delay(100000, _ct);//调试延时=========
+                    }
+                    else
+                    {
+                        Logger.LogInformation("周日未设置秘境奖励序号，不进行奖励选择");
+                    }
+                }
+                else
+                {
+                    Logger.LogWarning("周日设置秘境奖励序号错误，请检查配置页面");
+                }
+            } else
+            {
+                Logger.LogWarning("周日奖励选择：圣遗物副本无需选择奖励");
+            }
+            await Delay(300, _ct);
+            //await Delay(100000, _ct);//调试延时=========
+        }
+        
         // 点击单人挑战
         int retryTimes = 0;
         while (retryTimes < 20)
@@ -408,11 +484,22 @@ public class AutoDomainTask : ISoloTask
             {
                 await Delay(1000, _ct);
                 done.Click();
+                await Delay(500, _ct);
+                
+                using var reRa = CaptureToRectArea();//再次确认
+                var reocrList = reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.2, reRa.Width, reRa.Height * 0.6));
+                var redone = reocrList.FirstOrDefault(t =>
+                    Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
+                    Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
+                if (redone != null)
+                {
+                    continue;
+                }
                 break;
             }
 
             // todo 添加小地图角标位置检测 防止有人手点了
-            await Delay(1000, _ct);
+            await Delay(500, _ct);
         }
 
         await Delay(2000, _ct);
@@ -1065,5 +1152,52 @@ public class AutoDomainTask : ISoloTask
         }
 
         await new AutoArtifactSalvageTask(star).Start(_ct);
+    }
+    
+    private void InitConfigList()
+    {
+        Directory.CreateDirectory(OneDragonFlowConfigFolder);
+        // 读取文件夹内所有json配置，按创建时间正序
+        var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
+        var configs = new List<OneDragonFlowConfig>();
+
+        OneDragonFlowConfig? selected = null;
+        foreach (var configFile in configFiles)
+        {
+            var json = File.ReadAllText(configFile);
+            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            if (config != null)
+            {
+                configs.Add(config);
+                if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
+                {
+                    selected = config;
+                }
+            }
+        }
+
+        if (selected == null)
+        {
+            if (configs.Count > 0)
+            {
+                selected = configs[0];
+            }
+            else
+            {
+                selected = new OneDragonFlowConfig
+                {
+                    Name = "默认配置"
+                };
+                configs.Add(selected);
+            }
+        }
+
+        ConfigList.Clear();
+        foreach (var config in configs)
+        {
+            ConfigList.Add(config);
+        }
+
+        SelectedConfig = selected;
     }
 }

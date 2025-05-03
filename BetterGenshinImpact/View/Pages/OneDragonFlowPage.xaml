@@ -260,30 +260,76 @@
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
                                Text="合成树脂" />
+                    
                     <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon WeatherMoon24}">
 
                         <ui:CardControl.Header>
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
+                                              Width="Auto"
+                                              HorizontalAlignment="Left"
                                               FontTypography="Body"
                                               Text="合成树脂合成台"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
+                                              Margin=" 0,0,0,0"
+                                              Width="Auto"
+                                              HorizontalAlignment="Left"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="前往指定地区合成台合成树脂"
+                                              Text="指定地区合成树脂"
                                               TextWrapping="Wrap" />
+                                <ComboBox 
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Grid.RowSpan="2" 
+                                          Margin="18,0,0,0"
+                                          Width="Auto"
+                                          HorizontalContentAlignment="Center"
+                                          HorizontalAlignment="Left"
+                                          SelectedItem="{Binding SelectedConfig.CraftingBenchCountry, Mode=TwoWay}"
+                                          ItemsSource="{Binding CraftingBenchCountry}" />
+                                
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="2"
+                                              Width="Auto"
+                                              Margin=" 15,0,0,0"
+                                              HorizontalAlignment="Left"
+                                              FontTypography="Body"
+                                              Text="合成后保留"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="2"
+                                              Margin=" 15,0,0,0"
+                                              Width="Auto"
+                                              HorizontalAlignment="Left"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="原粹树脂数量"
+                                              TextWrapping="Wrap" />
+                                <TextBox Grid.Row="0"
+                                         Grid.Column="3"
+                                         Grid.RowSpan="2" 
+                                         Margin="8,0,0,0" 
+                                         Width="Auto"
+                                         HorizontalContentAlignment="Center"
+                                         Text="{Binding SelectedConfig.MinResinToKeep, Mode=TwoWay, TargetNullValue=-1}"
+                                         Height="{Binding ElementName=combinedTextBlocks, Path=ActualHeight}"/>
+
+                                
                             </Grid>
                         </ui:CardControl.Header>
-                        <ComboBox MinWidth="100"
-                                  Margin="0,0,28,0"
-                                  SelectedItem="{Binding SelectedConfig.CraftingBenchCountry, Mode=TwoWay}"
-                                  ItemsSource="{Binding CraftingBenchCountry}" />
+                        
                     </ui:CardControl>
 
 
@@ -360,30 +406,65 @@
                             <Grid Margin="16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="秘境名称"
+                                              HorizontalAlignment="Left"
+                                              Text="选择秘境"
+                                              Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              HorizontalAlignment="Left"
                                               Text="秘境名称"
+                                              Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
-                                          Width="150"
-                                          Margin="0,0,36,0"
+                                          Width="120"
+                                          HorizontalAlignment="Left"
+                                          HorizontalContentAlignment="Center"
+                                          Margin="15,0,10,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.DomainName, Mode=TwoWay}">
                                 </ComboBox>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="2"
+                                              Margin="17,0,10,0"
+                                              FontTypography="Body"
+                                              HorizontalAlignment="Right"
+                                              Text="周日副本"
+                                              Width="60"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="2"
+                                              Margin="17,0,10,0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              HorizontalAlignment="Right"
+                                              Text="选择序号"
+                                              Width="60"
+                                              TextWrapping="Wrap" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          Grid.RowSpan="2"
+                                          Margin="0,0,36,0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          HorizontalAlignment="Right"
+                                          Width="100"
+                                          ItemsSource="{Binding SundaySelectedValueList , Mode=TwoWay}"
+                                          SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}">
+                                </ComboBox>
+
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
@@ -410,9 +491,10 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="启用后，每日刷取配置将会失效"
                                               TextWrapping="Wrap">
-                                    启用后，每日刷取配置将会失效
                                 </ui:TextBlock>
+
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
@@ -587,6 +669,11 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
@@ -606,6 +693,31 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}" />
+                                <Border Grid.Row="1"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="3"
+                                        Grid.RowSpan="2"
+                                        Margin="0,21,10,10"
+                                        Background="#80595959"
+                                        CornerRadius="5"
+                                        Width="Auto"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Padding="10">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="周日开放三种奖励，从上往下（1/2/3）序号:"
+                                                  TextWrapping="Wrap" />
+                                </Border>
+                                <ComboBox Grid.Row="1"
+                                          Grid.Column="2"
+                                          Grid.RowSpan="2"
+                                          Margin="20,11,37,0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList , Mode=TwoWay}"
+                                          SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}">
+                                </ComboBox>
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>

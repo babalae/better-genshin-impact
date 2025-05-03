@@ -86,7 +86,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     private readonly string _basePath = AppDomain.CurrentDomain.BaseDirectory;
-
+    
     private void ReadScriptGroup()
     {
         try
@@ -282,6 +282,9 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
     [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
+
+    [ObservableProperty] private List<string> _sundaySelectedValueList = ["1", "2", "3"];
+   
 
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
