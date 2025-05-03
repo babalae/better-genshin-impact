@@ -874,10 +874,14 @@ public class TpTask(CancellationToken ct)
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, areaName);
         string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
-        Region? matchRect = list.FirstOrDefault(r => r.Text.Length == minCountryLocalized.Length && !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
+        Region? matchRect = list.FirstOrDefault(r =>  !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
         if (matchRect == null)
         {
             Logger.LogWarning("切换区域失败：{Country}", areaName);
+            if (areaName == MapTypes.TheChasm.GetDescription() || areaName == MapTypes.Enkanomiya.GetDescription())
+            {
+                throw new Exception($"切换独立地图区域[{areaName}]失败");
+            }
         }
         else
         {
