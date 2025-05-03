@@ -364,7 +364,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.OnedragonHotkeyType,
             (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SOneDragonFlowCommand); }
         ));
-        
+
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动七圣召唤",
             nameof(Config.HotKeyConfig.AutoGeniusInvokationHotkey),
@@ -493,7 +493,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
-                var p = new TpTask(new CancellationToken()).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+                var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
                 _logger.LogInformation("大地图位置：{Position}", p);
             }
         ));
@@ -514,7 +514,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
                 else
                 {
-                    pathRecorder.Start(MapTypes.Teyvat.ToString());
+                    Task.Run(() => { pathRecorder.Start(TaskContext.Instance().Config.DevConfig.RecordMapName); });
                 }
 
                 pathRecording = !pathRecording;
@@ -530,7 +530,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             {
                 if (pathRecording)
                 {
-                    pathRecorder.AddWaypoint();
+                    Task.Run(() => { pathRecorder.AddWaypoint(); });
+                    
                 }
             }
         ));

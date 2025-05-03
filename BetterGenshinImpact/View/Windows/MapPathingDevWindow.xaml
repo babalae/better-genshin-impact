@@ -5,11 +5,12 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+                 xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  d:DataContext="{d:DesignInstance Type=windows:MapPathingDevViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  Width="320"
-                 Height="230"
+                 Height="260"
                  mc:Ignorable="d">
     <StackPanel>
         <ui:TitleBar Title="地图追踪开发者工具">
@@ -19,12 +20,20 @@
         </ui:TitleBar>
 
         <StackPanel Margin="12">
+            <ui:TextBlock Margin="5">(下方地图选择会影响路径录制所在的独立地图)</ui:TextBlock>
             <ui:TextBlock Margin="5">请选择地图：</ui:TextBlock>
             <ComboBox ItemsSource="{Binding MapTypeItems}"
                       DisplayMemberPath="DisplayName"
                       SelectedValuePath="EnumName"
                       SelectedValue="{Binding SelectedMapType, Mode=TwoWay}"
-                      Margin="5" />
+                      Margin="5">
+                <b:Interaction.Triggers>
+                    <b:EventTrigger EventName="SelectionChanged">
+                        <b:InvokeCommandAction Command="{Binding DropDownChangedCommand}"
+                                               CommandParameter="GeniusInvocation" />
+                    </b:EventTrigger>
+                </b:Interaction.Triggers>
+            </ComboBox>
             <ui:Button Margin="5"
                        Command="{Binding OpenMapViewerCommand}"
                        Content="查看实时追踪地图" />

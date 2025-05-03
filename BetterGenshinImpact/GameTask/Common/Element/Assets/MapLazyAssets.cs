@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.Json;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
@@ -33,13 +34,10 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
 
     public readonly List<String> DomainNameList = [];
 
-    // 反方向行走的副本
-    public readonly List<string> DomainBackwardList = ["无妄引咎密宫", "芬德尼尔之顶"];
-
     public MapLazyAssets()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-        var worldScenes = JsonSerializer.Deserialize<List<GiWorldScene>>(json, ConfigService.JsonOptions) ?? throw new Exception("tp.json deserialize failed");
+        var worldScenes = JsonConvert.DeserializeObject<List<GiWorldScene>>(json) ?? throw new Exception("tp.json deserialize failed");
         ScenesDic = worldScenes.ToDictionary(x => x.MapName, x => x);
 
 

@@ -13,6 +13,7 @@ using System.Text.Json.Serialization;
 using System.Windows;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using Microsoft.Web.WebView2.Core;
 
@@ -42,9 +43,20 @@ public class PathRecorder : Singleton<PathRecorder>
         _mapName = mapName;
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
+        if (mapName == MapTypes.Teyvat.ToString())
+        {
+            TaskControl.Logger.LogInformation("如果需要切换其他地图，请在 {Msg} 中切换", "地图追踪——开发者工具");
+        }
+
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, mapName);
+        if (position == default)
+        {
+            TaskControl.Logger.LogWarning("未识别到当前位置！");
+            return;
+        }
+
         position = MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
@@ -68,6 +80,12 @@ public class PathRecorder : Singleton<PathRecorder>
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, _mapName);
         position = MapManager.GetMap(_mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        if (position == default)
+        {
+            TaskControl.Logger.LogWarning("未识别到当前位置！");
+            return;
+        }
+
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;
@@ -99,15 +117,15 @@ public class PathRecorder : Singleton<PathRecorder>
         }
     }
 
-    public void AddPosToEditor(double x, double y)
+    private void AddPosToEditor(double x, double y)
     {
         if (_webWindow != null)
         {
-            _webWindow.WebView.ExecuteScriptAsync($"addNewPoint({x},{y})");
+            UIDispatcherHelper.Invoke(() => { _webWindow.WebView.ExecuteScriptAsync($"addNewPoint({x},{y})"); });
         }
     }
 
-    public void OpenEditorInWebView()
+    public void OpenEditorInWebView(string mapName = "Teyvat")
     {
         if (_webWindow is not { IsVisible: true })
         {
@@ -121,7 +139,13 @@ public class PathRecorder : Singleton<PathRecorder>
             };
             _webWindow.Closed += (s, e) => _webWindow = null;
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
-            _webWindow.NavigateToFile(Global.Absolute(@"Assets\Map\Editor\index.html"));
+           
+            var htmlPath = Global.Absolute(@"Assets\Map\Editor\index.html");
+            var uri = new UriBuilder(htmlPath);
+            var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            query["map"] = mapName;
+            uri.Query = query.ToString();
+            _webWindow.NavigateToFile(uri.ToString());
             _webWindow.Show();
         }
         else
