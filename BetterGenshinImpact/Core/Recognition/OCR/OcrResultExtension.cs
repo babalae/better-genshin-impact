@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.View.Drawable;
