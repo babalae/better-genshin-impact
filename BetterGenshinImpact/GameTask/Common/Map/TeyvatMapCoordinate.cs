@@ -8,6 +8,8 @@ namespace BetterGenshinImpact.GameTask.Common.Map;
 /// 地图坐标系转换
 /// 1. 原神游戏坐标系 Game
 /// 2. BetterGI主地图1024区块坐标系 Main1024
+///
+/// 已过时，请使用 TeyvatMap 替代
 /// </summary>
 [Obsolete]
 public class TeyvatMapCoordinate

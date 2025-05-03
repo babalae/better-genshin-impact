@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model;
 using Microsoft.Web.WebView2.Core;
 
@@ -33,9 +34,12 @@ public class PathRecorder : Singleton<PathRecorder>
 
     private PathingTask _pathingTask = new();
 
+    private string _mapName = MapTypes.Teyvat.ToString();
+
     public void Start(string mapName)
     {
         Navigation.WarmUp();
+        _mapName = mapName;
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
         var waypoint = new Waypoint();
@@ -58,12 +62,12 @@ public class PathRecorder : Singleton<PathRecorder>
         }
     }
 
-    public void AddWaypoint(string mapName, string waypointType = "")
+    public void AddWaypoint(string waypointType = "")
     {
         Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen, mapName);
-        position = MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        var position = Navigation.GetPositionStable(screen, _mapName);
+        position = MapManager.GetMap(_mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;
@@ -76,6 +80,13 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         if (_webWindow == null)
         {
+            _pathingTask.Info = new PathingTaskInfo
+            {
+                Name = "未命名路线",
+                Type = PathingTaskType.Collect.Code,
+                MapName = _mapName,
+                BgiVersion = Global.Version
+            };
             var name = $@"{DateTime.Now:yyyyMMdd_HHmmss}.json";
             _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, name));
             TaskControl.Logger.LogInformation("录制编辑器未打开，直接保存路径点记录:{Name}", name);

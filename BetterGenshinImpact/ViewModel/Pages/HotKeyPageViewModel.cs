@@ -530,7 +530,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             {
                 if (pathRecording)
                 {
-                    pathRecorder.AddWaypoint(MapTypes.Teyvat.ToString());
+                    pathRecorder.AddWaypoint();
                 }
             }
         ));
