@@ -190,6 +190,12 @@ public partial class AllConfig : ObservableObject
     /// 传送相关配置
     /// </summary>
     public TpConfig TpConfig { get; set; } = new();
+    
+    /// <summary>
+    /// 开发者配置
+    /// </summary>
+    public DevConfig DevConfig { get; set; } = new();
+    
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -217,6 +223,7 @@ public partial class AllConfig : ObservableObject
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
+        DevConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

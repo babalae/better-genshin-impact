@@ -25,124 +25,157 @@
         </Grid.ColumnDefinitions>
 
         <!--  左侧任务列表  -->
-        <DockPanel Grid.Column="0">
-            <Grid
-                DockPanel.Dock="Top"
-                Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock
-                    Grid.Column="0"
-                    Grid.Row="0"
-                    VerticalAlignment="Center"
-                    FontSize="16"
-                    FontWeight="Bold"
-                    Text="任务" />
-                <ui:Button
-                    Grid.Column="1"
-                    Grid.Row="0"
-                    Margin="0,0,15,0"
-                    Appearance="Primary"
-                    Icon="{ui:SymbolIcon Play24}"
-                    Command="{Binding OneKeyExecuteCommand}" />
-                <ui:Button Grid.Column="1"
-                           Grid.Row="0"
-                           Margin="50,0,12,0"
-                           Icon="{ui:SymbolIcon Save24}"
-                           Command="{Binding SaveActionConfigCommand}"
-                           Content="保存排序" />
-            </Grid>
-                <Grid
-                    DockPanel.Dock="Top"
-                    Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="220" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Separator Grid.Row="0" Margin="0,1.5,0,0" BorderThickness="0,1,0,0" />
-                </Grid>
-            <ui:ListView dd:DragDrop.IsDragSource="True"
-                         dd:DragDrop.IsDropTarget="True"
-                         dd:DragDrop.UseDefaultDragAdorner="True"
-                         ItemsSource="{Binding TaskList}"
-                         SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
-                         SelectionMode="Single">
-                            
-                <ui:ListView.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
-                            <MenuItem Command="{Binding DeleteTaskGroupCommand}"
-                                      CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                                      Header="删除配置" />
-                        </ContextMenu>
-                    </ui:ListView.ContextMenu>
-                <ui:ListView.ItemTemplate>
-                    <DataTemplate>
-                        <ui:Card Margin="0,2,14,2">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:FontIcon Grid.Column="0"
-                                             Glyph="&#xe411;"
-                                             Style="{StaticResource FaFontIconStyleForOneDragon}" />
-                                <Ellipse Grid.Column="1"
-                                         Width="10"
-                                         Height="10"
-                                         Margin="10,0,10,0"
-                                         Fill="{Binding StatusColor}"
-                                         IsHitTestVisible="False" />
-                                <TextBlock Grid.Column="2"
-                                           VerticalAlignment="Center"
-                                           IsHitTestVisible="False"
-                                           Text="{Binding Name}" Width="100"/>
-                               <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
-                                </Grid>
-                        </ui:Card>
-                    </DataTemplate>
-                </ui:ListView.ItemTemplate>
-                <ui:ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="Padding" Value="0" />
-                        <!--  添加以下设置来禁用选中效果  -->
-                        <Setter Property="Template">
+       <DockPanel Grid.Column="0">
+           <DockPanel.ContextMenu>
+               <ContextMenu>
+                   <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
+                   <MenuItem Command="{Binding DeleteTaskGroupCommand}"
+                             CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
+                             Header="删除配置" />
+           </ContextMenu>
+       </DockPanel.ContextMenu>
+       <Grid DockPanel.Dock="Top"
+        Margin="0,0,0,10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBlock
+            Grid.Column="0"
+            Grid.Row="0"
+            VerticalAlignment="Center"
+            FontSize="16"
+            FontWeight="Bold"
+            Text="任务" />
+        <ui:Button
+            Grid.Column="1"
+            Grid.Row="0"
+            Margin="0,0,10,0"
+            Appearance="Primary"
+            Icon="{ui:SymbolIcon Play24}"
+            Command="{Binding OneKeyExecuteCommand}" />
+        <ui:Button
+            Grid.Column="2"
+            Grid.Row="0"
+            Margin="0,0,10,0"
+            Icon="{ui:SymbolIcon Add24}"
+            Command="{Binding AddTaskGroupCommand}" />
+        <ui:Button Grid.Column="3"
+                   Grid.Row="0"
+                   Margin="1,0,15,0"
+                   Icon="{ui:SymbolIcon Save24}"
+                   Command="{Binding SaveActionConfigCommand}"
+                   Content="排序" />
+    </Grid>
+    <Grid DockPanel.Dock="Top"
+        Margin="0,0,0,20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Separator Grid.Row="0" Margin="0,1.5,0,0" BorderThickness="0,1,0,0" />
+    </Grid>
+    <ContentControl>
+        <ContentControl.Style>
+            <Style TargetType="ContentControl">
+                <Setter Property="Content">
+                    <Setter.Value>
+                        <ui:ListView dd:DragDrop.IsDragSource="True"
+                                     dd:DragDrop.IsDropTarget="True"
+                                     dd:DragDrop.UseDefaultDragAdorner="True"
+                                     ItemsSource="{Binding TaskList}"
+                                     SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                                     SelectionMode="Single">
+                            <ui:ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <ui:Card Margin="0,2,14,2">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:FontIcon Grid.Column="0"
+                                                         Glyph="&#xe411;"
+                                                         Style="{StaticResource FaFontIconStyleForOneDragon}" />
+                                            <Ellipse Grid.Column="1"
+                                                     Width="10"
+                                                     Height="10"
+                                                     Margin="10,0,10,0"
+                                                     Fill="{Binding StatusColor}"
+                                                     IsHitTestVisible="False" />
+                                            <TextBlock Grid.Column="2"
+                                                       VerticalAlignment="Center"
+                                                       IsHitTestVisible="False"
+                                                       Text="{Binding Name}" Width="100"/>
+                                            
+                                            
+                                            <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                        </Grid>
+                                    </ui:Card>
+                                </DataTemplate>
+                            </ui:ListView.ItemTemplate>
+                            <ui:ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <!--  添加以下设置来禁用选中效果  -->
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                                <Border x:Name="Bd"
+                                                        Padding="{TemplateBinding Padding}"
+                                                        Background="{TemplateBinding Background}"
+                                                        SnapsToDevicePixels="true">
+                                                    <ContentPresenter
+                                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsEnabled" Value="false">
+                                                        <Setter Property="Foreground"
+                                                                Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ui:ListView.ItemContainerStyle>
+                        </ui:ListView>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding TaskList.Count}" Value="0">
+                        <Setter Property="ContentTemplate">
                             <Setter.Value>
-                                <ControlTemplate TargetType="{x:Type ListViewItem}">
-                                    <Border x:Name="Bd"
-                                            Padding="{TemplateBinding Padding}"
-                                            Background="{TemplateBinding Background}"
-                                            SnapsToDevicePixels="true">
-                                        <ContentPresenter
-                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsEnabled" Value="false">
-                                            <Setter Property="Foreground"
-                                                    Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="0,0,0,0"
+                                               Text="      ± 鼠标右击添加或删除任务       "
+                                               VerticalAlignment="Top"
+                                               HorizontalAlignment="Left"
+                                               FontSize="14"
+                                               Height="800"
+                                               Width="200"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                </DataTemplate>
                             </Setter.Value>
                         </Setter>
-                    </Style>
-                </ui:ListView.ItemContainerStyle>
-            </ui:ListView>
-        </DockPanel>
-
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ContentControl.Style>
+    </ContentControl>
+</DockPanel>
         <!--  右侧配置  -->
         <!--<ContentControl Grid.Column="1"
                         Margin="20,0,0,0"
@@ -385,7 +418,7 @@
                                                  Grid.Column="1"
                                                  Margin="0,0,20,0"
                                                  IsChecked="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}" />
-                             </Grid>
+                            </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
                             <Grid Margin="16">
@@ -464,7 +497,7 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}" />
-                                
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -491,7 +524,7 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}" />
-                                
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -518,8 +551,8 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}" />
-                                
-                                
+
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -546,7 +579,7 @@
                                           Margin="0,0,36,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}" />
-                                
+
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -600,15 +633,15 @@
                             </Grid>
                         </ui:CardControl.Header>
                         <StackPanel Orientation="Horizontal">
-                            <ComboBox 
-                                      Width="80"
-                                      Margin="0,0,10,0"
-                                      ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
-                                      SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                            <ComboBox
+                                Width="80"
+                                Margin="0,0,10,0"
+                                ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
+                                SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
                             </ComboBox>
-                            <ui:ToggleSwitch 
-                                             Margin="0,0,36,0"
-                                             IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+                            <ui:ToggleSwitch
+                                Margin="0,0,36,0"
+                                IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
                         </StackPanel>
                     </ui:CardControl>
 

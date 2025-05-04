@@ -11,6 +11,7 @@ using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 
+[Obsolete]
 public class FeatureMatcher
 {
     private readonly double _threshold = 100; // SURF 100
@@ -28,8 +29,8 @@ public class FeatureMatcher
     private readonly KeyPoint[] _trainKeyPoints;
 
     private readonly KeyPointFeatureBlock[][] _blocks; // 特征块存储
-    private readonly int _splitRow = MapCoordinate.GameMapRows * 2; // 特征点拆分行数
-    private readonly int _splitCol = MapCoordinate.GameMapCols * 2; // 特征点拆分列数
+    private readonly int _splitRow = TeyvatMapCoordinate.GameMapRows * 2; // 特征点拆分行数
+    private readonly int _splitCol = TeyvatMapCoordinate.GameMapCols * 2; // 特征点拆分列数
     private KeyPointFeatureBlock? _lastMergedBlock; // 上次合并的特征块
 
     /// <summary>
@@ -234,7 +235,6 @@ public class FeatureMatcher
             // 3. 获取变换后的中心点
             var trainCenterPoint = transformedCenterPoints[0];
             speedTimer.Record("PerspectiveTransform");
-            speedTimer.DebugPrint();
             return trainCenterPoint;
         }
 

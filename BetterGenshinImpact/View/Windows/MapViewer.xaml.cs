@@ -6,9 +6,9 @@ public partial class MapViewer
 {
     public MapViewerViewModel ViewModel { get; }
 
-    public MapViewer()
+    public MapViewer(string mapName)
     {
-        DataContext = ViewModel = new();
+        DataContext = ViewModel = new MapViewerViewModel(mapName);
         InitializeComponent();
     }
 }

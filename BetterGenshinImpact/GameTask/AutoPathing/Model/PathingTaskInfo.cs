@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using System;
 using System.Text.Json.Serialization;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -27,6 +28,8 @@ public class PathingTaskInfo
 
     [JsonIgnore]
     public string TypeDesc => PathingTaskType.GetMsgByCode(Type);
+    
+    public string MapName { get; set; } = MapTypes.Teyvat.ToString();
 
     // 任务参数/配置
     // 持续操作 切换某个角色 长E or 短E

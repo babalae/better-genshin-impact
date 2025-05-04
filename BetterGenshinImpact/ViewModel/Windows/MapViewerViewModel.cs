@@ -14,24 +14,42 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Helpers;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
+/// <summary>
+/// TODO 需要支持更多地图
+/// </summary>
 public partial class MapViewerViewModel : ObservableObject
 {
     [ObservableProperty]
     private WriteableBitmap _mapBitmap;
 
-    private readonly Mat _all256Map = new(Global.Absolute(@"Assets/Map/mainMap256Block.png"));
+    // private readonly Mat _all256Map = new(Global.Absolute(@"Assets/Map/mainMap256Block.png"));
 
-    private Mat _currentPathingMap = new();  // 2048级别
+    private Mat _currentPathingMap = new(); // 2048级别
 
     private Rect _currentPathingRect = new(); // 2048级别
 
-    public MapViewerViewModel()
+    private readonly string _mapName;
+
+    private Mat _mapImage;
+
+    private int _scale = 1;
+
+    public MapViewerViewModel(string mapName)
     {
-        var center = MapCoordinate.GameToMain2048(0, 0);
-        _mapBitmap = ClipMat(new Point2f((float)center.x, (float)center.y)).ToWriteableBitmap();
+        if (string.IsNullOrEmpty(mapName))
+        {
+            mapName = MapTypes.Teyvat.ToString();
+        }
+
+        _mapName = mapName;
+        Init(mapName);
+        var center = MapManager.GetMap(_mapName).ConvertGenshinMapCoordinatesToImageCoordinates(512, 512);
+        _mapBitmap = ClipMat(new Point2f(center.x, center.y)).ToWriteableBitmap();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
             if (msg.PropertyName == "SendCurrentPosition")
@@ -62,6 +80,28 @@ public partial class MapViewerViewModel : ObservableObject
         });
     }
 
+    private void Init(string mapName)
+    {
+        if (mapName == MapTypes.Teyvat.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/Teyvat/Teyvat_0_256.png"));
+            // 最特殊，图像坐标是 2048 级别的，路径展示窗口是 256 级别的
+            _scale = 2048 / 256;
+        }
+        else if (mapName == MapTypes.TheChasm.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/TheChasm/TheChasm_0_1024.png"));
+        }
+        else if (mapName == MapTypes.Enkanomiya.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/Enkanomiya/Enkanomiya_0_1024.png"));
+        }
+        else
+        {
+            throw new Exception("暂时不支持展示路径的地图类型:" + mapName);
+        }
+    }
+
     public Mat ClipMat(Point2f pos)
     {
         var len = 256;
@@ -71,7 +111,7 @@ public partial class MapViewerViewModel : ObservableObject
         if (_currentPathingMap.Empty())
         {
             Debug.WriteLine("_currentPathingMap 未初始化");
-            return new Mat(_all256Map, new Rect(rect.X / 8, rect.Y / 8, rect.Width, rect.Height));
+            return new Mat(_mapImage, new Rect(rect.X / _scale, rect.Y / _scale, rect.Width, rect.Height));
         }
         else
         {
@@ -94,11 +134,11 @@ public partial class MapViewerViewModel : ObservableObject
         var points = pathingTask.Positions;
         var mapPoints = points.Select(ConvertToMapPoint).ToList();
         var offsetRect = CalcRect(mapPoints);
-        var offsetRect256 = new Rect(offsetRect.X / 8, offsetRect.Y / 8, offsetRect.Width / 8, offsetRect.Height / 8);
+        var offsetRectZoom = new Rect(offsetRect.X / _scale, offsetRect.Y / _scale, offsetRect.Width / _scale, offsetRect.Height / _scale);
 
-        // 把 _all256Map 的局部转化为 2048 级别
-        Mat taskMat = new Mat(_all256Map, offsetRect256);
-        taskMat = ResizeHelper.Resize(taskMat, 2048d / 256d);
+        // 把 map 的局部转化为 实际展示图（提瓦特是256，其他的1024） 级别
+        Mat taskMat = new Mat(_mapImage, offsetRectZoom);
+        taskMat = ResizeHelper.Resize(taskMat, _scale);
 
         // 设置线条粗细
         int thickness = 2;
@@ -141,7 +181,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private Point ConvertToMapPoint(Waypoint point)
     {
-        var (x, y) = MapCoordinate.GameToMain2048(point.X, point.Y);
+        var (x, y) = MapManager.GetMap(_mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)point.X, (float)point.Y);
         return new Point(x, y);
     }
 
