@@ -22,7 +22,7 @@ public class Rec
     public Rec(BgiOnnxModel model, string labelFilePath, OcrVersionConfig config)
     {
         _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model,true);
 
 
         _labels = File.ReadAllLines(labelFilePath);

@@ -25,6 +25,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     private readonly bool _optimizedModel;
     private readonly bool _trtUseEmbedMode;
     private readonly bool _enableCache;
+    private readonly bool _cpuOcr;
 
 
     public BgiOnnxFactory()
@@ -46,6 +47,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         _dmlDeviceId = config.GpuDevice;
         _trtUseEmbedMode = config.EmbedTensorRtCache;
         _enableCache = config.EnableTensorRtCache;
+        _cpuOcr = config.CpuOcr;
         Logger.LogDebug("[ONNX]启用的provider: {Device}", string.Join(",", _providerTypes.Select(Enum.GetName)));
     }
 
@@ -65,9 +67,9 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             case InferenceDeviceType.Cpu:
                 return [ProviderType.Cpu];
             case InferenceDeviceType.GpuDirectMl:
-                return [ProviderType.Dml];
+                //只用dml不加cpu的话在很多场景下性能很差。
+                return [ProviderType.Dml, ProviderType.Cpu];
             case InferenceDeviceType.Gpu:
-
                 List<ProviderType> list = [];
                 SessionOptions? testSession = null;
                 var hasGpu = false;
@@ -246,19 +248,25 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// 根据模型创建一个onnx运行时的InferenceSession
     /// </summary>
     /// <param name="model">模型</param>
+    /// <param name="ocr">是否是用于ocr的模型，默认false</param>
     /// <returns>InferenceSession</returns>
-    public InferenceSession CreateInferenceSession(BgiOnnxModel model)
+    public InferenceSession CreateInferenceSession(BgiOnnxModel model, bool ocr = false)
     {
         Logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
+        ProviderType[]? providerTypes = null;
+        if (_cpuOcr && ocr)
+        {
+            providerTypes = [ProviderType.Cpu];
+        }
         if (!_enableCache)
         {
-            return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false));
+            return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
         }
 
         var cached = GetCached(model);
         return cached == null
-            ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true))
-            : new InferenceSession(cached, CreateSessionOptions(model, false));
+            ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
+            : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
 
     /// <summary>
@@ -296,12 +304,14 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// </summary>
     /// <param name="path">模型路径</param>
     /// <param name="genCache">是否生成缓存。有几种情况下不生成缓存:1为用户主动关闭，即enableCache为false。2为即将加载的模型文件已经是带有缓存的模型文件。</param>
+    /// <param name="forcedProvider">强制使用的Provider,为空或null则不强制</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    private SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache)
+    private SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache, ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
-        foreach (var type in _providerTypes)
+        foreach (var type in
+                 forcedProvider is null || forcedProvider.Length == 0 ? _providerTypes : forcedProvider)
         {
             try
             {

@@ -7,24 +7,31 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class HardwareAccelerationConfig : ObservableObject
 {
-    
     /// <summary>
-    /// 推理使用的设备
+    /// 推理使用的设备。默认CPU
     /// </summary>
     [ObservableProperty]
     private InferenceDeviceType _inferenceDevice = InferenceDeviceType.Cpu;
+
+    /// <summary>
+    /// 是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认开。
+    /// </summary>
+    [ObservableProperty]
+    private bool _cpuOcr = true;
+
     #region 一般GPU加速设置
+
     /// <summary>
     /// 强制指定gpu设备,默认为0(使用默认设备)
     /// </summary>
     [ObservableProperty]
     private int _gpuDevice = 0;
 
-    /// <summary>
-    /// 使用DirectML加速。默认开启。
-    /// </summary>
-    [ObservableProperty]
-    private bool _useDml = true;
+    // /// <summary>
+    // /// 使用DirectML加速。默认开启。
+    // /// </summary>
+    // [ObservableProperty]
+    // private bool _useDml = true;
 
     /// <summary>
     /// 附加path，用;分割。默认为空。
@@ -32,12 +39,12 @@ public partial class HardwareAccelerationConfig : ObservableObject
     [ObservableProperty]
     private string _additionalPath = "";
 
-    /// <summary>
-    /// 是否自动启用异构推理，这会让使用gpu加速时同时使用cpu加速。默认开启。
-    /// </summary>
-    [ObservableProperty]
-    private bool _heterogeneous = true;
-    
+    // /// <summary>
+    // /// 是否自动启用异构推理，这会让使用gpu加速时同时使用cpu加速。默认开启。
+    // /// </summary>
+    // [ObservableProperty]
+    // private bool _heterogeneous = true;
+
     /// <summary>
     /// 是否输出优化后的模型文件到缓存。注意:在不支持的执行器上使用会导致异常。默认关闭。
     /// </summary>
@@ -48,11 +55,11 @@ public partial class HardwareAccelerationConfig : ObservableObject
 
     #region cuda设置
 
-    /// <summary>
-    /// 是否启用cuda。如果关闭了它，则cuda和TensorRT都不可用。默认开启。
-    /// </summary>
-    [ObservableProperty]
-    private bool _useCuda = true;
+    // /// <summary>
+    // /// 是否启用cuda。如果关闭了它，则cuda和TensorRT都不可用。默认开启。
+    // /// </summary>
+    // [ObservableProperty]
+    // private bool _useCuda = true;
 
     /// <summary>
     /// 强制指定cuda设备,默认为0(使用默认设备)
@@ -69,6 +76,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
     #endregion
 
     #region TensorRT缓存设置
+
     /// <summary>
     /// 启用TensorRT缓存。默认开启。不开的话使用TensorRT每次加载模型会卡爆。
     /// </summary>

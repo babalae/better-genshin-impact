@@ -24,7 +24,7 @@ public class PickTextInference : ITextInference
 
     public PickTextInference()
     {
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(BgiOnnxModel.YapModelTraining);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(BgiOnnxModel.YapModelTraining,true);
 
         var wordJsonPath = Global.Absolute(@"Assets\Model\Yap\index_2_word.json");
         if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);

@@ -17,7 +17,7 @@ public class Det
     public Det(BgiOnnxModel model, OcrVersionConfig config)
     {
         _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model,true);
     }
 
     /// <summary>Gets or sets the maximum size for resizing the input image.</summary>

@@ -52,6 +52,8 @@
 		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+		<!--排除掉cpu的runtime dll-->
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" ExcludeAssets="native"/>
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />

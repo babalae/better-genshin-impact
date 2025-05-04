@@ -90,9 +90,8 @@ public class PaddleOcrService : IOcrService
     /// <summary>
     ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
-    public OcrResult RunAll(Mat src, int recognizeBatchSize = 0)
+    private OcrResult RunAll(Mat src, int recognizeBatchSize = 0)
     {
-        var startTime = Stopwatch.GetTimestamp();
         var rects = localDetModel.Run(src);
         Mat[] mats =
             rects.Select(rect =>
