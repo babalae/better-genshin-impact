@@ -3,11 +3,10 @@ using Fischless.GameCapture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View;
@@ -109,20 +108,10 @@ public partial class CaptureTestWindow : Window
             _captureCount++;
             sw.Reset();
             sw.Start();
-            DisplayCaptureResultImage.Source = ConvertToBitmapSource(bitmap, out var bottomUp);
+            DisplayCaptureResultImage.Source = bitmap.ToBitmapSource();
             sw.Stop();
             Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
             _transferTime += sw.ElapsedMilliseconds;
-
-            // 上下翻转渲染 bottom-up bitmap
-            if (bottomUp && Transform.ScaleY > 0)
-            {
-                Transform.ScaleY = -1;
-            }
-            else if (!bottomUp && Transform.ScaleY < 0)
-            {
-                Transform.ScaleY = 1;
-            }
         }
         else
         {

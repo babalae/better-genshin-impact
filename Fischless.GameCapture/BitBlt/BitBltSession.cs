@@ -100,7 +100,7 @@ public class BitBltSession : IDisposable
                     {
                         biSize = (uint)Marshal.SizeOf<Gdi32.BITMAPINFOHEADER>(),
                         biWidth = _width,
-                        biHeight = _height, // Bottom-up image
+                        biHeight = -_height, // Top-down image
                         biPlanes = (ushort)hdcSrcPlanes,
                         biBitCount = (ushort)(hdcSrcPixel - 8), //RGBA->RGB
                         biCompression = Gdi32.BitmapCompressionMode.BI_RGB,

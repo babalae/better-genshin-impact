@@ -11,11 +11,6 @@
     <Grid>
         <Image x:Name="DisplayCaptureResultImage"
                Width="Auto"
-               Height="Auto"
-               RenderTransformOrigin="0.5,0.5">
-            <Image.RenderTransform>
-                <ScaleTransform x:Name="Transform" ScaleY="1"/>
-            </Image.RenderTransform>
-        </Image>
+               Height="Auto" />
     </Grid>
 </Window>
