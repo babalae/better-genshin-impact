@@ -230,6 +230,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
+        Logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         if (!_enableCache)
         {
             return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
@@ -248,6 +249,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <returns>InferenceSession</returns>
     public InferenceSession CreateInferenceSession(BgiOnnxModel model)
     {
+        Logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         if (!_enableCache)
         {
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false));

@@ -2,6 +2,9 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
 
+/// <summary>
+/// 实现PPOCR的自定义操作，代码翻自python
+/// </summary>
 public class OcrOperationImpl
 {
     /// <summary>

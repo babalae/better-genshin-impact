@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -113,7 +114,6 @@ public class Det
                 _config.NormalizeImage.Mean, _config.NormalizeImage.Std, out var owner);
             using (owner)
             {
-                Tensor<float> outputTensor;
                 lock (_session)
                 {
                     using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
@@ -125,13 +125,10 @@ public class Det
 
                     if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
                         throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-                    outputTensor = output.AsTensor<float>();
+                    var outputTensor = output.AsTensor<float>();
+                    return OcrUtils.Tensor2Mat(tensor: outputTensor);
+                    // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
                 }
-                var dimensions = outputTensor.Dimensions;
-                var labelCount = dimensions[2];
-                var charCount = dimensions[3];
-                var predData = outputTensor.ToArray();
-                return Mat.FromPixelData(labelCount, charCount, MatType.CV_32FC1, predData);
             }
         }
     }

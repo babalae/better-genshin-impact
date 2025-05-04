@@ -2,6 +2,9 @@ using BetterGenshinImpact.Core.Recognition.OCR.paddle.data;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
+/// <summary>
+/// ppocr的版本配置
+/// </summary>
 public readonly record struct OcrVersionConfig(
     string Name,
     OcrImgMode Mode,
@@ -12,7 +15,7 @@ public readonly record struct OcrVersionConfig(
     // 参数来自 https://github.com/PaddlePaddle/PaddleOCR/tree/main/configs/det/PP-OCRv3
 
     public static OcrVersionConfig PpOcrV3 = new(
-        "PP-OCRv3-det",
+        "PP-OCRv3",
         OcrImgMode.BGR,
         false,
         new OcrNormalizeImage(
@@ -23,7 +26,7 @@ public readonly record struct OcrVersionConfig(
     );
 
     public static OcrVersionConfig PpOcrV4 = new(
-        "PP-OCRv4-det",
+        "PP-OCRv4",
         OcrImgMode.BGR,
         false,
         new OcrNormalizeImage(

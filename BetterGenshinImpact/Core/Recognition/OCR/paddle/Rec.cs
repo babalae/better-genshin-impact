@@ -82,7 +82,7 @@ public class Rec
             return 1.0 * size.Width / size.Height * modelHeight;
         }));
         List<IMemoryOwner<float>> owners = [];
-        Tensor<float>[] resultTensors;
+        (int[], float[])[] resultTensors;
         try
         {
             resultTensors = srcs
@@ -119,8 +119,9 @@ public class Rec
 
                             if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
                                 throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-
-                            return output.AsTensor<float>();
+                            var tensor = output.AsTensor<float>();
+                            // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
+                            return (tensor.Dimensions.ToArray(), tensor.ToArray());
                         }
                     }
                 ).ToArray();
@@ -133,8 +134,8 @@ public class Rec
         return resultTensors.SelectMany(
             resultTensor =>
             {
-                var resultArray = resultTensor.ToArray();
-                var resultShape = resultTensor.Dimensions;
+                var resultArray = resultTensor.Item2;
+                var resultShape = resultTensor.Item1;
                 GCHandle dataHandle = default;
                 try
                 {
@@ -161,10 +162,8 @@ public class Rec
                                     score += (float)maxVal;
                                     sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
                                 }
-
                                 lastIndex = maxIdx[1];
                             }
-
                             return new OcrRecognizerResult(sb.ToString(), score / sb.Length);
                         })
                         .ToArray();

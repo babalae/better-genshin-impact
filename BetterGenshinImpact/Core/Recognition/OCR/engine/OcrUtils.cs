@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OCR.engine;
 using BetterGenshinImpact.Core.Recognition.OCR.paddle.data;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -47,6 +48,7 @@ public static class OcrUtils
     }
 
     /// <summary>
+    /// 用于Det模型
     ///     归一化,标准化并返回Tensor。
     ///     <br />
     ///     归一化:固定范围归一化
@@ -89,6 +91,8 @@ public static class OcrUtils
 
     /// <summary>
     ///     不支持通道转换
+    ///    <br />
+    /// 用于PP-OCR的Rec模型，调整大小之后再归一化到-1~1，之后转换为Tensor
     /// </summary>
     public static Tensor<float> resize_norm_img(Mat img, OcrShape image_shape,
         out IMemoryOwner<float> tensorMemoryOwner, bool padding = true,
@@ -157,5 +161,20 @@ public static class OcrUtils
             _ => throw new Exception(
                 $"Unable to GetLabelByIndex: index {i} out of range {labels.Count}, OCR model or labels not matched?")
         };
+    }
+
+    public static Mat Tensor2Mat(Tensor<float> tensor)
+    {
+        var dimensions = tensor.Dimensions;
+        if (dimensions.Length !=4 || dimensions[0] != 1 || dimensions[1] != 1)
+        {
+            throw new ArgumentException($"wrong tensor shape: {string.Join(",", dimensions.ToArray())}");
+        }
+        if (tensor is not DenseTensor<float> denseTensor)
+            return Mat.FromPixelData(dimensions[2], dimensions[3], MatType.CV_32FC1, tensor.ToArray());
+        var mat = new Mat(new Size(dimensions[3], dimensions[2]), MatType.CV_32FC1);
+        denseTensor.Buffer.Span.CopyTo(mat.AsSpan<float>());
+        return mat;
+
     }
 }

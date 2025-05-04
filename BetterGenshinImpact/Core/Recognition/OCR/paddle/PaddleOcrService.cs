@@ -11,8 +11,6 @@ namespace BetterGenshinImpact.Core.Recognition.OCR;
 
 public class PaddleOcrService : IOcrService
 {
-    private static readonly object locker = new();
-
     /// <summary>
     ///     Usage:
     ///     https://github.com/sdcb/PaddleSharp/blob/master/docs/ocr.md
@@ -75,24 +73,18 @@ public class PaddleOcrService : IOcrService
     /// </summary>
     public string OcrWithoutDetector(Mat mat)
     {
-        lock (locker)
-        {
-            var str = localRecModel.Run(mat).Text;
-            Debug.WriteLine($"PaddleOcrWithoutDetector 结果: {str}");
-            return str;
-        }
+        var str = localRecModel.Run(mat).Text;
+        Debug.WriteLine($"PaddleOcrWithoutDetector 结果: {str}");
+        return str;
     }
 
     private OcrResult _OcrResult(Mat mat)
     {
-        lock (locker)
-        {
-            var startTime = Stopwatch.GetTimestamp();
-            var result = RunAll(mat);
-            var time = Stopwatch.GetElapsedTime(startTime);
-            Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
-            return result;
-        }
+        var startTime = Stopwatch.GetTimestamp();
+        var result = RunAll(mat);
+        var time = Stopwatch.GetElapsedTime(startTime);
+        Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
+        return result;
     }
 
     /// <summary>
