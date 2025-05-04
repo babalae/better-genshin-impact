@@ -12,6 +12,11 @@ namespace BetterGenshinImpact.Helpers.Extensions
     {
         public static BitmapSource ToBitmapSource(this Bitmap bitmap)
         {
+            return bitmap.ToBitmapSource(out _);
+        }
+
+        public static BitmapSource ToBitmapSource(this Bitmap bitmap, out bool bottomUp)
+        {
             var bitmapData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height),
                 System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
 
@@ -19,8 +24,13 @@ namespace BetterGenshinImpact.Helpers.Extensions
             var buffer = bitmapData.Scan0;
             if (stride < 0)
             {
+                bottomUp = true;
                 stride = -stride;
                 buffer -= stride * (bitmapData.Height - 1);
+            }
+            else
+            {
+                bottomUp = false;
             }
 
             var pixelFormat = bitmap.PixelFormat switch
