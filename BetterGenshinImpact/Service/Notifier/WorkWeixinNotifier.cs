@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 
@@ -45,11 +46,12 @@ public class WorkWeixinNotifier : INotifier
                     throw new NotifierException($"WorkWeixin image webhook call failed with code: {imageResponse.StatusCode}");
                 }
             }
-
+            // 添加延迟让图片先发送出去
+            Thread.Sleep(1000);
             // Then send the text message
             if (!string.IsNullOrEmpty(content.Message))
             {
-                var outputMessage = content.Timestamp + " " + content.Message;
+                var outputMessage = content.Timestamp + "\n\n" + content.Message;
                 var textPayload = await TransformTextData(outputMessage);
                 var textResponse = await _httpClient.PostAsync(Endpoint, textPayload);
 

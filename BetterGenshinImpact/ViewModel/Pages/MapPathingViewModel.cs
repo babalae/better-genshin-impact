@@ -35,7 +35,7 @@ public partial class MapPathingViewModel : ViewModel
     [ObservableProperty]
     private FileTreeNode<PathingTask>? _selectNode;
 
-    private MapViewer? _mapViewer;
+    private MapPathingDevWindow? _mapPathingDevWindow;
     private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
@@ -122,26 +122,20 @@ public partial class MapPathingViewModel : ViewModel
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
         await _scriptService.RunMulti([project]);
     }
-
+    
     [RelayCommand]
-    public void OnOpenMapViewer()
+    public void OnOpenDevTools()
     {
-        if (_mapViewer == null || !_mapViewer.IsVisible)
+        if (_mapPathingDevWindow == null || !_mapPathingDevWindow.IsVisible)
         {
-            _mapViewer = new MapViewer();
-            _mapViewer.Closed += (s, e) => _mapViewer = null;
-            _mapViewer.Show();
+            _mapPathingDevWindow = new MapPathingDevWindow();
+            _mapPathingDevWindow.Closed += (s, e) => _mapPathingDevWindow = null;
+            _mapPathingDevWindow.Show();
         }
         else
         {
-            _mapViewer.Activate();
+            _mapPathingDevWindow.Activate();
         }
-    }
-
-    [RelayCommand]
-    public void OnOpenMapEditor()
-    {
-        PathRecorder.Instance.OpenEditorInWebView();
     }
 
     [RelayCommand]

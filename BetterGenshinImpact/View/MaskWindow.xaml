@@ -197,7 +197,7 @@
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Foreground="White"
-                               Text="东" />
+                               Text="西" />
                     <TextBlock Grid.Column="2"
                                Grid.Row="4"
                                HorizontalAlignment="Center"
@@ -217,7 +217,7 @@
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Foreground="White"
-                               Text="西" />
+                               Text="东" />
                     <TextBlock Grid.Column="2"
                                Grid.Row="0"
                                HorizontalAlignment="Center"
