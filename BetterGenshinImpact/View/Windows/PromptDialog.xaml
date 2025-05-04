@@ -13,6 +13,7 @@
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="CanMinimize"
+                 SizeToContent="Width"
                  WindowBackdropType="Mica"
                  WindowStartupLocation="CenterScreen"
                  WindowStyle="SingleBorderWindow"
