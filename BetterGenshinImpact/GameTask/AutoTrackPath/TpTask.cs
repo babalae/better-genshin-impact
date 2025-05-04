@@ -778,7 +778,7 @@ public class TpTask(CancellationToken ct)
                 (x, y) = (p.X * TeyvatMap.BigMap256ScaleTo2048, p.Y * TeyvatMap.BigMap256ScaleTo2048);
             }
 
-            return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(p.X, p.Y));
+            return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y));
         }
         else
         {
