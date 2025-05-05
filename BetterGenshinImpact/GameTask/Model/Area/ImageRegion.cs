@@ -226,10 +226,10 @@ public class ImageRegion : Region
                 throw new Exception($"[OCR]识别对象{ro.Name}的匹配文本不能全为空");
             }
 
-            var roi = SrcGreyMat;
+            var roi = SrcMat;
             if (ro.RegionOfInterest != default)
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);
@@ -323,10 +323,10 @@ public class ImageRegion : Region
             }
             else
             {
-                roi = SrcGreyMat;
+                roi = SrcMat;
                 if (ro.RegionOfInterest != default)
                 {
-                    roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                    roi = new Mat(SrcMat, ro.RegionOfInterest);
                 }
             }
 
@@ -454,10 +454,10 @@ public class ImageRegion : Region
         }
         else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
         {
-            var roi = SrcGreyMat;
+            var roi = SrcMat;
             if (ro.RegionOfInterest != default)
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);
