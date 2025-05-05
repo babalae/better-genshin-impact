@@ -28,6 +28,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject PartyBtnDelete;
 
     public RecognitionObject CraftCondensedResin;
+    public RecognitionObject CondensedResinCount;
     public RecognitionObject fragileResinCount;
     public RecognitionObject Keyreduce;
     public RecognitionObject Keyincrease;
@@ -199,7 +200,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "fragile_resin_count.png"),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
-            DrawOnWindow = false
+            DrawOnWindow = true
+        }.InitTemplate();
+        CondensedResinCount = new RecognitionObject
+        {
+            Name = "CondensedResinCount",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "condensed_resin_count.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width / 4, CaptureRect.Height /15),
+            DrawOnWindow = true
         }.InitTemplate();
         // 减少合成
         Keyreduce = new RecognitionObject

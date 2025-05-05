@@ -95,8 +95,8 @@ public class GoToCraftingBenchTask
             InitConfigList();
             // 3. 点击合成树脂
             if (SelectedConfig.MinResinToKeep > 0){//开关判断，填写的数量大于0时启用 SelectedConfig.MinResinToKeep
-                Logger.LogInformation("设置保留 {MinResinToKeep} 原粹树脂", SelectedConfig.MinResinToKeep);
                 var fragileResinCount = 0;
+                var condensedResinCount = 0;
                 var fragileResinCountRa = ra.Find(ElementAssets.Instance.fragileResinCount);
                 if (!fragileResinCountRa.IsEmpty())
                 {
@@ -106,7 +106,16 @@ public class GoToCraftingBenchTask
                     var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
                     fragileResinCount = StringUtils.TryParseInt(count);
                 }
-                Logger.LogInformation("当前原粹树脂数量： {FragileResinCount}", fragileResinCount);
+                var condensedResinCountRa = ra.Find(ElementAssets.Instance.CondensedResinCount);
+                if (!condensedResinCountRa.IsEmpty())
+                {
+                    // 图像右侧就是浓缩树脂数量
+                    var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
+                        condensedResinCountRa.Y, condensedResinCountRa.Width*5/3, condensedResinCountRa.Height);
+                    var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+                    condensedResinCount = StringUtils.TryParseInt(count);
+                }
+                //todo 可加纠错机制判断树脂数量是否正确
                 // 每次合成消耗的数量
                 const int resinConsumedPerCraft = 40;
                 // 需要保留的最小数量
@@ -120,6 +129,12 @@ public class GoToCraftingBenchTask
                 {
                     craftsNeeded++;
                 }
+                if (craftsNeeded > (5 - condensedResinCount))
+                {
+                    craftsNeeded = 5 - condensedResinCount;//最多只能有5个浓缩树脂
+                }
+                Logger.LogInformation("脆弱树脂 {FragileResinCount}，剩余：浓缩树脂 {CondensedResinCount}，最大可合成次数为 {craftsNeeded}", fragileResinCount,
+                    condensedResinCount,craftsNeeded);
                 Logger.LogInformation("保留 {MinResinToKeep} 原粹树脂需要合成次数： {craftsNeeded}",minResinToKeep,craftsNeeded);
                 if (craftsNeeded > 0)
                 {
