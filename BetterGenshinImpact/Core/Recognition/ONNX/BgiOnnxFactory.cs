@@ -286,6 +286,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
             : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
+
     /// <summary>
     /// 获取带有缓存的模型(目前只支持TensorRT)
     /// </summary>
@@ -300,15 +301,17 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         {
             return result;
         }
+
         // 判断文件是否存在
         if (File.Exists(result))
         {
             return result;
         }
+
         Logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
         return null;
     }
-    
+
     private string? _GetCached(BgiOnnxModel model)
     {
         if (model.ModelRelativePath.StartsWith(BgiOnnxModel.ModelCacheRelativePath) &&
@@ -358,8 +361,10 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                 switch (type)
                 {
                     case ProviderType.Dml:
+                        // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
                         sessionOptions.AppendExecutionProvider_DML(_dmlDeviceId);
-                        sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+                        sessionOptions.EnableMemoryPattern = false;
+                        sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
                         break;
                     case ProviderType.Cpu:
                         sessionOptions.AppendExecutionProvider_CPU();
