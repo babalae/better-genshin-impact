@@ -30,6 +30,8 @@ using Windows.System;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -437,5 +439,18 @@ public partial class HomePageViewModel : ViewModel
 
         win.NavigateToHtml(html);
         win.ShowDialog();
+    }
+
+    [RelayCommand]
+    public void OnOpenHardwareAccelerationSettings()
+    {
+        var dialogWindow = new Window
+        {
+            Title = "硬件加速设置",
+            Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        var result = dialogWindow.ShowDialog();
     }
 }

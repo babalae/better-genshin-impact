@@ -20,13 +20,13 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     private static readonly ILogger<BgiOnnxFactory> Logger = App.GetLogger<BgiOnnxFactory>();
 
 
-    private readonly ProviderType[] _providerTypes;
-    private readonly int _dmlDeviceId;
-    private readonly int _cudaDeviceId;
-    private readonly bool _optimizedModel;
-    private readonly bool _trtUseEmbedMode;
-    private readonly bool _enableCache;
-    private readonly bool _cpuOcr;
+    public ProviderType[] ProviderTypes { get; }
+    public int DmlDeviceId { get; }
+    public int CudaDeviceId { get; }
+    public bool OptimizedModel { get; }
+    public bool TrtUseEmbedMode { get; }
+    public bool EnableCache { get; }
+    public bool CpuOcr { get; }
 
     /// <summary>
     /// 缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
@@ -49,24 +49,25 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
         }
 
-        _providerTypes = GetProviderType(config.InferenceDevice, _cudaDeviceId, _dmlDeviceId);
-        _optimizedModel = config.OptimizedModel;
-        _cudaDeviceId = config.CudaDevice;
-        _dmlDeviceId = config.GpuDevice;
-        _trtUseEmbedMode = config.EmbedTensorRtCache;
-        _enableCache = config.EnableTensorRtCache;
-        _cpuOcr = config.CpuOcr;
+        ProviderTypes = GetProviderType(config.InferenceDevice, CudaDeviceId, DmlDeviceId);
+        OptimizedModel = config.OptimizedModel;
+        CudaDeviceId = config.CudaDevice;
+        DmlDeviceId = config.GpuDevice;
+        TrtUseEmbedMode = config.EmbedTensorRtCache;
+        EnableCache = config.EnableTensorRtCache;
+        CpuOcr = config.CpuOcr;
         Logger.LogDebug(
             "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
-            string.Join(",", _providerTypes.Select(Enum.GetName)),
+            string.Join(",", ProviderTypes.Select(Enum.GetName)),
             config.InferenceDevice,
-            _optimizedModel,
-            _cudaDeviceId,
-            _dmlDeviceId,
-            _trtUseEmbedMode,
-            _enableCache,
-            _cpuOcr);
+            OptimizedModel,
+            CudaDeviceId,
+            DmlDeviceId,
+            TrtUseEmbedMode,
+            EnableCache,
+            CpuOcr);
     }
+
 
     /// <summary>
     /// 根据InferenceDeviceType选择Provider
@@ -250,7 +251,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         Logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
-        if (!_enableCache)
+        if (!EnableCache)
         {
             return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
         }
@@ -271,12 +272,12 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     {
         Logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         ProviderType[]? providerTypes = null;
-        if (_cpuOcr && ocr)
+        if (CpuOcr && ocr)
         {
             providerTypes = [ProviderType.Cpu];
         }
 
-        if (!_enableCache)
+        if (!EnableCache)
         {
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
         }
@@ -295,7 +296,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     private string? GetCached(BgiOnnxModel model)
     {
         // 目前只支持TensorRT
-        if (!_providerTypes.Contains(ProviderType.TensorRt)) return null;
+        if (!ProviderTypes.Contains(ProviderType.TensorRt)) return null;
         var result = _cachedModelPaths.GetOrAdd(model, _GetCached);
         if (result is null)
         {
@@ -354,7 +355,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     {
         var sessionOptions = new SessionOptions();
         foreach (var type in
-                 forcedProvider is null || forcedProvider.Length == 0 ? _providerTypes : forcedProvider)
+                 forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider)
         {
             try
             {
@@ -362,7 +363,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                 {
                     case ProviderType.Dml:
                         // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
-                        sessionOptions.AppendExecutionProvider_DML(_dmlDeviceId);
+                        sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
                         sessionOptions.EnableMemoryPattern = false;
                         sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
                         break;
@@ -396,7 +397,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             }
         }
 
-        if (!_optimizedModel) return sessionOptions;
+        if (!OptimizedModel) return sessionOptions;
         if (!genCache) return sessionOptions;
         var optPath = Path.Combine(path.CachePath, "optimized");
         if (!Directory.Exists(optPath))
@@ -421,7 +422,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             // 不使用缓存目录
             var r = new Dictionary<string, string>
             {
-                ["device_id"] = _cudaDeviceId.ToString(),
+                ["device_id"] = CudaDeviceId.ToString(),
             };
             return r;
         }
@@ -437,9 +438,9 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             ["trt_timing_cache_path"] =
                 Global.Absolute(Path.Combine(BgiOnnxModel.ModelCacheRelativePath, "trt_timing")),
             // ["trt_force_timing_cache"] = "1",
-            ["device_id"] = _cudaDeviceId.ToString(),
+            ["device_id"] = CudaDeviceId.ToString(),
         };
-        if (_trtUseEmbedMode)
+        if (TrtUseEmbedMode)
         {
             result["trt_ep_context_embed_mode"] = "1";
         }
@@ -465,7 +466,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     {
         var result = new Dictionary<string, string>
         {
-            ["device_id"] = _cudaDeviceId.ToString(),
+            ["device_id"] = CudaDeviceId.ToString(),
         };
         return result;
     }
