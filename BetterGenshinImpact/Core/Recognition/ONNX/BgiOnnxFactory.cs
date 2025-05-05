@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -26,6 +27,13 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     private readonly bool _trtUseEmbedMode;
     private readonly bool _enableCache;
     private readonly bool _cpuOcr;
+
+    /// <summary>
+    /// 缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
+    /// <br/>
+    /// 这样能避免并发加载模型问题。比如使用了未完全构建好的缓存文件，导致模型加载失败。
+    /// </summary>
+    private ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
 
 
     public BgiOnnxFactory()
@@ -279,16 +287,19 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
 
-    /// <summary>
-    /// 获取带有缓存的模型
-    /// </summary>
-    /// <param name="model">模型</param>
-    /// <returns>带有缓存的模型路径，null表示尚未创建缓存</returns>
     private string? GetCached(BgiOnnxModel model)
     {
         // 目前只支持TensorRT
-        if (!_providerTypes.Contains(ProviderType.TensorRt)) return null;
+        return !_providerTypes.Contains(ProviderType.TensorRt) ? null : _cachedModelPaths.GetOrAdd(model, _GetCached);
+    }
 
+    /// <summary>
+    /// 获取带有缓存的模型(目前只支持TensorRT)
+    /// </summary>
+    /// <param name="model">模型</param>
+    /// <returns>带有缓存的模型绝对路径，null表示尚未创建缓存</returns>
+    private string? _GetCached(BgiOnnxModel model)
+    {
         if (model.ModelRelativePath.StartsWith(BgiOnnxModel.ModelCacheRelativePath) &&
             model.ModelRelativePath.EndsWith("_ctx.onnx"))
         {
@@ -297,14 +308,22 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         }
 
         var ctxA = Path.Combine(model.CachePath, "trt", "_ctx.onnx");
-        if (File.Exists(Global.Absolute(ctxA)))
+        if (File.Exists(ctxA))
         {
+            Logger.LogDebug("[ONNX]模型 {Model} 命中TRT匿名缓存文件: {Path}", model.Name, ctxA);
             return ctxA;
         }
 
         var ctxB = Path.Combine(model.CachePath, "trt",
             Path.GetFileNameWithoutExtension(model.ModalPath) + "_ctx.onnx");
-        return File.Exists(Global.Absolute(ctxB)) ? ctxB : null;
+        if (File.Exists(ctxB))
+        {
+            Logger.LogDebug("[ONNX]模型 {Model} 命中TRT命名缓存文件: {Path}", model.Name, ctxB);
+            return ctxB;
+        }
+
+        Logger.LogDebug("[ONNX]没有找到模型 {Model} 的模型缓存文件。", model.Name);
+        return null;
     }
 
 
