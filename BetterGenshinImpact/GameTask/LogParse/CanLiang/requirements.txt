@@ -1,0 +1,4 @@
+flask==2.3.3
+Werkzeug==2.3.7
+flask_cors==5.0.1
+python-dotenv==1.0.1
