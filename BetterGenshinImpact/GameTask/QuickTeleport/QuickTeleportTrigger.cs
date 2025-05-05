@@ -49,7 +49,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
         {
             return;
         }
-        _prevExecute = DateTime.Now;
+
         IsExclusive = false;
 
         // 快捷键传送配置启用的情况下，且快捷键按下的时候激活
@@ -61,6 +61,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
             }
         }
 
+        _prevExecute = DateTime.Now;
 
         // 1.判断是否在地图界面
         content.CaptureRectArea.Find(_assets.MapScaleButtonRo, _ =>
