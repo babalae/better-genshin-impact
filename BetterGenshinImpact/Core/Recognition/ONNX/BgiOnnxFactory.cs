@@ -48,7 +48,14 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         _trtUseEmbedMode = config.EmbedTensorRtCache;
         _enableCache = config.EnableTensorRtCache;
         _cpuOcr = config.CpuOcr;
-        Logger.LogDebug("[ONNX]启用的provider: {Device}", string.Join(",", _providerTypes.Select(Enum.GetName)));
+        Logger.LogDebug("[ONNX] 初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}", 
+            config.InferenceDevice, 
+            _optimizedModel, 
+            _cudaDeviceId, 
+            _dmlDeviceId, 
+            _trtUseEmbedMode, 
+            _enableCache, 
+            _cpuOcr);
     }
 
     /// <summary>
