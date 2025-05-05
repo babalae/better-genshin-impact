@@ -286,18 +286,29 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
             : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
-
-    private string? GetCached(BgiOnnxModel model)
-    {
-        // 目前只支持TensorRT
-        return !_providerTypes.Contains(ProviderType.TensorRt) ? null : _cachedModelPaths.GetOrAdd(model, _GetCached);
-    }
-
     /// <summary>
     /// 获取带有缓存的模型(目前只支持TensorRT)
     /// </summary>
     /// <param name="model">模型</param>
     /// <returns>带有缓存的模型绝对路径，null表示尚未创建缓存</returns>
+    private string? GetCached(BgiOnnxModel model)
+    {
+        // 目前只支持TensorRT
+        if (!_providerTypes.Contains(ProviderType.TensorRt)) return null;
+        var result = _cachedModelPaths.GetOrAdd(model, _GetCached);
+        if (result is null)
+        {
+            return result;
+        }
+        // 判断文件是否存在
+        if (File.Exists(result))
+        {
+            return result;
+        }
+        Logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
+        return null;
+    }
+    
     private string? _GetCached(BgiOnnxModel model)
     {
         if (model.ModelRelativePath.StartsWith(BgiOnnxModel.ModelCacheRelativePath) &&

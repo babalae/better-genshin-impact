@@ -27,23 +27,11 @@ public partial class HardwareAccelerationConfig : ObservableObject
     [ObservableProperty]
     private int _gpuDevice = 0;
 
-    // /// <summary>
-    // /// 使用DirectML加速。默认开启。
-    // /// </summary>
-    // [ObservableProperty]
-    // private bool _useDml = true;
-
     /// <summary>
     /// 附加path，用;分割。默认为空。
     /// </summary>
     [ObservableProperty]
     private string _additionalPath = "";
-
-    // /// <summary>
-    // /// 是否自动启用异构推理，这会让使用gpu加速时同时使用cpu加速。默认开启。
-    // /// </summary>
-    // [ObservableProperty]
-    // private bool _heterogeneous = true;
 
     /// <summary>
     /// 是否输出优化后的模型文件到缓存。注意:在不支持的执行器上使用会导致异常。默认关闭。
@@ -54,12 +42,6 @@ public partial class HardwareAccelerationConfig : ObservableObject
     #endregion
 
     #region cuda设置
-
-    // /// <summary>
-    // /// 是否启用cuda。如果关闭了它，则cuda和TensorRT都不可用。默认开启。
-    // /// </summary>
-    // [ObservableProperty]
-    // private bool _useCuda = true;
 
     /// <summary>
     /// 强制指定cuda设备,默认为0(使用默认设备)
