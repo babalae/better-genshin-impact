@@ -104,23 +104,50 @@ public partial class MapViewerViewModel : ObservableObject
 
     public Mat ClipMat(Point2f pos)
     {
-        var len = 256;
-        pos = new Point2f(pos.X - _currentPathingRect.X, pos.Y - _currentPathingRect.Y);
-        Rect rect = new((int)pos.X - len, (int)pos.Y - len, len * 2, len * 2);
-        // 实现剪切 Mat 的逻辑
-        if (_currentPathingMap.Empty())
+        try
         {
-            Debug.WriteLine("_currentPathingMap 未初始化");
-            return new Mat(_mapImage, new Rect(rect.X / _scale, rect.Y / _scale, rect.Width, rect.Height));
+            var len = 256;
+            pos = new Point2f(pos.X - _currentPathingRect.X, pos.Y - _currentPathingRect.Y);
+            Rect rect = new((int)pos.X - len, (int)pos.Y - len, len * 2, len * 2);
+            // 处理越界
+            if (rect.X < 0)
+            {
+                rect.X = 0;
+            }
+            if (rect.Y < 0)
+            {
+                rect.Y = 0;
+            }
+            if (rect.X + rect.Width > _mapImage.Width)
+            {
+                rect.Width = _mapImage.Width - rect.X;
+            }
+            if (rect.Y + rect.Height > _mapImage.Height)
+            {
+                rect.Height = _mapImage.Height - rect.Y;
+            }
+            // 实现剪切 Mat 的逻辑
+            if (_currentPathingMap.Empty())
+            {
+                Debug.WriteLine("_currentPathingMap 未初始化");
+                return new Mat(_mapImage, new Rect(rect.X / _scale, rect.Y / _scale, rect.Width, rect.Height));
+            }
+            else
+            {
+                Mat clipMat = new(_currentPathingMap, rect);
+                clipMat = clipMat.Clone();
+                // 绘制中心点
+                Cv2.Circle(clipMat, new Point(len, len), 3, new Scalar(0, 255, 0), 2);
+                return clipMat;
+            }
         }
-        else
+        catch
         {
-            Mat clipMat = new(_currentPathingMap, rect);
-            clipMat = clipMat.Clone();
-            // 绘制中心点
-            Cv2.Circle(clipMat, new Point(len, len), 3, new Scalar(0, 255, 0), 2);
-            return clipMat;
+            // 返回一张全黑的图
+            var blackMat = new Mat(256, 256, MatType.CV_8UC3, new Scalar(0, 0, 0));
+            return blackMat;
         }
+
     }
 
     /// <summary>
