@@ -48,13 +48,15 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         _trtUseEmbedMode = config.EmbedTensorRtCache;
         _enableCache = config.EnableTensorRtCache;
         _cpuOcr = config.CpuOcr;
-        Logger.LogDebug("[ONNX] 初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}", 
-            config.InferenceDevice, 
-            _optimizedModel, 
-            _cudaDeviceId, 
-            _dmlDeviceId, 
-            _trtUseEmbedMode, 
-            _enableCache, 
+        Logger.LogDebug(
+            "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
+            string.Join(",", _providerTypes.Select(Enum.GetName)),
+            config.InferenceDevice,
+            _optimizedModel,
+            _cudaDeviceId,
+            _dmlDeviceId,
+            _trtUseEmbedMode,
+            _enableCache,
             _cpuOcr);
     }
 
@@ -265,6 +267,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         {
             providerTypes = [ProviderType.Cpu];
         }
+
         if (!_enableCache)
         {
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
