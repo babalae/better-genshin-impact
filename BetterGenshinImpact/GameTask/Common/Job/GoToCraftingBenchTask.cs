@@ -129,7 +129,7 @@ public class GoToCraftingBenchTask
                 {
                     craftsNeeded++;
                 }
-                if (craftsNeeded > (5 - condensedResinCount))
+                if (craftsNeeded >= (5 - condensedResinCount))
                 {
                     craftsNeeded = 5 - condensedResinCount;//最多只能有5个浓缩树脂
                 }
