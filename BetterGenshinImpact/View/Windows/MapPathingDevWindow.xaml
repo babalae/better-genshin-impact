@@ -25,14 +25,14 @@
             <ComboBox ItemsSource="{Binding MapTypeItems}"
                       DisplayMemberPath="DisplayName"
                       SelectedValuePath="EnumName"
-                      SelectedValue="{Binding SelectedMapType, Mode=TwoWay}"
+                      SelectedValue="{Binding DevConfig.RecordMapName, Mode=TwoWay}"
                       Margin="5">
-                <b:Interaction.Triggers>
+                <!--<b:Interaction.Triggers>
                     <b:EventTrigger EventName="SelectionChanged">
                         <b:InvokeCommandAction Command="{Binding DropDownChangedCommand}"
                                                CommandParameter="GeniusInvocation" />
                     </b:EventTrigger>
-                </b:Interaction.Triggers>
+                </b:Interaction.Triggers>-->
             </ComboBox>
             <ui:Button Margin="5"
                        Command="{Binding OpenMapViewerCommand}"

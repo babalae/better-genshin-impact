@@ -94,6 +94,9 @@ public class PathExecutor
 
     //跳过除走路径以外的操作
     private bool _skipOtherOperations = false;
+    
+    // 最近一次获取派遣奖励的时间
+    private DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
 
 
     //当到达恢复点位
@@ -594,11 +597,17 @@ public class PathExecutor
     /// 尝试自动领取派遣奖励，
     /// </summary>
     /// <returns>是否可以领取派遣奖励</returns>
-    private async Task<bool> TryAutoFetchDispatch(TpTask? tpTask = null)
+    private async Task<bool> TryGetExpeditionRewardsDispatch(TpTask? tpTask = null)
     {
         if (tpTask == null)
         {
             tpTask = new TpTask(ct);
+        }
+        
+        // 最小5分钟间隔
+        if ((DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
+        {
+            return false;
         }
 
         //打开大地图操作
@@ -630,6 +639,7 @@ public class PathExecutor
                 finally
                 {
                     RunnerContext.Instance.isAutoFetchDispatch = false;
+                    _lastGetExpeditionRewardsTime = DateTime.UtcNow; // 无论成功与否都更新时间
                 }
             }
         }
@@ -641,7 +651,7 @@ public class PathExecutor
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
         TpTask tpTask = new TpTask(ct);
-        await TryAutoFetchDispatch(tpTask);
+        await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配

@@ -1,0 +1,19 @@
+name: mirrorchyan_release_note
+
+on:
+  workflow_dispatch:
+  release:
+    types: [edited, released]
+
+jobs:
+  mirrorchyan_release_note:
+    runs-on: macos-latest
+
+    steps:
+      - id: uploading
+        uses: MirrorChyan/release-note-action@v1
+        with:
+          mirrorchyan_rid: BGI
+
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
