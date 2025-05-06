@@ -514,7 +514,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
                 else
                 {
-                    Task.Run(() => { pathRecorder.Start(TaskContext.Instance().Config.DevConfig.RecordMapName); });
+                    Task.Run(() => { pathRecorder.Start(); });
                 }
 
                 pathRecording = !pathRecording;

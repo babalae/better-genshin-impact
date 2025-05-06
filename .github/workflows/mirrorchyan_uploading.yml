@@ -1,0 +1,40 @@
+name: mirrorchyan_uploading
+
+on:
+  workflow_dispatch:
+  release:
+    types: [released]
+
+jobs:
+  mirrorchyan_7z:
+    runs-on: macos-latest
+    steps:
+      - uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: latest-release
+          filename: "BetterGI_*.7z"
+          p7zip: true
+          mirrorchyan_rid: BGI
+
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: babalae
+          repo: better-genshin-impact
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+
+  mirrorchyan_exe:
+    runs-on: macos-latest
+    steps:
+      - uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: latest-release
+          filename: "BetterGI.Install.*.exe"
+          extra_zip: true
+          mirrorchyan_rid: BGI
+
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: babalae
+          repo: better-genshin-impact
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          os: win
+          arch: x64
+

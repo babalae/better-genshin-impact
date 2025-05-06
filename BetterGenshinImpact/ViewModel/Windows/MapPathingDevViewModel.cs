@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common;
@@ -17,13 +18,15 @@ public partial class MapPathingDevViewModel: ObservableObject
 
     private MapViewer? _mapViewer;
     
-    [ObservableProperty]
-    private string _selectedMapType = TaskContext.Instance().Config.DevConfig.RecordMapName;
+    // [ObservableProperty]
+    // private string _selectedMapType = TaskContext.Instance().Config.DevConfig.RecordMapName;
+
+    public DevConfig DevConfig { get; set; } = TaskContext.Instance().Config.DevConfig;
     
     [RelayCommand]
     private void DropDownChanged()
     {
-        TaskContext.Instance().Config.DevConfig.RecordMapName = SelectedMapType;
+        // TaskContext.Instance().Config.DevConfig.RecordMapName = SelectedMapType;
     }
     
     [RelayCommand]
@@ -31,7 +34,7 @@ public partial class MapPathingDevViewModel: ObservableObject
     {
         if (_mapViewer == null || !_mapViewer.IsVisible)
         {
-            _mapViewer = new MapViewer(SelectedMapType);
+            _mapViewer = new MapViewer(DevConfig.RecordMapName);
             _mapViewer.Closed += (s, e) => _mapViewer = null;
             _mapViewer.Show();
         }
@@ -44,6 +47,6 @@ public partial class MapPathingDevViewModel: ObservableObject
     [RelayCommand]
     private void OpenMapEditor()
     {
-        PathRecorder.Instance.OpenEditorInWebView(SelectedMapType);
+        PathRecorder.Instance.OpenEditorInWebView(DevConfig.RecordMapName);
     }
 }
