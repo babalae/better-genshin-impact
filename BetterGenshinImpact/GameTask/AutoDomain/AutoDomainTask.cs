@@ -50,8 +50,6 @@ public class AutoDomainTask : ISoloTask
 {
     public string Name => "自动秘境";
     
-    private static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
-
     private readonly AutoDomainParam _taskParam;
 
     private readonly YoloV8Predictor _predictor;

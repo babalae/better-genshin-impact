@@ -205,7 +205,6 @@ public class GoToCraftingBenchTask
 
         await Delay(700, ct);
         
-        
         // 多种尝试 责任链
         if (!IsInCraftingTalkUi())
         {
