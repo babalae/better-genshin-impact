@@ -345,7 +345,7 @@ public class AutoDomainTask : ISoloTask
         }
         
         DateTime now = DateTime.Now;        
-        if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Sunday && now.Hour < 4)
+        if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4)
         {
             using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa);//检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
