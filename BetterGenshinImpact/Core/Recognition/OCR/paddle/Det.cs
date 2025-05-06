@@ -1,8 +1,6 @@
 using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
@@ -27,7 +25,7 @@ public class Det
     public int? DilatedSize { get; set; } = 2;
 
     /// <summary>Gets or sets the score threshold for filtering out possible text boxes.</summary>
-    public float? BoxScoreThreahold { get; set; } = 0.7f;
+    public float? BoxScoreThreshold { get; set; } = 0.7f;
 
     /// <summary>Gets or sets the threshold to binarize the text region.</summary>
     public float? BoxThreshold { get; set; } = 0.3f;
@@ -70,8 +68,8 @@ public class Det
         var scaleRate = 1.0 * src.Width / resizedSize.Width;
 
         var rects = contours
-            .Where(x => BoxScoreThreahold == null || GetScore(x, pred) > BoxScoreThreahold)
-            .Select(x => Cv2.MinAreaRect(x))
+            .Where(x => BoxScoreThreshold == null || GetScore(x, pred) > BoxScoreThreshold)
+            .Select(Cv2.MinAreaRect)
             .Where(x => x.Size.Width > MinSize && x.Size.Height > MinSize)
             .Select(rect =>
             {
