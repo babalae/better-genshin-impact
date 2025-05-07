@@ -146,6 +146,7 @@ public class SwitchPartyTask
             var found = await FindPage(partyName, page, partyDeleteBtn, ct);
             if (found)
             {
+                RunnerContext.Instance.ClearCombatScenes();
                 return true;
             }
 

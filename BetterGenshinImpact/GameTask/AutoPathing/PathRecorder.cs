@@ -11,6 +11,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Helpers;
@@ -35,29 +36,38 @@ public class PathRecorder : Singleton<PathRecorder>
 
     private PathingTask _pathingTask = new();
 
-    private string _mapName = MapTypes.Teyvat.ToString();
 
-    public void Start(string mapName)
+    private string GetMapName()
+    {
+        var mapName = TaskContext.Instance().Config.DevConfig.RecordMapName;
+        if (string.IsNullOrEmpty(mapName))
+        {
+            mapName = nameof(MapTypes.Teyvat);
+        }
+
+        return mapName;
+    }
+
+    public void Start()
     {
         Navigation.WarmUp();
-        _mapName = mapName;
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
-        if (mapName == MapTypes.Teyvat.ToString())
+        if (GetMapName() == nameof(MapTypes.Teyvat))
         {
             TaskControl.Logger.LogInformation("如果需要切换其他地图，请在 {Msg} 中切换", "地图追踪——开发者工具");
         }
 
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen, mapName);
+        var position = Navigation.GetPositionStable(screen, GetMapName());
         if (position == default)
         {
             TaskControl.Logger.LogWarning("未识别到当前位置！");
             return;
         }
 
-        position = MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        position = MapManager.GetMap(GetMapName()).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = WaypointType.Teleport.Code;
@@ -78,8 +88,8 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen, _mapName);
-        position = MapManager.GetMap(_mapName).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        var position = Navigation.GetPositionStable(screen, GetMapName());
+        position = MapManager.GetMap(GetMapName()).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (position == default)
         {
             TaskControl.Logger.LogWarning("未识别到当前位置！");
@@ -102,7 +112,7 @@ public class PathRecorder : Singleton<PathRecorder>
             {
                 Name = "未命名路线",
                 Type = PathingTaskType.Collect.Code,
-                MapName = _mapName,
+                MapName = GetMapName(),
                 BgiVersion = Global.Version
             };
             var name = $@"{DateTime.Now:yyyyMMdd_HHmmss}.json";
@@ -139,13 +149,14 @@ public class PathRecorder : Singleton<PathRecorder>
             };
             _webWindow.Closed += (s, e) => _webWindow = null;
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
-           
+
             var htmlPath = Global.Absolute(@"Assets\Map\Editor\index.html");
             var uri = new UriBuilder(htmlPath);
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
             query["map"] = mapName;
             uri.Query = query.ToString();
             _webWindow.NavigateToFile(uri.ToString());
+            _webWindow.Panel!.OnWebViewInitializedAction = () => _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("mapEditorWebBridge", new MapEditorWebBridge());
             _webWindow.Show();
         }
         else

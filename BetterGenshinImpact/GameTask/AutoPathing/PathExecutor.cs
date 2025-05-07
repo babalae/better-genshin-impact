@@ -95,6 +95,9 @@ public class PathExecutor
     //跳过除走路径以外的操作
     private bool _skipOtherOperations = false;
 
+    // 最近一次获取派遣奖励的时间
+    private DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
+
 
     //当到达恢复点位
     public void TryCloseSkipOtherOperations()
@@ -166,6 +169,13 @@ public class PathExecutor
                 try
                 {
                     await ResolveAnomalies(); // 异常场景处理
+
+                    // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
+                    if (waypoints[0].Type != WaypointType.Teleport.Code)
+                    {
+                        Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
+                    }
+
                     foreach (var waypoint in waypoints) // 一条路径
                     {
                         CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
@@ -186,7 +196,7 @@ public class PathExecutor
                                 // 考虑到方位点大概率是作为执行action的最后一个点，所以放在此处处理，不和传送点一样单独处理
                                 await FaceTo(waypoint);
                             }
-                            else if(waypoint.Action != ActionEnum.UpDownGrabLeaf.Code)
+                            else if (waypoint.Action != ActionEnum.UpDownGrabLeaf.Code)
                             {
                                 await MoveTo(waypoint);
                             }
@@ -199,7 +209,8 @@ public class PathExecutor
                             }
 
                             //skipOtherOperations如果重试，则跳过相关操作，
-                            if ((!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations) || waypoint.Action == ActionEnum.CombatScript.Code)
+                            if ((!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations) ||
+                                waypoint.Action == ActionEnum.CombatScript.Code)
                             {
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
@@ -261,7 +272,7 @@ public class PathExecutor
         {
             return false;
         }
-        
+
 
         var action = ActionEnum.GetEnumByCode(waypoint.Action);
         if (action is not null && action.UseWaypointTypeEnum != ActionUseWaypointTypeEnum.Custom)
@@ -330,13 +341,15 @@ public class PathExecutor
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！",
+                gameScreenSize.Width, gameScreenSize.Height);
             throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用地图追踪功能！");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！", gameScreenSize.Width, gameScreenSize.Height);
+            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！",
+                gameScreenSize.Width, gameScreenSize.Height);
             throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
         }
     }
@@ -453,7 +466,8 @@ public class PathExecutor
         return true;
     }
 
-    private bool ValidateElementalActionAvatarIndex(PathingTask task, string action, ElementalType el, CombatScenes combatScenes)
+    private bool ValidateElementalActionAvatarIndex(PathingTask task, string action, ElementalType el,
+        CombatScenes combatScenes)
     {
         if (task.HasAction(action))
         {
@@ -465,7 +479,8 @@ public class PathExecutor
                 }
             }
 
-            Logger.LogError("此路径存在 {El}元素采集 动作，队伍中没有对应元素角色:{Names}，无法执行此路径！", el.ToChinese(), string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
+            Logger.LogError("此路径存在 {El}元素采集 动作，队伍中没有对应元素角色:{Names}，无法执行此路径！", el.ToChinese(),
+                string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
             return false;
         }
         else
@@ -594,11 +609,17 @@ public class PathExecutor
     /// 尝试自动领取派遣奖励，
     /// </summary>
     /// <returns>是否可以领取派遣奖励</returns>
-    private async Task<bool> TryAutoFetchDispatch(TpTask? tpTask = null)
+    private async Task<bool> TryGetExpeditionRewardsDispatch(TpTask? tpTask = null)
     {
         if (tpTask == null)
         {
             tpTask = new TpTask(ct);
+        }
+
+        // 最小5分钟间隔
+        if ((DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
+        {
+            return false;
         }
 
         //打开大地图操作
@@ -620,7 +641,9 @@ public class PathExecutor
                 try
                 {
                     RunnerContext.Instance.isAutoFetchDispatch = true;
-                    await RunnerContext.Instance.StopAutoPickRunTask(async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, ct, null, true), 5);
+                    await RunnerContext.Instance.StopAutoPickRunTask(
+                        async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, ct, null, true),
+                        5);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
                 }
                 catch (Exception e)
@@ -630,6 +653,7 @@ public class PathExecutor
                 finally
                 {
                     RunnerContext.Instance.isAutoFetchDispatch = false;
+                    _lastGetExpeditionRewardsTime = DateTime.UtcNow; // 无论成功与否都更新时间
                 }
             }
         }
@@ -641,9 +665,10 @@ public class PathExecutor
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
         TpTask tpTask = new TpTask(ct);
-        await TryAutoFetchDispatch(tpTask);
+        await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
-        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
+        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName)
+            .ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
     }
@@ -810,7 +835,8 @@ public class PathExecutor
             else if (waypoint.MoveMode != MoveModeEnum.Climb.Code) //否则自动短疾跑
             {
                 // 使用 E 技能
-                if (distance > 10 && !string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex) && double.TryParse(PartyConfig.GuardianElementalSkillSecondInterval, out var s))
+                if (distance > 10 && !string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex) &&
+                    double.TryParse(PartyConfig.GuardianElementalSkillSecondInterval, out var s))
                 {
                     if (s < 1)
                     {
@@ -822,7 +848,8 @@ public class PathExecutor
                     if ((DateTime.UtcNow - _elementalSkillLastUseTime).TotalMilliseconds > ms)
                     {
                         // 可能刚切过人在冷却时间内
-                        if (num <= 5 && (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex) && PartyConfig.GuardianAvatarIndex != PartyConfig.MainAvatarIndex))
+                        if (num <= 5 && (!string.IsNullOrEmpty(PartyConfig.MainAvatarIndex) &&
+                                         PartyConfig.GuardianAvatarIndex != PartyConfig.MainAvatarIndex))
                         {
                             await Delay(800, ct); // 总共1s
                         }
