@@ -156,10 +156,6 @@ public class BitBltSession : CaptureSession
     {
         lock (_lockObject)
         {
-            if (_hBitmap.IsInvalid)
-                // 位图句柄无效
-                return null;
-
             // 截图
             var success = Gdi32.StretchBlt(_hdcDest, 0, 0, _width, _height,
                 _hdcSrc, 0, 0, _width, _height, Gdi32.RasterOperationMode.SRCCOPY);
@@ -177,7 +173,7 @@ public class BitBltSession : CaptureSession
     /// <returns></returns>
     public bool IsInvalid()
     {
-        return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid;
+        return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr != 0;
     }
 
     /// <summary>
