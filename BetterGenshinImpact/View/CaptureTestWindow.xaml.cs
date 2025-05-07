@@ -3,7 +3,6 @@ using Fischless.GameCapture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -17,7 +16,6 @@ namespace BetterGenshinImpact.View;
 public partial class CaptureTestWindow
 {
     private IGameCapture? _capture;
-    private IntPtr _cachePtr;
     private Size _cacheSize;
 
     private long _captureTime;
@@ -109,10 +107,9 @@ public partial class CaptureTestWindow
             _captureCount++;
             sw.Reset();
             sw.Start();
-            if (_cachePtr != mat.Data || _cacheSize != mat.Size())
+            if (_cacheSize != mat.Size())
             {
                 DisplayCaptureResultImage.Source = ToWriteableBitmap(mat);
-                _cachePtr = mat.Data;
                 _cacheSize = mat.Size();
             }
             else

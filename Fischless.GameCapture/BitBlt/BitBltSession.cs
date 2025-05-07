@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
@@ -33,6 +34,12 @@ public class BitBltSession : CaptureSession
 
     // 旧位图，析构时一起释放掉
     private HGDIOBJ _oldBitmap;
+
+    // Bitmap buffer 大小
+    private readonly int _bufferSize;
+
+    // Bitmap 内存池
+    private readonly ConcurrentStack<IntPtr> _bufferPool = [];
 
     // 窗口原宽高
     public int Width { get; }
@@ -125,6 +132,7 @@ public class BitBltSession : CaptureSession
                     throw new Exception("Unsupported bitmap format");
 
                 _stride = bitmap.bmWidthBytes;
+                _bufferSize = _stride * bitmap.bmHeight;
 
                 _oldBitmap = Gdi32.SelectObject(_hdcDest, _hBitmap);
                 if (_oldBitmap.IsNull) throw new Exception("Failed to select object");
@@ -150,9 +158,9 @@ public class BitBltSession : CaptureSession
     }
 
     /// <summary>
-    ///     调用GDI复制到缓冲区并返回Mat
+    ///     调用GDI复制到缓冲区并返回新Mat
     /// </summary>
-    public Mat? GetImage()
+    public unsafe Mat? GetImage()
     {
         lock (_lockObject)
         {
@@ -161,11 +169,27 @@ public class BitBltSession : CaptureSession
                 _hdcSrc, 0, 0, _width, _height, Gdi32.RasterOperationMode.SRCCOPY);
             if (!success || !Gdi32.GdiFlush()) return null;
 
-            // 无拷贝
-            return Mat.FromPixelData(_height, _width, MatType.CV_8UC3, _bitsPtr, _stride);
+            // 新Mat
+            var buffer = AcquireBuffer();
+            Buffer.MemoryCopy(_bitsPtr.ToPointer(), buffer.ToPointer(), _bufferSize, _bufferSize);
+            return BitBltMat.FromPixelData(this, _height, _width, MatType.CV_8UC3, buffer, _stride);
         }
     }
 
+    private IntPtr AcquireBuffer()
+    {
+        if (!_bufferPool.TryPop(out var buffer))
+        {
+            buffer = Marshal.AllocHGlobal(_bufferSize);
+        }
+
+        return buffer;
+    }
+
+    public void ReleaseBuffer(IntPtr buffer)
+    {
+        _bufferPool.Push(buffer);
+    }
 
     /// <summary>
     ///     不是所有的失效情况都能被检测到
@@ -211,5 +235,10 @@ public class BitBltSession : CaptureSession
         }
 
         _bitsPtr = IntPtr.Zero;
+
+        foreach (var buffer in _bufferPool)
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
     }
 }
