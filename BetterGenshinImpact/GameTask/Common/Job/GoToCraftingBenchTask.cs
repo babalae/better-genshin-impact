@@ -122,8 +122,10 @@ public class GoToCraftingBenchTask
                  int minResinToKeep = SelectedConfig.MinResinToKeep;
                 // 可以用来合成的树脂数量
                 int resinAvailableForCrafting = fragileResinCount - minResinToKeep;
+                // 最大可合成次数
+                int maxCraftsPossible = 5 - condensedResinCount;
                 // 计算需要合成的次数
-                int craftsNeeded = resinAvailableForCrafting / resinConsumedPerCraft-1;
+                int craftsNeeded = resinAvailableForCrafting / resinConsumedPerCraft;
                 // 如果 resinAvailableForCrafting 不是 resinConsumedPerCraft 的整数倍，那么还需要增加一次合成
                 if (resinAvailableForCrafting % resinConsumedPerCraft != 0)
                 {
@@ -133,8 +135,8 @@ public class GoToCraftingBenchTask
                 {
                     craftsNeeded = 5 - condensedResinCount;//最多只能有5个浓缩树脂
                 }
-                Logger.LogInformation("脆弱树脂 {FragileResinCount}，剩余：浓缩树脂 {CondensedResinCount}，最大可合成次数为 {craftsNeeded}", fragileResinCount,
-                    condensedResinCount,craftsNeeded);
+                Logger.LogInformation("原粹树脂: {FragileResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", fragileResinCount,
+                    condensedResinCount, maxCraftsPossible);
                 Logger.LogInformation("保留 {MinResinToKeep} 原粹树脂需要合成次数： {craftsNeeded}",minResinToKeep,craftsNeeded);
                 if (craftsNeeded > 0)
                 {
