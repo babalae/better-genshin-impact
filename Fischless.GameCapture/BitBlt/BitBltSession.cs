@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using OpenCvSharp;
 using Vanara.PInvoke;
 
 namespace Fischless.GameCapture.BitBlt;
@@ -15,11 +16,14 @@ public class BitBltSession : CaptureSession
     private readonly int _width;
     private readonly int _height;
 
-    // 位图指针，这个指针会在位图释放时自动释放
-    private IntPtr _bitsPtr;
-
     // 位图句柄
     private Gdi32.SafeHBITMAP _hBitmap;
+
+    // 位图数据指针，这个指针会在位图释放时自动释放
+    private IntPtr _bitsPtr;
+
+    // 位图数据一行字节数
+    private readonly int _stride;
 
     // 缓冲区 CompatibleDC
     private Gdi32.SafeHDC _hdcDest;
@@ -36,14 +40,6 @@ public class BitBltSession : CaptureSession
 
     public BitBltSession(HWND hWnd, int w, int h)
     {
-        // 分配全空对象 避免 System.NullReferenceException
-        // 不能直接在上面写，不然zz编译器会报warning,感觉抑制warning也不优雅
-        _oldBitmap = Gdi32.SafeHBITMAP.Null;
-        _hBitmap = Gdi32.SafeHBITMAP.Null;
-        _hdcDest = Gdi32.SafeHDC.Null;
-        _hdcSrc = User32.SafeReleaseHDC.Null;
-        _bitsPtr = IntPtr.Zero;
-
         if (hWnd.IsNull) throw new Exception("hWnd is invalid");
 
         _hWnd = hWnd;
@@ -60,6 +56,11 @@ public class BitBltSession : CaptureSession
             {
                 _hdcSrc = User32.GetDC(_hWnd);
                 if (_hdcSrc.IsInvalid) throw new Exception($"Failed to get DC for {_hWnd}");
+
+                var hdcRasterCaps = Gdi32.GetDeviceCaps(_hdcSrc, Gdi32.DeviceCap.RASTERCAPS);
+                if ((hdcRasterCaps | 0x800) == 0) // RC_STRETCHBLT
+                    // 设备不支持 BitBlt
+                    throw new Exception("BitBlt not supported");
 
                 var hdcSrcPixel = Gdi32.GetDeviceCaps(_hdcSrc, Gdi32.DeviceCap.BITSPIXEL);
                 // 颜色位数
@@ -79,9 +80,14 @@ public class BitBltSession : CaptureSession
                     throw new Exception("Device does not support clipping");
 
                 _hdcDest = Gdi32.CreateCompatibleDC(_hdcSrc);
+                if (_hdcDest.IsInvalid)
+                {
+                    Debug.Fail("Failed to create CompatibleDC");
+                    throw new Exception($"Failed to create CompatibleDC for {_hWnd}");
+                }
+
                 var maxW = Gdi32.GetDeviceCaps(_hdcDest, Gdi32.DeviceCap.HORZRES);
                 var maxH = Gdi32.GetDeviceCaps(_hdcDest, Gdi32.DeviceCap.VERTRES);
-
                 if (maxW <= 0 || maxH <= 0)
                     // 显示器不见啦
                     throw new Exception("Can not get display size");
@@ -89,12 +95,6 @@ public class BitBltSession : CaptureSession
                 // 避免截取全屏窗口的时候超出CompatibleDC范围
                 _width = Math.Min(maxW, Width);
                 _height = Math.Min(maxH, Height);
-
-                if (_hdcSrc.IsInvalid)
-                {
-                    Debug.Fail("Failed to create CompatibleDC");
-                    throw new Exception($"Failed to create CompatibleDC for {_hWnd}");
-                }
 
 
                 var bmi = new Gdi32.BITMAPINFO
@@ -110,17 +110,22 @@ public class BitBltSession : CaptureSession
                         biSizeImage = 0
                     }
                 };
-                _hBitmap = Gdi32.CreateDIBSection(_hdcDest, bmi, Gdi32.DIBColorMode.DIB_RGB_COLORS, out var bits,
+                _hBitmap = Gdi32.CreateDIBSection(_hdcDest, bmi, Gdi32.DIBColorMode.DIB_RGB_COLORS, out _bitsPtr,
                     IntPtr.Zero);
 
-                if (_hBitmap.IsInvalid || bits == 0)
+                if (_hBitmap.IsInvalid || _bitsPtr == 0)
                 {
                     if (!_hBitmap.IsInvalid) Gdi32.DeleteObject(_hBitmap);
 
                     throw new Exception($"Failed to create dIB section for {_hdcDest}");
                 }
 
-                _bitsPtr = bits;
+                var bitmap = Gdi32.GetObject<Gdi32.BITMAP>(_hBitmap);
+                if (bitmap.bmPlanes != 1 || bitmap.bmBitsPixel != 24)
+                    throw new Exception("Unsupported bitmap format");
+
+                _stride = bitmap.bmWidthBytes;
+
                 _oldBitmap = Gdi32.SelectObject(_hdcDest, _hBitmap);
                 if (_oldBitmap.IsNull) throw new Exception("Failed to select object");
             }
@@ -145,39 +150,23 @@ public class BitBltSession : CaptureSession
     }
 
     /// <summary>
-    ///     调用GDI复制到缓冲区并返回新Image
+    ///     调用GDI复制到缓冲区并返回Mat
     /// </summary>
-    public Bitmap? GetImage()
+    public Mat? GetImage()
     {
         lock (_lockObject)
         {
-            Gdi32.GdiFlush();
             if (_hBitmap.IsInvalid)
-                // 位图指针无效
+                // 位图句柄无效
                 return null;
 
-            Gdi32.BITMAP bitmap;
-            try
-            {
-                // 获取位图详情，这应该能抵挡住奇奇怪怪的bug
-                bitmap = Gdi32.GetObject<Gdi32.BITMAP>(_hBitmap);
-            }
-            catch (ArgumentException)
-            {
-                // 可能是位图已经被释放了
-                return null;
-            }
-
-            // 这个是bitmap的结构信息，不用手动释放
-            if (bitmap.bmPlanes != 1 || bitmap.bmBitsPixel != 24)
-                // 不支持的位图格式
-                return null;
-            // 直接返回转换后的位图
+            // 截图
             var success = Gdi32.StretchBlt(_hdcDest, 0, 0, _width, _height,
                 _hdcSrc, 0, 0, _width, _height, Gdi32.RasterOperationMode.SRCCOPY);
             if (!success || !Gdi32.GdiFlush()) return null;
 
-            return _hBitmap.ToBitmap();
+            // 无拷贝
+            return Mat.FromPixelData(_height, _width, MatType.CV_8UC3, _bitsPtr, _stride);
         }
     }
 
@@ -188,7 +177,7 @@ public class BitBltSession : CaptureSession
     /// <returns></returns>
     public bool IsInvalid()
     {
-        return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == IntPtr.Zero;
+        return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid;
     }
 
     /// <summary>
@@ -196,6 +185,8 @@ public class BitBltSession : CaptureSession
     /// </summary>
     private void ReleaseResources()
     {
+        Gdi32.GdiFlush();
+
         if (!_oldBitmap.IsNull)
         {
             // 先选回资源再释放_hBitmap
@@ -223,7 +214,6 @@ public class BitBltSession : CaptureSession
             _hdcSrc = User32.SafeReleaseHDC.Null;
         }
 
-        Gdi32.GdiFlush();
         _bitsPtr = IntPtr.Zero;
     }
 }

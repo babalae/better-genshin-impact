@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using OpenCvSharp;
 using Vanara.PInvoke;
 using static System.Console;
 
@@ -171,24 +172,15 @@ public class BitBltCapture : IGameCapture
     /// 截图功能的实现。需要加锁后调用，一般只由 Capture 方法调用。
     /// </summary>
     /// <returns></returns>
-    private Bitmap? Capture0()
+    private Mat? Capture0()
     {
-        Bitmap? bitmap = null;
         try
         {
-            if (_session is null)
-            {
-                // 没有成功创建会话，直接返回空
-                return null;
-            }
-            bitmap = _session.GetImage();
-            return bitmap;
+            return _session?.GetImage();
         }
         catch (Exception e)
         {
             // 理论这里不应出现异常，除非窗口不存在了或者有什么bug
-            // 出现异常的时候释放内存
-            bitmap?.Dispose();
             Error.WriteLine("[BitBlt]Failed to capture image {0}", e);
             return null;
         }
