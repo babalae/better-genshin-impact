@@ -4,7 +4,7 @@ using Vanara.PInvoke;
 
 namespace Fischless.GameCapture.BitBlt;
 
-public class BitBltSession : IDisposable
+public class BitBltSession : CaptureSession
 {
     // 窗口句柄
     private readonly HWND _hWnd;
@@ -30,6 +30,9 @@ public class BitBltSession : IDisposable
     // 旧位图，析构时一起释放掉
     private HGDIOBJ _oldBitmap;
 
+    // 窗口原宽高
+    public int Width { get; }
+    public int Height { get; }
 
     public BitBltSession(HWND hWnd, int w, int h)
     {
@@ -133,20 +136,13 @@ public class BitBltSession : IDisposable
         }
     }
 
-    //原宽高，用来喂上层
-    public int Width { get; }
-    public int Height { get; }
-
-
-    public void Dispose()
+    protected sealed override void DisposeInternal()
     {
         lock (_lockObject)
         {
             ReleaseResources();
-            GC.SuppressFinalize(this);
         }
     }
-
 
     /// <summary>
     ///     调用GDI复制到缓冲区并返回新Image

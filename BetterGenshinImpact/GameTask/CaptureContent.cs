@@ -1,8 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
-using System;
-using System.Drawing;
 using Fischless.GameCapture;
-using OpenCvSharp;
+using System;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -18,7 +16,9 @@ public class CaptureContent : IDisposable
 
     public int FrameRate => (int)(1000 / TimerInterval);
 
-    public ImageRegion CaptureRectArea { get; private set; }
+    public ImageRegion CaptureRectArea { get; }
+
+    private readonly CaptureSession? _session;
 
     public CaptureContent(CaptureImageRes image, int frameIndex, double interval)
     {
@@ -28,6 +28,9 @@ public class CaptureContent : IDisposable
 
         var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
         CaptureRectArea = gameCaptureRegion.DeriveTo1080P();
+
+        _session = image.Session;
+        _session?.Reference();
     }
 
     /// <summary>
@@ -42,5 +45,12 @@ public class CaptureContent : IDisposable
     public void Dispose()
     {
         CaptureRectArea.Dispose();
+        _session?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    ~CaptureContent()
+    {
+        Dispose();
     }
 }

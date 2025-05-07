@@ -1,6 +1,4 @@
-﻿using OpenCvSharp;
-
-namespace Fischless.GameCapture;
+﻿namespace Fischless.GameCapture;
 
 public interface IGameCapture : IDisposable
 {

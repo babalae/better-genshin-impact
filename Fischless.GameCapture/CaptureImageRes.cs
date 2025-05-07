@@ -8,40 +8,43 @@ namespace Fischless.GameCapture;
 /// </summary>
 public class CaptureImageRes : IDisposable
 {
-    public Bitmap? Bitmap { get; set; }
-    public Mat? Mat { get; set; }
-    
+    public Bitmap? Bitmap { get; private set; }
+    public Mat? Mat { get; private set; }
+    public CaptureSession? Session { get; }
+
     public int Width => Mat?.Width ?? Bitmap?.Width ?? 0;
     public int Height => Mat?.Height ?? Bitmap?.Height ?? 0;
 
-    public CaptureImageRes(Mat mat)
+    private CaptureImageRes(Mat mat, CaptureSession? session = null)
     {
         Mat = mat;
+        Session = session;
     }
-    
-    public CaptureImageRes(Bitmap bitmap)
+
+    private CaptureImageRes(Bitmap bitmap, CaptureSession? session = null)
     {
         Bitmap = bitmap;
+        Session = session;
     }
-    
-    public static CaptureImageRes? BuildNullable(Bitmap? bitmap)
+
+    public static CaptureImageRes? BuildNullable(Bitmap? bitmap, CaptureSession? session = null)
     {
         if (bitmap == null)
         {
             return null;
         }
-        return new CaptureImageRes(bitmap);
+        return new CaptureImageRes(bitmap, session);
     }
-    
-    public static CaptureImageRes? BuildNullable(Mat? mat)
+
+    public static CaptureImageRes? BuildNullable(Mat? mat, CaptureSession? session = null)
     {
         if (mat == null)
         {
             return null;
         }
-        return new CaptureImageRes(mat);
+        return new CaptureImageRes(mat, session);
     }
-    
+
     /// <summary>
     /// 非特殊情况不要使用这个方法，会造成额外的性能消耗
     /// </summary>
@@ -72,5 +75,6 @@ public class CaptureImageRes : IDisposable
     {
         Bitmap?.Dispose();
         Mat?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

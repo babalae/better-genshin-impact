@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using OpenCvSharp;
 using Vanara.PInvoke;
 using static System.Console;
 
@@ -15,7 +14,11 @@ public class BitBltCapture : IGameCapture
 
     private volatile bool _lastCaptureFailed;
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        GC.SuppressFinalize(this);
+    }
 
     public CaptureImageRes? Capture() => Capture(false);
 
@@ -50,9 +53,8 @@ public class BitBltCapture : IGameCapture
 
 
     /// <summary>
-    /// 检查窗口大小，如果改变则更新截图尺寸。返回是否成功。
+    /// 检查窗口大小，如果改变则更新截图尺寸。
     /// </summary>
-    /// <returns></returns>
     private void CheckSession()
     {
         if (_lockSlim.WaitingWriteCount > 0 || !_lockSlim.TryEnterWriteLock(TimeSpan.FromSeconds(0.5)))
@@ -84,16 +86,20 @@ public class BitBltCapture : IGameCapture
             var width = windowRect.right - windowRect.left;
             var height = windowRect.bottom - windowRect.top;
 
-            _session ??= new BitBltSession(_hWnd, width, height);
-            if (_session.Width == width && _session.Height == height)
+            if (_session != null)
             {
-                // 窗口大小没有改变
-                return;
+                if (_session.Width == width && _session.Height == height)
+                {
+                    // 窗口大小没有改变
+                    return;
+                }
+
+                // 窗口尺寸被改变，释放资源，然后重新创建会话
+                _session.Dispose();
             }
 
-            // 窗口尺寸被改变，释放资源，然后重新创建会话
-            _session.Dispose();
             _session = new BitBltSession(_hWnd, width, height);
+            _session.Reference();
         }
         catch (Exception e)
         {
@@ -139,13 +145,13 @@ public class BitBltCapture : IGameCapture
             {
                 // 成功截图
                 _lastCaptureFailed = false;
-                return CaptureImageRes.BuildNullable(result);
+                return CaptureImageRes.BuildNullable(result, _session);
             }
             else if (result is null)
             {
-                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result); // 这不是首次失败,不再进行尝试
+                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result, _session); // 这不是首次失败,不再进行尝试
                 _lastCaptureFailed = true; // 设置失败标志
-                if (recursive) return CaptureImageRes.BuildNullable(result); // 已设置递归标志，说明也不是首次失败
+                if (recursive) return CaptureImageRes.BuildNullable(result, _session); // 已设置递归标志，说明也不是首次失败
             }
         }
         finally
