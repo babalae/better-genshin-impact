@@ -10,39 +10,36 @@ public class CaptureImageRes : IDisposable
 {
     public Bitmap? Bitmap { get; private set; }
     public Mat? Mat { get; private set; }
-    public CaptureSession? Session { get; }
 
     public int Width => Mat?.Width ?? Bitmap?.Width ?? 0;
     public int Height => Mat?.Height ?? Bitmap?.Height ?? 0;
 
-    private CaptureImageRes(Mat mat, CaptureSession? session = null)
+    private CaptureImageRes(Mat mat)
     {
         Mat = mat;
-        Session = session;
     }
 
-    private CaptureImageRes(Bitmap bitmap, CaptureSession? session = null)
+    private CaptureImageRes(Bitmap bitmap)
     {
         Bitmap = bitmap;
-        Session = session;
     }
 
-    public static CaptureImageRes? BuildNullable(Bitmap? bitmap, CaptureSession? session = null)
+    public static CaptureImageRes? BuildNullable(Bitmap? bitmap)
     {
         if (bitmap == null)
         {
             return null;
         }
-        return new CaptureImageRes(bitmap, session);
+        return new CaptureImageRes(bitmap);
     }
 
-    public static CaptureImageRes? BuildNullable(Mat? mat, CaptureSession? session = null)
+    public static CaptureImageRes? BuildNullable(Mat? mat)
     {
         if (mat == null)
         {
             return null;
         }
-        return new CaptureImageRes(mat, session);
+        return new CaptureImageRes(mat);
     }
 
     /// <summary>

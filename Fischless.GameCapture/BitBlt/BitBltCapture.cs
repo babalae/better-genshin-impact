@@ -69,7 +69,7 @@ public class BitBltCapture : IGameCapture
         {
             // 窗口状态变化可能会导致会话失效
             // 上次截图失败则重置会话，避免一直截图失败
-            if (_session is not null && (_session.IsInvalid() || _lastCaptureFailed))
+            if (_session is not null && (_session.Invalid || _lastCaptureFailed))
             {
                 _session.Dispose();
                 _session = null;
@@ -100,7 +100,6 @@ public class BitBltCapture : IGameCapture
             }
 
             _session = new BitBltSession(_hWnd, width, height);
-            _session.Reference();
         }
         catch (Exception e)
         {
@@ -146,13 +145,13 @@ public class BitBltCapture : IGameCapture
             {
                 // 成功截图
                 _lastCaptureFailed = false;
-                return CaptureImageRes.BuildNullable(result, _session);
+                return CaptureImageRes.BuildNullable(result);
             }
             else if (result is null)
             {
-                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result, _session); // 这不是首次失败,不再进行尝试
+                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result); // 这不是首次失败,不再进行尝试
                 _lastCaptureFailed = true; // 设置失败标志
-                if (recursive) return CaptureImageRes.BuildNullable(result, _session); // 已设置递归标志，说明也不是首次失败
+                if (recursive) return CaptureImageRes.BuildNullable(result); // 已设置递归标志，说明也不是首次失败
             }
         }
         finally

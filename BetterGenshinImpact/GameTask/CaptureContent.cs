@@ -18,8 +18,6 @@ public class CaptureContent : IDisposable
 
     public ImageRegion CaptureRectArea { get; }
 
-    private readonly CaptureSession? _session;
-
     public CaptureContent(CaptureImageRes image, int frameIndex, double interval)
     {
         FrameIndex = frameIndex;
@@ -28,9 +26,6 @@ public class CaptureContent : IDisposable
 
         var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
         CaptureRectArea = gameCaptureRegion.DeriveTo1080P();
-
-        _session = image.Session;
-        _session?.Reference();
     }
 
     /// <summary>
@@ -45,7 +40,6 @@ public class CaptureContent : IDisposable
     public void Dispose()
     {
         CaptureRectArea.Dispose();
-        _session?.Dispose();
         GC.SuppressFinalize(this);
     }
 

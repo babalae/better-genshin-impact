@@ -6,7 +6,7 @@ using Vanara.PInvoke;
 
 namespace Fischless.GameCapture.BitBlt;
 
-public class BitBltSession : CaptureSession
+public class BitBltSession : IDisposable
 {
     // 窗口句柄
     private readonly HWND _hWnd;
@@ -44,6 +44,12 @@ public class BitBltSession : CaptureSession
     // 窗口原宽高
     public int Width { get; }
     public int Height { get; }
+
+    /// <summary>
+    ///     不是所有的失效情况都能被检测到
+    /// </summary>
+    /// <returns></returns>
+    public bool Invalid => _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr == 0;
 
     public BitBltSession(HWND hWnd, int w, int h)
     {
@@ -149,12 +155,13 @@ public class BitBltSession : CaptureSession
         }
     }
 
-    protected sealed override void DisposeInternal()
+    public void Dispose()
     {
         lock (_lockObject)
         {
             ReleaseResources();
         }
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -189,15 +196,6 @@ public class BitBltSession : CaptureSession
     public void ReleaseBuffer(IntPtr buffer)
     {
         _bufferPool.Push(buffer);
-    }
-
-    /// <summary>
-    ///     不是所有的失效情况都能被检测到
-    /// </summary>
-    /// <returns></returns>
-    public bool IsInvalid()
-    {
-        return _hWnd.IsNull || _hdcSrc.IsInvalid || _hdcDest.IsInvalid || _hBitmap.IsInvalid || _bitsPtr != 0;
     }
 
     /// <summary>
