@@ -3,6 +3,7 @@ using SharpDX.Direct3D11;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
+using SharpDX;
 using Vanara.PInvoke;
 using Device = SharpDX.Direct3D11.Device;
 
@@ -98,20 +99,32 @@ namespace Fischless.GameCapture.DwmSharedSurface
                     return null;
                 }
 
-                using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
-
-                if (_stagingTexture == null || _surfaceWidth != surfaceTexture.Description.Width || _surfaceHeight != surfaceTexture.Description.Height)
+                try
                 {
-                    _stagingTexture?.Dispose();
-                    _stagingTexture = null;
-                    _surfaceWidth = surfaceTexture.Description.Width;
-                    _surfaceHeight = surfaceTexture.Description.Height;
-                    _region = GetGameScreenRegion(_hWnd);
+                    using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
+
+                    if (_stagingTexture == null || _surfaceWidth != surfaceTexture.Description.Width ||
+                        _surfaceHeight != surfaceTexture.Description.Height)
+                    {
+                        _stagingTexture?.Dispose();
+                        _stagingTexture = null;
+                        _surfaceWidth = surfaceTexture.Description.Width;
+                        _surfaceHeight = surfaceTexture.Description.Height;
+                        _region = GetGameScreenRegion(_hWnd);
+                    }
+
+                    _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
+                    var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
+                    return mat;
+                }
+                catch (SharpDXException e)
+                {
+                    Debug.WriteLine($"SharpDXException: {e.Descriptor}");
+                    _d3dDevice?.Dispose();
+                    _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport);
                 }
 
-                _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
-                var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
-                return mat;
+                return null;
             }
         }
 
