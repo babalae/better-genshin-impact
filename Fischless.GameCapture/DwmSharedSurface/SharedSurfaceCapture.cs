@@ -25,6 +25,10 @@ namespace Fischless.GameCapture.DwmSharedSurface
         // 暂存贴图
         private Texture2D? _stagingTexture;
 
+        // Surface 大小
+        private int _surfaceWidth;
+        private int _surfaceHeight;
+
         public bool IsCapturing { get; private set; }
 
         [LibraryImport("user32.dll", EntryPoint = "DwmGetDxSharedSurface", SetLastError = true)]
@@ -97,11 +101,13 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
                 using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
 
-                if (_stagingTexture == null || _stagingTexture.Description.Width != surfaceTexture.Description.Width ||
-                    _stagingTexture.Description.Height != surfaceTexture.Description.Height)
+                if (_stagingTexture == null || _surfaceWidth != surfaceTexture.Description.Width || _surfaceHeight != surfaceTexture.Description.Height)
                 {
                     _stagingTexture?.Dispose();
                     _stagingTexture = null;
+                    _surfaceWidth = surfaceTexture.Description.Width;
+                    _surfaceHeight = surfaceTexture.Description.Height;
+                    _region = GetGameScreenRegion(_hWnd);
                 }
 
                 _stagingTexture ??= CreateStagingTexture(surfaceTexture);

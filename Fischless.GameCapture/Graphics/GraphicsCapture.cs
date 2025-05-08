@@ -204,6 +204,7 @@ public class GraphicsCapture : IGameCapture
             );
             _stagingTexture?.Dispose();
             _stagingTexture = null;
+            _region = GetGameScreenRegion(_hWnd);
         }
 
         // 从捕获的帧创建一个可以被访问的纹理
