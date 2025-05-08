@@ -138,7 +138,7 @@ public class BitBltSession : IDisposable
                     throw new Exception("Unsupported bitmap format");
 
                 _stride = bitmap.bmWidthBytes;
-                _bufferSize = _stride * bitmap.bmHeight;
+                _bufferSize = bitmap.bmWidth * bitmap.bmHeight * 3;
 
                 _oldBitmap = Gdi32.SelectObject(_hdcDest, _hBitmap);
                 if (_oldBitmap.IsNull) throw new Exception("Failed to select object");
@@ -178,8 +178,19 @@ public class BitBltSession : IDisposable
 
             // 新Mat
             var buffer = AcquireBuffer();
-            Buffer.MemoryCopy(_bitsPtr.ToPointer(), buffer.ToPointer(), _bufferSize, _bufferSize);
-            return BitBltMat.FromPixelData(this, _height, _width, MatType.CV_8UC3, buffer, _stride);
+            var step = _width * 3;
+            if (_stride == step)
+            {
+                Buffer.MemoryCopy(_bitsPtr.ToPointer(), buffer.ToPointer(), _bufferSize, _bufferSize);
+            }
+            else
+            {
+                for (var i = 0; i < _height; i++)
+                {
+                    Buffer.MemoryCopy((void*)(_bitsPtr + _stride * i), (void*)(buffer + step * i), step, step);
+                }
+            }
+            return BitBltMat.FromPixelData(this, _height, _width, MatType.CV_8UC3, buffer, step);
         }
     }
 
