@@ -386,9 +386,12 @@ namespace BetterGenshinImpact.GameTask
                     Directory.CreateDirectory(path);
                 }
 
-                var image = TaskControl.CaptureGameImage(GameCapture);
-                var mat = image.ForceGetMat();
-                if (mat == null)
+                Mat mat;
+                try
+                {
+                    mat = TaskControl.CaptureGameImage(GameCapture);
+                }
+                catch (Exception)
                 {
                     _logger.LogInformation("截图失败，未获取到图像");
                     return;
@@ -409,6 +412,8 @@ namespace BetterGenshinImpact.GameTask
                 {
                     Cv2.ImWrite(savePath, mat);
                 }
+
+                mat.Dispose();
 
                 _logger.LogInformation("截图已保存: {Name}", name);
             }

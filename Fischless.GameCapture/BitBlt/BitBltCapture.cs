@@ -21,7 +21,7 @@ public class BitBltCapture : IGameCapture
         GC.SuppressFinalize(this);
     }
 
-    public CaptureImageRes? Capture() => Capture(false);
+    public Mat? Capture() => Capture(false);
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -116,7 +116,7 @@ public class BitBltCapture : IGameCapture
     /// </summary>
     /// <param name="recursive">递归标志</param>
     /// <returns>截图</returns>
-    private CaptureImageRes? Capture(bool recursive)
+    private Mat? Capture(bool recursive)
     {
         if (_hWnd == IntPtr.Zero)
         {
@@ -145,13 +145,13 @@ public class BitBltCapture : IGameCapture
             {
                 // 成功截图
                 _lastCaptureFailed = false;
-                return CaptureImageRes.BuildNullable(result);
+                return result;
             }
-            else if (result is null)
+            else
             {
-                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result); // 这不是首次失败,不再进行尝试
+                if (_lastCaptureFailed) return result; // 这不是首次失败,不再进行尝试
                 _lastCaptureFailed = true; // 设置失败标志
-                if (recursive) return CaptureImageRes.BuildNullable(result); // 已设置递归标志，说明也不是首次失败
+                if (recursive) return result; // 已设置递归标志，说明也不是首次失败
             }
         }
         finally

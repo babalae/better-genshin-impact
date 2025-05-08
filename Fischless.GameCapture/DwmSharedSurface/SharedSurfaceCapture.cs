@@ -66,7 +66,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
             return region;
         }
 
-        public CaptureImageRes? Capture()
+        public Mat? Capture()
         {
             if (_hWnd == nint.Zero)
             {
@@ -97,7 +97,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
                 }
                 var bgrMat = new Mat();
                 Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-                return CaptureImageRes.BuildNullable(bgrMat);
+                return bgrMat;
             }
         }
         

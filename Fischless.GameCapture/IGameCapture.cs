@@ -1,4 +1,6 @@
-﻿namespace Fischless.GameCapture;
+﻿using OpenCvSharp;
+
+namespace Fischless.GameCapture;
 
 public interface IGameCapture : IDisposable
 {
@@ -6,7 +8,7 @@ public interface IGameCapture : IDisposable
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null);
 
-    public CaptureImageRes? Capture();
+    public Mat? Capture();
 
     public void Stop();
 }
