@@ -30,6 +30,8 @@ using StackPanel = Wpf.Ui.Controls.StackPanel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Core.Recognition;
+
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -268,6 +270,94 @@ public partial class OneDragonFlowViewModel : ViewModel
         return null;
     }
 
+    private async void AddPotBuyTask()
+    {
+        var selectedPotBuyItem = await OnPotBuyItemAsync(); 
+        WriteConfig(SelectedConfig);
+    }
+    
+    public async Task<string?> OnPotBuyItemAsync()
+    {
+        var stackPanel = new StackPanel();
+        var checkBoxes = new Dictionary<string, CheckBox>(); // 更改键类型为 string
+        CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
+        
+        if (SelectedConfig.SecretTreasureObjects == null || SelectedConfig.SecretTreasureObjects.Count == 0)
+        {
+            Toast.Warning("未配置秘境宝箱，请先配置");
+            SelectedConfig.SecretTreasureObjects.Add("每天重复");
+        }
+        // 添加下拉选择框
+        var dayComboBox = new ComboBox
+        {
+            ItemsSource = new List<string> { "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" ,"每天重复"  },
+            SelectedItem = SelectedConfig.SecretTreasureObjects.First(),
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        stackPanel.Children.Add(dayComboBox);
+        
+        foreach (var potBuyItem in SecretTreasureObjectList)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = potBuyItem,
+                Tag = potBuyItem,
+                IsChecked = SelectedConfig.SecretTreasureObjects.Contains(potBuyItem) // 根据 SelectedConfig.SecretTreasureObjects 包含的项来设置 IsChecked
+            };
+            checkBoxes[potBuyItem] = checkBox; 
+            stackPanel.Children.Add(checkBox);
+        }
+        
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "洞天百宝购买选择",
+            Content = new ScrollViewer
+            {
+                Content = stackPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Height = 400
+            },
+            CloseButtonText = "关闭",
+            PrimaryButtonText = "确认",
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        var result = await uiMessageBox.ShowDialogAsync();
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            SelectedConfig.SecretTreasureObjects.Clear();
+            SelectedConfig.SecretTreasureObjects.Add(dayComboBox.SelectedItem.ToString());
+            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
+            foreach (var checkBox in checkBoxes.Values)
+            {
+                if (checkBox.IsChecked == true)
+                {
+                    // 确保 Tag 是 ScriptGroup 类型，并返回其 Name 属性
+                    var potBuyItem = checkBox.Tag as string;
+                    if (potBuyItem != null)
+                    {
+                        selectedItems.Add(potBuyItem); // 将选中的项添加到列表中
+                        SelectedConfig.SecretTreasureObjects.Add(potBuyItem);
+                    }
+                    else
+                    {
+                        Toast.Error("配置组加载失败");
+                    }
+                }
+            }
+            if (selectedItems.Count > 0)
+            {
+                return string.Join(",", selectedItems); // 返回所有选中的项
+            }else
+            {
+                Toast.Warning("选择为空，请选择购买的宝物");
+            }
+        }
+        
+        return null;
+    }
+    
+
     [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
 
     /// <summary>
@@ -286,8 +376,9 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["1", "2", "3"];
     
     [ObservableProperty] private List<string> _sundaySelectedValueList = ["1", "2", "3"];
-   
 
+    [ObservableProperty] private List<string> _secretTreasureObjectList = ["布匹","须臾树脂","大英雄的经验","流浪者的经验","精锻用魔矿","摩拉","祝圣精华","祝圣油膏"];
+    
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
@@ -476,6 +567,14 @@ public partial class OneDragonFlowViewModel : ViewModel
         WriteConfig(SelectedConfig);
     }
 
+    [RelayCommand]
+    private void AddPotBuyItem()
+    {
+        AddPotBuyTask();
+        SaveConfig();
+        SelectedTask = null;
+    }
+    
     [RelayCommand]
     private void AddTaskGroup()
     {

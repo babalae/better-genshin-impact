@@ -807,7 +807,6 @@
                                   SelectedItem="{Binding SelectedConfig.AdventurersGuildCountry, Mode=TwoWay}"
                                   ItemsSource="{Binding AdventurersGuildCountry}" />
                     </ui:CardControl>
-
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
                             <ui:FontIcon Glyph="&#xf4c7;" Style="{StaticResource FaFontIconStyle}" />
@@ -839,6 +838,39 @@
                             TextWrapping="Wrap" />
                     </ui:CardControl>
 
+                    <!--  尘歌壶  -->
+                    <TextBlock Margin="4,0,0,4"
+                               FontSize="14"
+                               Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                               Text="尘歌壶奖励" />
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf07a;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="洞天百宝奖励"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="执行购买的日期和商品"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                            <Button MinWidth="100"
+                                    Margin="0,0,28,0"
+                                    Content="购买选择"
+                                    Command="{Binding AddPotBuyItemCommand}" />
+                    </ui:CardControl>
+                    
                     <!--  完成后操作  -->
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
