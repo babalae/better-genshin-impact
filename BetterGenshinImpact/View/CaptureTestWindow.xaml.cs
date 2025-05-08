@@ -92,16 +92,13 @@ public partial class CaptureTestWindow
             var length = stride * bitmap.PixelHeight;
             Buffer.MemoryCopy(mat.Data.ToPointer(), bitmap.BackBuffer.ToPointer(), length, length);
         }
-        else if (stride < step)
-        {
-            for (var i = 0; i < bitmap.PixelHeight; i++)
-            {
-                Buffer.MemoryCopy((void*)(mat.Data + i * step), (void*)(bitmap.BackBuffer + i * stride), stride, stride);
-            }
-        }
         else
         {
-            throw new Exception("Unexpected image stride size");
+            var length = Math.Min(stride, step);
+            for (var i = 0; i < bitmap.PixelHeight; i++)
+            {
+                Buffer.MemoryCopy((void*)(mat.Data + i * step), (void*)(bitmap.BackBuffer + i * stride), length, length);
+            }
         }
         bitmap.AddDirtyRect(new Int32Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
         bitmap.Unlock();
