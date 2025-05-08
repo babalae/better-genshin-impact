@@ -9,7 +9,6 @@ using Windows.Graphics.DirectX.Direct3D11;
 using OpenCvSharp;
 using SharpDX.DXGI;
 using Device = SharpDX.Direct3D11.Device;
-using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 namespace Fischless.GameCapture.Graphics;
 
@@ -44,7 +43,11 @@ public class GraphicsCapture : IGameCapture
 
     private readonly Stopwatch _frameTimer = new Stopwatch();
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        GC.SuppressFinalize(this);
+    }
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -199,6 +202,7 @@ public class GraphicsCapture : IGameCapture
                 2,
                 frameSize
             );
+            _stagingTexture?.Dispose();
             _stagingTexture = null;
         }
 
@@ -207,74 +211,21 @@ public class GraphicsCapture : IGameCapture
         var d3dDevice = surfaceTexture.Device;
 
         _stagingTexture ??= CreateStagingTexture(frame, d3dDevice);
-        var stagingTexture = _stagingTexture;
-
-        // 将捕获的纹理复制到暂存纹理
-        if (_region != null)
-        {
-            d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, _region, stagingTexture, 0);
-        }
-        else
-        {
-            d3dDevice.ImmediateContext.CopyResource(surfaceTexture, stagingTexture);
-        }
-
-
-        // 映射纹理以便CPU读取
-        var dataBox = d3dDevice.ImmediateContext.MapSubresource(
-            stagingTexture,
-            0,
-            MapMode.Read,
-            MapFlags.None);
-
+        var mat = _stagingTexture.CreateMat(d3dDevice, surfaceTexture, _region, _isHdrEnabled);
+        
+        // 使用写锁更新最新帧
+        _frameAccessLock.EnterWriteLock();
         try
         {
-            // 创建一个新的Mat
-            var newFrame = Mat.FromPixelData(stagingTexture.Description.Height, stagingTexture.Description.Width,
-                _isHdrEnabled ? MatType.MakeType(7, 4) : MatType.CV_8UC4, dataBox.DataPointer);
-
-            // 如果是HDR，进行HDR到SDR的转换
-            if (_isHdrEnabled)
-            {
-                // rgb -> bgr
-                newFrame = ConvertHdrToSdr(newFrame);
-            }
-
-            // 使用写锁更新最新帧
-            _frameAccessLock.EnterWriteLock();
-            try
-            {
-                // 释放之前的帧
-                _latestFrame?.Dispose();
-                // 克隆新帧以保持对其的引用（因为dataBox.DataPointer将被释放）
-                _latestFrame = newFrame.Clone();
-            }
-            finally
-            {
-                newFrame.Dispose();
-                _frameAccessLock.ExitWriteLock();
-            }
+            // 释放之前的帧
+            _latestFrame?.Dispose();
+            // 更新
+            _latestFrame = mat;
         }
         finally
         {
-            // 取消映射纹理
-            d3dDevice.ImmediateContext.UnmapSubresource(surfaceTexture, 0);
+            _frameAccessLock.ExitWriteLock();
         }
-    }
-
-    private static Mat ConvertHdrToSdr(Mat hdrMat)
-    {
-        // 创建一个目标 8UC4 Mat
-        Mat sdkMat = new Mat(hdrMat.Size(), MatType.CV_8UC4);
-
-        // 将 32FC4 缩放到 0-255 范围并转换为 8UC4
-        // 注意：这种简单缩放可能不会保留 HDR 的所有细节
-        hdrMat.ConvertTo(sdkMat, MatType.CV_8UC4, 255.0);
-
-        // 将 HDR 的 RGB 通道转换为 BGR
-        Cv2.CvtColor(sdkMat, sdkMat, ColorConversionCodes.RGBA2BGRA);
-
-        return sdkMat;
     }
 
     public Mat? Capture()
@@ -283,14 +234,8 @@ public class GraphicsCapture : IGameCapture
         _frameAccessLock.EnterReadLock();
         try
         {
-            // 如果没有可用帧则返回null
-            if (_latestFrame == null)
-            {
-                return null;
-            }
-
             // 返回最新帧的副本（这里我们必须克隆，因为Mat是不线程安全的）
-            return _latestFrame.Clone();
+            return _latestFrame?.Clone();
         }
         finally
         {
@@ -300,16 +245,24 @@ public class GraphicsCapture : IGameCapture
 
     public void Stop()
     {
-        _captureSession?.Dispose();
-        _captureFramePool?.Dispose();
-        _captureSession = null!;
-        _captureFramePool = null!;
-        _captureItem = null!;
-        _stagingTexture?.Dispose();
-        _d3dDevice?.Dispose();
+        _frameAccessLock.EnterWriteLock();
+        try
+        {
+            _captureSession?.Dispose();
+            _captureFramePool?.Dispose();
+            _captureSession = null!;
+            _captureFramePool = null!;
+            _captureItem = null!;
+            _stagingTexture?.Dispose();
+            _d3dDevice?.Dispose();
 
-        _hWnd = IntPtr.Zero;
-        IsCapturing = false;
+            _hWnd = IntPtr.Zero;
+            IsCapturing = false;
+        }
+        finally
+        {
+            _frameAccessLock.ExitWriteLock();
+        }
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)

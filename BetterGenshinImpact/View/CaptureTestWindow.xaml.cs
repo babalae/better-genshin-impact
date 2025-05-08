@@ -84,9 +84,25 @@ public partial class CaptureTestWindow
 
     private static unsafe void UpdateWriteableBitmap(WriteableBitmap bitmap, Mat mat)
     {
-        var length = bitmap.BackBufferStride * bitmap.PixelHeight;
         bitmap.Lock();
-        Buffer.MemoryCopy(mat.Data.ToPointer(), bitmap.BackBuffer.ToPointer(), length, length);
+        var stride = bitmap.BackBufferStride;
+        var step = mat.Step();
+        if (stride == step)
+        {
+            var length = stride * bitmap.PixelHeight;
+            Buffer.MemoryCopy(mat.Data.ToPointer(), bitmap.BackBuffer.ToPointer(), length, length);
+        }
+        else if (stride < step)
+        {
+            for (var i = 0; i < bitmap.PixelHeight; i++)
+            {
+                Buffer.MemoryCopy((void*)(mat.Data + i * step), (void*)(bitmap.BackBuffer + i * stride), stride, stride);
+            }
+        }
+        else
+        {
+            throw new Exception("Unexpected image stride size");
+        }
         bitmap.AddDirtyRect(new Int32Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
         bitmap.Unlock();
     }

@@ -1,38 +1,48 @@
-﻿using Fischless.GameCapture.DwmSharedSurface.Helpers;
-using Fischless.GameCapture.Graphics.Helpers;
+﻿using Fischless.GameCapture.Graphics.Helpers;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using Vanara.PInvoke;
 using Device = SharpDX.Direct3D11.Device;
 
 namespace Fischless.GameCapture.DwmSharedSurface
 {
-    public class SharedSurfaceCapture : IGameCapture
+    public partial class SharedSurfaceCapture : IGameCapture
     {
+        // 窗口句柄
         private nint _hWnd;
-        private static readonly object LockObject = new object();
+
+        private static readonly object LockObject = new();
+
+        // D3D 设备
         private Device? _d3dDevice;
 
-        public void Dispose() => Stop();
+        // 截图区域
+        private ResourceRegion? _region;
+        
+        // 暂存贴图
+        private Texture2D? _stagingTexture;
 
         public bool IsCapturing { get; private set; }
 
-        private ResourceRegion? _region;
+        [LibraryImport("user32.dll", EntryPoint = "DwmGetDxSharedSurface", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool DwmGetDxSharedSurface(IntPtr hWnd, out IntPtr phSurface, out long pAdapterLuid, out long pFmtWindow, out long pPresentFlags, out long pWin32KUpdateId);
 
+        public void Dispose()
+        {
+            Stop();
+            GC.SuppressFinalize(this);
+        }
 
         public void Start(nint hWnd, Dictionary<string, object>? settings = null)
         {
             _hWnd = hWnd;
             User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
-            User32.SetForegroundWindow(hWnd);
             _region = GetGameScreenRegion(hWnd);
             _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
-
-            //var device = Direct3D11Helper.CreateDevice();
-            //_d3dDevice = Direct3D11Helper.CreateSharpDXDevice(device);
 
             IsCapturing = true;
         }
@@ -68,43 +78,41 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         public Mat? Capture()
         {
-            if (_hWnd == nint.Zero)
-            {
-                return null;
-            }
-
             lock (LockObject)
             {
-                NativeMethods.DwmGetDxSharedSurface(_hWnd, out var phSurface, out _, out _, out _, out _);
-                if (phSurface == nint.Zero)
-                {
-                    return null;
-                }
-
-       
                 if (_d3dDevice == null)
                 {
                     Debug.WriteLine("D3Device is null.");
                     return null;
                 }
 
-                using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
-                using var stagingTexture = CreateStagingTexture(surfaceTexture, _d3dDevice);
-                var mat = stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
-                if (mat == null)
+                if (!DwmGetDxSharedSurface(_hWnd, out var phSurface, out _, out _, out _, out _))
                 {
                     return null;
                 }
-                var bgrMat = new Mat();
-                Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-                return bgrMat;
+                if (phSurface == 0)
+                {
+                    return null;
+                }
+
+                using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
+
+                if (_stagingTexture == null || _stagingTexture.Description.Width != surfaceTexture.Description.Width ||
+                    _stagingTexture.Description.Height != surfaceTexture.Description.Height)
+                {
+                    _stagingTexture?.Dispose();
+                    _stagingTexture = null;
+                }
+
+                _stagingTexture ??= CreateStagingTexture(surfaceTexture);
+                var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
+                return mat;
             }
         }
-        
 
-        private Texture2D CreateStagingTexture(Texture2D surfaceTexture, Device device)
+        private Texture2D CreateStagingTexture(Texture2D surfaceTexture)
         {
-            return new Texture2D(device, new Texture2DDescription
+            return new Texture2D(_d3dDevice, new Texture2DDescription
             {
                 Width = _region == null ? surfaceTexture.Description.Width : _region.Value.Right - _region.Value.Left,
                 Height = _region == null ? surfaceTexture.Description.Height : _region.Value.Bottom - _region.Value.Top,
@@ -121,8 +129,13 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         public void Stop()
         {
-            _hWnd = nint.Zero;
-            IsCapturing = false;
+            lock (LockObject)
+            {
+                _stagingTexture?.Dispose();
+                _d3dDevice?.Dispose();
+                _hWnd = 0;
+                IsCapturing = false;
+            }
         }
     }
 }
