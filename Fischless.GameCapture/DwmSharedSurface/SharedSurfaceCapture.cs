@@ -1,6 +1,5 @@
 ﻿using Fischless.GameCapture.Graphics.Helpers;
 using SharpDX.Direct3D11;
-using SharpDX.DXGI;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using OpenCvSharp;
@@ -21,7 +20,7 @@ namespace Fischless.GameCapture.DwmSharedSurface
 
         // 截图区域
         private ResourceRegion? _region;
-        
+
         // 暂存贴图
         private Texture2D? _stagingTexture;
 
@@ -110,27 +109,10 @@ namespace Fischless.GameCapture.DwmSharedSurface
                     _region = GetGameScreenRegion(_hWnd);
                 }
 
-                _stagingTexture ??= CreateStagingTexture(surfaceTexture);
+                _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
                 var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
                 return mat;
             }
-        }
-
-        private Texture2D CreateStagingTexture(Texture2D surfaceTexture)
-        {
-            return new Texture2D(_d3dDevice, new Texture2DDescription
-            {
-                Width = _region == null ? surfaceTexture.Description.Width : _region.Value.Right - _region.Value.Left,
-                Height = _region == null ? surfaceTexture.Description.Height : _region.Value.Bottom - _region.Value.Top,
-                MipLevels = 1,
-                ArraySize = 1,
-                Format = Format.B8G8R8A8_UNorm,
-                Usage = ResourceUsage.Staging,
-                SampleDescription = new SampleDescription(1, 0),
-                BindFlags = BindFlags.None,
-                CpuAccessFlags = CpuAccessFlags.Read,
-                OptionFlags = ResourceOptionFlags.None
-            });
         }
 
         public void Stop()

@@ -7,8 +7,6 @@ using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
 using OpenCvSharp;
-using SharpDX.DXGI;
-using Device = SharpDX.Direct3D11.Device;
 
 namespace Fischless.GameCapture.Graphics;
 
@@ -114,13 +112,10 @@ public class GraphicsCapture : IGameCapture
             return null;
         }
 
-
         ResourceRegion region = new();
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
             out var windowRect);
         User32.GetClientRect(_hWnd, out var clientRect);
-        //POINT point = default; // 这个点和 DwmGetWindowAttribute 结果差1
-        //User32.ClientToScreen(hWnd, ref point);
 
         region.Left = 0;
         region.Top = windowRect.Height - clientRect.Height;
@@ -152,26 +147,6 @@ public class GraphicsCapture : IGameCapture
         {
             return false;
         }
-    }
-
-    private Texture2D CreateStagingTexture(Direct3D11CaptureFrame frame, Device device)
-    {
-        // 创建可以用于CPU读取的暂存纹理
-        var textureDesc = new Texture2DDescription
-        {
-            CpuAccessFlags = CpuAccessFlags.Read,
-            BindFlags = BindFlags.None,
-            Format = _isHdrEnabled ? Format.R16G16B16A16_Float : Format.B8G8R8A8_UNorm,
-            Width = _region == null ? frame.ContentSize.Width : _region.Value.Right - _region.Value.Left,
-            Height = _region == null ? frame.ContentSize.Height : _region.Value.Bottom - _region.Value.Top,
-            OptionFlags = ResourceOptionFlags.None,
-            MipLevels = 1,
-            ArraySize = 1,
-            SampleDescription = { Count = 1, Quality = 0 },
-            Usage = ResourceUsage.Staging
-        };
-
-        return new Texture2D(device, textureDesc);
     }
 
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
@@ -211,9 +186,9 @@ public class GraphicsCapture : IGameCapture
         using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
         var d3dDevice = surfaceTexture.Device;
 
-        _stagingTexture ??= CreateStagingTexture(frame, d3dDevice);
+        _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(d3dDevice, frame.ContentSize.Width, frame.ContentSize.Height, _region, _isHdrEnabled);
         var mat = _stagingTexture.CreateMat(d3dDevice, surfaceTexture, _region, _isHdrEnabled);
-        
+
         // 使用写锁更新最新帧
         _frameAccessLock.EnterWriteLock();
         try
