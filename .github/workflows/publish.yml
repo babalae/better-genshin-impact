@@ -15,9 +15,11 @@ on:
         options:
           - release
           - dev
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+      create-release:
+        type: boolean
+        description: '是否创建 GitHub Release 草稿'
+        required: true
+        default: false
 
 jobs:
   # Add validation job to check version format
@@ -281,7 +283,7 @@ jobs:
         run: |
           cd dist
           ..\kachina-builder.exe gen -j 6 -i BetterGI -m metadata.json -o hashed -r babalae/bettergi -t ${{ needs.validate.outputs.version }} --diff-vers ..\last\BetterGI --diff-vers ..\2nd\BetterGI --diff-vers ..\3rd\BetterGI --diff-ignore *[.txt,.onnx] -u .\BetterGI\BetterGI.update.exe
-          ..\kachina-builder.exe pack -c ../kachina.config.json -m metadata.json -d hashed -o BetterGI.Install.${{ needs.validate.outputs.version }}.exe
+          ..\kachina-builder.exe pack -c ../Build/kachina.config.json -m metadata.json -d hashed -o BetterGI.Install.${{ needs.validate.outputs.version }}.exe
       - uses: actions/upload-artifact@v4
         with:
           name: BetterGI_Install
@@ -318,12 +320,35 @@ jobs:
           foreach ($archive in $archiveFiles) {
               & 7z x $archive.FullName
           }
-          .\makemica.exe micasetup.json
+          .\makemica.exe Build\micasetup.json
           ren BetterGI_Setup.exe BetterGI_Setup_v${{ needs.validate.outputs.version }}.exe
       - uses: actions/upload-artifact@v4
         with:
           name: BetterGI_Setup
           path: BetterGI_Setup*.exe
+
+  # 创建 GitHub Release
+  create_release:
+    if: github.event.inputs.create-release == 'true'
+    needs: [validate, build_dist, build_installer]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+  
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: BetterGI v${{ needs.validate.outputs.version }}
+          draft: true
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+          files: |
+            artifacts/BetterGI_7z/*.7z
+            artifacts/BetterGI_Install/*.exe
 
   mirrorchyan_uploading:
     if: github.repository_owner == 'babalae'
