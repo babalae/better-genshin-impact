@@ -133,7 +133,9 @@ namespace Fischless.GameCapture.DwmSharedSurface
             lock (LockObject)
             {
                 _stagingTexture?.Dispose();
+                _stagingTexture = null;
                 _d3dDevice?.Dispose();
+                _d3dDevice = null;
                 _hWnd = 0;
                 IsCapturing = false;
             }

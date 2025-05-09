@@ -8,17 +8,24 @@ public static class Texture2DExtensions
 {
     private static Mat ConvertHdrToSdr(Mat hdrMat)
     {
-        // 创建一个目标 8UC4 Mat
-        var sdkMat = new Mat(hdrMat.Size(), MatType.CV_8UC4);
+        // 16FC4 -> 32FC4  half float 支持不完全，转成 float 运算
+        using var flatMat = new Mat();
+        hdrMat.ConvertTo(flatMat, MatType.CV_32FC4);
 
-        // 将 32FC4 缩放到 0-255 范围并转换为 8UC4
-        // 注意：这种简单缩放可能不会保留 HDR 的所有细节
-        hdrMat.ConvertTo(sdkMat, MatType.CV_8UC4, 255.0);
+        // HDR -> SDR
+        using var expr = flatMat * 0.25;  // 曝光 -2，works on my machine
+        using var sdrMat = expr.ToMat();
 
-        // 将 HDR 的 RGB 通道转换为 BGR
-        Cv2.CvtColor(sdkMat, sdkMat, ColorConversionCodes.RGBA2BGRA);
+        // Linear RGB -> sRGB
+        var srgbMat = sdrMat.Pow(1 / 2.2);
 
-        return sdkMat;
+        // 32FC4 -> 8UC4
+        srgbMat.ConvertTo(srgbMat, MatType.CV_8UC4, 255.0);
+
+        // RGBA -> BGRA
+        Cv2.CvtColor(srgbMat, srgbMat, ColorConversionCodes.RGBA2BGR);
+
+        return srgbMat;
     }
 
     public static Mat? CreateMat(this Texture2D staging, Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null, bool hdr = false)
@@ -40,7 +47,7 @@ public static class Texture2DExtensions
                 staging,
                 0,
                 MapMode.Read,
-                SharpDX.Direct3D11.MapFlags.None);
+                MapFlags.None);
 
             try
             {
