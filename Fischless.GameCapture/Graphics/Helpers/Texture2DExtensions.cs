@@ -51,10 +51,10 @@ public static class Texture2DExtensions
 
             try
             {
-                var mat = Mat.FromPixelData(staging.Description.Height, staging.Description.Width,
-                    hdr? MatType.MakeType(7, 4) : MatType.CV_8UC4,
+                using var mat = Mat.FromPixelData(staging.Description.Height, staging.Description.Width,
+                    hdr ? MatType.MakeType(7, 4) : MatType.CV_8UC4,
                     dataBox.DataPointer, dataBox.RowPitch);
-                return hdr ? ConvertHdrToSdr(mat) : mat.Clone();
+                return hdr ? ConvertHdrToSdr(mat) : mat.CvtColor(ColorConversionCodes.BGRA2BGR);
             }
             finally
             {
