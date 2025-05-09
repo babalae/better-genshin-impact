@@ -22,7 +22,7 @@ public static class Texture2DExtensions
         // 32FC4 -> 8UC4
         srgbMat.ConvertTo(srgbMat, MatType.CV_8UC4, 255.0);
 
-        // RGBA -> BGRA
+        // RGBA -> BGR
         Cv2.CvtColor(srgbMat, srgbMat, ColorConversionCodes.RGBA2BGR);
 
         return srgbMat;
