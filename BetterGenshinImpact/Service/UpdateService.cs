@@ -47,11 +47,12 @@ public class UpdateService : IUpdateService
     {
         try
         {
+#if DEBUG && true
+            return;
+#endif
             string newVersion = await GetLatestVersionAsync();
 
-// #if DEBUG && true
-//             newVersion = "256.256.256.256";
-// #endif
+
 
             if (string.IsNullOrWhiteSpace(newVersion))
             {
