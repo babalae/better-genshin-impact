@@ -134,11 +134,13 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
             out var windowRect);
         User32.GetClientRect(_hWnd, out var clientRect);
+        POINT point = default;
+        User32.ClientToScreen(_hWnd, ref point);
 
-        region.Left = 0;
-        region.Top = windowRect.Height - clientRect.Height;
-        region.Right = clientRect.Width;
-        region.Bottom = windowRect.Height;
+        region.Left = point.X > windowRect.Left ? point.X - windowRect.Left : 0;
+        region.Top = point.Y > windowRect.Top ? point.Y - windowRect.Top : 0;
+        region.Right = region.Left + clientRect.Width;
+        region.Bottom = region.Top + clientRect.Height;
         region.Front = 0;
         region.Back = 1;
 
