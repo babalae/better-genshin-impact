@@ -17,7 +17,7 @@ on:
           - dev
       create-release:
         type: boolean
-        description: '是否创建 GitHub Release 草稿'
+        description: '创建 GitHub Release 草稿'
         required: true
         default: false
 
@@ -320,7 +320,9 @@ jobs:
           foreach ($archive in $archiveFiles) {
               & 7z x $archive.FullName
           }
-          .\makemica.exe Build\micasetup.json
+          Copy-Item -Path "Build\micasetup.json" -Destination "."
+          Copy-Item -Path "Build\micasetup" -Destination "." -Recurse -Force
+          .\makemica.exe micasetup.json
           ren BetterGI_Setup.exe BetterGI_Setup_v${{ needs.validate.outputs.version }}.exe
       - uses: actions/upload-artifact@v4
         with:
@@ -346,6 +348,7 @@ jobs:
           name: BetterGI v${{ needs.validate.outputs.version }}
           draft: true
           prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+          fail_on_unmatched_files: true
           files: |
             artifacts/BetterGI_7z/*.7z
             artifacts/BetterGI_Install/*.exe
