@@ -32,14 +32,16 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             # Validate manual input version format
             if ! [[ "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
-              echo "Error: Version must follow semantic versioning (e.g., 1.2.3, 1.2.3-alpha, 1.2.3+build.123)"
+              echo "❌ 错误：版本格式必须符合语义化版本规范 (例如: 1.2.3, 1.2.3-alpha, 1.2.3+build.123)"
               exit 1
             fi
             echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "✨ 手动触发构建，版本号：${{ github.event.inputs.version }}"
           else
             # Extract version from tag name (remove 'v' prefix)
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "🏷️ 从 tag 触发构建，版本号：${VERSION}"
           fi
 
   build_web_map_editor:
@@ -350,8 +352,6 @@ jobs:
           pick_files: '["BetterGI"]'
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
-          auto_channel: false
-          channel: beta
 
       - name: Upload Install.exe
         uses: MirrorChyan/uploading-action@v1
@@ -363,7 +363,5 @@ jobs:
           extra_zip: true
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
-          auto_channel: false
-          channel: beta
           os: win
           arch: x64
