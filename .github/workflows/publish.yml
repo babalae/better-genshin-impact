@@ -177,7 +177,7 @@ jobs:
 
   build_installer:
     runs-on: windows-latest
-    needs: [build_dist]
+    needs: [validate, build_dist]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -293,7 +293,7 @@ jobs:
 
   build_setup:
     runs-on: windows-latest
-    needs: [build_dist]
+    needs: [validate, build_dist]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -327,7 +327,7 @@ jobs:
 
   mirrorchyan_uploading:
     if: github.repository_owner == 'babalae'
-    needs: [build_dist, build_installer]
+    needs: [validate, build_dist, build_installer]
     runs-on: macos-latest
     steps:
 
