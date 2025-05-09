@@ -1,7 +1,4 @@
 {
-<<<<<<< HEAD
-    "source": "dfs+packed+https://steambird.cocogoat.cn/dfs/bgi/BetterGI.Install.exe",
-=======
     "source": [
       {
         "id": "dfs",
@@ -20,7 +17,6 @@
         "hidden": true
       }
     ],
->>>>>>> 9eee2aecbe2b5dce26425bf67f4d5a0451dcccfe
     "appName": "BetterGI",
     "publisher": "babalae",
     "regName": "BetterGI",
