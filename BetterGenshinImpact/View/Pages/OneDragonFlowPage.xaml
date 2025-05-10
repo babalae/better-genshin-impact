@@ -18,6 +18,7 @@
              FontFamily="{StaticResource TextThemeFontFamily}"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
+    
     <Grid Margin="22,16,8,12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MaxWidth="300" />
