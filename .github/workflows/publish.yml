@@ -95,6 +95,7 @@ jobs:
           $version = '${{ needs.validate.outputs.version }}'
           (Get-Content BetterGenshinImpact/BetterGenshinImpact.csproj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content BetterGenshinImpact/BetterGenshinImpact.csproj
       - name: 自动提交更改
+        if: github.repository_owner == 'babalae'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update version to ${{ needs.validate.outputs.version }}"
