@@ -90,6 +90,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
+      - name: 更新 csproj 文件版本号
+        run: |
+          $version = '${{ needs.validate.outputs.version }}'
+          (Get-Content BetterGenshinImpact/BetterGenshinImpact.csproj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content BetterGenshinImpact/BetterGenshinImpact.csproj
+      - name: 自动提交更改
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update version to ${{ needs.validate.outputs.version }}"
+          branch: main
+          file_pattern: BetterGenshinImpact/BetterGenshinImpact.csproj
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
