@@ -6,29 +6,7 @@ namespace Fischless.GameCapture.Graphics.Helpers;
 
 public static class Texture2DExtensions
 {
-    private static Mat ConvertHdrToSdr(Mat hdrMat)
-    {
-        // 16FC4 -> 32FC4  half float 支持不完全，转成 float 运算
-        using var flatMat = new Mat();
-        hdrMat.ConvertTo(flatMat, MatType.CV_32FC4);
-
-        // HDR -> SDR
-        using var expr = flatMat * 0.25;  // 曝光 -2，works on my machine
-        using var sdrMat = expr.ToMat();
-
-        // Linear RGB -> sRGB
-        var srgbMat = sdrMat.Pow(1 / 2.2);
-
-        // 32FC4 -> 8UC4
-        srgbMat.ConvertTo(srgbMat, MatType.CV_8UC4, 255.0);
-
-        // RGBA -> BGR
-        Cv2.CvtColor(srgbMat, srgbMat, ColorConversionCodes.RGBA2BGR);
-
-        return srgbMat;
-    }
-
-    public static Mat? CreateMat(this Texture2D staging, Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null, bool hdr = false)
+    public static Mat? CreateMat(this Texture2D staging, Device d3dDevice, Texture2D surfaceTexture, ResourceRegion? region = null)
     {
         try
         {
@@ -52,9 +30,8 @@ public static class Texture2DExtensions
             try
             {
                 using var mat = Mat.FromPixelData(staging.Description.Height, staging.Description.Width,
-                    hdr ? MatType.MakeType(7, 4) : MatType.CV_8UC4,
-                    dataBox.DataPointer, dataBox.RowPitch);
-                return hdr ? ConvertHdrToSdr(mat) : mat.CvtColor(ColorConversionCodes.BGRA2BGR);
+                    MatType.CV_8UC4, dataBox.DataPointer, dataBox.RowPitch);
+                return mat.CvtColor(ColorConversionCodes.BGRA2BGR);
             }
             finally
             {

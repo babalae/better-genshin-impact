@@ -8,6 +8,7 @@ using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
 using OpenCvSharp;
 using SharpDX;
+using SharpDX.D3DCompiler;
 
 namespace Fischless.GameCapture.Graphics;
 
@@ -29,7 +30,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     // HDR相关
     private bool _isHdrEnabled = captureHdr;
     private DirectXPixelFormat _pixelFormat;
-
+    private Texture2D? _hdrOutputTexture;
+    private ComputeShader? _hdrComputeShader;
 
     // 最新帧的存储
     private Mat? _latestFrame;
@@ -147,6 +149,32 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         return region;
     }
 
+    private Texture2D ProcessHdrTexture(Texture2D hdrTexture)
+    {
+        var device = hdrTexture.Device;
+        var context = device.ImmediateContext;
+
+        var width = hdrTexture.Description.Width;
+        var height = hdrTexture.Description.Height;
+
+        _hdrOutputTexture ??= Direct3D11Helper.CreateOutputTexture(device, width, height);
+        _hdrComputeShader ??= new ComputeShader(device, ShaderBytecode.Compile(HdrToSdrShader.Content, "CS_HDRtoSDR", "cs_5_0"));
+
+        using var inputSrv = new ShaderResourceView(device, hdrTexture);
+        using var outputUav = new UnorderedAccessView(device, _hdrOutputTexture);
+
+        context.ComputeShader.Set(_hdrComputeShader);
+        context.ComputeShader.SetShaderResource(0, inputSrv);
+        context.ComputeShader.SetUnorderedAccessView(0, outputUav);
+
+        var threadGroupCountX = (int)Math.Ceiling(width / 16.0);
+        var threadGroupCountY = (int)Math.Ceiling(height / 16.0);
+
+        context.Dispatch(threadGroupCountX, threadGroupCountY, 1);
+
+        return _hdrOutputTexture;
+    }
+
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
         // 使用写锁更新最新帧
@@ -192,10 +220,11 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             {
                 // 从捕获的帧创建一个可以被访问的纹理
                 using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
+                var sourceTexture = _isHdrEnabled ? ProcessHdrTexture(surfaceTexture) : surfaceTexture;
                 var d3dDevice = surfaceTexture.Device;
 
-                _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(d3dDevice, frame.ContentSize.Width, frame.ContentSize.Height, _region, _isHdrEnabled);
-                var mat = _stagingTexture.CreateMat(d3dDevice, surfaceTexture, _region, _isHdrEnabled);
+                _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(d3dDevice, frame.ContentSize.Width, frame.ContentSize.Height, _region);
+                var mat = _stagingTexture.CreateMat(d3dDevice, sourceTexture, _region);
 
                 // 释放之前的帧，然后更新
                 _latestFrame?.Dispose();
@@ -240,6 +269,10 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             _captureItem = null;
             _stagingTexture?.Dispose();
             _stagingTexture = null;
+            _hdrOutputTexture?.Dispose();
+            _hdrOutputTexture = null;
+            _hdrComputeShader?.Dispose();
+            _hdrComputeShader = null;
             _d3dDevice?.Dispose();
             _d3dDevice = null;
             _hWnd = 0;

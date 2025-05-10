@@ -74,7 +74,7 @@ public static class Direct3D11Helper
         return d3dSurface;
     }
 
-    public static Texture2D CreateStagingTexture(Device device, int width, int height, ResourceRegion? region, bool hdr = false)
+    public static Texture2D CreateStagingTexture(Device device, int width, int height, ResourceRegion? region)
     {
         return new Texture2D(device, new Texture2DDescription
         {
@@ -82,11 +82,28 @@ public static class Direct3D11Helper
             Height = region == null ? height : region.Value.Bottom - region.Value.Top,
             MipLevels = 1,
             ArraySize = 1,
-            Format = hdr ? Format.R16G16B16A16_Float : Format.B8G8R8A8_UNorm,
+            Format = Format.B8G8R8A8_UNorm,
             Usage = ResourceUsage.Staging,
             SampleDescription = new SampleDescription(1, 0),
             BindFlags = BindFlags.None,
             CpuAccessFlags = CpuAccessFlags.Read,
+            OptionFlags = ResourceOptionFlags.None
+        });
+    }
+
+    public static Texture2D CreateOutputTexture(Device device, int width, int height)
+    {
+        return new Texture2D(device, new Texture2DDescription
+        {
+            Width = width,
+            Height = height,
+            MipLevels = 1,
+            ArraySize = 1,
+            Format = Format.B8G8R8A8_UNorm,
+            Usage = ResourceUsage.Default,
+            SampleDescription = new SampleDescription(1, 0),
+            BindFlags = BindFlags.UnorderedAccess | BindFlags.ShaderResource,
+            CpuAccessFlags = CpuAccessFlags.None,
             OptionFlags = ResourceOptionFlags.None
         });
     }
