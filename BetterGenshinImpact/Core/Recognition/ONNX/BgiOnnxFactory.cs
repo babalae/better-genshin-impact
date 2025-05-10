@@ -256,7 +256,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
         }
 
-        var cached = GetCached(model);
+        var cached = GetCached(model,ProviderTypes);
         return cached == null
             ? new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, true))
             : new BgiYoloPredictor(model, cached, CreateSessionOptions(model, false));
@@ -282,7 +282,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
         }
 
-        var cached = GetCached(model);
+        var cached = GetCached(model,providerTypes);
         return cached == null
             ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
             : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
@@ -292,11 +292,12 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// 获取带有缓存的模型(目前只支持TensorRT)
     /// </summary>
     /// <param name="model">模型</param>
+    /// <param name="providerTypes">使用的 providerTypes</param>
     /// <returns>带有缓存的模型绝对路径，null表示尚未创建缓存</returns>
-    private string? GetCached(BgiOnnxModel model)
+    private string? GetCached(BgiOnnxModel model, ProviderType[] providerTypes)
     {
         // 目前只支持TensorRT
-        if (!ProviderTypes.Contains(ProviderType.TensorRt)) return null;
+        if (!providerTypes.Contains(ProviderType.TensorRt)) return null;
         var result = _cachedModelPaths.GetOrAdd(model, _GetCached);
         if (result is null)
         {
