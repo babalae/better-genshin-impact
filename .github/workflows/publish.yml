@@ -177,7 +177,7 @@ jobs:
       - name: 📦 Gen Updater by kachina-builder
         run: |
           cd dist
-          ..\kachina-builder.exe pack -c ..\publish\kachina.config.json -o BetterGI/BetterGI.update.exe
+          ..\kachina-builder.exe pack -c ..\BetterGenshinImpact\Build\kachina.config.json -o BetterGI/BetterGI.update.exe
       # 打包上传
       - name: 📦 Generate archive
         run: |
