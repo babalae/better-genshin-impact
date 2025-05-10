@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'BetterGI Version (eg: v0.35.1, v0.36.5-alpha.1)'
+        description: 'BetterGI Version (eg: 0.35.1, 0.36.5-alpha.1)'
         required: true
         type: string
       kachina-channel:
