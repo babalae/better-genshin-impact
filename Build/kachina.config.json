@@ -11,9 +11,9 @@
         "uri": "mirrorc://BGI"
       },
       {
-        "id": "mirrorc-beta",
-        "name": "Mirror酱 beta",
-        "uri": "mirrorc://BGI?channel=beta",
+        "id": "mirrorc-alpha",
+        "name": "Mirror酱 Alpha",
+        "uri": "mirrorc://BGI?channel=alpha",
         "hidden": true
       }
     ],
