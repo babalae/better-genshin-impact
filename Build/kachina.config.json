@@ -1,0 +1,34 @@
+{
+    "source": [
+      {
+        "id": "dfs",
+        "name": "默认服务器",
+        "uri": "dfs+packed+https://steambird.cocogoat.cn/dfs/bgi/BetterGI.Install.exe"
+      },
+      {
+        "id": "mirrorc",
+        "name": "Mirror酱",
+        "uri": "mirrorc://BGI"
+      },
+      {
+        "id": "mirrorc-alpha",
+        "name": "Mirror酱 Alpha",
+        "uri": "mirrorc://BGI?channel=alpha",
+        "hidden": true
+      }
+    ],
+    "appName": "BetterGI",
+    "publisher": "babalae",
+    "regName": "BetterGI",
+    "exeName": "BetterGI.exe",
+    "uninstallName": "BetterGI.uninst.exe",
+    "updaterName": "BetterGI.update.exe",
+    "programFilesPath": "BetterGI",
+    "title": "BetterGI",
+    "description": "更好的原神，免费且开源",
+    "windowTitle": "BetterGI 安装程序",
+    "userDataPath": ["${INSTALL_PATH}/User"],
+    "extraUninstallPath": ["${INSTALL_PATH}/log"],
+    "uacStrategy": "prefer-admin",
+    "runtimes": ["Microsoft.DotNet.DesktopRuntime.8", "Microsoft.VCRedist.2015+.x64"]
+}
