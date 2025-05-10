@@ -20,6 +20,8 @@ public class WaypointForTrack : Waypoint
     public double MatY { get; set; }
     
     public string MapName { get; set; }
+    //异常识别
+    public Misidentification Misidentification { get; set; } = new();
 
     /// <summary>
     /// 存在 combat_script 的 action 的话，这个值会存在
