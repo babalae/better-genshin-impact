@@ -7,31 +7,31 @@ using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
 using OpenCvSharp;
-using SharpDX.DXGI;
-using Device = SharpDX.Direct3D11.Device;
-using MapFlags = SharpDX.Direct3D11.MapFlags;
+using SharpDX;
+using SharpDX.D3DCompiler;
 
 namespace Fischless.GameCapture.Graphics;
 
-public class GraphicsCapture : IGameCapture
+public class GraphicsCapture(bool captureHdr = false) : IGameCapture
 {
     private nint _hWnd;
 
-    private Direct3D11CaptureFramePool _captureFramePool = null!;
-    private GraphicsCaptureItem _captureItem = null!;
+    private Direct3D11CaptureFramePool? _captureFramePool;
+    private GraphicsCaptureItem? _captureItem;
 
-    private GraphicsCaptureSession _captureSession = null!;
+    private GraphicsCaptureSession? _captureSession;
 
-    private IDirect3DDevice _d3dDevice = null!;
+    private IDirect3DDevice? _d3dDevice;
 
     public bool IsCapturing { get; private set; }
 
     private ResourceRegion? _region;
 
     // HDR相关
-    private bool _isHdrEnabled;
-    private DirectXPixelFormat _pixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
-
+    private bool _isHdrEnabled = captureHdr;
+    private DirectXPixelFormat _pixelFormat;
+    private Texture2D? _hdrOutputTexture;
+    private ComputeShader? _hdrComputeShader;
 
     // 最新帧的存储
     private Mat? _latestFrame;
@@ -40,11 +40,15 @@ public class GraphicsCapture : IGameCapture
     // 用于获取帧数据的临时纹理和暂存资源
     private Texture2D? _stagingTexture;
 
-    private long _lastFrameTime = 0;
+    private long _lastFrameTime;
 
-    private readonly Stopwatch _frameTimer = new Stopwatch();
+    private readonly Stopwatch _frameTimer = new();
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        GC.SuppressFinalize(this);
+    }
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -65,16 +69,33 @@ public class GraphicsCapture : IGameCapture
         // 创建D3D设备
         _d3dDevice = Direct3D11Helper.CreateDevice();
 
-        // 检测HDR状态
-        _isHdrEnabled = false;
-        _pixelFormat = _isHdrEnabled ? DirectXPixelFormat.R16G16B16A16Float : DirectXPixelFormat.B8G8R8A8UIntNormalized;
-
         // 创建帧池
-        _captureFramePool = Direct3D11CaptureFramePool.Create(
-            _d3dDevice,
-            _pixelFormat,
-            2,
-            _captureItem.Size);
+        try
+        {
+            if (!_isHdrEnabled)
+            {
+                // 不处理 HDR，直接抛异常走 SDR 分支
+                throw new Exception();
+            }
+
+            _pixelFormat = DirectXPixelFormat.R16G16B16A16Float;
+            _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+                _d3dDevice,
+                _pixelFormat,
+                2,
+                _captureItem.Size);
+        }
+        catch (Exception)
+        {
+            // Fallback
+            _pixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
+            _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+                _d3dDevice,
+                _pixelFormat,
+                2,
+                _captureItem.Size);
+            _isHdrEnabled = false;
+        }
 
 
         _captureItem.Closed += CaptureItemOnClosed;
@@ -82,13 +103,13 @@ public class GraphicsCapture : IGameCapture
 
         _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
         if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
-                "IsCursorCaptureEnabled"))
+                nameof(GraphicsCaptureSession.IsCursorCaptureEnabled)))
         {
             _captureSession.IsCursorCaptureEnabled = false;
         }
 
         if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
-                "IsBorderRequired"))
+                nameof(GraphicsCaptureSession.IsBorderRequired)))
         {
             _captureSession.IsBorderRequired = false;
         }
@@ -111,186 +132,124 @@ public class GraphicsCapture : IGameCapture
             return null;
         }
 
-
         ResourceRegion region = new();
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
             out var windowRect);
         User32.GetClientRect(_hWnd, out var clientRect);
-        //POINT point = default; // 这个点和 DwmGetWindowAttribute 结果差1
-        //User32.ClientToScreen(hWnd, ref point);
+        POINT point = default;
+        User32.ClientToScreen(_hWnd, ref point);
 
-        region.Left = 0;
-        region.Top = windowRect.Height - clientRect.Height;
-        region.Right = clientRect.Width;
-        region.Bottom = windowRect.Height;
+        region.Left = point.X > windowRect.Left ? point.X - windowRect.Left : 0;
+        region.Top = point.Y > windowRect.Top ? point.Y - windowRect.Top : 0;
+        region.Right = region.Left + clientRect.Width;
+        region.Bottom = region.Top + clientRect.Height;
         region.Front = 0;
         region.Back = 1;
 
         return region;
     }
 
-    public static bool IsHdrEnabled(nint hWnd)
+    private Texture2D ProcessHdrTexture(Texture2D hdrTexture)
     {
-        try
-        {
-            var hdc = User32.GetDC(hWnd);
-            if (hdc != IntPtr.Zero)
-            {
-                int bitsPerPixel = Gdi32.GetDeviceCaps(hdc, Gdi32.DeviceCap.BITSPIXEL);
-                User32.ReleaseDC(hWnd, hdc);
+        var device = hdrTexture.Device;
+        var context = device.ImmediateContext;
 
-                // 如果位深大于等于32位，认为支持HDR
-                return bitsPerPixel >= 32;
-            }
+        var width = hdrTexture.Description.Width;
+        var height = hdrTexture.Description.Height;
 
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+        _hdrOutputTexture ??= Direct3D11Helper.CreateOutputTexture(device, width, height);
+        _hdrComputeShader ??= new ComputeShader(device, ShaderBytecode.Compile(HdrToSdrShader.Content, "CS_HDRtoSDR", "cs_5_0"));
 
-    private Texture2D CreateStagingTexture(Direct3D11CaptureFrame frame, Device device)
-    {
-        // 创建可以用于CPU读取的暂存纹理
-        var textureDesc = new Texture2DDescription
-        {
-            CpuAccessFlags = CpuAccessFlags.Read,
-            BindFlags = BindFlags.None,
-            Format = _isHdrEnabled ? Format.R16G16B16A16_Float : Format.B8G8R8A8_UNorm,
-            Width = _region == null ? frame.ContentSize.Width : _region.Value.Right - _region.Value.Left,
-            Height = _region == null ? frame.ContentSize.Height : _region.Value.Bottom - _region.Value.Top,
-            OptionFlags = ResourceOptionFlags.None,
-            MipLevels = 1,
-            ArraySize = 1,
-            SampleDescription = { Count = 1, Quality = 0 },
-            Usage = ResourceUsage.Staging
-        };
+        using var inputSrv = new ShaderResourceView(device, hdrTexture);
+        using var outputUav = new UnorderedAccessView(device, _hdrOutputTexture);
 
-        return new Texture2D(device, textureDesc);
+        context.ComputeShader.Set(_hdrComputeShader);
+        context.ComputeShader.SetShaderResource(0, inputSrv);
+        context.ComputeShader.SetUnorderedAccessView(0, outputUav);
+
+        var threadGroupCountX = (int)Math.Ceiling(width / 16.0);
+        var threadGroupCountY = (int)Math.Ceiling(height / 16.0);
+
+        context.Dispatch(threadGroupCountX, threadGroupCountY, 1);
+
+        return _hdrOutputTexture;
     }
 
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
-        using var frame = sender.TryGetNextFrame();
-        if (frame == null)
-        {
-            return;
-        }
-
-        // 限制最高处理帧率为62fps
-        if (_frameTimer.ElapsedMilliseconds - _lastFrameTime < 16)
-        {
-            return;
-        }
-        _lastFrameTime = _frameTimer.ElapsedMilliseconds;
-
-        var frameSize = _captureItem.Size;
-
-        // 检查帧大小是否变化 // 不会被访问到的代码
-        if (frameSize.Width != frame.ContentSize.Width ||
-            frameSize.Height != frame.ContentSize.Height)
-        {
-            frameSize = frame.ContentSize;
-            _captureFramePool.Recreate(
-                _d3dDevice,
-                _pixelFormat,
-                2,
-                frameSize
-            );
-            _stagingTexture = null;
-        }
-
-        // 从捕获的帧创建一个可以被访问的纹理
-        using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
-        var d3dDevice = surfaceTexture.Device;
-
-        _stagingTexture ??= CreateStagingTexture(frame, d3dDevice);
-        var stagingTexture = _stagingTexture;
-
-        // 将捕获的纹理复制到暂存纹理
-        if (_region != null)
-        {
-            d3dDevice.ImmediateContext.CopySubresourceRegion(surfaceTexture, 0, _region, stagingTexture, 0);
-        }
-        else
-        {
-            d3dDevice.ImmediateContext.CopyResource(surfaceTexture, stagingTexture);
-        }
-
-
-        // 映射纹理以便CPU读取
-        var dataBox = d3dDevice.ImmediateContext.MapSubresource(
-            stagingTexture,
-            0,
-            MapMode.Read,
-            MapFlags.None);
-
+        // 使用写锁更新最新帧
+        _frameAccessLock.EnterWriteLock();
         try
         {
-            // 创建一个新的Mat
-            var newFrame = Mat.FromPixelData(stagingTexture.Description.Height, stagingTexture.Description.Width,
-                _isHdrEnabled ? MatType.MakeType(7, 4) : MatType.CV_8UC4, dataBox.DataPointer);
-
-            // 如果是HDR，进行HDR到SDR的转换
-            if (_isHdrEnabled)
+            if (_hWnd == 0)
             {
-                // rgb -> bgr
-                newFrame = ConvertHdrToSdr(newFrame);
+                return;
             }
 
-            // 使用写锁更新最新帧
-            _frameAccessLock.EnterWriteLock();
+            using var frame = sender.TryGetNextFrame();
+            if (frame == null)
+            {
+                return;
+            }
+
+            // 限制最高处理帧率为62fps
+            if (_frameTimer.ElapsedMilliseconds - _lastFrameTime < 16)
+            {
+                return;
+            }
+            _lastFrameTime = _frameTimer.ElapsedMilliseconds;
+
+            var frameSize = _captureItem!.Size;
+
+            // 检查帧大小是否变化
+            if (frameSize.Width != frame.ContentSize.Width || frameSize.Height != frame.ContentSize.Height)
+            {
+                frameSize = frame.ContentSize;
+                _captureFramePool!.Recreate(
+                    _d3dDevice,
+                    _pixelFormat,
+                    2,
+                    frameSize
+                );
+                _stagingTexture?.Dispose();
+                _stagingTexture = null;
+                _region = GetGameScreenRegion(_hWnd);
+            }
+
             try
             {
-                // 释放之前的帧
+                // 从捕获的帧创建一个可以被访问的纹理
+                using var surfaceTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
+                var sourceTexture = _isHdrEnabled ? ProcessHdrTexture(surfaceTexture) : surfaceTexture;
+                var d3dDevice = surfaceTexture.Device;
+
+                _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(d3dDevice, frame.ContentSize.Width, frame.ContentSize.Height, _region);
+                var mat = _stagingTexture.CreateMat(d3dDevice, sourceTexture, _region);
+
+                // 释放之前的帧，然后更新
                 _latestFrame?.Dispose();
-                // 克隆新帧以保持对其的引用（因为dataBox.DataPointer将被释放）
-                _latestFrame = newFrame.Clone();
+                _latestFrame = mat;
             }
-            finally
+            catch (SharpDXException e)
             {
-                newFrame.Dispose();
-                _frameAccessLock.ExitWriteLock();
+                Debug.WriteLine($"SharpDXException: {e.Descriptor}");
+                _latestFrame = null;
             }
         }
         finally
         {
-            // 取消映射纹理
-            d3dDevice.ImmediateContext.UnmapSubresource(surfaceTexture, 0);
+            _frameAccessLock.ExitWriteLock();
         }
     }
 
-    private static Mat ConvertHdrToSdr(Mat hdrMat)
-    {
-        // 创建一个目标 8UC4 Mat
-        Mat sdkMat = new Mat(hdrMat.Size(), MatType.CV_8UC4);
-
-        // 将 32FC4 缩放到 0-255 范围并转换为 8UC4
-        // 注意：这种简单缩放可能不会保留 HDR 的所有细节
-        hdrMat.ConvertTo(sdkMat, MatType.CV_8UC4, 255.0);
-
-        // 将 HDR 的 RGB 通道转换为 BGR
-        Cv2.CvtColor(sdkMat, sdkMat, ColorConversionCodes.RGBA2BGRA);
-
-        return sdkMat;
-    }
-
-    public CaptureImageRes? Capture()
+    public Mat? Capture()
     {
         // 使用读锁获取最新帧
         _frameAccessLock.EnterReadLock();
         try
         {
-            // 如果没有可用帧则返回null
-            if (_latestFrame == null)
-            {
-                return null;
-            }
-
             // 返回最新帧的副本（这里我们必须克隆，因为Mat是不线程安全的）
-            return CaptureImageRes.BuildNullable(_latestFrame.Clone());
+            return _latestFrame?.Clone();
         }
         finally
         {
@@ -300,16 +259,29 @@ public class GraphicsCapture : IGameCapture
 
     public void Stop()
     {
-        _captureSession?.Dispose();
-        _captureFramePool?.Dispose();
-        _captureSession = null!;
-        _captureFramePool = null!;
-        _captureItem = null!;
-        _stagingTexture?.Dispose();
-        _d3dDevice?.Dispose();
-
-        _hWnd = IntPtr.Zero;
-        IsCapturing = false;
+        _frameAccessLock.EnterWriteLock();
+        try
+        {
+            _captureSession?.Dispose();
+            _captureSession = null;
+            _captureFramePool?.Dispose();
+            _captureFramePool = null;
+            _captureItem = null;
+            _stagingTexture?.Dispose();
+            _stagingTexture = null;
+            _hdrOutputTexture?.Dispose();
+            _hdrOutputTexture = null;
+            _hdrComputeShader?.Dispose();
+            _hdrComputeShader = null;
+            _d3dDevice?.Dispose();
+            _d3dDevice = null;
+            _hWnd = 0;
+            IsCapturing = false;
+        }
+        finally
+        {
+            _frameAccessLock.ExitWriteLock();
+        }
     }
 
     private void CaptureItemOnClosed(GraphicsCaptureItem sender, object args)

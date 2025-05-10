@@ -12,6 +12,5 @@
         <Image x:Name="DisplayCaptureResultImage"
                Width="Auto"
                Height="Auto" />
-
     </Grid>
 </Window>

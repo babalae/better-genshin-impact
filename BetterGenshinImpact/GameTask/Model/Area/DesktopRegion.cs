@@ -69,7 +69,7 @@ public class DesktopRegion : Region
         Simulation.SendInput.Mouse.MoveMouseBy((int)dx, (int)dy);
     }
 
-    public GameCaptureRegion Derive(CaptureImageRes captureMat, int x, int y)
+    public GameCaptureRegion Derive(Mat captureMat, int x, int y)
     {
         return new GameCaptureRegion(captureMat, x, y, this, new TranslationConverter(x, y));
     }

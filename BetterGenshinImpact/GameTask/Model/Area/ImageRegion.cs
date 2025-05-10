@@ -78,23 +78,6 @@ public class ImageRegion : Region
         _srcMat = mat;
     }
 
-    public ImageRegion(CaptureImageRes image, int x, int y, Region? owner = null, INodeConverter? converter = null,
-        DrawContent? drawContent = null) : base(x, y, image.Width, image.Height, owner, converter, drawContent)
-    {
-        if (image.Bitmap != null)
-        {
-            _srcBitmap = image.Bitmap;
-        }
-        else if (image.Mat != null)
-        {
-            _srcMat = image.Mat;
-        }
-        else
-        {
-            throw new Exception("ImageRegion的构造函数参数错误");
-        }
-    }
-
     private bool HasImage()
     {
         return _srcBitmap != null || _srcMat != null;

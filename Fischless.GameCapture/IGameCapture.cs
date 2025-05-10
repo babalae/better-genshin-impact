@@ -8,7 +8,7 @@ public interface IGameCapture : IDisposable
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null);
 
-    public CaptureImageRes? Capture();
+    public Mat? Capture();
 
     public void Stop();
 }

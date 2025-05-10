@@ -182,7 +182,7 @@ public class TaskControl
         }
     }
 
-    public static CaptureImageRes CaptureGameImage(IGameCapture? gameCapture)
+    public static Mat CaptureGameImage(IGameCapture? gameCapture)
     {
         var image = gameCapture?.Capture();
         if (image == null)
@@ -208,7 +208,7 @@ public class TaskControl
         }
     }
 
-    public static CaptureImageRes? CaptureGameImageNoRetry(IGameCapture? gameCapture)
+    public static Mat? CaptureGameImageNoRetry(IGameCapture? gameCapture)
     {
         return gameCapture?.Capture();
     }
