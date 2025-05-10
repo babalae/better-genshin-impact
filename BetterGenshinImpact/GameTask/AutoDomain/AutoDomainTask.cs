@@ -3,7 +3,6 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -14,7 +13,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Drawable;
-using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -31,10 +29,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Kernel32;
-using static Vanara.PInvoke.User32;
 using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -42,7 +37,7 @@ using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
-
+using Compunet.YoloSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -52,7 +47,7 @@ public class AutoDomainTask : ISoloTask
     
     private readonly AutoDomainParam _taskParam;
 
-    private readonly YoloV8Predictor _predictor;
+    private readonly BgiYoloPredictor _predictor;
 
     private readonly AutoDomainConfig _config;
 
@@ -72,10 +67,7 @@ public class AutoDomainTask : ISoloTask
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
-        _predictor = YoloV8Builder.CreateDefaultBuilder()
-            .UseOnnxModel(Global.Absolute(@"Assets\Model\Domain\bgi_tree.onnx"))
-            .WithSessionOptions(BgiSessionOption.Instance.Options)
-            .Build();
+        _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
@@ -656,7 +648,7 @@ public class AutoDomainTask : ISoloTask
         using var ra = CaptureToRectArea();
 
         var endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsUpperRect);
-        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.challengeCompletedLocalizedString))
         {
             Logger.LogInformation("检测到秘境结束提示(挑战达成)，结束秘境");
@@ -664,7 +656,7 @@ public class AutoDomainTask : ISoloTask
         }
 
         endTipsRect = ra.DeriveCrop(AutoFightAssets.Instance.EndTipsRect);
-        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcGreyMat);
+        text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.autoLeavingLocalizedString))
         {
             Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
@@ -910,9 +902,9 @@ public class AutoDomainTask : ISoloTask
         using var memoryStream = new MemoryStream();
         region.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
         memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = _predictor.Detect(memoryStream);
+        var result = _predictor.Predictor.Detect(memoryStream);
         var list = new List<RectDrawable>();
-        foreach (var box in result.Boxes)
+        foreach (var box in result)
         {
             var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
             list.Add(region.ToRectDrawable(rect, "tree"));
@@ -922,7 +914,7 @@ public class AutoDomainTask : ISoloTask
 
         if (list.Count > 0)
         {
-            var box = result.Boxes[0];
+            var box = result[0];
             return new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
         }
 
@@ -1125,7 +1117,7 @@ public class AutoDomainTask : ISoloTask
             // 图像右侧就是脆弱树脂数量
             var countArea = ra.DeriveCrop(fragileResinCountRa.X + fragileResinCountRa.Width, fragileResinCountRa.Y,
                 (int)(fragileResinCountRa.Width * 3), fragileResinCountRa.Height);
-            var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.Ocr(countArea.SrcMat);
             fragileResinCount = StringUtils.TryParseInt(count);
         }
 

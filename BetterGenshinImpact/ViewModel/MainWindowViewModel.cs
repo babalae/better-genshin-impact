@@ -248,7 +248,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 {
                     string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
                     await OcrFactory.ChangeCulture(gameCultureInfoName);
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png"), ImreadModes.Grayscale));
+                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png")));
                     Debug.WriteLine("PaddleOcr预热结果:" + s);
                 }
                 catch (Exception e)

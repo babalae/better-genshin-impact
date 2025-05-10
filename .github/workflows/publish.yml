@@ -1,0 +1,412 @@
+name: BetterGI Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'BetterGI Version (eg: 0.35.1, 0.36.5-alpha.1)'
+        required: true
+        type: string
+      kachina-channel:
+        type: choice
+        description: 'Kachina Installer Channel'
+        required: true
+        default: 'release'
+        options:
+          - release
+          - dev
+      create-release:
+        type: boolean
+        description: '创建 GitHub Release 草稿'
+        required: true
+        default: false
+
+jobs:
+  # Add validation job to check version format
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - name: Set version from input or tag
+        id: set-version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Validate manual input version format
+            if ! [[ "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+              echo "❌ 错误：版本格式必须符合语义化版本规范 (例如: 1.2.3, 1.2.3-alpha, 1.2.3+build.123)"
+              exit 1
+            fi
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "✨ 手动触发构建，版本号：${{ github.event.inputs.version }}"
+          else
+            # Extract version from tag name (remove 'v' prefix)
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "🏷️ 从 tag 触发构建，版本号：${VERSION}"
+          fi
+
+  build_web_map_editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: huiyadanli/bettergi-map
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm install
+      - run: npm run build:single
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web_map_editor
+          path: dist/
+
+  build_web_scripts_list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: huiyadanli/bettergi-scripts-web
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm install
+      - run: npm run build:single
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web_scripts_list
+          path: dist/
+  
+  build_dist:
+    runs-on: windows-latest
+    needs: [validate, build_web_map_editor, build_web_scripts_list]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: babalae/better-genshin-impact
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+      - name: 更新 csproj 文件版本号
+        run: |
+          $version = '${{ needs.validate.outputs.version }}'
+          (Get-Content BetterGenshinImpact/BetterGenshinImpact.csproj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content BetterGenshinImpact/BetterGenshinImpact.csproj
+      - name: 自动提交更改
+        if: github.repository_owner == 'babalae'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update version to ${{ needs.validate.outputs.version }}"
+          branch: main
+          file_pattern: BetterGenshinImpact/BetterGenshinImpact.csproj
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/BetterGenshinImpact.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: 🛠️ Build application
+        run: dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c Release -p:PublishProfile=FolderProfile -p:Version=${{ needs.validate.outputs.version }}
+        continue-on-error: true
+      - name: 🧹 Clear & Move Files
+        run: |
+            $sourceDir = ".\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64"
+            Get-ChildItem -Path $sourceDir -Recurse -Filter "*.lib" | Remove-Item -Force
+            Get-ChildItem -Path $sourceDir -Recurse -Filter "*ffmpeg*.dll" | Remove-Item -Force
+            Get-ChildItem -Path $sourceDir -Recurse -Filter "*.pdb" | Remove-Item -Force
+            New-Item -Path "dist/BetterGI" -ItemType Directory
+            xcopy "$sourceDir\*" ".\dist\BetterGI\" /E /H /I /Y
+      # 下载前面构建好的web内容
+      - uses: actions/download-artifact@v4
+        with:
+          name: web_map_editor
+          path: dist/BetterGI/Assets/Map/Editor
+      - uses: actions/download-artifact@v4
+        with:
+          name: web_scripts_list
+          path: dist/BetterGI/Assets/Web/ScriptRepo
+      # 下载构建 repo 的内容补充数据
+      - uses: actions/checkout@v4
+        with:
+          repository: babalae/bettergi-publish
+          path: publish
+      - name: 🗜️ Extract Map
+        run: |
+            cd publish
+            # Extract zst files
+            Get-ChildItem -Filter *.zst | ForEach-Object {
+                if ($_.PSIsContainer -eq $false) {
+                    $file = $_.Name
+                    $output_file = "..\dist\BetterGI\Assets\Map\$($file -replace '.zst$', '')"
+                    & zstd -d $file -o $output_file
+                    Write-Host "$file -> $output_file"
+                }
+            }
+            # Extract zip files
+            Get-ChildItem -Filter *.zip | ForEach-Object {
+                if ($_.PSIsContainer -eq $false) {
+                    $file = $_.FullName
+                    $destination = "..\dist\BetterGI\Assets\Map"
+                    Expand-Archive -Path $file -DestinationPath $destination -Force
+                    Write-Host "$file -> $destination"
+                }
+            }
+      # 生成更新器
+      - name: 📥 Download kachina-builder release
+        if: ${{ github.event.inputs.kachina-channel == 'release' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "YuehaiTeam/kachina-installer"
+          latest: true
+          fileName: "kachina-builder.exe"
+          
+      - name: 📥 Download kachina-builder dev
+        if: ${{ github.event.inputs.kachina-channel == 'dev' }}
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          repo: "YuehaiTeam/kachina-installer"
+          workflow: "build.yml"
+          name: artifact
+          branch: main
+          event: push
+          workflow_conclusion: success
+      - name: 📦 Gen Updater by kachina-builder
+        run: |
+          cd dist
+          ..\kachina-builder.exe pack -c ..\Build\kachina.config.json -o BetterGI/BetterGI.update.exe
+      # 打包上传
+      - name: 📦 Generate archive
+        run: |
+          cd dist
+          7z a "BetterGI_v${{  needs.validate.outputs.version }}.7z" BetterGI -t7z -mx=5 -mf=BCJ2 -r -y
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BetterGI_7z
+          path: dist/BetterGI_*.7z
+
+  build_installer:
+    runs-on: windows-latest
+    needs: [validate, build_dist]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: BetterGI_7z
+          path: dist
+      - name: Unpack BetterGI_*.7z
+        run: |
+          cd dist
+          7z x "BetterGI_v${{ needs.validate.outputs.version }}.7z"
+      - name: 📥 Download kachina-builder release
+        if: ${{ github.event.inputs.kachina-channel == 'release' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "YuehaiTeam/kachina-installer"
+          latest: true
+          fileName: "kachina-builder.exe"
+      - name: 📥 Download kachina-builder dev
+        if: ${{ github.event.inputs.kachina-channel == 'dev' }}
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          repo: "YuehaiTeam/kachina-installer"
+          workflow: "build.yml"
+          name: artifact
+          branch: main
+          event: push
+          workflow_conclusion: success
+      - name: 📥 Download last release
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "babalae/better-genshin-impact"
+          latest: true
+          fileName: "BetterGI_v*.7z"
+          out-file-path: 'last'
+      - name: 📥 Get 2nd and 3rd release
+        id: release_tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $releasesUrl = "https://api.github.com/repos/babalae/better-genshin-impact/releases"
+          $headers = @{
+              "Authorization" = "Bearer $env:GITHUB_TOKEN"
+              "Accept" = "application/vnd.github.v3+json"
+          }
+          $releases = Invoke-RestMethod -Uri $releasesUrl -Headers $headers -Method Get
+          $validReleases = $releases | 
+          Where-Object { -not $_.draft -and -not $_.prerelease } |
+          Sort-Object { [DateTime]$_.published_at } -Descending
+          if ($validReleases.Count -lt 3) {
+              Write-Error "至少需要 3 个正式 Release（当前找到 $($validReleases.Count) 个）"
+              exit 1
+          }
+          "second_release_tag=$($validReleases[1].tag_name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "third_release_tag=$($validReleases[2].tag_name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: 📥 Download 2nd last release
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "babalae/better-genshin-impact"
+          tag: ${{ steps.release_tags.outputs.second_release_tag }}
+          fileName: "BetterGI_v*.7z"
+          out-file-path: '2nd'
+      - name: 📥 Download 3rd last release
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "babalae/better-genshin-impact"
+          tag: ${{ steps.release_tags.outputs.third_release_tag }}
+          fileName: "BetterGI_v*.7z"
+          out-file-path: '3rd'
+      - name: Unpack releases
+        run: |
+          cd last
+          7z x "BetterGI*.7z" -otemp
+          if (Test-Path -Path ".\temp\BetterGI" -PathType Container) {
+              Move-Item -Path ".\temp\BetterGI" -Destination ".\BetterGI"
+          } else {
+              Rename-Item -Path ".\temp" -NewName ".\BetterGI"
+          }
+          cd ..
+          cd 2nd
+          7z x "BetterGI*.7z" -otemp
+          if (Test-Path -Path ".\temp\BetterGI" -PathType Container) {
+              Move-Item -Path ".\temp\BetterGI" -Destination ".\BetterGI"
+          } else {
+              Rename-Item -Path ".\temp" -NewName ".\BetterGI"
+          }
+          cd ..
+          cd 3rd
+          7z x "BetterGI*.7z" -otemp
+          if (Test-Path -Path ".\temp\BetterGI" -PathType Container) {
+              Move-Item -Path ".\temp\BetterGI" -Destination ".\BetterGI"
+          } else {
+              Rename-Item -Path ".\temp" -NewName ".\BetterGI"
+          }
+          cd ..
+          ls .\last
+          ls .\2nd
+          ls .\3rd
+      - name: 📦 Pack kachina-builder
+        run: |
+          cd dist
+          ..\kachina-builder.exe gen -j 6 -i BetterGI -m metadata.json -o hashed -r babalae/bettergi -t ${{ needs.validate.outputs.version }} --diff-vers ..\last\BetterGI --diff-vers ..\2nd\BetterGI --diff-vers ..\3rd\BetterGI --diff-ignore *[.txt,.onnx] -u .\BetterGI\BetterGI.update.exe
+          ..\kachina-builder.exe pack -c ../Build/kachina.config.json -m metadata.json -d hashed -o BetterGI.Install.${{ needs.validate.outputs.version }}.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BetterGI_Install
+          path: dist/BetterGI.Install.*.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BetterGI_Metadata
+          path: dist/metadata.json
+
+  build_setup:
+    runs-on: windows-latest
+    needs: [validate, build_dist]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: BetterGI_7z
+          path: dist
+      - name: Unpack BetterGI_*.7z & Repack
+        run: |
+          cd dist
+          7z x "BetterGI_v${{ needs.validate.outputs.version }}.7z"
+          cd BetterGI
+          7z a -t7z "..\..\publish.7z" *
+      - name: 📥 Download MicaSetup
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "lemutec/MicaSetup"
+          latest: true
+          fileName: "MicaSetup_v*.7z"
+      - name: 📦 Pack MicaSetup
+        run: |
+          $archiveFiles = Get-ChildItem -Path . -Filter "MicaSetup_v*.7z"
+          foreach ($archive in $archiveFiles) {
+              & 7z x $archive.FullName
+          }
+          Copy-Item -Path "Build\micasetup.json" -Destination "."
+          Copy-Item -Path "Build\micasetup" -Destination "." -Recurse -Force
+          .\makemica.exe micasetup.json
+          ren BetterGI_Setup.exe BetterGI_Setup_v${{ needs.validate.outputs.version }}.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BetterGI_Setup
+          path: BetterGI_Setup*.exe
+
+  # 创建 GitHub Release
+  create_release:
+    if: github.event.inputs.create-release == 'true'
+    needs: [validate, build_dist, build_installer]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+  
+      - name: Append Metadata
+        shell: bash
+        run: |
+          mv artifacts/BetterGI_Metadata/metadata.json artifacts/BetterGI_Metadata/BetterGI_Metadata.json
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          name: BetterGI v${{ needs.validate.outputs.version }}
+          draft: true
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/BetterGI_7z/*.7z
+            artifacts/BetterGI_Install/*.exe
+            artifacts/BetterGI_Metadata/*.json
+
+  mirrorchyan_uploading:
+    if: github.repository_owner == 'babalae' && contains(needs.validate.outputs.version, '-')
+    needs: [validate, build_dist, build_installer]
+    runs-on: macos-latest
+    steps:
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloads
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract 7z
+        shell: bash
+        run: |
+          cd downloads/BetterGI_7z
+          7z x BetterGI_v*.7z -oun7z
+          mv ../BetterGI_Metadata/metadata.json ./un7z/BetterGI/.metadata.json
+          
+      - name: Upload Zip
+        uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: local
+          mirrorchyan_rid: BGI
+          working-directory: downloads/BetterGI_7z/un7z/
+          pick_files: '["BetterGI"]'
+          version_name: ${{ needs.validate.outputs.version }}
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+
+      - name: Upload Install.exe
+        uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: local
+          mirrorchyan_rid: BGI
+          working-directory: downloads/BetterGI_Install/
+          filename: "BetterGI.Install.*.exe"
+          extra_zip: true
+          version_name: ${{ needs.validate.outputs.version }}
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          os: win
+          arch: x64

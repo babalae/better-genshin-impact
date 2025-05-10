@@ -78,23 +78,6 @@ public class ImageRegion : Region
         _srcMat = mat;
     }
 
-    public ImageRegion(CaptureImageRes image, int x, int y, Region? owner = null, INodeConverter? converter = null,
-        DrawContent? drawContent = null) : base(x, y, image.Width, image.Height, owner, converter, drawContent)
-    {
-        if (image.Bitmap != null)
-        {
-            _srcBitmap = image.Bitmap;
-        }
-        else if (image.Mat != null)
-        {
-            _srcMat = image.Mat;
-        }
-        else
-        {
-            throw new Exception("ImageRegion的构造函数参数错误");
-        }
-    }
-
     private bool HasImage()
     {
         return _srcBitmap != null || _srcMat != null;
@@ -226,10 +209,10 @@ public class ImageRegion : Region
                 throw new Exception($"[OCR]识别对象{ro.Name}的匹配文本不能全为空");
             }
 
-            var roi = SrcGreyMat;
+            var roi = SrcMat;
             if (ro.RegionOfInterest != default)
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);
@@ -323,10 +306,10 @@ public class ImageRegion : Region
             }
             else
             {
-                roi = SrcGreyMat;
+                roi = SrcMat;
                 if (ro.RegionOfInterest != default)
                 {
-                    roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                    roi = new Mat(SrcMat, ro.RegionOfInterest);
                 }
             }
 
@@ -454,10 +437,10 @@ public class ImageRegion : Region
         }
         else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
         {
-            var roi = SrcGreyMat;
+            var roi = SrcMat;
             if (ro.RegionOfInterest != default)
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);

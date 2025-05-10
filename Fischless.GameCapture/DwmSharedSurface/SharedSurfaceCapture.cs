@@ -1,127 +1,142 @@
-﻿using Fischless.GameCapture.DwmSharedSurface.Helpers;
-using Fischless.GameCapture.Graphics.Helpers;
+﻿using Fischless.GameCapture.Graphics.Helpers;
 using SharpDX.Direct3D11;
-using SharpDX.DXGI;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
+using SharpDX;
 using Vanara.PInvoke;
 using Device = SharpDX.Direct3D11.Device;
 
-namespace Fischless.GameCapture.DwmSharedSurface
+namespace Fischless.GameCapture.DwmSharedSurface;
+
+public partial class SharedSurfaceCapture : IGameCapture
 {
-    public class SharedSurfaceCapture : IGameCapture
+    // 窗口句柄
+    private nint _hWnd;
+
+    private static readonly object LockObject = new();
+
+    // D3D 设备
+    private Device? _d3dDevice;
+
+    // 截图区域
+    private ResourceRegion? _region;
+
+    // 暂存贴图
+    private Texture2D? _stagingTexture;
+
+    // Surface 大小
+    private int _surfaceWidth;
+    private int _surfaceHeight;
+
+    public bool IsCapturing { get; private set; }
+
+    [LibraryImport("user32.dll", EntryPoint = "DwmGetDxSharedSurface", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool DwmGetDxSharedSurface(IntPtr hWnd, out IntPtr phSurface, out long pAdapterLuid, out long pFmtWindow, out long pPresentFlags, out long pWin32KUpdateId);
+
+    public void Dispose()
     {
-        private nint _hWnd;
-        private static readonly object LockObject = new object();
-        private Device? _d3dDevice;
+        Stop();
+        GC.SuppressFinalize(this);
+    }
 
-        public void Dispose() => Stop();
+    public void Start(nint hWnd, Dictionary<string, object>? settings = null)
+    {
+        _hWnd = hWnd;
+        User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
+        _region = GetGameScreenRegion(hWnd);
+        _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
 
-        public bool IsCapturing { get; private set; }
+        IsCapturing = true;
+    }
 
-        private ResourceRegion? _region;
-
-
-        public void Start(nint hWnd, Dictionary<string, object>? settings = null)
+    /// <summary>
+    /// 从 GetWindowRect 的带窗口阴影面积矩形 截取出 GetClientRect的矩形（游戏区域）
+    /// </summary>
+    /// <param name="hWnd"></param>
+    /// <returns></returns>
+    private ResourceRegion? GetGameScreenRegion(nint hWnd)
+    {
+        var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+        if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
         {
-            _hWnd = hWnd;
-            User32.ShowWindow(hWnd, ShowWindowCommand.SW_RESTORE);
-            User32.SetForegroundWindow(hWnd);
-            _region = GetGameScreenRegion(hWnd);
-            _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport); // Software/Hardware
-
-            //var device = Direct3D11Helper.CreateDevice();
-            //_d3dDevice = Direct3D11Helper.CreateSharpDXDevice(device);
-
-            IsCapturing = true;
+            return null;
         }
 
-        /// <summary>
-        /// 从 GetWindowRect 的带窗口阴影面积矩形 截取出 GetClientRect的矩形（游戏区域）
-        /// </summary>
-        /// <param name="hWnd"></param>
-        /// <returns></returns>
-        private ResourceRegion? GetGameScreenRegion(nint hWnd)
+        ResourceRegion region = new();
+        User32.GetWindowRect(hWnd, out var windowWithShadowRect);
+        DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
+        User32.GetClientRect(_hWnd, out var clientRect);
+
+        region.Left = windowRect.Left - windowWithShadowRect.Left;
+        // 标题栏 windowRect.Height - clientRect.Height 上阴影 windowRect.Top - windowWithShadowRect.Top
+        region.Top = windowRect.Height - clientRect.Height + windowRect.Top - windowWithShadowRect.Top;
+        region.Right = region.Left + clientRect.Width;
+        region.Bottom = region.Top + clientRect.Height;
+        region.Front = 0;
+        region.Back = 1;
+
+        return region;
+    }
+
+    public Mat? Capture()
+    {
+        lock (LockObject)
         {
-            var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
-            if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
+            if (_d3dDevice == null)
+            {
+                Debug.WriteLine("D3Device is null.");
+                return null;
+            }
+
+            if (!DwmGetDxSharedSurface(_hWnd, out var phSurface, out _, out _, out _, out _))
+            {
+                return null;
+            }
+            if (phSurface == 0)
             {
                 return null;
             }
 
-            ResourceRegion region = new();
-            User32.GetWindowRect(hWnd, out var windowWithShadowRect);
-            DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
-            User32.GetClientRect(_hWnd, out var clientRect);
-
-            region.Left = windowRect.Left - windowWithShadowRect.Left;
-            // 标题栏 windowRect.Height - clientRect.Height 上阴影 windowRect.Top - windowWithShadowRect.Top
-            region.Top = windowRect.Height - clientRect.Height + windowRect.Top - windowWithShadowRect.Top;
-            region.Right = region.Left + clientRect.Width;
-            region.Bottom = region.Top + clientRect.Height;
-            region.Front = 0;
-            region.Back = 1;
-
-            return region;
-        }
-
-        public CaptureImageRes? Capture()
-        {
-            if (_hWnd == nint.Zero)
+            try
             {
-                return null;
-            }
-
-            lock (LockObject)
-            {
-                NativeMethods.DwmGetDxSharedSurface(_hWnd, out var phSurface, out _, out _, out _, out _);
-                if (phSurface == nint.Zero)
-                {
-                    return null;
-                }
-
-       
-                if (_d3dDevice == null)
-                {
-                    Debug.WriteLine("D3Device is null.");
-                    return null;
-                }
-
                 using var surfaceTexture = _d3dDevice.OpenSharedResource<Texture2D>(phSurface);
-                using var stagingTexture = CreateStagingTexture(surfaceTexture, _d3dDevice);
-                var mat = stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
-                if (mat == null)
+
+                if (_stagingTexture == null || _surfaceWidth != surfaceTexture.Description.Width ||
+                    _surfaceHeight != surfaceTexture.Description.Height)
                 {
-                    return null;
+                    _stagingTexture?.Dispose();
+                    _stagingTexture = null;
+                    _surfaceWidth = surfaceTexture.Description.Width;
+                    _surfaceHeight = surfaceTexture.Description.Height;
+                    _region = GetGameScreenRegion(_hWnd);
                 }
-                var bgrMat = new Mat();
-                Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-                return CaptureImageRes.BuildNullable(bgrMat);
+
+                _stagingTexture ??= Direct3D11Helper.CreateStagingTexture(_d3dDevice, _surfaceWidth, _surfaceHeight, _region);
+                var mat = _stagingTexture.CreateMat(_d3dDevice, surfaceTexture, _region);
+                return mat;
             }
-        }
-        
-
-        private Texture2D CreateStagingTexture(Texture2D surfaceTexture, Device device)
-        {
-            return new Texture2D(device, new Texture2DDescription
+            catch (SharpDXException e)
             {
-                Width = _region == null ? surfaceTexture.Description.Width : _region.Value.Right - _region.Value.Left,
-                Height = _region == null ? surfaceTexture.Description.Height : _region.Value.Bottom - _region.Value.Top,
-                MipLevels = 1,
-                ArraySize = 1,
-                Format = Format.B8G8R8A8_UNorm,
-                Usage = ResourceUsage.Staging,
-                SampleDescription = new SampleDescription(1, 0),
-                BindFlags = BindFlags.None,
-                CpuAccessFlags = CpuAccessFlags.Read,
-                OptionFlags = ResourceOptionFlags.None
-            });
-        }
+                Debug.WriteLine($"SharpDXException: {e.Descriptor}");
+                _d3dDevice?.Dispose();
+                _d3dDevice = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport);
+            }
 
-        public void Stop()
+            return null;
+        }
+    }
+
+    public void Stop()
+    {
+        lock (LockObject)
         {
-            _hWnd = nint.Zero;
+            _stagingTexture?.Dispose();
+            _stagingTexture = null;
+            _d3dDevice?.Dispose();
+            _d3dDevice = null;
+            _hWnd = 0;
             IsCapturing = false;
         }
     }

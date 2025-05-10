@@ -1,10 +1,8 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
-using Compunet.YoloV8.Data;
-using OpenCvSharp;
-using System;
+﻿using OpenCvSharp;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Compunet.YoloSharp.Data;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
 
@@ -37,10 +35,10 @@ public class Fishpond
     /// <param name="result"></param>
     /// <param name="includeTarget">是否包含抛竿落点</param>
     /// <param name="ignoreObtained">是否忽略“获得”物品的图标</param>
-    public Fishpond(DetectionResult result, bool includeTarget = false, bool ignoreObtained = false)
+    public Fishpond(YoloResult<Detection> result, bool includeTarget = false, bool ignoreObtained = false)
     {
         Print(result);
-        foreach (var box in result.Boxes)
+        foreach (var box in result)
         {
             // 可信度太低的直接放弃
             if (box.Confidence < 0.4)
@@ -49,7 +47,7 @@ public class Fishpond
             }
             
             Rect rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-            if (box.Class.Name == "rod" || box.Class.Name == "err rod")
+            if (box.Name.Name == "rod" || box.Name.Name == "err rod")
             {
                 TargetRect = rect;
                 continue;
@@ -60,19 +58,19 @@ public class Fishpond
                 // todo：不是很重要但有机会可以从构造函数里分离逻辑
                 // 忽略界面左侧提示的“获得”物品的图标，当上一竿获得鱼时，会对当前竿产生干扰
                 // 使用估算大小和位置的方式来判断并剔除
-                if (box.Bounds.Width < result.Image.Width * 0.036 && box.Bounds.Height < result.Image.Width * 0.036)
+                if (box.Bounds.Width < result.ImageSize.Width * 0.036 && box.Bounds.Height < result.ImageSize.Width * 0.036)
                 {
-                    Rect huode = new Rect((int)(0.04375 * result.Image.Width), (int)(0.4666 * result.Image.Height), (int)(0.1 * result.Image.Width), (int)(0.1 * result.Image.Width));
+                    Rect huode = new Rect((int)(0.04375 * result.ImageSize.Width), (int)(0.4666 * result.ImageSize.Height), (int)(0.1 * result.ImageSize.Width), (int)(0.1 * result.ImageSize.Width));
                     if (huode.Contains(rect))
                     {
                         continue;
                     }
                 }
                 // 忽略界面中央提示的“获得”物品的图标
-                if (box.Bounds.Width > result.Image.Width * 0.03 && box.Bounds.Width < result.Image.Width * 0.06 &&
-                    box.Bounds.Height > result.Image.Width * 0.03 && box.Bounds.Height < result.Image.Width * 0.06)
+                if (box.Bounds.Width > result.ImageSize.Width * 0.03 && box.Bounds.Width < result.ImageSize.Width * 0.06 &&
+                    box.Bounds.Height > result.ImageSize.Width * 0.03 && box.Bounds.Height < result.ImageSize.Width * 0.06)
                 {
-                    Rect huode = new Rect((int)(0.4 * result.Image.Width), (int)(0.445 * result.Image.Height), (int)(0.2 * result.Image.Width), (int)(0.06125 * result.Image.Width));
+                    Rect huode = new Rect((int)(0.4 * result.ImageSize.Width), (int)(0.445 * result.ImageSize.Height), (int)(0.2 * result.ImageSize.Width), (int)(0.06125 * result.ImageSize.Width));
                     if (huode.Contains(rect))
                     {
                         continue;
@@ -81,13 +79,13 @@ public class Fishpond
             }
             if (includeTarget)
             {
-                if (box.Class.Name == "koi")    //进入抛竿的时候只看koihead
+                if (box.Name.Name == "koi")    //进入抛竿的时候只看koihead
                 {
                     continue;
                 }
             }
 
-            var fish = new OneFish(box.Class.Name, rect, box.Confidence);
+            var fish = new OneFish(box.Name.Name, rect, box.Confidence);
             Fishes.Add(fish);
         }
 
@@ -97,10 +95,10 @@ public class Fishpond
         FishpondRect = CalculateFishpondRect();
     }
     
-    private void Print(DetectionResult result)
+    private void Print(YoloResult<Detection> result)
     {
         Debug.Write("鱼塘YOLO识别结果：");
-        foreach (var box in result.Boxes)
+        foreach (var box in result)
         {
             Debug.Write(box.ToString());
         }

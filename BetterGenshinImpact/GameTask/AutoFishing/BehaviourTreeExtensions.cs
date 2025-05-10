@@ -166,7 +166,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 Directory.CreateDirectory(path);
             }
 
-            var bitmap = imageRegion.SrcBitmap;
             if (String.IsNullOrWhiteSpace(name))
             {
                 name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
@@ -176,17 +175,25 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var mat = imageRegion.SrcMat;
             if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
             {
-                var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
-                    (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
-                    (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
-                    (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
-                mat.Rectangle(rect, Scalar.White, -1);
+                new Task(() =>
+                {
+                    using var mat2 = mat.Clone();
+                    var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+                    var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
+                        (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
+                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
+                    mat2.Rectangle(rect, Scalar.White, -1);
+                    Cv2.ImWrite(savePath, mat2);
+                }).Start();
             }
-            new Task(() =>
+            else
             {
-                Cv2.ImWrite(savePath, mat);
-            }).Start();
+                new Task(() =>
+                {
+                    Cv2.ImWrite(savePath, mat);
+                }).Start();
+            }
         }
 
         public void Reset()

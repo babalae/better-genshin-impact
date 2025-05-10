@@ -128,16 +128,13 @@ public class SwitchPartyTask
         var nextX = partyDeleteBtn.Left;
         var nextY = partyDeleteBtn.Top - partyDeleteBtn.Height * 2;
 
-        // 滚轮到最上方
-        switchRa.MoveTo(nextX, nextY);
-        await Delay(10, ct);
-        for (var i = 0; i < 100; i++)
-        {
-            Simulation.SendInput.Mouse.VerticalScroll(1);
-            await Delay(10, ct);
-        }
-
-        await Delay(200, ct);
+        // 点击到最上方
+        await Task.Delay(50, ct);
+        GameCaptureRegion.GameRegion1080PPosClick(700, 120);
+        await Task.Delay(50, ct);
+        Simulation.SendInput.Mouse.LeftButtonDown();
+        await Task.Delay(450, ct);
+        Simulation.SendInput.Mouse.LeftButtonUp();
 
         // 逐页查找
         for (var i = 0; i < 11; i++)

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
@@ -15,7 +13,7 @@ public class OcrFactory
         return type switch
         {
             OcrEngineTypes.Paddle => new PaddleOcrService(cultureInfoName),
-            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
     }
 

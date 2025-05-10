@@ -1,15 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFishing;
 using BehaviourTree;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Core.Config;
-using Compunet.YoloV8;
-using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 
