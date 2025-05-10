@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           7z x BetterGI_v*.7z -oun7z
-          mv ./BetterGI.Metadata.json ./un7z/BetterGI/.metadata.json
+          mv  ./un7z/BetterGI/.metadata.json ./un7z/BetterGI/BetterGI.Metadata.json
 
       - name: Upload Zip
         uses: MirrorChyan/uploading-action@v1
