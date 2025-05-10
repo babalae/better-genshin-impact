@@ -26,9 +26,9 @@ jobs:
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          working-directory: downloads/BetterGI_7z/un7z/
+          working-directory: ./un7z/
           pick_files: '["BetterGI"]'
-          version_name: ${{ github.event.release.tag_name }}
+          version_name: ${{ replace(github.event.release.tag_name, 'v', '') }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
   mirrorchyan_exe:
