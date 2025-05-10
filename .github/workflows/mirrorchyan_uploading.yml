@@ -3,7 +3,7 @@ name: mirrorchyan_uploading
 on:
   workflow_dispatch:
   release:
-    types: [released]
+    types: [edited, released]
 
 jobs:
   mirrorchyan_7z:
