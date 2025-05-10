@@ -351,7 +351,7 @@ internal class GoToSereniteaPotTask
         InitConfigList();
         await Delay(900, ct);
         // 商店购买
-        if (SelectedConfig.SecretTreasureObjects.Count == 1) 
+        if (SelectedConfig.SecretTreasureObjects.Count == 0) 
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
             return; 
