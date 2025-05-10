@@ -63,29 +63,48 @@ public static class OcrUtils
         out IMemoryOwner<float> tensorMemoryOwner, bool swapRb = false, bool crop = false, Size size = default)
 
     {
+        scale ??= 0.00392156862745f;
+        mean ??= [0.485f, 0.456f, 0.406f];
+        std ??= [0.229f, 0.224f, 0.225f];
         using var rt = new ResourcesTracker();
         // 获取图像参数
         var channels = src.Channels();
         if (channels != 3)
             throw new ArgumentException($"图像通道数必须为3,当前为{channels}");
-        var data = rt.T(OcrOperationImpl.NormalizeImageOperation(src, scale, mean, std));
+        // var data = rt.T(OcrOperationImpl.NormalizeImageOperation(src, scale, mean, std));
+        Mat stdMat = rt.NewMat();
+        Mat[] bgr = [];
+        try
+        {
+            bgr = src.Split();
+            for (var i = 0; i < bgr.Length; ++i)
+                bgr[i].ConvertTo(bgr[i], MatType.CV_32FC1, 1 / std[i],
+                    (0.0 - mean[i]) / std[i] /(float)scale);
+            Cv2.Merge(bgr, stdMat);
+        }
+        finally
+        {
+            foreach (var channel in bgr) channel.Dispose();
+        }
+        //stdMat.GetArray<float>(out var data);
         // 使用DNN模块创建blob
         var blob = rt.T(CvDnn.BlobFromImage(
-            data,
-            1.0,
+            stdMat,
+            (double)scale,
             size,
             default,
             swapRb,
             crop
         ));
+
         // 租用内存并复制数据
-        var total = blob.Total();
-        tensorMemoryOwner = MemoryPool<float>.Shared.Rent((int)total);
+        var total = (int)blob.Total();
+        tensorMemoryOwner = MemoryPool<float>.Shared.Rent(total);
         blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
         // 计算输出形状
         return new DenseTensor<float>(
-            tensorMemoryOwner.Memory[..(int)total],
-            new[] { 1, channels, data.Rows, data.Cols }
+            tensorMemoryOwner.Memory[..total],
+            new[] { 1, channels, stdMat.Rows, stdMat.Cols }
         );
     }
 
