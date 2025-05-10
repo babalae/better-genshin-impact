@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'BetterGI Version (eg: v0.35.1, v0.36.5-alpha.1)'
+        description: 'BetterGI Version (eg: 0.35.1, 0.36.5-alpha.1)'
         required: true
         type: string
       kachina-channel:
@@ -90,6 +90,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
+      - name: 更新 csproj 文件版本号
+        run: |
+          $version = '${{ needs.validate.outputs.version }}'
+          (Get-Content BetterGenshinImpact/BetterGenshinImpact.csproj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content BetterGenshinImpact/BetterGenshinImpact.csproj
+      - name: 自动提交更改
+        if: github.repository_owner == 'babalae'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update version to ${{ needs.validate.outputs.version }}"
+          branch: main
+          file_pattern: BetterGenshinImpact/BetterGenshinImpact.csproj
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -166,7 +177,7 @@ jobs:
       - name: 📦 Gen Updater by kachina-builder
         run: |
           cd dist
-          ..\kachina-builder.exe pack -c ..\publish\kachina.config.json -o BetterGI/BetterGI.update.exe
+          ..\kachina-builder.exe pack -c ..\Build\kachina.config.json -o BetterGI/BetterGI.update.exe
       # 打包上传
       - name: 📦 Generate archive
         run: |
@@ -354,7 +365,7 @@ jobs:
             artifacts/BetterGI_Install/*.exe
 
   mirrorchyan_uploading:
-    if: github.repository_owner == 'babalae'
+    if: github.repository_owner == 'babalae' && contains(needs.validate.outputs.version, '-')
     needs: [validate, build_dist, build_installer]
     runs-on: macos-latest
     steps:
