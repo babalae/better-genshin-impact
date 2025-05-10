@@ -359,7 +359,7 @@ internal class GoToSereniteaPotTask
         DateTime now = DateTime.Now;  
         DayOfWeek currentDayOfWeek = now.DayOfWeek;
         DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
-        if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
+        if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
         {
             // 对比当前日期的星期几与配置中的星期几
             if (configDayOfWeek.HasValue && currentDayOfWeek == configDayOfWeek.Value || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
@@ -433,7 +433,7 @@ internal class GoToSereniteaPotTask
         }
         else
         {
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品的日期");
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
         }
 
         await Delay(900, ct);
