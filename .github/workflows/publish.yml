@@ -355,7 +355,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.validate.outputs.version }}
+          tag_name: ${{ needs.validate.outputs.version }}
           name: BetterGI v${{ needs.validate.outputs.version }}
           draft: true
           prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
