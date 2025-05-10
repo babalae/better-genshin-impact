@@ -126,6 +126,10 @@ public class GoToCraftingBenchTask
                 int maxCraftsPossible = 5 - condensedResinCount;
                 // 计算需要合成的次数
                 int craftsNeeded = resinAvailableForCrafting / resinConsumedPerCraft;
+                if (craftsNeeded < 0)
+                {
+                    craftsNeeded = 0;
+                }
                 // 计算最大合成次数
                 craftsNeeded = Math.Min(maxCraftsPossible, craftsNeeded);
                 Logger.LogInformation("原粹树脂: {FragileResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", fragileResinCount,
