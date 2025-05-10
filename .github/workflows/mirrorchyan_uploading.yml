@@ -9,16 +9,38 @@ jobs:
   mirrorchyan_7z:
     runs-on: macos-latest
     steps:
-      - uses: MirrorChyan/uploading-action@v1
+      - name: 📥 Download release
+        uses: robinraju/release-downloader@v1.8
         with:
-          filetype: latest-release
-          filename: "BetterGI_*.7z"
-          p7zip: true
-          mirrorchyan_rid: BGI
+          latest: true
+          fileName: "*"
 
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          owner: babalae
-          repo: better-genshin-impact
+      - name: Extract 7z
+        shell: bash
+        run: |
+          7z x BetterGI_v*.7z -oun7z
+          mv ./BetterGI.Metadata.json ./un7z/BetterGI/.metadata.json
+
+      - name: Determine version number
+        id: get-version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            LATEST_TAG=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${{ github.repository }}/releases/latest \
+              | jq -r '.tag_name')
+            echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Zip
+        uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: local
+          mirrorchyan_rid: BGI
+          working-directory: ./un7z/
+          pick_files: '["BetterGI"]'
+          version_name: ${{ steps.get-version.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
   mirrorchyan_exe:

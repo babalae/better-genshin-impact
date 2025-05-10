@@ -3,12 +3,15 @@ using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Semver;
 
 namespace BetterGenshinImpact.Core.Config;
 
 public class Global
 {
-    public static string Version { get; } = Assembly.GetExecutingAssembly().GetName().Version!.ToString(3);
+    public static string Version { get; } = Assembly.GetEntryAssembly()?.
+        GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.
+        InformationalVersion!;
 
     public static string StartUpPath { get; set; } = AppContext.BaseDirectory;
 
@@ -59,10 +62,10 @@ public class Global
     {
         try
         {
-            Version oldVersionX = new(oldVersion);
-            Version currentVersionX = new(currentVersion);
+            var oldVersionX = SemVersion.Parse(oldVersion);
+            var currentVersionX = SemVersion.Parse(currentVersion);
 
-            if (currentVersionX > oldVersionX)
+            if (currentVersionX.CompareSortOrderTo(oldVersionX) > 0)
                 // 需要更新
                 return true;
         }

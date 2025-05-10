@@ -1,0 +1,393 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.View.HardwareAccelerationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Width="800"
+             d:DataContext="{d:DesignInstance Type=pages:HardwareAccelerationViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <ScrollViewer Height="600"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto">
+        <StackPanel Width="700" Margin="42,16,42,12">
+            <!--  推理设备配置  -->
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             Icon="{ui:SymbolIcon Settings24}">
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="推理设备配置"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      TextWrapping="Wrap">
+                            修改后需要重启程序生效，不正确的修改可能会导致程序异常
+                        </ui:TextBlock>
+                    </Grid>
+                    <!-- <TextBlock FontWeight="SemiBold" Text="推理设备配置" /> -->
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <!--  Inference Device  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="推理设备类型" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="120"
+                                  ItemsSource="{Binding InferenceDeviceTypes}"
+                                  SelectedItem="{Binding Config.InferenceDevice, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="选择推理使用的硬件设备类型 默认使用CPU" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding ProviderTypesText, StringFormat='当前加载: {0}'}" />
+                    </Grid>
+                    <!--  缓存管理  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="缓存文件管理" />
+                        <ui:Button Grid.Row="0"
+                                   Grid.RowSpan="2"
+                                   Grid.Column="1"
+                                   Command="{Binding OpenCacheFolderCommand}"
+                                   Content="打开缓存目录" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="旧版本的缓存文件可以手动删除。" />
+                    </Grid>
+                    <!--  CPU OCR  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="强制OCR使用CPU" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.CpuOcr, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="解决部分GPU推理性能问题 默认开启" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.CpuOcr, StringFormat='当前状态: {0}'}" />
+                    </Grid>
+                    <!--  GPU Device  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="GPU设备ID" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="80"
+                                    Text="{Binding Config.GpuDevice, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="指定使用的GPU设备编号 使用默认配置请设为0 可以在任务管理器中查看编号" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.DmlDeviceId, StringFormat='当前DML设备: {0}'}" />
+                    </Grid>
+                    <!--  _optimizedModel  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="是否输出优化后的模型文件到缓存" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.OptimizedModel, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="注意:在不支持的执行器上使用会导致异常。默认关闭。" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.OptimizedModel, StringFormat='当前状态: {0}'}" />
+                    </Grid>
+
+                </StackPanel>
+            </ui:CardExpander>
+            <!--  CUDA配置  -->
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             Icon="{ui:SymbolIcon Settings24}">
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="CUDA配置"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      TextWrapping="Wrap">
+                            修改后需要重启程序生效。
+                        </ui:TextBlock>
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <!--  CUDA Device  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="CUDA设备ID" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="80"
+                                    Text="{Binding Config.CudaDevice, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="指定CUDA设备编号 使用默认配置请设为0 可以在nvidia-smi中查看编号" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.CudaDeviceId, StringFormat='当前CUDA设备: {0}'}" />
+                    </Grid>
+                    <!--  Auto Append CUDA Path  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="自动添加CUDA路径" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.AutoAppendCudaPath, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="自动添加系统CUDA环境路径 默认开启" />
+                    </Grid>
+                    <!--  _additionalPath  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="附加PATH"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="附加path，用;分割。默认为空。可用于附加DLL路径"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="180"
+                                    MaxWidth="800"
+                                    Text="{Binding Config.AdditionalPath, Mode=TwoWay}"
+                                    TextWrapping="Wrap" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+
+            <!--  TensorRT配置  -->
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             Icon="{ui:SymbolIcon Settings24}"
+                             IsExpanded="False">
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="TensorRT配置"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      TextWrapping="Wrap">
+                            修改后需要重启程序生效。
+                        </ui:TextBlock>
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <!--  Enable Cache  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="启用TensorRT缓存" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.EnableTensorRtCache, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="提升TensorRT模型加载速度 默认开启" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.EnableCache, StringFormat='缓存状态: {0}'}" />
+                    </Grid>
+
+                    <!--  Embed Mode  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="嵌入式引擎缓存" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.EmbedTensorRtCache, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="将引擎缓存嵌入模型文件 默认开启" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.TrtUseEmbedMode, StringFormat='嵌入模式: {0}'}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

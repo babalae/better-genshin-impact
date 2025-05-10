@@ -30,13 +30,14 @@ using Windows.System;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ViewModel
 {
-
     [ObservableProperty]
     private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
@@ -66,7 +67,7 @@ public partial class HomePageViewModel : ViewModel
     private IntPtr _hWnd;
 
     [ObservableProperty]
-    private string[] _inferenceDeviceTypes = BgiSessionOption.InferenceDeviceTypes;
+    private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -84,7 +85,9 @@ public partial class HomePageViewModel : ViewModel
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
-            _inferenceDeviceTypes = _inferenceDeviceTypes.Where(x => x != "GPU_DirectML").ToArray();
+            _inferenceDeviceTypes = _inferenceDeviceTypes
+                .Where(x => x != InferenceDeviceType.GpuDirectMl)
+                .ToArray();
         }
 
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -157,10 +160,10 @@ public partial class HomePageViewModel : ViewModel
         }
     }
 
-    [RelayCommand]
-    private void OnInferenceDeviceTypeDropDownChanged(string value)
-    {
-    }
+    // [RelayCommand]
+    // private void OnInferenceDeviceTypeDropDownChanged(string value)
+    // {
+    // }
 
     [RelayCommand]
     private void OnStartCaptureTest()
@@ -436,5 +439,18 @@ public partial class HomePageViewModel : ViewModel
 
         win.NavigateToHtml(html);
         win.ShowDialog();
+    }
+
+    [RelayCommand]
+    public void OnOpenHardwareAccelerationSettings()
+    {
+        var dialogWindow = new Window
+        {
+            Title = "硬件加速设置",
+            Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        var result = dialogWindow.ShowDialog();
     }
 }
