@@ -86,7 +86,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     private readonly string _basePath = AppDomain.CurrentDomain.BaseDirectory;
-
+    
     private void ReadScriptGroup()
     {
         try
@@ -283,6 +283,11 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
 
+    [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["1", "2", "3"];
+    
+    [ObservableProperty] private List<string> _sundaySelectedValueList = ["1", "2", "3"];
+   
+
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
@@ -306,6 +311,25 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
         };
 
+        TaskList.CollectionChanged += (sender, e) =>
+        {
+            if (e.NewItems != null)
+            {
+                foreach (OneDragonTaskItem newItem in e.NewItems)
+                {
+                    newItem.PropertyChanged += TaskPropertyChanged;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (OneDragonTaskItem oldItem in e.OldItems)
+                {
+                    oldItem.PropertyChanged -= TaskPropertyChanged;
+                }
+            }
+        };
+        
         TaskList.CollectionChanged += (sender, e) =>
         {
             if (e.NewItems != null)
