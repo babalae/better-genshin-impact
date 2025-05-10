@@ -632,7 +632,7 @@ public class PathExecutor
             var ra1 = CaptureToRectArea();
 
             var textRect = new Rect(60, 20, 160, 260);
-            var textMat = new Mat(ra1.SrcGreyMat, textRect);
+            var textMat = new Mat(ra1.SrcMat, textRect);
             string text = OcrFactory.Paddle.Ocr(textMat);
             if (text.Contains("探索派遣奖励"))
             {

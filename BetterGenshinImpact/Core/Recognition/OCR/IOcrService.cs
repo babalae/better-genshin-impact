@@ -1,5 +1,4 @@
 ﻿using OpenCvSharp;
-using Sdcb.PaddleOCR;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
@@ -9,5 +8,5 @@ public interface IOcrService
 
     public string OcrWithoutDetector(Mat mat);
 
-    public PaddleOcrResult OcrResult(Mat mat);
+    public OcrResult OcrResult(Mat mat);
 }

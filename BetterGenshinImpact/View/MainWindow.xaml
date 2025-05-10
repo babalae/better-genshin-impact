@@ -177,7 +177,7 @@
                 <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.TrailingContent>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
                     <ui:Button Width="46"
                                Height="32"
                                Background="Transparent"
