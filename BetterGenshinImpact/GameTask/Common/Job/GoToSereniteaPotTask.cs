@@ -300,7 +300,7 @@ internal class GoToSereniteaPotTask
             await Delay(300, ct);
             Simulation.SendInput.Mouse.LeftButtonDown();
             await Delay(300, ct);
-            Simulation.SendInput.Mouse.MoveMouseBy(numberBtn.Width * 15, 0);
+            numberBtn.MoveTo(ra.Width/7,0);//moveby会超出边界，改用MoveTo
             await Delay(300, ct);
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
@@ -319,37 +319,37 @@ internal class GoToSereniteaPotTask
         //Bv.FindFAndPress(ra,text:this.ayuanHeyString); // 开始对话
         await Delay(500, ct);
         // 领取奖励
-        var rewardOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanBelieveString, ct);
-        if (rewardOption == TalkOptionRes.FoundAndClick)
-        {
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
-            await Delay(1000, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
-            await Delay(500, ct);
-            var ra = CaptureToRectArea();
-            var list = ra.FindMulti(new RecognitionObject
-            {
-                RecognitionType = RecognitionTypes.Ocr,
-                RegionOfInterest = new Rect((int)(ra.Width * 0.35), (int)(ra.Height * 0.45), (int)(ra.Width * 0.3), (int)(ra.Height * 0.05))
-            });
-            var tem = list.FirstOrDefault(a => a.Text.Contains("无法领取好感经验"));
-            if (tem != null)
-            {
-                tem.Click();
-                await Delay(200, ct);
-            }
-
-            if (CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click()).IsExist())
-            {
-                await Delay(500, ct);
-            }
-
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotMoneyRo, a => a.Click());
-            await Delay(500, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click());
-            await Delay(500, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).Click();
-        }
+        // var rewardOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanBelieveString, ct);
+        // if (rewardOption == TalkOptionRes.FoundAndClick)
+        // {
+        //     Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
+        //     await Delay(1000, ct);
+        //     CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+        //     await Delay(500, ct);
+        //     var ra = CaptureToRectArea();
+        //     var list = ra.FindMulti(new RecognitionObject
+        //     {
+        //         RecognitionType = RecognitionTypes.Ocr,
+        //         RegionOfInterest = new Rect((int)(ra.Width * 0.35), (int)(ra.Height * 0.45), (int)(ra.Width * 0.3), (int)(ra.Height * 0.05))
+        //     });
+        //     var tem = list.FirstOrDefault(a => a.Text.Contains("无法领取好感经验"));
+        //     if (tem != null)
+        //     {
+        //         tem.Click();
+        //         await Delay(200, ct);
+        //     }
+        //
+        //     if (CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click()).IsExist())
+        //     {
+        //         await Delay(500, ct);
+        //     }
+        //
+        //     CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotMoneyRo, a => a.Click());
+        //     await Delay(500, ct);
+        //     CaptureToRectArea().Find(ElementAssets.Instance.SereniteapotPageClose, a => a.Click());
+        //     await Delay(500, ct);
+        //     CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).Click();
+        // }
         
         InitConfigList();
         await Delay(900, ct);
