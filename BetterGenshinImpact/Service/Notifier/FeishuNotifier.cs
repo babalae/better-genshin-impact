@@ -5,16 +5,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Net.Http.Headers;
 using System;
-using BetterGenshinImpact.GameTask.Common;
-using Microsoft.Extensions.Logging;
-using Windows.UI.Notifications;
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -153,12 +148,12 @@ public class FeishuNotifier : INotifier
         return tokenString;
     }
 
-    private async Task<String> UploadImage(Image image, string accessToken)
+    private async Task<String> UploadImage(Image<Rgb24> image, string accessToken)
     {
         string imageKey = string.Empty;
         MultipartFormDataContent multipartContent = new MultipartFormDataContent();
         MemoryStream ms = new MemoryStream();
-        image.Save(ms, ImageFormat.Png);
+        await image.SaveAsPngAsync(ms);
         ms.Seek(0, SeekOrigin.Begin);
         ByteArrayContent byteContent = new ByteArrayContent(ms.ToArray());
         byteContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");

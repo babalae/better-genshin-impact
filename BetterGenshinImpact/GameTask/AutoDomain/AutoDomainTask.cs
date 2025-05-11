@@ -18,8 +18,6 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +32,6 @@ using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
 using Compunet.YoloSharp;
@@ -710,7 +707,7 @@ public class AutoDomainTask : ISoloTask
         // 识别道具图标下是否是数字
         var s = TaskContext.Instance().SystemInfo.AssetScale;
         var countArea = ra.DeriveCrop(1800 * s, 845 * s, 40 * s, 20 * s);
-        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
         return int.TryParse(count, out _);
     }
 
@@ -899,10 +896,7 @@ public class AutoDomainTask : ISoloTask
 
     private Rect DetectTree(ImageRegion region)
     {
-        using var memoryStream = new MemoryStream();
-        region.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = _predictor.Predictor.Detect(memoryStream);
+        var result = _predictor.Predictor.Detect(region.CacheImage);
         var list = new List<RectDrawable>();
         foreach (var box in result)
         {
@@ -1106,7 +1100,7 @@ public class AutoDomainTask : ISoloTask
             var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
                 condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height);
             // Cv2.ImWrite($"log/resin_{DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")}.png", countArea.SrcGreyMat);
-            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
             condensedResinCount = StringUtils.TryParseInt(count);
         }
 

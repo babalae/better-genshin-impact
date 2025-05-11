@@ -239,7 +239,7 @@ public class TestTrigger : ITaskTrigger
 
     public void TestCamera(CaptureContent content)
     {
-        var mat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(62, 19, 212, 212));
+        var mat = new Mat(content.CaptureRectArea.CacheGreyMat, new Rect(62, 19, 212, 212));
         Cv2.GaussianBlur(mat, mat, new Size(3, 3), 0);
         // 极坐标展开
         var centerPoint = new Point2f(mat.Width / 2f, mat.Height / 2f);

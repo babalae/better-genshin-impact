@@ -3,8 +3,6 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Common.Map;
-
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
@@ -69,14 +67,14 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
 
                     // 小地图匹配
                     var tar = ElementAssets.Instance.PaimonMenuRo.TemplateImageGreyMat!;
-                    var p = MatchTemplateHelper.MatchTemplate(ra.SrcGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
+                    var p = MatchTemplateHelper.MatchTemplate(ra.CacheGreyMat, tar, TemplateMatchModes.CCoeffNormed, null, 0.9);
                     if (p.X == 0 || p.Y == 0)
                     {
                         Sleep(50, ct);
                         continue;
                     }
 
-                    var p2 = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(new Mat(ra.SrcGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    var p2 = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(new Mat(ra.CacheGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
                     if (!p2.IsEmpty())
                     {
                         way.AddPoint(p2);

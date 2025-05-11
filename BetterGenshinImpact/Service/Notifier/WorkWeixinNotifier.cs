@@ -9,6 +9,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -71,10 +73,9 @@ public class WorkWeixinNotifier : INotifier
         }
     }
 
-    private async Task<StringContent> TransformImageData(System.Drawing.Image screenshot)
+    private async Task<StringContent> TransformImageData(Image<Rgb24> screenshot)
     {
-        var base64Image = ConvertImageToBase64(screenshot);
-        var md5Image = ComputeMd5Hash(screenshot); 
+        var base64Image = ConvertImageToBase64(screenshot, out var md5Image);
         
         var imageMessage = new
         {
@@ -105,32 +106,23 @@ public class WorkWeixinNotifier : INotifier
         return new StringContent(serializedTextData, Encoding.UTF8, "application/json");
     }
 
-    private string ConvertImageToBase64(System.Drawing.Image image)
+    private string ConvertImageToBase64(Image<Rgb24> image, out string md5Hash)
     {
         using (var ms = new MemoryStream())
         {
             // Save the image to a MemoryStream in JPEG format
-            image.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+            image.SaveAsJpeg(ms);
             byte[] imageBytes = ms.ToArray();
-            
+
             // Convert to Base64 (this will produce a single-line string)
             string base64String = Convert.ToBase64String(imageBytes);
-            return base64String;
-        }
-    }
-
-    private string ComputeMd5Hash(System.Drawing.Image image)
-    {
-        using (var ms = new MemoryStream())
-        {
-            image.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
-            byte[] imageBytes = ms.ToArray();
 
             // Compute the MD5 hash of the raw byte data
             byte[] hashBytes = MD5.HashData(imageBytes);
             // Convert hash bytes to a hex string
-            string md5Hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
-            return md5Hash;
+            md5Hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+
+            return base64String;
         }
     }
 }

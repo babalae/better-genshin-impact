@@ -296,7 +296,7 @@ public class Avatar
             // 剪裁出IndexRect区域
             var indexRa = region.DeriveCrop(IndexRect);
             // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
-            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.SrcGreyMat, 251, 255);
+            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.CacheGreyMat, 251, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {
                 return false;
@@ -350,7 +350,7 @@ public class Avatar
             var indexBlock = teamRa.DeriveCrop(new Rect(blockX + IndexRect.X, NameRect.Y + IndexRect.Y, IndexRect.Width,
                 IndexRect.Height));
             // Cv2.ImWrite($"indexBlock_{Name}.png", indexBlock.SrcMat);
-            var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.SrcGreyMat, 255);
+            var count = OpenCvCommonHelper.CountGrayMatColor(indexBlock.CacheGreyMat, 255);
             if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
             {
                 return false;

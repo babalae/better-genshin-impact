@@ -21,7 +21,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip;
@@ -124,7 +123,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
             // 寻找所有传送点
             ra = CaptureToRectArea();
-            var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(ra.SrcGreyMat, QuickTeleportAssets.Instance.MapChooseIconGreyMatList);
+            var tpPointList = MatchTemplateHelper.MatchMultiPicForOnePic(ra.CacheGreyMat, QuickTeleportAssets.Instance.MapChooseIconGreyMatList);
             if (tpPointList.Count > 0)
             {
                 // 选中离中心点最近的传送点
@@ -254,7 +253,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                         wDown = false;
                     }
                     // 识别距离
-                    var text = OcrFactory.Paddle.OcrWithoutDetector(ra.SrcGreyMat[_missionDistanceRect]);
+                    var text = OcrFactory.Paddle.OcrWithoutDetector(ra.CacheGreyMat[_missionDistanceRect]);
                     if (StringUtils.TryExtractPositiveInt(text) is > -1 and <= 3)
                     {
                         Logger.LogInformation("任务追踪：到达目标,识别结果[{Text}]", text);

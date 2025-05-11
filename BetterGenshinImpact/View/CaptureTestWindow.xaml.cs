@@ -3,11 +3,10 @@ using Fischless.GameCapture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers;
-using OpenCvSharp;
+using BetterGenshinImpact.Helpers.Extensions;
 using Wpf.Ui.Violeta.Controls;
 using Size = OpenCvSharp.Size;
 
@@ -59,51 +58,6 @@ public partial class CaptureTestWindow
         CompositionTarget.Rendering += Loop;
     }
 
-    private static WriteableBitmap ToWriteableBitmap(Mat mat)
-    {
-        PixelFormat pixelFormat;
-        var type = mat.Type();
-        if (type == MatType.CV_8UC3)
-        {
-            pixelFormat = PixelFormats.Bgr24;
-        }
-        else if (type == MatType.CV_8UC4)
-        {
-            pixelFormat = PixelFormats.Bgra32;
-        }
-        else
-        {
-            throw new NotSupportedException($"Unsupported pixel format {type}");
-        }
-
-        var bitmap = new WriteableBitmap(mat.Width, mat.Height, 96, 96, pixelFormat, null);
-        UpdateWriteableBitmap(bitmap, mat);
-
-        return bitmap;
-    }
-
-    private static unsafe void UpdateWriteableBitmap(WriteableBitmap bitmap, Mat mat)
-    {
-        bitmap.Lock();
-        var stride = bitmap.BackBufferStride;
-        var step = mat.Step();
-        if (stride == step)
-        {
-            var length = stride * bitmap.PixelHeight;
-            Buffer.MemoryCopy(mat.Data.ToPointer(), bitmap.BackBuffer.ToPointer(), length, length);
-        }
-        else
-        {
-            var length = Math.Min(stride, step);
-            for (var i = 0; i < bitmap.PixelHeight; i++)
-            {
-                Buffer.MemoryCopy((void*)(mat.Data + i * step), (void*)(bitmap.BackBuffer + i * stride), length, length);
-            }
-        }
-        bitmap.AddDirtyRect(new Int32Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
-        bitmap.Unlock();
-    }
-
     private void Loop(object? sender, EventArgs e)
     {
         var sw = new Stopwatch();
@@ -121,12 +75,12 @@ public partial class CaptureTestWindow
             sw.Start();
             if (_cacheSize != mat.Size())
             {
-                DisplayCaptureResultImage.Source = ToWriteableBitmap(mat);
+                DisplayCaptureResultImage.Source = mat.ToWriteableBitmap();
                 _cacheSize = mat.Size();
             }
             else
             {
-                UpdateWriteableBitmap((WriteableBitmap)DisplayCaptureResultImage.Source, mat);
+                mat.UpdateWriteableBitmap((WriteableBitmap)DisplayCaptureResultImage.Source);
             }
             sw.Stop();
             Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
