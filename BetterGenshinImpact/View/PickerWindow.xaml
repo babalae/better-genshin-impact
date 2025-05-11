@@ -1,6 +1,7 @@
 ﻿<Window x:Class="BetterGenshinImpact.View.PickerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:view="clr-namespace:BetterGenshinImpact.View"
         Title="选择捕获窗口"
         Width="800"
         Height="450"
@@ -143,7 +144,7 @@
                 </ListBox.ItemContainerStyle>
 
                 <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate DataType="{x:Type view:PickerWindow+CapturableWindow}">
                         <Grid Margin="12,8" Height="48">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>

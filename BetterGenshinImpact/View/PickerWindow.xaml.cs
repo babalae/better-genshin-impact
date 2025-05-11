@@ -10,27 +10,28 @@ using Vanara.PInvoke;
 using System.Windows.Media;
 using System.Collections.Generic;
 using System.Windows.Media.Imaging;
-using System.Runtime.InteropServices;
 
 namespace BetterGenshinImpact.View;
 
 public partial class PickerWindow : Window
 {
-    private static readonly string[] _ignoreProcesses = ["applicationframehost", "shellexperiencehost", "systemsettings", "winstore.app", "searchui"];
-    private bool _isSelected = false;
-    public PickerWindow()
+    private bool _isSelected;
+    private readonly bool _captureTest;
+
+    public PickerWindow(bool captureTest = false)
     {
         InitializeComponent();
         this.InitializeDpiAwareness();
         Loaded += OnLoaded;
+        _captureTest = captureTest;
     }
-    public class CapturableWindow
-    {
-        public string Name { get; set; }
-        public string ProcessName { get; set; }
 
-        public IntPtr Handle { get; set; }
-        public ImageSource Icon { get; set; }
+    public class CapturableWindow(IntPtr handle, string name, string processName, ImageSource? icon)
+    {
+        public IntPtr Handle { get; } = handle;
+        public string Name { get; } = name;
+        public string ProcessName { get; } = processName;
+        public ImageSource? Icon { get; } = icon;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -38,27 +39,31 @@ public partial class PickerWindow : Window
         FindWindows();
     }
 
-    public bool PickCaptureTarget(IntPtr hWnd,out IntPtr PickedWindow)
+    public bool PickCaptureTarget(IntPtr hWnd, out IntPtr pickedWindow)
     {
         new WindowInteropHelper(this).Owner = hWnd;
         ShowDialog();
         if(!_isSelected)
         {
-            PickedWindow = IntPtr.Zero;
+            pickedWindow = IntPtr.Zero;
             return false;
         }
-        PickedWindow = ((CapturableWindow?)WindowList.SelectedItem)?.Handle ?? IntPtr.Zero;
+        pickedWindow = ((CapturableWindow?)WindowList.SelectedItem)?.Handle ?? IntPtr.Zero;
         return true;
     }
 
-    private unsafe void FindWindows()
+    private void FindWindows()
     {
         var wih = new WindowInteropHelper(this);
         var windows = new List<CapturableWindow>();
-        
+
         User32.EnumWindows((hWnd, lParam) =>
         {
             if (!User32.IsWindowVisible(hWnd) || wih.Handle == hWnd)
+                return true;
+
+            var exStyle = User32.GetWindowLong<User32.WindowStylesEx>(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+            if ((exStyle & (User32.WindowStylesEx.WS_EX_TOOLWINDOW | User32.WindowStylesEx.WS_EX_NOREDIRECTIONBITMAP)) != 0)
                 return true;
 
             var title = new StringBuilder(1024);
@@ -68,26 +73,22 @@ public partial class PickerWindow : Window
 
             _ = User32.GetWindowThreadProcessId(hWnd, out var processId);
             var process = Process.GetProcessById((int)processId);
-            if (_ignoreProcesses.Contains(process.ProcessName.ToLower()))
-                return true;
 
             // 获取窗口图标
             var icon = GetWindowIcon((IntPtr)hWnd);
-            
-            windows.Add(new CapturableWindow
-            {
-                Handle = (IntPtr)hWnd,
-                Name = title.ToString(),
-                ProcessName = process.ProcessName,
-                Icon = icon
-            });
+
+            windows.Add(new CapturableWindow((IntPtr)hWnd, title.ToString(), process.ProcessName, icon));
 
             return true;
         }, IntPtr.Zero);
 
-        WindowList.ItemsSource = windows;
+        var sortedWindows = windows.OrderByDescending(x => IsGenshinWindow(x.Name))
+            .ThenByDescending(x => x.Handle).ToList();
+
+        WindowList.ItemsSource = sortedWindows;
     }
-    private ImageSource GetWindowIcon(IntPtr hWnd)
+
+    private ImageSource? GetWindowIcon(IntPtr hWnd)
     {
         try
         {
@@ -126,13 +127,14 @@ public partial class PickerWindow : Window
         // 如果获取失败，返回一个默认图标或null
         return null;
     }
-    private bool IsGenshinWindow(string windowName)
+
+    private static bool IsGenshinWindow(string windowName)
     {
         // 判断是否包含原神相关的进程名 TODO：更加健壮的判断
-        return windowName == "原神";
+        return windowName is "原神" or "云·原神";
     }
 
-    private bool AskIsThisGenshinImpact(string windowName)
+    private static bool AskIsThisGenshinImpact(string windowName)
     {
         var res = MessageBox.Question(
             $"""
@@ -153,7 +155,7 @@ public partial class PickerWindow : Window
         if (selectedWindow == null) return;
 
         // 如果不是原神窗口，询问用户是否确认
-        if (!IsGenshinWindow(selectedWindow.Name))
+        if (!_captureTest && !IsGenshinWindow(selectedWindow.Name))
         {
             if (!AskIsThisGenshinImpact(selectedWindow.Name))
             {
@@ -163,10 +165,4 @@ public partial class PickerWindow : Window
         _isSelected = true;
         Close();
     }
-}
-
-public struct CapturableWindow
-{
-    public string Name { get; set; }
-    public IntPtr Handle { get; set; }
 }
