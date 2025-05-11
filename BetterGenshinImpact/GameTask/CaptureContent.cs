@@ -42,9 +42,4 @@ public class CaptureContent : IDisposable
         CaptureRectArea.Dispose();
         GC.SuppressFinalize(this);
     }
-
-    ~CaptureContent()
-    {
-        Dispose();
-    }
 }
