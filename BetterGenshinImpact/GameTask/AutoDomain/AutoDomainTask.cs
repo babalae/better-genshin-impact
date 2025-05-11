@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 public class AutoDomainTask : ISoloTask
 {
     public string Name => "自动秘境";
-    
+
     private readonly AutoDomainParam _taskParam;
 
     private readonly BgiYoloPredictor _predictor;
@@ -56,7 +56,7 @@ public class AutoDomainTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
-    
+
     private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
 
     private readonly string challengeCompletedLocalizedString;
@@ -293,6 +293,7 @@ public class AutoDomainTask : ISoloTask
                     Thread.Sleep(2000);
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 }
+
                 await Delay(100, _ct);
                 Simulation.SendInput.SimulateAction(GIActions.Drop); // 可能爬上去了，X键下来
                 await Delay(3000, _ct); // 站稳
@@ -349,7 +350,6 @@ public class AutoDomainTask : ISoloTask
             using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
             {
-
                 if (int.TryParse(_taskParam.SundaySelectedValue, out int sundaySelectedValue))
                 {
                     if (sundaySelectedValue > 0)
@@ -426,18 +426,19 @@ public class AutoDomainTask : ISoloTask
                 await Delay(500, _ct);
                 var ra = CaptureToRectArea();
                 var matchingChallengeArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
-                    ra.Width *0.13, ra.Height*0.06));
+                    ra.Width * 0.13, ra.Height * 0.06));
                 var done = matchingChallengeArea.LastOrDefault(t =>
                     Regex.IsMatch(t.Text, this.matchingChallengeString));
                 if (done != null)
                 {
                     continue;
-                }   
+                }
                 else
                 {
                     break;
                 }
             }
+
             await Delay(500, _ct);
         }
 
@@ -448,7 +449,7 @@ public class AutoDomainTask : ISoloTask
             await Delay(600, _ct);
             var ra = CaptureToRectArea();
             var rapidformationStringArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
-                ra.Width *0.13, ra.Height*0.06));
+                ra.Width * 0.13, ra.Height * 0.06));
             var done = rapidformationStringArea.LastOrDefault(t =>
                 Regex.IsMatch(t.Text, this.rapidformationString));
             if (done != null)
@@ -462,8 +463,9 @@ public class AutoDomainTask : ISoloTask
             }
             else
             {
-               break;
+                break;
             }
+
             using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
                 ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
             if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
@@ -471,8 +473,10 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
                 throw new Exception("当前树脂不足，自动秘境停止运行。");
             }
+
             retryTimes++;
         }
+
         // 载入动画
         await Delay(3000, _ct);
     }
@@ -495,19 +499,24 @@ public class AutoDomainTask : ISoloTask
                 done.Click();
                 await Delay(500, _ct);
             }
+
             // todo 添加小地图角标位置检测 防止有人手点了==>可改为OCR检测再次确认左下角是否有聊天框文字
             using var reRa = CaptureToRectArea();
-            var reocrList = reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.9, reRa.Width*0.1, reRa.Height * 0.07));
+            var reocrList =
+                reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.9, reRa.Width * 0.1, reRa.Height * 0.07));
             var redone = reocrList.FirstOrDefault(t =>
                 Regex.IsMatch(t.Text, this.enterString));
             if (redone != null)
             {
                 break;
             }
+
             await Delay(500, _ct);
         }
+
         await Delay(1000, _ct);
     }
+
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
     {
         var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
@@ -649,6 +658,7 @@ public class AutoDomainTask : ISoloTask
                         await cts.CancelAsync();
                         break;
                     }
+
                     await Delay(1000, cts.Token);
                 }
             }
