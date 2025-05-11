@@ -103,7 +103,7 @@ public class GoToCraftingBenchTask
                     // 图像下方就是脆弱树脂数量
                     var countArea = ra.DeriveCrop(fragileResinCountRa.X, fragileResinCountRa.Y + fragileResinCountRa.Height,
                         fragileResinCountRa.Width, fragileResinCountRa.Height/3);
-                    var count = OcrFactory.Paddle.Ocr(countArea.CacheGreyMat);
+                    var count = OcrFactory.Paddle.Ocr(countArea.SrcGreyMat);
                     fragileResinCount = StringUtils.TryParseInt(count);
                 }
                 var condensedResinCountRa = ra.Find(ElementAssets.Instance.CondensedResinCount);
@@ -112,7 +112,7 @@ public class GoToCraftingBenchTask
                     // 图像右侧就是浓缩树脂数量
                     var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
                         condensedResinCountRa.Y, condensedResinCountRa.Width*5/3, condensedResinCountRa.Height);
-                    var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
+                    var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
                     condensedResinCount = StringUtils.TryParseInt(count);
                 }
                 //todo 可加纠错机制判断树脂数量是否正确
@@ -126,6 +126,10 @@ public class GoToCraftingBenchTask
                 int maxCraftsPossible = 5 - condensedResinCount;
                 // 计算需要合成的次数
                 int craftsNeeded = resinAvailableForCrafting / resinConsumedPerCraft;
+                if (craftsNeeded < 0)
+                {
+                    craftsNeeded = 0;
+                }
                 // 计算最大合成次数
                 craftsNeeded = Math.Min(maxCraftsPossible, craftsNeeded);
                 Logger.LogInformation("原粹树脂: {FragileResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", fragileResinCount,
@@ -199,6 +203,7 @@ public class GoToCraftingBenchTask
         await pathingTask.Pathing(task);
 
         await Delay(700, ct);
+        
         
         // 多种尝试 责任链
         if (!IsInCraftingTalkUi())
