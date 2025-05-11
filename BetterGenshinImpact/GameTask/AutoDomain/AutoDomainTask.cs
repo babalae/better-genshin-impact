@@ -41,7 +41,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 public class AutoDomainTask : ISoloTask
 {
     public string Name => "自动秘境";
-    
+
     private readonly AutoDomainParam _taskParam;
 
     private readonly BgiYoloPredictor _predictor;
@@ -51,7 +51,7 @@ public class AutoDomainTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
-    
+
     private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
 
     private readonly string challengeCompletedLocalizedString;
@@ -332,30 +332,33 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
-        
-        DateTime now = DateTime.Now;        
-        if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4)
+
+        DateTime now = DateTime.Now;
+        if (!string.IsNullOrEmpty(_taskParam.SundaySelectedValue) &&
+            now is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } or { DayOfWeek: DayOfWeek.Monday, Hour: < 4 })
         {
-            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa);//检测是否为圣遗物副本
+            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
             {
-                
                 if (int.TryParse(_taskParam.SundaySelectedValue, out int sundaySelectedValue))
                 {
                     if (sundaySelectedValue > 0)
                     {
                         Logger.LogInformation("周日设置了秘境奖励序号 {sundaySelectedValue}", sundaySelectedValue);
                         using var abnormalscreenRa = CaptureToRectArea();
-                        GlobalMethod.MoveMouseTo(abnormalscreenRa.Width/4,abnormalscreenRa.Height/2);//移到左侧
+                        GlobalMethod.MoveMouseTo(abnormalscreenRa.Width / 4, abnormalscreenRa.Height / 2); //移到左侧
                         for (var i = 0; i < 150; i++)
                         {
                             Simulation.SendInput.Mouse.VerticalScroll(-1);
                             await Delay(10, _ct);
                         }
+
                         await Delay(400, _ct);
-                        
+
                         using var abnormalRa = CaptureToRectArea();
-                        var ocrList = abnormalRa.FindMulti(RecognitionObject.Ocr(0, 0, abnormalRa.Width*0.5, abnormalRa.Height));
+                        var ocrList =
+                            abnormalRa.FindMulti(RecognitionObject.Ocr(0, 0, abnormalRa.Width * 0.5,
+                                abnormalRa.Height));
                         var done = ocrList.LastOrDefault(t =>
                             Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString));
                         if (done != null)
@@ -365,10 +368,10 @@ public class AutoDomainTask : ISoloTask
                             switch (sundaySelectedValue)
                             {
                                 case 1:
-                                    GlobalMethod.Click(done.X, done.Y-abnormalRa.Height/5);
+                                    GlobalMethod.Click(done.X, done.Y - abnormalRa.Height / 5);
                                     break;
                                 case 2:
-                                    GlobalMethod.Click(done.X, done.Y-abnormalRa.Height/10);
+                                    GlobalMethod.Click(done.X, done.Y - abnormalRa.Height / 10);
                                     break;
                                 case 3:
                                     GlobalMethod.Click(done.X, done.Y);
@@ -390,14 +393,16 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogWarning("周日设置秘境奖励序号错误，请检查配置页面");
                 }
-            } else
+            }
+            else
             {
                 Logger.LogWarning("周日奖励选择：圣遗物副本无需选择奖励");
             }
+
             await Delay(300, _ct);
             //await Delay(100000, _ct);//调试延时=========
         }
-        
+
         // 点击单人挑战
         int retryTimes = 0;
         while (retryTimes < 20)
@@ -417,7 +422,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(600, _ct);
         var ra = CaptureToRectArea();
         using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
-            ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32  - ra.Height * 0.353));
+            ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
         if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
         {
             Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
@@ -469,9 +474,10 @@ public class AutoDomainTask : ISoloTask
                 await Delay(1000, _ct);
                 done.Click();
                 await Delay(500, _ct);
-                
-                using var reRa = CaptureToRectArea();//再次确认
-                var reocrList = reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.2, reRa.Width, reRa.Height * 0.6));
+
+                using var reRa = CaptureToRectArea(); //再次确认
+                var reocrList =
+                    reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.2, reRa.Width, reRa.Height * 0.6));
                 var redone = reocrList.FirstOrDefault(t =>
                     Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
                     Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
@@ -479,6 +485,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     continue;
                 }
+
                 break;
             }
 
