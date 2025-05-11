@@ -31,16 +31,7 @@ using StackPanel = Wpf.Ui.Controls.StackPanel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.Core.Recognition;
-using ICSharpCode.AvalonEdit.Editing;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
-using TextBox = Wpf.Ui.Controls.TextBox;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
-using Wpf.Ui.Controls;
-
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 

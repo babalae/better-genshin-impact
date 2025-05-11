@@ -37,10 +37,6 @@ using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using BetterGenshinImpact.Core.Script.Dependence;
-
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
 using Compunet.YoloSharp;
