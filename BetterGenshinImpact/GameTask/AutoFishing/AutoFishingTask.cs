@@ -1,8 +1,6 @@
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -13,14 +11,11 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.GameTask.AutoFishing.Assets;
 using Vanara.PInvoke;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Fischless.WindowsInput;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -290,10 +285,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             protected override BehaviourStatus Update(ImageRegion imageRegion)
             {
-                using var memoryStream = new MemoryStream();
-                imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                var result = blackboard.Predictor.Predictor.Detect(memoryStream);
+                var result = blackboard.Predictor.Predictor.Detect(imageRegion.CacheImage);
                 if (result.Any())
                 {
                     Fishpond fishpond = new Fishpond(result);
@@ -308,9 +300,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     blackboard.Sleep(1000);
                     VisionContext.Instance().DrawContent.ClearAll();
 
-                    var oneFourthX = imageRegion.SrcBitmap.Width / 4;
-                    var threeFourthX = imageRegion.SrcBitmap.Width * 3 / 4;
-                    var centerY = imageRegion.SrcBitmap.Height / 2;
+                    var oneFourthX = imageRegion.CacheImage.Width / 4;
+                    var threeFourthX = imageRegion.CacheImage.Width * 3 / 4;
+                    var centerY = imageRegion.CacheImage.Height / 2;
                     if (fishpond.FishpondRect.Left > threeFourthX)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(100, 0);

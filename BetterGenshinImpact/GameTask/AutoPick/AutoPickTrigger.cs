@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
@@ -17,7 +16,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.GameTask.Model.Area;
-using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -179,15 +177,15 @@ public partial class AutoPickTrigger : ITaskTrigger
         // 计算出文字区域
         var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
             (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
-        if (textRect.X + textRect.Width > content.CaptureRectArea.SrcGreyMat.Width
-            || textRect.Y + textRect.Height > content.CaptureRectArea.SrcGreyMat.Height)
+        if (textRect.X + textRect.Width > content.CaptureRectArea.CacheGreyMat.Width
+            || textRect.Y + textRect.Height > content.CaptureRectArea.CacheGreyMat.Height)
         {
             Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
             return;
         }
 
         // var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
-        var gradMat = new Mat(content.CaptureRectArea.SrcGreyMat,
+        var gradMat = new Mat(content.CaptureRectArea.CacheGreyMat,
             new Rect(textRect.X, textRect.Y, textRect.Width, Math.Min(textRect.Height, 3)));
         var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
         if (avgGrad < -3)
@@ -199,7 +197,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         string text;
         if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
         {
-            var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
+            var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
             text = _pickTextInference.Inference(TextInferenceFactory.PreProcessForInference(textMat));
         }
         else

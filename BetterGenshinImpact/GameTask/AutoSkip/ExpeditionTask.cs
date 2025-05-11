@@ -217,7 +217,7 @@ public class ExpeditionTask
     private OcrResult CaptureAndOcr(CaptureContent content)
     {
         using var ra = TaskControl.CaptureToRectArea();
-        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
+        var result = OcrFactory.Paddle.OcrResult(ra.CacheGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
@@ -225,7 +225,7 @@ public class ExpeditionTask
     private OcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
         using var ra = TaskControl.CaptureToRectArea();
-        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
+        var result = OcrFactory.Paddle.OcrResult(ra.CacheGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }

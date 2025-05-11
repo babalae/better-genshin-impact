@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using System.Collections.Generic;
 using System.IO;
-using System.Drawing.Imaging;
 using System;
+using SixLabors.ImageSharp;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -109,7 +109,7 @@ public class OneBotNotifier : INotifier
         if (content.Screenshot != null)
         {
             using var ms = new MemoryStream();
-            content.Screenshot.Save(ms, ImageFormat.Png);
+            await content.Screenshot.SaveAsPngAsync(ms);
             var base64Image = Convert.ToBase64String(ms.ToArray());
 
             messageContent.Add(new

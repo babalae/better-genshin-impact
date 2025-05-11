@@ -20,14 +20,12 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.ClearScript.JavaScript;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -726,7 +724,7 @@ public class TpTask(CancellationToken ct)
             using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
             if (mapScaleButtonRa.IsExist())
             {
-                rect = MapManager.GetMap(mapName).GetBigMapRect(ra.SrcGreyMat);
+                rect = MapManager.GetMap(mapName).GetBigMapRect(ra.CacheGreyMat);
                 if (rect == default)
                 {
                     // 滚轮调整后再次识别
@@ -764,7 +762,7 @@ public class TpTask(CancellationToken ct)
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
-            var p = MapManager.GetMap(mapName).GetBigMapPosition(ra.SrcGreyMat);
+            var p = MapManager.GetMap(mapName).GetBigMapPosition(ra.CacheGreyMat);
             if (p.IsEmpty())
             {
                 throw new InvalidOperationException("识别大地图位置失败");
@@ -968,7 +966,7 @@ public class TpTask(CancellationToken ct)
         var hasMapChooseIcon = false;
 
         // 全匹配一遍
-        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(imageRegion.SrcGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
+        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(imageRegion.CacheGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
         // 按高度排序
         if (rResultList.Count > 0)
         {
