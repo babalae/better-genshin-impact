@@ -3,7 +3,6 @@ using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Drawing;
-using Fischless.GameCapture;
 using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -12,19 +11,8 @@ namespace BetterGenshinImpact.GameTask.Model.Area;
 /// 游戏捕获区域类
 /// 主要用于转换到遮罩窗口的坐标
 /// </summary>
-public class GameCaptureRegion : ImageRegion
+public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = null, INodeConverter? converter = null, DrawContent? drawContent = null) : ImageRegion(mat, initX, initY, owner, converter, drawContent)
 {
-    public GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = null, INodeConverter? converter = null,
-        DrawContent? drawContent = null) : base(mat, initX, initY, owner, converter, drawContent)
-    {
-    }
-    
-    public GameCaptureRegion(CaptureImageRes image, int initX, int initY, Region? owner = null,
-        INodeConverter? converter = null, DrawContent? drawContent = null) : base(image, initX, initY, owner, converter, drawContent)
-    {
-    }
-
-
     /// <summary>
     /// 在游戏捕获图像的坐标维度进行转换到遮罩窗口的坐标维度
     /// </summary>
@@ -84,9 +72,7 @@ public class GameCaptureRegion : ImageRegion
 
         var newMat = new Mat();
         Cv2.Resize(SrcMat, newMat, new Size(1920, Height / scale));
-        _srcGreyMat?.Dispose();
-        _srcMat?.Dispose();
-        _srcBitmap?.Dispose();
+        Dispose();
         return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
         // return new ImageRegion(newMat, 0, 0, this, new TranslationConverter(0, 0));
     }

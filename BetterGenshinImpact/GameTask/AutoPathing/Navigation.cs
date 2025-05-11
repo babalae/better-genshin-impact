@@ -1,15 +1,10 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
-using System.Diagnostics;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -45,7 +40,7 @@ public class Navigation
 
     public static Point2f GetPosition(ImageRegion imageRegion, string mapName)
     {
-        var greyMat = new Mat(imageRegion.SrcGreyMat, MapAssets.Instance.MimiMapRect);
+        var greyMat = new Mat(imageRegion.CacheGreyMat, MapAssets.Instance.MimiMapRect);
         var p = MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);
         if (p != default)
         {
@@ -64,7 +59,7 @@ public class Navigation
     /// <returns>当前位置坐标</returns>
     public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName)
     {
-        var greyMat = new Mat(imageRegion.SrcGreyMat, MapAssets.Instance.MimiMapRect);
+        var greyMat = new Mat(imageRegion.CacheGreyMat, MapAssets.Instance.MimiMapRect);
 
         // 先尝试使用局部匹配
         var p =  MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);

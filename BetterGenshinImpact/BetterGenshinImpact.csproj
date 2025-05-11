@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.45.1</Version>
+		<Version>0.45.2-alpha.1</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -41,47 +41,47 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
+		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-		<PackageReference Include="DeviceId" Version="6.8.0" />
-		<PackageReference Include="DeviceId.Windows" Version="6.8.0" />
-		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.8.0" />
+		<PackageReference Include="DeviceId" Version="6.9.0" />
+		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
+		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.14" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.18.1" />
-		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.18.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+		<!--排除掉cpu的runtime dll-->
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none"/>
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
-		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.10.0.20240616" />
-		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20240616" />
-		<PackageReference Include="OpenCvSharp4.Windows" Version="4.10.0.20240616" />
+		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.10.0.20241108" />
+		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20241108" />
+		<PackageReference Include="OpenCvSharp4.Windows" Version="4.10.0.20241108" />
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
 		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
-		<PackageReference Include="Sdcb.PaddleInference.runtime.win64.openblas" Version="2.6.1" />
-		<PackageReference Include="Sdcb.PaddleOCR" Version="2.7.0.3" />
 		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Semver" Version="3.0.0" />
-		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
-		<PackageReference Include="System.IO.Hashing" Version="8.0.0" />
-		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.0.2" />
-		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.0.2" />
-		<PackageReference Include="Vanara.PInvoke.User32" Version="4.0.2" />
-		<PackageReference Include="WPF-UI" Version="4.0.0" />
-		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.0" />
-		<PackageReference Include="WPF-UI.Tray" Version="4.0.0" />
-		<PackageReference Include="WPF-UI.Violeta" Version="4.0.0" />
-		<PackageReference Include="YoloV8" Version="4.1.7" />
+		<PackageReference Include="System.IO.Hashing" Version="9.0.4" />
+		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
+		<PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
+		<PackageReference Include="WPF-UI" Version="4.0.2" />
+		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.2" />
+		<PackageReference Include="WPF-UI.Tray" Version="4.0.2" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
+		<PackageReference Include="YoloSharp" Version="6.0.3" />
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
@@ -166,6 +166,11 @@
 	    <SubType>Designer</SubType>
 	  </Page>
 	  <Page Update="View\Windows\MapPathingDevWindow.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	    <XamlRuntime>Wpf</XamlRuntime>
+	    <SubType>Designer</SubType>
+	  </Page>
+	  <Page Update="View\Pages\View\HardwareAccelerationView.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	    <XamlRuntime>Wpf</XamlRuntime>
 	    <SubType>Designer</SubType>

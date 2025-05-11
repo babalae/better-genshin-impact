@@ -352,10 +352,15 @@ jobs:
         with:
           path: artifacts
   
+      - name: Append Metadata
+        shell: bash
+        run: |
+          mv artifacts/BetterGI_Metadata/metadata.json artifacts/BetterGI_Metadata/BetterGI_Metadata.json
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.validate.outputs.version }}
+          tag_name: ${{ needs.validate.outputs.version }}
           name: BetterGI v${{ needs.validate.outputs.version }}
           draft: true
           prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
@@ -363,6 +368,7 @@ jobs:
           files: |
             artifacts/BetterGI_7z/*.7z
             artifacts/BetterGI_Install/*.exe
+            artifacts/BetterGI_Metadata/*.json
 
   mirrorchyan_uploading:
     if: github.repository_owner == 'babalae' && contains(needs.validate.outputs.version, '-')

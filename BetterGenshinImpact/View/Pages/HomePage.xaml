@@ -86,12 +86,10 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        截图器启动后才能使用各项功能，
-                        <Run FontWeight="Bold" TextDecorations="Underline">
+                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
                             点击展开启动相关配置
                         </Run>
-                        。
-                    </ui:TextBlock>
+                        。</ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
@@ -134,16 +132,16 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="推荐选择 BitBlt(稳定)，问题较少"
+                                  Text="推荐选择 BitBlt，问题较少"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding ModeNames, Mode=OneWay}"
                               DisplayMemberPath="DisplayName"
-                              SelectedValuePath="EnumName"
-                              SelectedValue="{Binding Config.CaptureMode, Mode=TwoWay}">
+                              ItemsSource="{Binding ModeNames, Mode=OneWay}"
+                              SelectedValue="{Binding Config.CaptureMode, Mode=TwoWay}"
+                              SelectedValuePath="EnumName">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="SelectionChanged">
                                 <b:InvokeCommandAction Command="{Binding CaptureModeDropDownChangedCommand}" CommandParameter="GeniusInvocation" />
@@ -213,29 +211,36 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="切换AI推理设备"
+                                  Text="AI推理设备设置"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="切换后需要重启程序生效"
+                                  Text="修改后需要重启程序生效"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Margin="0,0,36,0"
+                              Margin="0,0,10,0"
                               ItemsSource="{Binding InferenceDeviceTypes}"
-                              SelectedItem="{Binding Config.InferenceDevice, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="SelectionChanged">
-                                <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
+                              SelectedItem="{Binding Config.HardwareAccelerationConfig.InferenceDevice, Mode=TwoWay}">
+                        <!-- <b:Interaction.Triggers> -->
+                        <!--     <b:EventTrigger EventName="SelectionChanged"> -->
+                        <!--         <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" /> -->
+                        <!--     </b:EventTrigger> -->
+                        <!-- </b:Interaction.Triggers> -->
                     </ComboBox>
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,36,0"
+                               Command="{Binding OpenHardwareAccelerationSettingsCommand}"
+                               Content="更多..." />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -418,7 +423,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="如果你不知道什么是启动参数请不要填写。"
-                                  TextWrapping="Wrap"/>
+                                  TextWrapping="Wrap" />
                     <!--  常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080  -->
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"

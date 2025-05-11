@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier;
@@ -12,7 +13,6 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp.Extensions;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -352,7 +352,7 @@ public class NotificationService : IHostedService, IDisposable
         {
             try
             {
-                testData.Screenshot = TaskControl.CaptureToRectArea().SrcBitmap;
+                testData.Screenshot = TaskControl.CaptureToRectArea().CacheImage;
             }
             catch (Exception ex)
             {
@@ -406,18 +406,11 @@ public class NotificationService : IHostedService, IDisposable
 
         try
         {
-            var image = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
-
-            if (image != null)
+            var mat = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
+            if (mat != null)
             {
-                if (image.Bitmap != null)
-                {
-                    notificationData.Screenshot = image.Bitmap;
-                }
-                else if (image.Mat != null)
-                {
-                    notificationData.Screenshot = image.Mat.ToBitmap();
-                }
+                var imageRegion = new ImageRegion(mat, 0, 0);
+                notificationData.Screenshot = imageRegion.CacheImage;
             }
         }
         catch (Exception ex)

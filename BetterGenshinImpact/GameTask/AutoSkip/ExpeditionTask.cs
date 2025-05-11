@@ -4,7 +4,6 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -61,7 +60,8 @@ public class ExpeditionTask
             ExpeditionCharacterList.Clear();
             str = str.Replace("，", ",");
             str.Split(',').ToList().ForEach(x => ExpeditionCharacterList.Add(x.Trim()));
-            TaskContext.Instance().Config.AutoSkipConfig.AutoReExploreCharacter = string.Join(",", ExpeditionCharacterList);
+            TaskContext.Instance().Config.AutoSkipConfig.AutoReExploreCharacter =
+                string.Join(",", ExpeditionCharacterList);
         }
     }
 
@@ -72,13 +72,16 @@ public class ExpeditionTask
 
         for (var i = 0; i < 5; i++)
         {
-            var result = CaptureAndOcr(content, new Rect(0, 0, captureRect.Width - (int)(480 * assetScale), captureRect.Height));
+            var result = CaptureAndOcr(content,
+                new Rect(0, 0, captureRect.Width - (int)(480 * assetScale), captureRect.Height));
             var rect = result.FindRectByText("探险完成");
             // TODO i>1 的时候,可以通过关键词“探索派遣限制 4 / 5 ”判断是否已经派遣完成？
             if (rect != default)
             {
                 // 点击探险完成下方的人物头像
-                content.CaptureRectArea.Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale))).Click();
+                content.CaptureRectArea
+                    .Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale)))
+                    .Click();
                 TaskControl.Sleep(100);
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
@@ -128,7 +131,8 @@ public class ExpeditionTask
             var cards = GetCharacterCards(result);
             if (cards.Count > 0)
             {
-                var card = cards.FirstOrDefault(c => c.Idle && c.Name != null && ExpeditionCharacterList.Contains(c.Name)) ?? cards.First(c => c.Idle);
+                var card = cards.FirstOrDefault(c =>
+                    c.Idle && c.Name != null && ExpeditionCharacterList.Contains(c.Name)) ?? cards.First(c => c.Idle);
                 var rect = card.Rects.First();
 
                 using var ra = content.CaptureRectArea.Derive(rect);
@@ -147,7 +151,7 @@ public class ExpeditionTask
     /// </summary>
     /// <param name="result"></param>
     /// <returns></returns>
-    private List<ExpeditionCharacterCard> GetCharacterCards(PaddleOcrResult result)
+    private List<ExpeditionCharacterCard> GetCharacterCards(OcrResult result)
     {
         var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
@@ -162,7 +166,8 @@ public class ExpeditionTask
         var cards = new List<ExpeditionCharacterCard>();
         foreach (var ocrResultRect in ocrResultRects)
         {
-            if (ocrResultRect.Text.Contains("时间缩短") || ocrResultRect.Text.Contains("奖励增加") || ocrResultRect.Text.Contains("暂无加成"))
+            if (ocrResultRect.Text.Contains("时间缩短") || ocrResultRect.Text.Contains("奖励增加") ||
+                ocrResultRect.Text.Contains("暂无加成"))
             {
                 var card = new ExpeditionCharacterCard();
                 card.Rects.Add(ocrResultRect.Rect);
@@ -170,18 +175,21 @@ public class ExpeditionTask
                 foreach (var ocrResultRect2 in ocrResultRects)
                 {
                     if (ocrResultRect2.Rect.Y > ocrResultRect.Rect.Y - 50 * assetScale
-                        && ocrResultRect2.Rect.Y + ocrResultRect2.Rect.Height < ocrResultRect.Rect.Y + ocrResultRect.Rect.Height)
+                        && ocrResultRect2.Rect.Y + ocrResultRect2.Rect.Height <
+                        ocrResultRect.Rect.Y + ocrResultRect.Rect.Height)
                     {
                         if (ocrResultRect2.Text.Contains("探险完成") || ocrResultRect2.Text.Contains("探险中"))
                         {
                             card.Idle = false;
-                            var name = ocrResultRect2.Text.Replace("探险完成", "").Replace("探险中", "").Replace("/", "").Trim();
+                            var name = ocrResultRect2.Text.Replace("探险完成", "").Replace("探险中", "").Replace("/", "")
+                                .Trim();
                             if (!string.IsNullOrEmpty(name))
                             {
                                 card.Name = name;
                             }
                         }
-                        else if (!ocrResultRect2.Text.Contains("时间缩短") && !ocrResultRect2.Text.Contains("奖励增加") && !ocrResultRect2.Text.Contains("暂无加成"))
+                        else if (!ocrResultRect2.Text.Contains("时间缩短") && !ocrResultRect2.Text.Contains("奖励增加") &&
+                                 !ocrResultRect2.Text.Contains("暂无加成"))
                         {
                             card.Name = ocrResultRect2.Text;
                         }
@@ -206,18 +214,18 @@ public class ExpeditionTask
 
     private readonly Pen _pen = new(Color.Red, 1);
 
-    private PaddleOcrResult CaptureAndOcr(CaptureContent content)
+    private OcrResult CaptureAndOcr(CaptureContent content)
     {
         using var ra = TaskControl.CaptureToRectArea();
-        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
+        var result = OcrFactory.Paddle.OcrResult(ra.CacheGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }
 
-    private PaddleOcrResult CaptureAndOcr(CaptureContent content, Rect rect)
+    private OcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
         using var ra = TaskControl.CaptureToRectArea();
-        var result = OcrFactory.Paddle.OcrResult(ra.SrcGreyMat);
+        var result = OcrFactory.Paddle.OcrResult(ra.CacheGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
     }

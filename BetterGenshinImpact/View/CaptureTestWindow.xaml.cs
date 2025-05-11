@@ -1,20 +1,21 @@
 ﻿using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers.Extensions;
 using Fischless.GameCapture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers;
-using OpenCvSharp.WpfExtensions;
+using BetterGenshinImpact.Helpers.Extensions;
 using Wpf.Ui.Violeta.Controls;
+using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.View;
 
-public partial class CaptureTestWindow : Window
+public partial class CaptureTestWindow
 {
     private IGameCapture? _capture;
+    private Size _cacheSize;
 
     private long _captureTime;
     private long _transferTime;
@@ -61,19 +62,26 @@ public partial class CaptureTestWindow : Window
     {
         var sw = new Stopwatch();
         sw.Start();
-        var image = _capture?.Capture();
+        using var mat = _capture?.Capture();
         sw.Stop();
         Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
         _captureTime += sw.ElapsedMilliseconds;
 
-        var bitmap = image?.ForceGetBitmap();
-        if (bitmap != null)
+        if (mat != null)
         {
-            Debug.WriteLine($"Bitmap:{bitmap.Width}x{bitmap.Height}");
+            Debug.WriteLine($"Bitmap:{mat.Width}x{mat.Height}");
             _captureCount++;
             sw.Reset();
             sw.Start();
-            DisplayCaptureResultImage.Source = bitmap.ToBitmapSource();
+            if (_cacheSize != mat.Size())
+            {
+                DisplayCaptureResultImage.Source = mat.ToWriteableBitmap();
+                _cacheSize = mat.Size();
+            }
+            else
+            {
+                mat.UpdateWriteableBitmap((WriteableBitmap)DisplayCaptureResultImage.Source);
+            }
             sw.Stop();
             Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
             _transferTime += sw.ElapsedMilliseconds;

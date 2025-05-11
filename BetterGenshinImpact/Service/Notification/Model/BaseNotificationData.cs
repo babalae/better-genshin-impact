@@ -1,11 +1,11 @@
 ﻿using System;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using System.Text.Json.Serialization;
-using System.Drawing;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Converter;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace BetterGenshinImpact.Service.Notification.Model;
 
@@ -33,7 +33,7 @@ public class BaseNotificationData
     /// 事件触发时的截图
     /// </summary>
     [JsonConverter(typeof(ImageToBase64Converter))]
-    public Image? Screenshot { get; set; }
+    public Image<Rgb24>? Screenshot { get; set; }
 
     /// <summary>
     /// 事件消息

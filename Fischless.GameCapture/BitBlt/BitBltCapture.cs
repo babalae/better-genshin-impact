@@ -15,9 +15,13 @@ public class BitBltCapture : IGameCapture
 
     private volatile bool _lastCaptureFailed;
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        GC.SuppressFinalize(this);
+    }
 
-    public CaptureImageRes? Capture() => Capture(false);
+    public Mat? Capture() => Capture(false);
 
     public void Start(nint hWnd, Dictionary<string, object>? settings = null)
     {
@@ -50,9 +54,8 @@ public class BitBltCapture : IGameCapture
 
 
     /// <summary>
-    /// 检查窗口大小，如果改变则更新截图尺寸。返回是否成功。
+    /// 检查窗口大小，如果改变则更新截图尺寸。
     /// </summary>
-    /// <returns></returns>
     private void CheckSession()
     {
         if (_lockSlim.WaitingWriteCount > 0 || !_lockSlim.TryEnterWriteLock(TimeSpan.FromSeconds(0.5)))
@@ -66,7 +69,7 @@ public class BitBltCapture : IGameCapture
         {
             // 窗口状态变化可能会导致会话失效
             // 上次截图失败则重置会话，避免一直截图失败
-            if (_session is not null && (_session.IsInvalid() || _lastCaptureFailed))
+            if (_session is not null && (_session.Invalid || _lastCaptureFailed))
             {
                 _session.Dispose();
                 _session = null;
@@ -84,15 +87,18 @@ public class BitBltCapture : IGameCapture
             var width = windowRect.right - windowRect.left;
             var height = windowRect.bottom - windowRect.top;
 
-            _session ??= new BitBltSession(_hWnd, width, height);
-            if (_session.Width == width && _session.Height == height)
+            if (_session != null)
             {
-                // 窗口大小没有改变
-                return;
+                if (_session.Width == width && _session.Height == height)
+                {
+                    // 窗口大小没有改变
+                    return;
+                }
+
+                // 窗口尺寸被改变，释放资源，然后重新创建会话
+                _session.Dispose();
             }
 
-            // 窗口尺寸被改变，释放资源，然后重新创建会话
-            _session.Dispose();
             _session = new BitBltSession(_hWnd, width, height);
         }
         catch (Exception e)
@@ -110,7 +116,7 @@ public class BitBltCapture : IGameCapture
     /// </summary>
     /// <param name="recursive">递归标志</param>
     /// <returns>截图</returns>
-    private CaptureImageRes? Capture(bool recursive)
+    private Mat? Capture(bool recursive)
     {
         if (_hWnd == IntPtr.Zero)
         {
@@ -139,13 +145,13 @@ public class BitBltCapture : IGameCapture
             {
                 // 成功截图
                 _lastCaptureFailed = false;
-                return CaptureImageRes.BuildNullable(result);
+                return result;
             }
-            else if (result is null)
+            else
             {
-                if (_lastCaptureFailed) return CaptureImageRes.BuildNullable(result); // 这不是首次失败,不再进行尝试
+                if (_lastCaptureFailed) return result; // 这不是首次失败,不再进行尝试
                 _lastCaptureFailed = true; // 设置失败标志
-                if (recursive) return CaptureImageRes.BuildNullable(result); // 已设置递归标志，说明也不是首次失败
+                if (recursive) return result; // 已设置递归标志，说明也不是首次失败
             }
         }
         finally
@@ -165,24 +171,15 @@ public class BitBltCapture : IGameCapture
     /// 截图功能的实现。需要加锁后调用，一般只由 Capture 方法调用。
     /// </summary>
     /// <returns></returns>
-    private Bitmap? Capture0()
+    private Mat? Capture0()
     {
-        Bitmap? bitmap = null;
         try
         {
-            if (_session is null)
-            {
-                // 没有成功创建会话，直接返回空
-                return null;
-            }
-            bitmap = _session.GetImage();
-            return bitmap;
+            return _session?.GetImage();
         }
         catch (Exception e)
         {
             // 理论这里不应出现异常，除非窗口不存在了或者有什么bug
-            // 出现异常的时候释放内存
-            bitmap?.Dispose();
             Error.WriteLine("[BitBlt]Failed to capture image {0}", e);
             return null;
         }

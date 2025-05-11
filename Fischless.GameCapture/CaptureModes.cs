@@ -4,15 +4,19 @@ namespace Fischless.GameCapture;
 
 public enum CaptureModes
 {
-    // [Description("BitBlt（稳定）")]
-    // BitBlt,
-    
     [Description("BitBlt")]
-    BitBlt,
-    
-    [Description("WindowsGraphicsCapture")]
-    WindowsGraphicsCapture,
-    
+    [DefaultValue(0)]
+    BitBlt = 0,
+
     [Description("DwmGetDxSharedSurface")]
-    DwmGetDxSharedSurface
+    [DefaultValue(1)]
+    DwmGetDxSharedSurface = 2,
+
+    [Description("WindowsGraphicsCapture")]
+    [DefaultValue(2)]
+    WindowsGraphicsCapture = 1,
+
+    [Description("WindowsGraphicsCapture（HDR）")]
+    [DefaultValue(3)]
+    WindowsGraphicsCaptureHdr = 3,
 }

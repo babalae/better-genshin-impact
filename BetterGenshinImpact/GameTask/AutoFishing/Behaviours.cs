@@ -5,14 +5,11 @@ using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
-using Compunet.YoloV8;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing.Imaging;
-using System.IO;
 using static Vanara.PInvoke.User32;
 using Color = System.Drawing.Color;
 using Pen = System.Drawing.Pen;
@@ -22,6 +19,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
 using System.Globalization;
+using Compunet.YoloSharp;
 using Microsoft.Extensions.Localization;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
@@ -57,11 +55,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 detectInterval = timeProvider.GetLocalNow().AddSeconds(0.5);
             }
-            using var memoryStream = new MemoryStream();
-            imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = blackboard.Predictor.Detect(memoryStream);
-            Debug.WriteLine($"YOLOv8识别: {result.Speed}");
+            var result = blackboard.Predictor.Predictor.Detect(imageRegion.CacheImage);
+            Debug.WriteLine($"YOLO识别: {result.Speed}");
             var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == default)
             {
@@ -305,10 +300,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
             // 找 鱼饵落点
-            using var memoryStream = new MemoryStream();
-            imageRegion.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            var result = blackboard.Predictor.Detect(memoryStream);
+            var result = blackboard.Predictor.Predictor.Detect(imageRegion.CacheImage);
             Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
             blackboard.fishpond = fishpond;
@@ -349,13 +341,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 blackboard.Sleep(50);
                 Debug.WriteLine($"{noPlacementTimes}次未找到鱼饵落点");
 
-                var cX = imageRegion.SrcBitmap.Width / 2;
-                var cY = imageRegion.SrcBitmap.Height / 2;
-                var rdX = _rd.Next(0, imageRegion.SrcBitmap.Width);
-                var rdY = _rd.Next(0, imageRegion.SrcBitmap.Height);
+                var cX = imageRegion.CacheImage.Width / 2;
+                var cY = imageRegion.CacheImage.Height / 2;
+                var rdX = _rd.Next(0, imageRegion.CacheImage.Width);
+                var rdY = _rd.Next(0, imageRegion.CacheImage.Height);
 
-                var moveX = 100 * (cX - rdX) / imageRegion.SrcBitmap.Width;
-                var moveY = 100 * (cY - rdY) / imageRegion.SrcBitmap.Height;
+                var moveX = 100 * (cX - rdX) / imageRegion.CacheImage.Width;
+                var moveY = 100 * (cY - rdY) / imageRegion.CacheImage.Height;
 
                 input.Mouse.MoveMouseBy(moveX, moveY);
 
@@ -479,13 +471,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (state == -1)
                 {
                     // 失败 随机移动鼠标
-                    var cX = imageRegion.SrcBitmap.Width / 2;
-                    var cY = imageRegion.SrcBitmap.Height / 2;
-                    var rdX = _rd.Next(0, imageRegion.SrcBitmap.Width);
-                    var rdY = _rd.Next(0, imageRegion.SrcBitmap.Height);
+                    var cX = imageRegion.CacheImage.Width / 2;
+                    var cY = imageRegion.CacheImage.Height / 2;
+                    var rdX = _rd.Next(0, imageRegion.CacheImage.Width);
+                    var rdY = _rd.Next(0, imageRegion.CacheImage.Height);
 
-                    var moveX = 100 * (cX - rdX) / imageRegion.SrcBitmap.Width;
-                    var moveY = 100 * (cY - rdY) / imageRegion.SrcBitmap.Height;
+                    var moveX = 100 * (cX - rdX) / imageRegion.CacheImage.Width;
+                    var moveY = 100 * (cY - rdY) / imageRegion.CacheImage.Height;
 
                     logger.LogInformation("失败 随机移动 {DX}, {DY}", moveX, moveY);
                     input.Mouse.MoveMouseBy(moveX, moveY);
@@ -733,8 +725,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             // OCR 提竿判断
-            using Mat wordCaptureGreyMat = new Mat(imageRegion.SrcGreyMat, liftingWordsAreaRect);
-            var text = ocrService.Ocr(wordCaptureGreyMat);
+            var text = ocrService.Ocr(wordCaptureMat);
 
             if (!string.IsNullOrEmpty(text) && StringUtils.RemoveAllSpace(text).Contains(this.getABiteLocalizedString))
             {

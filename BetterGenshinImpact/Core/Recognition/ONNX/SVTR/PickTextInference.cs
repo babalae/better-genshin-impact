@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
@@ -23,23 +24,21 @@ public class PickTextInference : ITextInference
 
     public PickTextInference()
     {
-        var modelPath = Global.Absolute(@"Assets\Model\Yap\model_training.onnx");
-        if (!File.Exists(modelPath)) throw new FileNotFoundException("Yap模型文件不存在", modelPath);
-
-        _session = new InferenceSession(modelPath, BgiSessionOption.Instance.Options);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(BgiOnnxModel.YapModelTraining,true);
 
         var wordJsonPath = Global.Absolute(@"Assets\Model\Yap\index_2_word.json");
         if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);
 
         var json = File.ReadAllText(wordJsonPath);
-        _wordDictionary = JsonSerializer.Deserialize<Dictionary<int, string>>(json) ?? throw new Exception("index_2_word.json deserialize failed");
+        _wordDictionary = JsonSerializer.Deserialize<Dictionary<int, string>>(json) ??
+                          throw new Exception("index_2_word.json deserialize failed");
     }
 
     public string Inference(Mat mat)
     {
         long startTime = Stopwatch.GetTimestamp();
         // 将输入数据调整为 (1, 1, 32, 384) 形状的张量
-        var reshapedInputData = ToTensorUnsafe(mat, out var owner);
+        var reshapedInputData  = OcrUtils.ToTensorYapDnn(mat, out var owner);
 
         IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results;
 
@@ -86,6 +85,8 @@ public class PickTextInference : ITextInference
         }
     }
 
+
+    [Obsolete("使用CV DNN替代")]
     public static Tensor<float> ToTensorUnsafe(Mat src, out IMemoryOwner<float> tensorMemoryOwnser)
     {
         var channels = src.Channels();

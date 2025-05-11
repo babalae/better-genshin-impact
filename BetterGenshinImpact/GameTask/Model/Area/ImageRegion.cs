@@ -7,97 +7,56 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fischless.GameCapture;
+using Image = SixLabors.ImageSharp.Image;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
 
 public class ImageRegion : Region
 {
-    protected Bitmap? _srcBitmap;
-    protected Mat? _srcMat;
-    protected Mat? _srcGreyMat;
+    private Mat? _cacheGreyMat;
+    private Image<Rgb24>? _cacheImage;
 
-    public Bitmap SrcBitmap
+    public Mat SrcMat { get; }
+
+    public Mat CacheGreyMat
     {
         get
         {
-            if (_srcBitmap != null)
-            {
-                return _srcBitmap;
-            }
-
-            if (_srcMat == null)
-            {
-                throw new Exception("SrcBitmap和SrcMat不能同时为空");
-            }
-
-            _srcBitmap = _srcMat.ToBitmap();
-            return _srcBitmap;
+            if (_cacheGreyMat != null)
+                return _cacheGreyMat;
+            _cacheGreyMat = new Mat();
+            Cv2.CvtColor(SrcMat, _cacheGreyMat, ColorConversionCodes.BGR2GRAY);
+            return _cacheGreyMat;
         }
     }
 
-    public Mat SrcMat
+    public unsafe Image<Rgb24> CacheImage
     {
         get
         {
-            if (_srcMat != null)
-            {
-                return _srcMat;
-            }
+            if (_cacheImage != null)
+                return _cacheImage;
 
-            if (_srcBitmap == null)
-            {
-                throw new Exception("SrcBitmap和SrcMat不能同时为空");
-            }
+            using var mat = SrcMat.CvtColor(ColorConversionCodes.BGR2RGB);
+            var bufferSize = (int)SrcMat.Step() * SrcMat.Height;
+            using var image = Image.WrapMemory<Rgb24>(mat.DataPointer, bufferSize, mat.Width, mat.Height);
+            _cacheImage = image.Clone();
 
-            _srcMat = _srcBitmap.ToMat();
-            return _srcMat;
-        }
-    }
-
-    public Mat SrcGreyMat
-    {
-        get
-        {
-            _srcGreyMat ??= new Mat();
-            Cv2.CvtColor(SrcMat, _srcGreyMat, ColorConversionCodes.BGR2GRAY);
-            return _srcGreyMat;
+            return _cacheImage;
         }
     }
 
     public ImageRegion(Mat mat, int x, int y, Region? owner = null, INodeConverter? converter = null,
         DrawContent? drawContent = null) : base(x, y, mat.Width, mat.Height, owner, converter, drawContent)
     {
-        _srcMat = mat;
-    }
-
-    public ImageRegion(CaptureImageRes image, int x, int y, Region? owner = null, INodeConverter? converter = null,
-        DrawContent? drawContent = null) : base(x, y, image.Width, image.Height, owner, converter, drawContent)
-    {
-        if (image.Bitmap != null)
-        {
-            _srcBitmap = image.Bitmap;
-        }
-        else if (image.Mat != null)
-        {
-            _srcMat = image.Mat;
-        }
-        else
-        {
-            throw new Exception("ImageRegion的构造函数参数错误");
-        }
-    }
-
-    private bool HasImage()
-    {
-        return _srcBitmap != null || _srcMat != null;
+        SrcMat = mat;
     }
 
     /// <summary>
@@ -148,11 +107,6 @@ public class ImageRegion : Region
     /// <exception cref="Exception"></exception>
     public Region Find(RecognitionObject ro, Action<Region>? successAction = null, Action? failAction = null)
     {
-        if (!HasImage())
-        {
-            throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
-        }
-
         if (ro == null)
         {
             throw new Exception("识别对象不能为null");
@@ -171,7 +125,7 @@ public class ImageRegion : Region
             else
             {
                 template = ro.TemplateImageGreyMat;
-                roi = SrcGreyMat;
+                roi = CacheGreyMat;
             }
 
             if (template == null)
@@ -226,10 +180,10 @@ public class ImageRegion : Region
                 throw new Exception($"[OCR]识别对象{ro.Name}的匹配文本不能全为空");
             }
 
-            var roi = SrcGreyMat;
+            var roi = SrcMat;
             if (ro.RegionOfInterest != default)
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);
@@ -323,10 +277,10 @@ public class ImageRegion : Region
             }
             else
             {
-                roi = SrcGreyMat;
+                roi = SrcMat;
                 if (ro.RegionOfInterest != default)
                 {
-                    roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                    roi = new Mat(SrcMat, ro.RegionOfInterest);
                 }
             }
 
@@ -390,11 +344,6 @@ public class ImageRegion : Region
     public List<Region> FindMulti(RecognitionObject ro, Action<List<Region>>? successAction = null,
         Action? failAction = null)
     {
-        if (!HasImage())
-        {
-            throw new Exception("当前对象内没有图像内容，无法完成 Find 操作");
-        }
-
         if (ro == null)
         {
             throw new Exception("识别对象不能为null");
@@ -413,7 +362,7 @@ public class ImageRegion : Region
             else
             {
                 template = ro.TemplateImageGreyMat;
-                roi = SrcGreyMat;
+                roi = CacheGreyMat;
             }
 
             if (template == null)
@@ -454,10 +403,10 @@ public class ImageRegion : Region
         }
         else if (RecognitionTypes.Ocr.Equals(ro.RecognitionType))
         {
-            var roi = SrcGreyMat;
+            var roi = SrcMat;
             if (ro.RegionOfInterest != default)
             {
-                roi = new Mat(SrcGreyMat, ro.RegionOfInterest);
+                roi = new Mat(SrcMat, ro.RegionOfInterest);
             }
 
             var result = OcrFactory.Paddle.OcrResult(roi);
@@ -501,8 +450,8 @@ public class ImageRegion : Region
 
     public new void Dispose()
     {
-        _srcGreyMat?.Dispose();
-        _srcMat?.Dispose();
-        _srcBitmap?.Dispose();
+        _cacheImage?.Dispose();
+        _cacheGreyMat?.Dispose();
+        SrcMat.Dispose();
     }
 }

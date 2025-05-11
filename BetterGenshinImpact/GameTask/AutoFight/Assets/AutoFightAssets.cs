@@ -19,6 +19,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public RecognitionObject WandererIconRa;
     public RecognitionObject WandererIconNoActiveRa;
     public RecognitionObject ConfirmRa;
+    public RecognitionObject ArtifactAreaRa;
     public RecognitionObject ExitRa;
     public RecognitionObject ClickAnyCloseTipRa;
     public RecognitionObject UseCondensedResinRa;
@@ -189,6 +190,14 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "confirm.png"),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        ArtifactAreaRa = new RecognitionObject
+        {
+            Name = "ArtifactArea",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "artifact_flower_logo.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2,0,CaptureRect.Width / 2, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
 

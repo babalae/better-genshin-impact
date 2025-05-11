@@ -228,7 +228,7 @@ public partial class AutoWoodTask : ISoloTask
         {
             // OCR识别文本区域
             var woodCountRect = CaptureToRectArea().DeriveCrop(assert.WoodCountUpperRect);
-            return OcrFactory.Paddle.Ocr(woodCountRect.SrcGreyMat);
+            return OcrFactory.Paddle.Ocr(woodCountRect.SrcMat);
         }
 
         private bool HasDetectedWoodText(string recognizedText)

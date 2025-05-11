@@ -21,7 +21,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Vanara.PInvoke;
@@ -253,7 +252,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         // 黑屏剧情要点击鼠标（多次） 几乎全黑的时候不用点击
         if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1200)
         {
-            using var grayMat = new Mat(content.CaptureRectArea.SrcGreyMat, new Rect(0, content.CaptureRectArea.SrcGreyMat.Height / 3, content.CaptureRectArea.SrcGreyMat.Width, content.CaptureRectArea.SrcGreyMat.Height / 3));
+            using var grayMat = new Mat(content.CaptureRectArea.CacheGreyMat, new Rect(0, content.CaptureRectArea.CacheGreyMat.Height / 3, content.CaptureRectArea.CacheGreyMat.Width, content.CaptureRectArea.CacheGreyMat.Height / 3));
             var blackCount = OpenCvCommonHelper.CountGrayMatColor(grayMat, 0);
             var rate = blackCount * 1d / (grayMat.Width * grayMat.Height);
             if (rate is >= 0.5 and < 0.98999)
@@ -305,7 +304,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             // OCR识别选项文字
             foreach (var hangoutOption in hangoutOptionList)
             {
-                var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcGreyMat);
+                var text = OcrFactory.Paddle.Ocr(hangoutOption.TextRect!.SrcMat);
                 hangoutOption.OptionTextSrc = StringUtils.RemoveAllEnter(text);
             }
 
