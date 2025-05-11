@@ -53,11 +53,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject SereniteaPotMoneyRo;
     public RecognitionObject SereniteapotPageClose;
     public RecognitionObject SereniteapotShopNumberBtn;
-    public RecognitionObject AYuanExpBottleBigRo;
-    public RecognitionObject AYuanExpBottleSmallRo;
+    
+    public RecognitionObject AYuanClothRo;
+    public RecognitionObject AYuanresinRo;
     public RecognitionObject SereniteapotExpBookRo;
     public RecognitionObject SereniteapotExpBookSmallRo;
-
+    public RecognitionObject AYuanMagicmineralprecisionRo;
+    public RecognitionObject AYuanMOlaRo;
+    public RecognitionObject AYuanExpBottleBigRo;
+    public RecognitionObject AYuanExpBottleSmallRo;
 
     private ElementAssets()
     {
@@ -359,7 +363,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "AYuanExpBottleBigRo",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_big.png"),
-            RegionOfInterest = new Rect( 0, 0, CaptureRect.Width , CaptureRect.Height),
+            RegionOfInterest = new Rect( 0, 0, CaptureRect.Width*7/10 , CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
         AYuanExpBottleSmallRo = new RecognitionObject
@@ -367,7 +371,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "AYuanExpBottleSmallRo",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_small.png"),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
         SereniteapotPageClose = new RecognitionObject
@@ -391,7 +395,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "SereniteapotExpBookRo",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book.png"),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
         SereniteapotExpBookSmallRo = new RecognitionObject
@@ -399,11 +403,40 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "SereniteapotExpBookSmallRo",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book_small.png"),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width, CaptureRect.Height),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
-
-
-
-}
+        AYuanClothRo = new RecognitionObject
+        {
+            Name = "AYuanClothRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_cloth.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        AYuanresinRo = new RecognitionObject
+        {
+            Name = "AYuanresinRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_resin.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        AYuanMagicmineralprecisionRo = new RecognitionObject
+        {
+            Name = "AYuanMagicmineralprecisionRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_magicmineralprecision.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+        AYuanMOlaRo = new RecognitionObject
+        {
+            Name = "AYuanMOlaRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_mola.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
+            DrawOnWindow = false
+        }.InitTemplate();
+    }
 }
