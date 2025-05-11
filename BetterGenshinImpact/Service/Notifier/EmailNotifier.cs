@@ -1,4 +1,3 @@
-using System.Drawing.Imaging;
 using System.IO;
 using System.Net;
 using System.Net.Mail;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using SixLabors.ImageSharp;
 
 namespace BetterGenshinImpact.Service.Notifier
 {
@@ -87,7 +87,7 @@ namespace BetterGenshinImpact.Service.Notifier
                             try
                             {
                                 // 保存图片到临时文件
-                                content.Screenshot.Save(tempPath, ImageFormat.Jpeg);
+                                await content.Screenshot.SaveAsJpegAsync(tempPath);
 
                                 // 从文件添加附件
                                 var attachment = new Attachment(tempPath);

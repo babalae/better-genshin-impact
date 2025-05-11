@@ -17,6 +17,10 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Core.Config;
+using System.Collections.ObjectModel;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -28,15 +32,25 @@ internal class GoToSereniteaPotTask
     private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
 
     private readonly string ayuanHeyString;
+    private readonly string ayuanHuolingString;
+    private readonly string ayuanHuoling2String;
     private readonly string ayuanBelieveString;
     private readonly string ayuanShopString;
     private readonly string ayuanByeString;
+    private string dongTianName;
+    
+    private  OneDragonFlowConfig? SelectedConfig;
+    private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
+    private static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
+    
 
     public GoToSereniteaPotTask()
     {
         IStringLocalizer<GoToSereniteaPotTask> stringLocalizer = App.GetService<IStringLocalizer<GoToSereniteaPotTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         this.ayuanHeyString = stringLocalizer.WithCultureGet(cultureInfo, "阿圆");
+        this.ayuanHuolingString = stringLocalizer.WithCultureGet(cultureInfo, "壶灵");
+        this.ayuanHuoling2String = stringLocalizer.WithCultureGet(cultureInfo, "<壶灵>");
         this.ayuanBelieveString = stringLocalizer.WithCultureGet(cultureInfo, "信任");
         this.ayuanShopString = stringLocalizer.WithCultureGet(cultureInfo, "洞天百宝");
         this.ayuanByeString = stringLocalizer.WithCultureGet(cultureInfo, "再见");
@@ -64,10 +78,32 @@ internal class GoToSereniteaPotTask
 
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
         await Delay(900, ct);
+        
         // 进入 壶
         await ChangeCountryForce("尘歌壶", ct);
+        
+        
+
+        
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
         var ra = CaptureToRectArea();
+        //确定洞天名称
+        var list = ra.FindMulti(new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height*9/10, (int)(ra.Width * 0.073), (int)(ra.Height*0.04))
+        });
+        if (list.Count > 0)
+        {
+            dongTianName = list[0].Text;
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
+        }
+        else
+        {
+            dongTianName = "";
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
+        }
+        
         for (int i = 0; i < 3; i++)
         {
             var sereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
@@ -105,10 +141,54 @@ internal class GoToSereniteaPotTask
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
     }
 
+    
 
     // 寻找阿圆并靠近
     private async Task FindAYuan(CancellationToken ct)
     {
+        if (!string.IsNullOrEmpty(dongTianName)){
+            await Delay(500, ct);
+            switch (dongTianName)
+            {
+                case "妙香林":
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "在妙香林，调整位置");
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    await Delay(200, ct);
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    break;
+                case "清琼岛":
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "在清琼岛，调整位置");
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+                    await Delay(100, ct);
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    await Delay(300, ct);
+                    Simulation.SendInput.Mouse.MiddleButtonClick();
+                    await Delay(500, ct);
+                    break;
+                case "绘绮庭":
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "在绘绮庭，调整位置");
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+                    await Delay(1300, ct);
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    await Delay(500, ct);
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+                    await Delay(600, ct);
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                    await Delay(300, ct);
+                    Simulation.SendInput.Mouse.MiddleButtonClick();
+                    await Delay(800, ct);
+                    break;
+                case "旋流屿":
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "在旋流屿，调整位置");
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+                    await Delay(900, ct);
+                    TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                    await Delay(300, ct);
+                    Simulation.SendInput.Mouse.MiddleButtonClick();
+                    await Delay(800, ct);
+                    break;
+            }
+        }
         Logger.LogInformation("领取尘歌壶奖励:{text}", "寻找阿圆");
         CancellationTokenSource treeCts = new();
         ct.Register(treeCts.Cancel);
@@ -122,12 +202,14 @@ internal class GoToSereniteaPotTask
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,
-                RegionOfInterest = new Rect(ra.Width / 5, ra.Height / 10, (int)(ra.Width * 0.65), ra.Height / 2)
+                RegionOfInterest = new Rect(ra.Width / 5, ra.Height / 15, (int)(ra.Width * 0.65), ra.Height / 2)
             });
-            Region? ayuanIcon = list.FirstOrDefault(r => r.Text.Length == ayuanHeyString.Length && r.Text.Contains(ayuanHeyString));
+            Region? ayuanIcon = list.FirstOrDefault(r =>
+                r.Text.Contains(ayuanHeyString) || r.Text.Contains(ayuanHuolingString)||
+                 r.Text.Contains(ayuanHuoling2String)); 
             if (ayuanIcon == null)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy(ra.Width / 3, 0);
+                Simulation.SendInput.Mouse.MoveMouseBy(ra.Width / 10, 0);
                 continuousCount++;
             }
             else
@@ -140,22 +222,30 @@ internal class GoToSereniteaPotTask
                     await Delay(300, ct);
                     continue;
                 }
-
                 var middle = ra.Width / 2;
                 var ayuanMiddle = ayuanIcon.X + ayuanIcon.Width / 2;
-                if (Math.Abs(middle - ayuanMiddle) > ayuanIcon.Width / 4)
+                if (Math.Abs(middle - ayuanMiddle) > ayuanIcon.Width*1.4) //放宽范围，尽快找到阿圆
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle) / 2, 0);
+                    if(ayuanMiddle - middle > 0)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle)/2, 0);//未对正前小转
+                        await Delay(300, ct);
+                    }
+                    else if(ayuanMiddle - middle < 0)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle)*3/2, 0);//转过头回转加大距离
+                        await Delay(300, ct);
+                    }
                 }
                 else
                 {
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "寻找阿圆成功");
                     break;
                 }
+                await Delay(300, ct);
             }
-
-            await Delay(500, ct);
-            if (continuousCount > 24)
+            await Delay(100, ct);
+            if (continuousCount > 180)
             {
                 fail = true;
                 Logger.LogWarning("领取尘歌壶奖励:{text}", "寻找阿圆失败");
@@ -176,7 +266,7 @@ internal class GoToSereniteaPotTask
                     treeCts.Cancel();
                     break;
                 }
-
+                TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.Drop);//防止爬墙
                 await Delay(50, treeCts.Token);
             }
         }, treeCts.Token);
@@ -260,39 +350,93 @@ internal class GoToSereniteaPotTask
             await Delay(500, ct);
             CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).Click();
         }
-
+        
+        InitConfigList();
         await Delay(900, ct);
         // 商店购买
-        var shopOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanShopString, ct);
-        if (shopOption == TalkOptionRes.FoundAndClick)
+        if (SelectedConfig.SecretTreasureObjects.Count == 0) 
         {
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品");
-            await Delay(500, ct);
-            // 购买的物品清单
-            var buy = new List<RecognitionObject>()
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
+            return; 
+        }
+        DateTime now = DateTime.Now;  
+        DayOfWeek currentDayOfWeek = now.DayOfWeek;
+        DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
+        if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
+        {
+            // 对比当前日期的星期几与配置中的星期几
+            if (configDayOfWeek.HasValue && currentDayOfWeek == configDayOfWeek.Value || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
             {
-                ElementAssets.Instance.AYuanExpBottleBigRo,
-                ElementAssets.Instance.AYuanExpBottleSmallRo,
-                ElementAssets.Instance.SereniteapotExpBookRo,
-                ElementAssets.Instance.SereniteapotExpBookSmallRo,
-            };
-            // 直接购买最大数量
-            foreach (var item in buy)
-            {
-                var itemRo = CaptureToRectArea().Find(item);
-                if (itemRo.IsExist())
+                var shopOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanShopString, ct);
+                if (shopOption == TalkOptionRes.FoundAndClick)
                 {
-                    itemRo.Click();
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品");
+                    
                     await Delay(500, ct);
-                    await BuyMaxNumber(ct);
-                    await Delay(500, ct);
+                    // 购买的物品清单
+                    var buy = new List<RecognitionObject>();
+                    SelectedConfig.SecretTreasureObjects.RemoveAt(0);
+                    Logger.LogInformation("购买洞天百宝物品：{text}",string.Join(" / ", SelectedConfig.SecretTreasureObjects)); // 输出所有需要购买的商品
+                    foreach (var potBuyItem in SelectedConfig.SecretTreasureObjects)
+                    {
+                        switch (potBuyItem)
+                        {
+                            case "布匹":
+                                buy.Add(ElementAssets.Instance.AYuanClothRo);
+                                break;
+                            case "须臾树脂":
+                                buy.Add(ElementAssets.Instance.AYuanresinRo);
+                                break;
+                            case "大英雄的经验":
+                                buy.Add(ElementAssets.Instance.SereniteapotExpBookRo);
+                                break;
+                            case "流浪者的经验":
+                                buy.Add(ElementAssets.Instance.SereniteapotExpBookSmallRo);
+                                break;
+                            case "精锻用魔矿":
+                                buy.Add(ElementAssets.Instance.AYuanMagicmineralprecisionRo);
+                                break;
+                            case "摩拉":
+                                buy.Add(ElementAssets.Instance.AYuanMOlaRo);
+                                break;
+                            case "祝圣精华":
+                                buy.Add(ElementAssets.Instance.AYuanExpBottleBigRo);
+                                break;
+                            case "祝圣油膏":
+                                buy.Add(ElementAssets.Instance.AYuanExpBottleSmallRo);
+                                break;
+                            default:
+                                Logger.LogInformation("未知的商品");
+                                break;
+                        }
+                    }
+
+                    // 直接购买最大数量
+                    foreach (var item in buy)
+                    {
+                        var itemRo = CaptureToRectArea().Find(item);
+                        if (itemRo.IsExist())
+                        {
+                            itemRo.Click();
+                            await Delay(500, ct);
+                            await BuyMaxNumber(ct);
+                            await Delay(500, ct);
+                        }
+                    }
+                    await Delay(900, ct);
+                    Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品完成");
+                    // 购买完成 关闭page
+                    CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo, a => a.Click());
                 }
             }
-
-            await Delay(900, ct);
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品完成");
-            // 购买完成 关闭page
-            CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo, a => a.Click());
+            else
+            {
+                Logger.LogInformation("领取尘歌壶奖励: 今天不是购买商店物品的{text}", SelectedConfig.SecretTreasureObjects.First());     
+            }
+        }
+        else
+        {
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
         }
 
         await Delay(900, ct);
@@ -374,15 +518,15 @@ internal class GoToSereniteaPotTask
 
     public async Task DoOnce(CancellationToken ct)
     {
-        /**
-         * 1. 首先退出到主页面
-         * 2. 进入尘歌壶
-         * 3. 旋转视角寻找 阿圆
-         * 4. 贴近阿圆到能对话的地方，并对话
-         * 5. 领取奖励
-         */
+        // /**
+        //  * 1. 首先退出到主页面
+        //  * 2. 进入尘歌壶
+        //  * 3. 旋转视角寻找 阿圆
+        //  * 4. 贴近阿圆到能对话的地方，并对话
+        //  * 5. 领取奖励
+        //  */
         // 进入尘歌壶
-        await IntoSereniteaPot(ct);
+         await IntoSereniteaPot(ct);
         // 寻找阿圆并靠近
         await FindAYuan(ct);
         // 领取奖励
@@ -398,4 +542,77 @@ internal class GoToSereniteaPotTask
         // 收尾操作 - 退出到主页面 - 传送到提瓦特大陆
         await Finished(ct);
     }
+    
+    private void InitConfigList()
+    {
+        Directory.CreateDirectory(OneDragonFlowConfigFolder);
+        // 读取文件夹内所有json配置，按创建时间正序
+        var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
+        var configs = new List<OneDragonFlowConfig>();
+
+        OneDragonFlowConfig? selected = null;
+        foreach (var configFile in configFiles)
+        {
+            var json = File.ReadAllText(configFile);
+            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
+            if (config != null)
+            {
+                configs.Add(config);
+                if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
+                {
+                    selected = config;
+                }
+            }
+        }
+
+        if (selected == null)
+        {
+            if (configs.Count > 0)
+            {
+                selected = configs[0];
+            }
+            else
+            {
+                selected = new OneDragonFlowConfig
+                {
+                    Name = "默认配置"
+                };
+                configs.Add(selected);
+            }
+        }
+
+        ConfigList.Clear();
+        foreach (var config in configs)
+        {
+            ConfigList.Add(config);
+        }
+
+        SelectedConfig = selected;
+    }
+    
+    private DayOfWeek? GetDayOfWeekFromConfig(string configDay)
+    {
+        switch (configDay)
+        {
+            case "星期一":
+                return DayOfWeek.Monday;
+            case "星期二":
+                return DayOfWeek.Tuesday;
+            case "星期三":
+                return DayOfWeek.Wednesday;
+            case "星期四":
+                return DayOfWeek.Thursday;
+            case "星期五":
+                return DayOfWeek.Friday;
+            case "星期六":
+                return DayOfWeek.Saturday;
+            case "星期日":
+                return DayOfWeek.Sunday;
+            case "每天重复":
+                return null; // 返回 null 表示每天都重复购买
+            default:
+                return null; // 返回 null 表示配置中的值不是有效的星期几
+        }
+    }
+    
 }

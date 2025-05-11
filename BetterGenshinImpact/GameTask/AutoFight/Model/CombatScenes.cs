@@ -7,19 +7,17 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Core.Simulator;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -110,7 +108,7 @@ public class CombatScenes : IDisposable
             for (var i = 0; i < avatarSideIconRectList.Count; i++)
             {
                 var ra = imageRegion.DeriveCrop(avatarSideIconRectList[i]);
-                var pair = ClassifyAvatarCnName(ra.SrcBitmap, i + 1);
+                var pair = ClassifyAvatarCnName(ra.CacheImage, i + 1);
                 names[i] = pair.Item1;
                 if (!string.IsNullOrEmpty(pair.Item2))
                 {
@@ -139,9 +137,9 @@ public class CombatScenes : IDisposable
         return this;
     }
 
-    public (string, string) ClassifyAvatarCnName(Bitmap src, int index)
+    public (string, string) ClassifyAvatarCnName(Image<Rgb24> img, int index)
     {
-        var className = ClassifyAvatarName(src, index);
+        var className = ClassifyAvatarName(img, index);
 
         var nameEn = className;
         var costumeName = "";
@@ -156,14 +154,11 @@ public class CombatScenes : IDisposable
         return (avatar.Name, costumeName);
     }
 
-    public string ClassifyAvatarName(Bitmap src, int index)
+    public string ClassifyAvatarName(Image<Rgb24> img, int index)
     {
         SpeedTimer speedTimer = new();
-        using var memoryStream = new MemoryStream();
-        src.Save(memoryStream, ImageFormat.Bmp);
-        memoryStream.Seek(0, SeekOrigin.Begin);
         speedTimer.Record("角色侧面头像图像转换");
-        var result = _predictor.Predictor.Classify(memoryStream);
+        var result = _predictor.Predictor.Classify(img);
         speedTimer.Record("角色侧面头像分类识别");
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
@@ -173,7 +168,7 @@ public class CombatScenes : IDisposable
             // 降低琴和衣装角色的识别率要求
             if (topClass.Confidence < 0.51)
             {
-                Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+                img.SaveAsPng(@"log\avatar_side_classify_error.png");
                 throw new Exception(
                     $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
@@ -182,7 +177,7 @@ public class CombatScenes : IDisposable
         {
             if (topClass.Confidence < 0.7)
             {
-                Cv2.ImWrite(@"log\avatar_side_classify_error.png", src.ToMat());
+                img.SaveAsPng(@"log\avatar_side_classify_error.png");
                 throw new Exception(
                     $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }

@@ -29,12 +29,14 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using static Vanara.PInvoke.Kernel32;
+using static Vanara.PInvoke.User32;
 using Microsoft.Extensions.Localization;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
 using Compunet.YoloSharp;
@@ -44,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 public class AutoDomainTask : ISoloTask
 {
     public string Name => "自动秘境";
-    
+
     private readonly AutoDomainParam _taskParam;
 
     private readonly BgiYoloPredictor _predictor;
@@ -54,7 +56,7 @@ public class AutoDomainTask : ISoloTask
     private readonly CombatScriptBag _combatScriptBag;
 
     private CancellationToken _ct;
-    
+
     private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
 
     private readonly string challengeCompletedLocalizedString;
@@ -62,6 +64,9 @@ public class AutoDomainTask : ISoloTask
     private readonly string skipLocalizedString;
     private readonly string leyLineDisorderLocalizedString;
     private readonly string clickanywheretocloseLocalizedString;
+    private readonly string enterString;
+    private readonly string matchingChallengeString;
+    private readonly string rapidformationString;
 
     public AutoDomainTask(AutoDomainParam taskParam)
     {
@@ -81,6 +86,9 @@ public class AutoDomainTask : ISoloTask
         this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
         this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
         this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
+        this.enterString = stringLocalizer.WithCultureGet(cultureInfo, "Enter");
+        this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
+        this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
     }
 
     public async Task Start(CancellationToken ct)
@@ -335,30 +343,32 @@ public class AutoDomainTask : ISoloTask
                 await Delay(800, _ct);
             }
         }
-        
-        DateTime now = DateTime.Now;        
+
+        DateTime now = DateTime.Now;
         if (now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4)
         {
-            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa);//检测是否为圣遗物副本
+            using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
             {
-                
                 if (int.TryParse(_taskParam.SundaySelectedValue, out int sundaySelectedValue))
                 {
                     if (sundaySelectedValue > 0)
                     {
                         Logger.LogInformation("周日设置了秘境奖励序号 {sundaySelectedValue}", sundaySelectedValue);
                         using var abnormalscreenRa = CaptureToRectArea();
-                        GlobalMethod.MoveMouseTo(abnormalscreenRa.Width/4,abnormalscreenRa.Height/2);//移到左侧
+                        GlobalMethod.MoveMouseTo(abnormalscreenRa.Width / 4, abnormalscreenRa.Height / 2); //移到左侧
                         for (var i = 0; i < 150; i++)
                         {
                             Simulation.SendInput.Mouse.VerticalScroll(-1);
                             await Delay(10, _ct);
                         }
+
                         await Delay(400, _ct);
-                        
+
                         using var abnormalRa = CaptureToRectArea();
-                        var ocrList = abnormalRa.FindMulti(RecognitionObject.Ocr(0, 0, abnormalRa.Width*0.5, abnormalRa.Height));
+                        var ocrList =
+                            abnormalRa.FindMulti(RecognitionObject.Ocr(0, 0, abnormalRa.Width * 0.5,
+                                abnormalRa.Height));
                         var done = ocrList.LastOrDefault(t =>
                             Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString));
                         if (done != null)
@@ -368,10 +378,10 @@ public class AutoDomainTask : ISoloTask
                             switch (sundaySelectedValue)
                             {
                                 case 1:
-                                    GlobalMethod.Click(done.X, done.Y-abnormalRa.Height/5);
+                                    GlobalMethod.Click(done.X, done.Y - abnormalRa.Height / 5);
                                     break;
                                 case 2:
-                                    GlobalMethod.Click(done.X, done.Y-abnormalRa.Height/10);
+                                    GlobalMethod.Click(done.X, done.Y - abnormalRa.Height / 10);
                                     break;
                                 case 3:
                                     GlobalMethod.Click(done.X, done.Y);
@@ -393,55 +403,79 @@ public class AutoDomainTask : ISoloTask
                 {
                     Logger.LogWarning("周日设置秘境奖励序号错误，请检查配置页面");
                 }
-            } else
+            }
+            else
             {
                 Logger.LogWarning("周日奖励选择：圣遗物副本无需选择奖励");
             }
+
             await Delay(300, _ct);
             //await Delay(100000, _ct);//调试延时=========
         }
-        
-        // 点击单人挑战
+
+        // 点击单人挑战,增加容错，点击失败则继续尝试
         int retryTimes = 0;
-        while (retryTimes < 20)
+        while (retryTimes < 40)
         {
             retryTimes++;
             using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
+                await Delay(500, _ct);
                 confirmRectArea.Click();
-                break;
+                await Delay(500, _ct);
+                var ra = CaptureToRectArea();
+                var matchingChallengeArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
+                    ra.Width * 0.13, ra.Height * 0.06));
+                var done = matchingChallengeArea.LastOrDefault(t =>
+                    Regex.IsMatch(t.Text, this.matchingChallengeString));
+                if (done != null)
+                {
+                    continue;
+                }
+                else
+                {
+                    break;
+                }
             }
 
-            await Delay(1500, _ct);
+            await Delay(500, _ct);
         }
 
-        // 判断弹框
-        await Delay(600, _ct);
-        var ra = CaptureToRectArea();
-        using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
-            ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32  - ra.Height * 0.353));
-        if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
-        {
-            Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
-            throw new Exception("当前树脂不足，自动秘境停止运行。");
-        }
-
-        // 点击进入
+        //如果卡顿，可能会错过"是否仍要挑战该秘境"判断弹框,改为判断"快速编队"后进行点击进入
         retryTimes = 0;
-        while (retryTimes < 20)
+        while (retryTimes < 30)
         {
-            retryTimes++;
-            using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
-            if (!confirmRectArea.IsEmpty())
+            await Delay(600, _ct);
+            var ra = CaptureToRectArea();
+            var rapidformationStringArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
+                ra.Width * 0.13, ra.Height * 0.06));
+            var done = rapidformationStringArea.LastOrDefault(t =>
+                Regex.IsMatch(t.Text, this.rapidformationString));
+            if (done != null)
             {
-                confirmRectArea.Click();
+                using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
+                if (!confirmRectArea.IsEmpty())
+                {
+                    confirmRectArea.Click();
+                    await Delay(500, _ct);
+                }
+            }
+            else
+            {
                 break;
             }
 
-            await Delay(1200, _ct);
-        }
+            using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
+                ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
+            if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
+            {
+                Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
+                throw new Exception("当前树脂不足，自动秘境停止运行。");
+            }
 
+            retryTimes++;
+        }
 
         // 载入动画
         await Delay(3000, _ct);
@@ -455,14 +489,6 @@ public class AutoDomainTask : ISoloTask
         {
             retryTimes++;
             using var ra = CaptureToRectArea();
-            // using var cactRectArea =ra.Find(AutoFightAssets.Instance.ClickAnyCloseTipRa);
-            // if (!cactRectArea.IsEmpty())
-            // {
-            //     await Delay(1000, _ct);
-            //     cactRectArea.Click();
-            //     break;
-            // }
-
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
             var done = ocrList.FirstOrDefault(t =>
                 Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
@@ -472,24 +498,23 @@ public class AutoDomainTask : ISoloTask
                 await Delay(1000, _ct);
                 done.Click();
                 await Delay(500, _ct);
-                
-                using var reRa = CaptureToRectArea();//再次确认
-                var reocrList = reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.2, reRa.Width, reRa.Height * 0.6));
-                var redone = reocrList.FirstOrDefault(t =>
-                    Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
-                    Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString));
-                if (redone != null)
-                {
-                    continue;
-                }
+            }
+
+            // todo 添加小地图角标位置检测 防止有人手点了==>可改为OCR检测再次确认左下角是否有聊天框文字
+            using var reRa = CaptureToRectArea();
+            var reocrList =
+                reRa.FindMulti(RecognitionObject.Ocr(0, reRa.Height * 0.9, reRa.Width * 0.1, reRa.Height * 0.07));
+            var redone = reocrList.FirstOrDefault(t =>
+                Regex.IsMatch(t.Text, this.enterString));
+            if (redone != null)
+            {
                 break;
             }
 
-            // todo 添加小地图角标位置检测 防止有人手点了
             await Delay(500, _ct);
         }
 
-        await Delay(2000, _ct);
+        await Delay(1000, _ct);
     }
 
     private List<CombatCommand> FindCombatScriptAndSwitchAvatar(CombatScenes combatScenes)
@@ -710,7 +735,7 @@ public class AutoDomainTask : ISoloTask
         // 识别道具图标下是否是数字
         var s = TaskContext.Instance().SystemInfo.AssetScale;
         var countArea = ra.DeriveCrop(1800 * s, 845 * s, 40 * s, 20 * s);
-        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
         return int.TryParse(count, out _);
     }
 
@@ -899,10 +924,7 @@ public class AutoDomainTask : ISoloTask
 
     private Rect DetectTree(ImageRegion region)
     {
-        using var memoryStream = new MemoryStream();
-        region.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = _predictor.Predictor.Detect(memoryStream);
+        var result = _predictor.Predictor.Detect(region.CacheImage);
         var list = new List<RectDrawable>();
         foreach (var box in result)
         {
@@ -1106,7 +1128,7 @@ public class AutoDomainTask : ISoloTask
             var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
                 condensedResinCountRa.Y, condensedResinCountRa.Width, condensedResinCountRa.Height);
             // Cv2.ImWrite($"log/resin_{DateTime.Now.ToString("yyyy-MM-dd HH：mm：ss：ffff")}.png", countArea.SrcGreyMat);
-            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcGreyMat);
+            var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
             condensedResinCount = StringUtils.TryParseInt(count);
         }
 

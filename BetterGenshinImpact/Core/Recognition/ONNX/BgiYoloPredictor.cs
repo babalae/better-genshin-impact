@@ -3,8 +3,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
 using BetterGenshinImpact.View.Drawable;
@@ -45,10 +43,7 @@ public class BgiYoloPredictor : IDisposable
     /// <returns>类别-矩形框</returns>
     public Dictionary<string, List<Rect>> Detect(ImageRegion region)
     {
-        using var memoryStream = new MemoryStream();
-        region.SrcBitmap.Save(memoryStream, ImageFormat.Bmp);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        var result = Predictor.Detect(memoryStream);
+        var result = Predictor.Detect(region.CacheImage);
 
 
         var dict = new Dictionary<string, List<Rect>>();

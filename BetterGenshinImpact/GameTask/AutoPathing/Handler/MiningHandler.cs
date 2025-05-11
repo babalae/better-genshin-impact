@@ -17,29 +17,29 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 public class MiningHandler : IActionHandler
 {
     private readonly CombatScript _miningCombatScript = CombatScriptParser.ParseContext("""
-                                                                                        卡齐娜 e(hold),keydown(s),wait(0.4),keyup(s),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2)
-                                                                                        坎蒂丝 e(hold)
-                                                                                        雷泽 e(hold)
-                                                                                        钟离 e(hold)
-                                                                                        凝光 attack(0.4),attack(0.4),attack(0.4),attack(0.4)
-                                                                                        荒泷一斗 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        迪希雅 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        玛薇卡 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        基尼奇 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        娜维娅 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        菲米尼 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        迪卢克 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        诺艾尔 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        多莉 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        卡维 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        早柚 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        雷泽 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        优菈 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        嘉明 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        辛焱 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        重云 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        北斗 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
-                                                                                        """);
+        卡齐娜 e(hold),keydown(s),wait(0.4),keyup(s),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2)
+        坎蒂丝 e(hold)
+        雷泽 e(hold)
+        钟离 e(hold)
+        凝光 attack(0.4),attack(0.4),attack(0.4),attack(0.4)
+        荒泷一斗 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        迪希雅 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        玛薇卡 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        基尼奇 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        娜维娅 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        菲米尼 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        迪卢克 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        诺艾尔 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        多莉 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        卡维 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        早柚 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        雷泽 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        优菈 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        嘉明 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        辛焱 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        重云 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        北斗 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        """);
 
     private readonly ScanPickTask _scanPickTask = new();
 
@@ -55,9 +55,10 @@ public class MiningHandler : IActionHandler
         // 挖矿
         Mining(combatScenes);
 
-        
+
         if (waypointForTrack is { ActionParams: not null }
-            && waypointForTrack.ActionParams.Contains("disablePickupAround", StringComparison.InvariantCultureIgnoreCase))
+            && waypointForTrack.ActionParams.Contains("disablePickupAround",
+                StringComparison.InvariantCultureIgnoreCase))
         {
             await Delay(1000, ct);
 
@@ -73,7 +74,12 @@ public class MiningHandler : IActionHandler
             // 通用化战斗策略
             foreach (var command in _miningCombatScript.CombatCommands)
             {
-                command.Execute(combatScenes);
+                var avatar = combatScenes.SelectAvatar(command.Name);
+                if (avatar != null)
+                {
+                    command.Execute(combatScenes);
+                    break;
+                }
             }
         }
         catch (Exception e)

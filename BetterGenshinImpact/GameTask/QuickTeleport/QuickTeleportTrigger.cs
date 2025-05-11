@@ -125,7 +125,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
         var hasMapChooseIcon = false;
 
         // 全匹配一遍
-        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(content.CaptureRectArea.SrcGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
+        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(content.CaptureRectArea.CacheGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
         // 按高度排序
         if (rResultList.Count > 0)
         {

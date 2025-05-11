@@ -50,6 +50,10 @@ public partial class OneDragonFlowConfig : ObservableObject
     // 领取每日奖励的好感数量
     [ObservableProperty]
     private string _sundaySelectedValue = "0";
+    
+    // 尘歌壶洞天购买商品
+    [ObservableProperty]
+    private List<string> _secretTreasureObjects = new();
 
     #region 每周秘境配置
 

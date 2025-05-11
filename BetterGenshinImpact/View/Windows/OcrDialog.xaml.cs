@@ -2,10 +2,8 @@
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using System.Drawing;
-using System.IO;
+using BetterGenshinImpact.Helpers.Extensions;
 using System.Windows;
-using System.Windows.Media.Imaging;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -33,15 +31,8 @@ public partial class OcrDialog
     public void Capture()
     {
         using var ra = TaskControl.CaptureToRectArea();
-        using ImageRegion card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
-        using Bitmap bitmap = card.SrcBitmap;
-        using Stream stream = new MemoryStream();
-        bitmap.Save(stream, format: System.Drawing.Imaging.ImageFormat.Png);
-        BitmapImage bitmapImage = new BitmapImage();
-        bitmapImage.BeginInit();
-        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        bitmapImage.StreamSource = stream;
-        bitmapImage.EndInit();
+        using var card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
+        var bitmapImage = card.SrcMat.ToWriteableBitmap();
 
         this.Screenshot.Source = bitmapImage;
 

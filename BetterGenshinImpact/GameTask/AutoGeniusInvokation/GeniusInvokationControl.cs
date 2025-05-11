@@ -91,7 +91,7 @@ public class GeniusInvokationControl
 
     public Mat CaptureGameGreyMat()
     {
-        return CaptureToRectArea().SrcGreyMat;
+        return CaptureToRectArea().CacheGreyMat;
     }
 
     public ImageRegion CaptureGameRectArea()
@@ -1166,7 +1166,7 @@ public class GeniusInvokationControl
 
                     hpArray[i] = 2;
                     duel.CurrentCharacter = duel.Characters[i + 1];
-                    AppendCharacterStatus(duel.CurrentCharacter, imageRegion.SrcGreyMat, hp);
+                    AppendCharacterStatus(duel.CurrentCharacter, imageRegion.CacheGreyMat, hp);
                     return duel.CurrentCharacter;
                 }
             }
@@ -1178,7 +1178,7 @@ public class GeniusInvokationControl
             var index = hpArray.ToList().FindIndex(x => x != 1);
             Debug.WriteLine($"通过OCR HP的方式没有识别到出战角色，但是通过排除法确认角色{index + 1}处于出战状态！");
             duel.CurrentCharacter = duel.Characters[index + 1];
-            AppendCharacterStatus(duel.CurrentCharacter, imageRegion.SrcGreyMat);
+            AppendCharacterStatus(duel.CurrentCharacter, imageRegion.CacheGreyMat);
             return duel.CurrentCharacter;
         }
 

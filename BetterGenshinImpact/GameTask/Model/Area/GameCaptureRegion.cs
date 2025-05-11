@@ -3,7 +3,6 @@ using BetterGenshinImpact.View.Drawable;
 using OpenCvSharp;
 using System;
 using System.Drawing;
-using Fischless.GameCapture;
 using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -73,9 +72,7 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
 
         var newMat = new Mat();
         Cv2.Resize(SrcMat, newMat, new Size(1920, Height / scale));
-        _srcGreyMat?.Dispose();
-        _srcMat?.Dispose();
-        _srcBitmap?.Dispose();
+        Dispose();
         return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
         // return new ImageRegion(newMat, 0, 0, this, new TranslationConverter(0, 0));
     }

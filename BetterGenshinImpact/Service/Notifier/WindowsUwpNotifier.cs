@@ -5,6 +5,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Toolkit.Uwp.Notifications;
+using SixLabors.ImageSharp;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -20,7 +21,7 @@ public class WindowsUwpNotifier : INotifier
         {
             string uniqueFileName = $"notification_image_{Guid.NewGuid()}.png";
             string imagePath = Path.Combine(TempManager.GetTempDirectory(), uniqueFileName);
-            data.Screenshot.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
+            data.Screenshot.SaveAsPng(imagePath);
             toastBuilder.AddHeroImage(new Uri(imagePath));
         }
 
