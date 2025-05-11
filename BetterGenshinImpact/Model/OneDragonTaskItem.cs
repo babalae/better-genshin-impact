@@ -91,7 +91,7 @@ public partial class OneDragonTaskItem : ObservableObject
                     }
 
                     var (partyName, domainName,sundaySelectedValue) = config.GetDomainConfig();
-                    if (string.IsNullOrEmpty(domainName) || string.IsNullOrEmpty(partyName) || partyName == "地脉花")
+                    if (string.IsNullOrEmpty(domainName))
                     {
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过","未选择");
                         return;
