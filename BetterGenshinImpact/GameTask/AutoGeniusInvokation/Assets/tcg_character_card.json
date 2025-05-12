@@ -778,30 +778,6 @@
                         "count": 3
                     }
                 ]
-            },
-            {
-                "nameEn": "",
-                "name": "",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "",
-                "name": "",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "darkgold_wolfbite",
-                "name": "黑金狼噬",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -1232,22 +1208,6 @@
                     "被动技能"
                 ],
                 "cost": []
-            },
-            {
-                "nameEn": "ranged_stance",
-                "name": "远程状态",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "tide_withholder",
-                "name": "遏浪",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -1455,14 +1415,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "heron_strike",
-                "name": "苍鹭震击",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
             }
         ]
     },
@@ -1678,20 +1630,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "equitable_judgment",
-                "name": "衡平推裁",
-                "skillTag": [
-                    "普通攻击"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "sourcewater_droplet",
-                "name": "源水之滴",
-                "skillTag": [],
-                "cost": []
             }
         ]
     },
@@ -1761,14 +1699,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "",
-                "name": "",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             },
             {
                 "nameEn": "arkhe_seats_sacred_and_secular",
@@ -1846,30 +1776,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "detailed_diagnosis_thorough_treatment",
-                "name": "细致入微的诊疗",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "medical_intervention_of_pure_intention",
-                "name": "满满心意药剂冲击",
-                "skillTag": [
-                    "元素爆发"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "detailed_diagnosis_thorough_treatment",
-                "name": "细致入微的诊疗",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             },
             {
                 "nameEn": "detailed_diagnosis_thorough_treatment",
@@ -2568,22 +2474,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "incineration_drive",
-                "name": "焚落踢",
-                "skillTag": [
-                    "元素爆发"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "fiery_sanctum_redmanes_blood",
-                "name": "净焰剑狱·赤鬃之血",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -2883,14 +2773,6 @@
                     "被动技能"
                 ],
                 "cost": []
-            },
-            {
-                "nameEn": "shortrange_rapid_interdiction_fire",
-                "name": "近迫式急促拦射",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
             }
         ]
     },
@@ -2960,22 +2842,6 @@
                         "count": 3
                     }
                 ]
-            },
-            {
-                "nameEn": "the_balemoon_alone_may_know",
-                "name": "唯厄月可知晓",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "the_balemoon_alone_may_know",
-                "name": "唯厄月可知晓",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             },
             {
                 "nameEn": "the_balemoon_alone_may_know",
@@ -3337,14 +3203,6 @@
                         "count": 3
                     }
                 ]
-            },
-            {
-                "nameEn": "wavestrider",
-                "name": "踏潮",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
             }
         ]
     },
@@ -3840,6 +3698,83 @@
         ]
     },
     {
+        "id": 1413,
+        "nameEn": "sethos",
+        "type": "character",
+        "name": "赛索斯",
+        "hp": 10,
+        "energy": 4,
+        "element": "雷元素",
+        "weapon": "弓",
+        "skills": [
+            {
+                "nameEn": "royal_reed_archery",
+                "name": "王家苇箭术",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ancient_rite_the_thundering_sands",
+                "name": "古仪·鸣砂掣雷",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "secret_rite_twilight_shadowpiercer",
+                "name": "秘仪·瞑光贯影",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 4
+                    }
+                ]
+            },
+            {
+                "nameEn": "black_kites_enigma",
+                "name": "黑鸢的密喻",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1501,
         "nameEn": "sucrose",
         "type": "character",
@@ -4181,14 +4116,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "chihayaburu",
-                "name": "千早振",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -4327,14 +4254,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "fuufuu_whirlwind_kick",
-                "name": "风风轮舞踢",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
             }
         ]
     },
@@ -5040,22 +4959,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "spear_flourish",
-                "name": "长枪开相",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "",
-                "name": "",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -5271,6 +5174,83 @@
                         "count": 3
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 1611,
+        "nameEn": "xilonen",
+        "type": "character",
+        "name": "希诺宁",
+        "hp": 10,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "ehecatls_roar",
+                "name": "锐锋攫猎",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "yohuals_scratch",
+                "name": "音火锻淬",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ocelotlicue_point",
+                "name": "豹烈律动！",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "source_sample",
+                "name": "「源音采样」",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },
@@ -5907,12 +5887,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "",
-                "name": "",
-                "skillTag": [],
-                "cost": []
             }
         ]
     },
@@ -5982,14 +5956,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "lingering_fragrance",
-                "name": "余薰",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             },
             {
                 "nameEn": "lingering_fragrance",
@@ -6143,12 +6109,6 @@
                 "skillTag": [
                     "被动技能"
                 ],
-                "cost": []
-            },
-            {
-                "nameEn": "infernos_awakening",
-                "name": "炽炎醒燃",
-                "skillTag": [],
                 "cost": []
             }
         ]
@@ -6534,37 +6494,6 @@
                     "被动技能"
                 ],
                 "cost": []
-            },
-            {
-                "nameEn": "rippling_blades",
-                "name": "涟锋旋刃",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": [
-                    {
-                        "id": 1102,
-                        "nameEn": "hydro",
-                        "type": "水元素",
-                        "count": 3
-                    }
-                ]
-            },
-            {
-                "nameEn": "broken_ward",
-                "name": "护罩碎裂",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "watery_rebirth",
-                "name": "水之新生",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -6711,12 +6640,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "slash_of_surging_tides",
-                "name": "狂澜镰击",
-                "skillTag": [],
-                "cost": []
             }
         ]
     },
@@ -6863,14 +6786,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "fiery_rebirth",
-                "name": "火之新生",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             },
             {
                 "nameEn": "fiery_rebirth",
@@ -7033,22 +6948,6 @@
                     "被动技能"
                 ],
                 "cost": []
-            },
-            {
-                "nameEn": "searing_blast",
-                "name": "炽烈轰破",
-                "skillTag": [
-                    "元素爆发"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "imperial_panoply",
-                "name": "帝王甲胄",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -7124,22 +7023,6 @@
                 "name": "雷晶核心",
                 "skillTag": [
                     "被动技能"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "rockpaperscissors_combo_scissors",
-                "name": "猜拳三连击·剪刀",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "rockpaperscissors_combo_paper",
-                "name": "猜拳三连击·布",
-                "skillTag": [
-                    "元素战技"
                 ],
                 "cost": []
             }
@@ -7296,14 +7179,6 @@
                     "被动技能"
                 ],
                 "cost": []
-            },
-            {
-                "nameEn": "swirling_school_of_fish",
-                "name": "霰舞鱼群",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             }
         ]
     },
@@ -7373,14 +7248,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "surging_thunder",
-                "name": "霆电迸发",
-                "skillTag": [
-                    "元素爆发"
-                ],
-                "cost": []
             }
         ]
     },
@@ -7527,14 +7394,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "electric_rebirth",
-                "name": "雷之新生",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
             },
             {
                 "nameEn": "electric_rebirth",
@@ -7711,22 +7570,6 @@
                         "count": 2
                     }
                 ]
-            },
-            {
-                "nameEn": "perpetual_cleansing",
-                "name": "长延涤流",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
-            },
-            {
-                "nameEn": "ultimate_cleansing",
-                "name": "终幕涤流",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": []
             }
         ]
     },
