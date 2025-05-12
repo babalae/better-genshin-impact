@@ -363,8 +363,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         if (!genCache) return sessionOptions;
         var optPath = Path.Combine(path.CachePath, "optimized");
         if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
-
-        sessionOptions.OptimizedModelFilePath = optPath;
+        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(path.ModalPath));
         return sessionOptions;
     }
 
