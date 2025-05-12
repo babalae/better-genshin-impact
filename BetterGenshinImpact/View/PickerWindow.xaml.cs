@@ -18,6 +18,10 @@ public partial class PickerWindow : Window
     private bool _isSelected;
     private readonly bool _captureTest;
 
+    private const User32.WindowStylesEx IgnoreExStyle = User32.WindowStylesEx.WS_EX_TOOLWINDOW |
+                                                        User32.WindowStylesEx.WS_EX_NOREDIRECTIONBITMAP |
+                                                        User32.WindowStylesEx.WS_EX_LAYERED;
+
     public PickerWindow(bool captureTest = false)
     {
         InitializeComponent();
@@ -63,7 +67,7 @@ public partial class PickerWindow : Window
                 return true;
 
             var exStyle = User32.GetWindowLong<User32.WindowStylesEx>(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
-            if ((exStyle & (User32.WindowStylesEx.WS_EX_TOOLWINDOW | User32.WindowStylesEx.WS_EX_NOREDIRECTIONBITMAP)) != 0)
+            if ((exStyle & IgnoreExStyle) != 0)
                 return true;
 
             var title = new StringBuilder(1024);
