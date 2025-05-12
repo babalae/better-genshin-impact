@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR.engine;
 using BetterGenshinImpact.Core.Recognition.OCR.paddle;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using OpenCvSharp;
@@ -17,29 +18,29 @@ public class PaddleOcrService : IOcrService
     ///     模型列表:
     ///     https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.5/doc/doc_ch/models_list.md
     /// </summary>
-    private readonly Det localDetModel;
+    private readonly Det _localDetModel;
 
-    private readonly Rec localRecModel;
+    private readonly Rec _localRecModel;
 
-    public PaddleOcrService(string? cultureInfoName = null)
+    public PaddleOcrService(string cultureInfoName)
     {
         var path = Global.Absolute(@"Assets\Model\PaddleOcr");
 
         switch (cultureInfoName)
         {
             case "zh-Hant":
-                localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4);
-                localRecModel = new Rec(BgiOnnxModel.PaddleOcrChtRec, Path.Combine(path, "chinese_cht_dict.txt"),
+                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4);
+                _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChtRec, Path.Combine(path, "chinese_cht_dict.txt"),
                     OcrVersionConfig.PpOcrV3);
                 break;
             case "fr":
-                localDetModel = new Det(BgiOnnxModel.PaddleOcrEnDet, OcrVersionConfig.PpOcrV3);
-                localRecModel = new Rec(BgiOnnxModel.PaddleOcrLatinRec, Path.Combine(path, "latin_dict.txt"),
+                _localDetModel = new Det(BgiOnnxModel.PaddleOcrEnDet, OcrVersionConfig.PpOcrV3);
+                _localRecModel = new Rec(BgiOnnxModel.PaddleOcrLatinRec, Path.Combine(path, "latin_dict.txt"),
                     OcrVersionConfig.PpOcrV3);
                 break;
             default:
-                localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4);
-                localRecModel = new Rec(BgiOnnxModel.PaddleOcrChRec, Path.Combine(path, "ppocr_keys_v1.txt"),
+                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4);
+                _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChRec, Path.Combine(path, "ppocr_keys_v1.txt"),
                     OcrVersionConfig.PpOcrV4);
 
                 break;
@@ -73,7 +74,7 @@ public class PaddleOcrService : IOcrService
     /// </summary>
     public string OcrWithoutDetector(Mat mat)
     {
-        var str = localRecModel.Run(mat).Text;
+        var str = _localRecModel.Run(mat).Text;
         Debug.WriteLine($"PaddleOcrWithoutDetector 结果: {str}");
         return str;
     }
@@ -92,7 +93,7 @@ public class PaddleOcrService : IOcrService
     /// </summary>
     private OcrResult RunAll(Mat src, int recognizeBatchSize = 0)
     {
-        var rects = localDetModel.Run(src);
+        var rects = _localDetModel.Run(src);
         Mat[] mats =
             rects.Select(rect =>
                 {
@@ -102,7 +103,7 @@ public class PaddleOcrService : IOcrService
                 .ToArray();
         try
         {
-            return new OcrResult(localRecModel.Run(mats, recognizeBatchSize)
+            return new OcrResult(_localRecModel.Run(mats, recognizeBatchSize)
                 .Select((result, i) => new OcrResultRegion(rects[i], result.Text, result.Score))
                 .ToArray());
         }

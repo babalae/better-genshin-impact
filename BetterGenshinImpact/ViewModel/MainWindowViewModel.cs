@@ -204,7 +204,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
+                    System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
                     // 迁移配置，拷贝整个目录并覆盖
@@ -224,13 +225,14 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
      */
     private void Patch2()
     {
-        List<string> files =[
+        List<string> files =
+        [
             Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.kp"),
             Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.mat"),
             Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.kp"),
             Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.mat"),
         ];
-        
+
         // 循环删除
         foreach (var file in files.Where(File.Exists))
         {
@@ -246,19 +248,24 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             {
                 try
                 {
-                    string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
-                    await OcrFactory.ChangeCulture(gameCultureInfoName);
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_ocr.png")));
+                    // 现在OCR创建的时候会自己读设置了
+                    // string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
+                    // await OcrFactory.ChangeCulture(gameCultureInfoName);
+                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png")));
                     Debug.WriteLine("PaddleOcr预热结果:" + s);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常，解决方案：【https://bettergi.com/faq.html】\r\n" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+                    _logger.LogError("PaddleOcr预热异常，解决方案：【https://bettergi.com/faq.html】\r\n" + e.Source + "\r\n--" +
+                                     Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError("PaddleOcr预热内部异常，解决方案：【https://bettergi.com/faq.html】\r\n" + innerException.Source + "\r\n--" + Environment.NewLine + innerException.StackTrace + "\r\n---" + Environment.NewLine + innerException.Message);
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：【https://bettergi.com/faq.html】\r\n" +
+                                         innerException.Source + "\r\n--" + Environment.NewLine +
+                                         innerException.StackTrace + "\r\n---" + Environment.NewLine +
+                                         innerException.Message);
                         throw innerException;
                     }
                     else
@@ -270,8 +277,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            MessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-            Process.Start(new ProcessStartInfo("https://bettergi.com/faq.html#%E2%9D%93%E6%8F%90%E7%A4%BA-paddleocr%E9%A2%84%E7%83%AD%E5%A4%B1%E8%B4%A5-%E5%BA%94%E8%AF%A5%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3") { UseShellExecute = true });
+            MessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
+                               Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            Process.Start(
+                new ProcessStartInfo(
+                        "https://bettergi.com/faq.html#%E2%9D%93%E6%8F%90%E7%A4%BA-paddleocr%E9%A2%84%E7%83%AD%E5%A4%B1%E8%B4%A5-%E5%BA%94%E8%AF%A5%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3")
+                    { UseShellExecute = true });
         }
     }
 
@@ -290,7 +301,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            _logger.LogDebug("获取设备ID异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            _logger.LogDebug("获取设备ID异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
+                             Environment.NewLine + e.Message);
         }
 
         // 每个设备只运行一次

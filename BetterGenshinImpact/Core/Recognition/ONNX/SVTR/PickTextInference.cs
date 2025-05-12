@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR.engine;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
