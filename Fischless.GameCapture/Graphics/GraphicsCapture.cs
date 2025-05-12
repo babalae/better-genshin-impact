@@ -40,6 +40,10 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     // 用于获取帧数据的临时纹理和暂存资源
     private Texture2D? _stagingTexture;
 
+    // Surface 大小
+    private int _surfaceWidth;
+    private int _surfaceHeight;
+
     private long _lastFrameTime;
 
     private readonly Stopwatch _frameTimer = new();
@@ -65,6 +69,8 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             throw new InvalidOperationException("Failed to create capture item.");
         }
 
+        _surfaceWidth = _captureItem.Size.Width;
+        _surfaceHeight = _captureItem.Size.Height;
 
         // 创建D3D设备
         _d3dDevice = Direct3D11Helper.CreateDevice();
@@ -124,7 +130,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    private ResourceRegion? GetGameScreenRegion(nint hWnd)
+    private static ResourceRegion? GetGameScreenRegion(nint hWnd)
     {
         var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
         if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
@@ -135,9 +141,9 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         ResourceRegion region = new();
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS,
             out var windowRect);
-        User32.GetClientRect(_hWnd, out var clientRect);
+        User32.GetClientRect(hWnd, out var clientRect);
         POINT point = default;
-        User32.ClientToScreen(_hWnd, ref point);
+        User32.ClientToScreen(hWnd, ref point);
 
         region.Left = point.X > windowRect.Left ? point.X - windowRect.Left : 0;
         region.Top = point.Y > windowRect.Top ? point.Y - windowRect.Top : 0;
@@ -199,21 +205,26 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             }
             _lastFrameTime = _frameTimer.ElapsedMilliseconds;
 
-            var frameSize = _captureItem!.Size;
+            var captureSize = _captureItem!.Size;
 
             // 检查帧大小是否变化
-            if (frameSize.Width != frame.ContentSize.Width || frameSize.Height != frame.ContentSize.Height)
+            if (captureSize.Width != _surfaceWidth || captureSize.Height != _surfaceHeight)
             {
-                frameSize = frame.ContentSize;
+                if (User32.IsIconic(_hWnd))
+                    return;
+
                 _captureFramePool!.Recreate(
                     _d3dDevice,
                     _pixelFormat,
                     2,
-                    frameSize
+                    captureSize
                 );
                 _stagingTexture?.Dispose();
                 _stagingTexture = null;
+                _surfaceWidth = captureSize.Width;
+                _surfaceHeight = captureSize.Height;
                 _region = GetGameScreenRegion(_hWnd);
+                return;
             }
 
             try

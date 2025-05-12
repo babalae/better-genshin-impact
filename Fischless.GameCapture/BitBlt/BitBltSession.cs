@@ -13,10 +13,6 @@ public class BitBltSession : IDisposable
 
     private readonly object _lockObject = new();
 
-    // 大小计算好的宽高，截图用这个不会爆炸
-    private readonly int _width;
-    private readonly int _height;
-
     // 位图句柄
     private Gdi32.SafeHBITMAP _hBitmap;
 
@@ -71,15 +67,15 @@ public class BitBltSession : IDisposable
                 if (_hdcSrc.IsInvalid) throw new Exception($"Failed to get DC for {_hWnd}");
 
                 var hdcRasterCaps = Gdi32.GetDeviceCaps(_hdcSrc, Gdi32.DeviceCap.RASTERCAPS);
-                if ((hdcRasterCaps | 0x800) == 0) // RC_STRETCHBLT
+                if ((hdcRasterCaps | 1) == 0) // RC_BITBLT
                     // 设备不支持 BitBlt
                     throw new Exception("BitBlt not supported");
 
                 var hdcSrcPixel = Gdi32.GetDeviceCaps(_hdcSrc, Gdi32.DeviceCap.BITSPIXEL);
                 // 颜色位数
-                if (hdcSrcPixel != 32)
-                    // 目前只考虑支持32位RGBA,HDR什么的先放放
-                    throw new Exception("BitBlt only support 32 bit RGBA pixel color");
+                if (hdcSrcPixel != 32 && hdcSrcPixel != 24)
+                    // 目前只考虑支持24/32位像素格式
+                    throw new Exception("BitBlt only support 24 or 32 bit pixel color");
 
                 var hdcSrcPlanes = Gdi32.GetDeviceCaps(_hdcSrc, Gdi32.DeviceCap.PLANES);
                 // 颜色平面数
@@ -99,27 +95,16 @@ public class BitBltSession : IDisposable
                     throw new Exception($"Failed to create CompatibleDC for {_hWnd}");
                 }
 
-                var maxW = Gdi32.GetDeviceCaps(_hdcDest, Gdi32.DeviceCap.HORZRES);
-                var maxH = Gdi32.GetDeviceCaps(_hdcDest, Gdi32.DeviceCap.VERTRES);
-                if (maxW <= 0 || maxH <= 0)
-                    // 显示器不见啦
-                    throw new Exception("Can not get display size");
-
-                // 避免截取全屏窗口的时候超出CompatibleDC范围
-                _width = Math.Min(maxW, Width);
-                _height = Math.Min(maxH, Height);
-
-
                 var bmi = new Gdi32.BITMAPINFO
                 {
                     bmiHeader = new Gdi32.BITMAPINFOHEADER
                     {
                         biSize = (uint)Marshal.SizeOf<Gdi32.BITMAPINFOHEADER>(),
-                        biWidth = _width,
-                        biHeight = -_height, // Top-down image
-                        biPlanes = (ushort)hdcSrcPlanes,
-                        biBitCount = (ushort)(hdcSrcPixel - 8), //RGBA->RGB
-                        biCompression = Gdi32.BitmapCompressionMode.BI_RGB,
+                        biWidth = Width,
+                        biHeight = -Height, // Top-down image
+                        biPlanes = 1,
+                        biBitCount = 24,
+                        biCompression = Gdi32.BitmapCompressionMode.BI_RGB, // 内存里是BGR
                         biSizeImage = 0
                     }
                 };
@@ -172,25 +157,25 @@ public class BitBltSession : IDisposable
         lock (_lockObject)
         {
             // 截图
-            var success = Gdi32.StretchBlt(_hdcDest, 0, 0, _width, _height,
-                _hdcSrc, 0, 0, _width, _height, Gdi32.RasterOperationMode.SRCCOPY);
+            var success = Gdi32.BitBlt(_hdcDest, 0, 0, Width, Height,
+                _hdcSrc, 0, 0, Gdi32.RasterOperationMode.SRCCOPY);
             if (!success || !Gdi32.GdiFlush()) return null;
 
             // 新Mat
             var buffer = AcquireBuffer();
-            var step = _width * 3;
+            var step = Width * 3;
             if (_stride == step)
             {
                 Buffer.MemoryCopy(_bitsPtr.ToPointer(), buffer.ToPointer(), _bufferSize, _bufferSize);
             }
             else
             {
-                for (var i = 0; i < _height; i++)
+                for (var i = 0; i < Height; i++)
                 {
                     Buffer.MemoryCopy((void*)(_bitsPtr + _stride * i), (void*)(buffer + step * i), step, step);
                 }
             }
-            return BitBltMat.FromPixelData(this, _height, _width, MatType.CV_8UC3, buffer, step);
+            return BitBltMat.FromPixelData(this, Height, Width, MatType.CV_8UC3, buffer, step);
         }
     }
 

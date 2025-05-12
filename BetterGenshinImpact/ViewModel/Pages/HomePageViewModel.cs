@@ -168,7 +168,7 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand]
     private void OnStartCaptureTest()
     {
-        var picker = new PickerWindow();
+        var picker = new PickerWindow(true);
 
         if (picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle, out var hWnd))
         {
