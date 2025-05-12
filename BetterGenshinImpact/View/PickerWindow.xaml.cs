@@ -86,7 +86,7 @@ public partial class PickerWindow : Window
             return true;
         }, IntPtr.Zero);
 
-        var sortedWindows = windows.OrderByDescending(x => IsGenshinWindow(x.Name))
+        var sortedWindows = windows.OrderByDescending(IsGenshinWindow)
             .ThenByDescending(x => x.Handle).ToList();
 
         WindowList.ItemsSource = sortedWindows;
@@ -132,19 +132,22 @@ public partial class PickerWindow : Window
         return null;
     }
 
-    private static bool IsGenshinWindow(string windowName)
+    private static bool IsGenshinWindow(CapturableWindow window)
     {
-        // 判断是否包含原神相关的进程名 TODO：更加健壮的判断
-        return windowName is "原神" or "云·原神";
+        return window is
+            {Name: "原神", ProcessName: "YuanShen"} or
+            {Name: "云·原神", ProcessName: "Genshin Impact Cloud Game"} or
+            {Name: "Genshin Impact", ProcessName: "GenshinImpact"} or
+            {Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud"};
     }
 
-    private static bool AskIsThisGenshinImpact(string windowName)
+    private static bool AskIsThisGenshinImpact(CapturableWindow window)
     {
         var res = MessageBox.Question(
             $"""
             这看起来不像是原神，确定要选择这个窗口吗？
         
-            当前选择的窗口：{windowName}
+            当前选择的窗口：{window.Name} ({window.ProcessName})
             """,
             "确认选择",
             MessageBoxButton.YesNo,
@@ -155,13 +158,13 @@ public partial class PickerWindow : Window
 
     private void WindowsOnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        var selectedWindow = WindowList.SelectedItem as CapturableWindow;
-        if (selectedWindow == null) return;
+        if (WindowList.SelectedItem is not CapturableWindow selectedWindow)
+            return;
 
         // 如果不是原神窗口，询问用户是否确认
-        if (!_captureTest && !IsGenshinWindow(selectedWindow.Name))
+        if (!_captureTest && !IsGenshinWindow(selectedWindow))
         {
-            if (!AskIsThisGenshinImpact(selectedWindow.Name))
+            if (!AskIsThisGenshinImpact(selectedWindow))
             {
                 return;
             }

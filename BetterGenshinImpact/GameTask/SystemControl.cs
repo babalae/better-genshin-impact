@@ -12,7 +12,7 @@ public class SystemControl
 {
     public static nint FindGenshinImpactHandle()
     {
-        return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game");
+        return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud");
     }
 
     public static async Task<nint> StartFromLocalAsync(string path)
