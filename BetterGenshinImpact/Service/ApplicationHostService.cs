@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
@@ -46,19 +47,49 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
             _navigationWindow!.ShowWindow();
+            //
             var args = Environment.GetCommandLineArgs();
-            if (args.Length > 1 && args[1].Contains("startOneDragon"))
+            if (args.Length > 1)
             {
-                // 通过命令行参数启动一条龙，跳转到一条龙配置页。
-                _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+                if (args[1].Contains("startOneDragon"))
+                {
+
+                    // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
+                    _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+                    // 后续代码在 OneDragonFlowViewModel / OnLoaded 中。
+                }
+                else if (args[1].Trim().Equals("--startGroups", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
+                    _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                    if (args.Length > 3)
+                    {
+                        // 获取调度组
+                        var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
+                        // 启动调度器
+                        var scheduler = App.GetService<ScriptControlViewModel>();
+                        scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
+                    }
+                }
+                else if (args[1].Contains("start"))
+                {
+                    // 通过命令行参数打开「启动页开关」 => 跳转到主页。
+                    _ = _navigationWindow.Navigate(typeof(HomePage));
+                    // 后续代码在 HomePageViewModel / OnLoaded 中。
+                }
+                else
+                {
+                    // 其它命令行参数 => 跳转到主页。
+                    _ = _navigationWindow.Navigate(typeof(HomePage));
+                }
             }
             else
             {
-                // 其它情况，跳转到主页。
+                // 通过双击程序启动 => 跳转到主页。
                 _ = _navigationWindow.Navigate(typeof(HomePage));
             }
         }
-
+        //
         await Task.CompletedTask;
     }
 }
