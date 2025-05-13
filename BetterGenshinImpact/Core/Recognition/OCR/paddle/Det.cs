@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using BetterGenshinImpact.Core.Recognition.OCR.engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -15,7 +16,7 @@ public class Det
     public Det(BgiOnnxModel model, OcrVersionConfig config)
     {
         _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model,true);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model, true);
     }
 
     /// <summary>Gets or sets the maximum size for resizing the input image.</summary>
@@ -38,7 +39,10 @@ public class Det
 
     ~Det()
     {
-        _session.Dispose();
+        lock (_session)
+        {
+            _session.Dispose();
+        }
     }
 
     public RotatedRect[] Run(Mat src)
@@ -124,7 +128,7 @@ public class Det
                     if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
                         throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
                     var outputTensor = output.AsTensor<float>();
-                    return OcrUtils.Tensor2Mat(tensor: outputTensor);
+                    return OcrUtils.Tensor2Mat(outputTensor);
                     // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
                 }
             }

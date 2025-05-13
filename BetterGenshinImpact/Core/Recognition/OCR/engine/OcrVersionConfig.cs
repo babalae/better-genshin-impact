@@ -1,9 +1,9 @@
-using BetterGenshinImpact.Core.Recognition.OCR.paddle.data;
+using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR;
+namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
 
 /// <summary>
-/// ppocr的版本配置
+///     ppocr的版本配置
 /// </summary>
 public readonly record struct OcrVersionConfig(
     string Name,

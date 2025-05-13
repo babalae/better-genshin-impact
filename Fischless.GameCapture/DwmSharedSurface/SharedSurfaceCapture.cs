@@ -56,7 +56,7 @@ public partial class SharedSurfaceCapture : IGameCapture
     /// </summary>
     /// <param name="hWnd"></param>
     /// <returns></returns>
-    private ResourceRegion? GetGameScreenRegion(nint hWnd)
+    private static ResourceRegion? GetGameScreenRegion(nint hWnd)
     {
         var exStyle = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
         if ((exStyle & (int)User32.WindowStylesEx.WS_EX_TOPMOST) != 0)
@@ -67,7 +67,7 @@ public partial class SharedSurfaceCapture : IGameCapture
         ResourceRegion region = new();
         User32.GetWindowRect(hWnd, out var windowWithShadowRect);
         DwmApi.DwmGetWindowAttribute<RECT>(hWnd, DwmApi.DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out var windowRect);
-        User32.GetClientRect(_hWnd, out var clientRect);
+        User32.GetClientRect(hWnd, out var clientRect);
 
         region.Left = windowRect.Left - windowWithShadowRect.Left;
         // 标题栏 windowRect.Height - clientRect.Height 上阴影 windowRect.Top - windowWithShadowRect.Top
@@ -106,6 +106,9 @@ public partial class SharedSurfaceCapture : IGameCapture
                 if (_stagingTexture == null || _surfaceWidth != surfaceTexture.Description.Width ||
                     _surfaceHeight != surfaceTexture.Description.Height)
                 {
+                    if (User32.IsIconic(_hWnd))
+                        return null;
+
                     _stagingTexture?.Dispose();
                     _stagingTexture = null;
                     _surfaceWidth = surfaceTexture.Description.Width;

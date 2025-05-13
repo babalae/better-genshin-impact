@@ -19,35 +19,20 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
 {
     private static readonly ILogger<BgiOnnxFactory> Logger = App.GetLogger<BgiOnnxFactory>();
 
-
-    public ProviderType[] ProviderTypes { get; }
-    public int DmlDeviceId { get; }
-    public int CudaDeviceId { get; }
-    public bool OptimizedModel { get; }
-    public bool TrtUseEmbedMode { get; }
-    public bool EnableCache { get; }
-    public bool CpuOcr { get; }
-
     /// <summary>
-    /// 缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
-    /// <br/>
-    /// 这样能避免并发加载模型问题。比如使用了未完全构建好的缓存文件，导致模型加载失败。
+    ///     缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
+    ///     <br />
+    ///     这样能避免并发加载模型问题。比如使用了未完全构建好的缓存文件，导致模型加载失败。
     /// </summary>
-    private ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
-
+    private readonly ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
 
     public BgiOnnxFactory()
     {
         var config = TaskContext.Instance().Config.HardwareAccelerationConfig;
-        if (config.AutoAppendCudaPath)
-        {
-            AppendCudaPath();
-        }
+        if (config.AutoAppendCudaPath) AppendCudaPath();
 
         if (string.IsNullOrWhiteSpace(config.AdditionalPath))
-        {
             AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
-        }
 
         ProviderTypes = GetProviderType(config.InferenceDevice, CudaDeviceId, DmlDeviceId);
         OptimizedModel = config.OptimizedModel;
@@ -68,9 +53,17 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             CpuOcr);
     }
 
+    public ProviderType[] ProviderTypes { get; }
+    public int DmlDeviceId { get; }
+    public int CudaDeviceId { get; }
+    public bool OptimizedModel { get; }
+    public bool TrtUseEmbedMode { get; }
+    public bool EnableCache { get; }
+    public bool CpuOcr { get; }
+
 
     /// <summary>
-    /// 根据InferenceDeviceType选择Provider
+    ///     根据InferenceDeviceType选择Provider
     /// </summary>
     /// <param name="inferenceDeviceType">InferenceDeviceType</param>
     /// <param name="cudaDeviceId">cuda设备id</param>
@@ -92,7 +85,6 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                 SessionOptions? testSession = null;
                 var hasGpu = false;
                 if (!hasGpu && cudaDeviceId >= 0)
-                {
                     // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
                     try
                     {
@@ -108,10 +100,8 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                     {
                         testSession?.Dispose();
                     }
-                }
 
                 if (!hasGpu && dmlDeviceId >= 0)
-                {
                     // dml效果不如tensorrt，但是比纯cuda稳定性强
                     try
                     {
@@ -128,10 +118,8 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                     {
                         testSession?.Dispose();
                     }
-                }
 
                 if (!hasGpu && cudaDeviceId >= 0)
-                {
                     // cuda优先级比较低，因为跑起来并不太理想。
                     try
                     {
@@ -147,12 +135,8 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                     {
                         testSession?.Dispose();
                     }
-                }
 
-                if (!hasGpu)
-                {
-                    Logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
-                }
+                if (!hasGpu) Logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
 
                 //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
                 list.Add(ProviderType.Cpu);
@@ -163,7 +147,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     }
 
     /// <summary>
-    /// 自动嗅探并修改path以加载cuda
+    ///     自动嗅探并修改path以加载cuda
     /// </summary>
     private static void AppendCudaPath()
     {
@@ -191,10 +175,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             {
                 // 体系架构 
                 var architecture = Enum.GetName(RuntimeInformation.ProcessArchitecture);
-                if (architecture is null)
-                {
-                    return [s];
-                }
+                if (architecture is null) return [s];
 
                 return
                 [
@@ -219,15 +200,12 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     }
 
     /// <summary>
-    /// 将附加的path应用进来
+    ///     将附加的path应用进来
     /// </summary>
     /// <param name="extraPath">附加的path字符串</param>
     private static void AppendPath(string[] extraPath)
     {
-        if (extraPath.Length <= 0)
-        {
-            return;
-        }
+        if (extraPath.Length <= 0) return;
 
         var pathVariables = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
             ?.Split(Path.PathSeparator).ToList() ?? new List<string>();
@@ -244,17 +222,14 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     }
 
     /// <summary>
-    /// 根据模型创建一个YoloPredictor
+    ///     根据模型创建一个YoloPredictor
     /// </summary>
     /// <param name="model">模型</param>
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         Logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
-        if (!EnableCache)
-        {
-            return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
-        }
+        if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
 
         var cached = GetCached(model);
         return cached == null
@@ -263,7 +238,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     }
 
     /// <summary>
-    /// 根据模型创建一个onnx运行时的InferenceSession
+    ///     根据模型创建一个onnx运行时的InferenceSession
     /// </summary>
     /// <param name="model">模型</param>
     /// <param name="ocr">是否是用于ocr的模型，默认false</param>
@@ -272,42 +247,33 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     {
         Logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         ProviderType[]? providerTypes = null;
-        if (CpuOcr && ocr)
-        {
-            providerTypes = [ProviderType.Cpu];
-        }
+        if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
         if (!EnableCache)
-        {
             return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
-        }
 
-        var cached = GetCached(model);
+        var cached = GetCached(model, providerTypes);
         return cached == null
             ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
             : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
     }
 
     /// <summary>
-    /// 获取带有缓存的模型(目前只支持TensorRT)
+    ///     获取带有缓存的模型(目前只支持TensorRT)
     /// </summary>
     /// <param name="model">模型</param>
+    /// <param name="forcedProvider">强制使用的 providerTypes</param>
     /// <returns>带有缓存的模型绝对路径，null表示尚未创建缓存</returns>
-    private string? GetCached(BgiOnnxModel model)
+    private string? GetCached(BgiOnnxModel model, ProviderType[]? forcedProvider = null)
     {
+        var providerTypes = forcedProvider ?? ProviderTypes;
         // 目前只支持TensorRT
-        if (!ProviderTypes.Contains(ProviderType.TensorRt)) return null;
+        if (!providerTypes.Contains(ProviderType.TensorRt)) return null;
         var result = _cachedModelPaths.GetOrAdd(model, _GetCached);
-        if (result is null)
-        {
-            return result;
-        }
+        if (result is null) return result;
 
         // 判断文件是否存在
-        if (File.Exists(result))
-        {
-            return result;
-        }
+        if (File.Exists(result)) return result;
 
         Logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
         return null;
@@ -317,10 +283,8 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     {
         if (model.ModelRelativePath.StartsWith(BgiOnnxModel.ModelCacheRelativePath) &&
             model.ModelRelativePath.EndsWith("_ctx.onnx"))
-        {
             // 这已经是带有缓存的文件路径了
             return model.ModalPath;
-        }
 
         var ctxA = Path.Combine(model.CachePath, "trt", "_ctx.onnx");
         if (File.Exists(ctxA))
@@ -343,8 +307,8 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
 
 
     /// <summary>
-    /// 通过模型路径生成SessionOptions <br/>
-    /// 如果加载的模型文件已经是带有缓存的模型，请将cacheFolder设为null避免重复生成。
+    ///     通过模型路径生成SessionOptions <br />
+    ///     如果加载的模型文件已经是带有缓存的模型，请将cacheFolder设为null避免重复生成。
     /// </summary>
     /// <param name="path">模型路径</param>
     /// <param name="genCache">是否生成缓存。有几种情况下不生成缓存:1为用户主动关闭，即enableCache为false。2为即将加载的模型文件已经是带有缓存的模型文件。</param>
@@ -356,7 +320,6 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         var sessionOptions = new SessionOptions();
         foreach (var type in
                  forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider)
-        {
             try
             {
                 switch (type)
@@ -395,23 +358,18 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                 Logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
                     e.Message);
             }
-        }
 
         if (!OptimizedModel) return sessionOptions;
         if (!genCache) return sessionOptions;
         var optPath = Path.Combine(path.CachePath, "optimized");
-        if (!Directory.Exists(optPath))
-        {
-            Directory.CreateDirectory(optPath);
-        }
-
-        sessionOptions.OptimizedModelFilePath = optPath;
+        if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
+        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(path.ModalPath));
         return sessionOptions;
     }
 
 
     /// <summary>
-    /// 获取TensorRT的配置
+    ///     获取TensorRT的配置
     /// </summary>
     /// <param name="cacheFolder">缓存生成的目录</param>
     /// <returns>trt配置</returns>
@@ -422,7 +380,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             // 不使用缓存目录
             var r = new Dictionary<string, string>
             {
-                ["device_id"] = CudaDeviceId.ToString(),
+                ["device_id"] = CudaDeviceId.ToString()
             };
             return r;
         }
@@ -438,7 +396,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             ["trt_timing_cache_path"] =
                 Global.Absolute(Path.Combine(BgiOnnxModel.ModelCacheRelativePath, "trt_timing")),
             // ["trt_force_timing_cache"] = "1",
-            ["device_id"] = CudaDeviceId.ToString(),
+            ["device_id"] = CudaDeviceId.ToString()
         };
         if (TrtUseEmbedMode)
         {
@@ -451,22 +409,20 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         }
 
         if (!Directory.Exists(result["trt_ep_context_file_path"]))
-        {
             Directory.CreateDirectory(result["trt_ep_context_file_path"]);
-        }
 
         return result;
     }
 
     /// <summary>
-    /// 获取cuda provider的配置
+    ///     获取cuda provider的配置
     /// </summary>
     /// <returns>cuda配置</returns>
     private Dictionary<string, string> GetCudaProviderConfig()
     {
         var result = new Dictionary<string, string>
         {
-            ["device_id"] = CudaDeviceId.ToString(),
+            ["device_id"] = CudaDeviceId.ToString()
         };
         return result;
     }

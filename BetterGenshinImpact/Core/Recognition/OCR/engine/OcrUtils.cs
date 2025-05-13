@@ -2,14 +2,13 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OCR.engine;
-using BetterGenshinImpact.Core.Recognition.OCR.paddle.data;
+using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using OpenCvSharp.Dnn;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR;
+namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
 
 public static class OcrUtils
 {
@@ -48,7 +47,7 @@ public static class OcrUtils
     }
 
     /// <summary>
-    /// 用于Det模型
+    ///     用于Det模型
     ///     归一化,标准化并返回Tensor。
     ///     <br />
     ///     归一化:固定范围归一化
@@ -63,50 +62,68 @@ public static class OcrUtils
         out IMemoryOwner<float> tensorMemoryOwner, bool swapRb = false, bool crop = false, Size size = default)
 
     {
+        scale ??= 0.00392156862745f;
+        mean ??= [0.485f, 0.456f, 0.406f];
+        std ??= [0.229f, 0.224f, 0.225f];
         using var rt = new ResourcesTracker();
         // 获取图像参数
         var channels = src.Channels();
         if (channels != 3)
             throw new ArgumentException($"图像通道数必须为3,当前为{channels}");
-        var data = rt.T(OcrOperationImpl.NormalizeImageOperation(src, scale, mean, std));
+        // var data = rt.T(OcrOperationImpl.NormalizeImageOperation(src, scale, mean, std));
+        var stdMat = rt.NewMat();
+        Mat[] bgr = [];
+        try
+        {
+            bgr = src.Split();
+            for (var i = 0; i < bgr.Length; ++i)
+                bgr[i].ConvertTo(bgr[i], MatType.CV_32FC1, 1 / std[i],
+                    (0.0 - mean[i]) / std[i] / (float)scale);
+            Cv2.Merge(bgr, stdMat);
+        }
+        finally
+        {
+            foreach (var channel in bgr) channel.Dispose();
+        }
+
+        //stdMat.GetArray<float>(out var data);
         // 使用DNN模块创建blob
         var blob = rt.T(CvDnn.BlobFromImage(
-            data,
-            1.0,
+            stdMat,
+            (double)scale,
             size,
             default,
             swapRb,
             crop
         ));
+
         // 租用内存并复制数据
-        var total = blob.Total();
-        tensorMemoryOwner = MemoryPool<float>.Shared.Rent((int)total);
+        var total = (int)blob.Total();
+        tensorMemoryOwner = MemoryPool<float>.Shared.Rent(total);
         blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
         // 计算输出形状
         return new DenseTensor<float>(
-            tensorMemoryOwner.Memory[..(int)total],
-            new[] { 1, channels, data.Rows, data.Cols }
+            tensorMemoryOwner.Memory[..total],
+            new[] { 1, channels, stdMat.Rows, stdMat.Cols }
         );
     }
 
     /// <summary>
     ///     不支持通道转换
-    ///    <br />
-    /// 用于PP-OCR的Rec模型，调整大小之后再归一化到-1~1，之后转换为Tensor
+    ///     <br />
+    ///     用于PP-OCR的Rec模型，调整大小之后再归一化到-1~1，之后转换为Tensor
     /// </summary>
-    public static Tensor<float> resize_norm_img(Mat img, OcrShape image_shape,
+    public static Tensor<float> ResizeNormImg(Mat img, OcrShape imageShape,
         out IMemoryOwner<float> tensorMemoryOwner, bool padding = true,
         InterpolationFlags interpolation = InterpolationFlags.Linear)
     {
         using var rt = new ResourcesTracker();
-        var imgC = image_shape.Channel;
-        var imgH = image_shape.Height;
-        var imgW = image_shape.Width;
+        // var imgC = imageShape.Channel;
+        var imgH = imageShape.Height;
+        var imgW = imageShape.Width;
 
         var h = img.Height;
         var w = img.Width;
-
-        int resized_w;
 
         var resizedImage = rt.NewMat();
         if (!padding)
@@ -117,8 +134,8 @@ public static class OcrUtils
         else
         {
             var ratio = w / (double)h;
-            resized_w = Math.Ceiling(imgH * ratio) > imgW ? imgW : (int)Math.Ceiling(imgH * ratio);
-            Cv2.Resize(img, resizedImage, new Size(resized_w, imgH), 0, 0, interpolation);
+            var resizedW = Math.Ceiling(imgH * ratio) > imgW ? imgW : (int)Math.Ceiling(imgH * ratio);
+            Cv2.Resize(img, resizedImage, new Size(resizedW, imgH), 0, 0, interpolation);
         }
 
         /*
@@ -126,7 +143,7 @@ public static class OcrUtils
     resized_image -= 0.5
     resized_image /= 0.5
          */
-        // 归一化
+        // 归一化到 +-1
         // resizedImage.ConvertTo(resizedImage, MatType.CV_32F, 2 / 255f, 1);
         var blob = rt.T(CvDnn.BlobFromImage(
             resizedImage,
@@ -166,15 +183,12 @@ public static class OcrUtils
     public static Mat Tensor2Mat(Tensor<float> tensor)
     {
         var dimensions = tensor.Dimensions;
-        if (dimensions.Length !=4 || dimensions[0] != 1 || dimensions[1] != 1)
-        {
+        if (dimensions.Length != 4 || dimensions[0] != 1 || dimensions[1] != 1)
             throw new ArgumentException($"wrong tensor shape: {string.Join(",", dimensions.ToArray())}");
-        }
         if (tensor is not DenseTensor<float> denseTensor)
             return Mat.FromPixelData(dimensions[2], dimensions[3], MatType.CV_32FC1, tensor.ToArray());
         var mat = new Mat(new Size(dimensions[3], dimensions[2]), MatType.CV_32FC1);
         denseTensor.Buffer.Span.CopyTo(mat.AsSpan<float>());
         return mat;
-
     }
 }

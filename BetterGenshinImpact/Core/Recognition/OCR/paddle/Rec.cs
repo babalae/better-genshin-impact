@@ -5,7 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using BetterGenshinImpact.Core.Recognition.OCR.paddle.data;
+using BetterGenshinImpact.Core.Recognition.OCR.engine;
+using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -22,7 +23,7 @@ public class Rec
     public Rec(BgiOnnxModel model, string labelFilePath, OcrVersionConfig config)
     {
         _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model,true);
+        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model, true);
 
 
         _labels = File.ReadAllLines(labelFilePath);
@@ -95,7 +96,7 @@ public class Rec
                         3 => src,
                         var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
                     };
-                    var result = OcrUtils.resize_norm_img(channel3, new OcrShape(3, maxWidth, modelHeight),
+                    var result = OcrUtils.ResizeNormImg(channel3, new OcrShape(3, maxWidth, modelHeight),
                         out var owner);
                     lock (owners)
                     {
@@ -162,8 +163,10 @@ public class Rec
                                     score += (float)maxVal;
                                     sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
                                 }
+
                                 lastIndex = maxIdx[1];
                             }
+
                             return new OcrRecognizerResult(sb.ToString(), score / sb.Length);
                         })
                         .ToArray();

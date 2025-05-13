@@ -77,4 +77,9 @@ public class BgiYoloPredictor : IDisposable
             Predictor.Dispose();
         }
     }
+
+    ~BgiYoloPredictor()
+    {
+        Dispose();
+    }
 }
