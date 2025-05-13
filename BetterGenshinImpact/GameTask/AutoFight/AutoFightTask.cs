@@ -472,7 +472,8 @@ public class AutoFightTask : ISoloTask
                 }
             }
         }
-        if (_taskParam is { PickDropsAfterFightEnabled: true })
+        //首个人出招就结束战斗，跳过拾取
+        if (_taskParam is { PickDropsAfterFightEnabled: true } && countFight > 1 )
         {
             // 执行自动拾取掉落物的功能
             await new ScanPickTask().Start(ct);
