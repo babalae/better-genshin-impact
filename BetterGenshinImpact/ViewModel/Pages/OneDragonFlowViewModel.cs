@@ -650,10 +650,50 @@ public partial class OneDragonFlowViewModel : ViewModel
             Toast.Error("保存配置时失败");
         }
     }
+    
+    private bool _autoRun = true;
+    
+    [RelayCommand]
+    private void OnLoaded()
+    {
+        // 组件首次加载时运行一次。
+        if (!_autoRun)
+        {
+            return;
+        }
+        _autoRun = false;
+        //
+        var args = Environment.GetCommandLineArgs();
+        if (args.Length > 1 && args[1].Contains("startOneDragon"))
+        {
+            // 通过命令行参数启动一条龙。
+            if (args.Length > 2)
+            {
+                // 从命令行参数中提取一条龙配置名称。
+                _logger.LogInformation($"参数指定的一条龙配置：{args[2]}");
+                var argsOneDragonConfig = ConfigList.FirstOrDefault(x => x.Name == args[2], null);
+                if (argsOneDragonConfig != null)
+                {
+                    // 设定配置，配置下拉框会选定。
+                    SelectedConfig = argsOneDragonConfig;
+                    // 调用选定更新函数。
+                    OnConfigDropDownChanged();
+                }
+                else
+                {
+                    _logger.LogWarning("未找到，请检查。");
+                }
+            }
+            // 异步执行一条龙
+            Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
+            OnOneKeyExecute();
+        }
+    }
 
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
+        _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
         foreach (var task in taskListCopy)
         {

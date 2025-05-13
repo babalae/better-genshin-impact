@@ -46,8 +46,17 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
             _navigationWindow!.ShowWindow();
-
-            _ = _navigationWindow.Navigate(typeof(HomePage));
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && args[1].Contains("startOneDragon"))
+            {
+                // 通过命令行参数启动一条龙，跳转到一条龙配置页。
+                _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+            }
+            else
+            {
+                // 其它情况，跳转到主页。
+                _ = _navigationWindow.Navigate(typeof(HomePage));
+            }
         }
 
         await Task.CompletedTask;
