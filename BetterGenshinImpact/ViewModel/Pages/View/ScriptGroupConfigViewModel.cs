@@ -1,7 +1,10 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
@@ -41,6 +44,19 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     public void OnOpenLocalScriptRepo()
     {
         AutoFightViewModel.OnOpenLocalScriptRepo();
+    }
+    [RelayCommand]
+    public void OnGetExecutionOrder()
+    {
+        var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder(DateTime.Now);
+        if (index == -1)
+        {
+            Toast.Error("计算失败，请检查参数！");
+        }
+        else
+        {
+            Toast.Success("当前执行序号为："+index);
+        }
     }
 
     [RelayCommand]

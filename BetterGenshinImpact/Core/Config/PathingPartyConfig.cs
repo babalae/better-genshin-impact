@@ -91,6 +91,10 @@ public partial class PathingPartyConfig : ObservableObject
     // 自动冲刺启用
     [ObservableProperty]
     private bool _autoRunEnabled = true;
+    
+    //执行周期配置
+    [ObservableProperty]
+    private PathingPartyTaskCycleConfig _taskCycleConfig = new();
 
     //启用自动战斗配置
     [ObservableProperty]

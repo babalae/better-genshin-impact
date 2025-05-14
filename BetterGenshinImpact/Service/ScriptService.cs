@@ -43,7 +43,35 @@ public partial class ScriptService : IScriptService
         // 如果输入非数字或不合法，返回 false
         return false;
     }
+    public bool ShouldSkipTask(ScriptGroupProject project)
+    {
+        if (project.GroupInfo is { Config.PathingConfig.Enabled: true } )
+        {
+            if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+            {
+                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                return true;
+            }
 
+            var tcc = project.GroupInfo.Config.PathingConfig.TaskCycleConfig;
+            if (tcc.Enable)
+            {
+                int index = tcc.GetExecutionOrder(DateTime.Now);
+                if (index == -1)
+                {
+                    _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
+                }
+                else if (index != tcc.Index)
+                {
+                    _logger.LogInformation($"{project.Name}任务已经不在执行周期（当前值${index}!=配置值${tcc.Index}），将跳过此任务！");
+                    return true;
+                }
+               
+            }
+            
+        }
+        return false; // 不跳过
+    }
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
         groupName ??= "默认";
@@ -82,9 +110,8 @@ public partial class ScriptService : IScriptService
 
                 foreach (var project in list)
                 {
-                    if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                    if (ShouldSkipTask(project))
                     {
-                        _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                         continue;
                     }
                     //月卡检测
@@ -115,10 +142,9 @@ public partial class ScriptService : IScriptService
                             await ExecuteProject(project);
 
                             //多次执行时及时中断
-                            if (project.GroupInfo is { Config.PathingConfig.Enabled: true } && IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
+                            if (ShouldSkipTask(project))
                             {
-                                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
-                                break;
+                                continue;
                             }
                         }
                         catch (NormalEndException e)

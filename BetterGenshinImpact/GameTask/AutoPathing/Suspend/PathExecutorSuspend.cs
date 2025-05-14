@@ -24,6 +24,8 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         _waypoint = pathExecutor.CurWaypoint;
         _isSuspended = true;
         _resuming = false;
+        //暂停时记录，获取点位的暂停标志
+        pathExecutor.GetPositionAndTimeSuspendFlag = true;
     }
 
     //路径过远时，检查地图追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态

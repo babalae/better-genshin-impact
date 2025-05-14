@@ -1116,7 +1116,8 @@ public class PathExecutor
     {
         return (await GetPositionAndTime(imageRegion, waypoint)).point;
     }
-
+    //
+    public bool GetPositionAndTimeSuspendFlag = false;
     private async Task<(Point2f point,int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
     {
         
@@ -1132,6 +1133,12 @@ public class PathExecutor
         }
 
         var distance = Navigation.GetDistance(waypoint, position);
+        //中途暂停过，地图未识别到
+        if (position is {X:0,Y:0} && GetPositionAndTimeSuspendFlag)
+        {
+            GetPositionAndTimeSuspendFlag = false;
+            throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+        }
         //何时处理   pathTooFar  路径过远  unrecognized 未识别
         if ((position is {X:0,Y:0} && waypoint.Misidentification.Type.Contains("unrecognized")) || (distance>500 && waypoint.Misidentification.Type.Contains("pathTooFar")))
         {
