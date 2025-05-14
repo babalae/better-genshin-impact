@@ -144,55 +144,69 @@ public partial class OneDragonFlowViewModel : ViewModel
     private async void AddNewTaskGroup()
     {
         ReadScriptGroup();
-        var selectedGroupName = await OnStartMultiScriptGroupAsync();
-        if (selectedGroupName == null)
+        var selectedGroupNamePick = await OnStartMultiScriptGroupAsync();
+        if (selectedGroupNamePick == null)
         {
             return;
         }
-
-        var taskItem = new OneDragonTaskItem(selectedGroupName)
+        int pickTaskCount = selectedGroupNamePick.Split(',').Count();
+        foreach (var selectedGroupName in selectedGroupNamePick.Split(','))
         {
-            IsEnabled = true
-        };
-        if (TaskList.All(task => task.Name != taskItem.Name))
-        {
-            var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(name => name.Trim())
-                .ToList();
-            bool containsAnyDefaultGroup =
-                names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
-            if (containsAnyDefaultGroup)
+            var taskItem = new OneDragonTaskItem(selectedGroupName)
             {
-                int lastDefaultGroupIndex = -1;
-                for (int i = TaskList.Count - 1; i >= 0; i--)
+                IsEnabled = true
+            };
+            if (TaskList.All(task => task.Name != taskItem.Name))
+            {
+                var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(name => name.Trim())
+                    .ToList();
+                bool containsAnyDefaultGroup =
+                    names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
+                if (containsAnyDefaultGroup)
                 {
-                    if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == TaskList[i].Name))
+                    int lastDefaultGroupIndex = -1;
+                    for (int i = TaskList.Count - 1; i >= 0; i--)
                     {
-                        lastDefaultGroupIndex = i;
-                        break;
+                        if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == TaskList[i].Name))
+                        {
+                            lastDefaultGroupIndex = i;
+                            break;
+                        }
                     }
-                }
-
-                if (lastDefaultGroupIndex >= 0)
-                {
-                    TaskList.Insert(lastDefaultGroupIndex + 1, taskItem);
+                    if (lastDefaultGroupIndex >= 0)
+                    {
+                        TaskList.Insert(lastDefaultGroupIndex + 1, taskItem);
+                    }
+                    else
+                    {
+                        TaskList.Insert(0, taskItem);
+                    }
+                    if (pickTaskCount == 1)
+                    {
+                        Toast.Success("一条龙任务添加成功");
+                    }
                 }
                 else
                 {
-                    TaskList.Insert(0, taskItem);
+                    TaskList.Add(taskItem);
+                    if (pickTaskCount == 1)
+                    {
+                        Toast.Success("配置组添加成功");
+                    }
                 }
-
-                Toast.Success("一条龙任务添加成功");
             }
             else
             {
-                TaskList.Add(taskItem);
-                Toast.Success("配置组添加成功");
-            }
+                if (pickTaskCount == 1)
+                {
+                    Toast.Warning("任务或配置组已存在");
+                }
+            } 
         }
-        else
+        if (pickTaskCount > 1)
         {
-            Toast.Warning("任务或配置组已存在");
+                Toast.Success(pickTaskCount + " 个任务添加成功");  
         }
     }
 
@@ -203,38 +217,22 @@ public partial class OneDragonFlowViewModel : ViewModel
         CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
+            if (TaskList.Any(taskName => scriptGroup.Name.Contains(taskName.Name)))
+            {
+                continue; // 不显示已经存在的配置组
+            }
             var checkBox = new CheckBox
             {
                 Content = scriptGroup.Name,
                 Tag = scriptGroup,
                 IsChecked = false // 初始状态下都未选中
             };
-            checkBox.Checked += (sender, args) =>
-            {
-                var currentCheckBox = sender as CheckBox;
-
-            if (selectedCheckBox != null && selectedCheckBox != currentCheckBox)
-            {
-                selectedCheckBox.IsChecked = false; // 取消之前选中的 CheckBox
-            }
-
-            selectedCheckBox = currentCheckBox; // 更新当前选中的 CheckBox
-        };
-        checkBox.Unchecked += (sender, args) =>
-        {
-            if (selectedCheckBox == sender)
-            {
-                selectedCheckBox = null; // 如果取消选中的是当前选中的 CheckBox，则设置为 null
-            }
-        };
-
-        checkBoxes[scriptGroup] = checkBox;
-        stackPanel.Children.Add(checkBox);
+            checkBoxes[scriptGroup] = checkBox;
+            stackPanel.Children.Add(checkBox);
         }
-
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-        Title = "选择增加的配置组（单选）",
+        Title = "选择增加的配置组（可多选）",
         Content = new ScrollViewer
         {
             Content = stackPanel,
@@ -247,10 +245,10 @@ public partial class OneDragonFlowViewModel : ViewModel
         SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
         MaxHeight = 600,
         };
-
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
+            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
             foreach (var checkBox in checkBoxes.Values)
             {
                 if (checkBox.IsChecked == true)
@@ -258,8 +256,8 @@ public partial class OneDragonFlowViewModel : ViewModel
                     // 确保 Tag 是 ScriptGroup 类型，并返回其 Name 属性
                     var scriptGroup = checkBox.Tag as ScriptGroup;
                     if (scriptGroup != null)
-                    {
-                        return scriptGroup.Name;
+                    { 
+                        selectedItems.Add(scriptGroup.Name);
                     }
                     else
                     {
@@ -267,6 +265,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                 }
             }
+            return string.Join(",", selectedItems); // 返回所有选中的项
         }
         return null;
     }

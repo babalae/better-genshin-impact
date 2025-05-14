@@ -300,7 +300,7 @@ internal class GoToSereniteaPotTask
             await Delay(300, ct);
             Simulation.SendInput.Mouse.LeftButtonDown();
             await Delay(300, ct);
-            Simulation.SendInput.Mouse.MoveMouseBy(numberBtn.Width * 15, 0);
+            numberBtn.MoveTo(ra.Width/7,0);//moveby会超出边界，改用MoveTo
             await Delay(300, ct);
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
