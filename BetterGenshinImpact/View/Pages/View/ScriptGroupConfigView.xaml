@@ -890,6 +890,32 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
+                                      Text="万叶拾取队伍名"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下，并且填写队伍名才会切换），适用于需要多一个人刷经验时，替换调万叶的位置，战斗策略建议兼容两个队伍的，以防止队伍切换不成功也能继续战斗。"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="120"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding PathingConfig.AutoFightConfig.KazuhaPartyName}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
                                       Text="战斗超时（秒）"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
