@@ -34,7 +34,7 @@ public class AutoFightParam : BaseTaskParam
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
-        
+        KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         //下面参数固定，只取自动战斗里面的
         FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
         FinishDetectConfig.BattleEndProgressBarColorTolerance = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
@@ -52,6 +52,7 @@ public class AutoFightParam : BaseTaskParam
 
     public bool KazuhaPickupEnabled = true;
     public string ActionSchedulerByCd = "";
+    public string KazuhaPartyName;
 
 
 }

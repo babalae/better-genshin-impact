@@ -241,6 +241,7 @@ public class AutoFightTask : ISoloTask
         //     return;
         // }
         var fightEndFlag = false;
+        var timeOutFlag = false;
         string lastFightName = "";
 
         //统计切换人打架次数
@@ -343,6 +344,7 @@ public class AutoFightTask : ISoloTask
                         {
                             Logger.LogInformation("战斗超时结束");
                             fightEndFlag = true;
+                            timeOutFlag = true;
                             break;
                         }
 
@@ -445,15 +447,49 @@ public class AutoFightTask : ISoloTask
         // }, cts2.Token);
         //
         // await Task.WhenAll(fightTask, endTask);
+        //战斗人次少于2时（通常无怪物情况下），跳过拾取
+        if (countFight < 2)
+        {
+            return;
+        }
+        
+        
         if (_taskParam.KazuhaPickupEnabled)
         {
             // 队伍中存在万叶的时候使用一次长E
             var kazuha = combatScenes.SelectAvatar("枫原万叶");
+            
+            var oldPartyName = RunnerContext.Instance.PartyName;
+            var switchPartyFlag = false;
+            if (kazuha == null && !timeOutFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
+            {
+                try
+                {
+                    Logger.LogInformation($"切换为拾取队伍：{_taskParam.KazuhaPartyName}");
+                    var success = await new SwitchPartyTask().Start(_taskParam.KazuhaPartyName, ct);
+                    if (success)
+                    {
+                        Logger.LogInformation($"成功切换队伍为{_taskParam.KazuhaPartyName}");
+                        switchPartyFlag = true;
+                        RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
+                        RunnerContext.Instance.ClearCombatScenes();
+                        var cs = await RunnerContext.Instance.GetCombatScenes(ct);
+                        kazuha = cs.SelectAvatar("枫原万叶");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.LogInformation("切换队伍异常，跳过此步骤！");
+                }
+
+            }
+          
+            
             if (kazuha != null)
             {
                 var time = DateTime.UtcNow - kazuha.LastSkillTime;
-                //当万叶cd大于3时或战斗人次少于2时（通常无怪物情况下），此时不再触发万叶拾取，
-                if (!(countFight < 2 || lastFightName == "枫原万叶" && time.TotalSeconds > 3))
+                //当万叶cd大于3时，此时不再触发万叶拾取，
+                if (!(lastFightName == "枫原万叶" && time.TotalSeconds > 3))
                 {
                     Logger.LogInformation("使用枫原万叶长E拾取掉落物");
                     await Delay(300, ct);
@@ -471,8 +507,34 @@ public class AutoFightTask : ISoloTask
                     Logger.LogInformation((countFight < 2 ? "首个人出招就结束战斗，应该无怪物" : "距最近一次万叶出招，时间过短") + "，跳过此次万叶拾取！");
                 }
             }
+            //切换过队伍的，需要再切回来
+            if (switchPartyFlag && !string.IsNullOrEmpty(oldPartyName))
+            {
+                try
+                {
+                    Logger.LogInformation($"切换为原队伍：{oldPartyName}");
+                    var success = await new SwitchPartyTask().Start(oldPartyName, ct);
+                    if (success)
+                    {
+                        Logger.LogInformation($"切换为原队伍{oldPartyName}");
+                        switchPartyFlag = true;
+                        RunnerContext.Instance.PartyName = oldPartyName;
+                        RunnerContext.Instance.ClearCombatScenes();
+                        await RunnerContext.Instance.GetCombatScenes(ct);
+    
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.LogInformation("恢复原队伍失败，跳过此步骤！");
+                }
+                    
+            }
+            
+
         }
-        if (_taskParam is { PickDropsAfterFightEnabled: true })
+
+        if (_taskParam is { PickDropsAfterFightEnabled: true } )
         {
             // 执行自动拾取掉落物的功能
             await new ScanPickTask().Start(ct);

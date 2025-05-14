@@ -95,6 +95,13 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _kazuhaPickupEnabled = true;
+    
+    /// <summary>
+    /// 战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下）
+    /// </summary>
+    [ObservableProperty]
+    private string _kazuhaPartyName = "";
+    
 
     /// <summary>
     /// 战斗超时，单位秒
