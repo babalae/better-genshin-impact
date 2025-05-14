@@ -85,8 +85,6 @@ jobs:
     needs: [validate, build_web_map_editor, build_web_scripts_list]
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: babalae/better-genshin-impact
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
