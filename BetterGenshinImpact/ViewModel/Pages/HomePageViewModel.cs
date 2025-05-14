@@ -110,34 +110,24 @@ public partial class HomePageViewModel : ViewModel
         });
     }
 
+    private bool _autoRun = true;
+
     [RelayCommand]
     private void OnLoaded()
     {
         // OnTest();
+        
+        // 组件首次加载时运行一次。
+        if (!_autoRun)
+        {
+            return;
+        }
+        _autoRun = false;
 
         var args = Environment.GetCommandLineArgs();
-
-        // url protocol
-        // BetterGI.dll bettergi://start/
-        if (args.Length > 1)
+        if (args.Length > 1 && args[1].Contains("start"))
         {
-            if (args[1].Contains("startOneDragon"))
-            {
-                var odVm = App.GetService<OneDragonFlowViewModel>();
-                odVm?.OneKeyExecuteCommand.Execute(null);
-            }
-            else if (args[1].Trim().Equals("--startGroups", StringComparison.InvariantCultureIgnoreCase) ||
-                     args.Length > 3)
-            {
-                var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
-                // 启动调度器
-                var scheduler = App.GetService<ScriptControlViewModel>();
-                scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
-            }
-            else if (args[1].Contains("start"))
-            {
-                _ = OnStartTriggerAsync();
-            }
+            _ = OnStartTriggerAsync();
         }
     }
 

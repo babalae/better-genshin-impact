@@ -19,6 +19,12 @@
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
     
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+    
     <Grid Margin="22,16,8,12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MaxWidth="300" />
