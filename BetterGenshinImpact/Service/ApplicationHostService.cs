@@ -62,7 +62,7 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                 {
                     // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
                     _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                    if (args.Length > 3)
+                    if (args.Length > 2)
                     {
                         // 获取调度组
                         var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
