@@ -205,7 +205,9 @@ public class NotificationService : IHostedService, IDisposable
         {
             _notifierManager.RegisterNotifier(new BarkNotifier(
                 _notificationConfig.BarkDeviceKeys,
-                _notificationConfig.BarkApiEndpoint
+                _notificationConfig.BarkApiEndpoint,
+                _notificationConfig.BarkGroup,
+                _notificationConfig.BarkSound
             ));
         }
     }

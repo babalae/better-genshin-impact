@@ -1210,7 +1210,8 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              SelectedItem="{Binding Config.NotificationConfig.BarkSound}"
+                              SelectedValuePath="Content"
+                              SelectedValue="{Binding Config.NotificationConfig.BarkSound}"
                               Margin="0,0,36,0"
                               MinWidth="120">
                         <ComboBoxItem Content="minuet" />
