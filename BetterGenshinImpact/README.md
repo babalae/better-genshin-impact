@@ -21,8 +21,8 @@
 最后前往这里 `https://github.com/<your-user-name>/better-genshin-impact/actions/workflows/publish.yml` 并点击 `Run workflow`:
 
 - `Use workflow from` 选择 `<branch>`
-- `BetterGI Version` 填写 `<current-version>-commit-<commit>`
-- `Kachina Installer Channel` 选择 `dev`
+- `BetterGI Version` 填写 `<current-version>+<commit hash>`
+- `Kachina Installer Channel` 选择 `release` （无需修改）
 - 不要勾选 `创建 GitHub Release 草稿`
 
 点击绿色按钮 `Run workflow`，等待约10分钟。
