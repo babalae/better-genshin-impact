@@ -1143,7 +1143,7 @@ public class AutoDomainTask : ISoloTask
             fragileResinCount = StringUtils.TryParseInt(count);
         }
 
-        Logger.LogInformation("剩余：浓缩树脂 {CondensedResinCount} 脆弱树脂 {FragileResinCount}", condensedResinCount,
+        Logger.LogInformation("剩余：浓缩树脂 {CondensedResinCount} 原粹树脂 {FragileResinCount}", condensedResinCount,
             fragileResinCount);
         return (condensedResinCount, fragileResinCount);
     }
