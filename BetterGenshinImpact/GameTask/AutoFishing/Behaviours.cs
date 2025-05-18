@@ -437,7 +437,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var dy = NormalizeYTo576(fish.Top + fish.Bottom - rod.Top - rod.Bottom) / 2.0;
                 var dl = Math.Sqrt(dx * dx + dy * dy);
                 //logger.LogInformation("dl = {dl}", dl);
-                var state = RodNet.GetRodState(new RodInput
+
+                var state = new RodNet().GetRodState(new RodInput
                 {
                     rod_x1 = NormalizeXTo1024(rod.Left),
                     rod_x2 = NormalizeXTo1024(rod.Right),

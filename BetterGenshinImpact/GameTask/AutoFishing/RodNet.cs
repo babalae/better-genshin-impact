@@ -1,6 +1,10 @@
-﻿using OpenCvSharp;
-using System;
+﻿using System;
 using System.Linq;
+using static TorchSharp.torch.nn;
+using static TorchSharp.torch;
+using TorchSharp.Modules;
+using TorchSharp;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing;
 
@@ -34,7 +38,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing;
 /// 
 /// 哦 到这一步以后剩下的就很弱智了 远了挪近一点 近了挪远一点 调调参差不多得了
 /// </summary>
-public class RodNet
+public class RodNet : Module<Tensor, Tensor>
 {
     const double alpha = 1734.34 / 2.5;
 
@@ -62,6 +66,26 @@ public class RodNet
 
     static readonly double[] offset = [ 0.4, 0.2, 0.4, 0, 0.3, 0.3,
         0.3, 0.15, 0.5, 0.5, 0.5, 0.5 ];
+
+    private readonly Module<Tensor, Tensor> layers;
+
+    public RodNet() : base("RodNet")
+    {
+        var theta = tensor(RodNet.theta, ScalarType.Float64);
+        var b = tensor(RodNet.B, ScalarType.Float64);
+
+        RodLayer1 rodLayer1 = new RodLayer1(num_embeddings: theta.shape[0], embedding_dim: theta.shape[1], input_dim: 3, output_dim: 3);
+        rodLayer1.SetWeightsManually(theta, b);
+        var modules = new List<(string, Module<Tensor, Tensor>)>
+        {
+            ($"linear", rodLayer1),
+            ($"softmax", nn.Softmax(1))
+        };
+
+        layers = Sequential(modules);
+
+        RegisterComponents();
+    }
 
     static void F(double[] dst, double[] x, double[] y)
     {
@@ -141,8 +165,8 @@ public class RodNet
             dst[i] /= sum;
         }
     }
-
-    public static int GetRodState(RodInput input)
+    record NetInput(double dist, int fish_label);
+    private static NetInput GeometryProcessing(RodInput input)
     {
         double a, b, v0, u, v;
 
@@ -163,12 +187,13 @@ public class RodNet
         double[] abv0 = [a, b, v0];
         double[] init = [30, 15, 1];
 
-        bool solveSuccess = NewtonRaphson(F, DfInv, y0z0t, abv0, init, 3, 1000, 1e-6);
+        // todo 处理此种情况，奇怪的是hutao的dev分支已去除牛顿算法，得询问hutao和鸭蛋
+        //bool solveSuccess = NewtonRaphson(F, DfInv, y0z0t, abv0, init, 3, 1000, 1e-6);
 
-        if (!solveSuccess)
-        {
-            return -1;
-        }
+        //if (!solveSuccess)
+        //{
+        //    return -1;
+        //}
 
         double y0 = y0z0t[0], z0 = y0z0t[1], t = y0z0t[2];
         double x, y, dist;
@@ -176,33 +201,108 @@ public class RodNet
         y = (z0 + dz[input.fish_label]) * (1 + t * v) / (t - v);
         dist = Math.Sqrt(x * x + (y - y0) * (y - y0));
 
+        return new NetInput(dist, input.fish_label);
+    }
+
+    public static int GetRodState_Math(RodInput input)
+    {
+        NetInput netInput = GeometryProcessing(input);
+        double dist = netInput.dist;
+        int fish_label = netInput.fish_label;
+
         double[] logits = new double[3];
         for (int i = 0; i < 3; i++)
         {
-            logits[i] = theta[i, 0] * dist + theta[i, 1 + input.fish_label] + B[i];
+            logits[i] = theta[i, 0] * dist + theta[i, 1 + fish_label] + B[i];
         }
 
         double[] pred = new double[3];
         Softmax(pred, logits, 3);
-        pred[0] -= offset[input.fish_label];
+        pred[0] -= offset[fish_label];
 
         return Array.IndexOf(pred, pred.Max());
     }
 
-    public static int GetRodState(Rect rod, Rect fish, int fishTypeIndex)
+    public int GetRodState(RodInput input)
     {
-        RodInput input = new()
+        NetInput netInput = GeometryProcessing(input);
+        double dist = netInput.dist;
+        int fish_label = netInput.fish_label;
+
+        Tensor inputTensor = cat([tensor(new double[,] { { dist } }, dtype: ScalarType.Float64),
+            tensor(new int[,] { {fish_label } }, dtype: ScalarType.Int32)]).T;
+        var outputTensor = forward(inputTensor);
+
+        outputTensor[0][0] = outputTensor[0][0] - RodNet.offset[fish_label];
+
+        #region 临时校验
+        double[] logits = new double[3];
+        for (int i = 0; i < 3; i++)
         {
-            rod_x1 = rod.Left,
-            rod_x2 = rod.Right,
-            rod_y1 = rod.Top,
-            rod_y2 = rod.Bottom,
-            fish_x1 = fish.Left,
-            fish_x2 = fish.Right,
-            fish_y1 = fish.Top,
-            fish_y2 = fish.Bottom,
-            fish_label = fishTypeIndex
-        };
-        return GetRodState(input);
+            logits[i] = theta[i, 0] * dist + theta[i, 1 + fish_label] + B[i];
+        }
+
+        double[] pred = new double[3];
+        Softmax(pred, logits, 3);
+
+        pred[0] -= offset[fish_label];
+
+        if ((float)pred[0] != (float)outputTensor.data<double>()[0] ||
+            (float)pred[1] != (float)outputTensor.data<double>()[1] ||
+            (float)pred[2] != (float)outputTensor.data<double>()[2])
+        {
+            //todo 处理调试时发生的 pred[2] 为NaN 而此时outputTensor.data<double>()[2]为1的情况
+            throw new Exception("RodNet新旧方法数值不一致，远超计算精度影响");
+        }
+        #endregion
+
+        var max = argmax(outputTensor);
+        return (int)max.item<long>();
+    }
+
+    public override Tensor forward(Tensor input)
+    {
+        return layers.forward(input);
+    }
+}
+
+public class RodLayer1 : Module<Tensor, Tensor>
+{
+    private readonly Embedding embedding;
+    private readonly Linear linear;
+    public RodLayer1(long num_embeddings, long embedding_dim, long input_dim, long output_dim)
+        : base("RodLinear")
+    {
+        embedding = torch.nn.Embedding(num_embeddings, embedding_dim);
+        linear = torch.nn.Linear(input_dim, output_dim);
+
+        RegisterComponents();
+    }
+
+    public void SetWeightsManually(Tensor theta, Tensor b)
+    {
+        var splitTheta = theta.split([1, 12], dim: 1);
+
+        linear.weight.requires_grad = false;
+        linear.weight = new Parameter(splitTheta[0]);
+        linear.bias.requires_grad = false;
+        linear.bias = new Parameter(b);
+
+        embedding.weight = new Parameter(splitTheta[1].T);
+    }
+
+    public override Tensor forward(Tensor input)
+    {
+        var splitInput = input.split([1, 1], dim: 1);
+        var dist = splitInput[0];
+        var fish_label = splitInput[1].to(ScalarType.Int32).flatten();
+        var x_linear = linear.forward(dist);
+        //Console.WriteLine(x_linear);
+        //Console.WriteLine(String.Join(",", x_linear.data<double>()));
+        var x_embed = embedding.forward(fish_label);
+        //Console.WriteLine(x_embed);
+        //Console.WriteLine(String.Join(",", x_embed.data<double>()));
+        var x_combined = x_linear + x_embed;
+        return x_combined;
     }
 }
