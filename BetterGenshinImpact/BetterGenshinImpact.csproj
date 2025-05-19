@@ -48,7 +48,6 @@
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
-		<PackageReference Include="libtorch-cpu-win-x64" Version="2.5.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />

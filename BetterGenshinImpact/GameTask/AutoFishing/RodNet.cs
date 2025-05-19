@@ -204,7 +204,7 @@ public class RodNet : Module<Tensor, Tensor>
         return new NetInput(dist, input.fish_label);
     }
 
-    public static int GetRodState_Math(RodInput input)
+    public static int GetRodState(RodInput input)
     {
         NetInput netInput = GeometryProcessing(input);
         double dist = netInput.dist;
@@ -223,7 +223,7 @@ public class RodNet : Module<Tensor, Tensor>
         return Array.IndexOf(pred, pred.Max());
     }
 
-    public int GetRodState(RodInput input)
+    public int GetRodState_Torch(RodInput input)
     {
         NetInput netInput = GeometryProcessing(input);
         double dist = netInput.dist;

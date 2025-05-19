@@ -2,6 +2,9 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
+using Microsoft.Extensions.Configuration;
+using System.Runtime.InteropServices;
+using TorchSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -16,6 +19,26 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public BehavioursTests(PaddleFixture paddle)
         {
             this.paddle = paddle;
+
+            var configuration = new ConfigurationBuilder().AddUserSecrets<BehavioursTests>().Build();
+            if (configuration == null)
+            {
+                throw new NullReferenceException();
+            }
+            string torchDllFullPath = configuration["torchDllFullPath"] ?? throw new NullReferenceException();
+            try
+            {
+                NativeLibrary.Load(torchDllFullPath);
+                if (torch.TryInitializeDeviceType(DeviceType.CUDA))
+                {
+                    torch.set_default_device(new torch.Device(DeviceType.CUDA));
+                }
+                this.useTorch = true;
+            }
+            catch (Exception e) when (e is DllNotFoundException || e is NotSupportedException)
+            {
+                this.useTorch = false;
+            }
         }
 
         private IOcrService OcrService => paddle.Get();
@@ -27,5 +50,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 return LazyInitializer.EnsureInitialized(ref predictor,()=>BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish));
             }
         }
+
+        private readonly bool useTorch;
     }
 }
