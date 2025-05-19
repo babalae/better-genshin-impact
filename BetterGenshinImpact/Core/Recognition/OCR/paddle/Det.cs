@@ -13,10 +13,10 @@ public class Det
     private readonly OcrVersionConfig _config;
     private readonly InferenceSession _session;
 
-    public Det(BgiOnnxModel model, OcrVersionConfig config)
+    public Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgiOnnxFactory)
     {
         _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model, true);
+        _session = bgiOnnxFactory.CreateInferenceSession(model, true);
     }
 
     /// <summary>Gets or sets the maximum size for resizing the input image.</summary>

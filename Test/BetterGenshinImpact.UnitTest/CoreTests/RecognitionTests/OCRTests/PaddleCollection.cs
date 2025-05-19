@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
 
         public PaddleOcrService Get(string cultureInfoName = "zh-Hans")
         {
-            return paddleOcrServices.GetOrAdd(cultureInfoName, name => { lock (paddleOcrServices) { return new PaddleOcrService(name); } });
+            return paddleOcrServices.GetOrAdd(cultureInfoName, name => { lock (paddleOcrServices) { return new PaddleOcrService(name, new BgiOnnxFactory(new Core.Config.HardwareAccelerationConfig(), new FakeLogger<BgiOnnxFactory>())); } });
         }
     }
 }

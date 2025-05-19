@@ -24,6 +24,7 @@ using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using Compunet.YoloSharp;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -38,7 +39,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly AutoFishingTaskParam param;
 
         private readonly BgiYoloPredictor _predictor =
-            BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish);
+            App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiFish);
 
         public AutoFishingTask(AutoFishingTaskParam param)
         {

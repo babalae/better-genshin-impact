@@ -166,7 +166,7 @@ public class RodNet : Module<Tensor, Tensor>
         }
     }
     record NetInput(double dist, int fish_label);
-    private static NetInput GeometryProcessing(RodInput input)
+    private static NetInput? GeometryProcessing(RodInput input)
     {
         double a, b, v0, u, v;
 
@@ -188,12 +188,12 @@ public class RodNet : Module<Tensor, Tensor>
         double[] init = [30, 15, 1];
 
         // todo 处理此种情况，奇怪的是hutao的dev分支已去除牛顿算法，得询问hutao和鸭蛋
-        //bool solveSuccess = NewtonRaphson(F, DfInv, y0z0t, abv0, init, 3, 1000, 1e-6);
+        bool solveSuccess = NewtonRaphson(F, DfInv, y0z0t, abv0, init, 3, 1000, 1e-6);
 
-        //if (!solveSuccess)
-        //{
-        //    return -1;
-        //}
+        if (!solveSuccess)
+        {
+            return null;
+        }
 
         double y0 = y0z0t[0], z0 = y0z0t[1], t = y0z0t[2];
         double x, y, dist;
@@ -206,7 +206,11 @@ public class RodNet : Module<Tensor, Tensor>
 
     public static int GetRodState(RodInput input)
     {
-        NetInput netInput = GeometryProcessing(input);
+        NetInput? netInput = GeometryProcessing(input);
+        if (netInput is null)
+        {
+            return -1;
+        }
         double dist = netInput.dist;
         int fish_label = netInput.fish_label;
 
@@ -225,7 +229,11 @@ public class RodNet : Module<Tensor, Tensor>
 
     public int GetRodState_Torch(RodInput input)
     {
-        NetInput netInput = GeometryProcessing(input);
+        NetInput? netInput = GeometryProcessing(input);
+        if (netInput is null)
+        {
+            return -1;
+        }
         double dist = netInput.dist;
         int fish_label = netInput.fish_label;
 
@@ -295,8 +303,8 @@ public class RodLayer1 : Module<Tensor, Tensor>
     {
         var splitInput = input.split([1, 1], dim: 1);
         var dist = splitInput[0];
-        var fish_label = splitInput[1].to(ScalarType.Int32).flatten();
-        var x_linear = linear.forward(dist);
+        var fish_label = splitInput[1].to(ScalarType.Int32).flatten();
+        var x_linear = linear.forward(dist);
         //Console.WriteLine(x_linear);
         //Console.WriteLine(String.Join(",", x_linear.data<double>()));
         var x_embed = embedding.forward(fish_label);
