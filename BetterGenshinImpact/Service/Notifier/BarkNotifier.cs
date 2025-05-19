@@ -44,7 +44,7 @@ namespace BetterGenshinImpact.Service.Notifier
         /// <summary>
         /// 通知声音，填1时铃声重复播放
         /// </summary>
-        public string Sound { get; set; } = "minuet";
+        public string Sound { get; set; } = "bell";
 
         /// <summary>
         /// 重要警告的通知音量，取值范围: 0-10, 不传默认值为5
@@ -109,6 +109,8 @@ namespace BetterGenshinImpact.Service.Notifier
         // Bark API配置
         private readonly string _apiBaseUrl;
         private readonly string[] _deviceKeys;
+        private readonly string[] _group;
+        private readonly string[] _sound;
         private readonly HttpClient _httpClient;
         private readonly BarkOptions _defaultOptions;
 
@@ -121,6 +123,8 @@ namespace BetterGenshinImpact.Service.Notifier
         public BarkNotifier(
             string deviceKeys,
             string apiHost,
+            string group,
+            string sound,
             BarkOptions options = null)
         {
             // 输入验证
@@ -142,6 +146,8 @@ namespace BetterGenshinImpact.Service.Notifier
             
             // 初始化默认选项
             _defaultOptions = options ?? new BarkOptions();
+            _defaultOptions.Group = group;
+            _defaultOptions.Sound = sound;
 
             // 使用HttpClient进行API调用
             _httpClient = new HttpClient();
@@ -293,6 +299,7 @@ namespace BetterGenshinImpact.Service.Notifier
             if (customOptions == null)
                 return defaultOptions;
 
+            Console.Error.WriteLine($"customOptions {customOptions}");
             return new BarkOptions
             {
                 Title = customOptions.Title ?? defaultOptions.Title,

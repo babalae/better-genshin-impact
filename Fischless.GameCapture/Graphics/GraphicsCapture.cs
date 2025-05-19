@@ -85,7 +85,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             }
 
             _pixelFormat = DirectXPixelFormat.R16G16B16A16Float;
-            _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+            _captureFramePool = Direct3D11CaptureFramePool.Create(
                 _d3dDevice,
                 _pixelFormat,
                 2,
@@ -95,7 +95,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
         {
             // Fallback
             _pixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
-            _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+            _captureFramePool = Direct3D11CaptureFramePool.Create(
                 _d3dDevice,
                 _pixelFormat,
                 2,
