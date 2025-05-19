@@ -32,6 +32,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
+using System.Collections.Specialized;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -429,28 +430,11 @@ public partial class OneDragonFlowViewModel : ViewModel
                     oldItem.PropertyChanged -= TaskPropertyChanged;
                 }
             }
-        };
-        
-        TaskList.CollectionChanged += (sender, e) =>
-        {
-            if (e.NewItems != null)
+            if (e.Action == NotifyCollectionChangedAction.Move)
             {
-                foreach (OneDragonTaskItem newItem in e.NewItems)
-                {
-                    newItem.PropertyChanged += TaskPropertyChanged;
-                }
-            }
-
-            if (e.OldItems != null)
-            {
-                foreach (OneDragonTaskItem oldItem in e.OldItems)
-                {
-                    oldItem.PropertyChanged -= TaskPropertyChanged;
-                }
+                SaveConfig();
             }
         };
-        SaveConfig();
-        InitConfigList();
     }
 
     public override void OnNavigatedTo()
