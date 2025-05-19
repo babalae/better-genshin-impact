@@ -22,6 +22,9 @@ public class WaypointForTrack : Waypoint
     public string MapName { get; set; }
     //异常识别
     public Misidentification Misidentification { get; set; } = new();
+    
+    //怪物标签
+    public string MonsterTag { get; set; } ="";
 
     /// <summary>
     /// 存在 combat_script 的 action 的话，这个值会存在
