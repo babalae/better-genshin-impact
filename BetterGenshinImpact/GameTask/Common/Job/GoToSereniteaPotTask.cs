@@ -417,10 +417,11 @@ internal class GoToSereniteaPotTask
                         var itemRo = CaptureToRectArea().Find(item);
                         if (itemRo.IsExist())
                         {
+                            Logger.LogInformation("领取尘歌壶奖励:购买 {text} ", item.Name);
                             itemRo.Click();
-                            await Delay(500, ct);
+                            await Delay(600, ct);
                             await BuyMaxNumber(ct);
-                            await Delay(500, ct);
+                            await Delay(1200, ct);//等待购买动画结束
                         }
                     }
                     await Delay(900, ct);
