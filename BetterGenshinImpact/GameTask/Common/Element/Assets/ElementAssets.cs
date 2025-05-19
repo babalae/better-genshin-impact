@@ -360,7 +360,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanExpBottleBigRo = new RecognitionObject
         {
-            Name = "AYuanExpBottleBigRo",
+            Name = "祝圣精华",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_big.png"),
             RegionOfInterest = new Rect( 0, 0, CaptureRect.Width*7/10 , CaptureRect.Height),
@@ -368,7 +368,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanExpBottleSmallRo = new RecognitionObject
         {
-            Name = "AYuanExpBottleSmallRo",
+            Name = "祝圣油膏",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_small.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
@@ -392,7 +392,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         SereniteapotExpBookRo = new RecognitionObject
         {
-            Name = "SereniteapotExpBookRo",
+            Name = "大英雄的经验",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
@@ -400,7 +400,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         SereniteapotExpBookSmallRo = new RecognitionObject
         {
-            Name = "SereniteapotExpBookSmallRo",
+            Name = "流浪者的经验",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book_small.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
@@ -408,7 +408,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanClothRo = new RecognitionObject
         {
-            Name = "AYuanClothRo",
+            Name = "布匹",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_cloth.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
@@ -416,7 +416,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanresinRo = new RecognitionObject
         {
-            Name = "AYuanresinRo",
+            Name = "须臾树脂",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_resin.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
@@ -424,7 +424,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanMagicmineralprecisionRo = new RecognitionObject
         {
-            Name = "AYuanMagicmineralprecisionRo",
+            Name = "精锻用魔矿",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_magicmineralprecision.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
@@ -432,7 +432,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanMOlaRo = new RecognitionObject
         {
-            Name = "AYuanMOlaRo",
+            Name = "摩拉",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_mola.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width*7/10, CaptureRect.Height),
