@@ -496,6 +496,7 @@ public class PathExecutor
         {
             WaypointForTrack wft=new WaypointForTrack(waypoint, task.Info.MapName);
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
+            wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
             return wft;
         }).ToList();
 
