@@ -23,9 +23,9 @@ public abstract class BaseGearTask : ObservableObject
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 任务的位置相对 User 目录下的路径
+    /// 任务的文件位置，如果有
     /// </summary>
-    public string RelativePath { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
 
     /// <summary>
     /// 任务是否启用
@@ -45,14 +45,14 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 执行任务
     /// </summary>
-    public async Task Execute()
+    public async Task Execute(params object[] configs)
     {
         var stopwatch = new Stopwatch();
         try
         {
             _logger.LogInformation("------------------------------");
             stopwatch.Start();
-            await Run();
+            await Run(configs);
         }
         catch (NormalEndException e)
         {
@@ -81,5 +81,11 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 执行任务
     /// </summary>
-    public abstract Task Run();
+    public abstract Task Run(params object[] configs);
+    
+    
+    // /// <summary>
+    // /// 读取详情内容
+    // /// </summary>
+    // public abstract string ReadDetail();
 }
