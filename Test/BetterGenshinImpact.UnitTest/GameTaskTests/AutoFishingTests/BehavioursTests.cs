@@ -1,6 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
 using Microsoft.Extensions.Configuration;
 using System.Runtime.InteropServices;
@@ -19,16 +20,13 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public BehavioursTests(PaddleFixture paddle)
         {
             this.paddle = paddle;
-
-            var configuration = new ConfigurationBuilder().AddUserSecrets<BehavioursTests>().Build();
-            if (configuration == null)
-            {
-                throw new NullReferenceException();
-            }
-            string torchDllFullPath = configuration["torchDllFullPath"] ?? throw new NullReferenceException();
+            // 需要读取主项目编译目录中的配置
+            string configFullPath = Path.Combine(Path.GetFullPath(@"..\..\..\..\..\"), @"BetterGenshinImpact\bin\x64\Debug\net8.0-windows10.0.22621.0\User\config.json");
+            IConfigurationRoot configurationRoot = new ConfigurationBuilder().AddJsonFile(configFullPath, optional: false).Build();
+            AutoFishingConfig autoFishingConfig = configurationRoot.GetRequiredSection("autoFishingConfig").Get<AutoFishingConfig>() ?? throw new ArgumentNullException();
             try
             {
-                NativeLibrary.Load(torchDllFullPath);
+                NativeLibrary.Load(autoFishingConfig.TorchDllFullPath);
                 if (torch.TryInitializeDeviceType(DeviceType.CUDA))
                 {
                     torch.set_default_device(new torch.Device(DeviceType.CUDA));
