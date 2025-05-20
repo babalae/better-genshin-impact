@@ -87,71 +87,6 @@ public class RodNet : Module<Tensor, Tensor>
         RegisterComponents();
     }
 
-    static void F(double[] dst, double[] x, double[] y)
-    {
-        double y0 = x[0], z0 = x[1], t = x[2];
-        double tmp = (y0 + t * z0) * (y0 + t * z0) - 1;
-        dst[0] = Math.Sqrt((1 + t * t) / tmp) - y[0];
-        dst[1] = (1 + t * t) * z0 / tmp - y[1];
-        dst[2] = ((t * t - 1) * y0 * z0 + t * (y0 * y0 - z0 * z0 - 1)) / tmp - y[2];
-    }
-
-    static void DfInv(double[] dst, double[] x)
-    {
-        double y0 = x[0], z0 = x[1], t = x[2];
-        double tmp1 = (y0 + t * z0) * (y0 + t * z0) - 1;
-        double tmp2 = 1 + t * t;
-        dst[0] = (1 - y0 * y0 + z0 * z0) / y0 * Math.Sqrt(tmp1 / tmp2);
-        dst[1] = -z0 * (y0 * y0 + t * (t * (1 + z0 * z0) + 2 * y0 * z0)) / tmp2 / y0;
-        dst[2] = ((t * t - 1) * y0 * z0 + t * (y0 * y0 - z0 * z0 - 1)) / y0 / tmp2;
-        dst[3] = -2 * z0 * Math.Sqrt(tmp1 / tmp2);
-        dst[4] = tmp1 / tmp2;
-        dst[5] = 0;
-        dst[6] = -z0 / y0 * Math.Sqrt(tmp1 / tmp2);
-        dst[7] = (y0 + t * z0) * (y0 + t * z0) / y0;
-        dst[8] = 1 + t * z0 / y0;
-    }
-
-    static bool NewtonRaphson(Action<double[], double[], double[]> f, Action<double[], double[]> dfInv, double[] dst, double[] y,
-                               double[] init, int n, int maxIter, double eps)
-    {
-        double[] fEst = new double[n];
-        double[] dfInvMat = new double[n * n];
-        double[] x = new double[n];
-        double err;
-
-        Array.Copy(init, x, n);
-
-        for (int iter = 0; iter < maxIter; iter++)
-        {
-            err = 0;
-            f(fEst, x, y);
-            for (int i = 0; i < n; i++)
-            {
-                err += Math.Abs(fEst[i]);
-            }
-
-            if (err < eps)
-            {
-                Array.Copy(x, dst, n);
-                // printf("Newton-Raphson solver converge after %d steps, err: %lf !\n",
-                //        iter, err);
-                return true;
-            }
-
-            dfInv(dfInvMat, x);
-
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    x[i] -= dfInvMat[n * i + j] * fEst[j];
-                }
-            }
-        }
-        return false;
-    }
-
     static void Softmax(double[] dst, double[] x, int n)
     {
         double sum = 0;
@@ -165,8 +100,8 @@ public class RodNet : Module<Tensor, Tensor>
             dst[i] /= sum;
         }
     }
-    record NetInput(double dist, int fish_label);
-    private static NetInput? GeometryProcessing(RodInput input)
+    public record NetInput(double dist, int fish_label);
+    public static NetInput? GeometryProcessing(RodInput input)
     {
         double a, b, v0, u, v;
 
@@ -175,7 +110,8 @@ public class RodNet : Module<Tensor, Tensor>
 
         if (a < b)
         {
-            (b, a) = (a, b);
+            b = Math.Sqrt(a * b);
+            a = b + 1e-6;
         }
 
         v0 = (288 - (input.rod_y1 + input.rod_y2) / 2) / alpha;
@@ -183,20 +119,13 @@ public class RodNet : Module<Tensor, Tensor>
         u = (input.fish_x1 + input.fish_x2 - input.rod_x1 - input.rod_x2) / 2 / alpha;
         v = (288 - (input.fish_y1 + input.fish_y2) / 2) / alpha;
 
-        double[] y0z0t = new double[3];
-        double[] abv0 = [a, b, v0];
-        double[] init = [30, 15, 1];
-
-        // todo 处理此种情况，奇怪的是hutao的dev分支已去除牛顿算法，得询问hutao和鸭蛋
-        bool solveSuccess = NewtonRaphson(F, DfInv, y0z0t, abv0, init, 3, 1000, 1e-6);
-
-        if (!solveSuccess)
-        {
-            return null;
-        }
-
-        double y0 = y0z0t[0], z0 = y0z0t[1], t = y0z0t[2];
+        double y0, z0, t;
         double x, y, dist;
+
+        y0 = Math.Sqrt(Math.Pow(a, 4) - b * b + a * a * (1 - b * b + v0 * v0)) / (a * a);
+        z0 = b / (a * a);
+        t = a * a * (y0 * b + v0) / (a * a - b * b);
+
         x = u * (z0 + dz[input.fish_label]) * Math.Sqrt(1 + t * t) / (t - v);
         y = (z0 + dz[input.fish_label]) * (1 + t * v) / (t - v);
         dist = Math.Sqrt(x * x + (y - y0) * (y - y0));
@@ -204,13 +133,21 @@ public class RodNet : Module<Tensor, Tensor>
         return new NetInput(dist, input.fish_label);
     }
 
-    public static int GetRodState(RodInput input)
+    internal static int GetRodState(RodInput input)
     {
         NetInput? netInput = GeometryProcessing(input);
         if (netInput is null)
         {
             return -1;
         }
+
+        double[] pred = ComputeScores(netInput);
+
+        return Array.IndexOf(pred, pred.Max());
+    }
+
+    public static double[] ComputeScores(NetInput netInput)
+    {
         double dist = netInput.dist;
         int fish_label = netInput.fish_label;
 
@@ -224,16 +161,25 @@ public class RodNet : Module<Tensor, Tensor>
         Softmax(pred, logits, 3);
         pred[0] -= offset[fish_label];
 
-        return Array.IndexOf(pred, pred.Max());
+        return pred;
     }
 
-    public int GetRodState_Torch(RodInput input)
+    internal int GetRodState_Torch(RodInput input)
     {
         NetInput? netInput = GeometryProcessing(input);
         if (netInput is null)
         {
             return -1;
         }
+
+        Tensor outputTensor = ComputeScores_Torch(netInput);
+
+        var max = argmax(outputTensor);
+        return (int)max.item<long>();
+    }
+
+    public Tensor ComputeScores_Torch(NetInput netInput)
+    {
         double dist = netInput.dist;
         int fish_label = netInput.fish_label;
 
@@ -243,29 +189,7 @@ public class RodNet : Module<Tensor, Tensor>
 
         outputTensor[0][0] = outputTensor[0][0] - RodNet.offset[fish_label];
 
-        #region 临时校验
-        double[] logits = new double[3];
-        for (int i = 0; i < 3; i++)
-        {
-            logits[i] = theta[i, 0] * dist + theta[i, 1 + fish_label] + B[i];
-        }
-
-        double[] pred = new double[3];
-        Softmax(pred, logits, 3);
-
-        pred[0] -= offset[fish_label];
-
-        if ((float)pred[0] != (float)outputTensor.data<double>()[0] ||
-            (float)pred[1] != (float)outputTensor.data<double>()[1] ||
-            (float)pred[2] != (float)outputTensor.data<double>()[2])
-        {
-            //todo 处理调试时发生的 pred[2] 为NaN 而此时outputTensor.data<double>()[2]为1的情况
-            throw new Exception("RodNet新旧方法数值不一致，远超计算精度影响");
-        }
-        #endregion
-
-        var max = argmax(outputTensor);
-        return (int)max.item<long>();
+        return outputTensor;
     }
 
     public override Tensor forward(Tensor input)

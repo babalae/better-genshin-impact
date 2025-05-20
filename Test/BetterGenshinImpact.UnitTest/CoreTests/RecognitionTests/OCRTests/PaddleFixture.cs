@@ -9,11 +9,6 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
 {
-    [CollectionDefinition("Paddle Collection")]
-    public class PaddleCollection : ICollectionFixture<PaddleFixture>
-    {
-    }
-
     public class PaddleFixture
     {
         private readonly ConcurrentDictionary<string, PaddleOcrService> paddleOcrServices = new ConcurrentDictionary<string, PaddleOcrService>();
