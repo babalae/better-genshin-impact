@@ -709,13 +709,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
             using var wordCaptureMat = new Mat(imageRegion.SrcMat, liftingWordsAreaRect);
             var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
-            if (currentBiteWordsTips != default)
+            if (currentBiteWordsTips != null)
             {
                 // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
                 //     currentBiteWordsTips
                 //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
                 //         .ToRectDrawable());
-                using var tipsRa = imageRegion.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
+                using var tipsRa = imageRegion.Derive((Rect)currentBiteWordsTips + liftingWordsAreaRect.Location);
                 tipsRa.DrawSelf("FishBiteTips");
 
                 return RaiseRod("文字块");

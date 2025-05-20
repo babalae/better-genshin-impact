@@ -76,7 +76,7 @@ public class BgiOnnxFactory
     /// <param name="dmlDeviceId">dml设备id</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    private static ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType, int cudaDeviceId,
+    private ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType, int cudaDeviceId,
         int dmlDeviceId)
     {
         switch (inferenceDeviceType)
@@ -100,7 +100,7 @@ public class BgiOnnxFactory
                     }
                     catch (Exception e)
                     {
-                        App.GetLogger<BgiOnnxFactory>().LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
+                        logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -118,7 +118,7 @@ public class BgiOnnxFactory
                     }
                     catch (Exception e)
                     {
-                        App.GetLogger<BgiOnnxFactory>().LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
+                        logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -135,14 +135,14 @@ public class BgiOnnxFactory
                     }
                     catch (Exception e)
                     {
-                        App.GetLogger<BgiOnnxFactory>().LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
+                        logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
                         testSession?.Dispose();
                     }
 
-                if (!hasGpu) App.GetLogger<BgiOnnxFactory>().LogWarning("[init]GPU自动选择失败，回退到CPU处理");
+                if (!hasGpu) logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
 
                 //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
                 list.Add(ProviderType.Cpu);
@@ -155,7 +155,7 @@ public class BgiOnnxFactory
     /// <summary>
     ///     自动嗅探并修改path以加载cuda
     /// </summary>
-    private static void AppendCudaPath()
+    private void AppendCudaPath()
     {
         var cudaVersion =
             Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\GPU Computing Toolkit\CUDA",
@@ -209,7 +209,7 @@ public class BgiOnnxFactory
     ///     将附加的path应用进来
     /// </summary>
     /// <param name="extraPath">附加的path字符串</param>
-    private static void AppendPath(string[] extraPath)
+    private void AppendPath(string[] extraPath)
     {
         if (extraPath.Length <= 0) return;
 
@@ -218,12 +218,12 @@ public class BgiOnnxFactory
         pathVariables.AddRange(extraPath);
         if (pathVariables.Count <= 0)
         {
-            App.GetLogger<BgiOnnxFactory>().LogWarning("[GpuAuto]SetCudaPath:No valid paths found.");
+            logger.LogWarning("[GpuAuto]SetCudaPath:No valid paths found.");
             return;
         }
 
         var updatedPath = string.Join(Path.PathSeparator, pathVariables.Distinct());
-        App.GetLogger<BgiOnnxFactory>().LogDebug("[GpuAuto]修改进程PATH为:{UpdatedPath}", updatedPath);
+        logger.LogDebug("[GpuAuto]修改进程PATH为:{UpdatedPath}", updatedPath);
         Environment.SetEnvironmentVariable("PATH", updatedPath, EnvironmentVariableTarget.Process);
     }
 
@@ -232,7 +232,7 @@ public class BgiOnnxFactory
     /// </summary>
     /// <param name="model">模型</param>
     /// <returns>BgiYoloPredictor</returns>
-    public virtual BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
+    public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
@@ -321,7 +321,7 @@ public class BgiOnnxFactory
     /// <param name="forcedProvider">强制使用的Provider,为空或null则不强制</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    protected virtual SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache, ProviderType[]? forcedProvider = null)
+    protected SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache, ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
         foreach (var type in
