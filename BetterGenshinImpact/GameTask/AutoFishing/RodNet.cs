@@ -41,44 +41,53 @@ namespace BetterGenshinImpact.GameTask.AutoFishing;
 public class RodNet : Module<Tensor, Tensor>
 {
     const double alpha = 1734.34 / 2.5;
+    // fitted parameters
+    static readonly double[] dz = {1.0307939, 1.5887239,  1.4377865, 0.8548809,
+                                   1.8640924, -0.1687729, 1.8621461, 0.7167622,
+                                   1.7071064, 1.8727832,  0.5531539};
+    static readonly double[] h_coeff = {0.5840698,  0.8029298,  0.6090596,
+                                        -0.1390072, 0.7214464,  -0.6076725,
+                                        0.3286690,  -0.2991239, 0.6072225,
+                                        0.7662407,  -0.3689651};
+    static readonly double[,] weight = {{0.7779633, -1.7124480, 2.7366412},
+                                          {-0.0381155, -1.6536976, 3.5904298},
+                                          {0.1947731, -0.0445049, 0.8416666},
+                                          {-0.0331017, -1.3641578, 1.2834741},
+                                          {1.0268835, -1.6553984, 2.9930501},
+                                          {0.0108103, -0.8515291, 1.0032536},
+                                          {-0.0746362, -0.9677668, 0.7450780},
+                                          {0.7382144, -9.5275803, 2.6134675},
+                                          {-0.3597502, -1.7422760, 1.4354013},
+                                          {-0.0578425, -2.0274212, 1.7173727},
+                                          {-0.1225260, -1.0630554, 1.2958838}};
+    static readonly double[,] bias = {{3.1733532, 9.3601589, -11.0612173},
+                                        {6.4961057, 11.2683334, -13.7752209},
+                                        {2.3662698, 2.4709859, -2.5402584},
+                                        {2.4701204, 8.5112562, -7.6070199},
+                                        {0.9597272, 8.9189463, -11.9037018},
+                                        {2.1239815, 5.8446727, -5.7748013},
+                                        {2.1403685, 5.5432696, -4.0048418},
+                                        {-9.0128260, 28.4402637, -24.2205143},
+                                        {5.2072763, 8.6428480, -9.2946615},
+                                        {4.9253063, 11.4634714, -9.4336052},
+                                        {5.2460732, 7.7711511, -7.5998945}};
 
-    static readonly double[] dz = [ 0.561117562965, 0.637026851288, 0.705579317577,
-                                     1.062734463845, 0.949307580751, 1.015620474332,
-                                     1.797904203405, 1.513476738412, 1.013873007495,
-                                     1.159949954831, 1.353650974146, 1.302893195071 ];
 
-    static readonly double[,] theta = {
-                                        {-0.262674397633, 0.317025388945, -0.457150765450, 0.174522158281,
-                                          -0.957110676932, -0.095339800558, -0.119519564026, -0.139914755291,
-                                          -0.580893838475, 0.702302245305, 0.271575851220, 0.708473199472,
-                                          0.699108382380},
-                                        {-1.062702043060, -0.280779165943, -0.289891597384, 0.220173840594,
-                                          0.493463877037, -0.326492366566, 1.215859141832, 1.607133159643,
-                                          1.619199133672, 0.356402262447, 0.365385941958, 0.411869019381,
-                                          0.224962055122},
-                                        {0.460481782256, 0.048180392806, 0.475529271293, -0.150186412126,
-                                          0.135512307120, 0.087365984352, -1.317661146364, -1.882438208662,
-                                          -1.502483859283, -0.580228373556, -1.005821958682, -1.184199131739,
-                                          -1.285988918494}
-                                       };
-
-    static readonly double[] B = [1.241950004386, 3.051113640564, -3.848898190087];
-
-    static readonly double[] offset = [ 0.4, 0.2, 0.4, 0, 0.3, 0.3,
-        0.3, 0.15, 0.5, 0.5, 0.5, 0.5 ];
+    static readonly double[] offset = { 0.8, 0.4, 0.35, 0.35, 0.6, 0.3, 0.3, 0.8, 0.8, 0.8, 0.8 };
 
     private readonly Module<Tensor, Tensor> layers;
 
     public RodNet() : base("RodNet")
     {
-        var theta = tensor(RodNet.theta, ScalarType.Float64);
-        var b = tensor(RodNet.B, ScalarType.Float64);
+        var weight = tensor(RodNet.weight, ScalarType.Float64);
+        var bias = tensor(RodNet.bias, ScalarType.Float64);
 
-        RodLayer1 rodLayer1 = new RodLayer1(num_embeddings: theta.shape[0], embedding_dim: theta.shape[1], input_dim: 3, output_dim: 3);
-        rodLayer1.SetWeightsManually(theta, b);
+        RodLayer1 rodLayer1 = new RodLayer1(num_embeddings: weight.shape[0], embedding_dim: weight.shape[1], input_dim: 3, output_dim: 3);
+        rodLayer1.SetWeightsManually(weight, bias);
+
         var modules = new List<(string, Module<Tensor, Tensor>)>
         {
-            ($"linear", rodLayer1),
+            ($"rodLayer1", rodLayer1),
             ($"softmax", nn.Softmax(1))
         };
 
@@ -103,10 +112,11 @@ public class RodNet : Module<Tensor, Tensor>
     public record NetInput(double dist, int fish_label);
     public static NetInput? GeometryProcessing(RodInput input)
     {
-        double a, b, v0, u, v;
+        double a, b, v0, u, v, h;
 
         a = (input.rod_x2 - input.rod_x1) / 2 / alpha;
         b = (input.rod_y2 - input.rod_y1) / 2 / alpha;
+        h = (input.fish_y2 - input.fish_y1) / 2 / alpha;
 
         if (a < b)
         {
@@ -118,6 +128,7 @@ public class RodNet : Module<Tensor, Tensor>
 
         u = (input.fish_x1 + input.fish_x2 - input.rod_x1 - input.rod_x2) / 2 / alpha;
         v = (288 - (input.fish_y1 + input.fish_y2) / 2) / alpha;
+        v -= h * h_coeff[input.fish_label];
 
         double y0, z0, t;
         double x, y, dist;
@@ -154,12 +165,12 @@ public class RodNet : Module<Tensor, Tensor>
         double[] logits = new double[3];
         for (int i = 0; i < 3; i++)
         {
-            logits[i] = theta[i, 0] * dist + theta[i, 1 + fish_label] + B[i];
+            logits[i] = weight[fish_label, i] * dist + bias[fish_label, i];
         }
 
         double[] pred = new double[3];
         Softmax(pred, logits, 3);
-        pred[0] -= offset[fish_label];
+        pred[0] -= offset[fish_label]; // to make the prediction more precise when deployed
 
         return pred;
     }
@@ -200,27 +211,23 @@ public class RodNet : Module<Tensor, Tensor>
 
 public class RodLayer1 : Module<Tensor, Tensor>
 {
-    private readonly Embedding embedding;
+    private readonly Embedding embedding1;
+    private readonly Embedding embedding2;
     private readonly Linear linear;
     public RodLayer1(long num_embeddings, long embedding_dim, long input_dim, long output_dim)
         : base("RodLinear")
     {
-        embedding = torch.nn.Embedding(num_embeddings, embedding_dim);
+        embedding1 = torch.nn.Embedding(num_embeddings, embedding_dim);
+        embedding2 = torch.nn.Embedding(num_embeddings, embedding_dim);
         linear = torch.nn.Linear(input_dim, output_dim);
 
         RegisterComponents();
     }
 
-    public void SetWeightsManually(Tensor theta, Tensor b)
+    public void SetWeightsManually(Tensor weight, Tensor bias)
     {
-        var splitTheta = theta.split([1, 12], dim: 1);
-
-        linear.weight.requires_grad = false;
-        linear.weight = new Parameter(splitTheta[0]);
-        linear.bias.requires_grad = false;
-        linear.bias = new Parameter(b);
-
-        embedding.weight = new Parameter(splitTheta[1].T);
+        embedding1.weight = new Parameter(weight);
+        embedding2.weight = new Parameter(bias);
     }
 
     public override Tensor forward(Tensor input)
@@ -228,13 +235,17 @@ public class RodLayer1 : Module<Tensor, Tensor>
         var splitInput = input.split([1, 1], dim: 1);
         var dist = splitInput[0];
         var fish_label = splitInput[1].to(ScalarType.Int32).flatten();
-        var x_linear = linear.forward(dist);
-        //Console.WriteLine(x_linear);
-        //Console.WriteLine(String.Join(",", x_linear.data<double>()));
-        var x_embed = embedding.forward(fish_label);
-        //Console.WriteLine(x_embed);
-        //Console.WriteLine(String.Join(",", x_embed.data<double>()));
-        var x_combined = x_linear + x_embed;
-        return x_combined;
+
+        var embed1 = embedding1.forward(fish_label);
+        Console.WriteLine(embed1);
+        Console.WriteLine(String.Join(",", embed1.data<double>()));
+        var embed2 = embedding2.forward(fish_label);
+        Console.WriteLine(embed2);
+        Console.WriteLine(String.Join(",", embed2.data<double>()));
+
+        linear.weight = new Parameter(embed1.T);
+        linear.bias = new Parameter(embed2);
+
+        return linear.forward(dist);
     }
 }
