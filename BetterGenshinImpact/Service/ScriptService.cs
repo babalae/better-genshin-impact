@@ -101,8 +101,8 @@ public partial class ScriptService : IScriptService
 
         // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
 
-        Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
-
+        
+        bool fisrt = true;
         await new TaskRunner()
             .RunThreadAsync(async () =>
             {
@@ -128,6 +128,12 @@ public partial class ScriptService : IScriptService
                         break;
                     }
 
+                    
+                    if (fisrt)
+                    {
+                        fisrt = false;
+                        Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+                    }
                     for (var i = 0; i < project.RunNum; i++)
                     {
                         try
@@ -184,7 +190,12 @@ public partial class ScriptService : IScriptService
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
 
-        Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+        if (!fisrt)
+        {
+            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+        }
+
+       
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)

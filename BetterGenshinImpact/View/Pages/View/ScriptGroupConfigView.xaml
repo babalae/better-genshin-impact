@@ -459,7 +459,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="执行周期序号，按时间戳对应的天数(会根据分界时间修正)，对周期求余值加1，得出的值和配置执一致就会执行，否则跳过任务。"
+                                                  Text="执行周期序号，按时间戳对应的天数(会根据分界时间修正)，对周期求余值加1，得出的值和配置执一致就会执行，否则跳过任务。可以理解为周期内第几天执行。"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -486,7 +486,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="点击计算按钮，可计算出当天执行序号。"
+                                                  Text="点击计算按钮，可计算出当天执行序号（今天是周期内的第几天）。"
                                                   TextWrapping="Wrap" />
                                     <ui:Button Grid.Row="0"
                                                Grid.RowSpan="2"
