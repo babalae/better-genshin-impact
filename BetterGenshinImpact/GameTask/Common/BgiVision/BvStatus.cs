@@ -7,9 +7,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using System.Threading;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
+using Microsoft.Extensions.Logging;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -21,6 +24,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// </summary>
 public static partial class Bv
 {
+ 
     public static string WhichGameUi()
     {
         throw new NotImplementedException();
@@ -33,7 +37,52 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInMainUi(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
+        bool isMainUi = captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
+        if (isMainUi)
+        {
+            //检测到复活界面，尝试修正为主界面
+            if (Bv.IsInRevivePrompt(captureRa))
+            {
+                TaskControl.Logger.LogInformation("检查到复活界面，尝试恢复到主界面！");
+                int maxRetryCount = 3;
+                bool success = false;
+
+                for (int i = 0; i < maxRetryCount; i++)
+                {
+                    //这里用点击，由于存在多个线程同时调用,ESC可能会执行多次，影响其他判断逻辑
+                    try
+                    {
+                        captureRa.Find(AutoFightAssets.Instance.ExitRa).Click();
+                    }
+                    catch (Exception e)
+                    {
+                      //防止未预期的错误
+                    }
+                   
+                    Thread.Sleep(600);
+                    captureRa = TaskControl.CaptureToRectArea();
+                    if (!Bv.IsInRevivePrompt(captureRa))
+                    {
+                        TaskControl.Logger.LogInformation("成功退出复活界面！");
+                        success = true;
+                        break;
+                    }   
+     
+                }
+                
+
+                if (!success)
+                {
+                    TaskControl.Logger.LogInformation("复活界面退出失败！");
+                    return false;
+                }
+
+                return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
+            }
+            
+        }
+        
+        return isMainUi;
     }
 
     /// <summary>
