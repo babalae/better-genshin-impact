@@ -921,7 +921,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     _right = rects[2];
                     PutRects(imageRegion, _left, _cursor, _right);
 
-                    if (_left.Width * 2.5> _right.Width)
+                    if (_right.X + _right.Width - (_cursor.X + _cursor.Width) <= _cursor.X - _left.X)
                     {
                         if (_prevMouseEvent == MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
                         {
