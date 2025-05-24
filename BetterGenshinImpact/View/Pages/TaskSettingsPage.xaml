@@ -1526,6 +1526,40 @@
                                      IsEnabled="{Binding Config.CommonConfig.ScreenshotEnabled}"
                                      IsChecked="{Binding SaveScreenshotOnKeyTick, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="torch库文件地址（仅限2.5.1版本）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap" >
+                        请
+                        <Hyperlink Command="{Binding GoToTorchPreviousVersionsCommand}"
+           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            下载
+                        </Hyperlink> 到本地后填入torch_cpu.dll或torch_cuda.dll的完整地址。如未生效可尝试重启BGI。
+                        
+                    </ui:TextBlock>
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoFishingConfig.TorchDllFullPath, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
 

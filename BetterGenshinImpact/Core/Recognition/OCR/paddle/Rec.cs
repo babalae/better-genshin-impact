@@ -20,10 +20,10 @@ public class Rec
     private readonly IReadOnlyList<string> _labels;
     private readonly InferenceSession _session;
 
-    public Rec(BgiOnnxModel model, string labelFilePath, OcrVersionConfig config)
+    public Rec(BgiOnnxModel model, string labelFilePath, OcrVersionConfig config, BgiOnnxFactory bgiOnnxFactory)
     {
         _config = config;
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(model, true);
+        _session = bgiOnnxFactory.CreateInferenceSession(model, true);
 
 
         _labels = File.ReadAllLines(labelFilePath);

@@ -19,6 +19,7 @@ using Compunet.YoloSharp.Data;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -36,7 +37,7 @@ public class CombatScenes : IDisposable
 
 
     private readonly BgiYoloPredictor _predictor =
-        BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
+        App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
 
     public int ExpectedTeamAvatarNum { get; private set; } = 4;
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -125,12 +126,16 @@ public partial class App : Application
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<HutaoNamedPipe>();
+                services.AddSingleton(sp=> sp.GetRequiredService<HomePageViewModel>().Config.HardwareAccelerationConfig);
+                services.AddSingleton<BgiOnnxFactory>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }
         )
         .Build();
+
+    public static IServiceProvider ServiceProvider => _host.Services;
 
     public static ILogger<T> GetLogger<T>()
     {

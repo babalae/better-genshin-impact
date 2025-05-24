@@ -18,6 +18,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -39,7 +40,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private Blackboard blackboard;
 
-        private readonly BgiYoloPredictor _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish);
+        private readonly BgiYoloPredictor _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiFish);
 
         /// <summary>
         /// 辣条（误）

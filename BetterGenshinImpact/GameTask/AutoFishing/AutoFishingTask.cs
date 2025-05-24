@@ -24,6 +24,7 @@ using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using Compunet.YoloSharp;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -38,7 +39,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly AutoFishingTaskParam param;
 
         private readonly BgiYoloPredictor _predictor =
-            BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiFish);
+            App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiFish);
 
         public AutoFishingTask(AutoFishingTaskParam param)
         {
@@ -89,7 +90,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                         .PushLeaf(() => new MoveViewpointDown("调整视角至俯视", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                                             //.MySimpleParallel("举起鱼竿并抛竿", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                                                             //    .PushLeaf(() => new LiftAndHold("举起鱼竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
-                                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
+                                                            .PushLeaf(() => new ThrowRod("抛竿", blackboard, param.UseTorch, _logger, param.SaveScreenshotOnKeyTick, input))
                                                     //.End()
                                                     .End()
                                                 .End()
@@ -120,9 +121,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 .Build();
             // @formatter:on
             _logger.LogInformation("→ {Text}", "自动钓鱼，启动！");
-            _logger.LogWarning("请不要携带任何{Msg}，极有可能会误识别导致无法结束自动钓鱼！", "跟宠");
+            _logger.LogWarning("请不要携带任何{Msg}，极有可能会误识别导致拖慢速度！", "跟宠");
             _logger.LogInformation(
-                $"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}, {param.GameCultureInfo}");
+                $"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}, {param.GameCultureInfo}, {param.UseTorch}");
             TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
             _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");
 
