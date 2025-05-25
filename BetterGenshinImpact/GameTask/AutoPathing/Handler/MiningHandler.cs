@@ -34,11 +34,11 @@ public class MiningHandler : IActionHandler
         辛焱 attack(1.5)
         重云 attack(1.5)
         北斗 attack(1.5)
-        卡齐娜 e(hold),keydown(s),wait(0.4),keyup(s),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2)
-        坎蒂丝 e(hold)
-        雷泽 e(hold)
-        钟离 e(hold)
-        凝光 attack(0.4),attack(0.4),attack(0.4),attack(0.4)
+        卡齐娜 e(hold,wait),keydown(s),wait(0.4),keyup(s),attack(1.5)
+        坎蒂丝 e(hold,wait)
+        雷泽 e(hold,wait)
+        钟离 e(hold,wait)
+        凝光 attack(2.0)
         """);
 
     private readonly ScanPickTask _scanPickTask = new();
