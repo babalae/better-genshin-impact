@@ -720,7 +720,7 @@ public class Avatar
         {
             var dpi = TaskContext.Instance().DpiScale;
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-            int cnt = 0;
+            int tick = -4; // 起飞那一刻需要多一点点时间用来矫正视角高度
             while (ms >= 0)
             {
                 if (Ct is { IsCancellationRequested: true })
@@ -728,12 +728,47 @@ public class Avatar
                     return;
                 }
 
-                // 恰在蓄力时快速转动会把视角趋向于水平，所以在回正的时候不做额外Y轴移动
-                double rate = cnt % 10 < 5 ? 0 : 4.5; //每500ms做一轮上下移动。
-                cnt++;
-                Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * dpi), (int)(rate * 100 * dpi));
-                ms -= 50;
-                Sleep(50);
+                // 恰在蓄力时转得越快越容易把视角趋向于水平
+                // 基于上面这个特性，如果我们用同一个鼠标方向向量，大致能在所有设备上控制视角高低（只要帧率不太低）
+
+                // 恰的子弹上膛机制：怪物要在HUD准星框内超过一定时长（体感0.2-0.3秒）才能让子弹上膛。所以搜索敌人要低速。不然敌人体型小或者远就很容易锁不上。
+                const double lowspeed = 0.7, highspeed = 50;
+                double rateX, rateY;
+                if (tick < 3)
+                {
+                    rateX = highspeed;
+                    rateY = highspeed * 0.23;
+                }
+                else if (tick < 40)
+                {
+                    rateX = lowspeed * 0.7;
+                    rateY = 0;
+                }
+                else if (tick < 43)
+                {
+                    rateX = highspeed;
+                    rateY = highspeed * 0.4;
+                }
+                else if (tick < 70)
+                {
+                    rateX = lowspeed * 0.9;
+                    rateY = 0;
+                }
+                else if (tick < 73)
+                {
+                    rateX = highspeed;
+                    rateY = highspeed;
+                }
+                else
+                {
+                    rateX = lowspeed;
+                    rateY = 0;
+                }
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
+
+                tick = (tick + 1) % 100;
+                Sleep(25);
+                ms -= 25;
             }
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
