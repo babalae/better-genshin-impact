@@ -847,7 +847,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             logger.LogInformation("拉扯开始");
         }
 
-        private MOUSEEVENTF _prevMouseEvent = 0x0;
+        private MOUSEEVENTF _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
@@ -867,24 +867,30 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     rects.RemoveRange(3, rects.Count - 3);
                 }
 
-                Rect _cur, _left, _right;
                 //Debug.WriteLine($"识别到{rects.Count} 个矩形");
                 if (rects.Count == 2)
                 {
+                    // 游标矩形不在区间内或恰在区间两端时只会检测到两个矩形
+                    Rect _cursor, _target;
                     if (rects[0].Width < rects[1].Width)
                     {
-                        _cur = rects[0];
-                        _left = rects[1];
+                        _cursor = rects[0];
+                        _target = rects[1];
                     }
                     else
                     {
-                        _cur = rects[1];
-                        _left = rects[0];
+                        _cursor = rects[1];
+                        _target = rects[0];
+                    }
+                    logger.LogInformation($"识别到2个矩形，主：{_target}, 中：{_cursor}");
+                    if (_target.Width < _cursor.Width * 10) // 异常：当目标矩形明显不够长时视为无效检测，不作为
+                    {
+                        return BehaviourStatus.Running;
                     }
 
-                    PutRects(imageRegion, _left, _cur, new Rect());
+                    PutRects(imageRegion, _target, _cursor, new Rect());
 
-                    if (_cur.X < _left.X)
+                    if (_cursor.X < _target.X)
                     {
                         if (_prevMouseEvent != MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
                         {
@@ -907,13 +913,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
                 else if (rects.Count == 3)
                 {
+                    // 游标矩形在区间内会检测到三个矩形，即目标区间被游标分割成左半和右半
+                    Rect _cursor, _left, _right;
                     rects.Sort((a, b) => a.X.CompareTo(b.X));
                     _left = rects[0];
-                    _cur = rects[1];
+                    _cursor = rects[1];
                     _right = rects[2];
-                    PutRects(imageRegion, _left, _cur, _right);
+                    PutRects(imageRegion, _left, _cursor, _right);
 
-                    if (_right.X + _right.Width - (_cur.X + _cur.Width) <= _cur.X - _left.X)
+                    if (_right.X + _right.Width - (_cursor.X + _cursor.Width) <= _cursor.X - _left.X)
                     {
                         if (_prevMouseEvent == MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
                         {
@@ -955,7 +963,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 // 没有矩形视为已经完成钓鱼
                 drawContent.RemoveRect("FishBox");
-                _prevMouseEvent = 0x0;
+                _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
                 logger.LogInformation("  拉扯结束");
                 logger.LogInformation(@"└------------------------┘");
 
