@@ -882,7 +882,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         _cursor = rects[1];
                         _target = rects[0];
                     }
-                    logger.LogInformation($"识别到2个矩形，主：{_target}, 中：{_cursor}");
                     if (_target.Width < _cursor.Width * 10) // 异常：当目标矩形明显不够长时视为无效检测，不作为
                     {
                         return BehaviourStatus.Running;
