@@ -83,7 +83,7 @@ public class GoToCraftingBenchTask
         await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct,
             region => region.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist()
         );
-        await Delay(200, ct);
+        await Delay(800, ct);
         
         // 判断浓缩树脂是否存在
         // TODO 满的情况是怎么样子的
