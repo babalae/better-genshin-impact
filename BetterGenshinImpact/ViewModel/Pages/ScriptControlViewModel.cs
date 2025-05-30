@@ -212,7 +212,7 @@ public partial class ScriptControlViewModel : ViewModel
         // 将第一行添加到 StackPanel
         stackPanel.Children.Add(hoeingStatsSwitch);
 
-        // 第二行：文本框和“？”按钮
+        // 第二行：文本框和"？"按钮
         StackPanel secondRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -227,7 +227,7 @@ public partial class ScriptControlViewModel : ViewModel
         };
         secondRow.Children.Add(cookieTextBox);
 
-        // “？”按钮
+        // "？"按钮
         Button questionButton = new Button
         {
             Content = "?",
@@ -431,6 +431,52 @@ public partial class ScriptControlViewModel : ViewModel
                 }
             }
         }
+    }
+
+    [RelayCommand]
+    private void OpenNewLogParse()
+    {
+        if (SelectedScriptGroup == null)
+        {
+            return;
+        }
+
+        // 获取Canliang_v1.0.3.exe的路径
+        string exePath = Path.Combine(Global.Absolute(@"GameTask\LogParse"), "Canliang.exe");
+        _logger.LogDebug("新版日志分析程序路径: {ExePath}", exePath);
+        // 检查文件是否存在
+        if (!File.Exists(exePath))
+        {
+            Toast.Warning("找不到新版日志分析程序！");
+            return;
+        }
+
+        // 在分线程中运行exe文件
+        Task.Run(() =>
+        {
+            try
+            {
+                // 创建进程启动信息
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.GetDirectoryName(exePath)
+                };
+
+                // 启动进程
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                // 在UI线程中显示错误信息
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Toast.Warning($"启动新版日志分析程序时出错: {ex.Message}");
+                });
+            }
+        });
     }
 
     static string[] GetJsonFiles(string folderPath)
