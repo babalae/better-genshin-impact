@@ -443,7 +443,8 @@ public partial class ScriptControlViewModel : ViewModel
 
         // 获取Canliang_v1.0.3.exe的路径
         string exePath = Path.Combine(Global.Absolute(@"GameTask\LogParse"), "Canliang.exe");
-        _logger.LogDebug("新版日志分析程序路径: {ExePath}", exePath);
+        Toast.Information("正在分析...");
+        // _logger.LogDebug("新版日志分析程序路径: {ExePath}", exePath);
         // 检查文件是否存在
         if (!File.Exists(exePath))
         {
@@ -466,19 +467,113 @@ public partial class ScriptControlViewModel : ViewModel
                 };
 
                 // 启动进程
-                Process.Start(startInfo);
+                Process process = Process.Start(startInfo);
+                
+                // 确保主程序退出时，子进程也会退出
+                if (process != null)
+                {
+                    // 将进程标记为后台进程，这样当主进程退出时，此进程也会自动退出
+                    process.EnableRaisingEvents = true;
+                    
+                    // 添加到Application的退出事件中，确保应用程序关闭时关闭进程
+                    Application.Current.Exit += (sender, e) =>
+                    {
+                        try
+                        {
+                            if (!process.HasExited)
+                            {
+                                process.Kill();
+                            }
+                        }
+                        catch
+                        {
+                            // 忽略关闭过程中的错误
+                        }
+                    };
+                    
+                    // 添加到AppDomain的卸载事件，确保在应用程序域卸载时关闭进程
+                    AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+                    {
+                        try
+                        {
+                            if (!process.HasExited)
+                            {
+                                process.Kill();
+                            }
+                        }
+                        catch
+                        {
+                            // 忽略关闭过程中的错误
+                        }
+                    };
+                    
+                    // 添加到AppDomain的卸载事件，确保在应用程序域卸载时关闭进程
+                    AppDomain.CurrentDomain.DomainUnload += (sender, e) =>
+                    {
+                        try
+                        {
+                            if (!process.HasExited)
+                            {
+                                process.Kill();
+                            }
+                        }
+                        catch
+                        {
+                            // 忽略关闭过程中的错误
+                        }
+                    };
+                    
+                    // 保存进程引用到静态集合中，以便在应用程序退出时可以清理
+                    lock (_processLock)
+                    {
+                        _runningProcesses.Add(process);
+                    }
+                }
             }
             catch (Exception ex)
             {
                 // 在UI线程中显示错误信息
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Toast.Warning($"启动新版日志分析程序时出错: {ex.Message}");
+                    _logger.LogDebug("启动新版日志分析程序时出错: {Message}", ex.Message);
                 });
             }
         });
     }
 
+    // 用于存储所有运行的外部进程
+    private static readonly List<Process> _runningProcesses = new List<Process>();
+    private static readonly object _processLock = new object();
+    
+    // 静态构造函数，确保应用程序退出时清理所有进程
+    static ScriptControlViewModel()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (sender, e) => CleanupProcesses();
+        Application.Current.Exit += (sender, e) => CleanupProcesses();
+    }
+    
+    // 清理所有运行的进程
+    private static void CleanupProcesses()
+    {
+        lock (_processLock)
+        {
+            foreach (var process in _runningProcesses)
+            {
+                try
+                {
+                    if (process != null && !process.HasExited)
+                    {
+                        process.Kill();
+                    }
+                }
+                catch
+                {
+                    // 忽略清理过程中的错误
+                }
+            }
+            _runningProcesses.Clear();
+        }
+    }
     static string[] GetJsonFiles(string folderPath)
     {
         // 检查文件夹是否存在
