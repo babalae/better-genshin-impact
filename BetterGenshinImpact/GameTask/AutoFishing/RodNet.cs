@@ -237,11 +237,9 @@ public class RodLayer1 : Module<Tensor, Tensor>
         var fish_label = splitInput[1].to(ScalarType.Int32).flatten();
 
         var embed1 = embedding1.forward(fish_label);
-        Console.WriteLine(embed1);
-        Console.WriteLine(String.Join(",", embed1.data<double>()));
+        //Console.WriteLine(String.Join(",", embed1.data<double>()));
         var embed2 = embedding2.forward(fish_label);
-        Console.WriteLine(embed2);
-        Console.WriteLine(String.Join(",", embed2.data<double>()));
+        //Console.WriteLine(String.Join(",", embed2.data<double>()));
 
         linear.weight = new Parameter(embed1.T);
         linear.bias = new Parameter(embed2);
