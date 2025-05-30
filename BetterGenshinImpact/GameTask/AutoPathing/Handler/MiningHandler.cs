@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -17,27 +19,28 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 public class MiningHandler : IActionHandler
 {
     private readonly CombatScript _miningCombatScript = CombatScriptParser.ParseContext("""
-        荒泷一斗 attack(2.0)
-        迪希雅 attack(2.0)
-        玛薇卡 attack(2.0)
-        基尼奇 attack(2.0)
-        娜维娅 attack(2.0)
-        菲米尼 attack(2.0)
-        迪卢克 attack(2.0)
-        诺艾尔 attack(2.0)
-        卡维 attack(2.0)
-        雷泽 attack(2.0)
-        优菈 attack(2.0)
-        嘉明 attack(2.0)
-        辛焱 attack(2.0)
-        重云 attack(2.0)
-        多莉 attack(2.0)
-        北斗 attack(2.5)
-        早柚 attack(2.5)
-        坎蒂丝 e(hold,wait)
-        雷泽 e(hold,wait)
-        钟离 e(hold,wait)
-        凝光 attack(4.0)
+        卡齐娜 e(hold),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2),attack(0.2)
+        坎蒂丝 e(hold)
+        雷泽 e(hold)
+        钟离 e(hold)
+        凝光 attack(0.4),attack(0.4),attack(0.4),attack(0.4)
+        荒泷一斗 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        迪希雅 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        玛薇卡 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        基尼奇 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        娜维娅 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        菲米尼 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        迪卢克 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        诺艾尔 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        多莉 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        卡维 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        早柚 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        雷泽 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        优菈 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        嘉明 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        辛焱 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        重云 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
+        北斗 attack(0.4),attack(0.4),attack(0.4),attack(0.25)
         """);
 
     private readonly ScanPickTask _scanPickTask = new();
@@ -70,21 +73,29 @@ public class MiningHandler : IActionHandler
     {
         try
         {
-            // 通用化战斗策略
             foreach (var command in _miningCombatScript.CombatCommands)
             {
                 var avatar = combatScenes.SelectAvatar(command.Name);
                 if (avatar != null)
                 {
-                    command.Execute(combatScenes);
-                    break;
+                    // 执行该角色的所有命令
+                    var commandsForAvatar = _miningCombatScript.CombatCommands
+                        .Where(c => c.Name == command.Name);
+
+                    foreach (var cmd in commandsForAvatar)
+                    {
+                        cmd.Execute(combatScenes);
+                    }
+
+                    break; // 执行完一个角色后退出
                 }
             }
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
-            Debug.WriteLine(e.StackTrace);
+            Logger.LogError("0x00101 挖矿失败，请提 issue！");
         }
     }
+    
+
 }
