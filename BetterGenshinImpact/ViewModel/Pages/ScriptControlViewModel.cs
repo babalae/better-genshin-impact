@@ -1247,8 +1247,8 @@ public partial class ScriptControlViewModel : ViewModel
                 ScriptGroupNames = [SelectedScriptGroup.Name]
             };
         RunnerContext.Instance.taskProgress = taskProgress;
-        taskProgress.ScriptGroupName = SelectedScriptGroup.Name;
-        TaskProgressManager.saveTaskProgress(taskProgress);
+        taskProgress.CurrentScriptGroupName = SelectedScriptGroup.Name;
+        TaskProgressManager.SaveTaskProgress(taskProgress);
         await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name,taskProgress);
     }
 
@@ -1364,10 +1364,10 @@ public partial class ScriptControlViewModel : ViewModel
         ObservableCollection<KeyValuePair<string, string>>  kvs=new ObservableCollection<KeyValuePair<string, string>>();
         foreach (var taskProgress in taskProgresses)
         {
-            var name = taskProgress.Name+"_"+taskProgress.ScriptGroupName+"_";
+            var name = taskProgress.Name+"_"+taskProgress.CurrentScriptGroupName+"_";
             if (taskProgress.CurrentScriptGroupProjectInfo!=null)
             {
-                name = name + "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
+                name = name +taskProgress.CurrentScriptGroupProjectInfo.Index+ "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
             }
             kvs.Add(new KeyValuePair<string, string>(taskProgress.Name,name));
         }
@@ -1408,14 +1408,15 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 //await StartGroups(selectedGroups);
                 //taskProgress.Next
-                TaskProgressManager.GenerNextProjectInfo(taskProgress,ScriptGroups.ToList());
+                var sg = ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList();
+                TaskProgressManager.GenerNextProjectInfo(taskProgress,sg);
                 if (taskProgress.Next==null)
                 {
                     _logger.LogWarning("无法定位到下一个要执行的项目");
                 }
                 else
                 {
-                    await StartGroups(ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList(),taskProgress);
+                    await StartGroups(sg,taskProgress);
                 }
 
             }
@@ -1548,13 +1549,13 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 if (taskProgress.Next!=null)
                 {
-                    if (scriptGroup.Name!=taskProgress.ScriptGroupName)
+                    if (scriptGroup.Name!=taskProgress.Next.GroupName)
                     {
                         continue;
                     }
                 }
-                taskProgress.ScriptGroupName = scriptGroup.Name;
-                TaskProgressManager.saveTaskProgress(taskProgress);
+                taskProgress.CurrentScriptGroupName = scriptGroup.Name;
+                TaskProgressManager.SaveTaskProgress(taskProgress);
                 await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name,taskProgress);
                 await Task.Delay(2000);
             }

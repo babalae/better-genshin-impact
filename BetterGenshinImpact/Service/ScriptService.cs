@@ -121,7 +121,7 @@ public partial class ScriptService : IScriptService
                     projectIndex++;
                     if (taskProgress != null && taskProgress.Next != null)
                     {
-                        if (taskProgress.Next.Index!=projectIndex)
+                        if (taskProgress.Next.Index>projectIndex)
                         {
                             continue;
                         }
@@ -164,8 +164,9 @@ public partial class ScriptService : IScriptService
                             Name = project.Name,
                             FolderName = project.FolderName
                             ,Index = projectIndex
+                            ,GroupName = taskProgress?.CurrentScriptGroupName ?? ""
                         };
-                        TaskProgressManager.saveTaskProgress(taskProgress);
+                        TaskProgressManager.SaveTaskProgress(taskProgress);
                     }
                     for (var i = 0; i < project.RunNum; i++)
                     {
@@ -199,6 +200,10 @@ public partial class ScriptService : IScriptService
                         {
                             _logger.LogDebug(e, "执行脚本时发生异常");
                             _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                            if (taskProgress!=null && taskProgress.CurrentScriptGroupProjectInfo!=null )
+                            {
+                                taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
+                            }
                         }
                         finally
                         {
@@ -215,10 +220,25 @@ public partial class ScriptService : IScriptService
 
                     if (taskProgress != null)
                     {
-                        if (taskProgress.CurrentScriptGroupProjectInfo!=null)
+                        if (taskProgress.CurrentScriptGroupProjectInfo!=null )
                         {
                             taskProgress.CurrentScriptGroupProjectInfo.TaskEnd = true;
-                            TaskProgressManager.saveTaskProgress(taskProgress);
+                            taskProgress.CurrentScriptGroupProjectInfo.EndTime = DateTime.Now;
+                            if (taskProgress.CurrentScriptGroupProjectInfo.Status == 1)
+                            {
+                                taskProgress.ConsecutiveFailureCount = 0;
+                                taskProgress.LastSuccessScriptGroupProjectInfo =
+                                    taskProgress.CurrentScriptGroupProjectInfo;
+                                taskProgress.LastScriptGroupName =taskProgress.CurrentScriptGroupName;
+                            }
+                            //累计连续失败次数
+                            if (taskProgress.CurrentScriptGroupProjectInfo.Status == 2)
+                            {
+                                taskProgress.ConsecutiveFailureCount++;
+                            }
+
+                            taskProgress?.History?.Add(taskProgress.CurrentScriptGroupProjectInfo);
+                            TaskProgressManager.SaveTaskProgress(taskProgress);
                         }
 
                     }

@@ -14,7 +14,7 @@ public class TaskProgressManager
 {
     private static readonly string _configDir = Global.Absolute(@"log\task_progress");
     public static ILogger Logger { get; } = App.GetLogger<TaskProgressManager>();
-    public static void saveTaskProgress(TaskProgress taskProgress)
+    public static void SaveTaskProgress(TaskProgress taskProgress)
     {
         // 如果目录不存在，则创建
         if (!Directory.Exists(_configDir))
@@ -89,15 +89,15 @@ public static void GenerNextProjectInfo(
     List<ScriptGroup> scriptGroups,
     bool loopToFirstGroup = false)
 {
-    if (taskProgress.CurrentScriptGroupProjectInfo == null)
+    if (taskProgress.LastSuccessScriptGroupProjectInfo == null)
         return ;
 
-    var currentGroupIndex = scriptGroups.FindIndex(g => g.Name == taskProgress.ScriptGroupName);
+    var currentGroupIndex = scriptGroups.FindIndex(g => g.Name == taskProgress.LastScriptGroupName);
     if (currentGroupIndex == -1)
         return ;
 
     var currentGroup = scriptGroups[currentGroupIndex];
-    var currentProjectInfo = taskProgress.CurrentScriptGroupProjectInfo;
+    var currentProjectInfo = taskProgress.LastSuccessScriptGroupProjectInfo;
 
     var currentProjectIndex = currentGroup.Projects.ToList().FindIndex(p =>
         p.Name == currentProjectInfo.Name &&
@@ -107,9 +107,9 @@ public static void GenerNextProjectInfo(
         return ;
 
     bool isLastInGroup = currentProjectIndex == currentGroup.Projects.Count - 1;
-    bool isIncomplete = currentProjectInfo.EndTime == null;
+    //bool isIncomplete = currentProjectInfo.EndTime == null;
 
-    if (isLastInGroup && isIncomplete)
+    if (isLastInGroup)
     {
         // 向后查找下一个非空组
         for (int i = currentGroupIndex + 1; i < scriptGroups.Count; i++)
@@ -153,6 +153,13 @@ public static void GenerNextProjectInfo(
 
         return ;
     }
+    else
+    {
+        //取成功执行的下一个任务
+        currentProjectIndex++;
+    }
+
+
 
     // 返回当前项目
     var currentProject = currentGroup.Projects[currentProjectIndex];
