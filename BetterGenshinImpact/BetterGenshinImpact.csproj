@@ -83,6 +83,7 @@
 		<PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />
+		<PackageReference Include="Microsoft.AspNetCore.App" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">
@@ -147,6 +148,9 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\LogParse\static\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\**">
