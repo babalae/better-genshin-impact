@@ -121,6 +121,51 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
+    private async Task OpenNewLogParse()
+    {
+        try
+        {
+            // 启动LogAnalyzer Web服务器
+            var args = new string[] { "--open-browser", "true" };
+            
+            // 在新的任务中启动LogAnalyzer，避免阻塞UI
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await LogAnalyzer.Main(args);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "启动日志解析服务器时发生错误");
+                }
+            });
+            
+            // 给服务器一些时间启动
+            await Task.Delay(2000);
+            
+            _snackbarService.Show(
+                "日志解析服务已启动",
+                "日志解析Web界面已在浏览器中打开，地址: http://localhost:3000",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "启动新版日志解析时发生错误");
+            _snackbarService.Show(
+                "启动失败",
+                $"启动新版日志解析时发生错误: {ex.Message}",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    [RelayCommand]
     private async Task OpenLogParse()
     {
         if (SelectedScriptGroup == null)
