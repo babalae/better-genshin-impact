@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -49,8 +51,13 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
             _navigationWindow!.ShowWindow();
             //
             var args = Environment.GetCommandLineArgs();
+
             if (args.Length > 1)
             {
+                
+                //无论如何，先跳到主页，否则在通过参数的任务在执行完之前，不会加载快捷键
+                _ = _navigationWindow.Navigate(typeof(HomePage));
+                
                 if (args[1].Contains("startOneDragon"))
                 {
 
@@ -69,6 +76,19 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                         // 启动调度器
                         var scheduler = App.GetService<ScriptControlViewModel>();
                         scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
+                    }
+                }else if (args[1].Trim().Equals("--TaskProgress", StringComparison.InvariantCultureIgnoreCase))
+                {
+
+                    // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
+                    _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                    if (args.Length > 1)
+                    {
+                        // 获取调度组
+                        var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
+                        // 启动调度器
+                        var scheduler = App.GetService<ScriptControlViewModel>();
+                        scheduler?.OnStartMultiScriptTaskProgressAsync(names);
                     }
                 }
                 else if (args[1].Contains("start"))

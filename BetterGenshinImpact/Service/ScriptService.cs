@@ -1,23 +1,25 @@
-﻿using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask;
-
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.ViewModel.Pages;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.TaskProgress;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service;
 
@@ -45,6 +47,7 @@ public partial class ScriptService : IScriptService
     }
     public bool ShouldSkipTask(ScriptGroupProject project)
     {
+
         if (project.GroupInfo is { Config.PathingConfig.Enabled: true } )
         {
             if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
@@ -72,11 +75,18 @@ public partial class ScriptService : IScriptService
         }
         return false; // 不跳过
     }
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
+    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
         groupName ??= "默认";
 
         var list = ReloadScriptProjects(projectList);
+        
+        //恢复临时的跳过标志
+        foreach (var scriptGroupProject in projectList)
+        {
+            scriptGroupProject.SkipFlag = false;
+        }
+        
 
         // // 针对JS 脚本，检查是否包含定时器操作
         // var jsProjects = ExtractJsProjects(list);
@@ -107,9 +117,23 @@ public partial class ScriptService : IScriptService
             .RunThreadAsync(async () =>
             {
                 var stopwatch = new Stopwatch();
-
+                int projectIndex = -1;
                 foreach (var project in list)
                 {
+                    projectIndex++;
+                    if (taskProgress != null && taskProgress.Next != null)
+                    {
+                        if (taskProgress.Next.Index>projectIndex)
+                        {
+                            continue;
+                        }
+                        taskProgress.Next = null;
+                    }
+
+                    if (project is {SkipFlag:true})
+                    {
+                        continue;
+                    }
                     if (ShouldSkipTask(project))
                     {
                         continue;
@@ -134,6 +158,18 @@ public partial class ScriptService : IScriptService
                         fisrt = false;
                         Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
                     }
+
+                    if (taskProgress!=null)
+                    {
+                        taskProgress.CurrentScriptGroupProjectInfo = new TaskProgress.ScriptGroupProjectInfo
+                        {
+                            Name = project.Name,
+                            FolderName = project.FolderName
+                            ,Index = projectIndex
+                            ,GroupName = taskProgress?.CurrentScriptGroupName ?? ""
+                        };
+                        TaskProgressManager.SaveTaskProgress(taskProgress);
+                    }
                     for (var i = 0; i < project.RunNum; i++)
                     {
                         try
@@ -145,6 +181,7 @@ public partial class ScriptService : IScriptService
 
                             stopwatch.Reset();
                             stopwatch.Start();
+                            
                             await ExecuteProject(project);
 
                             //多次执行时及时中断
@@ -166,6 +203,10 @@ public partial class ScriptService : IScriptService
                         {
                             _logger.LogDebug(e, "执行脚本时发生异常");
                             _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                            if (taskProgress!=null && taskProgress.CurrentScriptGroupProjectInfo!=null )
+                            {
+                                taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
+                            }
                         }
                         finally
                         {
@@ -178,6 +219,48 @@ public partial class ScriptService : IScriptService
                         }
 
                         await Task.Delay(2000);
+                    }
+
+                    if (taskProgress != null)
+                    {
+                        if (taskProgress.CurrentScriptGroupProjectInfo!=null )
+                        {
+                            taskProgress.CurrentScriptGroupProjectInfo.TaskEnd = true;
+                            taskProgress.CurrentScriptGroupProjectInfo.EndTime = DateTime.Now;
+                            if (taskProgress.CurrentScriptGroupProjectInfo.Status == 1)
+                            {
+                                taskProgress.ConsecutiveFailureCount = 0;
+                                taskProgress.LastSuccessScriptGroupProjectInfo =
+                                    taskProgress.CurrentScriptGroupProjectInfo;
+                                taskProgress.LastScriptGroupName =taskProgress.CurrentScriptGroupName;
+                            }
+                            //累计连续失败次数
+                            if (taskProgress.CurrentScriptGroupProjectInfo.Status == 2)
+                            {
+                                taskProgress.ConsecutiveFailureCount++;
+                            }
+
+                            taskProgress?.History?.Add(taskProgress.CurrentScriptGroupProjectInfo);
+                            TaskProgressManager.SaveTaskProgress(taskProgress);
+                        }
+
+                        //异常达到一次次数，重启bgi
+                        var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+                        if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
+                        {
+                            _logger.LogInformation("调度器任务出现未预期的异常，自动重启bgi");
+                            Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
+                            if (autoconfig.RestartGameTogether 
+                                && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled 
+                                && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
+                            {
+                                SystemControl.CloseGame();
+                                Thread.Sleep(2000);
+                            }
+
+                            SystemControl.RestartApplication(["--TaskProgress",taskProgress.Name]);
+                        }
+
                     }
                 }
             });
@@ -195,7 +278,11 @@ public partial class ScriptService : IScriptService
             Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
         }
 
-       
+        if (taskProgress != null)
+        {
+            taskProgress.Next = null;
+        }
+
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
@@ -242,6 +329,7 @@ public partial class ScriptService : IScriptService
         target.JsScriptSettingsObject = source.JsScriptSettingsObject;
         target.GroupInfo = source.GroupInfo;
         target.AllowJsNotification = source.AllowJsNotification;
+        target.SkipFlag = source.SkipFlag;
     }
 
     // private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)
@@ -323,6 +411,8 @@ public partial class ScriptService : IScriptService
                 {
                     await Task.Delay(200);
                     var first = true;
+                    var sw = Stopwatch.StartNew();
+                    var loseFocusCount = 0;
                     while (true)
                     {
                         if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
@@ -340,10 +430,31 @@ public partial class ScriptService : IScriptService
                         {
                             first = false;
                             TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），使当前任务能够继续运行！");
+                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
                         }
 
                         await Task.Delay(500);
+                        if (sw.Elapsed.TotalSeconds >= 30)
+                        {
+                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
+                            if (!SystemControl.IsGenshinImpactActiveByProcess())
+                            {
+                                loseFocusCount++;
+                                if (loseFocusCount>50 && loseFocusCount<100)
+                                {
+                                    SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+                                }
+                                SystemControl.ActivateWindow();
+                            }
+
+                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                            if (sw.Elapsed.TotalSeconds < 200)
+                            {
+                                GlobalMethod.MoveMouseTo(300, 300);
+                            }
+
+
+                        }
                     }
                 });
             }

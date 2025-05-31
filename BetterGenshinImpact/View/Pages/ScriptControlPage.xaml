@@ -73,11 +73,24 @@
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
-                <ui:Button Grid.Row="2"
-                           Margin="0,2,0,2"
-                           HorizontalAlignment="Stretch"
-                           Command="{Binding StartMultiScriptGroupCommand}"
-                           Content="连续执行" />
+                <Grid Grid.Row="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <ui:Button Grid.Row="0"
+                               Margin="2"
+                               HorizontalAlignment="Stretch"
+                               Command="{Binding StartMultiScriptGroupCommand}"
+                               Content="连续执行" />
+
+                    <ui:Button Grid.Row="1"
+                               Margin="2"
+                               HorizontalAlignment="Stretch"
+                               Command="{Binding ContinueMultiScriptGroupCommand}"
+                               Content="继续执行" />
+                </Grid>
             </Grid>
         </Grid>
 
