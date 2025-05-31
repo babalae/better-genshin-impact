@@ -19,6 +19,7 @@ using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Vanara.PInvoke;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -185,7 +186,7 @@ public class AutoFightTask : ISoloTask
 
         if (_taskParam.FightFinishDetectEnabled)
         {
-            _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiWorld);
+            _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
         }
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);

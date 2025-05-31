@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 
 public partial class HardwareAccelerationViewModel : ObservableObject, IViewModel
 {
@@ -21,7 +22,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public HardwareAccelerationViewModel()
     {
         Config = TaskContext.Instance().Config.HardwareAccelerationConfig;
-        Status = BgiOnnxFactory.Instance;
+        Status = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>();
         _providerTypesText = string.Join(",", Status.ProviderTypes);
     }
     [RelayCommand]

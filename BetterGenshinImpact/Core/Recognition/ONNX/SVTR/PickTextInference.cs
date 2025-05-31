@@ -10,6 +10,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using BetterGenshinImpact.Core.Recognition.OCR.engine;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
@@ -24,7 +25,7 @@ public class PickTextInference : ITextInference
 
     public PickTextInference()
     {
-        _session = BgiOnnxFactory.Instance.CreateInferenceSession(BgiOnnxModel.YapModelTraining,true);
+        _session = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateInferenceSession(BgiOnnxModel.YapModelTraining,true);
 
         var wordJsonPath = Global.Absolute(@"Assets\Model\Yap\index_2_word.json");
         if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);

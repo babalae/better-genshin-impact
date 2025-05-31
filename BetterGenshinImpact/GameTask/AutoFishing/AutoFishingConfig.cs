@@ -46,4 +46,10 @@ public partial class AutoFishingConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private FishingTimePolicy _fishingTimePolicy = FishingTimePolicy.All;
+
+    /// <summary>
+    /// torch库文件地址
+    /// </summary>
+    [ObservableProperty]
+    private string _torchDllFullPath = @"C:\torch\lib\torch_cpu.dll";
 }

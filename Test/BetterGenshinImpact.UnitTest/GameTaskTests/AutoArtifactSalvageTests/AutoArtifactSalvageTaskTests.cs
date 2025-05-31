@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
 using OpenCvSharp;
 using System;
@@ -8,12 +7,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Media.Media3D;
 using static BetterGenshinImpact.GameTask.AutoArtifactSalvage.AutoArtifactSalvageTask;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
 {
-    [Collection("Paddle Collection")]
+    [Collection("Init Collection")]
     public partial class AutoArtifactSalvageTaskTests
     {
         private readonly PaddleFixture paddle;
