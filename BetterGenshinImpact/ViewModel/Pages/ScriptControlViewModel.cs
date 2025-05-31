@@ -1403,29 +1403,76 @@ public partial class ScriptControlViewModel : ViewModel
                 .Select(kv => kv.Key)
                 .ToList();*/
             Object val = checkBox.SelectedValue;
-            TaskProgress? taskProgress = taskProgresses.FirstOrDefault(t=>t.Name  == Convert.ToString(val));
-            if (taskProgress!=null)
+            if (val == null)
             {
-                //await StartGroups(selectedGroups);
-                //taskProgress.Next
-                var sg = ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList();
-                TaskProgressManager.GenerNextProjectInfo(taskProgress,sg);
-                if (taskProgress.Next==null)
-                {
-                    _logger.LogWarning("无法定位到下一个要执行的项目");
-                }
-                else
-                {
-                    await StartGroups(sg,taskProgress);
-                }
+                return;
+            }
+            await OnContinueTaskProgressAsync(Convert.ToString(val), taskProgresses);
 
+        }
+    }
+
+    public async Task OnContinueTaskProgressAsync(string name,List<TaskProgress>? taskProgresses = null)
+    {
+        if (taskProgresses == null)
+        {
+            taskProgresses = TaskProgressManager.LoadAllTaskProgress();
+        }
+        TaskProgress? taskProgress = null;
+        if (name == "latest")
+        {
+            if (taskProgresses.Count > 0)
+            {
+                taskProgress = taskProgresses[0];
+            }
+        }
+        else
+        {
+            taskProgress=taskProgresses.FirstOrDefault(t=>t.Name  == name);
+        }
+
+        
+        
+        if (taskProgress!=null)
+        {
+            //await StartGroups(selectedGroups);
+            //taskProgress.Next
+            var sg = ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList();
+            TaskProgressManager.GenerNextProjectInfo(taskProgress,sg);
+            if (taskProgress.Next==null)
+            {
+                _logger.LogWarning("无法定位到下一个要执行的项目：next为空（"+taskProgress.Name+")");
             }
             else
             {
-                _logger.LogWarning("无法定位到下一个要执行的项目");
+                await StartGroups(sg,taskProgress);
             }
 
         }
+        else
+        {
+            _logger.LogWarning("无法定位到下一个要执行的项目:taskProgress为空");
+        }
+    }
+
+    public async Task OnStartMultiScriptTaskProgressAsync(params string[] names)
+    {
+        if (ScriptGroups.Count == 0)
+        {
+            ReadScriptGroup();
+        }
+
+        string taskProgressName;
+        if (names == null || names.Length == 0)
+        {
+            taskProgressName = "latest";
+        }
+        else
+        {
+            taskProgressName = names[0];
+        }
+
+        await OnContinueTaskProgressAsync(taskProgressName);
     }
 
     [RelayCommand]

@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
@@ -179,6 +181,7 @@ public partial class ScriptService : IScriptService
 
                             stopwatch.Reset();
                             stopwatch.Start();
+                            
                             await ExecuteProject(project);
 
                             //多次执行时及时中断
@@ -239,6 +242,23 @@ public partial class ScriptService : IScriptService
 
                             taskProgress?.History?.Add(taskProgress.CurrentScriptGroupProjectInfo);
                             TaskProgressManager.SaveTaskProgress(taskProgress);
+                        }
+
+                        //异常达到一次次数，重启bgi
+                        var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+                        if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
+                        {
+                            _logger.LogInformation("调度器任务出现未预期的异常，自动重启bgi");
+                            Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
+                            if (autoconfig.RestartGameTogether 
+                                && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled 
+                                && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
+                            {
+                                SystemControl.CloseGame();
+                                Thread.Sleep(2000);
+                            }
+
+                            SystemControl.RestartApplication(["--TaskProgress",taskProgress.Name]);
                         }
 
                     }
@@ -391,6 +411,8 @@ public partial class ScriptService : IScriptService
                 {
                     await Task.Delay(200);
                     var first = true;
+                    var sw = Stopwatch.StartNew();
+                    var loseFocusCount = 0;
                     while (true)
                     {
                         if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
@@ -408,10 +430,31 @@ public partial class ScriptService : IScriptService
                         {
                             first = false;
                             TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），使当前任务能够继续运行！");
+                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
                         }
 
                         await Task.Delay(500);
+                        if (sw.Elapsed.TotalSeconds >= 30)
+                        {
+                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
+                            if (!SystemControl.IsGenshinImpactActiveByProcess())
+                            {
+                                loseFocusCount++;
+                                if (loseFocusCount>50 && loseFocusCount<100)
+                                {
+                                    SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+                                }
+                                SystemControl.ActivateWindow();
+                            }
+
+                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                            if (sw.Elapsed.TotalSeconds < 200)
+                            {
+                                GlobalMethod.MoveMouseTo(300, 300);
+                            }
+
+
+                        }
                     }
                 });
             }

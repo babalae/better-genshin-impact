@@ -89,24 +89,35 @@ public static void GenerNextProjectInfo(
     List<ScriptGroup> scriptGroups,
     bool loopToFirstGroup = false)
 {
-    if (taskProgress.LastSuccessScriptGroupProjectInfo == null)
-        return ;
+    var currentGroupIndex = 0;
+    var currentProjectIndex = -1;
+    /*if (taskProgress.LastSuccessScriptGroupProjectInfo == null)
+        return ;*/
 
-    var currentGroupIndex = scriptGroups.FindIndex(g => g.Name == taskProgress.LastScriptGroupName);
-    if (currentGroupIndex == -1)
-        return ;
-
+    if (taskProgress.LastScriptGroupName!=null)
+    {
+        currentGroupIndex = scriptGroups.FindIndex(g => g.Name == taskProgress.LastScriptGroupName);
+        if (currentGroupIndex == -1)
+            return ;
+    }
+    
     var currentGroup = scriptGroups[currentGroupIndex];
-    var currentProjectInfo = taskProgress.LastSuccessScriptGroupProjectInfo;
+    var isLastInGroup = false;
+    if (taskProgress.LastSuccessScriptGroupProjectInfo!=null)
+    {
+        
+        var currentProjectInfo = taskProgress.LastSuccessScriptGroupProjectInfo;
 
-    var currentProjectIndex = currentGroup.Projects.ToList().FindIndex(p =>
-        p.Name == currentProjectInfo.Name &&
-        p.FolderName == currentProjectInfo.FolderName);
+        currentProjectIndex = currentGroup.Projects.ToList().FindIndex(p =>
+            p.Name == currentProjectInfo.Name &&
+            p.FolderName == currentProjectInfo.FolderName);
 
-    if (currentProjectIndex == -1)
-        return ;
+        if (currentProjectIndex == -1)
+            return ;
 
-    bool isLastInGroup = currentProjectIndex == currentGroup.Projects.Count - 1;
+        isLastInGroup = currentProjectIndex == currentGroup.Projects.Count - 1;
+    }
+
     //bool isIncomplete = currentProjectInfo.EndTime == null;
 
     if (isLastInGroup)

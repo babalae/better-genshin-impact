@@ -185,7 +185,7 @@ public class SystemControl
 
         ActivateWindow(TaskContext.Instance().GameHandle);
     }
-    static void RestartApplication(string[] newArgs)
+    public static void RestartApplication(string[] newArgs)
     {
         // 获取当前程序路径
         string exePath = Process.GetCurrentProcess().MainModule.FileName;
