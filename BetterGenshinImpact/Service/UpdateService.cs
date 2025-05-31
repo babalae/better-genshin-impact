@@ -142,10 +142,17 @@ public class UpdateService : IUpdateService
         {
             using HttpClient httpClient = new();
             Notice? notice = await httpClient.GetFromJsonAsync<Notice>(NoticeUrl);
+            string deviceId = DeviceIdHelper.DeviceId;
 
             if (notice != null)
             {
-                return notice.Version;
+                // 灰度发布逻辑：deviceId做hash取余
+                int hash = deviceId.GetHashCode();
+                int mod = Math.Abs(hash % 10);
+                if (mod < notice.Gray)
+                {
+                    return notice.Version;
+                }
             }
         }
         catch (Exception e)
