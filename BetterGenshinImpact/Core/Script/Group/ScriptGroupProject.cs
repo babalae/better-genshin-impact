@@ -77,8 +77,13 @@ public partial class ScriptGroupProject : ObservableObject
     /// </summary>
     [JsonIgnore]
     [ObservableProperty]
-    public bool? _nextFlag = false;
-    
+    private bool? _nextFlag = false;
+    /// <summary>
+    /// 直接跳过标志
+    /// </summary>
+    [JsonIgnore]
+    [ObservableProperty]
+    private bool? _skipFlag = false;
     [ObservableProperty]
     private bool? _allowJsNotification = true;
 

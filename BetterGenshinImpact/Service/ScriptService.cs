@@ -1,23 +1,23 @@
-﻿using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.GameTask;
-
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.ViewModel.Pages;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.TaskProgress;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service;
 
@@ -45,6 +45,7 @@ public partial class ScriptService : IScriptService
     }
     public bool ShouldSkipTask(ScriptGroupProject project)
     {
+
         if (project.GroupInfo is { Config.PathingConfig.Enabled: true } )
         {
             if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
@@ -72,11 +73,18 @@ public partial class ScriptService : IScriptService
         }
         return false; // 不跳过
     }
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
+    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
         groupName ??= "默认";
 
         var list = ReloadScriptProjects(projectList);
+        
+        //恢复临时的跳过标志
+        foreach (var scriptGroupProject in projectList)
+        {
+            scriptGroupProject.SkipFlag = false;
+        }
+        
 
         // // 针对JS 脚本，检查是否包含定时器操作
         // var jsProjects = ExtractJsProjects(list);
@@ -107,9 +115,23 @@ public partial class ScriptService : IScriptService
             .RunThreadAsync(async () =>
             {
                 var stopwatch = new Stopwatch();
-
+                int projectIndex = -1;
                 foreach (var project in list)
                 {
+                    projectIndex++;
+                    if (taskProgress != null && taskProgress.Next != null)
+                    {
+                        if (taskProgress.Next.Index!=projectIndex)
+                        {
+                            continue;
+                        }
+                        taskProgress.Next = null;
+                    }
+
+                    if (project is {SkipFlag:true})
+                    {
+                        continue;
+                    }
                     if (ShouldSkipTask(project))
                     {
                         continue;
@@ -133,6 +155,17 @@ public partial class ScriptService : IScriptService
                     {
                         fisrt = false;
                         Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+                    }
+
+                    if (taskProgress!=null)
+                    {
+                        taskProgress.CurrentScriptGroupProjectInfo = new TaskProgress.ScriptGroupProjectInfo
+                        {
+                            Name = project.Name,
+                            FolderName = project.FolderName
+                            ,Index = projectIndex
+                        };
+                        TaskProgressManager.saveTaskProgress(taskProgress);
                     }
                     for (var i = 0; i < project.RunNum; i++)
                     {
@@ -179,6 +212,16 @@ public partial class ScriptService : IScriptService
 
                         await Task.Delay(2000);
                     }
+
+                    if (taskProgress != null)
+                    {
+                        if (taskProgress.CurrentScriptGroupProjectInfo!=null)
+                        {
+                            taskProgress.CurrentScriptGroupProjectInfo.TaskEnd = true;
+                            TaskProgressManager.saveTaskProgress(taskProgress);
+                        }
+
+                    }
                 }
             });
 
@@ -195,7 +238,11 @@ public partial class ScriptService : IScriptService
             Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
         }
 
-       
+        if (taskProgress != null)
+        {
+            taskProgress.Next = null;
+        }
+
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
@@ -242,6 +289,7 @@ public partial class ScriptService : IScriptService
         target.JsScriptSettingsObject = source.JsScriptSettingsObject;
         target.GroupInfo = source.GroupInfo;
         target.AllowJsNotification = source.AllowJsNotification;
+        target.SkipFlag = source.SkipFlag;
     }
 
     // private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)

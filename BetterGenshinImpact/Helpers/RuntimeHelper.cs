@@ -158,7 +158,10 @@ internal static class RuntimeExtension
 
     public static IHostBuilder UseSingleInstance(this IHostBuilder self, string instanceName, Action<bool> callback = null!)
     {
-        RuntimeHelper.CheckSingleInstance(instanceName, callback);
+        if (!Environment.GetCommandLineArgs().Contains("--no-single"))
+        {
+            RuntimeHelper.CheckSingleInstance(instanceName, callback);
+        }
         return self;
     }
 

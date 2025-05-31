@@ -18,6 +18,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
+using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -36,6 +37,7 @@ using Wpf.Ui.Violeta.Controls;
 using StackPanel = Wpf.Ui.Controls.StackPanel;
 using TextBox = Wpf.Ui.Controls.TextBox;
 using Button = Wpf.Ui.Controls.Button;
+using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
 
@@ -105,7 +107,7 @@ public partial class ScriptControlViewModel : ViewModel
     private void ClearTasks()
     {
         // 确认？
-        var result = MessageBox.Show("是否清空所有任务？", "清空任务", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var result = MessageBox.Show("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
@@ -1239,7 +1241,15 @@ public partial class ScriptControlViewModel : ViewModel
         }
 
         RunnerContext.Instance.Reset();
-        await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name);
+
+        TaskProgress taskProgress = new()
+            {
+                ScriptGroupNames = [SelectedScriptGroup.Name]
+            };
+        RunnerContext.Instance.taskProgress = taskProgress;
+        taskProgress.ScriptGroupName = SelectedScriptGroup.Name;
+        TaskProgressManager.saveTaskProgress(taskProgress);
+        await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name,taskProgress);
     }
 
     [RelayCommand]
@@ -1285,46 +1295,136 @@ public partial class ScriptControlViewModel : ViewModel
     public static List<ScriptGroupProject> GetNextProjects(ScriptGroup group)
     {
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
-        bool start = false;
-        foreach (var item in group.Projects)
+        if (group.Projects.Where(g=>g.NextFlag ?? false).Count() > 0)
         {
-            if (item.NextFlag ?? false)
+            bool start = false;
+            foreach (var item in group.Projects)
             {
-                start = true;
-            }
+                if (item.NextFlag ?? false)
+                {
+                    start = true;
+                }
 
-            if (start)
-            {
+                if (!start)
+                {
+                    item.SkipFlag = true;
+                }
                 ls.Add(item);
             }
-        }
 
-        if (!start)
-        {
-            ls.AddRange(group.Projects);
-        }
-
-        //拿出来后清空，和置状态
-        if (start)
-        {
-            List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
-            foreach (var item in nextScheduledTask)
+            if (!start)
             {
-                if (item.Item1 == group.Name)
+                ls.AddRange(group.Projects);
+            }
+
+            //拿出来后清空，和置状态
+            if (start)
+            {
+                List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
+                foreach (var item in nextScheduledTask)
                 {
-                    nextScheduledTask.Remove(item);
-                    break;
+                    if (item.Item1 == group.Name)
+                    {
+                        nextScheduledTask.Remove(item);
+                        break;
+                    }
+                }
+
+                foreach (var item in group.Projects)
+                {
+                    item.NextFlag = false;
                 }
             }
 
-            foreach (var item in group.Projects)
+            return ls;
+        }
+        
+        return group.Projects.Select(g=>g).ToList();
+    }
+
+    [RelayCommand]
+    public async Task OnContinueMultiScriptGroupAsync()
+    {
+        // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
+
+       // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
+        var stackPanel = new StackPanel();
+        
+
+        // 添加分割线
+        var separator = new Separator
+        {
+            Margin = new Thickness(0, 4, 0, 4)
+        };
+        stackPanel.Children.Add(separator);
+
+        List<TaskProgress> taskProgresses = TaskProgressManager.LoadAllTaskProgress();
+        var checkBox = new ComboBox();;
+        stackPanel.Children.Add(checkBox);
+        ObservableCollection<KeyValuePair<string, string>>  kvs=new ObservableCollection<KeyValuePair<string, string>>();
+        foreach (var taskProgress in taskProgresses)
+        {
+            var name = taskProgress.Name+"_"+taskProgress.ScriptGroupName+"_";
+            if (taskProgress.CurrentScriptGroupProjectInfo!=null)
             {
-                item.NextFlag = false;
+                name = name + "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
             }
+            kvs.Add(new KeyValuePair<string, string>(taskProgress.Name,name));
         }
 
+        checkBox.SelectedValuePath = "Key";
+        checkBox.DisplayMemberPath = "Value";
+        checkBox.ItemsSource = kvs;
+        checkBox.SelectedIndex = 0;
+        //SelectedValuePath="Key"
+       // DisplayMemberPath="Value"
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "选择需要继续执行的进度记录",
+            Content = new ScrollViewer
+            {
+                Content = stackPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Height = 300 // 设置固定高度
+                ,Width = 600
+            },
+            CloseButtonText = "关闭",
+            PrimaryButtonText = "确认执行",
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
 
-        return ls;
+        var result = await uiMessageBox.ShowDialogAsync();
+        if (result == MessageBoxResult.Primary)
+        {
+            
+            /*var selectedGroups = checkBoxes
+                .Where(kv => kv.Value.IsChecked == true)
+                .Select(kv => kv.Key)
+                .ToList();*/
+            Object val = checkBox.SelectedValue;
+            TaskProgress? taskProgress = taskProgresses.FirstOrDefault(t=>t.Name  == Convert.ToString(val));
+            if (taskProgress!=null)
+            {
+                //await StartGroups(selectedGroups);
+                //taskProgress.Next
+                TaskProgressManager.GenerNextProjectInfo(taskProgress,ScriptGroups.ToList());
+                if (taskProgress.Next==null)
+                {
+                    _logger.LogWarning("无法定位到下一个要执行的项目");
+                }
+                else
+                {
+                    await StartGroups(ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList(),taskProgress);
+                }
+
+            }
+            else
+            {
+                _logger.LogWarning("无法定位到下一个要执行的项目");
+            }
+
+        }
     }
 
     [RelayCommand]
@@ -1429,15 +1529,33 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    public async Task StartGroups(List<ScriptGroup> scriptGroups)
+    public async Task StartGroups(List<ScriptGroup> scriptGroups,TaskProgress? taskProgress = null)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
         try
         {
             RunnerContext.Instance.IsContinuousRunGroup = true;
+            if (taskProgress == null)
+            {
+                taskProgress = new()
+                {
+                    ScriptGroupNames = scriptGroups.Select(x => x.Name).ToList()
+                };
+            }
+
+            RunnerContext.Instance.taskProgress = taskProgress;
             foreach (var scriptGroup in scriptGroups)
             {
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name);
+                if (taskProgress.Next!=null)
+                {
+                    if (scriptGroup.Name!=taskProgress.ScriptGroupName)
+                    {
+                        continue;
+                    }
+                }
+                taskProgress.ScriptGroupName = scriptGroup.Name;
+                TaskProgressManager.saveTaskProgress(taskProgress);
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name,taskProgress);
                 await Task.Delay(2000);
             }
         }
