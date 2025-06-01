@@ -11,7 +11,8 @@
                  x:Name="app"
                  Title="发现新版本"
                  Width="680"
-                 Height="800"
+                 MinHeight="10"
+                 SizeToContent="Height"
                  Background="#202020"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
@@ -19,11 +20,13 @@
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Grid>
-        <ui:Grid Margin="0,48,0,0" RowDefinitions="Auto,*,Auto,Auto">
+        <ui:Grid Name="MyGrid" Margin="0,48,0,0" RowDefinitions="Auto,*,Auto,Auto">
             <webview:WebpagePanel x:Name="WebpagePanel"
                                   Grid.Row="1"
+                                  Height="400"
                                   Margin="12,0,12,0" />
-            <ui:Grid Grid.Row="0"
+            <ui:Grid Name="UpdateStatusMessageGrid"
+                     Grid.Row="0"
                      Margin="16,0,16,0"
                      ColumnDefinitions="Auto,*"
                      Visibility="{Binding ShowUpdateStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -33,8 +36,8 @@
                 </ui:StackPanel>
             </ui:Grid>
             <!-- 新增：多渠道更新方式卡片 -->
-            <StackPanel Grid.Row="2" Margin="12,0,12,0">
-                <ui:CardControl Margin="0,0,0,8">
+            <StackPanel Name="ServerPanel" Grid.Row="2" Margin="12,0,12,0">
+                <ui:CardControl Name="DefaultCard" Margin="0,0,0,8">
                     <ui:CardControl.Icon>
                         <ui:FontIcon Glyph="&#xf4ba;" Style="{StaticResource FaFontIconStyle}" />
                     </ui:CardControl.Icon>
@@ -47,12 +50,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="Steambird"
+                                          Text="默认更新服务器"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="普通用户可通过 Steambird 渠道直接更新（默认更新渠道）"
+                                          Text="普通用户可点此直接更新"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -61,7 +64,7 @@
                             Appearance="Success"
                             Icon="{ui:SymbolIcon ArrowDownload24}"
                             Content="立即更新"
-                            Command="{Binding UpdateCommand}" />
+                            Command="{Binding UpdateFromSteambirdCommand}" />
                     </StackPanel>
                 </ui:CardControl>
                 <ui:CardControl Margin="0,0,0,8">
@@ -86,15 +89,21 @@
                         </Grid>
                     </ui:CardControl.Header>
                     <StackPanel Orientation="Horizontal">
-                        <ui:Button
-                            Appearance="Primary"
+                        <ui:Button 
+                            Name="EditCdkButton"
+                            Margin="0,0,8,0"
                             Icon="{ui:SymbolIcon TicketDiagonal24}"
-                            Content="输入CDK更新"
-                            Command="{Binding OneKeyExecuteCommand}" />
+                            Content="修改CDK"
+                            Command="{Binding EditCdkCommand}" />
+                        <ui:Button
+                            Appearance="Success"
+                            Icon="{ui:SymbolIcon ArrowDownload24}"
+                            Content="立即更新"
+                            Command="{Binding UpdateFromMirrorChyanCommand}" />
                     </StackPanel>
                 </ui:CardControl>
                 
-                <ui:CardControl Margin="0,0,0,8">
+                <!--<ui:CardControl Margin="0,0,0,8">
                     <ui:CardControl.Icon>
                         <ui:FontIcon Glyph="&#xf0c2;" Style="{StaticResource FaFontIconStyle}" />
                     </ui:CardControl.Icon>
@@ -122,7 +131,7 @@
                             Content="唤起胡桃"
                             Command="{Binding OneKeyExecuteCommand}" />
                     </StackPanel>
-                </ui:CardControl>
+                </ui:CardControl>-->
             </StackPanel>
             <!-- 原有按钮区域 -->
             <ui:Grid Grid.Row="3"

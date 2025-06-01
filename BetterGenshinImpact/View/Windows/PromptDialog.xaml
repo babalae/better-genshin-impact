@@ -28,21 +28,36 @@
             <ui:TextBlock Name="TxtQuestion" Margin="5" />
             <!-- <ui:TextBox Name="TxtResponse" Margin="5" /> -->
             <ContentControl Name="DynamicContent" Margin="5" />
-            <StackPanel Margin="5"
-                        HorizontalAlignment="Right"
-                        Orientation="Horizontal">
-                <ui:Button Name="BtnOk"
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                
+                <!-- 左下角按钮 -->
+                <ui:Button Name="BtnLeftBottom"
                            Margin="5"
-                           Appearance="Primary"
-                           Click="BtnOkClick"
-                           Content="确定"
-                           IsDefault="True" />
-                <ui:Button Name="BtnCancel"
-                           Margin="5"
-                           Click="BtnCancelClick"
-                           Content="取消"
-                           IsCancel="True" />
-            </StackPanel>
+                           HorizontalAlignment="Left"
+                           Appearance="Success"
+                           Content="左下角按钮" 
+                           Grid.Column="0" />
+                
+                <!-- 原有的右侧按钮 -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal">
+                    <ui:Button Name="BtnOk"
+                               Margin="5"
+                               Appearance="Primary"
+                               Click="BtnOkClick"
+                               Content="确定"
+                               IsDefault="True" />
+                    <ui:Button Name="BtnCancel"
+                               Margin="5"
+                               Click="BtnCancelClick"
+                               Content="取消"
+                               IsCancel="True" />
+                </StackPanel>
+            </Grid>
         </StackPanel>
 
         <ui:TitleBar Name="MyTitleBar" Grid.Row="0">
