@@ -15,9 +15,9 @@ using Vanara;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
-public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
+public class BgiOnnxFactory
 {
-    private static readonly ILogger<BgiOnnxFactory> Logger = App.GetLogger<BgiOnnxFactory>();
+    private readonly ILogger logger;
 
     /// <summary>
     ///     缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
@@ -26,9 +26,15 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// </summary>
     private readonly ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
 
-    public BgiOnnxFactory()
+    /// <summary>
+    /// 请勿直接实例化此类
+    /// </summary>
+    /// <param name="hardwareAccelerationConfig"></param>
+    /// <param name="logger"></param>
+    public BgiOnnxFactory(HardwareAccelerationConfig hardwareAccelerationConfig, ILogger<BgiOnnxFactory> logger)
     {
-        var config = TaskContext.Instance().Config.HardwareAccelerationConfig;
+        var config = hardwareAccelerationConfig;
+        this.logger = logger;
         if (config.AutoAppendCudaPath) AppendCudaPath();
 
         if (string.IsNullOrWhiteSpace(config.AdditionalPath))
@@ -41,9 +47,9 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         TrtUseEmbedMode = config.EmbedTensorRtCache;
         EnableCache = config.EnableTensorRtCache;
         CpuOcr = config.CpuOcr;
-        Logger.LogDebug(
+        this.logger.LogDebug(
             "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
-            string.Join(",", ProviderTypes.Select(Enum.GetName)),
+            string.Join(",", ProviderTypes.Select<ProviderType, string>(Enum.GetName)),
             config.InferenceDevice,
             OptimizedModel,
             CudaDeviceId,
@@ -70,7 +76,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <param name="dmlDeviceId">dml设备id</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    private static ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType, int cudaDeviceId,
+    private ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType, int cudaDeviceId,
         int dmlDeviceId)
     {
         switch (inferenceDeviceType)
@@ -94,7 +100,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                     }
                     catch (Exception e)
                     {
-                        Logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
+                        logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -112,7 +118,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                     }
                     catch (Exception e)
                     {
-                        Logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
+                        logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
@@ -129,14 +135,14 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
                     }
                     catch (Exception e)
                     {
-                        Logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
+                        logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
                     }
                     finally
                     {
                         testSession?.Dispose();
                     }
 
-                if (!hasGpu) Logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
+                if (!hasGpu) logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
 
                 //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
                 list.Add(ProviderType.Cpu);
@@ -149,7 +155,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <summary>
     ///     自动嗅探并修改path以加载cuda
     /// </summary>
-    private static void AppendCudaPath()
+    private void AppendCudaPath()
     {
         var cudaVersion =
             Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\GPU Computing Toolkit\CUDA",
@@ -203,7 +209,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     ///     将附加的path应用进来
     /// </summary>
     /// <param name="extraPath">附加的path字符串</param>
-    private static void AppendPath(string[] extraPath)
+    private void AppendPath(string[] extraPath)
     {
         if (extraPath.Length <= 0) return;
 
@@ -212,12 +218,12 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         pathVariables.AddRange(extraPath);
         if (pathVariables.Count <= 0)
         {
-            Logger.LogWarning("[GpuAuto]SetCudaPath:No valid paths found.");
+            logger.LogWarning("[GpuAuto]SetCudaPath:No valid paths found.");
             return;
         }
 
         var updatedPath = string.Join(Path.PathSeparator, pathVariables.Distinct());
-        Logger.LogDebug("[GpuAuto]修改进程PATH为:{UpdatedPath}", updatedPath);
+        logger.LogDebug("[GpuAuto]修改进程PATH为:{UpdatedPath}", updatedPath);
         Environment.SetEnvironmentVariable("PATH", updatedPath, EnvironmentVariableTarget.Process);
     }
 
@@ -228,7 +234,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        Logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
+        logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
 
         var cached = GetCached(model);
@@ -245,7 +251,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <returns>InferenceSession</returns>
     public InferenceSession CreateInferenceSession(BgiOnnxModel model, bool ocr = false)
     {
-        Logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
+        logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
@@ -275,7 +281,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         // 判断文件是否存在
         if (File.Exists(result)) return result;
 
-        Logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
+        logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
         return null;
     }
 
@@ -289,7 +295,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
         var ctxA = Path.Combine(model.CachePath, "trt", "_ctx.onnx");
         if (File.Exists(ctxA))
         {
-            Logger.LogDebug("[ONNX]模型 {Model} 命中TRT匿名缓存文件: {Path}", model.Name, ctxA);
+            logger.LogDebug("[ONNX]模型 {Model} 命中TRT匿名缓存文件: {Path}", model.Name, ctxA);
             return ctxA;
         }
 
@@ -297,11 +303,11 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             Path.GetFileNameWithoutExtension(model.ModalPath) + "_ctx.onnx");
         if (File.Exists(ctxB))
         {
-            Logger.LogDebug("[ONNX]模型 {Model} 命中TRT命名缓存文件: {Path}", model.Name, ctxB);
+            logger.LogDebug("[ONNX]模型 {Model} 命中TRT命名缓存文件: {Path}", model.Name, ctxB);
             return ctxB;
         }
 
-        Logger.LogDebug("[ONNX]没有找到模型 {Model} 的模型缓存文件。", model.Name);
+        logger.LogDebug("[ONNX]没有找到模型 {Model} 的模型缓存文件。", model.Name);
         return null;
     }
 
@@ -315,7 +321,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
     /// <param name="forcedProvider">强制使用的Provider,为空或null则不强制</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    private SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache, ProviderType[]? forcedProvider = null)
+    protected SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache, ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
         foreach (var type in
@@ -355,7 +361,7 @@ public class BgiOnnxFactory : Singleton<BgiOnnxFactory>
             }
             catch (Exception e)
             {
-                Logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
+                logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
                     e.Message);
             }
 

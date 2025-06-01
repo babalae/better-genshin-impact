@@ -255,12 +255,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public const int MAX_NO_BAIT_FISH_TIMES = 2;
         private DateTimeOffset? findTargetEndTime;
         private bool foundTarget;
+        private bool useTorch;
 
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
-        public ThrowRod(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
+        public ThrowRod(string name, Blackboard blackboard, bool useTorch, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
+            this.useTorch = useTorch;
             this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
@@ -437,7 +439,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var dy = NormalizeYTo576(fish.Top + fish.Bottom - rod.Top - rod.Bottom) / 2.0;
                 var dl = Math.Sqrt(dx * dx + dy * dy);
                 //logger.LogInformation("dl = {dl}", dl);
-                var state = RodNet.GetRodState(new RodInput
+
+                RodInput rodInput = new RodInput
                 {
                     rod_x1 = NormalizeXTo1024(rod.Left),
                     rod_x2 = NormalizeXTo1024(rod.Right),
@@ -448,7 +451,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     fish_y1 = NormalizeYTo576(fish.Top),
                     fish_y2 = NormalizeYTo576(fish.Bottom),
                     fish_label = BigFishType.GetIndex(currentFish.FishType)
-                });
+                };
+                int state = this.useTorch ? new RodNet().GetRodState_Torch(rodInput) : RodNet.GetRodState(rodInput);
 
                 // 如果hutao钓鱼暂时没有更新导致报错，可以先用这段凑合
                 //int state;
@@ -705,13 +709,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
             using var wordCaptureMat = new Mat(imageRegion.SrcMat, liftingWordsAreaRect);
             var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
-            if (currentBiteWordsTips != default)
+            if (currentBiteWordsTips != null)
             {
                 // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
                 //     currentBiteWordsTips
                 //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
                 //         .ToRectDrawable());
-                using var tipsRa = imageRegion.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
+                using var tipsRa = imageRegion.Derive((Rect)currentBiteWordsTips + liftingWordsAreaRect.Location);
                 tipsRa.DrawSelf("FishBiteTips");
 
                 return RaiseRod("文字块");

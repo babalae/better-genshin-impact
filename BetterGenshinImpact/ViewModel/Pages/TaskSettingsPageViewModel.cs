@@ -434,6 +434,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private async Task OnGoToTorchPreviousVersionsAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://pytorch.org/get-started/previous-versions"));
+    }
+
+    [RelayCommand]
     private void OnOpenLocalScriptRepo()
     {
         AutoFightViewModel?.OnOpenLocalScriptRepo();
