@@ -1078,7 +1078,7 @@
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,20,0"
-                               Command="{Binding OpenKeyBindingsWindowCommand}"
+                               Command="{Binding CheckUpdateCommand}"
                                Content="检查更新" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -1099,14 +1099,39 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="测试版非常不稳定，请谨慎选择更新！"
+                                  Text="【测试版】非常不稳定，请谨慎选择更新！"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
-                               Command="{Binding OpenKeyBindingsWindowCommand}"
+                               Command="{Binding CheckUpdateAlphaCommand}"
                                Content="测试版检查更新" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <emoji:TextBlock Grid.Row="0"
+                                     Grid.Column="0"
+                                     Text="直接从 Github 获取最新测试版"
+                                     TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="【测试版】非常不稳定，请谨慎选择更新！"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding GotoGithubActionCommand}"
+                               Content="访问 Github" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

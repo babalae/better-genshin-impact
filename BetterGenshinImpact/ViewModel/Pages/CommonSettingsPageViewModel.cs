@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using Windows.System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
@@ -16,6 +17,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Converters;
@@ -259,5 +261,31 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
     {
         await OcrFactory.ChangeCulture(type.Key);
+    }
+    
+    [RelayCommand]
+    private async Task CheckUpdateAsync()
+    {
+        await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
+        {
+            Trigger = UpdateTrigger.Manual,
+            Channel = UpdateChannel.Stable
+        });
+    }
+    
+    [RelayCommand]
+    private async Task CheckUpdateAlphaAsync()
+    {
+        await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
+        {
+            Trigger = UpdateTrigger.Manual,
+            Channel = UpdateChannel.Alpha
+        });
+    }
+    
+    [RelayCommand]
+    private async Task GotoGithubActionAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
     }
 }
