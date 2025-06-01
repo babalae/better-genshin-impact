@@ -47,17 +47,24 @@ public class UpdateService : IUpdateService
     {
         try
         {
-#if DEBUG && true
+#if DEBUG && false
             return;
 #endif
             string newVersion = await GetLatestVersionAsync();
-
-
 
             if (string.IsNullOrWhiteSpace(newVersion))
             {
                 return;
             }
+            
+            // ---- 如果是调试模式且手动的检查更新的情况下，强制打开更新窗口 -----
+            // 方便调试窗口
+            if (RuntimeHelper.IsDebuggerAttached && option.Trigger == UpdateTrigger.Manual)
+            {
+                await OpenCheckUpdateWindow(option, newVersion);
+                return;
+            }
+            // ---- 如果是调试模式且手动的检查更新的情况下，强制打开更新窗口 -----
 
             if (!Global.IsNewVersion(newVersion))
             {
@@ -76,58 +83,7 @@ public class UpdateService : IUpdateService
                 return;
             }
 
-            CheckUpdateWindow win = new(option)
-            {
-                Owner = Application.Current.MainWindow,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Title = $"发现新版本 {newVersion}",
-                UserInteraction = async (sender, button) =>
-                {
-                    CheckUpdateWindow win = (CheckUpdateWindow)sender;
-
-                    switch (button)
-                    {
-                        case CheckUpdateWindow.CheckUpdateWindowButton.BackgroundUpdate:
-                            // TBD
-                            break;
-
-                        case CheckUpdateWindow.CheckUpdateWindowButton.OtherUpdate:
-                            Process.Start(new ProcessStartInfo(DownloadPageUrl) { UseShellExecute = true });
-                            break;
-
-                        case CheckUpdateWindow.CheckUpdateWindowButton.Update:
-                            {
-                                // 唤起更新程序
-                                string updaterExePath = Global.Absolute("BetterGI.update.exe");
-                                if (!File.Exists(updaterExePath))
-                                {
-                                    await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
-                                    return;
-                                }
-                                // 启动
-                                Process.Start(updaterExePath, "-I");
-                                
-                                // 退出程序
-                                Application.Current.Shutdown();
-                                
-                            }
-                            break;
-
-                        case CheckUpdateWindow.CheckUpdateWindowButton.Ignore:
-                            Config.NotShowNewVersionNoticeEndVersion = newVersion;
-                            win.Close();
-                            break;
-
-                        case CheckUpdateWindow.CheckUpdateWindowButton.Cancel:
-                            win.ShowUpdateStatus = false;
-                            win.Close();
-                            break;
-                    }
-                }
-            };
-
-            win.NavigateToHtml(await GetReleaseMarkdownHtmlAsync());
-            win.ShowDialog();
+            await OpenCheckUpdateWindow(option, newVersion);
         }
         catch (Exception e)
         {
@@ -136,16 +92,79 @@ public class UpdateService : IUpdateService
         }
     }
 
+    private async Task OpenCheckUpdateWindow(UpdateOption option, string newVersion)
+    {
+        CheckUpdateWindow win = new(option)
+        {
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Title = $"发现新版本 {newVersion}",
+            UserInteraction = async (sender, button) =>
+            {
+                CheckUpdateWindow win = (CheckUpdateWindow)sender;
+
+                switch (button)
+                {
+                    case CheckUpdateWindow.CheckUpdateWindowButton.BackgroundUpdate:
+                        // TBD
+                        break;
+
+                    case CheckUpdateWindow.CheckUpdateWindowButton.OtherUpdate:
+                        Process.Start(new ProcessStartInfo(DownloadPageUrl) { UseShellExecute = true });
+                        break;
+
+                    case CheckUpdateWindow.CheckUpdateWindowButton.Update:
+                    {
+                        // 唤起更新程序
+                        string updaterExePath = Global.Absolute("BetterGI.update.exe");
+                        if (!File.Exists(updaterExePath))
+                        {
+                            await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+                            return;
+                        }
+                        // 启动
+                        Process.Start(updaterExePath, "-I");
+                                
+                        // 退出程序
+                        Application.Current.Shutdown();
+                                
+                    }
+                        break;
+
+                    case CheckUpdateWindow.CheckUpdateWindowButton.Ignore:
+                        Config.NotShowNewVersionNoticeEndVersion = newVersion;
+                        win.Close();
+                        break;
+
+                    case CheckUpdateWindow.CheckUpdateWindowButton.Cancel:
+                        win.ShowUpdateStatus = false;
+                        win.Close();
+                        break;
+                }
+            }
+        };
+
+        win.NavigateToHtml(await GetReleaseMarkdownHtmlAsync());
+        win.ShowDialog();
+    }
+
     private async Task<string> GetLatestVersionAsync()
     {
         try
         {
             using HttpClient httpClient = new();
             Notice? notice = await httpClient.GetFromJsonAsync<Notice>(NoticeUrl);
+            string deviceId = DeviceIdHelper.DeviceId;
 
             if (notice != null)
             {
-                return notice.Version;
+                // 灰度发布逻辑：deviceId做hash取余
+                int hash = deviceId.GetHashCode();
+                int mod = Math.Abs(hash % 10);
+                if (mod < notice.Gray)
+                {
+                    return notice.Version;
+                }
             }
         }
         catch (Exception e)

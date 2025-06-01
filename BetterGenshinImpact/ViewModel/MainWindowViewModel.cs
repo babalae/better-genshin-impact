@@ -288,21 +288,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     private void OnceRun()
     {
-        string deviceId = "default";
-        try
+        string deviceId = DeviceIdHelper.DeviceId;
+        if (string.IsNullOrWhiteSpace(deviceId))
         {
-            deviceId = new DeviceIdBuilder()
-                .OnWindows(windows => windows
-                    .AddMacAddressFromWmi(excludeWireless: true, excludeNonPhysical: true)
-                    .AddProcessorId()
-                    .AddMotherboardSerialNumber()
-                )
-                .ToString();
-        }
-        catch (Exception e)
-        {
-            _logger.LogDebug("获取设备ID异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
-                             Environment.NewLine + e.Message);
+            deviceId = "default"; // 如果获取设备ID失败，使用默认值
         }
 
         // 每个设备只运行一次
