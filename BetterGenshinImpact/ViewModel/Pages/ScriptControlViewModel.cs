@@ -38,6 +38,7 @@ using TextBox = Wpf.Ui.Controls.TextBox;
 using Button = Wpf.Ui.Controls.Button;
 using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
+using  Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -105,7 +106,8 @@ public partial class ScriptControlViewModel : ViewModel
     private void ClearTasks()
     {
         // 确认？
-        var result = MessageBox.Show("是否清空所有任务？", "清空任务", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var result = MessageBox.Show("是否清空所有任务？", "清空任务", 
+            System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
@@ -575,6 +577,34 @@ public partial class ScriptControlViewModel : ViewModel
             }
             else
             {
+                var result = MessageBox.Show("所有配置单中名为 < " + item.Name + " > 配置组将重命名为 < " + str + " > ，是否继续？", 
+                    "重名配置组", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+                
+                if (result != System.Windows.MessageBoxResult.Yes)
+                {
+                    return;
+                }
+                
+                var ViewModel = new OneDragonFlowViewModel();
+                ViewModel.InitConfigList();
+                var configList = ViewModel.ConfigList;
+                
+               // 读取ConfigList中所有的配置单，检查每个配置单中的TaskEnabledList，如果含有和item.Name相同的配置组，则把这个TaskEnabledList中的配置组改为str
+                foreach (var config in configList)
+                {
+                    if (config.TaskEnabledList.Any(task => task.Value.Item2 == item.Name))
+                    {
+                        var oldName = item.Name;
+                        foreach (var task in config.TaskEnabledList)
+                        {
+                            if (task.Value.Item2 == oldName)
+                            {
+                                config.TaskEnabledList[task.Key] = (task.Value.Item1, str);
+                            }
+                        }
+                        ViewModel.WriteConfig(config);
+                    }
+                }
                 File.Move(Path.Combine(ScriptGroupPath, $"{item.Name}.json"), Path.Combine(ScriptGroupPath, $"{str}.json"));
                 item.Name = str;
                 WriteScriptGroup(item);
@@ -589,9 +619,41 @@ public partial class ScriptControlViewModel : ViewModel
         {
             return;
         }
-
+        
+        //弹窗提示"配置单中的所有同名配置组将被删除，是否继续？，取消退出，确认执行删除操作"
+        var result = MessageBox.Show("所有配置单中名为 < " + item.Name + " > 配置组将被删除，是否继续？", 
+            "删除配置组", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+        
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+        
         try
         {
+            var ViewModel = new OneDragonFlowViewModel();
+            ViewModel.InitConfigList();
+            var configList = ViewModel.ConfigList;
+            // 读取ConfigList中所有的配置单，检查每个配置单中的TaskEnabledList，如果含有和item.Name相同的配置组，则把这个TaskEnabledList中的配置组删除
+            foreach (var config in configList)
+            {
+                if (config.TaskEnabledList.Any(task => task.Value.Item2 == item.Name))
+                {
+                    var oldName = item.Name;
+                    foreach (var task in config.TaskEnabledList)
+                    {
+                        if (task.Value.Item2 == oldName)
+                        {
+                            config.TaskEnabledList.Remove(task.Key);
+                        }
+                    }
+                    ViewModel.WriteConfig(config);
+                }
+            }
+            
+            
+            
+            
             ScriptGroups.Remove(item);
             File.Delete(Path.Combine(ScriptGroupPath, $"{item.Name}.json"));
             _snackbarService.Show(
@@ -612,6 +674,13 @@ public partial class ScriptControlViewModel : ViewModel
                 null,
                 TimeSpan.FromSeconds(3)
             );
+        }
+        if (ScriptGroups.Count() != 0)//如果删除的是当前选中的配置组，则清空选中项
+        {
+            SelectedScriptGroup = ScriptGroups.First();
+        }else
+        {
+            SelectedScriptGroup = null;
         }
     }
 

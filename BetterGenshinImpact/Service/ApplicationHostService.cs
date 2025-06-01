@@ -47,6 +47,7 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
             _navigationWindow!.ShowWindow();
+            _ = _navigationWindow.Navigate(typeof(HomePage));//不进主页的话，快捷键会失效
             //
             var args = Environment.GetCommandLineArgs();
             if (args.Length > 1)
