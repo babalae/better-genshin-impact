@@ -114,7 +114,14 @@ public class UpdateService : IUpdateService
                         break;
 
                     case CheckUpdateWindow.CheckUpdateWindowButton.OtherUpdate:
-                        Process.Start(new ProcessStartInfo(DownloadPageUrl) { UseShellExecute = true });
+                        if (option.Channel == UpdateChannel.Stable)
+                        {
+                            Process.Start(new ProcessStartInfo(DownloadPageUrl) { UseShellExecute = true });
+                        }
+                        else
+                        {
+                            Process.Start(new ProcessStartInfo("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml") { UseShellExecute = true });
+                        }
                         break;
 
                     case CheckUpdateWindow.CheckUpdateWindowButton.Update:
@@ -164,7 +171,7 @@ public class UpdateService : IUpdateService
         }
         else
         {
-            return await UpdateFromMirrorChyan(option);
+            return await UpdateFromMirrorChyan();
         }
     }
 
@@ -172,22 +179,14 @@ public class UpdateService : IUpdateService
     /// 文档
     /// https://apifox.com/apidoc/shared/ffdc8453-597d-4ba6-bd3c-5e375c10c789
     /// </summary>
-    /// <param name="option"></param>
     /// <returns></returns>
-    private async Task<string> UpdateFromMirrorChyan(UpdateOption option)
+    private async Task<string> UpdateFromMirrorChyan()
     {
-        if (string.IsNullOrWhiteSpace(option.MirrorChyanCdk))
-        {
-            Toast.Warning("请输入Mirror酱CDK");
-            return string.Empty;
-        }
-
         try
         {
             const string url = "https://mirrorchyan.com/api/resources/BGI/latest";
             var queryParams = new Dictionary<string, string>
             {
-                { "cdk", option.MirrorChyanCdk },
                 { "user_agent", "BetterGI" },
                 { "os", "win" },
                 { "arch", "x64" },
@@ -197,23 +196,35 @@ public class UpdateService : IUpdateService
             using var httpClient = new HttpClient();
 
             var finalUrl = $"{url}?{string.Join("&", queryParams.Select(x => $"{x.Key}={x.Value}"))}";
-            var response = await httpClient.GetFromJsonAsync<LatestResponse>(finalUrl);
-
-            if (response != null)
+            var response = await httpClient.GetAsync(finalUrl);
+            LatestResponse? result = null;
+            if (response.StatusCode == HttpStatusCode.OK)
             {
-                if (response.Code == 0)
+                response.EnsureSuccessStatusCode();
+                result = await response.Content.ReadFromJsonAsync<LatestResponse>();
+            }
+            else
+            {
+                // 即使是403、400也尝试读取响应体
+                var content = await response.Content.ReadAsStringAsync();
+                result = JsonConvert.DeserializeObject<LatestResponse>(content);
+            }
+
+            if (result != null)
+            {
+                if (result.Code == 0)
                 {
-                    return response.Data.VersionName;
+                    return result.Data.VersionName;
                 }
-                else if (response.Code < 0)
+                else if (result.Code < 0)
                 {
                     Toast.Error(
-                        $"Mirror酱源更新检查失败，意料之外的严重错误，请及时联系 Mirror 酱的技术支持处理\n，错误代码：{response.Code}，错误信息：{response.Msg}");
+                        $"Mirror酱源更新检查失败，意料之外的严重错误，请及时联系 Mirror 酱的技术支持处理\n，错误代码：{result.Code}，错误信息：{result.Msg}");
                     return string.Empty;
                 }
                 else
                 {
-                    ToastError(response);
+                    ToastError(result);
                 }
             }
         }

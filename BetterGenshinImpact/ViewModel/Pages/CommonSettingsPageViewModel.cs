@@ -280,17 +280,10 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
-        var cdk = CredentialManagerHelper.GetAndSaveMirrorChyanCdk();
-        if (string.IsNullOrEmpty(cdk))
-        {
-            return;
-        }
-
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
         {
             Trigger = UpdateTrigger.Manual,
             Channel = UpdateChannel.Alpha,
-            MirrorChyanCdk = cdk
         });
     }
 

@@ -6,10 +6,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using Windows.System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
+using Meziantou.Framework.Win32;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -29,7 +32,13 @@ public partial class CheckUpdateWindow : FluentWindow
         _option = option ?? throw new ArgumentNullException(nameof(option));
         DataContext = this;
         InitializeComponent();
-
+        
+        // 存在CDK则显示修改按钮
+        if (string.IsNullOrEmpty(MirrorChyanHelper.GetCdk()))
+        {
+            EditCdkButton.Visibility = Visibility.Collapsed;
+        }
+        
         if (option.Trigger == UpdateTrigger.Manual)
         {
             IgnoreButton.Visibility = Visibility.Collapsed;
@@ -39,7 +48,31 @@ public partial class CheckUpdateWindow : FluentWindow
         {
             WebpagePanel.Height = 0;
             WebpagePanel.Visibility = Visibility.Collapsed;
+            UpdateStatusMessageGrid.Height = 0;
+            ShowUpdateStatus = false;
+            
+            // 删除前两行
+            MyGrid.RowDefinitions.RemoveAt(0);
+            MyGrid.RowDefinitions.RemoveAt(0);
+            
+            // 注意：删除行定义后，需要调整剩余元素的 Grid.Row 属性
+            foreach (FrameworkElement child in MyGrid.Children)
+            {
+                int currentRow = System.Windows.Controls.Grid.GetRow(child);
+                if (currentRow > 1) // 如果元素在第三行或之后
+                {
+                    Grid.SetRow(child, currentRow - 2); // 行号减2
+                }
+            }
+            
+            if (ServerPanel.Children.Count > 0)
+            {
+                ServerPanel.Children.RemoveAt(0);
+            }
+            SizeToContent = SizeToContent.Height; // 设置高度为自动
+            UpdateLayout();
         }
+
 
         Closing += OnClosing;
     }
@@ -94,7 +127,7 @@ public partial class CheckUpdateWindow : FluentWindow
     [RelayCommand]
     private async Task UpdateFromMirrorChyanAsync()
     {
-        var cdk = CredentialManagerHelper.GetAndSaveMirrorChyanCdk();
+        var cdk = MirrorChyanHelper.GetAndPromptCdk();
         if (string.IsNullOrEmpty(cdk))
         {
             return;
@@ -149,6 +182,12 @@ public partial class CheckUpdateWindow : FluentWindow
         {
             await UserInteraction.Invoke(this, CheckUpdateWindowButton.Cancel);
         }
+    }
+    
+    [RelayCommand]
+    private void EditCdk()
+    {
+        MirrorChyanHelper.EditCdk();
     }
 
     public enum CheckUpdateWindowButton

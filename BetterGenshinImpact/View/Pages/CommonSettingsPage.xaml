@@ -1094,21 +1094,26 @@
                     </Grid.ColumnDefinitions>
                     <emoji:TextBlock Grid.Row="0"
                                      Grid.Column="0"
-                                     Text="使用 Mirror 酱 更新至测试版⚡"
+                                     Text="检查是否存在最新测试版"
                                      TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="【测试版】非常不稳定，请谨慎选择更新！"
                                   TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding CheckUpdateAlphaCommand}"
-                               Content="测试版检查更新" />
+
+                    <StackPanel
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Orientation="Horizontal">
+                        <ui:Button 
+                                   Margin="0,0,36,0"
+                                   Command="{Binding CheckUpdateAlphaCommand}"
+                                   Content="检查更新" />
+                    </StackPanel>
                 </Grid>
-                <Grid Margin="16">
+                <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1132,7 +1137,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding GotoGithubActionCommand}"
                                Content="访问 Github" />
-                </Grid>
+                </Grid>-->
             </StackPanel>
         </ui:CardExpander>
 
