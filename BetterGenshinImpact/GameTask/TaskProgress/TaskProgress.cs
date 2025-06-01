@@ -20,10 +20,31 @@ public partial class TaskProgress : ObservableObject
     [ObservableProperty] private DateTime _startTime = DateTime.Now;
     [ObservableProperty] private DateTime? _endTime = null;
     [ObservableProperty] private List<ScriptGroupProjectInfo>? _history = new();
-    //连续失败次数
-    [ObservableProperty][JsonIgnore] private int _consecutiveFailureCount = 0;
-    //进度信息，如果next不为空，则从next执行
-    [ObservableProperty][JsonIgnore] private  Progress? _next;
+    [ObservableProperty] private bool _loop = false;
+    //记录完成了几圈
+    [ObservableProperty] private int _loopCount = 0;
+    private int _consecutiveFailureCount = 0;
+    
+    private Progress? _next;
+    /// <summary>
+    /// 连续失败次数
+    /// </summary>
+    [JsonIgnore]
+    public int ConsecutiveFailureCount
+    {
+        get => _consecutiveFailureCount;
+        set => SetProperty(ref _consecutiveFailureCount, value);
+    }
+
+    /// <summary>
+    /// 进度信息，如果next不为空，则从next执行
+    /// </summary>
+    [JsonIgnore]
+    public Progress? Next
+    {
+        get => _next;
+        set => SetProperty(ref _next, value);
+    }
     public partial class Progress : ObservableObject
     {
         [ObservableProperty] private string _groupName  = string.Empty;

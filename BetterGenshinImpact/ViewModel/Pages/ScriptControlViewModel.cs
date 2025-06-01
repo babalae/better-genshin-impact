@@ -513,6 +513,21 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
+    public void AddScriptGroupNextFlag(ScriptGroup? item)
+    {
+        foreach (var scriptGroup in ScriptGroups)
+        {
+            scriptGroup.NextFlag = false;
+        }
+
+        if (item!=null)
+        {
+            item.NextFlag = true;
+            TaskContext.Instance().Config.NextScriptGroupName = item.Name;
+        }
+    }
+
+    [RelayCommand]
     public void OnCopyScriptGroup(ScriptGroup? item)
     {
         if (item == null)
@@ -579,6 +594,10 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 File.Move(Path.Combine(ScriptGroupPath, $"{item.Name}.json"), Path.Combine(ScriptGroupPath, $"{str}.json"));
                 item.Name = str;
+                if (item.NextFlag)
+                {
+                    TaskContext.Instance().Config.NextScriptGroupName = item.Name;
+                }
                 WriteScriptGroup(item);
             }
         }
@@ -1159,6 +1178,10 @@ public partial class ScriptControlViewModel : ViewModel
                         }
                     }
 
+                    if (group.Name == TaskContext.Instance().Config.NextScriptGroupName)
+                    {
+                        group.NextFlag = true;
+                    }
                     groups.Add(group);
                 }
                 catch (Exception e)
@@ -1292,6 +1315,33 @@ public partial class ScriptControlViewModel : ViewModel
         WriteScriptGroup(SelectedScriptGroup);
     }
 
+    public static List<ScriptGroup> GetNextScriptGroups(List<ScriptGroup> groups)
+    {
+        if (groups.Where(g => g.NextFlag).Count() > 0)
+        {
+            List<ScriptGroup> ng = new();
+            bool start = false;
+            foreach (var group in groups)
+            {
+                if (group.NextFlag)
+                {
+                    start = true;
+                    group.NextFlag = false;
+                    TaskContext.Instance().Config.NextScriptGroupName = String.Empty;
+                }
+
+                if (start)
+                {
+                    ng.Add(group);
+                }
+            }
+
+            return ng;
+        }
+
+        return groups;
+    }
+
     public static List<ScriptGroupProject> GetNextProjects(ScriptGroup group)
     {
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
@@ -1365,6 +1415,10 @@ public partial class ScriptControlViewModel : ViewModel
         foreach (var taskProgress in taskProgresses)
         {
             var name = taskProgress.Name+"_"+taskProgress.CurrentScriptGroupName+"_";
+            if (taskProgress.Loop)
+            {
+                name += "循环("+taskProgress.LoopCount+")_";
+            }
             if (taskProgress.CurrentScriptGroupProjectInfo!=null)
             {
                 name = name +taskProgress.CurrentScriptGroupProjectInfo.Index+ "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
@@ -1482,6 +1536,13 @@ public partial class ScriptControlViewModel : ViewModel
         var stackPanel = new StackPanel();
         var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
 
+        
+        var loopCheckBox = new CheckBox
+        {
+            Content = "循环",
+        };
+        
+        
         // 创建全选按钮
         var selectAllCheckBox = new CheckBox
         {
@@ -1501,6 +1562,7 @@ public partial class ScriptControlViewModel : ViewModel
                 checkBox.IsChecked = false;
             }
         };
+        stackPanel.Children.Add(loopCheckBox);
         stackPanel.Children.Add(selectAllCheckBox);
         // 添加分割线
         var separator = new Separator
@@ -1544,7 +1606,7 @@ public partial class ScriptControlViewModel : ViewModel
                 .Select(kv => kv.Key)
                 .ToList();
 
-            await StartGroups(selectedGroups);
+            await StartGroups(selectedGroups,null,loopCheckBox.IsChecked ?? false);;
         }
     }
     public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
@@ -1577,7 +1639,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    public async Task StartGroups(List<ScriptGroup> scriptGroups,TaskProgress? taskProgress = null)
+    public async Task StartGroups(List<ScriptGroup> scriptGroups,TaskProgress? taskProgress = null,bool loop = false)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
         try
@@ -1588,11 +1650,13 @@ public partial class ScriptControlViewModel : ViewModel
                 taskProgress = new()
                 {
                     ScriptGroupNames = scriptGroups.Select(x => x.Name).ToList()
+                    ,Loop = loop
                 };
             }
 
             RunnerContext.Instance.taskProgress = taskProgress;
-            foreach (var scriptGroup in scriptGroups)
+            var sg = GetNextScriptGroups(scriptGroups);
+            foreach (var scriptGroup in sg)
             {
                 if (taskProgress.Next!=null)
                 {
@@ -1606,6 +1670,25 @@ public partial class ScriptControlViewModel : ViewModel
                 await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name,taskProgress);
                 await Task.Delay(2000);
             }
+
+            taskProgress.LoopCount++;
+            if (taskProgress is { Loop: true })
+            {
+                taskProgress.LastScriptGroupName = null;
+                taskProgress.LastSuccessScriptGroupProjectInfo = null;
+                taskProgress.Next = null;
+                await StartGroups(scriptGroups, taskProgress);
+            }
+            else
+            {
+                //只有最后一次成功才算
+                if (taskProgress.ConsecutiveFailureCount == 0)
+                {
+                    taskProgress.EndTime = DateTime.Now;
+                    TaskProgressManager.SaveTaskProgress(taskProgress);
+                }
+               
+            }
         }
         catch (Exception e)
         {
@@ -1615,5 +1698,7 @@ public partial class ScriptControlViewModel : ViewModel
         {
             RunnerContext.Instance.Reset();
         }
+
+
     }
 }

@@ -86,8 +86,7 @@ public class TaskProgressManager
     
 public static void GenerNextProjectInfo(
     TaskProgress taskProgress,
-    List<ScriptGroup> scriptGroups,
-    bool loopToFirstGroup = false)
+    List<ScriptGroup> scriptGroups)
 {
     var currentGroupIndex = 0;
     var currentProjectIndex = -1;
@@ -142,7 +141,7 @@ public static void GenerNextProjectInfo(
         }
 
         // 循环从开头查找直到当前组之前
-        if (loopToFirstGroup)
+        if (taskProgress.Loop)
         {
             for (int i = 0; i < currentGroupIndex; i++)
             {
