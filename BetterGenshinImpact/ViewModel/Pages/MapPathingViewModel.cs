@@ -57,17 +57,25 @@ public partial class MapPathingViewModel : ViewModel
         // 循环写入 root.Children
         foreach (var item in root.Children)
         {
-            // 补充图标
-            if (!string.IsNullOrEmpty(item.FilePath) && File.Exists(Path.Combine(item.FilePath, "icon.ico")))
-            {
-                item.IconFilePath = Path.Combine(item.FilePath, "icon.ico");
-            }
-            else
-            {
-                item.IconFilePath = item.FilePath;
-            }
-
+            SetIconForNodeAndChildren(item);
             TreeList.Add(item);
+        }
+    }
+
+    private void SetIconForNodeAndChildren(FileTreeNode<PathingTask> node)
+    {
+        if (!string.IsNullOrEmpty(node.FilePath) && File.Exists(Path.Combine(node.FilePath, "icon.ico")))
+        {
+            node.IconFilePath = Path.Combine(node.FilePath, "icon.ico");
+        }
+        else
+        {
+            node.IconFilePath = node.FilePath;
+        }
+
+        foreach (var child in node.Children)
+        {
+            SetIconForNodeAndChildren(child);
         }
     }
 
