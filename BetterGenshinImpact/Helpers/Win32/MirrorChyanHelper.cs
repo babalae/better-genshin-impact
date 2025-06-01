@@ -73,7 +73,7 @@ public static class MirrorChyanHelper
         );
         if (string.IsNullOrEmpty(cdk))
         {
-            Toast.Warning("输入CDK为空，无法继续操作");
+            DeleteCdk();
         }
         else
         {
@@ -84,5 +84,10 @@ public static class MirrorChyanHelper
                 string.Empty,
                 CredentialPersistence.LocalMachine);
         }
+    }
+
+    public static void DeleteCdk()
+    {
+        CredentialManagerHelper.DeleteCredential(MirrorChyanCdkAppName);
     }
 }
