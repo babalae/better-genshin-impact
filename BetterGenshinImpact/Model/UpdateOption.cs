@@ -6,7 +6,7 @@ public sealed class UpdateOption
     
     public UpdateChannel Channel { get; set; } = UpdateChannel.Stable;
     
-    public string? MirrorChanCdk { get; set; }
+    public string? MirrorChyanCdk { get; set; }
 }
 
 public enum UpdateTrigger

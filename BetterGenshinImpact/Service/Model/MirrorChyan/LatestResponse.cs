@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace BetterGenshinImpact.Service.Model.Mirrorchan;
+namespace BetterGenshinImpact.Service.Model.MirrorChyan;
 
 #nullable enable
 #pragma warning disable CS8618

@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -27,9 +28,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Meziantou.Framework.Win32;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
 using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -44,8 +47,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
 
     private string _selectedCountry = string.Empty;
-    [ObservableProperty]
-    private List<string> _adventurersGuildCountry = ["无","枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)
     {
@@ -59,17 +62,18 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
 
-    [ObservableProperty]
-    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
-        .ToFrozenDictionary(
-            c => c,
-            c =>
-            {
-                CultureInfo.CurrentUICulture = new CultureInfo(c);
-                var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
-                return stringLocalizer["简体中文"].ToString();
-            }
-        );
+    [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
+        new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
+            .ToFrozenDictionary(
+                c => c,
+                c =>
+                {
+                    CultureInfo.CurrentUICulture = new CultureInfo(c);
+                    var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ??
+                                          throw new NullReferenceException();
+                    return stringLocalizer["简体中文"].ToString();
+                }
+            );
 
     public string SelectedCountry
     {
@@ -240,7 +244,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
             }
         }
     }
-    
+
     [RelayCommand]
     private void OpenAboutWindow()
     {
@@ -248,7 +252,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         aboutWindow.Owner = Application.Current.MainWindow;
         aboutWindow.ShowDialog();
     }
-    
+
     [RelayCommand]
     private void OpenKeyBindingsWindow()
     {
@@ -262,7 +266,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         await OcrFactory.ChangeCulture(type.Key);
     }
-    
+
     [RelayCommand]
     private async Task CheckUpdateAsync()
     {
@@ -272,20 +276,22 @@ public partial class CommonSettingsPageViewModel : ViewModel
             Channel = UpdateChannel.Stable
         });
     }
-    
+
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
         {
             Trigger = UpdateTrigger.Manual,
-            Channel = UpdateChannel.Alpha
+            Channel = UpdateChannel.Alpha,
+            MirrorChyanCdk = CredentialManagerHelper.GetAndSaveMirrorChyanCdk()
         });
     }
-    
+
     [RelayCommand]
     private async Task GotoGithubActionAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
+        await Launcher.LaunchUriAsync(
+            new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
     }
 }

@@ -19,7 +19,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.Service.Model.Mirrorchan;
+using BetterGenshinImpact.Service.Model.MirrorChyan;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Service;
@@ -164,7 +164,7 @@ public class UpdateService : IUpdateService
         }
         else
         {
-            return await UpdateFromMirrorChan(option);
+            return await UpdateFromMirrorChyan(option);
         }
     }
 
@@ -174,11 +174,11 @@ public class UpdateService : IUpdateService
     /// </summary>
     /// <param name="option"></param>
     /// <returns></returns>
-    private async Task<string> UpdateFromMirrorChan(UpdateOption option)
+    private async Task<string> UpdateFromMirrorChyan(UpdateOption option)
     {
-        if (string.IsNullOrWhiteSpace(option.MirrorChanCdk))
+        if (string.IsNullOrWhiteSpace(option.MirrorChyanCdk))
         {
-            Toast.Warning("Mirror酱源更新检查失败，未设置CDK");
+            Toast.Warning("请输入Mirror酱CDK");
             return string.Empty;
         }
 
@@ -187,7 +187,7 @@ public class UpdateService : IUpdateService
             const string url = "https://mirrorchyan.com/api/resources/BGI/latest";
             var queryParams = new Dictionary<string, string>
             {
-                { "cdk", option.MirrorChanCdk },
+                { "cdk", option.MirrorChyanCdk },
                 { "user_agent", "BetterGI" },
                 { "os", "win" },
                 { "arch", "x64" },

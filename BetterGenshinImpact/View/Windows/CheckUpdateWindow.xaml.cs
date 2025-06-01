@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using Wpf.Ui.Controls;
 
@@ -90,8 +91,14 @@ public partial class CheckUpdateWindow : FluentWindow
     }
 
     [RelayCommand]
-    private async Task UpdateFromMirrorchanAsync()
+    private async Task UpdateFromMirrorChyanAsync()
     {
+        var cdk = CredentialManagerHelper.GetAndSaveMirrorChyanCdk();
+        if (string.IsNullOrEmpty(cdk))
+        {
+            return;
+        }
+        
         if (_option.Channel == UpdateChannel.Stable)
         {
             await RunUpdaterAsync("--source mirrorc");

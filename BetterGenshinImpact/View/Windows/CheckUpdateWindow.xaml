@@ -90,7 +90,7 @@
                             Appearance="Success"
                             Icon="{ui:SymbolIcon TicketDiagonal24}"
                             Content="立即更新"
-                            Command="{Binding UpdateFromMirrorchanCommand}" />
+                            Command="{Binding UpdateFromMirrorChyanCommand}" />
                     </StackPanel>
                 </ui:CardControl>
                 
