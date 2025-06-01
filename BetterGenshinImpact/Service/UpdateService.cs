@@ -220,6 +220,8 @@ public class UpdateService : IUpdateService
         catch (Exception e)
         {
             _logger.LogDebug(e, "Mirror源更新检查失败");
+            Toast.Warning($"Mirror源更新检查失败,{e.Message}");
+
         }
 
         return string.Empty;

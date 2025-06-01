@@ -37,6 +37,7 @@ public partial class CheckUpdateWindow : FluentWindow
 
         if (option.Channel == UpdateChannel.Alpha)
         {
+            WebpagePanel.Height = 0;
             WebpagePanel.Visibility = Visibility.Collapsed;
         }
 
