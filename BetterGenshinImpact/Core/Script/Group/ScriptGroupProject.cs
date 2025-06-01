@@ -72,12 +72,29 @@ public partial class ScriptGroupProject : ObservableObject
     [JsonIgnore]
     public ScriptGroup? GroupInfo { get; set; }
 
+    private bool? _nextFlag = false;
+    private bool? _skipFlag = false;
+
     /// <summary>
     /// 下一个从此执行标志
     /// </summary>
     [JsonIgnore]
-    [ObservableProperty]
-    public bool? _nextFlag = false;
+    public bool? NextFlag
+    {
+        get => _nextFlag;
+        set => SetProperty(ref _nextFlag, value);
+    }
+
+    /// <summary>
+    /// 直接跳过标志
+    /// </summary>
+    [JsonIgnore]
+    public bool? SkipFlag
+    {
+        get => _skipFlag;
+        set => SetProperty(ref _skipFlag, value);
+    }
+    
     
     [ObservableProperty]
     private bool? _allowJsNotification = true;

@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using BetterGenshinImpact.GameTask.AutoFight.Model;
-using BetterGenshinImpact.Model;
-using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
-using OpenCvSharp;
-using Wpf.Ui.Controls;
+using BetterGenshinImpact.Model;
+using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask;
@@ -22,6 +20,8 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 是否是连续执行配置组的场景
     /// </summary>
     public bool IsContinuousRunGroup { get; set; }
+    
+    public TaskProgress.TaskProgress? taskProgress  { get; set; }
     
     /// <summary>
     /// 暂停逻辑
@@ -112,6 +112,7 @@ public class RunnerContext : Singleton<RunnerContext>
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
         AutoPickTriggerStopCount = 0;
+        taskProgress = null;
     }
 
     /// <summary>
