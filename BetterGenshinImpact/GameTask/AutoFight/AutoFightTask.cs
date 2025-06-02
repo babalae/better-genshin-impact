@@ -13,12 +13,15 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Assets.Model.DepthAnything;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View.Drawable;
 using Vanara;
 using Vanara.PInvoke;
+using WinRT;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -190,7 +193,80 @@ public class AutoFightTask : ISoloTask
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
+    
+    private BgiYoloPredictor _enemyPredictor;
+    private bool _enemyPredictorInited = false;
+    private List<Point2f> GetEnemyPos(ImageRegion img)
+    {
+        if (!_enemyPredictorInited)
+        {
+            _enemyPredictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiEnemy);
+            _enemyPredictorInited = true;
+        }
 
+        try
+        {
+            var result = _enemyPredictor.Detect(img);
+            var list = new List<RectDrawable>();
+            var ret = new List<Point2f>();
+            foreach (var box in result["item"])
+            {
+                list.Add(img.ToRectDrawable(box, "Enemy"));
+                ret.Add(new Point2f((box.Left + box.Right)/2f, (box.Top + box.Bottom)/2f));
+            }
+
+            VisionContext.Instance().DrawContent.PutOrRemoveRectList("Enemy", list);
+
+            return ret;
+        }
+        catch
+        {
+            return new List<Point2f>();
+        }
+    }
+
+    public async Task FaceToEnemy(CancellationToken ct, int maxMilliseconds=114514)
+    {
+        var start = DateTime.UtcNow;
+        var ratio = 15f;
+        var previousDistance = 0;
+        while (!ct.IsCancellationRequested && (DateTime.UtcNow - start).TotalMilliseconds < maxMilliseconds)
+        {
+            var screen = CaptureToRectArea();
+            var enemies = GetEnemyPos(screen);
+            var cx = screen.Width / 2;
+            var cy = screen.Height / 2;
+            var minDx = float.MaxValue;
+            var minDy = float.MaxValue;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                var enemy = enemies[i];
+                var x = enemy.X;
+                var y = enemy.Y;
+                var dx = Math.Abs(x - cx);
+                var dy = Math.Abs(y - cy);
+                if (Math.Sqrt(minDx * minDx + minDy * minDy) < Math.Sqrt(dx * dx + dy * dy))
+                {
+                    minDx = dx;
+                    minDy = dy;
+                }
+            }
+
+            var distance = Math.Sqrt(minDx * minDx + minDy * minDy);
+            if (distance < 50)
+                break;
+            if (distance > previousDistance)
+                ratio -= 1;
+            if (ratio <= 0)
+                ratio = 1;
+
+            var eps = 1e-5f;
+            minDx = minDx/ (minDx + eps) * 10 * ratio;
+            minDy = minDy/ (minDy + eps) * 10 * ratio;
+            Simulation.SendInput.Mouse.MoveMouseBy((int)minDx, (int)minDy);
+        }
+    }
+    
     // 方法1：判断是否是单个数字
 
     /*public int delayTime=1500;
@@ -283,6 +359,49 @@ public class AutoFightTask : ISoloTask
 
                     #endregion
 
+                    // await FaceToEnemy(cts2.Token);
+                    // while (!cts2.Token.IsCancellationRequested)
+                    // {
+                    //     var screen = CaptureToRectArea();
+                    //     var cx = screen.Width / 2;
+                    //     var cy = screen.Height / 2;
+                    //     var current = new Rect();
+                    //     try
+                    //     {
+                    //         var op = _enemyPredictor.Detect(screen)["item"];
+                    //         for (int i = 0; i < op.Count; i++)
+                    //         {
+                    //             var enemyRect = op[i];
+                    //             var left = enemyRect.Left;
+                    //             var right = enemyRect.Right;
+                    //             var top = enemyRect.Top;
+                    //             var bottom = enemyRect.Bottom / 2;
+                    //             if (left < cx && cx < right && top < cy && cy < bottom)
+                    //             {
+                    //                 current = enemyRect;
+                    //                 break;
+                    //             }
+                    //         }
+                    //
+                    //         if (current.Height == 0 || current.Width == 0)
+                    //         {
+                    //             continue;
+                    //         }
+                    //
+                    //         var mat = new Mat(screen.SrcMat, current);
+                    //         var depth = Module.RunModel(mat).Mean().ToDouble();
+                    //         if (depth < 2)
+                    //             break;
+                    //         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    //         await Delay(1000, cts2.Token);
+                    //         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    //     }
+                    //     catch
+                    //     {
+                    //         continue;
+                    //     }
+                    // }
+                    
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
