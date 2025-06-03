@@ -18,6 +18,8 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
+using Vanara.PInvoke;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -184,7 +186,7 @@ public class AutoFightTask : ISoloTask
 
         if (_taskParam.FightFinishDetectEnabled)
         {
-            _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiWorld);
+            _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
         }
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
@@ -196,7 +198,7 @@ public class AutoFightTask : ISoloTask
     {
         if (!_enemyPredictorInited)
         {
-            _enemyPredictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiEnemy);
+            _enemyPredictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiEnemy);
             _enemyPredictorInited = true;
         }
 
@@ -217,7 +219,7 @@ public class AutoFightTask : ISoloTask
         }
     }
 
-    public async Task FaceToEnemy(CancellationToken ct, int maxMilliseconds=114514)
+    public async Task FaceToEnemy(CancellationToken ct, int maxMilliseconds=5000)
     {
         var start = DateTime.UtcNow;
         var ratio = 15f;

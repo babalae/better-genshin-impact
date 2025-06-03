@@ -1,11 +1,10 @@
-﻿using BetterGenshinImpact.Service;
-using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Text.Json;
-
+using BetterGenshinImpact.Service;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 namespace BetterGenshinImpact.Core.Script.Group;
 
 /// <summary>
@@ -24,6 +23,14 @@ public partial class ScriptGroup : ObservableObject
     [ObservableProperty]
     private ObservableCollection<ScriptGroupProject> _projects = [];
 
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool NextFlag
+    {
+        get => _nextFlag;
+        set => SetProperty(ref _nextFlag, value);
+    }
+    private bool _nextFlag;
+
     public ScriptGroup()
     {
         Projects.CollectionChanged += ProjectsCollectionChanged;
@@ -41,7 +48,7 @@ public partial class ScriptGroup : ObservableObject
 
     public static ScriptGroup FromJson(string json)
     {
-        var group = Newtonsoft.Json.JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception("解析配置组JSON配置失败");
+        var group = JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception("解析配置组JSON配置失败");
         ResetGroupInfo(group);
         return group;
     }

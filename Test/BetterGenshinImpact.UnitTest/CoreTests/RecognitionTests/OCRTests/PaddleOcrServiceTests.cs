@@ -10,7 +10,7 @@ using OpenCvSharp.Extensions;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
 {
-    [Collection("Paddle Collection")]
+    [Collection("Init Collection")]
     public partial class PaddleOcrServiceTests
     {
         private readonly PaddleFixture paddle;

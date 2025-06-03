@@ -74,7 +74,13 @@ public partial class AllConfig : ObservableObject
 
     [ObservableProperty]
     private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
-
+    
+    /// <summary>
+    /// 连续执行任务时，从此任务开始执行
+    /// </summary>
+    [JsonIgnore]
+    public string NextScriptGroupName { get; set; }= string.Empty;
+    
     /// <summary>
     /// 一条龙选中使用的配置
     /// </summary>

@@ -990,6 +990,104 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />-->
                 </Grid>
+                        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon SquareHintSparkles24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="调度器异常重启配置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="当调度器任务异常抛出未预期错误时，累计一定次数后，自动重启bgi，以恢复功能。"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.Enabled, Mode=TwoWay}" />
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="Unchecked">
+                            <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                        </b:EventTrigger>
+                        <b:EventTrigger EventName="Checked">
+                            <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="异常次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="当运行调度器任务时，异常导致任务失败的计数，当达到计数时会重启bgi。"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.OtherConfig.AutoRestartConfig.FailureCount, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="是否同时重启游戏"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        重启bgi时，同时重启游戏，需开启首页启动配置：同时启动原神、自动进入游戏，此配置才会生效。
+                    </ui:TextBlock>
+                    
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.RestartGameTogether, Mode=TwoWay}">
+                    </ui:ToggleSwitch>
+                    </Grid>
+
+            </StackPanel>
+        </ui:CardExpander>
+
             </StackPanel>
         </ui:CardExpander>
         <!--  地图  -->
@@ -1078,7 +1176,7 @@
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,20,0"
-                               Command="{Binding OpenKeyBindingsWindowCommand}"
+                               Command="{Binding CheckUpdateCommand}"
                                Content="检查更新" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -1094,20 +1192,50 @@
                     </Grid.ColumnDefinitions>
                     <emoji:TextBlock Grid.Row="0"
                                      Grid.Column="0"
-                                     Text="使用 Mirror 酱 更新至测试版⚡"
+                                     Text="检查是否存在最新测试版"
                                      TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="测试版非常不稳定，请谨慎选择更新！"
+                                  Text="【测试版】非常不稳定，请谨慎选择更新！"
+                                  TextWrapping="Wrap" />
+
+                    <StackPanel
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        Orientation="Horizontal">
+                        <ui:Button 
+                                   Margin="0,0,36,0"
+                                   Command="{Binding CheckUpdateAlphaCommand}"
+                                   Content="检查更新" />
+                    </StackPanel>
+                </Grid>
+                <!--<Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <emoji:TextBlock Grid.Row="0"
+                                     Grid.Column="0"
+                                     Text="直接从 Github 获取最新测试版"
+                                     TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="【测试版】非常不稳定，请谨慎选择更新！"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
-                               Command="{Binding OpenKeyBindingsWindowCommand}"
-                               Content="测试版检查更新" />
-                </Grid>
+                               Command="{Binding GotoGithubActionCommand}"
+                               Content="访问 Github" />
+                </Grid>-->
             </StackPanel>
         </ui:CardExpander>
 
