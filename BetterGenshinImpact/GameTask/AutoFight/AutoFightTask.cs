@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Assets.Model.DepthAnything;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.SLAM;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
@@ -224,12 +225,21 @@ public class AutoFightTask : ISoloTask
         var start = DateTime.UtcNow;
         var ratio = 15f;
         var previousDistance = 0.0;
+        Simulation.SendInput.Mouse.MiddleButtonClick();
+        for (var i = 0; i < 5; i++)
+        {
+            Simulation.SendInput.Mouse.VerticalScroll(-5);
+            await Task.Delay(100, ct);
+        }
         while (!ct.IsCancellationRequested && (DateTime.UtcNow - start).TotalMilliseconds < maxMilliseconds)
         {
             var screen = CaptureToRectArea();
             var enemies = GetEnemyPos(screen);
             if (enemies.Count == 0)
+            {
+                Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
                 continue;
+            }
             var cx = screen.Width / 2;
             var cy = screen.Height / 2;
             var minDx = float.MaxValue;
@@ -355,8 +365,8 @@ public class AutoFightTask : ISoloTask
                     var skipFightName = "";
 
                     #endregion
-                    
-                    while (!cts2.Token.IsCancellationRequested)
+                    var startTime = DateTime.UtcNow;
+                    while (!cts2.Token.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds <= 3000)
                     {
                         await FaceToEnemy(cts2.Token);
                         var screen = CaptureToRectArea();
@@ -369,35 +379,46 @@ public class AutoFightTask : ISoloTask
                             for (int i = 0; i < op.Count; i++)
                             {
                                 var enemyRect = op[i];
-                                var x = enemyRect.X + enemyRect.Width/2;
-                                var y = enemyRect.Y + enemyRect.Height/2;
+                                var x = enemyRect.X + enemyRect.Width / 2;
+                                var y = enemyRect.Y + enemyRect.Height / 2;
                                 var dx = x - cx;
                                 var dy = y - cy;
-                                if (Math.Sqrt(dx*dx + dy*dy) <= 250)
+                                if (Math.Sqrt(dx * dx + dy * dy) <= 250)
                                 {
                                     current = enemyRect;
                                     break;
                                 }
                             }
-                    
+
                             if (current.Height == 0 || current.Width == 0)
                             {
                                 continue;
                             }
-                    
+
                             var depth = DepthAnythingV2Inference.Once(screen.SrcMat);
                             var dpt = new Mat(depth, current);
-                            var dptValue = dpt.Mean().ToDouble();
+                            var character = new Mat(depth, new Rect(862, 401, 191, 402));
+                            dpt.ConvertTo(dpt, MatType.CV_32FC1);
+                            var baseValue = character.Mean().ToDouble();
+                            var dptValue = Math.Abs(dpt.Mean().ToDouble() - baseValue);
                             Logger.LogInformation("检测到与敌人距离为{Depth}", dptValue);
-                            if (dptValue < 200)
+                            if (dptValue < 1.0)
                                 break;
-                            ScanPickTask.MoveTowardsItem(current);
-                            await Delay(1000, cts2.Token);
-                            Simulation.ReleaseAllKey();
+                            var Navigation = new NoDropNavigation();
+                            if (Navigation.CanGoForward(depth) == 0)
+                            {
+                                ScanPickTask.MoveTowardsItem(current);
+                                await Delay(1000, cts2.Token);
+                                Simulation.ReleaseAllKey();
+                            }
                         }
                         catch
                         {
                             continue;
+                        }
+                        finally
+                        {
+                            Simulation.ReleaseAllKey();
                         }
                     }
                     

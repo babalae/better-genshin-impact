@@ -130,7 +130,7 @@ public class DepthAnythingV2Inference
                 Cv2.Resize(rawDepthMat, depthResized, new Size(originalWidth, originalHeight), 0, 0, InterpolationFlags.Nearest);
                 rawDepthMat.Dispose();
 
-                return depthResized; // Or return depthViz for grayscale
+                return depthResized;
             }
         }
     }
@@ -138,7 +138,7 @@ public class DepthAnythingV2Inference
     public static Mat Once(Mat input)
     {
         var DAV2 = new DepthAnythingV2Inference(Global.Absolute(@"Assets\Model\DepthAnything\1.onnx"));
-        DAV2.Infer(input, out var ret);
+        var ret = DAV2.Infer(input, out _);
         return ret;
     }
 }

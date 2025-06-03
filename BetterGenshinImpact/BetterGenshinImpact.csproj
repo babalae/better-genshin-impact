@@ -26,6 +26,10 @@
 		<None Remove="Assets\Strings\*.html" />
 		<None Remove="Assets\Strings\*.md" />
 		<None Remove="Assets\Audios\*.mp3" />
+		<None Remove="Core\SLAM\**" />
+		<None Update="Assets\Web\ScriptRepo\favicon.ico">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -179,6 +183,7 @@
 	    <XamlRuntime>Wpf</XamlRuntime>
 	    <SubType>Designer</SubType>
 	  </Page>
+	  <Page Remove="Core\SLAM\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -186,6 +191,11 @@
 	    <SubType>Code</SubType>
 	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Remove="Core\SLAM\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Remove="Core\SLAM\**" />
 	</ItemGroup>
 	
 </Project>
