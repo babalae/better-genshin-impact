@@ -97,7 +97,7 @@ public class ScanPickTask
     /// Moves the character towards the specified item by controlling movement keys
     /// </summary>
     /// <param name="toPickItem">The item to move towards</param>
-    private static void MoveTowardsItem(Rect toPickItem)
+    public static void MoveTowardsItem(Rect toPickItem)
     {
         // 对于比较远的物品（Y坐标靠上）先用前进靠近
         // 需要避免两个对向的键同时按下

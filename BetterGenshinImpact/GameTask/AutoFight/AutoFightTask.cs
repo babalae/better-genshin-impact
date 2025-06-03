@@ -207,15 +207,11 @@ public class AutoFightTask : ISoloTask
         try
         {
             var result = _enemyPredictor.Detect(img);
-            var list = new List<RectDrawable>();
             var ret = new List<Point2f>();
             foreach (var box in result["item"])
             {
-                list.Add(img.ToRectDrawable(box, "Enemy"));
                 ret.Add(new Point2f((box.Left + box.Right)/2f, (box.Top + box.Bottom)/2f));
             }
-
-            VisionContext.Instance().DrawContent.PutOrRemoveRectList("Enemy", list);
 
             return ret;
         }
@@ -255,7 +251,7 @@ public class AutoFightTask : ISoloTask
             }
 
             var distance = Math.Sqrt(minDx * minDx + minDy * minDy);
-            if (distance < 150)
+            if (distance < 250)
                 break;
             if ((DateTime.UtcNow - start).TotalMilliseconds > 2000)
                 ratio -= 1;
@@ -269,7 +265,7 @@ public class AutoFightTask : ISoloTask
             previousDistance = distance;
         }
     }
-    
+
     // 方法1：判断是否是单个数字
 
     /*public int delayTime=1500;
@@ -361,50 +357,51 @@ public class AutoFightTask : ISoloTask
                     var skipFightName = "";
 
                     #endregion
-
-                    // await FaceToEnemy(cts2.Token);
-                    // while (!cts2.Token.IsCancellationRequested)
-                    // {
-                    //     var screen = CaptureToRectArea();
-                    //     var cx = screen.Width / 2;
-                    //     var cy = screen.Height / 2;
-                    //     var current = new Rect();
-                    //     try
-                    //     {
-                    //         var op = _enemyPredictor.Detect(screen)["item"];
-                    //         for (int i = 0; i < op.Count; i++)
-                    //         {
-                    //             var enemyRect = op[i];
-                    //             var x = enemyRect.X;
-                    //             var y = enemyRect.Y;
-                    //             var dx = x - cx;
-                    //             var dy = y - cy;
-                    //             if (Math.Sqrt(dx*dx + dy*dy) <= 150)
-                    //             {
-                    //                 current = enemyRect;
-                    //                 break;
-                    //             }
-                    //         }
-                    //
-                    //         if (current.Height == 0 || current.Width == 0)
-                    //         {
-                    //             continue;
-                    //         }
-                    //
-                    //         var mat = new Mat(screen.SrcMat, current);
-                    //         var depth = Module.RunModel(mat).Mean().ToDouble();
-                    //         Logger.LogInformation("检测到与敌人距离为{Depth}", depth);
-                    //         if (depth < 2)
-                    //             break;
-                    //         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    //         await Delay(1000, cts2.Token);
-                    //         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    //     }
-                    //     catch
-                    //     {
-                    //         continue;
-                    //     }
-                    // }
+                    
+                    while (!cts2.Token.IsCancellationRequested)
+                    {
+                        await FaceToEnemy(cts2.Token);
+                        var screen = CaptureToRectArea();
+                        var cx = screen.Width / 2;
+                        var cy = screen.Height / 2;
+                        var current = new Rect();
+                        try
+                        {
+                            var op = _enemyPredictor.Detect(screen)["item"];
+                            for (int i = 0; i < op.Count; i++)
+                            {
+                                var enemyRect = op[i];
+                                var x = enemyRect.X + enemyRect.Width/2;
+                                var y = enemyRect.Y + enemyRect.Height/2;
+                                var dx = x - cx;
+                                var dy = y - cy;
+                                if (Math.Sqrt(dx*dx + dy*dy) <= 250)
+                                {
+                                    current = enemyRect;
+                                    break;
+                                }
+                            }
+                    
+                            if (current.Height == 0 || current.Width == 0)
+                            {
+                                continue;
+                            }
+                    
+                            var depth = DepthAnythingV2Inference.Once(screen.SrcMat);
+                            var dpt = new Mat(depth, current);
+                            var dptValue = dpt.Mean().ToDouble();
+                            Logger.LogInformation("检测到与敌人距离为{Depth}", dptValue);
+                            if (dptValue < 200)
+                                break;
+                            ScanPickTask.MoveTowardsItem(current);
+                            await Delay(1000, cts2.Token);
+                            Simulation.ReleaseAllKey();
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+                    }
                     
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
