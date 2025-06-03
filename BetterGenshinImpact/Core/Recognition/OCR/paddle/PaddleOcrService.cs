@@ -22,26 +22,26 @@ public class PaddleOcrService : IOcrService
 
     private readonly Rec _localRecModel;
 
-    public PaddleOcrService(string cultureInfoName)
+    public PaddleOcrService(string cultureInfoName, BgiOnnxFactory bgiOnnxFactory)
     {
         var path = Global.Absolute(@"Assets\Model\PaddleOcr");
 
         switch (cultureInfoName)
         {
             case "zh-Hant":
-                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4);
+                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
                 _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChtRec, Path.Combine(path, "chinese_cht_dict.txt"),
-                    OcrVersionConfig.PpOcrV3);
+                    OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
                 break;
             case "fr":
-                _localDetModel = new Det(BgiOnnxModel.PaddleOcrEnDet, OcrVersionConfig.PpOcrV3);
+                _localDetModel = new Det(BgiOnnxModel.PaddleOcrEnDet, OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
                 _localRecModel = new Rec(BgiOnnxModel.PaddleOcrLatinRec, Path.Combine(path, "latin_dict.txt"),
-                    OcrVersionConfig.PpOcrV3);
+                    OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
                 break;
             default:
-                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4);
+                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
                 _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChRec, Path.Combine(path, "ppocr_keys_v1.txt"),
-                    OcrVersionConfig.PpOcrV4);
+                    OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
 
                 break;
         }

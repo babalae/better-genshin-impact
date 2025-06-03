@@ -185,7 +185,25 @@ public class SystemControl
 
         ActivateWindow(TaskContext.Instance().GameHandle);
     }
+    public static void RestartApplication(string[] newArgs)
+    {
+        // 获取当前程序路径
+        string exePath = Process.GetCurrentProcess().MainModule.FileName;
 
+        // 构建参数字符串
+        string arguments = string.Join(" ", [..newArgs,"--no-single"]);
+
+        // 启动新进程
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = exePath,
+            Arguments = arguments,
+            UseShellExecute = false
+        });
+
+        // 关闭当前程序
+        Environment.Exit(0);
+    }
     public static void FocusWindow(nint hWnd)
     {
         if (User32.IsWindow(hWnd))
