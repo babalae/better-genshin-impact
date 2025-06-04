@@ -493,8 +493,10 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="启用后，每日刷取配置将会失效"
                                               TextWrapping="Wrap">
+                                    启用后，每日刷取配置将会失效。
+                                    <LineBreak />
+                                    周一4:00:00至周二3:59:59执行周一配置，以此类推。
                                 </ui:TextBlock>
 
                                 <ui:ToggleSwitch Grid.Row="0"
