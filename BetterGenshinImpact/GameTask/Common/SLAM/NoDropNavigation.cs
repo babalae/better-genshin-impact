@@ -8,8 +8,8 @@ namespace BetterGenshinImpact.GameTask.Common.SLAM;
 public class NoDropNavigation
 {
     public static Rect PersonReferenceRoi { get; set; } = new Rect(883, 823, 167, 70); // x, y, width, height (脚部区域)
-    public static Rect ForwardDetectionRoiL { get; set; } = new Rect(781, 435, 77, 364); // x, y, width, height (左侧区域)
-    public static Rect ForwardDetectionRoiR { get; set; } = new Rect(1139, 435, 77, 364); // x, y, width, height (右侧区域)
+    public static Rect ForwardDetectionRoiL { get; set; } = new Rect(781, 435, 77, 180); // x, y, width, height (左侧区域)
+    public static Rect ForwardDetectionRoiR { get; set; } = new Rect(1139, 435, 77, 180); // x, y, width, height (右侧区域)
     public float ObstacleDepthThreshold { get; set; } = 2.5f;
 
     /// <summary>
@@ -28,8 +28,8 @@ public class NoDropNavigation
         var forwardDetectionLValue = forwardDetectionL.Mean().ToDouble();
         var forwardDetectionRValue = forwardDetectionR.Mean().ToDouble();
         
-        var dl = Math.Abs(forwardDetectionLValue - personValue);
-        var dr = Math.Abs(forwardDetectionRValue - personValue);
+        var dl = forwardDetectionLValue - personValue;
+        var dr = forwardDetectionRValue - personValue;
         
         Logger.LogInformation("得到地形差：(左{dl}, 右{dr})", dl, dr);
         

@@ -224,7 +224,7 @@ public class AutoFightTask : ISoloTask
     {
         var start = DateTime.UtcNow;
         var ratio = 15f;
-        var previousDistance = 0.0;
+        var lor = 200;
         Simulation.SendInput.Mouse.MiddleButtonClick();
         for (var i = 0; i < 5; i++)
         {
@@ -237,7 +237,7 @@ public class AutoFightTask : ISoloTask
             var enemies = GetEnemyPos(screen);
             if (enemies.Count == 0)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                Simulation.SendInput.Mouse.MoveMouseBy(lor, 0);
                 continue;
             }
             var cx = screen.Width / 2;
@@ -261,16 +261,16 @@ public class AutoFightTask : ISoloTask
             var distance = Math.Sqrt(minDx * minDx + minDy * minDy);
             if (distance < 250)
                 break;
-            if ((DateTime.UtcNow - start).TotalMilliseconds > 2000)
+            if ((DateTime.UtcNow - start).TotalMilliseconds > 800)
                 ratio -= 1;
             if (ratio <= 0)
                 ratio = 1;
 
             var eps = 1e-5f;
-            minDx = minDx > 0 ? 10*ratio : -10*ratio;
-            minDy = minDy > 0 ? 10*ratio : -10*ratio;
+            minDx = minDx > 0 ? 20*ratio : -20*ratio;
+            minDy = minDy > 0 ? 20*ratio : -20*ratio;
             Simulation.SendInput.Mouse.MoveMouseBy((int)minDx, (int)minDy);
-            previousDistance = distance;
+            lor = (int)minDx;
         }
     }
 
@@ -366,9 +366,9 @@ public class AutoFightTask : ISoloTask
 
                     #endregion
                     var startTime = DateTime.UtcNow;
-                    while (!cts2.Token.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds <= 3000)
+                    while (!cts2.Token.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds <= 5000)
                     {
-                        await FaceToEnemy(cts2.Token);
+                        await FaceToEnemy(cts2.Token, maxMilliseconds:2000);
                         var screen = CaptureToRectArea();
                         var cx = screen.Width / 2;
                         var cy = screen.Height / 2;
@@ -390,20 +390,20 @@ public class AutoFightTask : ISoloTask
                                 }
                             }
 
-                            if (current.Height == 0 || current.Width == 0)
-                            {
-                                continue;
-                            }
-
+                            var input = screen.SrcMat;
+                            Cv2.Resize(input, input, new Size(1920, 1080));
                             var depth = DepthAnythingV2Inference.Once(screen.SrcMat);
-                            var dpt = new Mat(depth, current);
-                            var character = new Mat(depth, new Rect(862, 401, 191, 402));
-                            dpt.ConvertTo(dpt, MatType.CV_32FC1);
-                            var baseValue = character.Mean().ToDouble();
-                            var dptValue = Math.Abs(dpt.Mean().ToDouble() - baseValue);
-                            Logger.LogInformation("检测到与敌人距离为{Depth}", dptValue);
-                            if (dptValue < 1.0)
-                                break;
+                            if (!(current.Height == 0 || current.Width == 0))
+                            {
+                                var dpt = new Mat(depth, current);
+                                var character = new Mat(depth, new Rect(862, 401, 191, 402));
+                                dpt.ConvertTo(dpt, MatType.CV_32FC1);
+                                var baseValue = character.Mean().ToDouble();
+                                var dptValue = Math.Abs(dpt.Mean().ToDouble() - baseValue);
+                                Logger.LogInformation("检测到与敌人距离为{Depth}", dptValue);
+                                if (dptValue < 1.0)
+                                    break;
+                            }
                             var Navigation = new NoDropNavigation();
                             if (Navigation.CanGoForward(depth) == 0)
                             {
