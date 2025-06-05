@@ -1145,6 +1145,22 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
+    private static void SetTaskContextNextFlag(ScriptGroup group)
+    {
+        var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
+        foreach (var item in group.Projects)
+        {
+            item.NextFlag = false;
+            if (nst != default)
+            {
+                if (nst.Item2 == item.Index && nst.Item3 == item.FolderName && nst.Item4 == item.Name)
+                {
+                    item.NextFlag = true;
+                }
+            }
+        }
+    }
+
     private void ReadScriptGroup()
     {
         try
@@ -1163,21 +1179,7 @@ public partial class ScriptControlViewModel : ViewModel
                 {
                     var json = File.ReadAllText(file);
                     var group = ScriptGroup.FromJson(json);
-
-
-                    var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
-                    foreach (var item in group.Projects)
-                    {
-                        item.NextFlag = false;
-                        if (nst != default)
-                        {
-                            if (nst.Item2 == item.Index && nst.Item3 == item.FolderName && nst.Item4 == item.Name)
-                            {
-                                item.NextFlag = true;
-                            }
-                        }
-                    }
-
+                    SetTaskContextNextFlag(group);
                     if (group.Name == TaskContext.Instance().Config.NextScriptGroupName)
                     {
                         group.NextFlag = true;
@@ -1344,6 +1346,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     public static List<ScriptGroupProject> GetNextProjects(ScriptGroup group)
     {
+        SetTaskContextNextFlag(group);
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
         if (group.Projects.Where(g=>g.NextFlag ?? false).Count() > 0)
         {
