@@ -111,12 +111,12 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private string _completionAction = string.Empty;
     
-    // 通过当天是哪一天来返回配置
+    // 通过当天（4点起始）是哪一天来返回配置
     public (string partyName, string domainName, string sundaySelectedValue) GetDomainConfig()
     {
         if (WeeklyDomainEnabled)
         {
-            var dayOfWeek = DateTime.Now.DayOfWeek;
+            var dayOfWeek = (DateTime.Now.Hour >= 4 ? DateTime.Today : DateTime.Today.AddDays(-1)).DayOfWeek;
             return dayOfWeek switch
             {
                 DayOfWeek.Monday => (MondayPartyName, MondayDomainName,SundaySelectedValue),
