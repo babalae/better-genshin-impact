@@ -27,7 +27,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private Task? _fightTask;
 
     private bool _isKeyDown = false;
-    private int activeMacroPriority = -1;
+    private int _activeMacroPriority = -1;
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
     private CombatScenes? _currentCombatScenes;
@@ -40,10 +40,10 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         }
 
         _isKeyDown = true;
-        if (activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority ||
+        if (_activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority ||
             IsAvatarMacrosEdited())
         {
-            activeMacroPriority = TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
+            _activeMacroPriority = TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
             _avatarMacros = LoadAvatarMacros();
             Logger.LogInformation("加载一键宏配置完成");
         }
@@ -187,7 +187,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         }
         else
         {
-            Logger.LogWarning("→ {Name}配置[{Priority}]为空，请先配置一键宏", activeAvatar.Name, activeMacroPriority);
+            Logger.LogWarning("→ {Name}配置[{Priority}]为空，请先配置一键宏", activeAvatar.Name, _activeMacroPriority);
             return Task.CompletedTask;
         }
     }
