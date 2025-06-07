@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Assets.Model.DepthAnything;
@@ -193,87 +194,8 @@ public class AutoFightTask : ISoloTask
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
     
-    private BgiYoloPredictor _enemyPredictor;
-    private bool _enemyPredictorInited = false;
-    private List<Point2f> GetEnemyPos(ImageRegion img)
-    {
-        if (!_enemyPredictorInited)
-        {
-            _enemyPredictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiEnemy);
-            _enemyPredictorInited = true;
-        }
-
-        try
-        {
-            var result = _enemyPredictor.Detect(img);
-            var ret = new List<Point2f>();
-            foreach (var box in result["item"])
-            {
-                ret.Add(new Point2f((box.Left + box.Right)/2f, (box.Top + box.Bottom)/2f));
-            }
-
-            return ret;
-        }
-        catch
-        {
-            return new List<Point2f>();
-        }
-    }
-
-    public async Task FaceToEnemy(CancellationToken ct, int maxMilliseconds=5000)
-    {
-        var start = DateTime.UtcNow;
-        var ratio = 15f;
-        var lor = 200;
-        Simulation.SendInput.Mouse.MiddleButtonClick();
-        for (var i = 0; i < 5; i++)
-        {
-            Simulation.SendInput.Mouse.VerticalScroll(-5);
-            await Task.Delay(100, ct);
-        }
-        while (!ct.IsCancellationRequested && (DateTime.UtcNow - start).TotalMilliseconds < maxMilliseconds)
-        {
-            var screen = CaptureToRectArea();
-            var enemies = GetEnemyPos(screen);
-            if (enemies.Count == 0)
-            {
-                Simulation.SendInput.Mouse.MoveMouseBy(lor, 0);
-                continue;
-            }
-            var cx = screen.Width / 2;
-            var cy = screen.Height / 2;
-            var minDx = float.MaxValue;
-            var minDy = float.MaxValue;
-            for (int i = 0; i < enemies.Count; i++)
-            {
-                var enemy = enemies[i];
-                var x = enemy.X;
-                var y = enemy.Y;
-                var dx = x - cx;
-                var dy = y - cy;
-                if (Math.Sqrt(minDx * minDx + minDy * minDy) > Math.Sqrt(dx * dx + dy * dy))
-                {
-                    minDx = dx;
-                    minDy = dy;
-                }
-            }
-
-            var distance = Math.Sqrt(minDx * minDx + minDy * minDy);
-            if (distance < 250)
-                break;
-            if ((DateTime.UtcNow - start).TotalMilliseconds > 800)
-                ratio -= 1;
-            if (ratio <= 0)
-                ratio = 1;
-
-            var eps = 1e-5f;
-            minDx = minDx > 0 ? 20*ratio : -20*ratio;
-            minDy = minDy > 0 ? 20*ratio : -20*ratio;
-            Simulation.SendInput.Mouse.MoveMouseBy((int)minDx, (int)minDy);
-            lor = (int)minDx;
-        }
-    }
-
+    private BgiYoloPredictor _enemyPredictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiEnemy);
+    
     // 方法1：判断是否是单个数字
 
     /*public int delayTime=1500;
@@ -290,8 +212,8 @@ public class AutoFightTask : ISoloTask
         {
             throw new Exception("识别队伍角色失败");
         }
-
-
+        
+        
         // var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);
         var combatCommands = _combatScriptBag.FindCombatScript(combatScenes.GetAvatars());
         // 命令用到的角色名 筛选交集
@@ -365,28 +287,44 @@ public class AutoFightTask : ISoloTask
                     var skipFightName = "";
 
                     #endregion
-                    var startTime = DateTime.UtcNow;
-                    while (!cts2.Token.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds <= 5000)
+                    
+                    if (countFight != 0)
                     {
-                        await FaceToEnemy(cts2.Token, maxMilliseconds:2000);
-                        var screen = CaptureToRectArea();
-                        var cx = screen.Width / 2;
-                        var cy = screen.Height / 2;
-                        var current = new Rect();
-                        try
+                        var startTime = DateTime.UtcNow;
+                        Simulation.SendInput.Mouse.MiddleButtonClick();
+                        while (!cts2.Token.IsCancellationRequested &&
+                               (DateTime.UtcNow - startTime).TotalMilliseconds <= 7000)
                         {
-                            var op = _enemyPredictor.Detect(screen)["item"];
+                            Simulation.SendInput.SimulateAction(GIActions.Drop, KeyType.KeyPress);
+                            for (var i = 0; i < 5; i++)
+                            {
+                                Simulation.SendInput.Mouse.VerticalScroll(-7);
+                                await Task.Delay(100, cts2.Token);
+                            }
+                            
+                            var screen = CaptureToRectArea();
+                            var cx = screen.Width / 2;
+                            var cy = screen.Height / 2;
+                            var current = new Rect();
+                            
+                            var opb = _enemyPredictor.Detect(screen);
+                            if (!opb.ContainsKey("item"))
+                            {
+                                for (var b = 0; b < 40; b++)
+                                    Simulation.SendInput.Mouse.MoveMouseBy(10, 0);
+                                continue;
+                            } 
+                            var op = opb["item"];
+
+                            var minY = int.MaxValue;
                             for (int i = 0; i < op.Count; i++)
                             {
                                 var enemyRect = op[i];
-                                var x = enemyRect.X + enemyRect.Width / 2;
                                 var y = enemyRect.Y + enemyRect.Height / 2;
-                                var dx = x - cx;
-                                var dy = y - cy;
-                                if (Math.Sqrt(dx * dx + dy * dy) <= 250)
+                                if (minY > y)
                                 {
                                     current = enemyRect;
-                                    break;
+                                    minY = y;
                                 }
                             }
 
@@ -395,30 +333,29 @@ public class AutoFightTask : ISoloTask
                             var depth = DepthAnythingV2Inference.Once(screen.SrcMat);
                             if (!(current.Height == 0 || current.Width == 0))
                             {
+                                // 防止矩形框超出图片外导致断言失败
+                                if (current.X + current.Width > 1920)
+                                    current.Width = 1920-current.X;
+                                if (current.Y + current.Height > 1080)
+                                    current.Height = 1080-current.Y;
                                 var dpt = new Mat(depth, current);
-                                var character = new Mat(depth, new Rect(862, 401, 191, 402));
+                                var character = new Mat(depth, NoDropNavigation.PersonReferenceRoi);
                                 dpt.ConvertTo(dpt, MatType.CV_32FC1);
-                                var baseValue = character.Mean().ToDouble();
+                                Cv2.MinMaxLoc(character, out double baseValue, out _);
                                 var dptValue = Math.Abs(dpt.Mean().ToDouble() - baseValue);
                                 Logger.LogInformation("检测到与敌人距离为{Depth}", dptValue);
                                 if (dptValue < 1.0)
                                     break;
                             }
+
                             var Navigation = new NoDropNavigation();
                             if (Navigation.CanGoForward(depth) == 0)
                             {
                                 ScanPickTask.MoveTowardsItem(current);
                                 await Delay(1000, cts2.Token);
                                 Simulation.ReleaseAllKey();
+                                Simulation.SendInput.Mouse.MiddleButtonClick();
                             }
-                        }
-                        catch
-                        {
-                            continue;
-                        }
-                        finally
-                        {
-                            Simulation.ReleaseAllKey();
                         }
                     }
                     
