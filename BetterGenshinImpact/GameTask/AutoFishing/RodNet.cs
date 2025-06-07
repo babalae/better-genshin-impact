@@ -75,23 +75,25 @@ public class RodNet : Module<Tensor, Tensor>
 
     static readonly double[] offset = { 0.8, 0.4, 0.35, 0.35, 0.6, 0.3, 0.3, 0.8, 0.8, 0.8, 0.8 };
 
-    private readonly Module<Tensor, Tensor> layers;
+    private readonly Embedding embedding1;
+    private readonly Embedding embedding2;
+    private readonly Linear linear;
+    private readonly Embedding embeddingOffset;
+    private readonly Embedding embeddingDz;
+    private readonly Embedding embeddingHcoeff;
 
     public RodNet() : base("RodNet")
     {
-        var weight = tensor(RodNet.weight, ScalarType.Float64);
-        var bias = tensor(RodNet.bias, ScalarType.Float64);
+        long num_embeddings = RodNet.weight.GetLength(0);
+        long embedding_dim = 3;
 
-        RodLayer1 rodLayer1 = new RodLayer1(num_embeddings: weight.shape[0], embedding_dim: weight.shape[1], input_dim: 3, output_dim: 3);
-        rodLayer1.SetWeightsManually(weight, bias);
+        embedding1 = torch.nn.Embedding(num_embeddings, embedding_dim, dtype: ScalarType.Float64);
+        embedding2 = torch.nn.Embedding(num_embeddings, embedding_dim, dtype: ScalarType.Float64);
+        linear = torch.nn.Linear(3, 3, dtype: ScalarType.Float64);  //这个线性层的权重和偏置是在计算时取embedding1和embedding2
 
-        var modules = new List<(string, Module<Tensor, Tensor>)>
-        {
-            ($"rodLayer1", rodLayer1),
-            ($"softmax", nn.Softmax(1))
-        };
-
-        layers = Sequential(modules);
+        embeddingOffset = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
+        embeddingDz = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
+        embeddingHcoeff = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
 
         RegisterComponents();
     }
@@ -109,8 +111,15 @@ public class RodNet : Module<Tensor, Tensor>
             dst[i] /= sum;
         }
     }
-    public record NetInput(double dist, int fish_label);
-    public static NetInput? GeometryProcessing(RodInput input)
+
+    internal static int GetRodState(RodInput input)
+    {
+        double[] pred = ComputeScores(input);
+
+        return Array.IndexOf(pred, pred.Max());
+    }
+
+    public static double[] ComputeScores(RodInput input)
     {
         double a, b, v0, u, v, h;
 
@@ -123,13 +132,10 @@ public class RodNet : Module<Tensor, Tensor>
             b = Math.Sqrt(a * b);
             a = b + 1e-6;
         }
-
         v0 = (288 - (input.rod_y1 + input.rod_y2) / 2) / alpha;
-
         u = (input.fish_x1 + input.fish_x2 - input.rod_x1 - input.rod_x2) / 2 / alpha;
         v = (288 - (input.fish_y1 + input.fish_y2) / 2) / alpha;
         v -= h * h_coeff[input.fish_label];
-
         double y0, z0, t;
         double x, y, dist;
 
@@ -141,26 +147,7 @@ public class RodNet : Module<Tensor, Tensor>
         y = (z0 + dz[input.fish_label]) * (1 + t * v) / (t - v);
         dist = Math.Sqrt(x * x + (y - y0) * (y - y0));
 
-        return new NetInput(dist, input.fish_label);
-    }
-
-    internal static int GetRodState(RodInput input)
-    {
-        NetInput? netInput = GeometryProcessing(input);
-        if (netInput is null)
-        {
-            return -1;
-        }
-
-        double[] pred = ComputeScores(netInput);
-
-        return Array.IndexOf(pred, pred.Max());
-    }
-
-    public static double[] ComputeScores(NetInput netInput)
-    {
-        double dist = netInput.dist;
-        int fish_label = netInput.fish_label;
+        int fish_label = input.fish_label;
 
         double[] logits = new double[3];
         for (int i = 0; i < 3; i++)
@@ -177,64 +164,80 @@ public class RodNet : Module<Tensor, Tensor>
 
     internal int GetRodState_Torch(RodInput input)
     {
-        NetInput? netInput = GeometryProcessing(input);
-        if (netInput is null)
-        {
-            return -1;
-        }
-
-        Tensor outputTensor = ComputeScores_Torch(netInput);
+        using var _ = no_grad();
+        Tensor outputTensor = ComputeScores_Torch(input);
 
         var max = argmax(outputTensor);
         return (int)max.item<long>();
     }
 
-    public Tensor ComputeScores_Torch(NetInput netInput)
+    public Tensor ComputeScores_Torch(RodInput input)
     {
-        double dist = netInput.dist;
-        int fish_label = netInput.fish_label;
+        using var _ = no_grad();
+        var weight = tensor(RodNet.weight, ScalarType.Float64);
+        var bias = tensor(RodNet.bias, ScalarType.Float64);
+        var offset = tensor(RodNet.offset, ScalarType.Float64).reshape([RodNet.offset.Length, 1]);
+        var dz = tensor(RodNet.dz, ScalarType.Float64).reshape([RodNet.dz.Length, 1]);
+        var h_coeff = tensor(RodNet.h_coeff, ScalarType.Float64).reshape([RodNet.h_coeff.Length, 1]);
+        this.SetWeightsManually(weight, bias, offset, dz, h_coeff);
 
-        Tensor inputTensor = cat([tensor(new double[,] { { dist } }, dtype: ScalarType.Float64),
-            tensor(new int[,] { {fish_label } }, dtype: ScalarType.Int32)]).T;
+        Tensor inputTensor = input.ToTensor();
         var outputTensor = forward(inputTensor);
-
-        outputTensor[0][0] = outputTensor[0][0] - RodNet.offset[fish_label];
 
         return outputTensor;
     }
 
-    public override Tensor forward(Tensor input)
-    {
-        return layers.forward(input);
-    }
-}
-
-public class RodLayer1 : Module<Tensor, Tensor>
-{
-    private readonly Embedding embedding1;
-    private readonly Embedding embedding2;
-    private readonly Linear linear;
-    public RodLayer1(long num_embeddings, long embedding_dim, long input_dim, long output_dim)
-        : base("RodLinear")
-    {
-        embedding1 = torch.nn.Embedding(num_embeddings, embedding_dim);
-        embedding2 = torch.nn.Embedding(num_embeddings, embedding_dim);
-        linear = torch.nn.Linear(input_dim, output_dim);
-
-        RegisterComponents();
-    }
-
-    public void SetWeightsManually(Tensor weight, Tensor bias)
+    /// <summary>
+    /// 使用时直接赋值参数
+    /// </summary>
+    public void SetWeightsManually(Tensor weight, Tensor bias, Tensor offset, Tensor dz, Tensor h_coeff)
     {
         embedding1.weight = new Parameter(weight);
         embedding2.weight = new Parameter(bias);
+        embeddingOffset.weight = new Parameter(offset);
+        embeddingDz.weight = new Parameter(dz);
+        embeddingHcoeff.weight = new Parameter(h_coeff);
     }
 
     public override Tensor forward(Tensor input)
     {
-        var splitInput = input.split([1, 1], dim: 1);
-        var dist = splitInput[0];
-        var fish_label = splitInput[1].to(ScalarType.Int32).flatten();
+        var splitInput = input.split([1, 1, 1, 1, 1, 1, 1, 1, 1], dim: 1);
+        var rod_x1 = splitInput[0];
+        var rod_x2 = splitInput[1];
+        var rod_y1 = splitInput[2];
+        var rod_y2 = splitInput[3];
+        var fish_x1 = splitInput[4];
+        var fish_x2 = splitInput[5];
+        var fish_y1 = splitInput[6];
+        var fish_y2 = splitInput[7];
+        var fish_label = splitInput[8].to(ScalarType.Int32).flatten();
+
+        Tensor a, b, v0, u, v, h;
+
+        a = (rod_x2 - rod_x1) / 2 / alpha;
+        b = (rod_y2 - rod_y1) / 2 / alpha;
+        h = (fish_y2 - fish_y1) / 2 / alpha;
+
+        Tensor abComparision = a < b;
+        b = torch.where(abComparision, torch.sqrt(a * b), b);
+        a = torch.where(abComparision, b + 1e-6, a);
+
+        v0 = (288 - (rod_y1 + rod_y2) / 2) / alpha;
+
+        u = (fish_x1 + fish_x2 - rod_x1 - rod_x2) / 2 / alpha;
+        v = (288 - (fish_y1 + fish_y2) / 2) / alpha;
+        v -= h * embeddingHcoeff.forward(fish_label);
+
+        Tensor y0, z0, t;
+        Tensor x, y, dist;
+
+        y0 = torch.sqrt(torch.pow(a, 4) - b * b + a * a * (1 - b * b + v0 * v0)) / (a * a);
+        z0 = b / (a * a);
+        t = a * a * (y0 * b + v0) / (a * a - b * b);
+
+        x = u * (z0 + embeddingDz.forward(fish_label)) * torch.sqrt(1 + t * t) / (t - v);
+        y = (z0 + embeddingDz.forward(fish_label)) * (1 + t * v) / (t - v);
+        dist = torch.sqrt(x * x + (y - y0) * (y - y0));
 
         var embed1 = embedding1.forward(fish_label);
         //Console.WriteLine(String.Join(",", embed1.data<double>()));
@@ -243,7 +246,11 @@ public class RodLayer1 : Module<Tensor, Tensor>
 
         linear.weight = new Parameter(embed1.T);
         linear.bias = new Parameter(embed2);
+        var x_linear = linear.forward(dist);
+        var x_softmax = torch.nn.functional.softmax(x_linear, 1);
 
-        return linear.forward(dist);
+        var x_offset = embeddingOffset.forward(fish_label);
+
+        return cat([x_softmax[0][0] - x_offset, x_softmax.narrow(1, 1, 2)], dim: 1);
     }
 }
