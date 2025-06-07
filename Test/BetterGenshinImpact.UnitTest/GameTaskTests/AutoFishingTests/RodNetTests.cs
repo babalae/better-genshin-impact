@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TorchSharp;
 using static BetterGenshinImpact.GameTask.AutoFishing.RodNet;
 using static TorchSharp.torch;
 
@@ -42,14 +43,29 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             RodNet sut = new RodNet();
 
             //
-            NetInput netInput = GeometryProcessing(rodInput) ?? throw new NullReferenceException();
-            Tensor outputTensor = sut.ComputeScores_Torch(netInput);
-            double[] pred = ComputeScores(netInput);
+            Tensor outputTensor = sut.ComputeScores_Torch(rodInput);
+            double[] pred = ComputeScores(rodInput);
 
             //
             Assert.Equal((float)pred[0], (float)outputTensor.data<double>()[0]);    // 对比时降低精度，差不多就行
             Assert.Equal((float)pred[1], (float)outputTensor.data<double>()[1]);
             Assert.Equal((float)pred[2], (float)outputTensor.data<double>()[2]);
+        }
+
+        /// <summary>
+        /// RodNet必须支持训练
+        /// </summary>
+        [Fact]
+        public void RodNetTest_ShouldBeDifferentiable()
+        {
+            //
+            Tensor input = new RodInput().ToTensor();
+            RodNet sut = new RodNet();
+
+            //
+            Tensor output = sut.forward(input);
+            output.backward([torch.ones_like(output)]);
+            //
         }
     }
 }
