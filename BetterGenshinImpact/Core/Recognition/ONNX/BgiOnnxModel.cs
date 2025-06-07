@@ -45,6 +45,11 @@ public class BgiOnnxModel
     public static readonly BgiOnnxModel BgiWorld = Register("BgiTree", @"Assets\Model\World\bgi_world.onnx");
 
     /// <summary>
+    /// 用于识别并追踪怪物的大世界模型
+    /// </summary>
+    public static readonly BgiOnnxModel BgiEnemy = Register("BgiEnemy", @"Assets\Model\Enemy\bgi_enemy.onnx");
+
+    /// <summary>
     /// 角色识别
     /// </summary>
     public static readonly BgiOnnxModel BgiAvatarSide =
