@@ -55,7 +55,18 @@
                              SelectionMode="Single">
                     <ui:ListView.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Margin="8,4" Text="{Binding Name, Mode=OneWay}" />
+                            <TextBlock Margin="8,4" Text="{Binding Name, Mode=OneWay}" >
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding NextFlag}" Value="True">
+                                                <Setter Property="Foreground" Value="Green" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                              </TextBlock>
                         </DataTemplate>
                     </ui:ListView.ItemTemplate>
                     <ui:ListView.ContextMenu>
@@ -70,14 +81,30 @@
                             <MenuItem Command="{Binding CopyScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="复制组" />
+                            <MenuItem Command="{Binding AddScriptGroupNextFlagCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="连续任务从此开始执行" />
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
-                <ui:Button Grid.Row="2"
-                           Margin="0,2,0,2"
-                           HorizontalAlignment="Stretch"
-                           Command="{Binding StartMultiScriptGroupCommand}"
-                           Content="连续执行" />
+                <Grid Grid.Row="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <ui:Button Grid.Row="0"
+                               Margin="2"
+                               HorizontalAlignment="Stretch"
+                               Command="{Binding StartMultiScriptGroupCommand}"
+                               Content="连续执行" />
+
+                    <ui:Button Grid.Row="1"
+                               Margin="2"
+                               HorizontalAlignment="Stretch"
+                               Command="{Binding ContinueMultiScriptGroupCommand}"
+                               Content="继续执行" />
+                </Grid>
             </Grid>
         </Grid>
 

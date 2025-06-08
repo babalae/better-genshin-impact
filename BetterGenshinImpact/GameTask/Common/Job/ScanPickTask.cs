@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
@@ -22,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// </summary>
 public class ScanPickTask
 {
-    private readonly BgiYoloPredictor _predictor = BgiOnnxFactory.Instance.CreateYoloPredictor(BgiOnnxModel.BgiWorld);
+    private readonly BgiYoloPredictor _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
     private readonly double _dpi = TaskContext.Instance().DpiScale;
     private readonly RECT _realCaptureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
 

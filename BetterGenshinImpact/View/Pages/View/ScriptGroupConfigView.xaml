@@ -459,7 +459,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="执行周期序号，按时间戳对应的天数(会根据分界时间修正)，对周期求余值加1，得出的值和配置执一致就会执行，否则跳过任务。"
+                                                  Text="执行周期序号，按时间戳对应的天数(会根据分界时间修正)，对周期求余值加1，得出的值和配置执一致就会执行，否则跳过任务。可以理解为周期内第几天执行。"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -486,7 +486,7 @@
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="点击计算按钮，可计算出当天执行序号。"
+                                                  Text="点击计算按钮，可计算出当天执行序号（今天是周期内的第几天）。"
                                                   TextWrapping="Wrap" />
                                     <ui:Button Grid.Row="0"
                                                Grid.RowSpan="2"
@@ -878,6 +878,35 @@
                                          Margin="0,0,36,0"
                                          IsChecked="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
                     </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="只拾取精英掉落模式"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="需要路径文件支持，在点位的更多》扩展配置》怪物标签中，可标记。只拾取标记为精英或传奇的点位。非精英允许自动拾取：战斗过程中掉落脚下的可以自动拾取，但不会执行万叶拾取和自动拾取配置逻辑。非精英关闭拾取：战斗过程中掉落到脚下的也不会自动拾取。"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="100"
+                                  SelectedValuePath="Key"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding OnlyPickEliteDropsSource}"
+                                  SelectedValue="{Binding PathingConfig.AutoFightConfig.OnlyPickEliteDropsMode}" />
+                    </Grid>
+
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

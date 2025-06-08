@@ -255,12 +255,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public const int MAX_NO_BAIT_FISH_TIMES = 2;
         private DateTimeOffset? findTargetEndTime;
         private bool foundTarget;
+        private bool useTorch;
 
         private int noPlacementTimes; // 没有落点的次数
         private int noTargetFishTimes; // 没有目标鱼的次数
-        public ThrowRod(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
+        public ThrowRod(string name, Blackboard blackboard, bool useTorch, ILogger logger, bool saveScreenshotOnTerminat, IInputSimulator input, TimeProvider? timeProvider = null, DrawContent? drawContent = null) : base(name, logger, saveScreenshotOnTerminat)
         {
             this.blackboard = blackboard;
+            this.useTorch = useTorch;
             this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
@@ -437,7 +439,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 var dy = NormalizeYTo576(fish.Top + fish.Bottom - rod.Top - rod.Bottom) / 2.0;
                 var dl = Math.Sqrt(dx * dx + dy * dy);
                 //logger.LogInformation("dl = {dl}", dl);
-                var state = RodNet.GetRodState(new RodInput
+
+                RodInput rodInput = new RodInput
                 {
                     rod_x1 = NormalizeXTo1024(rod.Left),
                     rod_x2 = NormalizeXTo1024(rod.Right),
@@ -448,7 +451,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     fish_y1 = NormalizeYTo576(fish.Top),
                     fish_y2 = NormalizeYTo576(fish.Bottom),
                     fish_label = BigFishType.GetIndex(currentFish.FishType)
-                });
+                };
+                int state = this.useTorch ? new RodNet().GetRodState_Torch(rodInput) : RodNet.GetRodState(rodInput);
 
                 // 如果hutao钓鱼暂时没有更新导致报错，可以先用这段凑合
                 //int state;
@@ -705,13 +709,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             //VisionContext.Instance().DrawContent.PutRect("liftingWordsAreaRect", liftingWordsAreaRect.ToRectDrawable(new Pen(Color.Cyan, 2)));
             using var wordCaptureMat = new Mat(imageRegion.SrcMat, liftingWordsAreaRect);
             var currentBiteWordsTips = AutoFishingImageRecognition.MatchFishBiteWords(wordCaptureMat, liftingWordsAreaRect);
-            if (currentBiteWordsTips != default)
+            if (currentBiteWordsTips != null)
             {
                 // VisionContext.Instance().DrawContent.PutRect("FishBiteTips",
                 //     currentBiteWordsTips
                 //         .ToWindowsRectangleOffset(liftingWordsAreaRect.X, liftingWordsAreaRect.Y)
                 //         .ToRectDrawable());
-                using var tipsRa = imageRegion.Derive(currentBiteWordsTips + liftingWordsAreaRect.Location);
+                using var tipsRa = imageRegion.Derive((Rect)currentBiteWordsTips + liftingWordsAreaRect.Location);
                 tipsRa.DrawSelf("FishBiteTips");
 
                 return RaiseRod("文字块");
@@ -847,7 +851,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             logger.LogInformation("拉扯开始");
         }
 
-        private MOUSEEVENTF _prevMouseEvent = 0x0;
+        private MOUSEEVENTF _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
         {
@@ -867,24 +871,29 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     rects.RemoveRange(3, rects.Count - 3);
                 }
 
-                Rect _cur, _left, _right;
                 //Debug.WriteLine($"识别到{rects.Count} 个矩形");
                 if (rects.Count == 2)
                 {
+                    // 游标矩形不在区间内或恰在区间两端时只会检测到两个矩形
+                    Rect _cursor, _target;
                     if (rects[0].Width < rects[1].Width)
                     {
-                        _cur = rects[0];
-                        _left = rects[1];
+                        _cursor = rects[0];
+                        _target = rects[1];
                     }
                     else
                     {
-                        _cur = rects[1];
-                        _left = rects[0];
+                        _cursor = rects[1];
+                        _target = rects[0];
+                    }
+                    if (_target.Width < _cursor.Width * 10) // 异常：当目标矩形明显不够长时视为无效检测，不作为
+                    {
+                        return BehaviourStatus.Running;
                     }
 
-                    PutRects(imageRegion, _left, _cur, new Rect());
+                    PutRects(imageRegion, _target, _cursor, new Rect());
 
-                    if (_cur.X < _left.X)
+                    if (_cursor.X < _target.X)
                     {
                         if (_prevMouseEvent != MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
                         {
@@ -907,13 +916,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
                 else if (rects.Count == 3)
                 {
+                    // 游标矩形在区间内会检测到三个矩形，即目标区间被游标分割成左半和右半
+                    Rect _cursor, _left, _right;
                     rects.Sort((a, b) => a.X.CompareTo(b.X));
                     _left = rects[0];
-                    _cur = rects[1];
+                    _cursor = rects[1];
                     _right = rects[2];
-                    PutRects(imageRegion, _left, _cur, _right);
+                    PutRects(imageRegion, _left, _cursor, _right);
 
-                    if (_right.X + _right.Width - (_cur.X + _cur.Width) <= _cur.X - _left.X)
+                    if (_right.X + _right.Width - (_cursor.X + _cursor.Width) <= _cursor.X - _left.X)
                     {
                         if (_prevMouseEvent == MOUSEEVENTF.MOUSEEVENTF_LEFTDOWN)
                         {
@@ -955,7 +966,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 // 没有矩形视为已经完成钓鱼
                 drawContent.RemoveRect("FishBox");
-                _prevMouseEvent = 0x0;
+                _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
                 logger.LogInformation("  拉扯结束");
                 logger.LogInformation(@"└------------------------┘");
 

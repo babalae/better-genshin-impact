@@ -1,389 +1,516 @@
 [
   {
     "name": "荧",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "空",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "神里绫华",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "琴",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "丽莎",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "芭芭拉",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "凯亚",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "迪卢克",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "雷泽",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "安柏",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "温迪",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "香菱",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "北斗",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "行秋",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "魈",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "凝光",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "可莉",
     "scriptContent1": "keydown(w),wait(0.08),attack(0.05),keyup(w),wait(0.2)",
-    "scriptContent2": "mousedown(left),mouseup(left),wait(0.09),charge(0.519),wait(0.09),charge(0.519),wait(0.09)"
+    "scriptContent2": "mousedown(left),mouseup(left),wait(0.09),charge(0.519),wait(0.09),charge(0.519),wait(0.09)",
+    "macroPriority": 0
   },
   {
     "name": "钟离",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "菲谢尔",
-    "scriptContent1": "mousedown(left),wait(0.001),mouseup(left),wait(0.3),mousedown(left),wait(0.001),mouseup(left),wait(0.2),keydown(r),wait(0.02),keyup(r),wait(0.1),keydown(r),wait(0.02),keyup(r),wait(0.04)"
+    "scriptContent1": "mousedown(left),wait(0.001),mouseup(left),wait(0.3),mousedown(left),wait(0.001),mouseup(left),wait(0.2),keydown(r),wait(0.02),keyup(r),wait(0.1),keydown(r),wait(0.02),keyup(r),wait(0.04)",
+    "macroPriority": 0
   },
   {
     "name": "班尼特",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "达达利亚",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "诺艾尔",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "七七",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "重云",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "甘雨",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "阿贝多",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "迪奥娜",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "莫娜",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "刻晴",
     "scriptContent1": "mousedown(left),wait(0.350),mouseup(left),wait(0.100)",
-    "scriptContent2": "keydown(e),wait(0.085),keyup(e),wait(0.667),keydown(q),wait(0.081),keyup(q),wait(2.388),keydown(e),wait(0.085),keyup(e)"
+    "scriptContent2": "keydown(e),wait(0.085),keyup(e),wait(0.667),keydown(q),wait(0.081),keyup(q),wait(2.388),keydown(e),wait(0.085),keyup(e)",
+    "macroPriority": 0
   },
   {
     "name": "砂糖",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "辛焱",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "罗莎莉亚",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "胡桃",
-    "scriptContent1": "charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.52)"
+    "scriptContent1": "charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.52)",
+    "macroPriority": 0
   },
   {
     "name": "枫原万叶",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "烟绯",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "宵宫",
     "scriptContent1": "e,wait(0.8),attack(1)",
-    "scriptContent2": "mousedown(left),wait(0.001),mouseup(left),wait(0.218),mousedown(left),wait(0.001),mouseup(left),wait(0.219),mousedown(left),wait(0.25),mouseup(left),wait(0.206)"
+    "scriptContent2": "mousedown(left),wait(0.001),mouseup(left),wait(0.218),mousedown(left),wait(0.001),mouseup(left),wait(0.219),mousedown(left),wait(0.25),mouseup(left),wait(0.206)",
+    "macroPriority": 0
   },
   {
     "name": "托马",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "优菈",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "雷电将军",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "早柚",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "珊瑚宫心海",
-    "scriptContent1": "mousedown(left),wait(0.005),mouseup(left),wait(0.005),mousedown(left),wait(0.005),mouseup(left),wait(0.425),keydown(w),wait(0.225),keyup(w),wait(0.05)"
+    "scriptContent1": "mousedown(left),wait(0.005),mouseup(left),wait(0.005),mousedown(left),wait(0.005),mouseup(left),wait(0.425),keydown(w),wait(0.225),keyup(w),wait(0.05)",
+    "macroPriority": 0
   },
   {
     "name": "五郎",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "九条裟罗",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "荒泷一斗",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "八重神子",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "鹿野院平藏",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "夜兰",
-    "scriptContent1": "mousedown(left),wait(0.550),mouseup(left)"
+    "scriptContent1": "mousedown(left),wait(0.550),mouseup(left)",
+    "macroPriority": 0
   },
   {
     "name": "绮良良",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "埃洛伊",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "申鹤",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "云堇",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "久岐忍",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "神里绫人",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "柯莱",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "多莉",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "提纳里",
-    "scriptContent1": "keydown(r),wait(0.005),keyup(r),wait(0.25),mousedown(left),wait(0.05),mouseup(left),wait(0.8),mousedown(left),wait(0.05),mouseup(left),wait(0.8),mousedown(left),wait(0.05),mouseup(left),wait(0.05),keydown(r),wait(0.005),keyup(r)"
+    "scriptContent1": "keydown(r),wait(0.005),keyup(r),wait(0.25),mousedown(left),wait(0.05),mouseup(left),wait(0.8),mousedown(left),wait(0.05),mouseup(left),wait(0.8),mousedown(left),wait(0.05),mouseup(left),wait(0.05),keydown(r),wait(0.005),keyup(r)",
+    "macroPriority": 0
   },
   {
     "name": "妮露",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "赛诺",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "坎蒂丝",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "纳西妲",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "莱依拉",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "流浪者",
-    "scriptContent1": "e,wait(0.3),charge(0.71),wait(0.101),charge(0.69),wait(0.09),charge(0.702),wait(0.101),charge(0.703),wait(0.102),charge(0.698),wait(0.099),charge(0.703),wait(0.098),charge(0.703),wait(0.101),charge(0.704),wait(0.099),charge(0.701),wait(0.101),charge(0.701),wait(0.101),charge(0.702),wait(0.103),charge(0.704),wait(0.103),charge(0.704)"
+    "scriptContent1": "e,wait(0.3),charge(0.71),wait(0.101),charge(0.69),wait(0.09),charge(0.702),wait(0.101),charge(0.703),wait(0.102),charge(0.698),wait(0.099),charge(0.703),wait(0.098),charge(0.703),wait(0.101),charge(0.704),wait(0.099),charge(0.701),wait(0.101),charge(0.701),wait(0.101),charge(0.702),wait(0.103),charge(0.704),wait(0.103),charge(0.704)",
+    "macroPriority": 0
   },
   {
     "name": "珐露珊",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "瑶瑶",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "艾尔海森",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "迪希雅",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "米卡",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "卡维",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "白术",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "琳妮特",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "林尼",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "菲米尼",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "莱欧斯利",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "那维莱特",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "夏洛蒂",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "芙宁娜",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "夏沃蕾",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "娜维娅",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "嘉明",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "闲云",
-    "scriptContent1": ""
-    },
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
   {
     "name": "千织",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "希格雯",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "阿蕾奇诺",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "赛索斯",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "克洛琳德",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "艾梅莉埃",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "卡齐娜",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "基尼奇",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "玛拉妮",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "希诺宁",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "恰斯卡",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "欧洛伦",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "玛薇卡",
-    "scriptContent1": "keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(1.3)"
+    "scriptContent1": "keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(1.3)",
+    "scriptContent2": "mousedown(left),wait(0.3),mouseup(left),wait(0.6),mousedown(right),wait(0.08),mouseup(right),wait(0.02),mousedown(left),wait(0.15),mouseup(left),wait(0.05)",
+    "macroPriority": 0
   },
   {
     "name": "茜特菈莉",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "蓝砚",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
   },
   {
     "name": "梦见月瑞希",
-    "scriptContent1": ""
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
+  {
+    "name": "伊安珊",
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
+  {
+    "name": "瓦雷莎",
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
+  {
+    "name": "爱可菲",
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
+  {
+    "name": "伊法",
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
+  {
+    "name": "丝柯克",
+    "scriptContent1": "",
+    "macroPriority": 0
+  },
+  {
+    "name": "塔利雅",
+    "scriptContent1": "",
+    "macroPriority": 0
   }
 ]

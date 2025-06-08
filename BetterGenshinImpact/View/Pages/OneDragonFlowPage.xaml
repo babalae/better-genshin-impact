@@ -341,7 +341,7 @@
                                Text="自动秘境" />
 
 
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="{Binding SelectedConfig.WeeklyDomainEnabled, Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf073;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -470,8 +470,7 @@
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
-
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf784;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -493,10 +492,8 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="启用后，每日刷取配置将会失效"
-                                              TextWrapping="Wrap">
-                                </ui:TextBlock>
-
+                                              Text="启用后，每日刷取配置将会失效。"
+                                              TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
@@ -505,6 +502,25 @@
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
+                            <Grid Margin="52,16,16,8">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text=""
+                                              TextWrapping="Wrap">
+                                    新的一天开始于 4:00
+                                </ui:TextBlock>
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              TextWrapping="Wrap">
+                                    周一 4:00 至周二 3:59 执行周一配置，以此类推。
+                                </ui:TextBlock>
+                            </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -513,7 +529,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周一"
                                               VerticalAlignment="Center" />
@@ -542,7 +558,7 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周二"
                                               VerticalAlignment="Center" />
@@ -570,7 +586,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周三"
                                               VerticalAlignment="Center" />
@@ -599,7 +615,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周四"
                                               VerticalAlignment="Center" />
@@ -628,7 +644,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周五"
                                               VerticalAlignment="Center" />
@@ -658,7 +674,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周六"
                                               VerticalAlignment="Center" />
@@ -692,7 +708,7 @@
                                 </Grid.RowDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="35,0,0,0"
+                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周日"
                                               VerticalAlignment="Center" />

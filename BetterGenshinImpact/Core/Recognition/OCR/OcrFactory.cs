@@ -2,7 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
@@ -34,7 +36,7 @@ public class OcrFactory
         var result = type switch
         {
             OcrEngineTypes.Paddle => new KeyValuePair<string, IOcrService>(cultureInfoName,
-                new PaddleOcrService(cultureInfoName)),
+                new PaddleOcrService(cultureInfoName, App.ServiceProvider.GetRequiredService<BgiOnnxFactory>())),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
         Logger.LogDebug("为 {CultureInfoName} 创建了类型为 {Type} 的 OCR服务", result.Key, result.Value);

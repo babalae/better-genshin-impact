@@ -6,11 +6,13 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
+                 xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
                  xmlns:webview="clr-namespace:BetterGenshinImpact.View.Controls.Webview"
                  x:Name="app"
                  Title="发现新版本"
                  Width="680"
-                 Height="800"
+                 MinHeight="10"
+                 SizeToContent="Height"
                  Background="#202020"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
@@ -18,11 +20,13 @@
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Grid>
-        <ui:Grid Margin="0,48,0,0" RowDefinitions="Auto,*,Auto">
+        <ui:Grid Name="MyGrid" Margin="0,48,0,0" RowDefinitions="Auto,*,Auto,Auto">
             <webview:WebpagePanel x:Name="WebpagePanel"
                                   Grid.Row="1"
+                                  Height="400"
                                   Margin="12,0,12,0" />
-            <ui:Grid Grid.Row="0"
+            <ui:Grid Name="UpdateStatusMessageGrid"
+                     Grid.Row="0"
                      Margin="16,0,16,0"
                      ColumnDefinitions="Auto,*"
                      Visibility="{Binding ShowUpdateStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -31,7 +35,106 @@
                     <TextBlock Text="{Binding UpdateStatusMessage}" />
                 </ui:StackPanel>
             </ui:Grid>
-            <ui:Grid Grid.Row="2"
+            <!-- 新增：多渠道更新方式卡片 -->
+            <StackPanel Name="ServerPanel" Grid.Row="2" Margin="12,0,12,0">
+                <ui:CardControl Name="DefaultCard" Margin="0,0,0,8">
+                    <ui:CardControl.Icon>
+                        <ui:FontIcon Glyph="&#xf4ba;" Style="{StaticResource FaFontIconStyle}" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="默认更新服务器"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="普通用户可点此直接更新"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button
+                            Appearance="Success"
+                            Icon="{ui:SymbolIcon ArrowDownload24}"
+                            Content="立即更新"
+                            Command="{Binding UpdateFromSteambirdCommand}" />
+                    </StackPanel>
+                </ui:CardControl>
+                <ui:CardControl Margin="0,0,0,8">
+                    <ui:CardControl.Icon>
+                        <ui:FontIcon Glyph="&#xf0c2;" Style="{StaticResource FaFontIconStyle}" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <emoji:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          Text="Mirror酱⚡"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="Mirror酱用户可以输入CDK高速更新"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button 
+                            Name="EditCdkButton"
+                            Margin="0,0,8,0"
+                            Icon="{ui:SymbolIcon TicketDiagonal24}"
+                            Content="修改CDK"
+                            Command="{Binding EditCdkCommand}" />
+                        <ui:Button
+                            Appearance="Success"
+                            Icon="{ui:SymbolIcon ArrowDownload24}"
+                            Content="立即更新"
+                            Command="{Binding UpdateFromMirrorChyanCommand}" />
+                    </StackPanel>
+                </ui:CardControl>
+                
+                <!--<ui:CardControl Margin="0,0,0,8">
+                    <ui:CardControl.Icon>
+                        <ui:FontIcon Glyph="&#xf0c2;" Style="{StaticResource FaFontIconStyle}" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <emoji:TextBlock Grid.Row="0"
+                                             Grid.Column="0"
+                                             Text="Hutao Cloud 胡桃云⚡"
+                                             TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="胡桃云CDN用户，可使用 Hutao Cloud CDN 高速更新"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button
+                            Appearance="Primary"
+                            Icon="{ui:SymbolIcon ArrowBounce24}"
+                            Content="唤起胡桃"
+                            Command="{Binding OneKeyExecuteCommand}" />
+                    </StackPanel>
+                </ui:CardControl>-->
+            </StackPanel>
+            <!-- 原有按钮区域 -->
+            <ui:Grid Grid.Row="3"
                      Margin="8"
                      ColumnDefinitions="*,Auto,Auto,Auto,Auto">
                 <ui:Button Grid.Column="0"
@@ -45,14 +148,14 @@
                            Margin="8,0,8,0"
                            Command="{Binding OtherUpdateCommand}"
                            Content="其他更新方式" />
-                <ui:Button Grid.Column="1"
+                <!--<ui:Button Grid.Column="1"
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Appearance="Success"
                            Command="{Binding UpdateCommand}"
-                           Content="立即更新" />
+                           Content="立即更新" />-->
                 <ui:Button Name="IgnoreButton"
-                    Grid.Column="2"
+                           Grid.Column="2"
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding IgnoreCommand}"

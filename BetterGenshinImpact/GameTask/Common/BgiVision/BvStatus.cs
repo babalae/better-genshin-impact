@@ -7,9 +7,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using System.Threading;
+
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
+
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -21,6 +23,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// </summary>
 public static partial class Bv
 {
+ 
     public static string WhichGameUi()
     {
         throw new NotImplementedException();
@@ -33,7 +36,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInMainUi(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist();
+        return  captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist() && !IsInRevivePrompt(captureRa);
     }
 
     /// <summary>
