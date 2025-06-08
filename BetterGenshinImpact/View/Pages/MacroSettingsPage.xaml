@@ -120,21 +120,37 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="角色选择使用的战斗宏编号"
+                                  Text="默认战斗宏编号"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于修改当前配置文件中哪个战斗宏是优先使用的（1~5）"
+                                  Text="当角色的 macroPriority 设置为0时，使用此默认宏编号（1~5）"
                                   TextWrapping="Wrap" />
-                    <ui:NumberBox Grid.Row="0"
+                    <ui:TextBox Grid.Row="0"
                                   Grid.RowSpan="2"
                                   Grid.Column="1"
+                                  MinWidth="90"
                                   Margin="0,0,36,0"
-                                  Maximum="5"
-                                  Minimum="1"
-                                  ValidationMode="InvalidInputOverwritten"
-                                  Value="{Binding Config.MacroConfig.CombatMacroPriority, Mode=TwoWay}" />
+                                  Text="{Binding Config.MacroConfig.CombatMacroPriority, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  FontTypography="Body"
+                                  Text="角色个性化宏编号设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="上方宏配置支持为每个角色单独设置宏编号。在角色宏配置中设置 macroPriority 字段（1-5），设置为0则使用上面的默认战斗宏编号。"
+                                  TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
