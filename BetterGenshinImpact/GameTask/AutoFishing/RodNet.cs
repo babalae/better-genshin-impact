@@ -78,7 +78,6 @@ public class RodNet : Module<Tensor, Tensor>
     private readonly Embedding embedding1;
     private readonly Embedding embedding2;
     private readonly Linear linear;
-    private readonly Embedding embeddingOffset;
     private readonly Embedding embeddingDz;
     private readonly Embedding embeddingHcoeff;
 
@@ -91,7 +90,6 @@ public class RodNet : Module<Tensor, Tensor>
         embedding2 = torch.nn.Embedding(num_embeddings, embedding_dim, dtype: ScalarType.Float64);
         linear = torch.nn.Linear(3, 3, dtype: ScalarType.Float64);  //这个线性层的权重和偏置是在计算时取embedding1和embedding2
 
-        embeddingOffset = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
         embeddingDz = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
         embeddingHcoeff = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
 
@@ -176,25 +174,24 @@ public class RodNet : Module<Tensor, Tensor>
         using var _ = no_grad();
         var weight = tensor(RodNet.weight, ScalarType.Float64);
         var bias = tensor(RodNet.bias, ScalarType.Float64);
-        var offset = tensor(RodNet.offset, ScalarType.Float64).reshape([RodNet.offset.Length, 1]);
         var dz = tensor(RodNet.dz, ScalarType.Float64).reshape([RodNet.dz.Length, 1]);
         var h_coeff = tensor(RodNet.h_coeff, ScalarType.Float64).reshape([RodNet.h_coeff.Length, 1]);
-        this.SetWeightsManually(weight, bias, offset, dz, h_coeff);
+        this.SetWeightsManually(weight, bias, dz, h_coeff);
 
         Tensor inputTensor = input.ToTensor();
-        var outputTensor = forward(inputTensor);
+        var logits = forward(inputTensor);
+        var output = PostProcess(logits, inputTensor[torch.arange(inputTensor.shape[0]), 8].to(ScalarType.Int32).flatten());
 
-        return outputTensor;
+        return output;
     }
 
     /// <summary>
     /// 使用时直接赋值参数
     /// </summary>
-    public void SetWeightsManually(Tensor weight, Tensor bias, Tensor offset, Tensor dz, Tensor h_coeff)
+    public void SetWeightsManually(Tensor weight, Tensor bias, Tensor dz, Tensor h_coeff)
     {
         embedding1.weight = new Parameter(weight);
         embedding2.weight = new Parameter(bias);
-        embeddingOffset.weight = new Parameter(offset);
         embeddingDz.weight = new Parameter(dz);
         embeddingHcoeff.weight = new Parameter(h_coeff);
     }
@@ -246,11 +243,16 @@ public class RodNet : Module<Tensor, Tensor>
 
         linear.weight = new Parameter(embed1.T);
         linear.bias = new Parameter(embed2);
-        var x_linear = linear.forward(dist);
-        var x_softmax = torch.nn.functional.softmax(x_linear, 1);
+        return linear.forward(dist);
+    }
 
-        var x_offset = embeddingOffset.forward(fish_label);
+    public Tensor PostProcess(Tensor logits, Tensor fishLabel)
+    {
+        var x_softmax = torch.nn.functional.softmax(logits, 1);
 
-        return cat([x_softmax[0][0] - x_offset, x_softmax.narrow(1, 1, 2)], dim: 1);
+        Tensor x_offset = tensor(fishLabel.data<int>().Select(l => RodNet.offset[l]).ToArray());
+
+        x_softmax[torch.arange(x_offset.shape[0]), 0] -= x_offset;
+        return x_softmax;
     }
 }
