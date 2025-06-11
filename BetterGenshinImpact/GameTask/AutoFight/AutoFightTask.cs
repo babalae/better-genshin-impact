@@ -14,8 +14,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Assets.Model.DepthAnything;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Common.SLAM;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
@@ -291,6 +293,7 @@ public class AutoFightTask : ISoloTask
                     if (countFight != 0)
                     {
                         var startTime = DateTime.UtcNow;
+                        var tryTimes = 0;
                         Simulation.SendInput.Mouse.MiddleButtonClick();
                         while (!cts2.Token.IsCancellationRequested &&
                                (DateTime.UtcNow - startTime).TotalMilliseconds <= 7000)
@@ -303,17 +306,19 @@ public class AutoFightTask : ISoloTask
                             }
                             
                             var screen = CaptureToRectArea();
-                            var cx = screen.Width / 2;
-                            var cy = screen.Height / 2;
                             var current = new Rect();
                             
                             var opb = _enemyPredictor.Detect(screen);
                             if (!opb.ContainsKey("item"))
                             {
-                                for (var b = 0; b < 40; b++)
-                                    Simulation.SendInput.Mouse.MoveMouseBy(10, 0);
+                                fightEndFlag = true;
+                                var crt = new CameraRotateTask(cts2.Token);
+                                var angle = CameraOrientation.Compute(screen.SrcMat);
+                                await crt.WaitUntilRotatedTo((int)(angle + 90), 10);
                                 continue;
-                            } 
+                            }
+                            fightEndFlag = false;
+                            startTime = DateTime.UtcNow;
                             var op = opb["item"];
 
                             var minY = int.MaxValue;
@@ -331,18 +336,22 @@ public class AutoFightTask : ISoloTask
                             var input = screen.SrcMat;
                             Cv2.Resize(input, input, new Size(1920, 1080));
                             var depth = DepthAnythingV2Inference.Once(screen.SrcMat);
-                            if (!(current.Height == 0 || current.Width == 0))
+                            if (!(current.Height <= 0 || current.Width <= 0))
                             {
                                 // 防止矩形框超出图片外导致断言失败
                                 if (current.X + current.Width > 1920)
                                     current.Width = 1920-current.X;
                                 if (current.Y + current.Height > 1080)
                                     current.Height = 1080-current.Y;
+                                if (current.Y < 0)
+                                    current.Y = 0;
+                                if (current.X < 0)
+                                    current.X = 0;
                                 var dpt = new Mat(depth, current);
                                 var character = new Mat(depth, NoDropNavigation.PersonReferenceRoi);
-                                dpt.ConvertTo(dpt, MatType.CV_32FC1);
-                                Cv2.MinMaxLoc(character, out double baseValue, out _);
-                                var dptValue = Math.Abs(dpt.Mean().ToDouble() - baseValue);
+                                var dx = current.X + current.Width / 2 - 960; // 1920/2 = 960
+                                var baseValue = Calc.CannyMean(character);
+                                var dptValue = Math.Abs(Calc.CannyMean(dpt) - baseValue) + Math.Abs(dx)*0.01;
                                 Logger.LogInformation("检测到与敌人距离为{Depth}", dptValue);
                                 if (dptValue < 1.0)
                                     break;
@@ -356,6 +365,9 @@ public class AutoFightTask : ISoloTask
                                 Simulation.ReleaseAllKey();
                                 Simulation.SendInput.Mouse.MiddleButtonClick();
                             }
+                            tryTimes++;
+                            if (tryTimes > 3)
+                                break;
                         }
                     }
                     
