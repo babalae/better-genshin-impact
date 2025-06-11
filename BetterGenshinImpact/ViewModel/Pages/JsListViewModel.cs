@@ -12,12 +12,19 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View.Controls.Drawer;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Wpf.Ui;
-using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using Button = Wpf.Ui.Controls.Button;
+using StackPanel = Wpf.Ui.Controls.StackPanel;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -32,6 +39,9 @@ public partial class JsListViewModel : ViewModel
     private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
+    
+    public DrawerViewModel DrawerVm { get; } = new DrawerViewModel();
+
 
     public JsListViewModel(IScriptService scriptService, IConfigService configService)
     {
@@ -122,5 +132,73 @@ public partial class JsListViewModel : ViewModel
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+    }
+    
+    [RelayCommand]
+    private void OpenScriptDetailDrawer(object scriptItem)
+    {
+        if (scriptItem == null) return;
+    
+        // 设置抽屉位置和大小
+        DrawerVm.DrawerPosition = DrawerPosition.Right;
+        DrawerVm.DrawerWidth = 400;
+    
+        // 创建要在抽屉中显示的内容
+        var content = CreateScriptDetailContent(scriptItem);
+    
+        // 打开抽屉
+        DrawerVm.OpenDrawer(content);
+    }
+
+    private object CreateScriptDetailContent(object scriptItem)
+    {
+        // 创建显示脚本详情的控件
+        var border = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
+            Padding = new Thickness(20)
+        };
+        var panel = new StackPanel();
+        border.Child = panel;
+    
+        // 假设scriptItem是你的脚本对象，根据实际类型进行调整
+        if (scriptItem is ScriptProject script)
+        {
+            panel.Children.Add(new TextBlock { 
+                Text = script.Manifest.Name, 
+                FontSize = 20, 
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+        
+            panel.Children.Add(new TextBlock { 
+                Text = $"版本: {script.Manifest.Version}", 
+                Margin = new Thickness(0, 5, 0, 5)
+            });
+        
+            panel.Children.Add(new TextBlock { 
+                Text = script.Manifest.Description, 
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 5, 0, 15)
+            });
+        
+            // 添加操作按钮
+            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal };
+        
+            var runButton = new Button { 
+                Content = "执行脚本", 
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            runButton.Click += async (s, e) =>  await OnStartRun(script);
+            buttonPanel.Children.Add(runButton);
+        
+            var openFolderButton = new Button { Content = "打开目录" };
+            openFolderButton.Click += (s, e) => OnOpenScriptProjectFolder(script);
+            buttonPanel.Children.Add(openFolderButton);
+        
+            panel.Children.Add(buttonPanel);
+        }
+    
+        return border;
     }
 }
