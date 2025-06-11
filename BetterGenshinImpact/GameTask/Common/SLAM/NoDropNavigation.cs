@@ -17,7 +17,7 @@ public class NoDropNavigation
     // 人物参考区域 (用于获取人物脚下的基准深度)
     // 考虑到 PersonReferenceRoi 很大 (655, 349, 613, 514)，
     // 我们需要从其中选取一个更小的、更可靠的地面区域作为基准。
-    public static Rect PersonReferenceRoi { get; set; } = new Rect(655, 349, 610, 514);
+    public static Rect PersonReferenceRoi { get; set; } = new Rect(841, 323, 238, 434);
 
     // 定义一个更精确的地面参考区域，位于人物脚下
     private readonly Rect GroundReferenceRoi = new Rect(

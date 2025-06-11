@@ -70,9 +70,36 @@ public static class Calc
             }
         }
         
-        // 如果 floatList 仍然可能为空 (理论上经过 IsEmpty 检查后不会，但作为防御性编程)
+        // floatList为空 (理论上经过 IsEmpty 检查后不会，但作为防御性编程)
         if (floatList.Count == 0) return float.NaN;
 
-        return GetMedian(floatList); // 调用上面已修正的列表版本
+        return GetMedian(floatList); // 调用上面的列表版本
+    }
+
+    public static Point[][] CannyPointList(Mat depthMat)
+    {
+        depthMat.MinMaxLoc(out _, out double maxValue);
+        using var grayMat = new Mat();
+        depthMat.ConvertTo(grayMat, MatType.CV_8UC1, 255.0 / maxValue, 0);
+        using var canny = grayMat.Canny(128, 200);
+        canny.FindContours(out Point[][] points, out _, RetrievalModes.External, 
+            ContourApproximationModes.ApproxNone);
+        return points;
+    }
+
+    public static float CannyMean(Mat depthMat)
+    {
+        var points = CannyPointList(depthMat);
+        var sum = 0f;
+        var count = 0;
+        foreach (var point in points)
+        {
+            foreach (var point1 in point)
+            {
+                sum += depthMat.At<float>(point1.Y, point1.X);
+                count++;
+            }
+        }
+        return sum / count;
     }
 }
