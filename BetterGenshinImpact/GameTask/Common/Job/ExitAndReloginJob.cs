@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
@@ -15,54 +16,46 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 public class ExitAndReloginJob
 {
-    private AutoWoodAssets _assets;
+    private AutoWoodAssets _assets = AutoWoodAssets.Instance;
     private readonly Login3rdParty _login3rdParty = new();
     
     public async Task Start(CancellationToken ct)
     {
-         //============== 退出游戏流程 ==============
         Logger.LogInformation("退出至登录页面");
-        _assets = AutoWoodAssets.Instance;
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
-        Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(800, ct);
-        
-        // 菜单界面验证（带重试机制）
-        try
-        {
-            NewRetry.Do(() => 
-            {
-                using var contentRegion = CaptureToRectArea();
-                using var ra = contentRegion.Find(_assets.MenuBagRo);
-                if (ra.IsEmpty())
-                {
-                    // 未检测到菜单时再次发送ESC
-                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                    throw new RetryException("菜单界面验证失败");
-                }
-            }, TimeSpan.FromSeconds(1.2), 5);  // 1.2秒内重试5次
-        }
-        catch
-        {
-            // 即使失败也继续退出流程
-        }
 
-        // 点击退出按钮
-        GameCaptureRegion.GameRegionClick((size, scale) => (50 * scale, size.Height - 50 * scale));
-        await Delay(500, ct);
+        // 等待菜单界面出现
+        await NewRetry.WaitForElementAppear(
+            _assets.MenuBagRo,
+            () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
+            ct,
+            5,
+            1200
+        );
 
-        // 确认退出
-        using var cr = CaptureToRectArea();
-        cr.Find(_assets.ConfirmRo, ra =>
-        {
-            ra.Click();
-            ra.Dispose();
-        });
-            
-        await Delay(1000, ct);  // 等待退出完成
-        
+        // 点击退出按钮并等待确认弹窗出现
+        await NewRetry.WaitForElementAppear(
+            _assets.ConfirmRo,
+            () => GameCaptureRegion.GameRegionClick((size, scale) => (50 * scale, size.Height - 50 * scale)),
+            ct,
+            5,
+            800
+        );
+
+        // 点击确认退出并等待确认弹窗消失
+        await NewRetry.WaitForElementDisappear(
+            _assets.ConfirmRo,
+            () => {
+                using var cr = CaptureToRectArea();
+                cr.Find(_assets.ConfirmRo, ra => { ra.Click(); ra.Dispose(); });
+            },
+            ct,
+            5,
+            1000
+        );
+        await Delay(1000, ct);
+
         //============== 重新登录流程 ==============
-        // 第三方登录（如果启用）
         Logger.LogInformation("点击登录");
         _login3rdParty.RefreshAvailabled();
         if (_login3rdParty is { Type: Login3rdParty.The3rdPartyType.Bilibili, IsAvailabled: true })
@@ -72,45 +65,48 @@ public class ExitAndReloginJob
             Logger.LogInformation("退出重登启用 B 服模式");
         }
 
-        // 进入游戏检测
-        var clickCnt = 0;
-        for (var i = 0; i < 50; i++)
+        // 等待进入游戏按钮出现并点击
+        var enterGameAppear = await NewRetry.WaitForElementAppear(
+            _assets.EnterGameRo,
+            () => { },
+            ct,
+            50,
+            1000
+        );
+        if (enterGameAppear)
         {
-            await Delay(1, ct);
-
-            using var contentRegion = CaptureToRectArea();
-            using var ra = contentRegion.Find(_assets.EnterGameRo);
-            if (!ra.IsEmpty())
-            {
-                clickCnt++;
-                GameCaptureRegion.GameRegion1080PPosClick(955, 666);
-            }
-            else
-            {
-                if (clickCnt > 2)
-                {
-                    await Delay(5000, ct);
-                    break;
-                }
-            }
-
-            await Delay(1000, ct);
+            // 点击进入游戏按钮直到它消失
+            await NewRetry.WaitForElementDisappear(
+                _assets.EnterGameRo,
+                () => GameCaptureRegion.GameRegion1080PPosClick(955, 666),
+                ct,
+                10,
+                1000
+            );
         }
-
-        if (clickCnt == 0)
+        else
         {
             throw new RetryException("未检测进入游戏界面");
         }
 
-        for (var i = 0; i < 50; i++)
+        // 等待主界面出现
+        var mainUiFound = await NewRetry.WaitForElementAppear(
+            ElementAssets.Instance.PaimonMenuRo,
+            () => { },
+            ct,
+            50,
+            1000
+        );
+        
+        if (mainUiFound)
         {
-            if (Bv.IsInMainUi(CaptureToRectArea()))
-            {
-                Logger.LogInformation("退出重新登录结束！");
-                break;
-            }
-            await Delay(1000, ct);
+            Logger.LogInformation("退出重新登录结束！");
+        }
+        else
+        {
+            Logger.LogWarning("未检测到主界面，登录可能未完成");
         }
         await Delay(500, ct);
     }
 }
+
