@@ -122,6 +122,14 @@
                                 <ui:SymbolIcon Symbol="Record24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        
+                        <ui:NavigationViewItem Content="调度器2"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:SchedulerPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Script16" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                     </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
 
