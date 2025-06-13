@@ -37,8 +37,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing;
 /// tmd 今天我意识到 XXXX可不就是XXXX
 /// 
 /// 哦 到这一步以后剩下的就很弱智了 远了挪近一点 近了挪远一点 调调参差不多得了
+/// 
+/// *后来又新增了一些访谈内容：
+/// 
+/// 额 总之就是要求不能把不咬钩的识别成咬钩的 但是咬钩的可以识别成不咬钩的
+/// 
+/// 然后就可视化一下onehot在不同距离的结果 加一个offset使得模型输出的结果在保证可以predict距离正好的结果的同时距离范围尽可能小
 /// </summary>
-public class RodNet : Module<Tensor, Tensor>
+public class RodNet : Module<Tensor, Tensor, Tensor, Tensor, Tensor>
 {
     const double alpha = 1734.34 / 2.5;
     // fitted parameters
@@ -75,23 +81,21 @@ public class RodNet : Module<Tensor, Tensor>
 
     static readonly double[] offset = { 0.8, 0.4, 0.35, 0.35, 0.6, 0.3, 0.3, 0.8, 0.8, 0.8, 0.8 };
 
-    private readonly Embedding embedding1;
-    private readonly Embedding embedding2;
-    private readonly Linear linear;
-    private readonly Embedding embeddingDz;
-    private readonly Embedding embeddingHcoeff;
+    private Parameter thetaParameter;
+    private Parameter bParameter;
+    private Parameter dzParameter;
+    private Parameter hCoeffParameter;
 
     public RodNet() : base("RodNet")
     {
         long num_embeddings = RodNet.weight.GetLength(0);
         long embedding_dim = 3;
 
-        embedding1 = torch.nn.Embedding(num_embeddings, embedding_dim, dtype: ScalarType.Float64);
-        embedding2 = torch.nn.Embedding(num_embeddings, embedding_dim, dtype: ScalarType.Float64);
-        linear = torch.nn.Linear(3, 3, dtype: ScalarType.Float64);  //这个线性层的权重和偏置是在计算时取embedding1和embedding2
+        this.thetaParameter = new Parameter(torch.randn(num_embeddings, embedding_dim, dtype: ScalarType.Float64));
+        this.bParameter = new Parameter(torch.randn(num_embeddings, embedding_dim, dtype: ScalarType.Float64));
 
-        embeddingDz = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
-        embeddingHcoeff = torch.nn.Embedding(num_embeddings, 1, dtype: ScalarType.Float64);
+        this.dzParameter = new Parameter(torch.zeros(num_embeddings, 1, dtype: ScalarType.Float64));
+        this.hCoeffParameter = new Parameter(torch.zeros(num_embeddings, 1, dtype: ScalarType.Float64));
 
         RegisterComponents();
     }
@@ -119,27 +123,10 @@ public class RodNet : Module<Tensor, Tensor>
 
     public static double[] ComputeScores(RodInput input)
     {
-        double a, b, v0, u, v, h;
+        var (y0, z0, t, u, v, h) = GetRodStatePreProcess(input);
 
-        a = (input.rod_x2 - input.rod_x1) / 2 / alpha;
-        b = (input.rod_y2 - input.rod_y1) / 2 / alpha;
-        h = (input.fish_y2 - input.fish_y1) / 2 / alpha;
-
-        if (a < b)
-        {
-            b = Math.Sqrt(a * b);
-            a = b + 1e-6;
-        }
-        v0 = (288 - (input.rod_y1 + input.rod_y2) / 2) / alpha;
-        u = (input.fish_x1 + input.fish_x2 - input.rod_x1 - input.rod_x2) / 2 / alpha;
-        v = (288 - (input.fish_y1 + input.fish_y2) / 2) / alpha;
         v -= h * h_coeff[input.fish_label];
-        double y0, z0, t;
         double x, y, dist;
-
-        y0 = Math.Sqrt(Math.Pow(a, 4) - b * b + a * a * (1 - b * b + v0 * v0)) / (a * a);
-        z0 = b / (a * a);
-        t = a * a * (y0 * b + v0) / (a * a - b * b);
 
         x = u * (z0 + dz[input.fish_label]) * Math.Sqrt(1 + t * t) / (t - v);
         y = (z0 + dz[input.fish_label]) * (1 + t * v) / (t - v);
@@ -172,78 +159,59 @@ public class RodNet : Module<Tensor, Tensor>
     public Tensor ComputeScores_Torch(RodInput input)
     {
         using var _ = no_grad();
-        var weight = tensor(RodNet.weight, ScalarType.Float64);
-        var bias = tensor(RodNet.bias, ScalarType.Float64);
-        var dz = tensor(RodNet.dz, ScalarType.Float64).reshape([RodNet.dz.Length, 1]);
-        var h_coeff = tensor(RodNet.h_coeff, ScalarType.Float64).reshape([RodNet.h_coeff.Length, 1]);
-        this.SetWeightsManually(weight, bias, dz, h_coeff);
+        this.SetWeightsManually();
 
-        Tensor inputTensor = input.ToTensor();
-        var logits = forward(inputTensor);
-        var output = PostProcess(logits, inputTensor[torch.arange(inputTensor.shape[0]), 8].to(ScalarType.Int32).flatten());
+        var (y0, z0, t, u, v, h) = GetRodStatePreProcess(input);
+
+        Tensor fishLabel = tensor(new double[] { input.fish_label }, dtype: ScalarType.Int32);
+        Tensor uv = tensor(new double[,] { { u, v } }, dtype: ScalarType.Float64);
+        Tensor y0z0t = tensor(new double[,] { { y0, z0, t } }, dtype: ScalarType.Float64);
+        Tensor h_ = tensor(new double[,] { { h } }, dtype: ScalarType.Float64);
+
+        var logits = forward(fishLabel, uv, y0z0t, h_);
+        var output = PostProcess(logits, fishLabel);
 
         return output;
     }
 
     /// <summary>
-    /// 使用时直接赋值参数
+    /// 使用时直接赋值已知权重
     /// </summary>
-    public void SetWeightsManually(Tensor weight, Tensor bias, Tensor dz, Tensor h_coeff)
+    public void SetWeightsManually()
     {
-        embedding1.weight = new Parameter(weight);
-        embedding2.weight = new Parameter(bias);
-        embeddingDz.weight = new Parameter(dz);
-        embeddingHcoeff.weight = new Parameter(h_coeff);
+        var weightTensor = tensor(RodNet.weight, ScalarType.Float64);
+        var biasTensor = tensor(RodNet.bias, ScalarType.Float64);
+        var dzTensor = tensor(RodNet.dz, ScalarType.Float64).reshape([RodNet.dz.Length, 1]);
+        var h_coeffTensor = tensor(RodNet.h_coeff, ScalarType.Float64).reshape([RodNet.h_coeff.Length, 1]);
+        this.thetaParameter = new Parameter(weightTensor);
+        this.bParameter = new Parameter(biasTensor);
+        this.dzParameter = new Parameter(dzTensor);
+        this.hCoeffParameter = new Parameter(h_coeffTensor);
     }
 
-    public override Tensor forward(Tensor input)
+    public override Tensor forward(Tensor fishLabel, Tensor uv, Tensor y0z0t, Tensor h)
     {
-        var splitInput = input.split([1, 1, 1, 1, 1, 1, 1, 1, 1], dim: 1);
-        var rod_x1 = splitInput[0];
-        var rod_x2 = splitInput[1];
-        var rod_y1 = splitInput[2];
-        var rod_y2 = splitInput[3];
-        var fish_x1 = splitInput[4];
-        var fish_x2 = splitInput[5];
-        var fish_y1 = splitInput[6];
-        var fish_y2 = splitInput[7];
-        var fish_label = splitInput[8].to(ScalarType.Int32).flatten();
+        var uvSplit = uv.split([1, 1], dim: 1);
+        Tensor u = uvSplit[0];
+        Tensor v = uvSplit[1];
 
-        Tensor a, b, v0, u, v, h;
+        var y0z0tSplit = y0z0t.split([1, 1, 1], dim: 1);
+        Tensor y0 = y0z0tSplit[0];
+        Tensor z0 = y0z0tSplit[1];
+        Tensor t = y0z0tSplit[2];
 
-        a = (rod_x2 - rod_x1) / 2 / alpha;
-        b = (rod_y2 - rod_y1) / 2 / alpha;
-        h = (fish_y2 - fish_y1) / 2 / alpha;
+        v = v - h * hCoeffParameter[fishLabel];
 
-        Tensor abComparision = a < b;
-        b = torch.where(abComparision, torch.sqrt(a * b), b);
-        a = torch.where(abComparision, b + 1e-6, a);
-
-        v0 = (288 - (rod_y1 + rod_y2) / 2) / alpha;
-
-        u = (fish_x1 + fish_x2 - rod_x1 - rod_x2) / 2 / alpha;
-        v = (288 - (fish_y1 + fish_y2) / 2) / alpha;
-        v -= h * embeddingHcoeff.forward(fish_label);
-
-        Tensor y0, z0, t;
         Tensor x, y, dist;
 
-        y0 = torch.sqrt(torch.pow(a, 4) - b * b + a * a * (1 - b * b + v0 * v0)) / (a * a);
-        z0 = b / (a * a);
-        t = a * a * (y0 * b + v0) / (a * a - b * b);
-
-        x = u * (z0 + embeddingDz.forward(fish_label)) * torch.sqrt(1 + t * t) / (t - v);
-        y = (z0 + embeddingDz.forward(fish_label)) * (1 + t * v) / (t - v);
+        var dz = dzParameter[fishLabel];
+        x = u * (z0 + dz) * torch.sqrt(1 + t * t) / (t - v);
+        y = (z0 + dz) * (1 + t * v) / (t - v);
         dist = torch.sqrt(x * x + (y - y0) * (y - y0));
 
-        var embed1 = embedding1.forward(fish_label);
-        //Console.WriteLine(String.Join(",", embed1.data<double>()));
-        var embed2 = embedding2.forward(fish_label);
-        //Console.WriteLine(String.Join(",", embed2.data<double>()));
+        Tensor logits = this.thetaParameter[fishLabel] * dist + this.bParameter[fishLabel];
 
-        linear.weight = new Parameter(embed1.T);
-        linear.bias = new Parameter(embed2);
-        return linear.forward(dist);
+        return logits;
     }
 
     public Tensor PostProcess(Tensor logits, Tensor fishLabel)
@@ -254,5 +222,40 @@ public class RodNet : Module<Tensor, Tensor>
 
         x_softmax[torch.arange(x_offset.shape[0]), 0] -= x_offset;
         return x_softmax;
+    }
+
+    /// <summary>
+    /// 根据rod和fish的坐标计算y0z0t、uv、h
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns>y0, z0, t, u, v, h</returns>
+    public static (double, double, double, double, double, double) GetRodStatePreProcess(RodInput input)
+    {
+        /*
+         * 以下为hutaofisher代码中关于部分变量的意义的注释
+            # uv: screen coordinate of bbox center of the fish
+            # abv0: rod shape and center coordinate in screen
+        */
+        double a, b, v0, u, v, h;
+
+        a = (input.rod_x2 - input.rod_x1) / 2 / alpha;
+        b = (input.rod_y2 - input.rod_y1) / 2 / alpha;
+        h = (input.fish_y2 - input.fish_y1) / 2 / alpha;
+
+        if (a < b)
+        {
+            b = Math.Sqrt(a * b);
+            a = b + 1e-6;
+        }
+        v0 = (288 - (input.rod_y1 + input.rod_y2) / 2) / alpha;
+        u = (input.fish_x1 + input.fish_x2 - input.rod_x1 - input.rod_x2) / 2 / alpha;
+        v = (288 - (input.fish_y1 + input.fish_y2) / 2) / alpha;
+        double y0, z0, t;
+
+        y0 = Math.Sqrt(Math.Pow(a, 4) - b * b + a * a * (1 - b * b + v0 * v0)) / (a * a);
+        z0 = b / (a * a);
+        t = a * a * (y0 * b + v0) / (a * a - b * b);
+
+        return (y0, z0, t, u, v, h);
     }
 }
