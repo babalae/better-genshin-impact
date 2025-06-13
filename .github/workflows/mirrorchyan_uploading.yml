@@ -42,6 +42,8 @@ jobs:
           pick_files: '["BetterGI"]'
           version_name: ${{ steps.get-version.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          os: win
+          arch: x64
 
   mirrorchyan_exe:
     runs-on: macos-latest
