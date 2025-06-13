@@ -57,6 +57,4 @@ jobs:
           owner: babalae
           repo: better-genshin-impact
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
-          os: win
-          arch: x64
 
