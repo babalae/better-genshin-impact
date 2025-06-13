@@ -395,6 +395,8 @@ jobs:
           pick_files: '["BetterGI"]'
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
+          os: win
+          arch: x64
 
       - name: Upload Install.exe
         uses: MirrorChyan/uploading-action@v1
@@ -406,5 +408,4 @@ jobs:
           extra_zip: true
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
-          os: win
-          arch: x64
+
