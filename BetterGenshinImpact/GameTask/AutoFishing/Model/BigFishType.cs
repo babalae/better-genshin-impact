@@ -21,15 +21,15 @@ public class BigFishType
 
     // public static readonly BigFishType FormaloRay = new("formalo ray", "fake fly bait", "佛玛洛鳐");
     // public static readonly BigFishType DivdaRay = new("divda ray", "fake fly bait", "迪芙妲鳐");
-    public static readonly BigFishType Angler = new("angler", "sugardew bait", "角鲀", 8);
-    public static readonly BigFishType AxeMarlin = new("axe marlin", "sugardew bait", "斧枪鱼", 9);
-    public static readonly BigFishType HeartfeatherBass = new("heartfeather bass", "sour bait", "心羽鲈", 10);
-    public static readonly BigFishType MaintenanceMek = new("maintenance mek", "flashing maintenance mek bait", "维护机关", 11);
-    public static readonly BigFishType Unihornfish = new("unihornfish", "spinelgrain bait", "独角鱼", 11);
-    public static readonly BigFishType Sunfish = new("sunfish", "spinelgrain bait", "翻车鲀", 8);
-    public static readonly BigFishType Rapidfish = new("rapidfish", "spinelgrain bait", "斗士急流鱼", 10);
-    public static readonly BigFishType PhonyUnihornfish = new("phony unihornfish", "emberglow bait", "燃素独角鱼", 11);
-    public static readonly BigFishType MagmaRapidfish = new("magma rapidfish", "emberglow bait", "炽岩斗士急流鱼", 10);
+    public static readonly BigFishType Angler = new("angler", "sugardew bait", "角鲀", 7);
+    public static readonly BigFishType AxeMarlin = new("axe marlin", "sugardew bait", "斧枪鱼", 8);
+    public static readonly BigFishType HeartfeatherBass = new("heartfeather bass", "sour bait", "心羽鲈", 9);
+    public static readonly BigFishType MaintenanceMek = new("maintenance mek", "flashing maintenance mek bait", "维护机关", 10);
+    public static readonly BigFishType Unihornfish = new("unihornfish", "spinelgrain bait", "独角鱼", 10);
+    public static readonly BigFishType Sunfish = new("sunfish", "spinelgrain bait", "翻车鲀", 7);
+    public static readonly BigFishType Rapidfish = new("rapidfish", "spinelgrain bait", "斗士急流鱼", 9);
+    public static readonly BigFishType PhonyUnihornfish = new("phony unihornfish", "emberglow bait", "燃素独角鱼", 10);
+    public static readonly BigFishType MagmaRapidfish = new("magma rapidfish", "emberglow bait", "炽岩斗士急流鱼", 9);
 
 
     public static IEnumerable<BigFishType> Values
