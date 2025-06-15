@@ -17,6 +17,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.View.Windows;
+using LibGit2Sharp;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
@@ -35,7 +37,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
 
     // 中央仓库信息地址
-    public static readonly List<string> CenterRepoInfoUrls = 
+    public static readonly List<string> CenterRepoInfoUrls =
     [
         "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json",
         "https://r2-script.bettergi.com/github_mirror/repo.json",
@@ -66,7 +68,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         // 判断更新周期是否到达
-        if (DateTime.Now - scriptConfig.LastUpdateScriptRepoTime >= TimeSpan.FromDays(scriptConfig.AutoUpdateScriptRepoPeriod))
+        if (DateTime.Now - scriptConfig.LastUpdateScriptRepoTime >=
+            TimeSpan.FromDays(scriptConfig.AutoUpdateScriptRepoPeriod))
         {
             // 更新仓库
             Task.Run(async () =>
@@ -152,7 +155,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public string FindCenterRepoPath()
     {
-        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
+            .FirstOrDefault();
         if (localRepoJsonPath is null)
         {
             throw new Exception("本地仓库缺少 repo.json");
@@ -197,7 +201,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         // 获取文件名
         var contentDisposition = res.Content.Headers.ContentDisposition;
-        var fileName = contentDisposition is { FileName: not null } ? contentDisposition.FileName.Trim('"') : "temp.zip";
+        var fileName = contentDisposition is { FileName: not null }
+            ? contentDisposition.FileName.Trim('"')
+            : "temp.zip";
 
         // 创建临时目录
         if (!Directory.Exists(ReposTempPath))
@@ -250,7 +256,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var uiMessageBox = new Wpf.Ui.Controls.MessageBox
                 {
                     Title = "脚本订阅",
-                    Content = $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
+                    Content =
+                        $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
                     CloseButtonText = "关闭",
                     PrimaryButtonText = "确认导入",
                     Owner = Application.Current.MainWindow,
@@ -474,10 +481,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         // 使用路径分隔符分割路径
-        string[] parts = path.Split(new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = path.Split(new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
 
         // 返回第一个文件夹和剩余路径
-        return parts.Length > 0 ? (parts[0], string.Join(Path.DirectorySeparatorChar, parts.Skip(1))) : (string.Empty, string.Empty);
+        return parts.Length > 0
+            ? (parts[0], string.Join(Path.DirectorySeparatorChar, parts.Skip(1)))
+            : (string.Empty, string.Empty);
     }
 
     public void OpenLocalRepoInWebView()
@@ -493,13 +503,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _webWindow.Closed += (s, e) => _webWindow = null;
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
             _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
-            _webWindow.Panel!.OnWebViewInitializedAction = () => _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+            _webWindow.Panel!.OnWebViewInitializedAction = () =>
+                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
             _webWindow.Show();
         }
         else
         {
             _webWindow.Activate();
         }
+    }
+
+    public void OpenScriptRepoWindow()
+    {
+        var scriptRepoWindow = new ScriptRepoWindow {  Owner = Application.Current.MainWindow };
+        scriptRepoWindow.ShowDialog();
     }
 
     /// <summary>

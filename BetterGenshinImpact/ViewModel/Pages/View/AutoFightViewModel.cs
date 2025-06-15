@@ -79,7 +79,7 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
     public void OnOpenLocalScriptRepo()
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
-        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+        ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
     }
 
     [RelayCommand]

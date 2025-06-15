@@ -131,7 +131,7 @@ public partial class JsListViewModel : ViewModel
     public void OnOpenLocalScriptRepo()
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
-        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+        ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
     }
     
     [RelayCommand]

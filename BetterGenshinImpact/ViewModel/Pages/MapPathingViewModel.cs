@@ -179,6 +179,6 @@ public partial class MapPathingViewModel : ViewModel
     public void OnOpenLocalScriptRepo()
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
-        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+        ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
     }
 }
