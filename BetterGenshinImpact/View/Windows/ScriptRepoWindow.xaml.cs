@@ -1,10 +1,13 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -51,12 +54,33 @@ public partial class ScriptRepoWindow
     }
 
     [RelayCommand]
-    private void UpdateRepo()
+    private async Task UpdateRepo()
     {
-        // 使用选定渠道的URL进行更新
-        string repoUrl = SelectedRepoChannel.Url;
-        // 在这里添加使用repoUrl更新仓库的逻辑
-        // 例如: ScriptRepoUpdater.Instance.Update(repoUrl);
+        try
+        {
+            // 使用选定渠道的URL进行更新
+            string repoUrl = SelectedRepoChannel.Url;
+
+            // 显示更新中提示
+            Toast.Information("正在更新脚本仓库...");
+
+            // 执行更新
+            var (repoPath, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl);
+
+            // 更新结果提示
+            if (updated)
+            {
+                Toast.Success("脚本仓库更新成功，有新内容");
+            }
+            else
+            {
+                Toast.Success("脚本仓库已是最新");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"更新失败: {ex.Message}");
+        }
     }
 
     [RelayCommand]
