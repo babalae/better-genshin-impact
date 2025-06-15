@@ -46,31 +46,33 @@ internal class AutoFightHandler : IActionHandler
         //根据怪物标签，调整拾取配置
         if (waypointForTrack!=null)
         {
-           // normal 小怪,elite 精英,legendary 传奇
-           //不为精英或者小怪
-           if (!(waypointForTrack.MonsterTag == "elite" || waypointForTrack.MonsterTag == "legendary"))
-           {
-               
-               if (taskParams.OnlyPickEliteDropsMode == "AllowAutoPickupForNonElite" || taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
-               {
-                   //允许自动拾取，即只关闭配置上的拾取即刻
-                   taskParams.KazuhaPickupEnabled = false;
-                   taskParams.PickDropsAfterFightEnabled = false;
-                   _logger.LogInformation("当前非精英或传奇点位，关闭战斗拾取配置！");
-                   //禁止自动拾取，除了关闭配置拾取外，连自动拾取都关掉
-                   if (taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
-                   {
-                       await RunnerContext.Instance.StopAutoPickRunTask(
-                           async () => await new AutoFightTask(taskParams).Start(ct),
-                           5);
-                       return;
-                   }
-               }
+            taskParams.WaypointForTrack = waypointForTrack; // 传入参考点
 
-           }
-            
+            // normal 小怪,elite 精英,legendary 传奇
+            //不为精英或者小怪
+            if (!(waypointForTrack.MonsterTag == "elite" || waypointForTrack.MonsterTag == "legendary"))
+            {
+
+                if (taskParams.OnlyPickEliteDropsMode == "AllowAutoPickupForNonElite" || taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
+                {
+                    //允许自动拾取，即只关闭配置上的拾取即刻
+                    taskParams.KazuhaPickupEnabled = false;
+                    taskParams.PickDropsAfterFightEnabled = false;
+                    _logger.LogInformation("当前非精英或传奇点位，关闭战斗拾取配置！");
+                    //禁止自动拾取，除了关闭配置拾取外，连自动拾取都关掉
+                    if (taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
+                    {
+                        await RunnerContext.Instance.StopAutoPickRunTask(
+                            async () => await new AutoFightTask(taskParams).Start(ct),
+                            5);
+                        return;
+                    }
+                }
+
+            }
+
         }
-        
+
         var fightSoloTask = new AutoFightTask(taskParams);
         await fightSoloTask.Start(ct);
     }

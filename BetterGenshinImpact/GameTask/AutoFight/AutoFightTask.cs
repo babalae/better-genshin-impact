@@ -20,6 +20,8 @@ using BetterGenshinImpact.Helpers;
 using Vanara;
 using Vanara.PInvoke;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.AutoPathing;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -247,14 +249,14 @@ public class AutoFightTask : ISoloTask
 
         //统计切换人打架次数
         var countFight = 0;
-        
+
         // 可以跳过的角色名,配置中有的和命令中有的取交
         var canBeSkippedAvatarNames = combatScenes.UpdateActionSchedulerByCd(_taskParam.ActionSchedulerByCd)
             .Where(s => commandAvatarNames.Contains(s)).WhereNotNull().ToList();
-        
+
         //所有角色是否都可被跳过
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
-        
+
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -349,6 +351,8 @@ public class AutoFightTask : ISoloTask
                             break;
                         }
 
+
+                        SwimEscape();
                         // 通用化战斗策略
                         command.Execute(combatScenes);
                         //统计战斗人次
@@ -453,13 +457,13 @@ public class AutoFightTask : ISoloTask
         {
             return;
         }
-        
-        
+
+
         if (_taskParam.KazuhaPickupEnabled)
         {
             // 队伍中存在万叶的时候使用一次长E
             var kazuha = combatScenes.SelectAvatar("枫原万叶");
-            
+
             var oldPartyName = RunnerContext.Instance.PartyName;
             var switchPartyFlag = false;
             if (kazuha == null && !timeOutFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
@@ -484,8 +488,8 @@ public class AutoFightTask : ISoloTask
                 }
 
             }
-          
-            
+
+
             if (kazuha != null)
             {
                 var time = DateTime.UtcNow - kazuha.LastSkillTime;
@@ -522,16 +526,16 @@ public class AutoFightTask : ISoloTask
                         RunnerContext.Instance.PartyName = oldPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
                         await RunnerContext.Instance.GetCombatScenes(ct);
-    
+
                     }
                 }
                 catch (Exception e)
                 {
                     Logger.LogInformation("恢复原队伍失败，跳过此步骤！");
                 }
-                    
+
             }
-            
+
 
         }
 
@@ -711,4 +715,20 @@ public class AutoFightTask : ISoloTask
     //     // 要大于 gadgetMat 的 1/2
     //     return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
     // }
+
+    public async void SwimEscape()
+    {
+        if (_taskParam.WaypointForTrack == null)
+        {
+            return;
+        }
+
+        var screen = CaptureToRectArea();
+        var montionStatus = Bv.GetMotionStatus(screen);
+        if (montionStatus == MotionStatus.Swim)
+        {
+            Logger.LogInformation("检测到游泳状态，尝试回到上一个关键点");
+            await new TrapEscaper(_ct).MoveTo(_taskParam.WaypointForTrack);
+        }
+    }
 }
