@@ -355,13 +355,13 @@ public class AutoFightTask : ISoloTask
                         }
 
 
-                        SwimEscape();
                         // 通用化战斗策略
                         command.Execute(combatScenes);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
                         {
                             countFight++;
+                            await SwimEscape(); // 只在切人前检查
                         }
 
                         lastFightName = command.Name;
@@ -719,7 +719,7 @@ public class AutoFightTask : ISoloTask
     //     return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
     // }
 
-    public async void SwimEscape()
+    public async Task SwimEscape()
     {
         if (_taskParam.WaypointForTrack == null)
         {
