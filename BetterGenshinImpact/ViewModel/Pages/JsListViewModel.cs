@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -17,8 +18,10 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Controls.Drawer;
+using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Web.WebView2.Wpf;
 using Wpf.Ui;
 using Wpf.Ui.Violeta.Controls;
 using Button = Wpf.Ui.Controls.Button;
@@ -33,15 +36,17 @@ public partial class JsListViewModel : ViewModel
     private readonly ILogger<JsListViewModel> _logger = App.GetLogger<JsListViewModel>();
     private readonly string scriptPath = Global.ScriptPath();
 
-    [ObservableProperty]
-    private ObservableCollection<ScriptProject> _scriptItems = [];
+    [ObservableProperty] private ObservableCollection<ScriptProject> _scriptItems = [];
 
     private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
-    
+
     public DrawerViewModel DrawerVm { get; } = new DrawerViewModel();
 
+    private WebView2? _webView2;
+
+    private WebpagePanel? _mdWebpagePanel;
 
     public JsListViewModel(IScriptService scriptService, IConfigService configService)
     {
@@ -124,7 +129,8 @@ public partial class JsListViewModel : ViewModel
     [RelayCommand]
     public void OnGoToJsScriptUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/jsscript.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/jsscript.html")
+            { UseShellExecute = true });
     }
 
     [RelayCommand]
@@ -133,24 +139,50 @@ public partial class JsListViewModel : ViewModel
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
     }
-    
+
     [RelayCommand]
-    private void OpenScriptDetailDrawer(object scriptItem)
+    private void OpenScriptDetailDrawer(object? scriptItem)
     {
-        if (scriptItem == null) return;
-    
-        // 设置抽屉位置和大小
-        DrawerVm.DrawerPosition = DrawerPosition.Right;
-        DrawerVm.DrawerWidth = 400;
-    
-        // 创建要在抽屉中显示的内容
-        var content = CreateScriptDetailContent(scriptItem);
-    
-        // 打开抽屉
-        DrawerVm.OpenDrawer(content);
+        if (scriptItem == null)
+        {
+            return;
+        }
+
+        if (scriptItem is ScriptProject scriptProject)
+        {
+            // 检查是否存在README.md或其他md文件
+            var mdFilePath = FindMdFilePath(scriptProject);
+            
+            // 设置抽屉位置和大小
+            DrawerVm.DrawerPosition = DrawerPosition.Right;
+
+            if (!string.IsNullOrEmpty(mdFilePath))
+            {
+                DrawerVm.DrawerWidth = 700;
+                // 注册抽屉关闭前事件
+                DrawerVm.SetDrawerClosingAction(args =>
+                {
+                    if (_mdWebpagePanel != null)
+                    {
+                        _mdWebpagePanel.Visibility = Visibility.Hidden;
+                    }
+                });
+            }
+            else
+            {
+                DrawerVm.DrawerWidth = 400;
+            }
+
+
+            // 创建要在抽屉中显示的内容
+            var content = CreateScriptDetailContent(scriptProject, mdFilePath);
+
+            // 打开抽屉
+            DrawerVm.OpenDrawer(content);
+        }
     }
 
-    private object CreateScriptDetailContent(object scriptItem)
+    private object CreateScriptDetailContent(ScriptProject scriptProject, string? mdFilePath)
     {
         // 创建显示脚本详情的控件
         var border = new Border
@@ -160,45 +192,90 @@ public partial class JsListViewModel : ViewModel
         };
         var panel = new StackPanel();
         border.Child = panel;
-    
+
         // 假设scriptItem是你的脚本对象，根据实际类型进行调整
-        if (scriptItem is ScriptProject script)
+        panel.Children.Add(new TextBlock
         {
-            panel.Children.Add(new TextBlock { 
-                Text = script.Manifest.Name, 
-                FontSize = 20, 
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 10)
-            });
+            Text = scriptProject.Manifest.Name,
+            FontSize = 20,
+            FontWeight = FontWeights.Bold,
+            Margin = new Thickness(0, 0, 0, 10)
+        });
         
-            panel.Children.Add(new TextBlock { 
-                Text = $"版本: {script.Manifest.Version}", 
+
+        // 如果找到md文件，使用WebpagePanel显示
+        if (!string.IsNullOrEmpty(mdFilePath))
+        {
+            // _webView2 ??= new WebView2();
+            _mdWebpagePanel = new WebpagePanel()
+            {
+                Height = 480,
+                Margin = new Thickness(0, 0, 0, 15),
+                // Visibility = Visibility.Hidden
+            };
+
+            _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
+            _mdWebpagePanel.OnWebViewInitializedAction = () =>
+            {
+                _mdWebpagePanel.Focus();
+                _mdWebpagePanel.WebView.Focus();
+                _mdWebpagePanel.Visibility = Visibility.Visible;
+            };
+
+            panel.Children.Add(_mdWebpagePanel);
+        }
+        else
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"版本: {scriptProject.Manifest.Version}",
                 Margin = new Thickness(0, 5, 0, 5)
             });
-        
-            panel.Children.Add(new TextBlock { 
-                Text = script.Manifest.Description, 
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = scriptProject.Manifest.Description,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 5, 0, 15)
             });
-        
-            // 添加操作按钮
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal };
-        
-            var runButton = new Button { 
-                Content = "执行脚本", 
-                Margin = new Thickness(0, 0, 10, 0)
-            };
-            runButton.Click += async (s, e) =>  await OnStartRun(script);
-            buttonPanel.Children.Add(runButton);
-        
-            var openFolderButton = new Button { Content = "打开目录" };
-            openFolderButton.Click += (s, e) => OnOpenScriptProjectFolder(script);
-            buttonPanel.Children.Add(openFolderButton);
-        
-            panel.Children.Add(buttonPanel);
         }
-    
+
+        // 添加操作按钮
+        // var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal };
+        //
+        // var runButton = new Button
+        // {
+        //     Content = "执行脚本",
+        //     Margin = new Thickness(0, 0, 10, 0)
+        // };
+        // runButton.Click += async (s, e) => await OnStartRun(script);
+        // buttonPanel.Children.Add(runButton);
+        //
+        // var openFolderButton = new Button { Content = "打开目录" };
+        // openFolderButton.Click += (s, e) => OnOpenScriptProjectFolder(script);
+        // buttonPanel.Children.Add(openFolderButton);
+
+        // panel.Children.Add(buttonPanel);
+
+
         return border;
+    }
+
+    private static string? FindMdFilePath(ScriptProject script)
+    {
+        string[] possibleMdFiles = { "README.md", "readme.md" };
+        string mdFilePath = null;
+
+        foreach (var mdFile in possibleMdFiles)
+        {
+            string fullPath = Path.Combine(script.ProjectPath, mdFile);
+            if (File.Exists(fullPath))
+            {
+                mdFilePath = fullPath;
+                break;
+            }
+        }
+
+        return mdFilePath;
     }
 }

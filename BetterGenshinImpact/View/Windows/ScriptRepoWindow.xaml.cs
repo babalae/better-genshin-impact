@@ -90,6 +90,7 @@ public partial class ScriptRepoWindow
     {
         TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+        Close();
     }
 
     [RelayCommand]

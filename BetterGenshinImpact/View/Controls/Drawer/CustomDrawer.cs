@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.ComponentModel;
 
 namespace BetterGenshinImpact.View.Controls.Drawer;
 
@@ -37,6 +38,43 @@ public class CustomDrawer : ContentControl
     public static readonly DependencyProperty DrawerBackgroundProperty =
         DependencyProperty.Register(nameof(DrawerBackground), typeof(Brush), typeof(CustomDrawer),
             new PropertyMetadata(Brushes.Black));
+
+    #endregion
+
+    #region 事件
+
+    /// <summary>
+    /// 抽屉打开后触发的事件
+    /// </summary>
+    public event EventHandler Opened;
+
+    /// <summary>
+    /// 抽屉关闭前触发的事件，可以取消关闭操作
+    /// </summary>
+    public event CancelEventHandler Closing;
+
+    /// <summary>
+    /// 引发 Opened 事件
+    /// </summary>
+    protected virtual void OnOpened()
+    {
+        Opened?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 引发 Closing 事件
+    /// </summary>
+    /// <returns>如果取消关闭，则返回 true；否则返回 false</returns>
+    protected virtual bool OnClosing()
+    {
+        if (Closing != null)
+        {
+            CancelEventArgs args = new CancelEventArgs();
+            Closing(this, args);
+            return args.Cancel;
+        }
+        return false;
+    }
 
     #endregion
 
@@ -125,14 +163,39 @@ public class CustomDrawer : ContentControl
 
     private void BackgroundOverlay_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        IsOpen = false;
+        CloseDrawer();
     }
 
     private static void OnIsOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is CustomDrawer drawer)
         {
+            bool newValue = (bool)e.NewValue;
+            bool oldValue = (bool)e.OldValue;
+
+            // 如果是从打开到关闭状态，需要触发关闭前事件
+            if (oldValue && !newValue)
+            {
+                bool cancel = drawer.OnClosing();
+                if (cancel)
+                {
+                    // 如果取消关闭，则恢复 IsOpen 为 true
+                    drawer.IsOpen = true;
+                    return;
+                }
+            }
+
             drawer.UpdateOpenState(true);
+
+            // // 如果是从关闭到打开状态，在动画完成后触发打开后事件
+            // if (newValue && !oldValue)
+            // {
+            //     // 使用动画持续时间来确定何时触发 Opened 事件
+            //     drawer.Dispatcher.BeginInvoke(new Action(() =>
+            //     {
+            //         drawer.OnOpened();
+            //     }), System.Windows.Threading.DispatcherPriority.ApplicationIdle, drawer.AnimationDuration);
+            // }
         }
     }
 
@@ -300,6 +363,22 @@ public class CustomDrawer : ContentControl
 
             Visibility = IsOpen ? Visibility.Visible : Visibility.Collapsed;
         }
+    }
+
+    /// <summary>
+    /// 关闭抽屉的方法，会触发 Closing 事件并可能被取消
+    /// </summary>
+    /// <returns>如果成功关闭返回 true，如果被取消返回 false</returns>
+    public bool CloseDrawer()
+    {
+        if (!IsOpen)
+            return true;
+
+        if (OnClosing())
+            return false;
+
+        IsOpen = false;
+        return true;
     }
 }
 

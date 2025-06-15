@@ -160,6 +160,13 @@
             OpenHeight="{Binding DrawerVm.DrawerHeight}"
             DrawerBackground="{DynamicResource ControlFillColorDefaultBrush}"
             Content="{Binding DrawerVm.DrawerContent}"
-            Panel.ZIndex="100"/>
+            Panel.ZIndex="100">
+            <b:Interaction.Triggers>
+                <b:EventTrigger EventName="Closing">
+                    <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerClosingCommand}"
+                                           PassEventArgsToCommand="True"/>
+                </b:EventTrigger>
+            </b:Interaction.Triggers>
+        </drawer:CustomDrawer>
     </Grid>
 </UserControl>

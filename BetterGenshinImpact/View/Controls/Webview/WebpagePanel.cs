@@ -4,11 +4,13 @@ using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Security.AccessControl;
 using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
 
@@ -46,6 +48,26 @@ public class WebpagePanel : UserControl
             _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
             _webView.NavigationStarting += NavigationStarting_CancelNavigation;
             Content = _webView;
+        }
+    }
+    
+    public WebpagePanel(WebView2 webView2)
+    {
+        if (!IsWebView2Available())
+        {
+            Content = CreateDownloadButton();
+        }
+        else
+        {
+            EnsureWebView2DataFolder();
+            _webView = webView2;
+            webView2.CreationProperties = new CoreWebView2CreationProperties
+            {
+                UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
+            };
+            webView2.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
+            webView2.NavigationStarting += NavigationStarting_CancelNavigation;
+            Content = webView2;
         }
     }
 
@@ -141,6 +163,15 @@ public class WebpagePanel : UserControl
                     _webView?.NavigateToString(htmlContentOrUrl);
                 }
             }));
+    }
+
+    public void NavigateToMd(string md, string backgroundColor = "#2b2b2b")
+    {
+        md = WebUtility.HtmlEncode(md);
+        string md2Html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html",
+            Encoding.UTF8);
+        var html = md2Html.Replace("{{content}}", md).Replace("#202020", backgroundColor);
+        NavigateToHtml(html);
     }
 
     private void NavigationStarting_CancelNavigation(object? sender, CoreWebView2NavigationStartingEventArgs e)
