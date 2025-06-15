@@ -7,10 +7,10 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
                  xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
-                 x:Name="app"
                  Title="脚本仓库"
-                 Width="400"
-                 MinHeight="10"
+                 Width = "350"
+                 MinWidth="350"
+                 MinHeight="50"
                  SizeToContent="Height"
                  Background="#202020"
                  ExtendsContentIntoTitleBar="True"
@@ -49,19 +49,25 @@
                             SelectedItem="{Binding SelectedRepoChannel}"
                             VerticalAlignment="Center"/>
                         
-                        <ui:Button
-                            Appearance="Primary"
-                            Icon="{ui:SymbolIcon CloudSync24}"
-                            Content="更新仓库"
-                            Margin="16,0,0,0"
-                            Command="{Binding UpdateRepoCommand}" />
+  
                     </StackPanel>
                     
                     <!-- 第二行：脚本仓库 -->
                     <StackPanel Grid.Row="1" 
                                 Orientation="Horizontal" >
                         <ui:Button
+                            Icon="{ui:SymbolIcon CloudSync24}"
+                            Content="更新仓库"
+                            Margin="0,0,8,0"
+                            Command="{Binding UpdateRepoCommand}" />
+                        <ui:Button
+                            Icon="{ui:SymbolIcon ArrowReset24}"
+                            Content="重置仓库"
+                            Margin="0,0,8,0"
+                            Command="{Binding ResetRepoCommand}" />
+                        <ui:Button
                             Icon="{ui:SymbolIcon BookStar24}"
+                            Appearance="Primary"
                             Content="打开仓库"
                             Command="{Binding OpenLocalScriptRepoCommand}" />
                     </StackPanel>
@@ -69,7 +75,7 @@
             </Border>
         </ui:Grid>
 
-        <ui:TitleBar Title="{Binding Title, ElementName=app}"
+        <ui:TitleBar Title="{Binding Title}"
                      ShowMaximize="False"
                      ShowMinimize="False">
             <ui:TitleBar.Icon>

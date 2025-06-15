@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -7,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -88,5 +90,36 @@ public partial class ScriptRepoWindow
     {
         TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+    }
+
+    [RelayCommand]
+    private async Task ResetRepo()
+    {
+        // 添加确认对话框
+        var result = await MessageBox.ShowAsync(
+            "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
+            "确认重置",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+            
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+                {
+                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
+                    Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
+                }
+                else
+                {
+                    Toast.Information("脚本仓库不存在，无需重置");
+                }
+            }
+            catch (Exception ex)
+            {
+                Toast.Error($"重置失败: {ex.Message}");
+            }
+        }
     }
 }
