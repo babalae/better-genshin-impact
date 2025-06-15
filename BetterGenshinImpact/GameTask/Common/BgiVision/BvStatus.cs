@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// </summary>
 public static partial class Bv
 {
- 
+
     public static string WhichGameUi()
     {
         throw new NotImplementedException();
@@ -132,6 +132,11 @@ public static partial class Bv
     {
         var spaceExist = captureRa.Find(ElementAssets.Instance.SpaceKey).IsExist();
         var xExist = captureRa.Find(ElementAssets.Instance.XKey).IsExist();
+        var swimExist = captureRa.Find(ElementAssets.Instance.BtnSwim).IsExist();
+        if (swimExist)
+        {
+            return MotionStatus.Swim; // 游泳状态
+        }
         if (spaceExist)
         {
             return xExist ? MotionStatus.Climb : MotionStatus.Fly;
@@ -241,4 +246,5 @@ public enum MotionStatus
     Normal, // 正常
     Fly, // 飞行
     Climb, // 攀爬
+    Swim, // 游泳
 }
