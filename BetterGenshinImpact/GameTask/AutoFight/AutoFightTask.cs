@@ -42,6 +42,8 @@ public class AutoFightTask : ISoloTask
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
 
+    private readonly TrapEscaper _trapEscaper;
+
 
     private class TaskFightFinishDetectConfig
     {
@@ -184,6 +186,7 @@ public class AutoFightTask : ISoloTask
     public AutoFightTask(AutoFightParam taskParam)
     {
         _taskParam = taskParam;
+        _trapEscaper = new TrapEscaper(_ct);
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
 
         if (_taskParam.FightFinishDetectEnabled)
@@ -728,7 +731,7 @@ public class AutoFightTask : ISoloTask
         if (montionStatus == MotionStatus.Swim)
         {
             Logger.LogInformation("检测到游泳状态，尝试回到上一个关键点");
-            await new TrapEscaper(_ct).MoveTo(_taskParam.WaypointForTrack);
+            await _trapEscaper.MoveTo(_taskParam.WaypointForTrack);
         }
     }
 }
