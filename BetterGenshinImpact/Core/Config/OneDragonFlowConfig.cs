@@ -14,8 +14,8 @@ public partial class OneDragonFlowConfig : ObservableObject
     /// <summary>
     /// 所有任务的开关状态
     /// </summary>
-    public Dictionary<string, bool> TaskEnabledList { get; set; } = new();
-   
+    public Dictionary<int,(bool,string)> TaskEnabledList { get; set; } = new();
+    
     // 合成树脂的国家
     [ObservableProperty]
     private string _craftingBenchCountry = "枫丹";
