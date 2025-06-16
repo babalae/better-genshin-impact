@@ -242,13 +242,20 @@ public partial class JsListViewModel : ViewModel
         // 如果找到md文件，使用WebpagePanel显示
         if (!string.IsNullOrEmpty(mdFilePath))
         {
-            // _webView2 ??= new WebView2();
+            // 使用Grid作为容器来实现填充效果
+            var grid = new Grid
+            {
+                Margin = new Thickness(0, 0, 0, 15)
+            };
+            
             _mdWebpagePanel = new WebpagePanel
             {
-                Height = 480,
-                Margin = new Thickness(0, 0, 0, 15),
-                Visibility = Visibility.Hidden
+                Margin = new Thickness(0),
+                Visibility = Visibility.Hidden,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch
             };
+            
             _navigationCompletionSource = new TaskCompletionSource<bool>();
             _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
             {
@@ -256,7 +263,30 @@ public partial class JsListViewModel : ViewModel
                 _navigationCompletionSource.TrySetResult(true);
             };
             _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
-            panel.Children.Add(_mdWebpagePanel);
+            
+            grid.Children.Add(_mdWebpagePanel);
+            panel.Children.Add(grid);
+            
+            // 设置Grid高度以占满剩余空间
+            panel.SizeChanged += (sender, args) =>
+            {
+                // 计算其他元素使用的高度
+                double otherElementsHeight = 0;
+                foreach (var child in panel.Children)
+                {
+                    if (child != grid)
+                    {
+                        var frameworkElement = child as FrameworkElement;
+                        if (frameworkElement != null)
+                        {
+                            otherElementsHeight += frameworkElement.ActualHeight + frameworkElement.Margin.Top + frameworkElement.Margin.Bottom;
+                        }
+                    }
+                }
+                
+                // 设置Grid高度为剩余空间
+                grid.Height = Math.Max(400, panel.ActualHeight - otherElementsHeight - 15); // 设置最小高度为400
+            };
         }
         else
         {
