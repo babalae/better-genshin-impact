@@ -53,9 +53,9 @@ public class SwitchPartyTask
 
                 // 考虑加载时间 2s，共检查 2.5s，如果失败则抛出异常
                 
-                for (int i = 0; i < 3; i++) // 检查 3 次
+                for (int i = 0; i < 10; i++) // 检查 3 次
                 {
-                    await Delay(850, ct);
+                    await Delay(600, ct);
                     using var raCheck = CaptureToRectArea();
                     if (Bv.IsInPartyViewUi(raCheck))
                     {
@@ -67,11 +67,6 @@ public class SwitchPartyTask
                 if (isOpened)
                 {
                     break; // 页面已打开，跳出循环
-                }
-
-                if (attempt < maxAttempts)
-                {
-                    Logger.LogWarning("尝试打开队伍配置页面失败，正在重试...");
                 }
             }
 

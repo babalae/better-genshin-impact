@@ -17,6 +17,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.View.Windows;
+using LibGit2Sharp;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
@@ -34,15 +36,15 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     // 仓储临时目录 用于下载与解压
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
 
-    // 中央仓库信息地址
-    public static readonly List<string> CenterRepoInfoUrls = 
-    [
-        "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json",
-        "https://r2-script.bettergi.com/github_mirror/repo.json",
-    ];
+    // // 中央仓库信息地址
+    // public static readonly List<string> CenterRepoInfoUrls =
+    // [
+    //     "https://raw.githubusercontent.com/babalae/bettergi-scripts-list/refs/heads/main/repo.json",
+    //     "https://r2-script.bettergi.com/github_mirror/repo.json",
+    // ];
 
     // 中央仓库解压后文件夹名
-    public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-main";
+    public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-git";
 
     public static readonly string CenterRepoPath = Path.Combine(ReposPath, CenterRepoUnzipName);
 
@@ -56,103 +58,211 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private WebpageWindow? _webWindow;
 
-    public void AutoUpdate()
+    // [Obsolete]
+    // public void AutoUpdate()
+    // {
+    //     var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+    //
+    //     if (!Directory.Exists(ReposPath))
+    //     {
+    //         Directory.CreateDirectory(ReposPath);
+    //     }
+    //
+    //     // 判断更新周期是否到达
+    //     if (DateTime.Now - scriptConfig.LastUpdateScriptRepoTime >=
+    //         TimeSpan.FromDays(scriptConfig.AutoUpdateScriptRepoPeriod))
+    //     {
+    //         // 更新仓库
+    //         Task.Run(async () =>
+    //         {
+    //             try
+    //             {
+    //                 var (repoPath, updated) = await UpdateCenterRepo();
+    //                 Debug.WriteLine($"脚本仓库更新完成，路径：{repoPath}");
+    //                 scriptConfig.LastUpdateScriptRepoTime = DateTime.Now;
+    //                 if (updated)
+    //                 {
+    //                     scriptConfig.ScriptRepoHintDotVisible = true;
+    //                 }
+    //             }
+    //             catch (Exception e)
+    //             {
+    //                 _logger.LogDebug(e, $"脚本仓库更新失败：{e.Message}");
+    //             }
+    //         });
+    //     }
+    // }
+
+
+    public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl)
     {
-        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-
-        if (!Directory.Exists(ReposPath))
+        if (string.IsNullOrEmpty(repoUrl))
         {
-            Directory.CreateDirectory(ReposPath);
+            throw new ArgumentException("仓库URL不能为空", nameof(repoUrl));
         }
 
-        // 判断更新周期是否到达
-        if (DateTime.Now - scriptConfig.LastUpdateScriptRepoTime >= TimeSpan.FromDays(scriptConfig.AutoUpdateScriptRepoPeriod))
-        {
-            // 更新仓库
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var (repoPath, updated) = await UpdateCenterRepo();
-                    Debug.WriteLine($"脚本仓库更新完成，路径：{repoPath}");
-                    scriptConfig.LastUpdateScriptRepoTime = DateTime.Now;
-                    if (updated)
-                    {
-                        scriptConfig.ScriptRepoHintDotVisible = true;
-                    }
-                }
-                catch (Exception e)
-                {
-                    _logger.LogDebug(e, $"脚本仓库更新失败：{e.Message}");
-                }
-            });
-        }
-    }
-
-    public async Task<(string, bool)> UpdateCenterRepo()
-    {
-        // 测速并获取信息
-        var (fastUrl, jsonString) = await ProxySpeedTester.GetFastestUrlAsync(CenterRepoInfoUrls);
-        if (string.IsNullOrEmpty(jsonString))
-        {
-            throw new Exception("从互联网下载最新的仓库信息失败");
-        }
-
-        var (time, url, file) = ParseJson(jsonString);
-
+        var repoPath = Path.Combine(ReposPath, "bettergi-scripts-list-git");
         var updated = false;
 
-        // 检查仓库是否存在，不存在则下载
-        var needDownload = false;
-        if (Directory.Exists(CenterRepoPath))
+        await Task.Run(() =>
         {
-            var p = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-            if (p is null)
+            try
             {
-                needDownload = true;
+                if (!Directory.Exists(repoPath))
+                {
+                    // 如果仓库不存在，执行浅克隆操作
+                    _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
+
+                    // 使用浅克隆选项
+                    var options = new CloneOptions
+                    {
+                        Checkout = true,
+                        IsBare = false,
+                        RecurseSubmodules = false, // 不递归克隆子模块
+                    };
+                    options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+                    // 克隆仓库
+                    Repository.Clone(repoUrl, repoPath, options);
+                    updated = true;
+                }
+                else
+                {
+                    // 仓库已经存在，执行拉取更新
+                    using var repo = new Repository(repoPath);
+
+                    // 检查远程URL是否需要更新
+                    var origin = repo.Network.Remotes["origin"];
+                    if (origin.Url != repoUrl)
+                    {
+                        // 远程URL已更改，需要更新
+                        _logger.LogInformation($"更新远程URL: 从 {origin.Url} 到 {repoUrl}");
+                        repo.Network.Remotes.Update("origin", r => r.Url = repoUrl);
+                    }
+
+                    // 获取远程分支信息
+                    var remote = repo.Network.Remotes["origin"];
+                    var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+                    
+                    // 使用浅拉取选项
+                    // var fetchOptions = new FetchOptions
+                    // {
+                    //     Depth = 1 // 浅拉取，只获取最新的提交
+                    // };
+                    
+                    Commands.Fetch(repo, remote.Name, refSpecs, null, "拉取最新更新");
+
+                    // 获取当前分支
+                    var branch = repo.Branches["main"] ?? repo.Branches["master"];
+                    if (branch == null)
+                    {
+                        throw new Exception("未找到main或master分支");
+                    }
+
+                    // 如果是本地分支，需要设置上游分支
+                    if (!branch.IsRemote)
+                    {
+                        var trackingBranch = repo.Branches[$"origin/{branch.FriendlyName}"];
+                        if (trackingBranch != null && branch.TrackedBranch == null)
+                        {
+                            branch = repo.Branches.Update(branch,
+                                b => b.TrackedBranch = trackingBranch.CanonicalName);
+                        }
+                    }
+
+                    // 检查是否有更新
+                    var currentCommitSha = repo.Head.Tip.Sha;
+
+                    // 合并或重置到最新
+                    if (branch.TrackedBranch != null)
+                    {
+                        var trackingBranch = branch.TrackedBranch;
+                        var mergeResult = Commands.Pull(
+                            repo,
+                            new Signature("BetterGI", "auto@bettergi.com", DateTimeOffset.Now),
+                            new PullOptions());
+
+                        // 检查是否有更新
+                        updated = currentCommitSha != repo.Head.Tip.Sha;
+                    }
+                }
             }
-        }
-        else
-        {
-            needDownload = true;
-        }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Git仓库更新失败");
+                throw;
+            }
+        });
 
-        if (needDownload)
-        {
-            await DownloadRepoAndUnzip(url);
-            updated = true;
-        }
-
-        // 搜索本地的 repo.json
-        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, file, SearchOption.AllDirectories).FirstOrDefault();
-        if (localRepoJsonPath is null)
-        {
-            throw new Exception("本地仓库缺少 repo.json");
-        }
-
-        var (time2, url2, file2) = ParseJson(await File.ReadAllTextAsync(localRepoJsonPath));
-
-        // 检查是否需要更新
-        if (long.Parse(time) > long.Parse(time2))
-        {
-            await DownloadRepoAndUnzip(url2);
-            updated = true;
-        }
-
-        // 获取与 localRepoJsonPath 同名（无扩展名）的文件夹路径
-        var folderName = Path.GetFileNameWithoutExtension(localRepoJsonPath);
-        var folderPath = Path.Combine(Path.GetDirectoryName(localRepoJsonPath)!, folderName);
-        if (!Directory.Exists(folderPath))
-        {
-            throw new Exception("本地仓库文件夹不存在");
-        }
-
-        return (folderPath, updated);
+        return (repoPath, updated);
     }
+    
+
+    // [Obsolete]
+    // public async Task<(string, bool)> UpdateCenterRepo()
+    // {
+    //     // 测速并获取信息
+    //     var (fastUrl, jsonString) = await ProxySpeedTester.GetFastestUrlAsync(CenterRepoInfoUrls);
+    //     if (string.IsNullOrEmpty(jsonString))
+    //     {
+    //         throw new Exception("从互联网下载最新的仓库信息失败");
+    //     }
+    //
+    //     var (time, url, file) = ParseJson(jsonString);
+    //
+    //     var updated = false;
+    //
+    //     // 检查仓库是否存在，不存在则下载
+    //     var needDownload = false;
+    //     if (Directory.Exists(CenterRepoPath))
+    //     {
+    //         var p = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+    //         if (p is null)
+    //         {
+    //             needDownload = true;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         needDownload = true;
+    //     }
+    //
+    //     if (needDownload)
+    //     {
+    //         await DownloadRepoAndUnzip(url);
+    //         updated = true;
+    //     }
+    //
+    //     // 搜索本地的 repo.json
+    //     var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, file, SearchOption.AllDirectories).FirstOrDefault();
+    //     if (localRepoJsonPath is null)
+    //     {
+    //         throw new Exception("本地仓库缺少 repo.json");
+    //     }
+    //
+    //     var (time2, url2, file2) = ParseJson(await File.ReadAllTextAsync(localRepoJsonPath));
+    //
+    //     // 检查是否需要更新
+    //     if (long.Parse(time) > long.Parse(time2))
+    //     {
+    //         await DownloadRepoAndUnzip(url2);
+    //         updated = true;
+    //     }
+    //
+    //     // 获取与 localRepoJsonPath 同名（无扩展名）的文件夹路径
+    //     var folderName = Path.GetFileNameWithoutExtension(localRepoJsonPath);
+    //     var folderPath = Path.Combine(Path.GetDirectoryName(localRepoJsonPath)!, folderName);
+    //     if (!Directory.Exists(folderPath))
+    //     {
+    //         throw new Exception("本地仓库文件夹不存在");
+    //     }
+    //
+    //     return (folderPath, updated);
+    // }
 
     public string FindCenterRepoPath()
     {
-        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
+            .FirstOrDefault();
         if (localRepoJsonPath is null)
         {
             throw new Exception("本地仓库缺少 repo.json");
@@ -197,7 +307,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         // 获取文件名
         var contentDisposition = res.Content.Headers.ContentDisposition;
-        var fileName = contentDisposition is { FileName: not null } ? contentDisposition.FileName.Trim('"') : "temp.zip";
+        var fileName = contentDisposition is { FileName: not null }
+            ? contentDisposition.FileName.Trim('"')
+            : "temp.zip";
 
         // 创建临时目录
         if (!Directory.Exists(ReposTempPath))
@@ -250,7 +362,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var uiMessageBox = new Wpf.Ui.Controls.MessageBox
                 {
                     Title = "脚本订阅",
-                    Content = $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
+                    Content =
+                        $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
                     CloseButtonText = "关闭",
                     PrimaryButtonText = "确认导入",
                     Owner = Application.Current.MainWindow,
@@ -322,28 +435,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         scriptConfig.SubscribedScriptPaths.AddRange(paths);
 
         Toast.Information("获取最新仓库信息中...");
-
-        // 更新仓库
+        
         string repoPath;
         try
         {
-            (repoPath, _) = await Task.Run(UpdateCenterRepo);
+            repoPath = FindCenterRepoPath();
         }
-        catch (Exception e)
-        {
-            Toast.Warning("获取最新仓库信息失败，尝试使用本地已有仓库信息");
-            try
-            {
-                repoPath = FindCenterRepoPath();
-            }
-            catch
-            {
-                await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
-                return;
-            }
-        }
-
-        if (string.IsNullOrEmpty(repoPath))
+        catch
         {
             await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
             return;
@@ -474,10 +572,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         // 使用路径分隔符分割路径
-        string[] parts = path.Split(new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = path.Split(new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
 
         // 返回第一个文件夹和剩余路径
-        return parts.Length > 0 ? (parts[0], string.Join(Path.DirectorySeparatorChar, parts.Skip(1))) : (string.Empty, string.Empty);
+        return parts.Length > 0
+            ? (parts[0], string.Join(Path.DirectorySeparatorChar, parts.Skip(1)))
+            : (string.Empty, string.Empty);
     }
 
     public void OpenLocalRepoInWebView()
@@ -493,13 +594,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _webWindow.Closed += (s, e) => _webWindow = null;
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
             _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
-            _webWindow.Panel!.OnWebViewInitializedAction = () => _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+            _webWindow.Panel!.OnWebViewInitializedAction = () =>
+                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
             _webWindow.Show();
         }
         else
         {
             _webWindow.Activate();
         }
+    }
+
+    public void OpenScriptRepoWindow()
+    {
+        var scriptRepoWindow = new ScriptRepoWindow { Owner = Application.Current.MainWindow };
+        scriptRepoWindow.ShowDialog();
     }
 
     /// <summary>

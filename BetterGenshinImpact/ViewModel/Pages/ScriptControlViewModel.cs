@@ -451,7 +451,7 @@ public partial class ScriptControlViewModel : ViewModel
     public void OnOpenLocalScriptRepo()
     {
         TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
-        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+        ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
     }
 
     [RelayCommand]
