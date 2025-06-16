@@ -245,6 +245,21 @@ public class CustomDrawer : ContentControl
         {
             Visibility = Visibility.Visible;
         }
+        
+        // 每次更新状态时重新应用宽高
+        switch (DrawerPosition)
+        {
+            case DrawerPosition.Left:
+            case DrawerPosition.Right:
+                _drawerContainer.Width = OpenWidth;
+                _drawerContainer.Height = double.NaN;
+                break;
+            case DrawerPosition.Top:
+            case DrawerPosition.Bottom:
+                _drawerContainer.Width = double.NaN;
+                _drawerContainer.Height = OpenHeight;
+                break;
+        }
 
         if (animate)
         {

@@ -161,7 +161,7 @@ public partial class JsListViewModel : ViewModel
 
             if (!string.IsNullOrEmpty(mdFilePath))
             {
-                DrawerVm.DrawerWidth = 700;
+                DrawerVm.DrawerWidth = 450;
                 // 注册抽屉关闭前事件
                 DrawerVm.SetDrawerClosingAction(args =>
                 {
@@ -194,7 +194,7 @@ public partial class JsListViewModel : ViewModel
             {
                 DrawerVm.SetDrawerClosingAction(_ => { });
                 DrawerVm.setDrawerOpenedAction(() => { });
-                DrawerVm.DrawerWidth = 400;
+                DrawerVm.DrawerWidth = 300;
             }
 
             // 创建要在抽屉中显示的内容
