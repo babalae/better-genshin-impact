@@ -27,6 +27,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.ComponentModel;
+using BetterGenshinImpact.View.Controls.Webview;
+using Microsoft.Web.WebView2.Wpf;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -48,6 +51,12 @@ public partial class MapPathingViewModel : ViewModel
     
     // 添加抽屉ViewModel
     public DrawerViewModel DrawerVm { get; } = new DrawerViewModel();
+    
+    // 添加WebView2相关成员变量
+    private WebView2? _webView2;
+    private WebpagePanel? _mdWebpagePanel;
+    private TaskCompletionSource<bool>? _navigationCompletionSource;
+    private const int NavigationTimeoutMs = 10000; // 10秒超时
 
     /// <inheritdoc/>
     public MapPathingViewModel(IScriptService scriptService, IConfigService configService)
@@ -200,18 +209,93 @@ public partial class MapPathingViewModel : ViewModel
             return;
         }
 
+        // 如果是目录，检查是否存在README.md
+        string? mdFilePath = null;
+        if (item.IsDirectory && !string.IsNullOrEmpty(item.FilePath))
+        {
+            mdFilePath = FindMdFilePath(item.FilePath);
+        }
+
         // 设置抽屉位置和大小
         DrawerVm.DrawerPosition = DrawerPosition.Right;
-        DrawerVm.DrawerWidth = 350;
+        
+        if (!string.IsNullOrEmpty(mdFilePath))
+        {
+            DrawerVm.DrawerWidth = 450;
+            // 注册抽屉关闭前事件
+            DrawerVm.SetDrawerClosingAction(args =>
+            {
+                if (_mdWebpagePanel != null)
+                {
+                    _mdWebpagePanel.Visibility = Visibility.Hidden;
+                }
+            });
+            DrawerVm.setDrawerOpenedAction(async () =>
+            {
+                if (_mdWebpagePanel != null)
+                {
+                    // 等待导航完成或超时
+                    try
+                    {
+                        await WaitForNavigationCompletedWithTimeout();
+                        _mdWebpagePanel.Visibility = Visibility.Visible;
+                        _mdWebpagePanel.WebView.Focus();
+                        Debug.WriteLine("Navigation completed successfully");
+                    }
+                    catch (TimeoutException)
+                    {
+                        Toast.Error("Markdown内容加载超时");
+                    }
+                }
+            });
+        }
+        else
+        {
+            DrawerVm.DrawerWidth = 350;
+            DrawerVm.SetDrawerClosingAction(_ => { });
+            DrawerVm.setDrawerOpenedAction(() => { });
+        }
 
         // 创建要在抽屉中显示的内容
-        var content = CreatePathingDetailContent(item);
+        var content = CreatePathingDetailContent(item, mdFilePath);
 
         // 打开抽屉
-        DrawerVm.OpenDrawer(content);
+        if (content != null)
+        {
+            DrawerVm.OpenDrawer(content);
+        }
     }
 
-    private object CreatePathingDetailContent(FileTreeNode<PathingTask> node)
+    private async Task WaitForNavigationCompletedWithTimeout()
+    {
+        var completedTask = await Task.WhenAny(
+            _navigationCompletionSource!.Task,
+            Task.Delay(NavigationTimeoutMs)
+        );
+
+        if (completedTask != _navigationCompletionSource.Task)
+        {
+            throw new TimeoutException("Navigation did not complete within the timeout period");
+        }
+    }
+
+    private string? FindMdFilePath(string dirPath)
+    {
+        string[] possibleMdFiles = { "README.md", "readme.md" };
+        
+        foreach (var mdFile in possibleMdFiles)
+        {
+            string fullPath = Path.Combine(dirPath, mdFile);
+            if (File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+        }
+
+        return null;
+    }
+
+    private object? CreatePathingDetailContent(FileTreeNode<PathingTask> node, string? mdFilePath = null)
     {
         // 创建显示路径任务详情的控件
         var border = new Border
@@ -232,44 +316,71 @@ public partial class MapPathingViewModel : ViewModel
             Margin = new Thickness(0, 0, 0, 10)
         });
 
-        // 如果是文件而不是目录，显示更多详情
-        if (!node.IsDirectory && !string.IsNullOrEmpty(node.FilePath))
+        // 如果找到md文件，使用WebpagePanel显示
+        if (!string.IsNullOrEmpty(mdFilePath))
         {
+            // 使用Grid作为容器来实现填充效果
+            var grid = new Grid
+            {
+                Margin = new Thickness(0, 0, 0, 15)
+            };
+            
+            _mdWebpagePanel = new WebpagePanel
+            {
+                Margin = new Thickness(0),
+                Visibility = Visibility.Hidden,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            
+            _navigationCompletionSource = new TaskCompletionSource<bool>();
+            _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
+            {
+                // 导航完成时设置任务结果
+                _navigationCompletionSource.TrySetResult(true);
+            };
+            _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
+            
+            grid.Children.Add(_mdWebpagePanel);
+            panel.Children.Add(grid);
+            
+            // 设置Grid高度以占满剩余空间
+            panel.SizeChanged += (sender, args) =>
+            {
+                // 计算其他元素使用的高度
+                double otherElementsHeight = 0;
+                foreach (var child in panel.Children)
+                {
+                    if (child != grid)
+                    {
+                        var frameworkElement = child as FrameworkElement;
+                        if (frameworkElement != null)
+                        {
+                            otherElementsHeight += frameworkElement.ActualHeight + frameworkElement.Margin.Top + frameworkElement.Margin.Bottom;
+                        }
+                    }
+                }
+                
+                // 设置Grid高度为剩余空间
+                grid.Height = Math.Max(400, panel.ActualHeight - otherElementsHeight - 15); // 设置最小高度为400
+            };
+        }
+        else if (!node.IsDirectory && !string.IsNullOrEmpty(node.FilePath))
+        {
+            // 如果是文件而不是目录，显示更多详情
             try
             {
-                var fileInfo = new FileInfo(node.FilePath);
+                if (string.IsNullOrEmpty(node.Value?.Info.Description))
+                {
+                    return null;
+                }
                 
                 panel.Children.Add(new TextBlock
                 {
-                    Text = $"路径: {node.FilePath}",
+                    Text = $"{node.Value?.Info.Description}",
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 5, 0, 5)
                 });
-                
-                panel.Children.Add(new TextBlock
-                {
-                    Text = $"大小: {fileInfo.Length / 1024} KB",
-                    Margin = new Thickness(0, 5, 0, 5)
-                });
-                
-                panel.Children.Add(new TextBlock
-                {
-                    Text = $"修改时间: {fileInfo.LastWriteTime}",
-                    Margin = new Thickness(0, 5, 0, 15)
-                });
-
-                // 添加操作按钮
-                var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal };
-
-                var runButton = new Button
-                {
-                    Content = "执行任务",
-                    Margin = new Thickness(0, 0, 10, 0)
-                };
-                runButton.Click += async (s, e) => await OnStart();
-                buttonPanel.Children.Add(runButton);
-
-                panel.Children.Add(buttonPanel);
             }
             catch (Exception ex)
             {
