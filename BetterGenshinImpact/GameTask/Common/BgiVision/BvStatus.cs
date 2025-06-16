@@ -132,19 +132,20 @@ public static partial class Bv
     {
         var spaceExist = captureRa.Find(ElementAssets.Instance.SpaceKey).IsExist();
         var xExist = captureRa.Find(ElementAssets.Instance.XKey).IsExist();
-        var swimExist = captureRa.Find(ElementAssets.Instance.BtnSwim).IsExist();
-        if (swimExist)
-        {
-            return MotionStatus.Swim; // 游泳状态
-        }
         if (spaceExist)
         {
             return xExist ? MotionStatus.Climb : MotionStatus.Fly;
         }
-        else
+
+        if (captureRa.Find(ElementAssets.Instance.BtnSwim).IsExist())
         {
-            return MotionStatus.Normal;
+            return MotionStatus.Swim; // 水面游泳状态
         }
+        if (captureRa.Find(ElementAssets.Instance.BtnDiving).IsExist())
+        {
+            return MotionStatus.Diving; // 枫丹水下游泳状态
+        }
+        return MotionStatus.Normal;
     }
 
     /// <summary>
@@ -247,4 +248,5 @@ public enum MotionStatus
     Fly, // 飞行
     Climb, // 攀爬
     Swim, // 游泳
+    Diving, // 枫丹水下游泳
 }

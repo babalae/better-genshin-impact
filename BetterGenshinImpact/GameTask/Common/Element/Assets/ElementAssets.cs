@@ -22,6 +22,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject SpaceKey;
     public RecognitionObject XKey;
     public RecognitionObject BtnSwim;
+    public RecognitionObject BtnDiving;
 
     public RecognitionObject FriendChat;
 
@@ -162,10 +163,18 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         BtnSwim = new RecognitionObject
         {
-            Name = "SwimBtn",
+            Name = "BtnSwim",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_swim.png"),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(139 * AssetScale), CaptureRect.Height - (int)(125 * AssetScale), (int)(75 * AssetScale), (int)(75 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnDiving = new RecognitionObject //潜水和游泳仅图标位置不同
+        {
+            Name = "BtnDiving",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_swim.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(346 * AssetScale), CaptureRect.Height - (int)(125 * AssetScale), (int)(75 * AssetScale), (int)(75 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
