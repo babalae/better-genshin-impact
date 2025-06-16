@@ -297,17 +297,17 @@ internal class GoToSereniteaPotTask
         if (numberBtn.IsExist())
         {
             numberBtn.Move();
-            await Delay(300, ct);
+            await Delay(700, ct);//减慢速度，设备差异导致的延迟
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(300, ct);
+            await Delay(700, ct);
             numberBtn.MoveTo(ra.Width/7,0);//moveby会超出边界，改用MoveTo
-            await Delay(300, ct);
+            await Delay(700, ct);
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
 
-        await Delay(300, ct);
+        await Delay(700, ct);
         ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
-        await Delay(500, ct);
+        await Delay(700, ct);
         ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
     }
 
