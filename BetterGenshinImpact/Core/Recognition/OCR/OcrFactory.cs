@@ -36,7 +36,7 @@ public class OcrFactory
         var result = type switch
         {
             OcrEngineTypes.Paddle => new KeyValuePair<string, IOcrService>(cultureInfoName,
-                new PaddleOcrService(cultureInfoName, App.ServiceProvider.GetRequiredService<BgiOnnxFactory>())),
+                new PaddleOcrService(cultureInfoName, App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),false)),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
         Logger.LogDebug("为 {CultureInfoName} 创建了类型为 {Type} 的 OCR服务", result.Key, result.Value);
