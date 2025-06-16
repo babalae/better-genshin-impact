@@ -152,7 +152,7 @@ public partial class JsListViewModel : ViewModel
         {
             // 检查是否存在README.md或其他md文件
             var mdFilePath = FindMdFilePath(scriptProject);
-            
+
             // 设置抽屉位置和大小
             DrawerVm.DrawerPosition = DrawerPosition.Right;
 
@@ -201,27 +201,25 @@ public partial class JsListViewModel : ViewModel
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(0, 0, 0, 10)
         });
-        
+
 
         // 如果找到md文件，使用WebpagePanel显示
         if (!string.IsNullOrEmpty(mdFilePath))
         {
             // _webView2 ??= new WebView2();
-            _mdWebpagePanel = new WebpagePanel()
+            _mdWebpagePanel = new WebpagePanel
             {
                 Height = 480,
                 Margin = new Thickness(0, 0, 0, 15),
-                // Visibility = Visibility.Hidden
+                Visibility = Visibility.Hidden
             };
-
-            _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
-            _mdWebpagePanel.OnWebViewInitializedAction = () =>
+            _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
             {
-                _mdWebpagePanel.Focus();
-                _mdWebpagePanel.WebView.Focus();
                 _mdWebpagePanel.Visibility = Visibility.Visible;
+                _mdWebpagePanel.WebView.Focus();
+                Debug.WriteLine("WebpagePanel initialized and visible.");
             };
-
+            _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
             panel.Children.Add(_mdWebpagePanel);
         }
         else

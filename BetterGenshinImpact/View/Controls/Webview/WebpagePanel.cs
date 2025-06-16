@@ -25,6 +25,8 @@ public class WebpagePanel : UserControl
     public string? DownloadFolderPath { get; set; }
 
     public Action? OnWebViewInitializedAction { get; set; }
+    
+    public Action<CoreWebView2NavigationCompletedEventArgs>? OnNavigationCompletedAction { get; set; }
 
     public WebpagePanel()
     {
@@ -47,30 +49,37 @@ public class WebpagePanel : UserControl
             };
             _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
             _webView.NavigationStarting += NavigationStarting_CancelNavigation;
+            _webView.NavigationCompleted += WebView_NavigationCompleted;
+
             Content = _webView;
         }
     }
     
-    public WebpagePanel(WebView2 webView2)
+    // public WebpagePanel(WebView2 webView2)
+    // {
+    //     if (!IsWebView2Available())
+    //     {
+    //         Content = CreateDownloadButton();
+    //     }
+    //     else
+    //     {
+    //         EnsureWebView2DataFolder();
+    //         _webView = webView2;
+    //         webView2.CreationProperties = new CoreWebView2CreationProperties
+    //         {
+    //             UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
+    //         };
+    //         webView2.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
+    //         webView2.NavigationStarting += NavigationStarting_CancelNavigation;
+    //         Content = webView2;
+    //     }
+    // }
+    private void WebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (!IsWebView2Available())
-        {
-            Content = CreateDownloadButton();
-        }
-        else
-        {
-            EnsureWebView2DataFolder();
-            _webView = webView2;
-            webView2.CreationProperties = new CoreWebView2CreationProperties
-            {
-                UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
-            };
-            webView2.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
-            webView2.NavigationStarting += NavigationStarting_CancelNavigation;
-            Content = webView2;
-        }
+        // 调用外部设置的导航完成 Action
+        OnNavigationCompletedAction?.Invoke(e);
     }
-
+    
     private void WebView_CoreWebView2InitializationCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
     {
         if (e.IsSuccess)
