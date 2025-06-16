@@ -10,6 +10,7 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
+             xmlns:drawer="clr-namespace:BetterGenshinImpact.View.Controls.Drawer"
              d:DataContext="{d:DesignInstance Type=pages:MapPathingViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -25,102 +26,135 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Margin="42,16,42,12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid Margin="42,16,42,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <ui:TextBlock Grid.Row="0"
-                      Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="地图追踪（实验功能）" />
-        <ui:TextBlock Grid.Row="1"
-                      Margin="0,0,0,8"
-                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      TextWrapping="Wrap">
-            可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！<Hyperlink Command="{Binding GoToPathingUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                点击查看地图追踪与录制使用教程
-            </Hyperlink>
-        </ui:TextBlock>
+            <ui:TextBlock Grid.Row="0"
+                          Margin="0,0,0,8"
+                          FontTypography="BodyStrong"
+                          Text="地图追踪（实验功能）" />
+            <ui:TextBlock Grid.Row="1"
+                          Margin="0,0,0,8"
+                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                          TextWrapping="Wrap">
+                可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！
+                <Hyperlink Command="{Binding GoToPathingUrlCommand}"
+                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    点击查看地图追踪与录制使用教程
+                </Hyperlink>
+            </ui:TextBlock>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal">
-            <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                       Content="打开任务目录"
-                       Icon="{ui:SymbolIcon FolderOpen24}" />
-            <ui:Button Margin="10,0,0,0"
-                       Command="{Binding OpenLocalScriptRepoCommand}"
-                       Icon="{ui:SymbolIcon Archive24}">
-                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <ui:TextBlock>脚本仓库</ui:TextBlock>
-                    <ui:InfoBadge Margin="0,-8,-14,0"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Top"
-                                  Severity="Attention"
-                                  Style="{DynamicResource DotInfoBadgeStyle}"
-                                  Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <ui:Button Command="{Binding OpenScriptsFolderCommand}"
+                           Content="打开任务目录"
+                           Icon="{ui:SymbolIcon FolderOpen24}" />
+                <ui:Button Margin="10,0,0,0"
+                           Command="{Binding OpenLocalScriptRepoCommand}"
+                           Icon="{ui:SymbolIcon Archive24}">
+                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <ui:TextBlock>脚本仓库</ui:TextBlock>
+                        <ui:InfoBadge Margin="0,-8,-14,0"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Top"
+                                      Severity="Attention"
+                                      Style="{DynamicResource DotInfoBadgeStyle}"
+                                      Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </Grid>
+                </ui:Button>
+                <ui:Button Margin="10,0,0,0"
+                           Command="{Binding OpenSettingsCommand}"
+                           Content="设置"
+                           Icon="{ui:SymbolIcon Settings24}" />
+                <ui:Button Margin="10,0,0,0"
+                           Command="{Binding OpenDevToolsCommand}"
+                           Content="开发者工具" />
+            </StackPanel>
+
+            <Separator Grid.Row="3"
+                       Height="10"
+                       Opacity="0" />
+
+            <ui:Border Grid.Row="5"
+                       Background="{DynamicResource CardBackground}"
+                       BorderBrush="{DynamicResource CardBorderBrush}"
+                       BorderThickness="1"
+                       CornerRadius="{DynamicResource ControlCornerRadius}">
+                <Grid Margin="4">
+                    <ui:Grid ColumnDefinitions="*,10" Visibility="Hidden">
+                        <Grid x:Name="TreeColumnStar" Grid.Column="0" />
+                    </ui:Grid>
+                    <ui:TreeListView BorderThickness="0"
+                                     ItemsSource="{Binding TreeList}"
+                                     SelectedItem="{Binding SelectNode, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectedItemChanged">
+                                <b:InvokeCommandAction Command="{Binding OpenPathingDetailCommand}"
+                                                       CommandParameter="{Binding SelectNode}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                        <ui:TreeListView.Columns>
+                            <GridViewColumnCollection>
+                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}"
+                                                   Header="名称">
+                                    <ui:GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ui:TreeRowExpander>
+                                                <ui:TreeRowExpander.Content>
+                                                    <ui:StackPanel Margin="8,0,0,0"
+                                                                   Orientation="Horizontal"
+                                                                   Spacing="8">
+                                                        <Image Height="16"
+                                                               Source="{Binding IconFilePath, Converter={x:Static vio:PathToIconConverter.Instance}}" />
+                                                        <TextBlock VerticalAlignment="Center" Text="{Binding FileName}" />
+                                                    </ui:StackPanel>
+                                                </ui:TreeRowExpander.Content>
+                                            </ui:TreeRowExpander>
+                                        </DataTemplate>
+                                    </ui:GridViewColumn.CellTemplate>
+                                </ui:GridViewColumn>
+                            </GridViewColumnCollection>
+                        </ui:TreeListView.Columns>
+                        <ui:TreeListView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+                        </ui:TreeListView.ItemTemplate>
+                        <ui:TreeListView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Command="{Binding StartCommand}" Header="执行任务" />
+                                <MenuItem Command="{Binding RefreshCommand}" Header="刷新" />
+                            </ContextMenu>
+                        </ui:TreeListView.ContextMenu>
+                    </ui:TreeListView>
                 </Grid>
-            </ui:Button>
-            <ui:Button Margin="10,0,0,0"
-                       Command="{Binding OpenSettingsCommand}"
-                       Content="设置"
-                       Icon="{ui:SymbolIcon Settings24}" />
-            <ui:Button Margin="10,0,0,0"
-                       Command="{Binding OpenDevToolsCommand}"
-                       Content="开发者工具" />
-        </StackPanel>
+            </ui:Border>
+        </Grid>
 
-        <Separator Grid.Row="3"
-                   Height="10"
-                   Opacity="0" />
-
-        <ui:Border Grid.Row="5"
-                   Background="{DynamicResource CardBackground}"
-                   BorderBrush="{DynamicResource CardBorderBrush}"
-                   BorderThickness="1"
-                   CornerRadius="{DynamicResource ControlCornerRadius}">
-            <Grid Margin="4">
-                <ui:Grid ColumnDefinitions="*,10" Visibility="Hidden">
-                    <Grid x:Name="TreeColumnStar" Grid.Column="0" />
-                </ui:Grid>
-                <ui:TreeListView BorderThickness="0"
-                                 ItemsSource="{Binding TreeList}"
-                                 SelectedItem="{Binding SelectNode, Mode=TwoWay}">
-                    <ui:TreeListView.Columns>
-                        <GridViewColumnCollection>
-                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="名称">
-                                <ui:GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <ui:TreeRowExpander>
-                                            <ui:TreeRowExpander.Content>
-                                                <ui:StackPanel Margin="8,0,0,0"
-                                                               Orientation="Horizontal"
-                                                               Spacing="8">
-                                                    <Image Height="16" Source="{Binding IconFilePath, Converter={x:Static vio:PathToIconConverter.Instance}}" />
-                                                    <TextBlock VerticalAlignment="Center" Text="{Binding FileName}" />
-                                                </ui:StackPanel>
-                                            </ui:TreeRowExpander.Content>
-                                        </ui:TreeRowExpander>
-                                    </DataTemplate>
-                                </ui:GridViewColumn.CellTemplate>
-                            </ui:GridViewColumn>
-                        </GridViewColumnCollection>
-                    </ui:TreeListView.Columns>
-                    <ui:TreeListView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
-                    </ui:TreeListView.ItemTemplate>
-                    <ui:TreeListView.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Command="{Binding StartCommand}" Header="执行任务" />
-                            <MenuItem Command="{Binding RefreshCommand}" Header="刷新" />
-                        </ContextMenu>
-                    </ui:TreeListView.ContextMenu>
-                </ui:TreeListView>
-            </Grid>
-        </ui:Border>
+        <!-- 添加抽屉控件 -->
+        <drawer:CustomDrawer
+            IsOpen="{Binding DrawerVm.IsDrawerOpen, Mode=TwoWay}"
+            DrawerPosition="{Binding DrawerVm.DrawerPosition}"
+            OpenWidth="{Binding DrawerVm.DrawerWidth}"
+            OpenHeight="{Binding DrawerVm.DrawerHeight}"
+            DrawerBackground="{DynamicResource ControlFillColorDefaultBrush}"
+            Content="{Binding DrawerVm.DrawerContent}"
+            Panel.ZIndex="100">
+            <b:Interaction.Triggers>
+                <b:EventTrigger EventName="Opened">
+                    <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerOpenedCommand}"
+                                           PassEventArgsToCommand="True" />
+                </b:EventTrigger>
+                <b:EventTrigger EventName="Closing">
+                    <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerClosingCommand}"
+                                           PassEventArgsToCommand="True" />
+                </b:EventTrigger>
+            </b:Interaction.Triggers>
+        </drawer:CustomDrawer>
     </Grid>
 </UserControl>
