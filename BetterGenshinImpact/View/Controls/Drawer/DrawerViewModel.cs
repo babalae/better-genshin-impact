@@ -23,9 +23,16 @@ public partial class DrawerViewModel : ObservableObject
     [ObservableProperty]
     private double _drawerHeight = 300;
     
+    [ObservableProperty]
+    private RelayCommand _onDrawerOpenedCommand;
     
     [ObservableProperty]
     private RelayCommand<CancelEventArgs> _onDrawerClosingCommand;
+    
+    public void setDrawerOpenedAction(Action action)
+    {
+        OnDrawerOpenedCommand = new RelayCommand(action!);
+    }
     
     public void SetDrawerClosingAction(Action<CancelEventArgs> action)
     {

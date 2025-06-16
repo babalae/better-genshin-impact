@@ -162,6 +162,10 @@
             Content="{Binding DrawerVm.DrawerContent}"
             Panel.ZIndex="100">
             <b:Interaction.Triggers>
+                <b:EventTrigger EventName="Opened">
+                    <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerOpenedCommand}"
+                                           PassEventArgsToCommand="True"/>
+                </b:EventTrigger>
                 <b:EventTrigger EventName="Closing">
                     <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerClosingCommand}"
                                            PassEventArgsToCommand="True"/>

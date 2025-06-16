@@ -48,6 +48,9 @@ public partial class JsListViewModel : ViewModel
 
     private WebpagePanel? _mdWebpagePanel;
 
+    private TaskCompletionSource<bool>? _navigationCompletionSource;
+    private const int NavigationTimeoutMs = 10000; // 10秒超时
+
     public JsListViewModel(IScriptService scriptService, IConfigService configService)
     {
         _scriptService = scriptService;
@@ -167,18 +170,51 @@ public partial class JsListViewModel : ViewModel
                         _mdWebpagePanel.Visibility = Visibility.Hidden;
                     }
                 });
+                DrawerVm.setDrawerOpenedAction(async () =>
+                {
+                    if (_mdWebpagePanel != null)
+                    {
+                        // 等待导航完成或超时
+                        try
+                        {
+                            await WaitForNavigationCompletedWithTimeout();
+                            _mdWebpagePanel.Visibility = Visibility.Visible;
+                            _mdWebpagePanel.WebView.Focus();
+                            Debug.WriteLine("Navigation completed successfully");
+                            // 导航成功完成后执行其他操作
+                        }
+                        catch (TimeoutException)
+                        {
+                            Toast.Error("Markdown内容加载超时");
+                        }
+                    }
+                });
             }
             else
             {
+                DrawerVm.SetDrawerClosingAction(_ => { });
+                DrawerVm.setDrawerOpenedAction(() => { });
                 DrawerVm.DrawerWidth = 400;
             }
-
 
             // 创建要在抽屉中显示的内容
             var content = CreateScriptDetailContent(scriptProject, mdFilePath);
 
             // 打开抽屉
             DrawerVm.OpenDrawer(content);
+        }
+    }
+
+    private async Task WaitForNavigationCompletedWithTimeout()
+    {
+        var completedTask = await Task.WhenAny(
+            _navigationCompletionSource!.Task,
+            Task.Delay(NavigationTimeoutMs)
+        );
+
+        if (completedTask != _navigationCompletionSource.Task)
+        {
+            throw new TimeoutException("Navigation did not complete within the timeout period");
         }
     }
 
@@ -213,11 +249,11 @@ public partial class JsListViewModel : ViewModel
                 Margin = new Thickness(0, 0, 0, 15),
                 Visibility = Visibility.Hidden
             };
+            _navigationCompletionSource = new TaskCompletionSource<bool>();
             _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
             {
-                _mdWebpagePanel.Visibility = Visibility.Visible;
-                _mdWebpagePanel.WebView.Focus();
-                Debug.WriteLine("WebpagePanel initialized and visible.");
+                // 导航完成时设置任务结果
+                _navigationCompletionSource.TrySetResult(true);
             };
             _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
             panel.Children.Add(_mdWebpagePanel);

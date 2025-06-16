@@ -185,17 +185,9 @@ public class CustomDrawer : ContentControl
                 }
             }
 
+            // 更新抽屉状态（动画）
             drawer.UpdateOpenState(true);
 
-            // // 如果是从关闭到打开状态，在动画完成后触发打开后事件
-            // if (newValue && !oldValue)
-            // {
-            //     // 使用动画持续时间来确定何时触发 Opened 事件
-            //     drawer.Dispatcher.BeginInvoke(new Action(() =>
-            //     {
-            //         drawer.OnOpened();
-            //     }), System.Windows.Threading.DispatcherPriority.ApplicationIdle, drawer.AnimationDuration);
-            // }
         }
     }
 
@@ -282,6 +274,12 @@ public class CustomDrawer : ContentControl
                 //     : new ExponentialEase { EasingMode = EasingMode.EaseIn, Exponent = 6 }
             };
 
+            // 如果是打开操作，在动画完成时触发Opened事件
+            if (IsOpen)
+            {
+                drawerAnimation.Completed += (s, e) => OnOpened();
+            }
+
             switch (DrawerPosition)
             {
                 case DrawerPosition.Left:
@@ -362,6 +360,12 @@ public class CustomDrawer : ContentControl
             }
 
             Visibility = IsOpen ? Visibility.Visible : Visibility.Collapsed;
+            
+            // 如果是无动画模式且正在打开，立即触发Opened事件
+            if (IsOpen)
+            {
+                OnOpened();
+            }
         }
     }
 
