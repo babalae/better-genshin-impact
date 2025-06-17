@@ -7,6 +7,11 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class OneDragonFlowConfig : ObservableObject
 {
+    
+    //版本号
+    [ObservableProperty]
+    private int _version = 1;
+    
     // 配置名
     [ObservableProperty]
     private string _name = string.Empty;
@@ -15,6 +20,13 @@ public partial class OneDragonFlowConfig : ObservableObject
     /// 所有任务的开关状态
     /// </summary>
     public Dictionary<int,(bool,string)> TaskEnabledList { get; set; } = new();
+    
+    // 定义旧版本的TaskEnabledList
+    [Serializable]
+    public class TaskEnabledListOld
+    {
+        public Dictionary<string, bool> TaskEnabledList { get; set; } = new();
+    }
     
     // 合成树脂的国家
     [ObservableProperty]
