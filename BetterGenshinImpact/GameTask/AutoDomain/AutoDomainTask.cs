@@ -39,6 +39,8 @@ using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.GameTask.AutoDomain.Model;
+using BetterGenshinImpact.GameTask.Common;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -182,7 +184,7 @@ public class AutoDomainTask : ISoloTask
 
             // 5. 快速领取奖励并判断是否有下一轮
             Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-            if (!GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
+            if (!await GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
             {
                 if (i == _taskParam.DomainRoundNum - 1)
                 {
@@ -1010,35 +1012,54 @@ public class AutoDomainTask : ISoloTask
     /// </summary>
     /// <param name="recognizeResin">是否识别树脂</param>
     /// <param name="isLastTurn">是否最后一轮</param>
-    private bool GettingTreasure(bool recognizeResin, bool isLastTurn)
+    private async Task<bool> GettingTreasure(bool recognizeResin, bool isLastTurn)
     {
         // 等待窗口弹出
-        Sleep(1500, _ct);
+        Sleep(1000, _ct);
 
         // 优先使用浓缩树脂
-        var retryTimes = 0;
-        while (true)
+        // var retryTimes = 0;
+        // while (true)
+        // {
+        //     retryTimes++;
+        //     if (retryTimes > 3)
+        //     {
+        //         Logger.LogInformation("没有浓缩树脂了");
+        //         break;
+        //     }
+        //
+        //     var useCondensedResinRa = CaptureToRectArea().Find(AutoFightAssets.Instance.UseCondensedResinRa);
+        //     if (!useCondensedResinRa.IsEmpty())
+        //     {
+        //         useCondensedResinRa.Click();
+        //         // 点两下 #224 #218
+        //         // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
+        //         Sleep(400, _ct);
+        //         useCondensedResinRa.Click();
+        //         break;
+        //     }
+        //
+        //     Sleep(800, _ct);
+        // }
+
+        // OCR 弹出框
+        await NewRetry.WaitForAction(() =>
         {
-            retryTimes++;
-            if (retryTimes > 3)
-            {
-                Logger.LogInformation("没有浓缩树脂了");
-                break;
-            }
+            using var ra = CaptureToRectArea();
+            var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
+            return regionList.Any(t =>
+                Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
+                Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString) ||
+                Regex.IsMatch(t.Text, this.challengeCompletedLocalizedString) ||
+                Regex.IsMatch(t.Text, this.autoLeavingLocalizedString));
+        }, _ct);
 
-            var useCondensedResinRa = CaptureToRectArea().Find(AutoFightAssets.Instance.UseCondensedResinRa);
-            if (!useCondensedResinRa.IsEmpty())
-            {
-                useCondensedResinRa.Click();
-                // 点两下 #224 #218
-                // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
-                Sleep(400, _ct);
-                useCondensedResinRa.Click();
-                break;
-            }
+        await Delay(800, _ct);
+        // 弹出框
+        using var ra2 = CaptureToRectArea();
+        // 识别树脂状况
+        var resinStatus = ResinStatus.RecogniseFromRegion(ra2);
 
-            Sleep(800, _ct);
-        }
 
         Sleep(1000, _ct);
 
@@ -1047,25 +1068,7 @@ public class AutoDomainTask : ISoloTask
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         for (var i = 0; i < 30; i++)
         {
-            // 跳过领取动画
-            if (!hasSkip)
-            {
-                TaskContext.Instance().PostMessageSimulator.LeftButtonClick(); // 先随便点一个地方使得跳过出现
-            }
-
             using var ra = CaptureToRectArea();
-
-            // OCR识别是否有跳过
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(captureArea.Width - 230 * assetScale, 0,
-                230 * assetScale - 5, 80 * assetScale));
-            var skipTextRa = ocrList.FirstOrDefault(t => Regex.IsMatch(t.Text, this.skipLocalizedString));
-            if (skipTextRa != null)
-            {
-                hasSkip = true;
-                skipTextRa.Click(); // 有则点击
-            }
-
-
             // 优先点击继续
             using var confirmRectArea = ra.Find(AutoFightAssets.Instance.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
