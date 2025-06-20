@@ -21,6 +21,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject SpaceKey;
     public RecognitionObject XKey;
+    public RecognitionObject BtnSwim;
+    public RecognitionObject BtnDiving;
 
     public RecognitionObject FriendChat;
 
@@ -43,7 +45,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject EscMailReward;
     public RecognitionObject CollectRo;
-    
+
     public RecognitionObject PageCloseWhiteRo;
 
     public RecognitionObject SereniteaPotHomeRo;
@@ -53,7 +55,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject SereniteaPotMoneyRo;
     public RecognitionObject SereniteapotPageClose;
     public RecognitionObject SereniteapotShopNumberBtn;
-    
+
     public RecognitionObject AYuanClothRo;
     public RecognitionObject AYuanresinRo;
     public RecognitionObject SereniteapotExpBookRo;
@@ -157,6 +159,22 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "key_x.png"),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(350 * AssetScale), CaptureRect.Height - (int)(70 * AssetScale), (int)(200 * AssetScale), (int)(70 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnSwim = new RecognitionObject
+        {
+            Name = "BtnSwim",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_swim.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(139 * AssetScale), CaptureRect.Height - (int)(125 * AssetScale), (int)(75 * AssetScale), (int)(75 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        BtnDiving = new RecognitionObject //潜水和游泳仅图标位置不同
+        {
+            Name = "BtnDiving",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_swim.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(346 * AssetScale), CaptureRect.Height - (int)(125 * AssetScale), (int)(75 * AssetScale), (int)(75 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -305,7 +323,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = new Rect(0, CaptureRect.Height - CaptureRect.Height / 3, CaptureRect.Width / 4, CaptureRect.Height / 3),
             DrawOnWindow = false
         }.InitTemplate();
-        
+
         PageCloseWhiteRo = new RecognitionObject
         {
             Name = "PageCloseWhite",

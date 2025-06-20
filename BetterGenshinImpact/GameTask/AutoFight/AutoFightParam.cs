@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.Model;
+﻿using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -19,7 +20,7 @@ public class AutoFightParam : BaseTaskParam
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
     }
-    
+
     public AutoFightParam(string path, AutoFightConfig autoFightConfig)
     {
         CombatStrategyPath = path;
@@ -29,7 +30,7 @@ public class AutoFightParam : BaseTaskParam
         PickDropsAfterFightSeconds = autoFightConfig.PickDropsAfterFightSeconds;
         KazuhaPickupEnabled = autoFightConfig.KazuhaPickupEnabled;
         ActionSchedulerByCd = autoFightConfig.ActionSchedulerByCd;
-       
+
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
@@ -55,6 +56,8 @@ public class AutoFightParam : BaseTaskParam
     public string ActionSchedulerByCd = "";
     public string KazuhaPartyName;
     public string OnlyPickEliteDropsMode="";
+
+    public WaypointForTrack? WaypointForTrack; //不在UI配置，供战斗发现卡住回到参考点
 
 
 }
