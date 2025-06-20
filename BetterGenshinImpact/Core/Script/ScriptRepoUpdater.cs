@@ -47,6 +47,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-git";
 
     public static readonly string CenterRepoPath = Path.Combine(ReposPath, CenterRepoUnzipName);
+    
+    public static readonly string CenterRepoPathOld = Path.Combine(ReposPath, "bettergi-scripts-list-main");
 
     public static readonly Dictionary<string, string> PathMapper = new Dictionary<string, string>
     {

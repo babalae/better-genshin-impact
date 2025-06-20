@@ -226,15 +226,16 @@ public partial class CommonSettingsPageViewModel : ViewModel
         {
             var zipPath = dialog.FileName;
             // 删除旧文件夹
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
-                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
+                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPathOld);
             }
 
             ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
 
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
+                DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
                 MessageBox.Information("脚本仓库离线包导入成功！");
             }
             else
