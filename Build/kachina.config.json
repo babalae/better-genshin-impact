@@ -8,7 +8,7 @@
       {
         "id": "mirrorc",
         "name": "Mirror酱",
-        "uri": "mirrorc://BGI"
+        "uri": "mirrorc://BGI?os=win&arch=x64"
       },
       {
         "id": "mirrorc-alpha",
