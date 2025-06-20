@@ -184,7 +184,7 @@ public class AutoDomainTask : ISoloTask
 
             // 5. 快速领取奖励并判断是否有下一轮
             Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-            if (!await GettingTreasure(_taskParam.DomainRoundNum == 9999, i == _taskParam.DomainRoundNum - 1))
+            if (!await GettingTreasure(i == _taskParam.DomainRoundNum - 1))
             {
                 if (i == _taskParam.DomainRoundNum - 1)
                 {
@@ -999,7 +999,7 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
                 }
 
-                Sleep(100);
+                Sleep(100, _ct);
             }
 
             Logger.LogInformation("锁定东方向视角线程结束");
@@ -1010,62 +1010,48 @@ public class AutoDomainTask : ISoloTask
     /// <summary>
     /// 领取奖励
     /// </summary>
-    /// <param name="recognizeResin">是否识别树脂</param>
     /// <param name="isLastTurn">是否最后一轮</param>
-    private async Task<bool> GettingTreasure(bool recognizeResin, bool isLastTurn)
+    private async Task<bool> GettingTreasure(bool isLastTurn)
     {
         // 等待窗口弹出
-        Sleep(1000, _ct);
-
-        // 优先使用浓缩树脂
-        // var retryTimes = 0;
-        // while (true)
-        // {
-        //     retryTimes++;
-        //     if (retryTimes > 3)
-        //     {
-        //         Logger.LogInformation("没有浓缩树脂了");
-        //         break;
-        //     }
-        //
-        //     var useCondensedResinRa = CaptureToRectArea().Find(AutoFightAssets.Instance.UseCondensedResinRa);
-        //     if (!useCondensedResinRa.IsEmpty())
-        //     {
-        //         useCondensedResinRa.Click();
-        //         // 点两下 #224 #218
-        //         // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了
-        //         Sleep(400, _ct);
-        //         useCondensedResinRa.Click();
-        //         break;
-        //     }
-        //
-        //     Sleep(800, _ct);
-        // }
+        await Delay(300, _ct);
 
         // OCR 弹出框
-        await NewRetry.WaitForAction(() =>
+        bool chooseResinPrompt = await NewRetry.WaitForAction(() =>
         {
             using var ra = CaptureToRectArea();
             var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-            return regionList.Any(t =>
-                Regex.IsMatch(t.Text, this.leyLineDisorderLocalizedString) ||
-                Regex.IsMatch(t.Text, this.clickanywheretocloseLocalizedString) ||
-                Regex.IsMatch(t.Text, this.challengeCompletedLocalizedString) ||
-                Regex.IsMatch(t.Text, this.autoLeavingLocalizedString));
-        }, _ct);
+            return regionList.Any(t => t.Text.Contains("石化古树"));
+        }, _ct, 10, 500);
+        Debug.WriteLine("识别到选择树脂页");
+
+        if (!chooseResinPrompt)
+        {
+            throw new NormalEndException("未检测到选取树脂界面，可能是背包物品已满。");
+        }
+
 
         await Delay(800, _ct);
         // 弹出框
         using var ra2 = CaptureToRectArea();
         // 识别树脂状况
         var resinStatus = ResinStatus.RecogniseFromRegion(ra2);
+        resinStatus.Print(Logger);
+
+        if (resinStatus.CondensedResinCount > 0)
+        {
+            PressUseResin(ra2, "浓缩树脂");
+            resinStatus.CondensedResinCount -= 1;
+        }
+        else if (resinStatus.OriginalResinCount >= 20)
+        {
+            PressUseResin(ra2, "原粹树脂");
+            resinStatus.OriginalResinCount -= 20;
+        }
 
 
         Sleep(1000, _ct);
 
-        var hasSkip = false;
-        var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         for (var i = 0; i < 30; i++)
         {
             using var ra = CaptureToRectArea();
@@ -1084,14 +1070,7 @@ public class AutoDomainTask : ISoloTask
                     }
                 }
 
-                if (!recognizeResin)
-                {
-                    confirmRectArea.Click();
-                    return true;
-                }
-
-                var (condensedResinCount, fragileResinCount) = GetRemainResinStatus();
-                if (condensedResinCount == 0 && fragileResinCount < 20)
+                if (resinStatus.CondensedResinCount <= 0 && resinStatus.OriginalResinCount < 20)
                 {
                     // 没有体力了退出
                     var exitRectArea = ra.Find(AutoFightAssets.Instance.ExitRa);
@@ -1113,6 +1092,50 @@ public class AutoDomainTask : ISoloTask
         }
 
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
+    }
+
+    private void PressUseResin(ImageRegion ra, string resinName)
+    {
+        var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
+        var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
+        if (resinKey != null)
+        {
+            // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
+            var useList = regionList.Where(t => t.Text.Contains("使用")).ToList();
+            if (useList.Count != 0)
+            {
+                // 找到使用按键
+                var useKey = useList.FirstOrDefault(t => t.X > ra.Width / 2 && IsHeightOverlap(t, resinKey));
+                if (useKey != null)
+                {
+                    // 点击使用
+                    useKey.Click();
+                    Logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
+                }
+                else
+                {
+                    Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                }
+            }
+            else
+            {
+                Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 判断两个区域在垂直方向上是否有重叠
+    /// </summary>
+    private bool IsHeightOverlap(Region region1, Region region2)
+    {
+        int region1Top = region1.Y;
+        int region1Bottom = region1.Y + region1.Height;
+        int region2Top = region2.Y;
+        int region2Bottom = region2.Y + region2.Height;
+
+        // 检查区域是否在垂直方向上重叠
+        return (region1Top <= region2Bottom && region1Bottom >= region2Top);
     }
 
     /// <summary>

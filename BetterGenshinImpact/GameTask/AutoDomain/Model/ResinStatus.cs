@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.Model;
@@ -44,24 +45,30 @@ public class ResinStatus
             throw new Exception("未找到原粹树脂图标");
         }
 
-        // 找出 icon 的位置 + 30 ~ w-256 就是原粹树脂的数字
+        // 找出 icon 的位置 + 30 ~ w-267 就是原粹树脂的数字
         var originalResinCountRect = new Rect(originalResinRes.X + 30, originalResinTopIconRa.RegionOfInterest.Y,
-            captureArea.Width - (originalResinRes.X + 30) - (int)(256 * assetScale), originalResinTopIconRa.RegionOfInterest.Height);
+            captureArea.Width - (originalResinRes.X + 30) - (int)(267 * assetScale), originalResinTopIconRa.RegionOfInterest.Height);
         string cnt1 = OcrFactory.Paddle.OcrWithoutDetector(region.DeriveCrop(originalResinCountRect).SrcMat);
-        status.OriginalResinCount = StringUtils.TryParseInt(cnt1, 0);
+        status.OriginalResinCount = StringUtils.TryExtractPositiveInt(cnt1, 0);
 
         // 2. 浓缩树脂
         var condensedResinRes = region.Find(AutoFightAssets.Instance.CondensedResinTopIconRa);
-        if (originalResinRes.IsEmpty())
+        if (condensedResinRes.IsExist())
         {
-            throw new Exception("未找到浓缩树脂图标");
+            // 找出 icon 的位置 + 25 ~ icon 的位置+45 就是浓缩树脂的数字，数字宽20
+            var condensedResinCountRect = new Rect(condensedResinRes.Right + (int)(25 * assetScale), condensedResinRes.Y, (int)(20 * assetScale), condensedResinRes.Height);
+            string cnt40 = OcrFactory.Paddle.OcrWithoutDetector(region.DeriveCrop(condensedResinCountRect).SrcMat);
+            status.CondensedResinCount = StringUtils.TryExtractPositiveInt(cnt40, 0);
         }
 
-        // 找出 icon 的位置 + 25 ~ icon 的位置+45 就是浓缩树脂的数字，数字宽20
-        var condensedResinCountRect = new Rect(condensedResinRes.X + (int)(25 * assetScale), condensedResinRes.Y, (int)(20 * assetScale), condensedResinRes.Height);
-        string cnt40 = OcrFactory.Paddle.OcrWithoutDetector(region.DeriveCrop(condensedResinCountRect).SrcMat);
-        status.CondensedResinCount = StringUtils.TryParseInt(cnt40, 0);
-
         return status;
+    }
+
+    public void Print(ILogger logger)
+    {
+        // logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}，须臾树脂：{Cnt3}，脆弱树脂：{Cnt4}", 
+        //     OriginalResinCount, CondensedResinCount, FragileResinCount, TransientResinCount);
+        logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}", 
+            OriginalResinCount, CondensedResinCount);
     }
 }

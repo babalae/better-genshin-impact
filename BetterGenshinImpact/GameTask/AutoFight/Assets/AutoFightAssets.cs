@@ -263,7 +263,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             Name = "CondensedResinTopIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_top_icon.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(1270 * AssetScale), (int)(45 * AssetScale), (int)(520 * AssetScale), (int)(25 * AssetScale)),
+            RegionOfInterest = new Rect((int)(1270 * AssetScale), (int)(25 * AssetScale), (int)(520 * AssetScale), (int)(45 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
         OriginalResinTopIconRa = new RecognitionObject
