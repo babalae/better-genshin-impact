@@ -36,6 +36,7 @@ public class AutoFightParam : BaseTaskParam
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
+        BattleThresholdForLoot = autoFightConfig.BattleThresholdForLoot ?? BattleThresholdForLoot;
         //下面参数固定，只取自动战斗里面的
         FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
         FinishDetectConfig.BattleEndProgressBarColorTolerance = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
@@ -48,7 +49,7 @@ public class AutoFightParam : BaseTaskParam
     public bool FightFinishDetectEnabled { get; set; } = false;
     public bool PickDropsAfterFightEnabled { get; set; } = false;
     public int PickDropsAfterFightSeconds { get; set; } = 15;
-
+    public int BattleThresholdForLoot { get; set; } = -1;
     public int Timeout { get; set; } = 120;
 
     public bool KazuhaPickupEnabled = true;
