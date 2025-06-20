@@ -1,0 +1,86 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ScriptRepoWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:local="clr-namespace:BetterGenshinImpact.View.Windows"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
+                 xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
+                 Title="脚本仓库"
+                 Width = "350"
+                 MinWidth="350"
+                 MinHeight="50"
+                 SizeToContent="Height"
+                 Background="#202020"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 WindowBackdropType="None"
+                 WindowStartupLocation="CenterOwner"
+                 mc:Ignorable="d">
+    <Grid>
+        <ui:Grid Margin="0,48,0,0">
+            <Border Grid.Column="2"
+                    Margin="6"
+                    Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1,1,1,1"
+                    CornerRadius="8">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 第一行：更新渠道 -->
+                    <StackPanel Grid.Row="0" 
+                                Orientation="Horizontal" 
+                                VerticalAlignment="Center"
+                                Margin="0,0,0,12">
+                        <ui:TextBlock
+                            Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0"
+                            Text="更新渠道：" />
+                        <ComboBox
+                            Width="160"
+                            ItemsSource="{Binding RepoChannels}"
+                            DisplayMemberPath="Name"
+                            SelectedItem="{Binding SelectedRepoChannel}"
+                            VerticalAlignment="Center"/>
+                        
+  
+                    </StackPanel>
+                    
+                    <!-- 第二行：脚本仓库 -->
+                    <StackPanel Grid.Row="1" 
+                                Orientation="Horizontal" >
+                        <ui:Button
+                            Icon="{ui:SymbolIcon CloudSync24}"
+                            Content="更新仓库"
+                            Margin="0,0,8,0"
+                            Command="{Binding UpdateRepoCommand}" />
+                        <ui:Button
+                            Icon="{ui:SymbolIcon ArrowReset24}"
+                            Content="重置仓库"
+                            Margin="0,0,8,0"
+                            Command="{Binding ResetRepoCommand}" />
+                        <ui:Button
+                            Icon="{ui:SymbolIcon BookStar24}"
+                            Appearance="Primary"
+                            Content="打开仓库"
+                            Command="{Binding OpenLocalScriptRepoCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </ui:Grid>
+
+        <ui:TitleBar Title="{Binding Title}"
+                     ShowMaximize="False"
+                     ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+    </Grid>
+</ui:FluentWindow>

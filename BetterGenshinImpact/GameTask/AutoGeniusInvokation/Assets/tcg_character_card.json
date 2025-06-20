@@ -920,6 +920,83 @@
         ]
     },
     {
+        "id": 1114,
+        "nameEn": "citlali",
+        "type": "character",
+        "name": "茜特菈莉",
+        "hp": 10,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "shadowstealing_spirit_vessel",
+                "name": "宿灵捕影",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "dawnfrost_darkstar",
+                "name": "霜昼黑星",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "edict_of_entwined_splendor",
+                "name": "诸曜饬令",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "songs_of_profound_mystery",
+                "name": "奥秘传唱",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1201,
         "nameEn": "barbara",
         "type": "character",
@@ -1354,7 +1431,7 @@
         "nameEn": "candace",
         "type": "character",
         "name": "坎蒂丝",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "水元素",
         "weapon": "长柄武器",
@@ -1569,7 +1646,7 @@
         "nameEn": "neuvillette",
         "type": "character",
         "name": "那维莱特",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "水元素",
         "weapon": "法器",
@@ -2854,6 +2931,83 @@
         ]
     },
     {
+        "id": 1315,
+        "nameEn": "mavuika",
+        "type": "character",
+        "name": "玛薇卡",
+        "hp": 10,
+        "energy": 0,
+        "element": "火元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "flames_weave_life",
+                "name": "以火织命",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "the_named_moment",
+                "name": "称名之刻",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "hour_of_burning_skies",
+                "name": "燔天之时",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 4
+                    },
+                    {
+                        "id": null,
+                        "nameEn": null,
+                        "type": null,
+                        "count": null
+                    }
+                ]
+            },
+            {
+                "nameEn": "fighting_spirit",
+                "name": "战意",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1401,
         "nameEn": "fischl",
         "type": "character",
@@ -3142,7 +3296,7 @@
         "nameEn": "beidou",
         "type": "character",
         "name": "北斗",
-        "hp": 10,
+        "hp": 11,
         "energy": 3,
         "element": "雷元素",
         "weapon": "双手剑",
@@ -3332,7 +3486,7 @@
                         "id": 1104,
                         "nameEn": "electro",
                         "type": "雷元素",
-                        "count": 4
+                        "count": 3
                     },
                     {
                         "id": 1110,
@@ -4465,6 +4619,83 @@
         ]
     },
     {
+        "id": 1511,
+        "nameEn": "chasca",
+        "type": "character",
+        "name": "恰斯卡",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "弓",
+        "skills": [
+            {
+                "nameEn": "phantom_feather_flurry",
+                "name": "迷羽流击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "spirit_reins_shadow_hunt",
+                "name": "灵缰追影",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "soul_reapers_fatal_round",
+                "name": "索魂命袭",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "shadowhunt_shell",
+                "name": "追影弹",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1601,
         "nameEn": "ningguang",
         "type": "character",
@@ -4691,7 +4922,7 @@
         "nameEn": "albedo",
         "type": "character",
         "name": "阿贝多",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "岩元素",
         "weapon": "单手剑",
@@ -5550,7 +5781,7 @@
         "nameEn": "baizhu",
         "type": "character",
         "name": "白术",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "草元素",
         "weapon": "法器",
@@ -6579,7 +6810,7 @@
         "nameEn": "hydro_hilichurl_rogue",
         "type": "character",
         "name": "丘丘水行游侠",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "水元素",
         "weapon": "其他武器",

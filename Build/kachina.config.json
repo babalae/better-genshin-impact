@@ -8,12 +8,12 @@
       {
         "id": "mirrorc",
         "name": "Mirror酱",
-        "uri": "mirrorc://BGI"
+        "uri": "mirrorc://BGI?os=win&arch=x64"
       },
       {
         "id": "mirrorc-alpha",
         "name": "Mirror酱 Alpha",
-        "uri": "mirrorc://BGI?channel=alpha",
+        "uri": "mirrorc://BGI?channel=alpha&os=win&arch=x64",
         "hidden": true
       }
     ],

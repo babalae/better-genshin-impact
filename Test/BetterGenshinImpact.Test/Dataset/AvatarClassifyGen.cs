@@ -16,6 +16,8 @@ public class AvatarClassifyGen
     private static readonly string BackgroundDir = @"E:\HuiTask\更好的原神\数据源\background";
 
     private static readonly Random Rd = new Random();
+    
+    public static readonly List<string> ImgNames = ["UI_AvatarIcon_Side_Ambor.png","UI_AvatarIcon_Side_AmborCostumeWic.png"];
 
     public static void GenAll()
     {
@@ -23,9 +25,8 @@ public class AvatarClassifyGen
         // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
         List<string> sideImageFiles = [];
-        List<string> imgNames = ["UI_AvatarIcon_Side_Escoffier.png","UI_AvatarIcon_Side_Ifa.png",
-            "UI_AvatarIcon_Side_Flamingo.png","UI_AvatarIcon_Side_Hookwalker.png","UI_AvatarIcon_Side_Mosasaurus.png","UI_AvatarIcon_Side_Shamansaurus.png","UI_AvatarIcon_Side_Drillhead.png"];
-        foreach (string imgName in imgNames)
+        
+        foreach (string imgName in ImgNames)
         {
             sideImageFiles.Add(Path.Combine(BaseDir, imgName));
         }

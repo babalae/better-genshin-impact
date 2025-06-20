@@ -527,7 +527,7 @@ public class TpTask(CancellationToken ct)
             // 非常接近目标点，不再进一步调整
             if (mouseDistance < _tpConfig.Tolerance)
             {
-                Logger.LogInformation("移动 {I} 次鼠标后，已经接近目标点，不再移动地图。", iteration + 1);
+                Logger.LogDebug("移动 {I} 次鼠标后，已经接近目标点，不再移动地图。", iteration + 1);
                 break;
             }
 
