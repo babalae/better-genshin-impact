@@ -135,11 +135,11 @@ public partial class CheckUpdateWindow : FluentWindow
         
         if (_option.Channel == UpdateChannel.Stable)
         {
-            await RunUpdaterAsync("--source mirrorc");
+            await RunUpdaterAsync("-I --source mirrorc");
         }
         else
         {
-            await RunUpdaterAsync("--source mirrorc-alpha");
+            await RunUpdaterAsync("-I --source mirrorc-alpha");
         }
     }
 
