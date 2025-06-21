@@ -416,10 +416,11 @@ jobs:
       - name: Extract 7z and create zip
         shell: bash
         run: |
+          7z a -tzip BetterGI.Install.${{ needs.validate.outputs.version }}.zip ./downloads/BetterGI_Install/BetterGI.Install.${{ needs.validate.outputs.version }}.exe -mx=1 -r -y
           cd downloads/BetterGI_7z
           7z x BetterGI_v*.7z -oun7z
           mv ../../metadata.json ./un7z/BetterGI/.metadata.json
-          7z a -tzip BetterGI.zip un7z/BetterGI -mx=5 -mf=BCJ2 -r -y
+          7z a -tzip BetterGI.zip un7z/BetterGI -mx=5 -r -y
           ls .
           ls ./un7z/BetterGI
           choco install wget --no-progress 
@@ -441,7 +442,7 @@ jobs:
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          filename: "downloads/BetterGI_Install/BetterGI.Install.${{ needs.validate.outputs.version }}.exe"
+          filename: "BetterGI.Install.${{ needs.validate.outputs.version }}.zip"
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
