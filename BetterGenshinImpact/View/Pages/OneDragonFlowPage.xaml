@@ -341,7 +341,7 @@
                                Text="自动秘境" />
 
 
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="{Binding SelectedConfig.WeeklyDomainEnabled, Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}">
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf073;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -470,7 +470,8 @@
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}">
+
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="True">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf784;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -502,7 +503,7 @@
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
-                            <Grid Margin="52,16,16,8">
+                            <Grid Margin="52,16,16,16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
