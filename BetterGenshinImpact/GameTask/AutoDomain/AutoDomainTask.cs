@@ -71,6 +71,8 @@ public class AutoDomainTask : ISoloTask
     private readonly string matchingChallengeString;
     private readonly string rapidformationString;
 
+    private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
+
     public AutoDomainTask(AutoDomainParam taskParam)
     {
         AutoFightAssets.DestroyInstance();
@@ -80,6 +82,8 @@ public class AutoDomainTask : ISoloTask
         _config = TaskContext.Instance().Config.AutoDomainConfig;
 
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+
+        _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
         IStringLocalizer<AutoDomainTask> stringLocalizer =
             App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
@@ -184,17 +188,9 @@ public class AutoDomainTask : ISoloTask
 
             // 5. 快速领取奖励并判断是否有下一轮
             Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
-            if (!await GettingTreasure(i == _taskParam.DomainRoundNum - 1))
+            if (!await GettingTreasure())
             {
-                if (i == _taskParam.DomainRoundNum - 1)
-                {
-                    Logger.LogInformation("配置的{Cnt}轮秘境已经完成，结束自动秘境", _taskParam.DomainRoundNum);
-                }
-                else
-                {
-                    Logger.LogInformation("体力已经耗尽，结束自动秘境");
-                }
-
+                Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
                 break;
             }
 
@@ -1011,14 +1007,13 @@ public class AutoDomainTask : ISoloTask
     /// <summary>
     /// 领取奖励
     /// </summary>
-    /// <param name="isLastTurn">是否最后一轮</param>
-    private async Task<bool> GettingTreasure(bool isLastTurn)
+    private async Task<bool> GettingTreasure()
     {
+        bool isLastTurn = false;
         // 等待窗口弹出
         await Delay(300, _ct);
 
-        // OCR 弹出框
-        var noOriginalResin = false;
+        // 1. OCR 直到确认弹出框弹出
         bool chooseResinPrompt = await NewRetry.WaitForAction(() =>
         {
             using var ra = CaptureToRectArea();
@@ -1028,7 +1023,6 @@ public class AutoDomainTask : ISoloTask
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
                 // res.Click();
-                noOriginalResin = regionList.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂"));
                 return true;
             }
             return false;
@@ -1036,39 +1030,69 @@ public class AutoDomainTask : ISoloTask
         Debug.WriteLine("识别到选择树脂页");
         await Delay(800, _ct);
         
-        if (noOriginalResin)
+        // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
+        using var ra2 = CaptureToRectArea();
+        var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
+        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充")))
         {
             // 没有原粹树脂，直接退出秘境
             Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
-            Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-            await Delay(500, _ct);
-            Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-            await Delay(800, _ct);
-            Bv.ClickBlackConfirmButton(CaptureToRectArea());
+            await ExitDomain();
             return false;
         }
 
-        // 如果没有选择树脂的提示，说明只有原粹树脂
-        ResinStatus? resinStatus = null;
         if (chooseResinPrompt)
         {
+            using var ra3 = CaptureToRectArea();
 
-            // 弹出框
-            using var ra2 = CaptureToRectArea();
-            // 识别树脂状况
-            resinStatus = ResinStatus.RecogniseFromRegion(ra2);
-            resinStatus.Print(Logger);
+            if (!_taskParam.SpecifyResinUse)
+            {
+                // 识别树脂状况
+                var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
+                resinStatus.Print(Logger);
 
-            if (resinStatus.CondensedResinCount > 0)
-            {
-                PressUseResin(ra2, "浓缩树脂");
-                resinStatus.CondensedResinCount -= 1;
+                if (resinStatus.CondensedResinCount > 0)
+                {
+                    PressUseResin(ra3, "浓缩树脂");
+                    resinStatus.CondensedResinCount -= 1;
+                }
+                else if (resinStatus.OriginalResinCount >= 20)
+                {
+                    PressUseResin(ra3, "原粹树脂");
+                    resinStatus.OriginalResinCount -= 20;
+                }
+
+                if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
+                {
+                    // 没树脂了就是最后一回合了
+                    isLastTurn = true;
+                }
             }
-            else if (resinStatus.OriginalResinCount >= 20)
+            else
             {
-                PressUseResin(ra2, "原粹树脂");
-                resinStatus.OriginalResinCount -= 20;
+                var textListInPrompt2 = ra3.FindMulti(RecognitionObject.Ocr(ra3.Width * 0.25, ra3.Height * 0.2, ra3.Width * 0.5, ra3.Height * 0.6));
+                // 按优先级使用
+                foreach (var record in _resinPriorityListWhenSpecifyUse)
+                {
+                    if (record.RemainCount > 0 && PressUseResin(textListInPrompt2, record.Name))
+                    {
+                        record.RemainCount -= 1;
+                        Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
+                        break;
+                    }
+                }
+
+                if (_resinPriorityListWhenSpecifyUse.Sum(o => o.RemainCount) <= 0)
+                {
+                    // 全部刷完
+                    isLastTurn = true;
+                }
             }
+        }
+        else
+        {
+            // 如果没有选择树脂的提示，说明只有原粹树脂
+            // 继续向下执行
         }
 
         Sleep(1000, _ct);
@@ -1090,30 +1114,15 @@ public class AutoDomainTask : ISoloTask
                         return false;
                     }
                 }
-
-                if (resinStatus != null)
-                {
-                    // 前面识别了体力的时候
-                    if (resinStatus.CondensedResinCount <= 0 && resinStatus.OriginalResinCount < 20)
-                    {
-                        // 没有体力了退出
-                        var exitRectArea = ra.Find(AutoFightAssets.Instance.ExitRa);
-                        if (!exitRectArea.IsEmpty())
-                        {
-                            exitRectArea.Click();
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        // 有体力继续
-                        confirmRectArea.Click();
-                        return true;
-                    }
-                }
                 else
                 {
-                    // 前面没有弹框的情况下，意味着只有原粹树脂，要再识别一次右上角确认树脂余量
+                    if (!chooseResinPrompt)
+                    {
+                        // TODO 前面没有弹框的情况下，意味着只有原粹树脂，要再识别一次右上角确认树脂余量，没有余量直接退出
+                    }
+                    // 有体力继续
+                    confirmRectArea.Click();
+                    return true;
                 }
             }
 
@@ -1123,9 +1132,23 @@ public class AutoDomainTask : ISoloTask
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
     }
 
+    private async Task ExitDomain()
+    {
+        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        await Delay(500, _ct);
+        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        await Delay(800, _ct);
+        Bv.ClickBlackConfirmButton(CaptureToRectArea());
+    }
+
     private bool PressUseResin(ImageRegion ra, string resinName)
     {
         var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
+        return PressUseResin(regionList, resinName);
+    }
+
+    private bool PressUseResin(List<Region> regionList, string resinName)
+    {
         var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
         if (resinKey != null)
         {
@@ -1134,7 +1157,8 @@ public class AutoDomainTask : ISoloTask
             if (useList.Count != 0)
             {
                 // 找到使用按键
-                var useKey = useList.FirstOrDefault(t => t.X > ra.Width / 2 && IsHeightOverlap(t, resinKey));
+                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / 2
+                                                         && IsHeightOverlap(t, resinKey));
                 if (useKey != null)
                 {
                     // 点击使用

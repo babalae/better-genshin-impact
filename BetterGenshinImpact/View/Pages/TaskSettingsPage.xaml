@@ -9,6 +9,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       Title="TaskSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
       d:DesignHeight="1150"
@@ -954,20 +955,113 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="循环次数"
+                                  Text="刷取至树脂耗尽"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="循环秘境多少次，输入 0 则为用光所有树脂为止，优先使用浓缩树脂"
+                                  Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="90"
-                                Margin="0,0,36,0"
-                                Text="{Binding AutoDomainRoundNum, Mode=TwoWay}" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Margin="0,0,36,0"
+                                      IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse,Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 指定树脂使用开关 -->
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="指定每种树脂刷取次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="开启后会根据配置的次数使用对应的树脂"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- 树脂设置组 -->
+                <Border Margin="16,8,16,16"
+                        BorderThickness="1"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8"
+                        IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=OneWay}">
+                    <StackPanel Margin="12">
+
+                        <!-- 原粹树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,8,0,12">
+                            <ui:TextBlock Text="原粹树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoDomainConfig.OriginalResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120"/>
+                        </StackPanel>
+
+                        <!-- 浓缩树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,12">
+                            <ui:TextBlock Text="浓缩树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoDomainConfig.CondensedResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120" />
+                        </StackPanel>
+
+                        <!-- 须臾树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,12">
+                            <ui:TextBlock Text="须臾树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoDomainConfig.TransientResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120" />
+                        </StackPanel>
+
+                        <!-- 脆弱树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,0">
+                            <ui:TextBlock Text="脆弱树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoDomainConfig.FragileResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
 
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
