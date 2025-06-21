@@ -447,7 +447,7 @@ jobs:
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          filename: "downloads/BetterGI_Install/BetterGI.Install.*.exe"
+          filename: "downloads/BetterGI_Install/BetterGI.Install.${{ needs.validate.outputs.version }}.exe"
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
