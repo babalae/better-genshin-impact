@@ -1022,15 +1022,21 @@ public class AutoDomainTask : ISoloTask
         {
             using var ra = CaptureToRectArea();
             var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-            bool res = regionList.Any(t => t.Text.Contains("石化古树"));
-            if (res)
+            var res = regionList.FirstOrDefault(t => t.Text.Contains("石化古树"));
+            if (res != null)
             {
+                // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
+                res.Click();
                 noOriginalResin = regionList.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂"));
+                return true;
             }
-
-            return res;
+            else
+            {
+                return false;
+            }
         }, _ct, 10, 500);
         Debug.WriteLine("识别到选择树脂页");
+        await Delay(800, _ct);
         
         if (noOriginalResin)
         {
@@ -1048,7 +1054,7 @@ public class AutoDomainTask : ISoloTask
         ResinStatus? resinStatus = null;
         if (chooseResinPrompt)
         {
-            await Delay(800, _ct);
+
             // 弹出框
             using var ra2 = CaptureToRectArea();
             // 识别树脂状况
