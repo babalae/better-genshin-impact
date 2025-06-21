@@ -1027,7 +1027,7 @@ public class AutoDomainTask : ISoloTask
             if (res != null)
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
-                res.Click();
+                // res.Click();
                 noOriginalResin = regionList.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂"));
                 return true;
             }
@@ -1141,6 +1141,9 @@ public class AutoDomainTask : ISoloTask
                 if (useKey != null)
                 {
                     // 点击使用
+                    useKey.Click();
+                    // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了。使用双击
+                    Sleep(60, _ct);
                     useKey.Click();
                     Logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
                 }
