@@ -1031,10 +1031,7 @@ public class AutoDomainTask : ISoloTask
                 noOriginalResin = regionList.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂"));
                 return true;
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }, _ct, 10, 500);
         Debug.WriteLine("识别到选择树脂页");
         await Delay(800, _ct);
@@ -1126,7 +1123,7 @@ public class AutoDomainTask : ISoloTask
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
     }
 
-    private void PressUseResin(ImageRegion ra, string resinName)
+    private bool PressUseResin(ImageRegion ra, string resinName)
     {
         var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
         var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
@@ -1146,6 +1143,7 @@ public class AutoDomainTask : ISoloTask
                     Sleep(60, _ct);
                     useKey.Click();
                     Logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
+                    return true;
                 }
                 else
                 {
@@ -1157,6 +1155,8 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
             }
         }
+
+        return false;
     }
 
     /// <summary>
