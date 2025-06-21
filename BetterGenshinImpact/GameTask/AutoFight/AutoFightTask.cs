@@ -417,7 +417,11 @@ public class AutoFightTask : ISoloTask
         }, cts2.Token);
 
         await fightTask;
-        
+        if (_taskParam.BattleThresholdForLoot>=2 && countFight < _taskParam.BattleThresholdForLoot)
+        {
+            Logger.LogInformation($"战斗人次（{countFight}）低于配置人次（{_taskParam.BattleThresholdForLoot}），跳过此次拾取！");
+            return;
+        }
         
         if (_taskParam.KazuhaPickupEnabled)
         {
