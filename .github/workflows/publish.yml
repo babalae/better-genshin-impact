@@ -299,8 +299,8 @@ jobs:
           path: dist/BetterGI.Install.*.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: BetterGI_Metadata
-          path: dist/metadata.json
+          name: BetterGI_OnlineInst
+          path: dist/BetterGI/BetterGI.update.exe
 
   build_setup:
     runs-on: windows-latest
@@ -349,11 +349,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-  
-      - name: Append Metadata
-        shell: bash
-        run: |
-          mv artifacts/BetterGI_Metadata/metadata.json artifacts/BetterGI_Metadata/BetterGI_Metadata.json
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -366,7 +361,6 @@ jobs:
           files: |
             artifacts/BetterGI_7z/*.7z
             artifacts/BetterGI_Install/*.exe
-            artifacts/BetterGI_Metadata/*.json
 
   mirrorchyan_uploading:
     if: github.repository_owner == 'babalae' && contains(needs.validate.outputs.version, '-')
@@ -417,14 +411,14 @@ jobs:
           curl -fSL -o "vc_redist.x64.exe" "https://aka.ms/vs/17/release/vc_redist.x64.exe"
           # embed
           echo "Embedding runtimes"
-          ./kachina-builder.exe append -o ./downloads/BetterGI_Install/BetterGI.Install.*.exe -f "$OUTPUT" -n "Microsoft.DotNet.DesktopRuntime.8" -f "vc_redist.x64.exe" -n "Microsoft.VCRedist.2015+.x64"
-
+          ./kachina-builder.exe append -o  ./downloads/BetterGI_Install/BetterGI.Install.*.exe -f "$OUTPUT" -n "Microsoft.DotNet.DesktopRuntime.8" -f "vc_redist.x64.exe" -n "Microsoft.VCRedist.2015+.x64"
+          ./kachina-builder.exe extract -i ./downloads/BetterGI_Install/BetterGI.Install.*.exe -f ./metadata.json -n "\0META"
       - name: Extract 7z and create zip
         shell: bash
         run: |
           cd downloads/BetterGI_7z
           7z x BetterGI_v*.7z -oun7z
-          mv ../BetterGI_Metadata/metadata.json ./un7z/BetterGI/.metadata.json
+          mv ../../metadata.json ./un7z/BetterGI/.metadata.json
           7z a -tzip BetterGI.zip un7z/BetterGI -mx=5 -mf=BCJ2 -r -y
           ls .
           ls ./un7z/BetterGI
