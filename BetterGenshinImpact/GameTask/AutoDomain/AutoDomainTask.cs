@@ -1022,7 +1022,7 @@ public class AutoDomainTask : ISoloTask
             if (res != null)
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
-                // res.Click();
+                res.Click();
                 return true;
             }
 
