@@ -1025,11 +1025,12 @@ public class AutoDomainTask : ISoloTask
                 // res.Click();
                 return true;
             }
+
             return false;
         }, _ct, 10, 500);
         Debug.WriteLine("识别到选择树脂页");
         await Delay(800, _ct);
-        
+
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
@@ -1047,6 +1048,7 @@ public class AutoDomainTask : ISoloTask
 
             if (!_taskParam.SpecifyResinUse)
             {
+                // 自动刷干树脂
                 // 识别树脂状况
                 var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
                 resinStatus.Print(Logger);
@@ -1070,8 +1072,10 @@ public class AutoDomainTask : ISoloTask
             }
             else
             {
+                // 指定使用树脂
                 var textListInPrompt2 = ra3.FindMulti(RecognitionObject.Ocr(ra3.Width * 0.25, ra3.Height * 0.2, ra3.Width * 0.5, ra3.Height * 0.6));
                 // 按优先级使用
+                var failCount = 0;
                 foreach (var record in _resinPriorityListWhenSpecifyUse)
                 {
                     if (record.RemainCount > 0 && PressUseResin(textListInPrompt2, record.Name))
@@ -1080,12 +1084,25 @@ public class AutoDomainTask : ISoloTask
                         Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
                         break;
                     }
+                    else
+                    {
+                        failCount++;
+                    }
                 }
 
                 if (_resinPriorityListWhenSpecifyUse.Sum(o => o.RemainCount) <= 0)
                 {
                     // 全部刷完
                     isLastTurn = true;
+                }
+
+                if (failCount == _resinPriorityListWhenSpecifyUse.Count)
+                {
+                    // 没有找到对应的树脂
+                    Logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
+                    Logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
+                    await ExitDomain();
+                    return false;
                 }
             }
         }
@@ -1120,6 +1137,7 @@ public class AutoDomainTask : ISoloTask
                     {
                         // TODO 前面没有弹框的情况下，意味着只有原粹树脂，要再识别一次右上角确认树脂余量，没有余量直接退出
                     }
+
                     // 有体力继续
                     confirmRectArea.Click();
                     return true;
