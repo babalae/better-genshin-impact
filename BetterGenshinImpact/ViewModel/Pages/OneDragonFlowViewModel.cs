@@ -284,8 +284,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             Title = "自动秘境领奖树脂配置（使用顺序从上往下）",
             Content = "请设置每种树脂的使用数量",
-            CloseButtonText = "取消",
-            PrimaryButtonText = "确认",
+            CloseButtonText = "关闭",
             Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose
                 ? null
                 : Application.Current.MainWindow,
