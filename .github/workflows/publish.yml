@@ -437,7 +437,6 @@ jobs:
           arch: x64
       
       - name: Upload Install.exe
-        if: always()
         uses: MirrorChyan/uploading-action@v1
         with:
           filetype: local
