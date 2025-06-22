@@ -110,6 +110,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             try
             {
+                GlobalSettings.SetOwnerValidation(false);
                 if (!Directory.Exists(repoPath))
                 {
                     // 如果仓库不存在，执行浅克隆操作
