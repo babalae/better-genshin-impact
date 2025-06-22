@@ -1151,6 +1151,31 @@ public class AutoDomainTask : ISoloTask
 
                     // 有体力继续
                     confirmRectArea.Click();
+                    await Delay(60, _ct); // 双击
+                    confirmRectArea.Click();
+                    
+                    if (!chooseResinPrompt)
+                    {
+                        // 真没树脂了还有提示兜底
+                        await Delay(900, _ct);
+                        var textListInNoResinPrompt = CaptureToRectArea().FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
+                        if (textListInNoResinPrompt.Any(t => t.Text.Contains("是否仍要") && t.Text.Contains("挑战") && t.Text.Contains("秘境")))
+                        {
+                            var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => t.Text.Contains("取消"));
+                            if (cancelBtn != null)
+                            {
+                                cancelBtn.Click();
+                                await Delay(700, _ct);
+                                
+                                var exitRectArea = CaptureToRectArea().Find(AutoFightAssets.Instance.ExitRa);
+                                if (!exitRectArea.IsEmpty())
+                                {
+                                    exitRectArea.Click();
+                                    return false;
+                                }
+                            }
+                        }
+                    }
                     return true;
                 }
             }
