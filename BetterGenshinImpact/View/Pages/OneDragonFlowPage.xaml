@@ -476,7 +476,7 @@
                         </StackPanel>
                     </ui:CardExpander>
 
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="True">
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf784;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -508,25 +508,20 @@
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
-                            <Grid Margin="52,16,16,16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                            
+                                
+                     
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
+                                                Margin="0,20,0,0"
+                                              HorizontalAlignment="Center"
                                               FontTypography="Body"
-                                              Text=""
-                                              TextWrapping="Wrap">
-                                    新的一天开始于 4:00
-                                </ui:TextBlock>
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
+                                              FontSize="12"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="周期始于凌晨 4:00 ，如周一 4:00 至周二 3:59 刷取周一秘境" 
                                               TextWrapping="Wrap">
-                                    周一 4:00 至周二 3:59 执行周一配置，以此类推。
                                 </ui:TextBlock>
-                            </Grid>
+                           
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -773,29 +768,53 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    HorizontalAlignment="Left"
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Grid.RowSpan="2"
+                                    MinWidth="100"
+                                    Margin="10,0,10,0"
+                                    Content="树脂使用设定"
+                                    Command="{Binding ResinUsageSequenceCommand}"/>
                                 <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
+                                              Grid.Column="1"
                                               FontTypography="Body"
-                                              Text="结束后自动快速分解圣遗物"
+                                              Text="分解圣遗物"
+                                              HorizontalAlignment="Right"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
+                                              Grid.Column="1"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="需要分解圣遗物的最高星级"
+                                              Text="最高的等级"
+                                              HorizontalAlignment="Right"
                                               TextWrapping="Wrap" />
+                                <StackPanel 
+                                    Grid.Row="0"
+                                    Grid.Column="2"
+                                    Grid.RowSpan="2"
+                                    Margin="15,0,0,0"
+                                    Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <ComboBox
+                                        Width="60"
+                                        Margin="0,0,13,0"
+                                        ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
+                                        SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                                    </ComboBox>
+                                    <ui:ToggleSwitch
+                                        Margin="0,0,36,0"
+                                        IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+                                </StackPanel>
+
+                        
                             </Grid>
                         </ui:CardControl.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox
-                                Width="80"
-                                Margin="0,0,10,0"
-                                ItemsSource="{Binding  Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
-                                SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
-                            </ComboBox>
-                            <ui:ToggleSwitch
-                                Margin="0,0,36,0"
-                                IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
-                        </StackPanel>
+                        
                     </ui:CardControl>
 
                     <!--  领取奖励  -->
@@ -847,6 +866,9 @@
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
+                                              TextAlignment="Center"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               Text="用于给指定队伍加好感度"
                                               TextWrapping="Wrap" />
@@ -858,6 +880,9 @@
                             Margin="0,0,28,0"
                             Text="{Binding SelectedConfig.DailyRewardPartyName, Mode=TwoWay}"
                             PlaceholderText="填写好感队名称"
+                            TextAlignment="Center"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
                             TextWrapping="Wrap" />
                     </ui:CardControl>
 
