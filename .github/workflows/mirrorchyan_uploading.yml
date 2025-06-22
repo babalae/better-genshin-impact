@@ -16,7 +16,6 @@ jobs:
           fileName: "*"
 
       - name: 📥 Download kachina-builder release
-        if: ${{ github.event.inputs.kachina-channel == 'release' }}
         uses: robinraju/release-downloader@v1.8
         with:
           repository: "YuehaiTeam/kachina-installer"
@@ -57,6 +56,7 @@ jobs:
 
       - name: Determine version number
         id: get-version
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
@@ -72,7 +72,7 @@ jobs:
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          filename: "downloads/BetterGI_7z/BetterGI.zip"
+          filename: "BetterGI.zip"
           version_name: ${{ steps.get-version.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
           os: win
