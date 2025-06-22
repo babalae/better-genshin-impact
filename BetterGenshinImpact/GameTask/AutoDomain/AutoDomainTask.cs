@@ -1143,14 +1143,7 @@ public class AutoDomainTask : ISoloTask
                             if (cancelBtn != null)
                             {
                                 cancelBtn.Click();
-                                await Delay(700, _ct);
-                                
-                                var exitRectArea = CaptureToRectArea().Find(AutoFightAssets.Instance.ExitRa);
-                                if (!exitRectArea.IsEmpty())
-                                {
-                                    exitRectArea.Click();
-                                    return false;
-                                }
+                                return false;
                             }
                         }
                     }
