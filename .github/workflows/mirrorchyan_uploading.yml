@@ -56,6 +56,7 @@ jobs:
 
       - name: Determine version number
         id: get-version
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
