@@ -779,7 +779,7 @@
                                     Grid.Column="0"
                                     Grid.RowSpan="2"
                                     MinWidth="100"
-                                    Margin="10,0,10,0"
+                                    Margin="5,0,10,0"
                                     Content="树脂使用设定"
                                     Command="{Binding ResinUsageSequenceCommand}"/>
                                 <ui:TextBlock Grid.Row="0"
