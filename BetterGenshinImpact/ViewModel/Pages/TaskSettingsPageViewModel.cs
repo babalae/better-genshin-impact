@@ -31,6 +31,7 @@ using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Frozen;
+using System.Diagnostics;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.View.Windows;
 

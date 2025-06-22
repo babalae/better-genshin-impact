@@ -198,7 +198,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
         {
             var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
-            text = _pickTextInference.Inference(TextInferenceFactory.PreProcessForInference(textMat));
+            text = _pickTextInference.Inference(textMat);
         }
         else
         {

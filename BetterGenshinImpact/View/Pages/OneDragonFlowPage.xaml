@@ -335,13 +335,18 @@
 
 
                     <!--  自动秘境  -->
-                    <TextBlock Margin="4,0,0,4"
-                               FontSize="14"
-                               Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="自动秘境" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
+                        <TextBlock FontSize="14"
+                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   Text="自动秘境" />
+                        <TextBlock Margin="4,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="11"
+                                   Text="（此处未覆盖的配置可在 独立任务-自动秘境 中配置）" />
+                    </StackPanel>
+ 
 
-
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="{Binding SelectedConfig.WeeklyDomainEnabled, Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}">
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf073;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -470,7 +475,8 @@
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="{Binding SelectedConfig.WeeklyDomainEnabled, Mode=TwoWay}">
+
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="True">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf784;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -502,7 +508,7 @@
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
-                            <Grid Margin="52,16,16,8">
+                            <Grid Margin="52,16,16,16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />

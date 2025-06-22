@@ -38,7 +38,6 @@ public class ResinStatus
         var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         var originalResinTopIconRa = AutoFightAssets.Instance.OriginalResinTopIconRa;
-        originalResinTopIconRa.RegionOfInterest = new Rect(captureArea.Width - (int)(356 * assetScale), (int)(37 * assetScale), (int)(100 * assetScale), (int)(21 * assetScale));
         var originalResinRes = region.Find(originalResinTopIconRa);
         if (originalResinRes.IsEmpty())
         {
@@ -46,8 +45,8 @@ public class ResinStatus
         }
 
         // 找出 icon 的位置 + 30 ~ w-267 就是原粹树脂的数字
-        var originalResinCountRect = new Rect(originalResinRes.X + 30, originalResinTopIconRa.RegionOfInterest.Y,
-            captureArea.Width - (originalResinRes.X + 30) - (int)(267 * assetScale), originalResinTopIconRa.RegionOfInterest.Height);
+        var originalResinCountRect = new Rect(originalResinRes.Right + 30, (int)(37 * assetScale),
+            captureArea.Width - (originalResinRes.Right + 30) - (int)(267 * assetScale), (int)(21 * assetScale));
         string cnt1 = OcrFactory.Paddle.OcrWithoutDetector(region.DeriveCrop(originalResinCountRect).SrcMat);
         status.OriginalResinCount = StringUtils.TryExtractPositiveInt(cnt1, 0);
 
@@ -68,7 +67,7 @@ public class ResinStatus
     {
         // logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}，须臾树脂：{Cnt3}，脆弱树脂：{Cnt4}", 
         //     OriginalResinCount, CondensedResinCount, FragileResinCount, TransientResinCount);
-        logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}", 
+        logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}",
             OriginalResinCount, CondensedResinCount);
     }
 }
