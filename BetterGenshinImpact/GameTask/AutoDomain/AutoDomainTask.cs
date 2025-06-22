@@ -398,14 +398,10 @@ public class AutoDomainTask : ISoloTask
                         Logger.LogInformation("周日未设置秘境奖励序号，不进行奖励选择");
                     }
                 }
-                else
-                {
-                    Logger.LogWarning("周日设置秘境奖励序号错误，请检查配置页面");
-                }
             }
             else
             {
-                Logger.LogWarning("周日奖励选择：圣遗物副本无需选择奖励");
+                Logger.LogDebug("周日奖励选择：圣遗物副本无需选择奖励");
             }
 
             await Delay(300, _ct);
@@ -1034,7 +1030,7 @@ public class AutoDomainTask : ISoloTask
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充")))
+        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
         {
             // 没有原粹树脂，直接退出秘境
             Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
@@ -1053,15 +1049,30 @@ public class AutoDomainTask : ISoloTask
                 var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
                 resinStatus.Print(Logger);
 
+                if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
+                {
+                    Logger.LogWarning("树脂不足");
+                    await ExitDomain();
+                    return false;
+                }
+                
+                bool resinUsed = false;
                 if (resinStatus.CondensedResinCount > 0)
                 {
-                    PressUseResin(ra3, "浓缩树脂");
+                    resinUsed = PressUseResin(ra3, "浓缩树脂");
                     resinStatus.CondensedResinCount -= 1;
                 }
                 else if (resinStatus.OriginalResinCount >= 20)
                 {
-                    PressUseResin(ra3, "原粹树脂");
+                    resinUsed = PressUseResin(ra3, "原粹树脂");
                     resinStatus.OriginalResinCount -= 20;
+                }
+                
+                if (!resinUsed)
+                {
+                    Logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
+                    await ExitDomain();
+                    return false;
                 }
 
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
@@ -1175,7 +1186,7 @@ public class AutoDomainTask : ISoloTask
             if (useList.Count != 0)
             {
                 // 找到使用按键
-                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / 2
+                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width / 2
                                                          && IsHeightOverlap(t, resinKey));
                 if (useKey != null)
                 {
