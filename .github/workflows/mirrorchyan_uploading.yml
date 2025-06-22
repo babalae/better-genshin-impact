@@ -72,7 +72,7 @@ jobs:
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          filename: "downloads/BetterGI_7z/BetterGI.zip"
+          filename: "BetterGI.zip"
           version_name: ${{ steps.get-version.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
           os: win
