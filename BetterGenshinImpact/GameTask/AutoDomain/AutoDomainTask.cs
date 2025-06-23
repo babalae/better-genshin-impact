@@ -398,83 +398,57 @@ public class AutoDomainTask : ISoloTask
                         Logger.LogInformation("周日未设置秘境奖励序号，不进行奖励选择");
                     }
                 }
-                else
-                {
-                    Logger.LogWarning("周日设置秘境奖励序号错误，请检查配置页面");
-                }
             }
             else
             {
-                Logger.LogWarning("周日奖励选择：圣遗物副本无需选择奖励");
+                Logger.LogDebug("周日奖励选择：圣遗物副本无需选择奖励");
             }
 
             await Delay(300, _ct);
             //await Delay(100000, _ct);//调试延时=========
         }
 
-        // 点击单人挑战,增加容错，点击失败则继续尝试
+        // 点击单人挑战
         int retryTimes = 0;
-        while (retryTimes < 40)
+        while (retryTimes < 20)
         {
             retryTimes++;
             using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
-                await Delay(500, _ct);
                 confirmRectArea.Click();
-                await Delay(500, _ct);
-                var ra = CaptureToRectArea();
-                var matchingChallengeArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
-                    ra.Width * 0.13, ra.Height * 0.06));
-                var done = matchingChallengeArea.LastOrDefault(t =>
-                    Regex.IsMatch(t.Text, this.matchingChallengeString));
-                if (done != null)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            await Delay(500, _ct);
-        }
-
-        //如果卡顿，可能会错过"是否仍要挑战该秘境"判断弹框,改为判断"快速编队"后进行点击进入
-        retryTimes = 0;
-        while (retryTimes < 30)
-        {
-            await Delay(600, _ct);
-            var ra = CaptureToRectArea();
-            var rapidformationStringArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
-                ra.Width * 0.13, ra.Height * 0.06));
-            var done = rapidformationStringArea.LastOrDefault(t =>
-                Regex.IsMatch(t.Text, this.rapidformationString));
-            if (done != null)
-            {
-                using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
-                if (!confirmRectArea.IsEmpty())
-                {
-                    confirmRectArea.Click();
-                    await Delay(500, _ct);
-                }
-            }
-            else
-            {
                 break;
             }
 
-            using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
-                ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
-            if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
+            await Delay(1500, _ct);
+        }
+
+        // 判断弹框
+        await Delay(600, _ct);
+        var ra = CaptureToRectArea();
+        using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
+            ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
+        if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
+        {
+            Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
+            throw new Exception("当前树脂不足，自动秘境停止运行。");
+        }
+
+        // 点击进入
+        retryTimes = 0;
+        while (retryTimes < 20)
+        {
+            retryTimes++;
+            using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
+            if (!confirmRectArea.IsEmpty())
             {
-                Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
-                throw new Exception("当前树脂不足，自动秘境停止运行。");
+                confirmRectArea.Click();
+                break;
             }
 
-            retryTimes++;
+            await Delay(1200, _ct);
         }
+
 
         // 载入动画
         await Delay(3000, _ct);
@@ -1022,18 +996,19 @@ public class AutoDomainTask : ISoloTask
             if (res != null)
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
-                // res.Click();
+                res.Click();
                 return true;
             }
+
             return false;
         }, _ct, 10, 500);
         Debug.WriteLine("识别到选择树脂页");
         await Delay(800, _ct);
-        
+
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充")))
+        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
         {
             // 没有原粹树脂，直接退出秘境
             Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
@@ -1047,19 +1022,35 @@ public class AutoDomainTask : ISoloTask
 
             if (!_taskParam.SpecifyResinUse)
             {
+                // 自动刷干树脂
                 // 识别树脂状况
                 var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
                 resinStatus.Print(Logger);
 
+                if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
+                {
+                    Logger.LogWarning("树脂不足");
+                    await ExitDomain();
+                    return false;
+                }
+                
+                bool resinUsed = false;
                 if (resinStatus.CondensedResinCount > 0)
                 {
-                    PressUseResin(ra3, "浓缩树脂");
+                    resinUsed = PressUseResin(ra3, "浓缩树脂");
                     resinStatus.CondensedResinCount -= 1;
                 }
                 else if (resinStatus.OriginalResinCount >= 20)
                 {
-                    PressUseResin(ra3, "原粹树脂");
+                    resinUsed = PressUseResin(ra3, "原粹树脂");
                     resinStatus.OriginalResinCount -= 20;
+                }
+                
+                if (!resinUsed)
+                {
+                    Logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
+                    await ExitDomain();
+                    return false;
                 }
 
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
@@ -1070,8 +1061,10 @@ public class AutoDomainTask : ISoloTask
             }
             else
             {
+                // 指定使用树脂
                 var textListInPrompt2 = ra3.FindMulti(RecognitionObject.Ocr(ra3.Width * 0.25, ra3.Height * 0.2, ra3.Width * 0.5, ra3.Height * 0.6));
                 // 按优先级使用
+                var failCount = 0;
                 foreach (var record in _resinPriorityListWhenSpecifyUse)
                 {
                     if (record.RemainCount > 0 && PressUseResin(textListInPrompt2, record.Name))
@@ -1080,12 +1073,25 @@ public class AutoDomainTask : ISoloTask
                         Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
                         break;
                     }
+                    else
+                    {
+                        failCount++;
+                    }
                 }
 
                 if (_resinPriorityListWhenSpecifyUse.Sum(o => o.RemainCount) <= 0)
                 {
                     // 全部刷完
                     isLastTurn = true;
+                }
+
+                if (failCount == _resinPriorityListWhenSpecifyUse.Count)
+                {
+                    // 没有找到对应的树脂
+                    Logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
+                    Logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
+                    await ExitDomain();
+                    return false;
                 }
             }
         }
@@ -1120,8 +1126,27 @@ public class AutoDomainTask : ISoloTask
                     {
                         // TODO 前面没有弹框的情况下，意味着只有原粹树脂，要再识别一次右上角确认树脂余量，没有余量直接退出
                     }
+
                     // 有体力继续
                     confirmRectArea.Click();
+                    await Delay(60, _ct); // 双击
+                    confirmRectArea.Click();
+                    
+                    if (!chooseResinPrompt)
+                    {
+                        // 真没树脂了还有提示兜底
+                        await Delay(900, _ct);
+                        var textListInNoResinPrompt = CaptureToRectArea().FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
+                        if (textListInNoResinPrompt.Any(t => t.Text.Contains("是否仍要") && t.Text.Contains("挑战") && t.Text.Contains("秘境")))
+                        {
+                            var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => t.Text.Contains("取消"));
+                            if (cancelBtn != null)
+                            {
+                                cancelBtn.Click();
+                                return false;
+                            }
+                        }
+                    }
                     return true;
                 }
             }
@@ -1157,7 +1182,7 @@ public class AutoDomainTask : ISoloTask
             if (useList.Count != 0)
             {
                 // 找到使用按键
-                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / 2
+                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width / 2
                                                          && IsHeightOverlap(t, resinKey));
                 if (useKey != null)
                 {

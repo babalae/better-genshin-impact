@@ -81,7 +81,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            Toast.Error($"更新失败，可尝试重置仓库后重新更新。失败原因：: {ex.Message}");
+            await MessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：: {ex.Message}");
         }
     }
 
