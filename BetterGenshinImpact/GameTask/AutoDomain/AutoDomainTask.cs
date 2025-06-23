@@ -408,47 +408,73 @@ public class AutoDomainTask : ISoloTask
             //await Delay(100000, _ct);//调试延时=========
         }
 
-        // 点击单人挑战
+        // 点击单人挑战,增加容错，点击失败则继续尝试
         int retryTimes = 0;
-        while (retryTimes < 20)
+        while (retryTimes < 40)
         {
             retryTimes++;
             using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
             if (!confirmRectArea.IsEmpty())
             {
+                await Delay(500, _ct);
                 confirmRectArea.Click();
-                break;
+                await Delay(500, _ct);
+                var ra = CaptureToRectArea();
+                var matchingChallengeArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
+                    ra.Width * 0.13, ra.Height * 0.06));
+                var done = matchingChallengeArea.LastOrDefault(t =>
+                    Regex.IsMatch(t.Text, this.matchingChallengeString));
+                if (done != null)
+                {
+                    using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
+                        ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
+                    if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
+                    {
+                        Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
+                        throw new Exception("当前树脂不足，自动秘境停止运行。");
+                    }
+                    else
+                    {
+                        Logger.LogInformation("自动秘境：检测到匹配挑战提示，未进入秘境，尝试继续");
+                    }
+
+                    continue;
+                }
+                else
+                {
+                    break;
+                }
             }
 
-            await Delay(1500, _ct);
+            await Delay(500, _ct);
         }
 
-        // 判断弹框
-        await Delay(600, _ct);
-        var ra = CaptureToRectArea();
-        using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
-            ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
-        if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
-        {
-            Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
-            throw new Exception("当前树脂不足，自动秘境停止运行。");
-        }
-
-        // 点击进入
+        //如果卡顿，可能会错过"是否仍要挑战该秘境"判断弹框,改为判断"快速编队"后进行点击进入
         retryTimes = 0;
-        while (retryTimes < 20)
+        while (retryTimes < 30)
         {
-            retryTimes++;
-            using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
-            if (!confirmRectArea.IsEmpty())
+            await Delay(600, _ct);
+            var ra = CaptureToRectArea();
+            var rapidformationStringArea = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.64, ra.Height * 0.91,
+                ra.Width * 0.13, ra.Height * 0.06));
+            var done = rapidformationStringArea.LastOrDefault(t =>
+                Regex.IsMatch(t.Text, this.rapidformationString));
+            if (done != null)
             {
-                confirmRectArea.Click();
+                using var confirmRectArea = CaptureToRectArea().Find(fightAssets.ConfirmRa);
+                if (!confirmRectArea.IsEmpty())
+                {
+                    confirmRectArea.Click();
+                    await Delay(500, _ct);
+                }
+            }
+            else
+            {
                 break;
             }
-
-            await Delay(1200, _ct);
+            
+            retryTimes++;
         }
-
 
         // 载入动画
         await Delay(3000, _ct);
