@@ -163,13 +163,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSOneDragonFlow()
     {   
-        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
-        {
-            Toast.Warning("未设置任务!");
-            return;
-        }
-        OneDragonFlowViewModel.OnNavigatedTo();
-        await OneDragonFlowViewModel.OnOneKeyExecute();
+       if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+       {
+            OneDragonFlowViewModel.OnNavigatedTo();
+            if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+            {
+                Toast.Warning("未设置任务!");
+                return;
+            }
+       }
+       await OneDragonFlowViewModel.OnOneKeyExecute();
     }
 
     [RelayCommand]
