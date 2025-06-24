@@ -125,22 +125,39 @@ internal class GoToSereniteaPotTask
             }
         }
 
-        ra = CaptureToRectArea();
-        var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
-        if (!teleportBtn.IsExist())
+        
+        for (int attempt = 0; attempt < 10; attempt++) // 尝试点击传送按钮
         {
+            ra = CaptureToRectArea();
+            var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+            if (teleportBtn.IsExist())
+            {
+                teleportBtn.Click();
+                break; // 找到并点击后退出循环
+            }
+
             var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (teleportSereniteaPotHome.IsExist())
             {
                 teleportSereniteaPotHome.Click();
+                break; // 找到并点击后退出循环
             }
+            await Delay(500, ct);
         }
-
-        ra = CaptureToRectArea();
-        teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
-        if (teleportBtn.IsExist())
+        
+        for (int i = 0; i < 10; i++)//有传送图标，点击传送
         {
-            teleportBtn.Click();
+            ra = CaptureToRectArea();
+            var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+            if (teleportBtn.IsExist())
+            {
+                teleportBtn.Click();
+                await Delay(1000, ct);
+            }
+            else
+            {
+                break;
+            }
         }
 
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
@@ -362,8 +379,8 @@ internal class GoToSereniteaPotTask
             Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
             return; 
         }
-        DateTime now = DateTime.Now;  
-        DayOfWeek currentDayOfWeek = now.DayOfWeek;
+        DateTime now = DateTime.Now;
+        DayOfWeek currentDayOfWeek = now.Hour >= 4 ? now.DayOfWeek : now.AddDays(-1).DayOfWeek;
         DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
         if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
         {
