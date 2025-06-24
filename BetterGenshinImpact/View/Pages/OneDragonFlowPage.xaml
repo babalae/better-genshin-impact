@@ -476,7 +476,7 @@
                         </StackPanel>
                     </ui:CardExpander>
 
-                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="True">
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                         <ui:CardExpander.Icon>
                             <ui:FontIcon Glyph="&#xf784;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
@@ -508,25 +508,20 @@
                             </Grid>
                         </ui:CardExpander.Header>
                         <StackPanel>
-                            <Grid Margin="52,16,16,16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                            
+                                
+                     
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
+                                                Margin="0,20,0,0"
+                                              HorizontalAlignment="Center"
                                               FontTypography="Body"
-                                              Text=""
-                                              TextWrapping="Wrap">
-                                    新的一天开始于 4:00
-                                </ui:TextBlock>
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
+                                              FontSize="12"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="周期始于凌晨 4:00 ，如周一 4:00 至周二 3:59 刷取周一秘境" 
                                               TextWrapping="Wrap">
-                                    周一 4:00 至周二 3:59 执行周一配置，以此类推。
                                 </ui:TextBlock>
-                            </Grid>
+                           
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -847,6 +842,9 @@
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
+                                              TextAlignment="Center"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               Text="用于给指定队伍加好感度"
                                               TextWrapping="Wrap" />
@@ -858,6 +856,9 @@
                             Margin="0,0,28,0"
                             Text="{Binding SelectedConfig.DailyRewardPartyName, Mode=TwoWay}"
                             PlaceholderText="填写好感队名称"
+                            TextAlignment="Center"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
                             TextWrapping="Wrap" />
                     </ui:CardControl>
 
