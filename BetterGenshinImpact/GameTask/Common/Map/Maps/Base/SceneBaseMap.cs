@@ -95,7 +95,7 @@ public abstract class SceneBaseMap : ISceneMap
         return SiftMatcher.KnnMatchRect(MainLayer.TrainKeyPoints, MainLayer.TrainDescriptors, greyBigMapMat);
     }
 
-    public Point2f GetMiniMapPosition(Mat greyMiniMapMat)
+    public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat)
     {
         // 从表到里逐层匹配
         foreach (var layer in Layers)
@@ -117,7 +117,7 @@ public abstract class SceneBaseMap : ISceneMap
         return default;
     }
 
-    public Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY)
+    public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY)
     {
         if (prevX <= 0 && prevY <= 0)
         {
