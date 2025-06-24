@@ -1016,20 +1016,29 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    public void OnDeleteScriptByFolder(ScriptGroupProject? item)
+    public  async void OnDeleteScriptByFolder(ScriptGroupProject? item)
     {
         if (item == null)
         {
             return;
-        }
-
-        var toBeDeletedProjects = SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName);
-        if (toBeDeletedProjects != null)
+        } 
+        
+        if (SelectedScriptGroup != null)
         {
-            foreach (var project in toBeDeletedProjects)
+            var toBeDeletedProjects = SelectedScriptGroup.Projects
+                .Where(item2 => item2.FolderName == item.FolderName)
+                .ToList();
+
+            await Task.Run(async () =>
             {
-                OnDeleteScript(project);
-            }      
+                foreach (var project in toBeDeletedProjects)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        OnDeleteScript(project);
+                    });
+                }
+            });
         }
     }
 
