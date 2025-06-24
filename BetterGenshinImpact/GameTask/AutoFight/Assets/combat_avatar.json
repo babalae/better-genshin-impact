@@ -1868,5 +1868,35 @@
     "nameEn": "Ifa",
     "skillCD": 7.5,
     "weapon": "10"
+  },
+  {
+    "alias": [
+      "丝柯克",
+      "Skirk",
+      "丝柯可",
+      "斯柯克"
+    ],
+    "burstCD": 15,
+    "id": "10000114",
+    "name": "丝柯克",
+    "nameEn": "SkirkNew",
+    "skillCD": 8,
+    "weapon": "1"
+  },
+  {
+    "alias": [
+      "塔利雅",
+      "Dahlia",
+      "塔利亚",
+      "塔丽雅",
+      "主祭",
+      "助祭"
+    ],
+    "burstCD": 15,
+    "id": "10000115",
+    "name": "塔利雅",
+    "nameEn": "Dahlia",
+    "skillCD": 9,
+    "weapon": "1"
   }
 ]

@@ -1,17 +1,16 @@
 ﻿using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static BetterGenshinImpact.GameTask.AutoFishing.RodNet;
+using TorchSharp;
 using static TorchSharp.torch;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
     [Collection("Init Collection")]
-    public class RodNetTests
+    public partial class RodNetTests
     {
         public RodNetTests(TorchFixture torch)
         {
@@ -42,9 +41,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             RodNet sut = new RodNet();
 
             //
-            NetInput netInput = GeometryProcessing(rodInput) ?? throw new NullReferenceException();
-            Tensor outputTensor = sut.ComputeScores_Torch(netInput);
-            double[] pred = ComputeScores(netInput);
+            Tensor outputTensor = sut.ComputeScores_Torch(rodInput);
+            double[] pred = RodNet.ComputeScores(rodInput);
 
             //
             Assert.Equal((float)pred[0], (float)outputTensor.data<double>()[0]);    // 对比时降低精度，差不多就行

@@ -7,6 +7,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:drawer="clr-namespace:BetterGenshinImpact.View.Controls.Drawer"
              d:DataContext="{d:DesignInstance Type=pages:JsListViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -22,82 +23,93 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Margin="42,16,42,12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
 
-        <ui:TextBlock Grid.Row="0"
-                      Margin="0,0,0,8"
-                      FontTypography="BodyStrong"
-                      Text="自定义 Javascript 脚本（实验功能）" />
-        <ui:TextBlock Grid.Row="1"
-                      Margin="0,0,0,8"
-                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      TextWrapping="Wrap">
-            可以通过 Javascript 调用 BetterGI 在原神中的各项能力。请在调度器中使用！<Hyperlink Command="{Binding GoToJsScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                点击查看 Javascript 脚本使用与编写教程
-            </Hyperlink>
-        </ui:TextBlock>
+    <Grid>
+        <Grid Margin="42,16,42,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal">
-            <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                       Content="打开脚本目录"
-                       Icon="{ui:SymbolIcon FolderOpen24}" />
-            <Separator Width="10" Opacity="0" />
-            <ui:Button Command="{Binding OpenLocalScriptRepoCommand}" Icon="{ui:SymbolIcon Archive24}">
-                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <ui:TextBlock>脚本仓库</ui:TextBlock>
-                    <ui:InfoBadge Margin="0,-8,-14,0"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Top"
-                                  Severity="Attention"
-                                  Style="{DynamicResource DotInfoBadgeStyle}"
-                                  Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                </Grid>
-            </ui:Button>
-        </StackPanel>
+            <ui:TextBlock Grid.Row="0"
+                          Margin="0,0,0,8"
+                          FontTypography="BodyStrong"
+                          Text="自定义 Javascript 脚本（实验功能）" />
+            <ui:TextBlock Grid.Row="1"
+                          Margin="0,0,0,8"
+                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                          TextWrapping="Wrap">
+                可以通过 Javascript 调用 BetterGI 在原神中的各项能力。请在调度器中使用！
+                <Hyperlink Command="{Binding GoToJsScriptUrlCommand}"
+                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                    点击查看 Javascript 脚本使用与编写教程
+                </Hyperlink>
+            </ui:TextBlock>
 
-        <Separator Grid.Row="3"
-                   Height="10"
-                   Opacity="0" />
+            <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <ui:Button Command="{Binding OpenScriptsFolderCommand}"
+                           Content="打开脚本目录"
+                           Icon="{ui:SymbolIcon FolderOpen24}" />
+                <Separator Width="10" Opacity="0" />
+                <ui:Button Command="{Binding OpenLocalScriptRepoCommand}" Icon="{ui:SymbolIcon Archive24}">
+                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <ui:TextBlock>脚本仓库</ui:TextBlock>
+                        <ui:InfoBadge Margin="0,-8,-14,0"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Top"
+                                      Severity="Attention"
+                                      Style="{DynamicResource DotInfoBadgeStyle}"
+                                      Visibility="{Binding Config.ScriptConfig.ScriptRepoHintDotVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </Grid>
+                </ui:Button>
+            </StackPanel>
 
-        <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="80" />
-                <!-- <ColumnDefinition Width="120" /> -->
-                <ColumnDefinition Width="20" />
-            </Grid.ColumnDefinitions>
-            <Grid x:Name="Col1" Grid.Column="0" />
-            <Grid x:Name="Col2" Grid.Column="1" />
-            <Grid x:Name="Col3" Grid.Column="2" />
-            <Grid x:Name="Col4" Grid.Column="3" />
-            <!-- <Grid x:Name="Col5" Grid.Column="4" /> -->
-        </Grid>
-        <ui:ListView Grid.Row="5"
-                     HorizontalAlignment="Stretch"
-                     VerticalAlignment="Stretch"
-                     ItemsSource="{Binding ScriptItems}"
-                     SelectionMode="Single">
-            <ListView.View>
-                <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
-                    <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding FolderName}"
-                                    Header="目录" />
-                    <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding Manifest.Name}"
-                                    Header="名称" />
-                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
-                                    DisplayMemberBinding="{Binding Manifest.Version}"
-                                    Header="版本" />
-                    <!--<GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="操作">
+            <Separator Grid.Row="3"
+                       Height="10"
+                       Opacity="0" />
+
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="80" />
+                    <!-- <ColumnDefinition Width="120" /> -->
+                    <ColumnDefinition Width="20" />
+                </Grid.ColumnDefinitions>
+                <Grid x:Name="Col1" Grid.Column="0" />
+                <Grid x:Name="Col2" Grid.Column="1" />
+                <Grid x:Name="Col3" Grid.Column="2" />
+                <Grid x:Name="Col4" Grid.Column="3" />
+                <!-- <Grid x:Name="Col5" Grid.Column="4" /> -->
+            </Grid>
+            <ui:ListView Grid.Row="5"
+                         x:Name="ScriptsListView"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch"
+                         ItemsSource="{Binding ScriptItems}"
+                         SelectionMode="Single">
+                <b:Interaction.Triggers>
+                    <b:EventTrigger EventName="SelectionChanged">
+                        <b:InvokeCommandAction Command="{Binding OpenScriptDetailDrawerCommand}"
+                                               CommandParameter="{Binding ElementName=ScriptsListView, Path=SelectedItem}" />
+                    </b:EventTrigger>
+                </b:Interaction.Triggers>
+                <ListView.View>
+                    <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
+                        <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
+                                        DisplayMemberBinding="{Binding FolderName}"
+                                        Header="目录" />
+                        <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
+                                        DisplayMemberBinding="{Binding Manifest.Name}"
+                                        Header="名称" />
+                        <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
+                                        DisplayMemberBinding="{Binding Manifest.Version}"
+                                        Header="版本" />
+                        <!--<GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -110,34 +122,55 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>-->
-                </GridView>
-            </ListView.View>
-            <ListBox.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Command="{Binding OpenScriptProjectFolderCommand}"
-                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                              Header="打开目录" />
-                    <MenuItem Command="{Binding StartRunCommand}"
-                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                              Header="执行脚本" />
-                    <MenuItem Command="{Binding RefreshCommand}"
-                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                              Header="刷新" />
-                </ContextMenu>
-            </ListBox.ContextMenu>
-            <ListView.Style>
-                <Style TargetType="{x:Type ListView}">
-                    <Setter Property="BorderThickness" Value="0" />
-                    <Setter Property="Background" Value="Transparent" />
-                </Style>
-            </ListView.Style>
-            <ListView.ItemContainerStyle>
-                <Style BasedOn="{StaticResource ListViewItemStyle}" TargetType="ui:ListViewItem">
-                    <Setter Property="ToolTip" Value="{Binding Manifest.Description}" />
-                    <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
-                    <Setter Property="ToolTipService.ShowDuration" Value="60000" />
-                </Style>
-            </ListView.ItemContainerStyle>
-        </ui:ListView>
+                    </GridView>
+                </ListView.View>
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="{Binding OpenScriptProjectFolderCommand}"
+                                  CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                  Header="打开目录" />
+                        <MenuItem Command="{Binding StartRunCommand}"
+                                  CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                  Header="执行脚本" />
+                        <MenuItem Command="{Binding RefreshCommand}"
+                                  CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                  Header="刷新" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListView.Style>
+                    <Style TargetType="{x:Type ListView}">
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </ListView.Style>
+                <ListView.ItemContainerStyle>
+                    <Style BasedOn="{StaticResource ListViewItemStyle}" TargetType="ui:ListViewItem">
+                        <Setter Property="ToolTip" Value="{Binding Manifest.Description}" />
+                        <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
+                        <Setter Property="ToolTipService.ShowDuration" Value="60000" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+            </ui:ListView>
+        </Grid>
+        <!-- 抽屉控件 -->
+        <drawer:CustomDrawer    
+            IsOpen="{Binding DrawerVm.IsDrawerOpen, Mode=TwoWay}"
+            DrawerPosition="{Binding DrawerVm.DrawerPosition}"
+            OpenWidth="{Binding DrawerVm.DrawerWidth}"
+            OpenHeight="{Binding DrawerVm.DrawerHeight}"
+            DrawerBackground="{DynamicResource ControlFillColorDefaultBrush}"
+            Content="{Binding DrawerVm.DrawerContent}"
+            Panel.ZIndex="100">
+            <b:Interaction.Triggers>
+                <b:EventTrigger EventName="Opened">
+                    <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerOpenedCommand}"
+                                           PassEventArgsToCommand="True"/>
+                </b:EventTrigger>
+                <b:EventTrigger EventName="Closing">
+                    <b:InvokeCommandAction Command="{Binding DrawerVm.OnDrawerClosingCommand}"
+                                           PassEventArgsToCommand="True"/>
+                </b:EventTrigger>
+            </b:Interaction.Triggers>
+        </drawer:CustomDrawer>
     </Grid>
 </UserControl>

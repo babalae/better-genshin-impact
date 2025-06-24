@@ -97,6 +97,11 @@ public partial class AutoFightConfig : ObservableObject
     private int _pickDropsAfterFightSeconds = 15;
 
     /// <summary>
+    /// 拾取战斗人次阈值,当战斗人次小于一定次数，就结束战斗情况下，不触发拾取掉落物和万叶拾取后拾取，只有不小于2时才生效。
+    /// </summary>
+    [ObservableProperty]
+    private int? _battleThresholdForLoot;
+    /// <summary>
     /// 战斗结束后，如果存在枫原万叶，则使用该角色捡材料
     /// </summary>
     [ObservableProperty]

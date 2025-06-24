@@ -43,9 +43,15 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
 
         <ui:NavigationView x:Name="RootNavigation"
+                           Grid.Column="0"
                            Grid.Row="1"
+                           Margin="0,0,0,5"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            OpenPaneLength="160">
