@@ -1029,16 +1029,18 @@ public partial class ScriptControlViewModel : ViewModel
                 .Where(item2 => item2.FolderName == item.FolderName)
                 .ToList();
 
-            await Task.Run(async () =>
+            foreach (var project in toBeDeletedProjects)
             {
-                foreach (var project in toBeDeletedProjects)
-                {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        OnDeleteScript(project);
-                    });
-                }
-            });
+                SelectedScriptGroup.Projects.Remove(project);
+            }
+            
+            _snackbarService.Show(
+                "脚本配置移除成功",
+                $"已移除 {item.FolderName} 下的所有关联配置",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
         }
     }
 
