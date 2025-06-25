@@ -836,11 +836,11 @@
                                                 
                                                 <!-- 根据模SpecifyResinUse显示不同的文字 -->
                                                 <ui:TextBlock Grid.Column="1"
-                                                                Margin="5,0,0,10"
+                                                                Margin="12,0,0,10"
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
-                                                                Text="先用浓缩,后原粹,其他不用"
+                                                                Text="先用浓缩,后原粹,其余不用"
                                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
@@ -849,18 +849,18 @@
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
-                                                                Text="按以下配置数量使用树脂"
+                                                                Text="按下方配置数量使用树脂"
                                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </Grid>
                                             
-                                            <!-- 细线 -->
-                                            <Separator Height="1"
-                                                      Margin="0,0,0,0"
-                                                      Background="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                            
-                                            <StackPanel IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse}">   
+                                            <StackPanel IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse}" Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">   
+                                                <!-- 细线 -->
+                                                <Separator Height="1"
+                                                           Margin="0,0,0,0"
+                                                           Background="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                
                                                 <!-- 原粹树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,8,0,12">
