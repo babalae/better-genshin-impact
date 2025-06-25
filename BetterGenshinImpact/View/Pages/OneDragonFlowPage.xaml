@@ -807,7 +807,7 @@
                                        PlacementTarget="{Binding ElementName=ToggleButton}"
                                        IsOpen="{Binding IsChecked, ElementName=ToggleButton}"
                                        AllowsTransparency="True"
-                                       PopupAnimation="Slide"
+                                       PopupAnimation="Fade"
                                        HorizontalAlignment="Center"
                                        Focusable="False" 
                                        StaysOpen="False">
