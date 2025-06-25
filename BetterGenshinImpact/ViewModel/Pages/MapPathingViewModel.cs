@@ -38,20 +38,18 @@ public partial class MapPathingViewModel : ViewModel
     private readonly ILogger<MapPathingViewModel> _logger = App.GetLogger<MapPathingViewModel>();
     public static readonly string PathJsonPath = Global.Absolute(@"User\AutoPathing");
 
-    [ObservableProperty]
-    private ObservableCollection<FileTreeNode<PathingTask>> _treeList = [];
+    [ObservableProperty] private ObservableCollection<FileTreeNode<PathingTask>> _treeList = [];
 
-    [ObservableProperty]
-    private FileTreeNode<PathingTask>? _selectNode;
+    [ObservableProperty] private FileTreeNode<PathingTask>? _selectNode;
 
     private MapPathingDevWindow? _mapPathingDevWindow;
     private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
-    
+
     // 添加抽屉ViewModel
     public DrawerViewModel DrawerVm { get; } = new DrawerViewModel();
-    
+
     // 添加WebView2相关成员变量
     private WebView2? _webView2;
     private WebpagePanel? _mdWebpagePanel;
@@ -148,7 +146,7 @@ public partial class MapPathingViewModel : ViewModel
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
         await _scriptService.RunMulti([project]);
     }
-    
+
     [RelayCommand]
     public void OnOpenDevTools()
     {
@@ -218,7 +216,7 @@ public partial class MapPathingViewModel : ViewModel
 
         // 设置抽屉位置和大小
         DrawerVm.DrawerPosition = DrawerPosition.Right;
-        
+
         if (!string.IsNullOrEmpty(mdFilePath))
         {
             DrawerVm.DrawerWidth = 450;
@@ -232,6 +230,7 @@ public partial class MapPathingViewModel : ViewModel
             });
             DrawerVm.setDrawerOpenedAction(async () =>
             {
+                SelectNode = null;
                 if (_mdWebpagePanel != null)
                 {
                     // 等待导航完成或超时
@@ -253,7 +252,7 @@ public partial class MapPathingViewModel : ViewModel
         {
             DrawerVm.DrawerWidth = 350;
             DrawerVm.SetDrawerClosingAction(_ => { });
-            DrawerVm.setDrawerOpenedAction(() => { });
+            DrawerVm.setDrawerOpenedAction(() => { SelectNode = null; });
         }
 
         // 创建要在抽屉中显示的内容
@@ -282,7 +281,7 @@ public partial class MapPathingViewModel : ViewModel
     private string? FindMdFilePath(string dirPath)
     {
         string[] possibleMdFiles = { "README.md", "readme.md" };
-        
+
         foreach (var mdFile in possibleMdFiles)
         {
             string fullPath = Path.Combine(dirPath, mdFile);
@@ -303,7 +302,7 @@ public partial class MapPathingViewModel : ViewModel
             Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
             Padding = new Thickness(20)
         };
-        
+
         var panel = new StackPanel();
         border.Child = panel;
 
@@ -324,7 +323,7 @@ public partial class MapPathingViewModel : ViewModel
             {
                 Margin = new Thickness(0, 0, 0, 15)
             };
-            
+
             _mdWebpagePanel = new WebpagePanel
             {
                 Margin = new Thickness(0),
@@ -332,7 +331,7 @@ public partial class MapPathingViewModel : ViewModel
                 VerticalAlignment = VerticalAlignment.Stretch,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
-            
+
             _navigationCompletionSource = new TaskCompletionSource<bool>();
             _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
             {
@@ -340,10 +339,10 @@ public partial class MapPathingViewModel : ViewModel
                 _navigationCompletionSource.TrySetResult(true);
             };
             _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
-            
+
             grid.Children.Add(_mdWebpagePanel);
             panel.Children.Add(grid);
-            
+
             // 设置Grid高度以占满剩余空间
             panel.SizeChanged += (sender, args) =>
             {
@@ -360,7 +359,7 @@ public partial class MapPathingViewModel : ViewModel
                         }
                     }
                 }
-                
+
                 // 设置Grid高度为剩余空间
                 grid.Height = Math.Max(400, panel.ActualHeight - otherElementsHeight - 15); // 设置最小高度为400
             };
@@ -374,7 +373,7 @@ public partial class MapPathingViewModel : ViewModel
                 {
                     return null;
                 }
-                
+
                 panel.Children.Add(new TextBlock
                 {
                     Text = $"{node.Value?.Info.Description}",
