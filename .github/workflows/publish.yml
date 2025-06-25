@@ -1,4 +1,5 @@
 name: BetterGI Publish
+run-name: "BetterGI ${{ inputs.version }}"
 
 on:
   workflow_dispatch:
@@ -299,8 +300,8 @@ jobs:
           path: dist/BetterGI.Install.*.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: BetterGI_Metadata
-          path: dist/metadata.json
+          name: BetterGI_OnlineInst
+          path: dist/BetterGI/BetterGI.update.exe
 
   build_setup:
     runs-on: windows-latest
@@ -349,11 +350,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-  
-      - name: Append Metadata
-        shell: bash
-        run: |
-          mv artifacts/BetterGI_Metadata/metadata.json artifacts/BetterGI_Metadata/BetterGI_Metadata.json
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -366,46 +362,86 @@ jobs:
           files: |
             artifacts/BetterGI_7z/*.7z
             artifacts/BetterGI_Install/*.exe
-            artifacts/BetterGI_Metadata/*.json
 
   mirrorchyan_uploading:
     if: github.repository_owner == 'babalae' && contains(needs.validate.outputs.version, '-')
     needs: [validate, build_dist, build_installer]
-    runs-on: macos-latest
+    runs-on: windows-latest
     steps:
 
       - uses: actions/download-artifact@v4
         with:
           path: downloads
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📥 Download kachina-builder release
+        if: ${{ github.event.inputs.kachina-channel == 'release' }}
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: "YuehaiTeam/kachina-installer"
+          latest: true
+          fileName: "kachina-builder.exe"
+      - name: 📥 Download kachina-builder dev
+        if: ${{ github.event.inputs.kachina-channel == 'dev' }}
+        uses: dawidd6/action-download-artifact@v8
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          repo: "YuehaiTeam/kachina-installer"
+          workflow: "build.yml"
+          name: artifact
+          branch: main
+          event: push
+          workflow_conclusion: success
 
-      - name: Extract 7z
+      - name: Embed Dotnet and VCRedist
         shell: bash
         run: |
+          # dotnet
+          VERSION_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0/latest.version"
+          VERSION=$(curl -fsSL "$VERSION_URL" | tr -d '\r\n')
+          if [ -z "$VERSION" ]; then
+              echo "Cannot get the latest version from $VERSION_URL"
+              exit 1
+          fi
+          INSTALLER_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/${VERSION}/windowsdesktop-runtime-${VERSION}-win-x64.exe"
+          OUTPUT="windowsdesktop-runtime-${VERSION}-win-x64.exe"
+          echo "Downloading Windows Desktop Runtime version $VERSION from $INSTALLER_URL"
+          curl -fSL -o "$OUTPUT" "$INSTALLER_URL"
+          # vcredist
+          echo "Downloading VCRedist"
+          curl -fSL -o "vc_redist.x64.exe" "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+          # embed
+          echo "Embedding runtimes"
+          ./kachina-builder.exe append -o  ./downloads/BetterGI_Install/BetterGI.Install.*.exe -f "$OUTPUT" -n "Microsoft.DotNet.DesktopRuntime.8" -f "vc_redist.x64.exe" -n "Microsoft.VCRedist.2015+.x64"
+          ./kachina-builder.exe extract -i ./downloads/BetterGI_Install/BetterGI.Install.*.exe -f ./metadata.json -n "\0META"
+      - name: Extract 7z and create zip
+        shell: bash
+        run: |
+          choco install wget --no-progress 
+          7z a -tzip BetterGI.Install.${{ needs.validate.outputs.version }}.zip ./downloads/BetterGI_Install/BetterGI.Install.${{ needs.validate.outputs.version }}.exe -mx=1 -r -y
           cd downloads/BetterGI_7z
           7z x BetterGI_v*.7z -oun7z
-          mv ../BetterGI_Metadata/metadata.json ./un7z/BetterGI/.metadata.json
+          mv ../../metadata.json ./un7z/BetterGI/.metadata.json
+          cd un7z
+          7z a -tzip ../BetterGI.zip ./BetterGI -mx=5 -r -y
           
       - name: Upload Zip
         uses: MirrorChyan/uploading-action@v1
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          working-directory: downloads/BetterGI_7z/un7z/
-          pick_files: '["BetterGI"]'
+          filename: "downloads/BetterGI_7z/BetterGI.zip"
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
           os: win
           arch: x64
-
+      
       - name: Upload Install.exe
         uses: MirrorChyan/uploading-action@v1
         with:
           filetype: local
           mirrorchyan_rid: BGI
-          working-directory: downloads/BetterGI_Install/
-          filename: "BetterGI.Install.*.exe"
-          extra_zip: true
+          filename: "BetterGI.Install.${{ needs.validate.outputs.version }}.zip"
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 

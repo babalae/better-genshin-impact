@@ -88,21 +88,21 @@ public partial class StringUtils
         return int.TryParse(text, out int result) ? result : defaultValue;
     }
 
-    public static int TryExtractPositiveInt(string text)
+    public static int TryExtractPositiveInt(string text, int defaultValue = -1)
     {
         if (string.IsNullOrEmpty(text))
         {
-            return -1;
+            return defaultValue;
         }
 
         try
         {
             text = RegexHelper.ExcludeNumberRegex().Replace(text, "");
-            return int.Parse(text);
+            return TryParseInt(text, defaultValue);
         }
         catch
         {
-            return -1;
+            return defaultValue;
         }
     }
 

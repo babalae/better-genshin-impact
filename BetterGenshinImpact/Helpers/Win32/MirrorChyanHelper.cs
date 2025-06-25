@@ -1,5 +1,6 @@
 using System;
 using Windows.System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View.Windows;
 using Meziantou.Framework.Win32;
 using Wpf.Ui.Violeta.Controls;
@@ -31,7 +32,7 @@ public static class MirrorChyanHelper
                     LeftButtonText = "获取CDK",
                     LeftButtonClick = (sender, args) =>
                     {
-                        Launcher.LaunchUriAsync(new Uri("https://mirrorchyan.com/zh/get-start"));
+                        OpenMirrorChyanWebsite();
                     }
                 }
             );
@@ -67,7 +68,7 @@ public static class MirrorChyanHelper
                 LeftButtonText = "获取CDK",
                 LeftButtonClick = (sender, args) =>
                 {
-                    Launcher.LaunchUriAsync(new Uri("https://mirrorchyan.com/zh/get-start"));
+                    OpenMirrorChyanWebsite();
                 }
             }
         );
@@ -89,5 +90,11 @@ public static class MirrorChyanHelper
     public static void DeleteCdk()
     {
         CredentialManagerHelper.DeleteCredential(MirrorChyanCdkAppName);
+    }
+    
+    
+    private static void OpenMirrorChyanWebsite()
+    {
+        Launcher.LaunchUriAsync(new Uri($"https://mirrorchyan.com/zh/get-start?source=bgi-{Global.Version}"));
     }
 }

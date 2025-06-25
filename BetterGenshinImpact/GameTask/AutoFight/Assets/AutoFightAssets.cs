@@ -26,8 +26,11 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
     // 树脂状态
     public RecognitionObject CondensedResinCountRa;
-
     public RecognitionObject FragileResinCountRa;
+    // 自动秘境
+    // public RecognitionObject LockIconRa; // 锁定辅助图标
+    public RecognitionObject CondensedResinTopIconRa;
+    public RecognitionObject OriginalResinTopIconRa;
 
     public Dictionary<string, string> AvatarCostumeMap;
 
@@ -243,6 +246,32 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "fragile_resin_count.png"),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 3 * 2, CaptureRect.Width / 2, CaptureRect.Height / 3),
+            DrawOnWindow = false
+        }.InitTemplate();
+        
+        // 自动秘境
+        // LockIconRa = new RecognitionObject
+        // {
+        //     Name = "LockIcon",
+        //     RecognitionType = RecognitionTypes.TemplateMatch,
+        //     TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "lock_icon.png"),
+        //     RegionOfInterest = new Rect(CaptureRect.Width - (int)(215 * AssetScale), 0, (int)(215 * AssetScale), (int)(80 * AssetScale)),
+        //     DrawOnWindow = false
+        // }.InitTemplate();
+        CondensedResinTopIconRa = new RecognitionObject
+        {
+            Name = "CondensedResinTopIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_top_icon.png"),
+            RegionOfInterest = new Rect((int)(1270 * AssetScale), (int)(25 * AssetScale), (int)(520 * AssetScale), (int)(45 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        OriginalResinTopIconRa = new RecognitionObject
+        {
+            Name = "OriginalResinTopIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "original_resin_top_icon.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(450 * AssetScale), (int)(25 * AssetScale), (int)(265 * AssetScale), (int)(45 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }

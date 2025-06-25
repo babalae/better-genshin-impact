@@ -11,7 +11,9 @@
                 <ui:ControlsDictionary />
                 <vio:ControlsDictionary />
                 <ResourceDictionary Source="/View/Controls/WpfUi/FaFontIconStyle.xaml" />
+                <ResourceDictionary Source="/View/Controls/Drawer/DrawerStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
             <FontFamily x:Key="TextThemeFontFamily">/Assets/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="DigitalThemeFontFamily">/Assets/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />

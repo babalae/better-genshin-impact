@@ -417,43 +417,11 @@ public class AutoFightTask : ISoloTask
         }, cts2.Token);
 
         await fightTask;
-
-        // 战斗结束检测线程
-        // var endTask = Task.Run(async () =>
-        // {
-        //     if (!_taskParam.FightFinishDetectEnabled)
-        //     {
-        //         return;
-        //     }
-        //
-        //     try
-        //     {
-        //         while (!cts2.IsCancellationRequested)
-        //         {
-        //             var finish = await CheckFightFinish();
-        //             if (finish)
-        //             {
-        //                 await cts2.CancelAsync();
-        //                 break;
-        //             }
-        //
-        //             Sleep(1000, cts2.Token);
-        //         }
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         Debug.WriteLine(e.Message);
-        //         Debug.WriteLine(e.StackTrace);
-        //     }
-        // }, cts2.Token);
-        //
-        // await Task.WhenAll(fightTask, endTask);
-        //战斗人次少于2时（通常无怪物情况下），跳过拾取
-        if (countFight < 2)
+        if (_taskParam.BattleThresholdForLoot>=2 && countFight < _taskParam.BattleThresholdForLoot)
         {
+            Logger.LogInformation($"战斗人次（{countFight}）低于配置人次（{_taskParam.BattleThresholdForLoot}），跳过此次拾取！");
             return;
         }
-        
         
         if (_taskParam.KazuhaPickupEnabled)
         {
@@ -505,7 +473,7 @@ public class AutoFightTask : ISoloTask
                 }
                 else
                 {
-                    Logger.LogInformation((countFight < 2 ? "首个人出招就结束战斗，应该无怪物" : "距最近一次万叶出招，时间过短") + "，跳过此次万叶拾取！");
+                    Logger.LogInformation("距最近一次万叶出招，时间过短，跳过此次万叶拾取！");
                 }
             }
             //切换过队伍的，需要再切回来

@@ -82,35 +82,40 @@ internal class GoToSereniteaPotTask
         // 进入 壶
         await ChangeCountryForce("尘歌壶", ct);
         
-        
-
-        
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
-        var ra = CaptureToRectArea();
-        //确定洞天名称
-        var list = ra.FindMulti(new RecognitionObject
-        {
-            RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height*9/10, (int)(ra.Width * 0.073), (int)(ra.Height*0.04))
-        });
-        if (list.Count > 0)
-        {
-            dongTianName = list[0].Text;
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
+        var  ra = CaptureToRectArea();
+        for (int i = 0; i < 5; i++){
+            ra = CaptureToRectArea();
+            //确定洞天名称
+            var list = ra.FindMulti(new RecognitionObject
+            {
+                RecognitionType = RecognitionTypes.Ocr,
+                RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height*9/10, (int)(ra.Width * 0.073), (int)(ra.Height*0.04))
+            });
+            if (list.Count > 0)
+            {
+                dongTianName = list[0].Text;
+                Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
+                await Task.Delay(100, ct);
+                break;
+            }
+            else
+            {
+                dongTianName = "";
+                Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
+            }
+            await Task.Delay(100, ct);
         }
-        else
-        {
-            dongTianName = "";
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
-        }
-        
-        for (int i = 0; i < 3; i++)
+
+        for (int i = 0; i < 5; i++)
         {
             var sereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
             if (!sereniteaPotHomeIcon.IsExist())
             {
-                Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至3.0。");
-                await new Core.Script.Dependence.Genshin().SetBigMapZoomLevel(3.0);
+                Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
+                await Task.Delay(1000, ct);
+                await new Core.Script.Dependence.Genshin().SetBigMapZoomLevel(2.5-i*0.2);//尝试缩放地图
+                await Task.Delay(1000, ct);
             }
             else
             {
@@ -120,28 +125,43 @@ internal class GoToSereniteaPotTask
             }
         }
 
-        ra = CaptureToRectArea();
-        var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
-        if (!teleportBtn.IsExist())
+        
+        for (int attempt = 0; attempt < 10; attempt++) // 尝试点击传送按钮
         {
+            ra = CaptureToRectArea();
+            var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+            if (teleportBtn.IsExist())
+            {
+                teleportBtn.Click();
+                break; // 找到并点击后退出循环
+            }
+
             var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (teleportSereniteaPotHome.IsExist())
             {
                 teleportSereniteaPotHome.Click();
+                break; // 找到并点击后退出循环
             }
+            await Delay(500, ct);
         }
-
-        ra = CaptureToRectArea();
-        teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
-        if (teleportBtn.IsExist())
+        
+        for (int i = 0; i < 10; i++)//有传送图标，点击传送
         {
-            teleportBtn.Click();
+            ra = CaptureToRectArea();
+            var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+            if (teleportBtn.IsExist())
+            {
+                teleportBtn.Click();
+                await Delay(1000, ct);
+            }
+            else
+            {
+                break;
+            }
         }
 
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
     }
-
-    
 
     // 寻找阿圆并靠近
     private async Task FindAYuan(CancellationToken ct)
@@ -297,18 +317,18 @@ internal class GoToSereniteaPotTask
         if (numberBtn.IsExist())
         {
             numberBtn.Move();
-            await Delay(300, ct);
+            await Delay(600, ct);//减慢速度，设备差异导致的延迟
             Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(300, ct);
+            await Delay(600, ct);
             numberBtn.MoveTo(ra.Width/7,0);//moveby会超出边界，改用MoveTo
-            await Delay(300, ct);
+            await Delay(600, ct);
             Simulation.SendInput.Mouse.LeftButtonUp();
         }
 
-        await Delay(300, ct);
+        await Delay(600, ct);
         ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
-        await Delay(500, ct);
-        ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
+        await Delay(600, ct);
+        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenPaimonMenu); // ESC 
     }
 
     private async Task GetReward(CancellationToken ct)
@@ -359,8 +379,8 @@ internal class GoToSereniteaPotTask
             Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
             return; 
         }
-        DateTime now = DateTime.Now;  
-        DayOfWeek currentDayOfWeek = now.DayOfWeek;
+        DateTime now = DateTime.Now;
+        DayOfWeek currentDayOfWeek = now.Hour >= 4 ? now.DayOfWeek : now.AddDays(-1).DayOfWeek;
         DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
         if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
         {
@@ -371,7 +391,6 @@ internal class GoToSereniteaPotTask
                 if (shopOption == TalkOptionRes.FoundAndClick)
                 {
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品");
-                    
                     await Delay(500, ct);
                     // 购买的物品清单
                     var buy = new List<RecognitionObject>();
@@ -410,18 +429,39 @@ internal class GoToSereniteaPotTask
                                 break;
                         }
                     }
-
+                    
+                    //对比购买成功和buy的数量，如果不等，重试一次
+                    var buyCount = 0;
+                    var retryBuy= 0;
                     // 直接购买最大数量
-                    foreach (var item in buy)
+                    while (retryBuy < 2)
                     {
-                        var itemRo = CaptureToRectArea().Find(item);
-                        if (itemRo.IsExist())
+                        foreach (var item in buy)
                         {
-                            Logger.LogInformation("领取尘歌壶奖励:购买 {text} ", item.Name);
-                            itemRo.Click();
-                            await Delay(600, ct);
-                            await BuyMaxNumber(ct);
-                            await Delay(1200, ct);//等待购买动画结束
+                            var itemRo = CaptureToRectArea().Find(item);
+                            if (itemRo.IsExist())
+                            {
+                                buyCount++;
+                                Logger.LogInformation("领取尘歌壶奖励:购买 {text} ", item.Name);
+                                itemRo.Click();
+                                await Delay(600, ct);
+                                await BuyMaxNumber(ct);
+                                await Delay(1000, ct);//等待购买动画结束
+                            }
+                            else
+                            {
+                                await Delay(700, ct);
+                                Logger.LogInformation("领取尘歌壶奖励: {text} 未找到", item.Name);
+                            }
+                            await Delay(700, ct);
+                        }
+                        if (buyCount < buy.Count)
+                        {
+                            retryBuy++;
+                            await Delay(500, ct);
+                        }else
+                        {
+                            break;
                         }
                     }
                     await Delay(900, ct);
