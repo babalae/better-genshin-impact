@@ -45,9 +45,11 @@ public class ExitAndReloginJob
         // 点击确认退出并等待确认弹窗消失
         await NewRetry.WaitForElementDisappear(
             _assets.ConfirmRo,
-            () => {
-                using var cr = CaptureToRectArea();
-                cr.Find(_assets.ConfirmRo, ra => { ra.Click(); ra.Dispose(); });
+            screen => {  // 接收当前截图作为参数
+                screen.Find(_assets.ConfirmRo, ra => { 
+                    ra.Click(); 
+                    ra.Dispose(); 
+                });
             },
             ct,
             5,
@@ -70,7 +72,7 @@ public class ExitAndReloginJob
             _assets.EnterGameRo,
             () => { },
             ct,
-            50,
+            120,
             1000
         );
         if (enterGameAppear)
@@ -94,7 +96,7 @@ public class ExitAndReloginJob
             ElementAssets.Instance.PaimonMenuRo,
             () => { },
             ct,
-            50,
+            120,
             1000
         );
         
