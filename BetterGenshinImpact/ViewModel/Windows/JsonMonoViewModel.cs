@@ -4,6 +4,7 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
@@ -24,7 +25,10 @@ public partial class JsonMonoViewModel : ObservableObject
         try
         {
             JsonPath = path;
-            JsonText = Global.ReadAllTextIfExist(JsonPath)!;
+            if (File.Exists(JsonPath))
+            {
+                JsonText = Global.ReadAllTextIfExist(JsonPath)!;
+            }
         }
         catch (Exception e)
         {

@@ -34,12 +34,12 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// <summary>
     /// 拾取黑名单
     /// </summary>
-    private List<string> _blackList = [];
+    private HashSet<string> _blackList = [];
 
     /// <summary>
     /// 拾取白名单
     /// </summary>
-    private List<string> _whiteList = [];
+    private HashSet<string> _whiteList = [];
 
     private RecognitionObject _pickRo;
 
@@ -59,35 +59,63 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = TaskContext.Instance().Config.AutoPickConfig.Enabled;
-        try
+        var config = TaskContext.Instance().Config.AutoPickConfig;
+        IsEnabled = config.Enabled;
+
+        if (config.BlackListEnabled)
         {
-            var blackListJson = Global.ReadAllTextIfExist(@"User\pick_black_lists.json");
-            if (!string.IsNullOrEmpty(blackListJson))
+            _blackList = ReadJson(@"Assets\Config\Pick\pick_black_lists.json");
+            var userBlackList = ReadText(@"User\pick_black_lists.txt");
+            if (userBlackList.Count > 0)
             {
-                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson, ConfigService.JsonOptions) ?? [];
+                _blackList.UnionWith(userBlackList);
             }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "读取拾取黑名单失败");
-            MessageBox.Error("读取拾取黑名单失败，请确认修改后的拾取黑名单内容格式是否正确！");
         }
 
+        if (config.WhiteListEnabled)
+        {
+            _whiteList = ReadText(@"User\pick_white_lists.txt");
+        }
+    }
+
+    private HashSet<string> ReadJson(string jsonFilePath)
+    {
         try
         {
-            var whiteListJson = Global.ReadAllTextIfExist(@"User\pick_white_lists.json");
-            if (!string.IsNullOrEmpty(whiteListJson))
+            var json = Global.ReadAllTextIfExist(jsonFilePath);
+            if (!string.IsNullOrEmpty(json))
             {
-                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson, ConfigService.JsonOptions) ?? [];
+                return JsonSerializer.Deserialize<HashSet<string>>(json, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取白名单失败");
-            MessageBox.Error("读取拾取白名单失败，请确认修改后的拾取白名单内容格式是否正确！");
+            _logger.LogError(e, "读取拾取黑/白名单失败");
+            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
+
+        return [];
     }
+
+    private HashSet<string> ReadText(string textFilePath)
+    {
+        try
+        {
+            var txt = Global.ReadAllTextIfExist(textFilePath);
+            if (!string.IsNullOrEmpty(txt))
+            {
+                return [..txt.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)];
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "读取拾取黑/白名单失败");
+            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+        }
+
+        return [];
+    }
+
 
     /// <summary>
     /// 用于日志只输出一次
@@ -161,6 +189,19 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
         }
 
+        if (!config.WhiteListEnabled && isExcludeIcon)
+        {
+            // 默认不拾取且没有白名单直接放弃OCR
+            return;
+        }
+
+        if (!config.WhiteListEnabled && !config.BlackListEnabled && !isExcludeIcon)
+        {
+            // 没有黑白名单直接拾取
+            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            LogPick(content, "黑名单未启用，直接拾取");
+        }
+
         //if (config.FastModeEnabled && !isExcludeIcon)
         //{
         //    _fastModePickCount++;
@@ -195,7 +236,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         string text;
-        if (config.OcrEngine == PickOcrEngineEnum.Yap.ToString())
+        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
         {
             var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
             text = _pickTextInference.Inference(textMat);
@@ -208,7 +249,8 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (boundingRect.Width > 5 && boundingRect.Height > 5)
             {
                 // 截取只包含文字的区域
-                var textOnlyMat = new Mat(textMat, boundingRect);
+                var textOnlyMat = new Mat(textMat, new Rect(0, 0,
+                    boundingRect.Right + 3 < textMat.Width ? boundingRect.Right + 3 : textMat.Width, textMat.Height));
                 text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
             }
             else
@@ -222,7 +264,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             text = PunctuationAndSpacesRegex().Replace(text, "");
             // 唯一一个动态拾取项，特殊处理，不拾取
-            if (text.Contains("生长时间"))
+            if (text.Contains("长时间"))
             {
                 return;
             }
@@ -240,7 +282,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (_whiteList.Contains(text))
+            if (config.WhiteListEnabled && _whiteList.Contains(text))
             {
                 LogPick(content, text);
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
@@ -255,7 +297,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (_blackList.Contains(text))
+            if (config.BlackListEnabled && _blackList.Contains(text))
             {
                 return;
             }
