@@ -201,13 +201,13 @@ public class AutoDomainTask : ISoloTask
     private void Init()
     {
         LogScreenResolution();
-        if (_taskParam.DomainRoundNum == 9999)
+        if (_config.SpecifyResinUse)
         {
-            Logger.LogInformation("→ {Text} 用尽所有体力后结束", "自动秘境，");
+            Logger.LogInformation("→ {Text} 指定使用树脂", "自动秘境，");
         }
         else
         {
-            Logger.LogInformation("→ {Text} 设置总次数：{Cnt}", "自动秘境，", _taskParam.DomainRoundNum);
+            Logger.LogInformation("→ {Text} 用尽所有浓缩树脂和原粹树脂后结束", "自动秘境，");
         }
     }
 
