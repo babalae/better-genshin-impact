@@ -669,7 +669,21 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
             _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
+            {
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+
+                _webWindow.Panel!.WebView.CoreWebView2.NewWindowRequested += (sender, e) =>
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        UseShellExecute = true,
+                        FileName = e.Uri
+                    };
+                    Process.Start(psi);
+
+                    e.Handled = true;
+                };
+            };
             _webWindow.Show();
         }
         else
