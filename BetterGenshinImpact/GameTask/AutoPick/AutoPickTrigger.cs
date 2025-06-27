@@ -203,7 +203,18 @@ public partial class AutoPickTrigger : ITaskTrigger
         else
         {
             var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            text = OcrFactory.Paddle.Ocr(textMat);
+            var boundingRect = GetWhiteTextBoundingRect(textMat);
+            // 如果找到有效区域
+            if (boundingRect.Width > 5 && boundingRect.Height > 5)
+            {
+                // 截取只包含文字的区域
+                var textOnlyMat = new Mat(textMat, boundingRect);
+                text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
+            }
+            else
+            {
+                text = OcrFactory.Paddle.Ocr(textMat);
+            }
         }
 
         speedTimer.Record("文字识别");
@@ -256,6 +267,21 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
+    }
+
+    private static Rect GetWhiteTextBoundingRect(Mat textMat)
+    {
+        // 预处理提取纯白色文字
+        var processedMat = new Mat();
+        // 提取白色文字 (255,255,255)
+        Cv2.InRange(textMat, new Scalar(254, 254, 254), new Scalar(255, 255, 255), processedMat);
+        // 形态学操作，先腐蚀后膨胀，去除噪点并保持文字完整
+        var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(2, 2));
+        Cv2.MorphologyEx(processedMat, processedMat, MorphTypes.Open, kernel, iterations: 1);
+        Cv2.Dilate(processedMat, processedMat, kernel, iterations: 1);
+        // 寻找非零区域，即文字区域
+        Rect boundingRect = Cv2.BoundingRect(processedMat);
+        return boundingRect;
     }
 
 
