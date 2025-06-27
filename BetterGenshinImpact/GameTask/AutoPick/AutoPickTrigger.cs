@@ -64,7 +64,7 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         if (config.BlackListEnabled)
         {
-            _blackList = ReadJson(@"Assets\Config\Pick\pick_black_lists.json");
+            _blackList = ReadJson(@"Assets\Config\Pick\default_pick_black_lists.json");
             var userBlackList = ReadText(@"User\pick_black_lists.txt");
             if (userBlackList.Count > 0)
             {
@@ -262,7 +262,6 @@ public partial class AutoPickTrigger : ITaskTrigger
         speedTimer.Record("文字识别");
         if (!string.IsNullOrEmpty(text))
         {
-            text = PunctuationAndSpacesRegex().Replace(text, "");
             // 唯一一个动态拾取项，特殊处理，不拾取
             if (text.Contains("长时间"))
             {
@@ -277,12 +276,13 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
 
             // 单个字符不拾取
-            if (text.Length <= 1)
+            var simpleText = PunctuationAndSpacesRegex().Replace(text, "");
+            if (simpleText.Length <= 1)
             {
                 return;
             }
 
-            if (config.WhiteListEnabled && _whiteList.Contains(text))
+            if (config.WhiteListEnabled && (_whiteList.Contains(text) || _whiteList.Contains(simpleText)))
             {
                 LogPick(content, text);
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
@@ -297,7 +297,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (config.BlackListEnabled && _blackList.Contains(text))
+            if (config.BlackListEnabled && (_blackList.Contains(text) || _blackList.Contains(simpleText)))
             {
                 return;
             }
