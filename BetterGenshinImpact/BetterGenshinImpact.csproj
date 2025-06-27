@@ -26,6 +26,15 @@
 		<None Remove="Assets\Strings\*.html" />
 		<None Remove="Assets\Strings\*.md" />
 		<None Remove="Assets\Audios\*.mp3" />
+		<None Update="Assets\Model\PaddleOCR\chinese_cht_PP-OCRv3_rec_infer\chinese_cht_dict.txt">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\latin_PP-OCRv3_rec_infer\latin_dict.txt">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\ppocr_keys_v1.txt">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>

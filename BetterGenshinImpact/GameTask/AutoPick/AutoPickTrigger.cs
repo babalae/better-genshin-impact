@@ -34,12 +34,12 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// <summary>
     /// 拾取黑名单
     /// </summary>
-    private List<string> _blackList = [];
+    private HashSet<string> _blackList = [];
 
     /// <summary>
     /// 拾取白名单
     /// </summary>
-    private List<string> _whiteList = [];
+    private HashSet<string> _whiteList = [];
 
     private RecognitionObject _pickRo;
 
@@ -65,7 +65,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             var blackListJson = Global.ReadAllTextIfExist(@"User\pick_black_lists.json");
             if (!string.IsNullOrEmpty(blackListJson))
             {
-                _blackList = JsonSerializer.Deserialize<List<string>>(blackListJson, ConfigService.JsonOptions) ?? [];
+                _blackList = JsonSerializer.Deserialize<HashSet<string>>(blackListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)
@@ -79,7 +79,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             var whiteListJson = Global.ReadAllTextIfExist(@"User\pick_white_lists.json");
             if (!string.IsNullOrEmpty(whiteListJson))
             {
-                _whiteList = JsonSerializer.Deserialize<List<string>>(whiteListJson, ConfigService.JsonOptions) ?? [];
+                _whiteList = JsonSerializer.Deserialize<HashSet<string>>(whiteListJson, ConfigService.JsonOptions) ?? [];
             }
         }
         catch (Exception e)

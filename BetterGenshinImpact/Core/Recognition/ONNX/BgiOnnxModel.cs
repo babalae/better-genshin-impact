@@ -51,6 +51,18 @@ public class BgiOnnxModel
         Register("BgiAvatarSide", @"Assets\Model\Common\avatar_side_classify_sim.onnx");
 
     /// <summary>
+    /// paddleOCR V5 检测模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrV5Det = Register("PP-OCRv5_mobile_det",
+        @"Assets\Model\PaddleOCR\PP-OCRv5_mobile_det_infer\slim_model.onnx");
+
+    /// <summary>
+    /// paddleOCR V5 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrV5Rec = Register("PP-OCRv5_mobile_rec",
+        @"Assets\Model\PaddleOCR\PP-OCRv5_mobile_rec_infer\slim_model.onnx");
+
+    /// <summary>
     /// paddleOCR V4 简体中文 检测模型
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrChDet =

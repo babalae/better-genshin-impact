@@ -22,29 +22,39 @@ public class PaddleOcrService : IOcrService
 
     private readonly Rec _localRecModel;
 
-    public PaddleOcrService(string cultureInfoName, BgiOnnxFactory bgiOnnxFactory)
+    public PaddleOcrService(string cultureInfoName, BgiOnnxFactory bgiOnnxFactory,bool v4 = false)
     {
         var path = Global.Absolute(@"Assets\Model\PaddleOcr");
-
-        switch (cultureInfoName)
+        if (v4)
         {
-            case "zh-Hant":
-                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
-                _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChtRec, Path.Combine(path, "chinese_cht_dict.txt"),
-                    OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
-                break;
-            case "fr":
-                _localDetModel = new Det(BgiOnnxModel.PaddleOcrEnDet, OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
-                _localRecModel = new Rec(BgiOnnxModel.PaddleOcrLatinRec, Path.Combine(path, "latin_dict.txt"),
-                    OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
-                break;
-            default:
-                _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
-                _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChRec, Path.Combine(path, "ppocr_keys_v1.txt"),
-                    OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
+            switch (cultureInfoName)
+            {
+                case "zh-Hant":
+                    _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
+                    _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChtRec, Path.Combine(path, @"chinese_cht_PP-OCRv3_rec_infer\chinese_cht_dict.txt"),
+                        OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
+                    break;
+                case "fr":
+                    _localDetModel = new Det(BgiOnnxModel.PaddleOcrEnDet, OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
+                    _localRecModel = new Rec(BgiOnnxModel.PaddleOcrLatinRec, Path.Combine(path, @"latin_PP-OCRv3_rec_infer\latin_dict.txt"),
+                        OcrVersionConfig.PpOcrV3, bgiOnnxFactory);
+                    break;
+                default:
+                    _localDetModel = new Det(BgiOnnxModel.PaddleOcrChDet, OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
+                    _localRecModel = new Rec(BgiOnnxModel.PaddleOcrChRec, Path.Combine(path, @"ch_PP-OCRv4_rec\ppocr_keys_v1.txt"),
+                        OcrVersionConfig.PpOcrV4, bgiOnnxFactory);
 
-                break;
+                    break;
+            }
         }
+        else
+        {
+            _localDetModel = new Det(BgiOnnxModel.PaddleOcrV5Det, OcrVersionConfig.PpOcrV5, bgiOnnxFactory);
+            _localRecModel = new Rec(BgiOnnxModel.PaddleOcrV5Rec, Path.Combine(path, @"PP-OCRv5_mobile_rec_infer\ppocrv5_dict.txt"),
+                OcrVersionConfig.PpOcrV5, bgiOnnxFactory);
+        }
+
+
     }
 
     /// <summary>
