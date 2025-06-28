@@ -144,7 +144,18 @@ internal class GoToSereniteaPotTask
                 await Delay(500, ct);  
                 continue; // 找到并点击传送住宅按钮后再次点击传送按钮
             }
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "传送按钮、传送住宅按钮未找到，重试");
+
+            if (attempt < 9)
+            {
+                Logger.LogInformation("领取尘歌壶奖励:{text}", "传送按钮、传送住宅按钮未找到，重试");
+                await Delay(1000, ct);    // 重试间隔
+            }
+            else
+            {
+                fail = true;
+                Logger.LogWarning("领取尘歌壶奖励:{text}", "传送至尘歌壶失败");
+                return；
+            }
         }
         
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
@@ -555,6 +566,11 @@ internal class GoToSereniteaPotTask
         //  */
         // 进入尘歌壶
          await IntoSereniteaPot(ct);
+        if (fail)
+        {
+            await Finished(ct);
+            return;
+        }
         // 寻找阿圆并靠近
         await FindAYuan(ct);
         // 领取奖励
