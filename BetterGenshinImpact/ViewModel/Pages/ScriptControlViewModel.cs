@@ -1016,20 +1016,31 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    public void OnDeleteScriptByFolder(ScriptGroupProject? item)
+    public  async void OnDeleteScriptByFolder(ScriptGroupProject? item)
     {
         if (item == null)
         {
             return;
-        }
-
-        var toBeDeletedProjects = SelectedScriptGroup?.Projects.ToList().Where(item2 => item2.FolderName == item.FolderName);
-        if (toBeDeletedProjects != null)
+        } 
+        
+        if (SelectedScriptGroup != null)
         {
+            var toBeDeletedProjects = SelectedScriptGroup.Projects
+                .Where(item2 => item2.FolderName == item.FolderName)
+                .ToList();
+
             foreach (var project in toBeDeletedProjects)
             {
-                OnDeleteScript(project);
-            }      
+                SelectedScriptGroup.Projects.Remove(project);
+            }
+            
+            _snackbarService.Show(
+                "脚本配置移除成功",
+                $"已移除 {item.FolderName} 下的所有关联配置",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
         }
     }
 
