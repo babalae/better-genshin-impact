@@ -105,8 +105,8 @@ public class AutoDomainTask : ISoloTask
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
-        // 3次复活重试 (DISABLED)
-        while (true)
+        // 复活重试
+        for (var i = 0; i < _config.ReviveRetryCount; i++)
         {
             try
             {
