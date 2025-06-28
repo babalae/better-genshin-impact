@@ -22,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// </summary>
 public class LowerHeadThenWalkToTask
 {
-    private RECT CaptureRect => TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    private Rect CaptureRect => TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
 
     private double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
 
