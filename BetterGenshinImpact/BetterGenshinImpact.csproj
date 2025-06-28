@@ -26,6 +26,7 @@
 		<None Remove="Assets\Strings\*.html" />
 		<None Remove="Assets\Strings\*.md" />
 		<None Remove="Assets\Audios\*.mp3" />
+		<None Update="Assets\Config\*"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -104,6 +105,9 @@
 		</None>
 		<None Update="Assets\Model\**">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Config\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>

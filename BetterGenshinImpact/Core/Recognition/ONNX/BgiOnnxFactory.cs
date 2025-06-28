@@ -234,7 +234,7 @@ public class BgiOnnxFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
+        // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
 
         var cached = GetCached(model);

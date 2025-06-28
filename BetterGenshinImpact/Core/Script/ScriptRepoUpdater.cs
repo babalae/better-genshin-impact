@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.View.Windows;
 using LibGit2Sharp;
+using LibGit2Sharp.Handlers;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
 
@@ -47,7 +48,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-git";
 
     public static readonly string CenterRepoPath = Path.Combine(ReposPath, CenterRepoUnzipName);
-    
+
     public static readonly string CenterRepoPathOld = Path.Combine(ReposPath, "bettergi-scripts-list-main");
 
     public static readonly Dictionary<string, string> PathMapper = new Dictionary<string, string>
@@ -96,7 +97,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     // }
 
 
-    public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl)
+    public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
         {
@@ -116,16 +117,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 如果仓库不存在，执行浅克隆操作
                     _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
-                    // 使用浅克隆选项
-                    var options = new CloneOptions
-                    {
-                        Checkout = true,
-                        IsBare = false,
-                        RecurseSubmodules = false, // 不递归克隆子模块
-                    };
-                    options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
-                    // 克隆仓库
-                    Repository.Clone(repoUrl, repoPath, options);
+                    SimpleCloneRepository(repoUrl, repoPath, onCheckoutProgress);
+
+                    // CloneRepository(repoUrl, repoPath);
                     updated = true;
                 }
                 else
@@ -145,13 +139,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 获取远程分支信息
                     var remote = repo.Network.Remotes["origin"];
                     var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
-                    
+
                     // 使用浅拉取选项
                     // var fetchOptions = new FetchOptions
                     // {
                     //     Depth = 1 // 浅拉取，只获取最新的提交
                     // };
-                    
+
                     Commands.Fetch(repo, remote.Name, refSpecs, null, "拉取最新更新");
 
                     // 获取当前分支
@@ -198,7 +192,84 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         return (repoPath, updated);
     }
+
+    private static void SimpleCloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
+    {
+        // 使用浅克隆选项
+        var options = new CloneOptions
+        {
+            Checkout = true,
+            IsBare = false,
+            RecurseSubmodules = false, // 不递归克隆子模块
+            OnCheckoutProgress = onCheckoutProgress
+        };
+        options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+        // 克隆仓库
+        Repository.Clone(repoUrl, repoPath, options);
+    }
+
+    /// <summary>
+    ///  
+    /// 相当于 Repository.Clone(repoUrl, repoPath, options); 
+    /// </summary>
+    /// <param name="repoUrl"></param>
+    /// <param name="repoPath"></param>
+    /// <exception cref="Exception"></exception>
+    private void CloneRepository(string repoUrl, string repoPath)
+    {
+        // 1. 创建目录
+        Directory.CreateDirectory(repoPath);
+
+        // 2. 初始化 Git 仓库
+        Repository.Init(repoPath);
+
+        using var repo = new Repository(repoPath);
+        GitConfig(repo);
+        
+        // 3. 添加远程源
+        Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
+
+        // 4. 获取数据（使用浅克隆选项）
+        var fetchOptions = new FetchOptions
+        {
+            Depth = 1, // 浅克隆，只获取最新的提交
+            TagFetchMode = TagFetchMode.None // 不获取标签
+        };
+
+        // 5. 执行获取操作
+        Commands.Fetch(repo, remote.Name, ["+refs/heads/*:refs/remotes/origin/*"], fetchOptions, "初始化拉取");
+
+        // 6. 创建本地分支并跟踪远程分支
+        var remoteBranch = repo.Branches["refs/remotes/origin/main"] ?? repo.Branches["refs/remotes/origin/master"];
+        if (remoteBranch == null)
+        {
+            throw new Exception("远程仓库中未找到 main 或 master 分支");
+        }
+
+        // 7. 创建并检出本地分支
+        var localBranch = repo.CreateBranch(remoteBranch.FriendlyName, remoteBranch.Tip);
+
+        // 8. 设置本地分支跟踪远程分支
+        repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
+
+        // 9. 检出分支
+        Commands.Checkout(repo, localBranch);
+    }
+
+    private void GitConfig(Repository repo)
+    {
+        // 设置 Git 配置
+        // 1. 设置 core.longpaths 为 true
+        repo.Config.Set("core.longpaths", true);
     
+        // 2. 添加 safe.directory *
+        repo.Config.Set("safe.directory", "*");
+    
+        // 3. 移除 http.proxy 和 https.proxy 配置
+        repo.Config.Unset("http.proxy");
+        repo.Config.Unset("https.proxy");
+    }
+
 
     // [Obsolete]
     // public async Task<(string, bool)> UpdateCenterRepo()
@@ -438,7 +509,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         scriptConfig.SubscribedScriptPaths.AddRange(paths);
 
         Toast.Information("获取最新仓库信息中...");
-        
+
         string repoPath;
         try
         {
