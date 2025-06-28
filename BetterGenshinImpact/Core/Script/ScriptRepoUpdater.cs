@@ -195,7 +195,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private static void SimpleCloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
     {
-        // 使用浅克隆选项
         var options = new CloneOptions
         {
             Checkout = true,
@@ -203,7 +202,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             RecurseSubmodules = false, // 不递归克隆子模块
             OnCheckoutProgress = onCheckoutProgress
         };
-        options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+        // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 克隆仓库
         Repository.Clone(repoUrl, repoPath, options);
     }
