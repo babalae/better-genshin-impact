@@ -84,7 +84,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             // 确认载入
             bool res = await Bv.WaitUntilFound(ElementAssets.Instance.LeylineDisorderIconRo, _ct, 60);
-            if (res)
+            if (!res)
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
@@ -99,6 +99,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             // 0. 切换到第一个角色
             var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
+            await Delay(2950, _ct); // 开始的三秒计时
             // 走到boss前面
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             await Delay(1200, _ct);
@@ -121,10 +122,11 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
             Bv.ClickWhiteCancelButton(ra); // 点击返回后是主角
             await Bv.WaitUntilFound(ElementAssets.Instance.LeylineDisorderIconRo, _ct);
+            await Delay(6000, _ct); // 等待载入完成
 
             // 4. 寻找地脉花
             Logger.LogInformation($"{Name}：{{Text}}", "3. 寻找地脉花");
-            await _lowerHeadThenWalkToTask.Start(_ct);
+            await _lowerHeadThenWalkToTask!.Start(_ct);
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
 
 
@@ -172,6 +174,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task EnterDomain()
     {
+        await Delay(300, _ct);
         var ra = CaptureToRectArea();
 
         var ocrList = ra.FindMulti(RecognitionObject.OcrThis);
@@ -237,33 +240,23 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }, cts.Token);
 
         // 对局结束检测
-        var domainEndTask = Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 150, 1000);
+        var domainEndTask = DomainEndDetectionTask(cts);
+        combatTask.Start();
         domainEndTask.Start();
         return Task.WhenAll(combatTask, domainEndTask);
     }
 
-    private void EndFightWait()
+    /// <summary>
+    /// 对局结束检测
+    /// </summary>
+    private Task DomainEndDetectionTask(CancellationTokenSource cts)
     {
-        if (_ct.IsCancellationRequested)
+        return new Task(async () =>
         {
-            return;
-        }
-
-        var s = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
-        if (s > 0)
-        {
-            Logger.LogInformation("战斗结束后等待 {Second} 秒", s);
-            Sleep((int)(s * 1000), _ct);
-        }
+            await Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 150, 1000);
+            await cts.CancelAsync();
+        }, cts.Token);
     }
-
-    // /// <summary>
-    // /// 对局结束检测
-    // /// </summary>
-    // private Task DomainEndDetectionTask(CancellationTokenSource cts)
-    // {
-    //     return new Task(async () => { await  Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 150, 1000);}, cts.Token);
-    // }
 
 
     /// <summary>
@@ -280,7 +273,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             using var ra = CaptureToRectArea();
             var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-            var res = regionList.FirstOrDefault(t => t.Text.Contains("石化古树"));
+            var res = regionList.FirstOrDefault(t => t.Text.Contains("地脉之花"));
             if (res != null)
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下

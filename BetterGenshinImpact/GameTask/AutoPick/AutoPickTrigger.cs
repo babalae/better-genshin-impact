@@ -311,7 +311,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         speedTimer.DebugPrint();
     }
 
-    private static Rect GetWhiteTextBoundingRect(Mat textMat)
+    public static Rect GetWhiteTextBoundingRect(Mat textMat)
     {
         // 预处理提取纯白色文字
         var processedMat = new Mat();

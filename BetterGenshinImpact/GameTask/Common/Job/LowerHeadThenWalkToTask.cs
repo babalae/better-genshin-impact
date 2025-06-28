@@ -7,7 +7,9 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
@@ -50,98 +52,93 @@ public class LowerHeadThenWalkToTask
             Logger.LogInformation("未找到追踪点，停止任务");
             throw new Exception("未找到追踪点");
         }
+
         return await MakeTrackPointDirectlyAbove(ct);
     }
 
     private async Task<bool> MakeTrackPointDirectlyAbove(CancellationToken ct)
     {
-        var startTime = DateTime.Now;
-        int prevMoveX = 0;
-        bool wDown = false;
-        while (!ct.IsCancellationRequested)
+        try
         {
-            var ra = CaptureToRectArea();
-            var trackPointRa = ra.Find(_trackPoint);
-            if (trackPointRa.IsExist())
+            double dpi = TaskContext.Instance().DpiScale;
+            var startTime = DateTime.Now;
+            int prevMoveX = 0;
+            while (!ct.IsCancellationRequested)
             {
-                // 使追踪点位于俯视角上方
-                var centerY = trackPointRa.Y + trackPointRa.Height / 2;
-                if (centerY > CaptureRect.Height / 2)
+                var ra = CaptureToRectArea();
+                var trackPointRa = ra.Find(_trackPoint);
+                if (trackPointRa.IsExist())
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
-                    if (wDown)
+                    // 使追踪点位于俯视角上方
+                    var centerY = trackPointRa.Y + trackPointRa.Height / 2;
+                    if (centerY > CaptureRect.Height / 2)
                     {
+                        Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                        wDown = false;
+
+                        Debug.WriteLine("使追踪点位于俯视角上方");
+                        continue;
                     }
 
-                    Debug.WriteLine("使追踪点位于俯视角上方");
-                    continue;
-                }
+                    // 调整方向
+                    var centerX = trackPointRa.X + trackPointRa.Width / 2;
+                    var moveX = (int)((centerX - CaptureRect.Width / 2.0) / 8 / dpi);
+                    moveX = moveX switch
+                    {
+                        >= 10 and < 50 => 80 + moveX,
+                        > -50 and <= -10 => -80 + moveX,
+                        > 0 and < 10 => 10 + moveX,
+                        > -10 and < 0 => -10 + moveX,
+                        _ => moveX
+                    };
+                    if (moveX != 0)
+                    {
+                        Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                        Debug.WriteLine("调整方向:" + moveX);
+                    }
 
-                // 调整方向
-                var centerX = trackPointRa.X + trackPointRa.Width / 2;
-                var moveX = (centerX - CaptureRect.Width / 2) / 8;
-                moveX = moveX switch
-                {
-                    > 0 and < 10 => 10,
-                    > -10 and < 0 => -10,
-                    _ => moveX
-                };
-                if (moveX != 0)
-                {
-                    Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
-                    Debug.WriteLine("调整方向:" + moveX);
-                }
-
-                if (moveX == 0 || prevMoveX * moveX < 0)
-                {
-                    if (!wDown)
+                    if (moveX == 0 || prevMoveX * moveX < 0)
                     {
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                        wDown = true;
                     }
-                }
-
-                if (Math.Abs(moveX) < 50 && Math.Abs(centerY - CaptureRect.Height / 2) < 200)
-                {
-                    if (wDown)
+                    else
                     {
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                        wDown = false;
                     }
 
                     // 识别F
-                    var res = ra.Find(AutoPickAssets.Instance.PickRo);
-                    if (res.IsExist())
+                    var text = Bv.FindFKeyText(ra);
+                    if (!string.IsNullOrEmpty(text) && text.Contains("激活"))
                     {
-                        Logger.LogInformation("追踪：识别到[F]");
+                        Logger.LogInformation("追踪：识别到[{Msg}]", text);
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         return true;
                     }
 
-                    Logger.LogInformation("追踪：到达目标");
-                    break;
+                    prevMoveX = moveX;
+                }
+                else
+                {
+                    // 随机移动
+                    Logger.LogInformation("未找到追踪目标");
                 }
 
-                prevMoveX = moveX;
-            }
-            else
-            {
-                // 随机移动
-                Logger.LogInformation("未找到追踪目标");
+                if (DateTime.Now - startTime > TimeSpan.FromMilliseconds(_timeoutMilliseconds))
+                {
+                    Logger.LogInformation("追踪超时");
+                    return false;
+                }
+
+                Simulation.SendInput.Mouse.MoveMouseBy(0, 800); // 保证俯视角（低头）
+                await Delay(100, ct);
             }
 
-            if (DateTime.Now - startTime > TimeSpan.FromMilliseconds(_timeoutMilliseconds))
-            {
-                Logger.LogInformation("追踪超时");
-                return false;
-            }
-
-            Simulation.SendInput.Mouse.MoveMouseBy(0, 500); // 保证俯视角（低头）
-            await Delay(100, ct);
+            return false;
         }
-
-        return false;
+        finally
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            VisionContext.Instance().DrawContent.ClearAll();
+        }
     }
 }
