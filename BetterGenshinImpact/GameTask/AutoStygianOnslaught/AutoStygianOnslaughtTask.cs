@@ -35,7 +35,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 {
     public string Name => "自动幽境危战";
 
-    private readonly AutoStygianOnslaughConfig _taskParam;
+    private readonly AutoStygianOnslaughtConfig _taskParam;
 
     private readonly CombatScriptBag _combatScriptBag;
 
@@ -44,20 +44,21 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
 
-    private LowerHeadThenWalkToTask _lowerHeadThenWalkToTask = new("chest_tip.png",20000);
+    private LowerHeadThenWalkToTask? _lowerHeadThenWalkToTask;
 
-    public AutoStygianOnslaughtTask(AutoStygianOnslaughConfig taskParam)
+    public AutoStygianOnslaughtTask(AutoStygianOnslaughtConfig taskParam, string path)
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
 
-        _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
+        _combatScriptBag = CombatScriptParser.ReadAndParse(path);
 
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
     }
 
     public async Task Start(CancellationToken ct)
     {
+        _lowerHeadThenWalkToTask = new LowerHeadThenWalkToTask("chest_tip.png", 20000);
         _ct = ct;
 
         Init();
@@ -76,8 +77,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task DoDomain()
     {
-        var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-
         // 前置进入秘境
         await EnterDomain();
 
@@ -89,9 +88,13 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
-            
+
             // 队伍没初始化成功则重试
-            TeamInit(combatScenes);
+            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            if (!combatScenes.CheckTeamInitialized())
+            {
+                throw new Exception("识别队伍角色失败！");
+            }
 
             // 0. 切换到第一个角色
             var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
@@ -106,7 +109,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             Logger.LogInformation($"{Name}：{{Text}}", "2. 执行战斗策略");
             await StartFight(combatScenes, combatCommands);
             await Delay(500, _ct);
-            
+
             // 3.判断是否成功（存在确认按钮就是失败）
             using var ra = CaptureToRectArea();
             if (ra.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist())
@@ -115,15 +118,16 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 Bv.ClickWhiteCancelButton(ra);
                 continue;
             }
+
             Bv.ClickWhiteCancelButton(ra); // 点击返回后是主角
             await Bv.WaitUntilFound(ElementAssets.Instance.LeylineDisorderIconRo, _ct);
-            
+
             // 4. 寻找地脉花
             Logger.LogInformation($"{Name}：{{Text}}", "3. 寻找地脉花");
             await _lowerHeadThenWalkToTask.Start(_ct);
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
-            
-            
+
+
             // 5. 快速领取奖励并判断是否有下一轮
             Logger.LogInformation($"{Name}：{{Text}}", "5. 领取奖励");
             if (!await GettingTreasure())
@@ -166,18 +170,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
     }
 
-    private void TeamInit(CombatScenes combatScenes)
-    {
-        if (!combatScenes.CheckTeamInitialized())
-        {
-            combatScenes.InitializeTeam(CaptureToRectArea());
-            if (!combatScenes.CheckTeamInitialized())
-            {
-                throw new Exception("识别队伍角色失败！");
-            }
-        }
-    }
-
     private async Task EnterDomain()
     {
         var ra = CaptureToRectArea();
@@ -185,7 +177,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
         var ocrList = ra.FindMulti(RecognitionObject.OcrThis);
         if (ocrList.Any(o => o.Text.Contains("好友挑战")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
         {
-        
             // 幽境危战确认界面
             Bv.ClickWhiteConfirmButton(ra);
 
@@ -195,6 +186,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         else
         {
             Logger.LogWarning("当前界面不是幽境危战{Msg1}界面，请注意是旅行者打开钥匙后弹出的界面！", "开始挑战");
+            throw new NormalEndException("当前界面不是幽境危战开始挑战界面，请注意是旅行者打开钥匙后弹出的界面！");
         }
     }
 

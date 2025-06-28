@@ -54,7 +54,7 @@ public class ResinUseRecord
         return list;
     }
     
-    public static List<ResinUseRecord> BuildFromDomainParam(AutoStygianOnslaughConfig taskParam)
+    public static List<ResinUseRecord> BuildFromDomainParam(AutoStygianOnslaughtConfig taskParam)
     {
         List<ResinUseRecord> list = [];
         if (taskParam.SpecifyResinUse)

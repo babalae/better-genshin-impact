@@ -5,11 +5,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 [Serializable]
-public partial class AutoStygianOnslaughConfig : ObservableObject
+public partial class AutoStygianOnslaughtConfig : ObservableObject
 {
-    // 结束后是否自动分解圣遗物
-    [ObservableProperty]
-    private string _combatStrategyPath;
+    [ObservableProperty] 
+    private string _strategyName = "";
     
     // 结束后是否自动分解圣遗物
     [ObservableProperty]

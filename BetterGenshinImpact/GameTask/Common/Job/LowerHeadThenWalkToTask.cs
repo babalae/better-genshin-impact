@@ -34,7 +34,7 @@ public class LowerHeadThenWalkToTask
         _timeoutMilliseconds = timeoutMilliseconds;
         _trackPoint = new RecognitionObject
         {
-            Name = "BlueTrackPoint",
+            Name = "TrackPoint",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", targetMatName),
             RegionOfInterest = new Rect((int)(300 * AssetScale), 0, CaptureRect.Width - (int)(600 * AssetScale), CaptureRect.Height),
