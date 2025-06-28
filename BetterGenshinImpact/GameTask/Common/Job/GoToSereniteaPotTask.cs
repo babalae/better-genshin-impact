@@ -127,28 +127,28 @@ internal class GoToSereniteaPotTask
 
         for (int attempt = 0; attempt < 10; attempt++) // 尝试点击传送按钮
         {
-            await Delay(500, ct);  //点击传送图标和传送按钮之间添加时间间隔
-
             ra = CaptureToRectArea();
             var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
             if (teleportBtn.IsExist())
             {
                 teleportBtn.Click();
+                await Delay(500, ct);  //点击传送图标和传送按钮之间添加时间间隔
                 break; // 找到并点击传送按钮后退出循环
             }
 
-            await Delay(500, ct); 
+            await Delay(300, ct); 
 
             //未找到传送按钮，点击传送住宅按钮
             var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (teleportSereniteaPotHome.IsExist())
             {
                 teleportSereniteaPotHome.Click();
+                await Delay(500, ct);  //点击传送图标和传送按钮之间添加时间间隔
                 continue; // 找到并点击后再次点击传送按钮
             }
             Logger.LogInformation("领取尘歌壶奖励:{text}", "传送按钮、传送住宅按钮未找到，重试");
         }
-
+        
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
     }
 
