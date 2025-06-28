@@ -1280,7 +1280,7 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
                         在接触钥匙后的界面启动本任务 -
-                        <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}"
+                        <Hyperlink Command="{Binding GoToAutoStygianOnslaughtUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
                         </Hyperlink>
