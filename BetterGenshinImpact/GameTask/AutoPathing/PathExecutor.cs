@@ -223,7 +223,10 @@ public class PathExecutor
                 catch (NormalEndException normalEndException)
                 {
                     Logger.LogInformation(normalEndException.Message);
-                    if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
+                    if (normalEndException.Message == "达成结束条件，结束地图追踪")
+                    {
+                        break;
+                    } else if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
                         throw;
                     }
