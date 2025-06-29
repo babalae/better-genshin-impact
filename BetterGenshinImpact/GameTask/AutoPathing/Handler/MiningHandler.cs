@@ -17,6 +17,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 public class MiningHandler : IActionHandler
 {
     private readonly CombatScript _miningCombatScript = CombatScriptParser.ParseContext("""
+        诺艾尔 attack(2.0)
         荒泷一斗 attack(2.0)
         迪希雅 attack(2.0)
         玛薇卡 attack(2.0)
@@ -24,7 +25,6 @@ public class MiningHandler : IActionHandler
         娜维娅 attack(2.0)
         菲米尼 attack(2.0)
         迪卢克 attack(2.0)
-        诺艾尔 attack(2.0)
         卡维 attack(2.0)
         雷泽 attack(2.0)
         优菈 attack(2.0)
