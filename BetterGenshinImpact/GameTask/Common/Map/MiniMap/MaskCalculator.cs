@@ -39,7 +39,7 @@ public class MaskCalculator : IDisposable
             var index = Array.BinarySearch(alphaParams1, v);
             return (byte)Math.Min(229 + (index < 0 ? ~index : index), 255);
         }).ToArray();
-        var lutData2 = range.Select(v => (byte)Math.Min(111.7 + 1.836 * v, 255)).ToArray();
+        var lutData2 = range.Select(v => (byte)Math.Min(137 + 1.43 * v, 255)).ToArray();
         using var lut1 = Mat.FromPixelData(1, 256, MatType.CV_8UC1, lutData1);
         using var lut2 = Mat.FromPixelData(1, 256, MatType.CV_8UC1, lutData2);
         Cv2.LUT(_radius, lut1, _alphaMask1);
@@ -50,22 +50,19 @@ public class MaskCalculator : IDisposable
         _circleMask.Circle(Size / 2, Size / 2, Size / 2, new Scalar(255), -1);
     }
 
-    public Mat Process1(Mat bgrMat)
+    public (Mat, Mat) Process1(Mat bgrMat)
     {
         bgrMat = bgrMat[new Rect((bgrMat.Width - Size) / 2, (bgrMat.Width - Size) / 2, Size, Size)];
         bgrMat.ConvertTo(_outMatF, MatType.CV_32FC3);
-        ApplyMask(_outMatF, _alphaMask1, new Scalar(0.0f, 0.0f, 0.0f));
         CreateIconMask(bgrMat);
-        var outMat = new Mat();
-        _outMatF.ConvertTo(outMat, MatType.CV_8UC3);
-        outMat.SetTo(new Scalar(0, 0, 0), _outMask);
-        return outMat;
+        return (bgrMat, _outMask);
     }
 
     public (Mat, Mat) Process2(float angle)
     {
         CreatSectorMask((int)Math.Round(angle));
         ApplyMask(_outMatF, _sectorMask, new Scalar(255.0f, 255.0f, 255.0f));
+        ApplyMask(_outMatF, _alphaMask1, new Scalar(0.0f, 0.0f, 0.0f));
         var outMat = new Mat();
         _outMatF.ConvertTo(outMat, MatType.CV_8UC3);
         Cv2.BitwiseNot(_outMask, _outMask);
@@ -107,6 +104,8 @@ public class MaskCalculator : IDisposable
         using var diff = new Mat();
         MaxMinChannels(bgrMat, cmax, cmin);
         Cv2.Compare(cmax, cmin, _outMask, CmpType.EQ);
+        Cv2.InRange(cmax, new Scalar(50), new Scalar(127), diff);
+        Cv2.BitwiseAnd(diff, _outMask, _outMask);
         Cv2.Subtract(cmax, cmin, diff);
         Cv2.Subtract(255, cmax, cmin);
         Cv2.Divide(cmin, 6, cmin);
@@ -114,6 +113,8 @@ public class MaskCalculator : IDisposable
         Cv2.Add(diff, 10, diff);
         cmax.SetTo(255, _outMask);
         Cv2.Divide(cmax, diff, cmax, 10);
+        //Cv2.GaussianBlur(cmax,cmax, new Size(3,3), 0.5);
+        //Cv2.MorphologyEx(cmax,cmax, MorphTypes.Open, Mat.Ones(2, 2, MatType.CV_8UC1));
         Cv2.Threshold(cmax, _outMask, 200, 255, ThresholdTypes.Binary);
         Cv2.Dilate(_outMask, _outMask, _kernel);
         Cv2.MorphologyEx(_outMask, _outMask, MorphTypes.Close, _kernel);

@@ -40,8 +40,8 @@ public class Navigation
 
     public static Point2f GetPosition(ImageRegion imageRegion, string mapName)
     {
-        var greyMat = new Mat(imageRegion.CacheGreyMat, MapAssets.Instance.MimiMapRect);
-        var p = MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);
+        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
+        var p = MapManager.GetMap(mapName).GetMiniMapPosition(colorMat, _prevX, _prevY);
         if (p != default)
         {
             (_prevX, _prevY) = (p.X, p.Y);
@@ -59,16 +59,16 @@ public class Navigation
     /// <returns>当前位置坐标</returns>
     public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName)
     {
-        var greyMat = new Mat(imageRegion.CacheGreyMat, MapAssets.Instance.MimiMapRect);
+        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
 
         // 先尝试使用局部匹配
-        var p =  MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);
+        var p =  MapManager.GetMap(mapName).GetMiniMapPosition(colorMat, _prevX, _prevY);
 
         // 如果局部匹配失败，再尝试全地图匹配失败
         if (p == new Point2f())
         {
             Reset();
-            p = MapManager.GetMap(mapName).GetMiniMapPosition(greyMat, _prevX, _prevY);
+            p = MapManager.GetMap(mapName).GetMiniMapPosition(colorMat, _prevX, _prevY);
         }
         if (p != default)
         {

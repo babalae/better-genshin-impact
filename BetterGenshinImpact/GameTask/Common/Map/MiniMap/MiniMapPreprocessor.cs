@@ -11,8 +11,8 @@ public class MiniMapPreprocessor : IDisposable
     
     public (float, float) PredictRotationWithConfidence(Mat miniMap)
     {
-        using var mat = _maskCalculator.Process1(miniMap);
-        return _coCalculator.PredictRotation(mat);
+        var (src, mask) = _maskCalculator.Process1(miniMap);
+        return _coCalculator.PredictRotation(src, mask);
     }
 
     public float PredictRotation(Mat miniMap)
@@ -23,8 +23,8 @@ public class MiniMapPreprocessor : IDisposable
     public (Mat, Mat) GetMiniMapAndMask(Mat miniMap)
     {
         //Debug.WriteLine($"输入图片尺寸为{miniMap.Size()} 类型为 {miniMap.Type()}");
-        using var mat = _maskCalculator.Process1(miniMap);
-        var (angle, _) = _coCalculator.PredictRotation(mat);
+        var (src, mask) = _maskCalculator.Process1(miniMap);
+        var (angle, _) = _coCalculator.PredictRotation(src, mask);
         return _maskCalculator.Process2(angle);
     }
 
