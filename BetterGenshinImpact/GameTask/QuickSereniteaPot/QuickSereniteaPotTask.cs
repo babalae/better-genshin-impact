@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.View.Drawable;
@@ -75,18 +76,22 @@ public class QuickSereniteaPotTask
             TaskControl.CheckAndSleep(200);
 
             // 点击放置 右下225,60
-            GameCaptureRegion.GameRegionClick((size, assetScale) => (size.Width - 225 * assetScale, size.Height - 60 * assetScale));
+            // GameCaptureRegion.GameRegionClick((size, assetScale) => (size.Width - 225 * assetScale, size.Height - 60 * assetScale));
             // 也可以使用下面的方法点击放置按钮
-            // Bv.ClickWhiteConfirmButton(TaskControl.CaptureToRectArea());
+            Bv.ClickWhiteConfirmButton(TaskControl.CaptureToRectArea());
             TaskControl.CheckAndSleep(800);
+            // 校验F交互是否是 进入[尘歌壶]
+            bool canIn = Bv.FindF(TaskControl.CaptureToRectArea(), "进入","尘歌壶");
 
-            // 按F进入
-            Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
-            TaskControl.CheckAndSleep(200);
+            if (canIn) { 
+                // 按F进入
+                Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+                TaskControl.CheckAndSleep(200);
             
-            // 点击进入尘歌壶
-            // 如果不是联机状态，此时玩家应已进入传送界面，本次点击不会影响实际功能
-            GameCaptureRegion.GameRegion1080PPosClick(1010, 760);
+                // 点击进入尘歌壶
+                // 如果不是联机状态，此时玩家应已进入传送界面，本次点击不会影响实际功能
+                GameCaptureRegion.GameRegion1080PPosClick(1010, 760);
+            }
         }
         catch (Exception e)
         {
