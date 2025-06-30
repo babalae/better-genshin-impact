@@ -173,14 +173,15 @@ internal class GoToSereniteaPotTask
     {
         // 尝试使用背包的壶进入。
         QuickSereniteaPotTask.Done();
+        await Delay(5000, ct); // 在点击壶之后的特殊加载页面会有 mainUI
         await Bv.WaitForMainUi(ct);
         // 判断是否在尘歌壶中
         if (CaptureToRectArea().Find(ElementAssets.Instance.FingerIconRo).IsExist())
         {
+            await Delay(1000, ct);
             // 尝试获取尘歌壶名称
             TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
             await Delay(1000, ct);
-            Bv.IsInBigMapUi(CaptureToRectArea());
             for (int i = 0; i < 5; i++)
             {
                 var ra = CaptureToRectArea();
@@ -195,6 +196,14 @@ internal class GoToSereniteaPotTask
                     dongTianName = list[0].Text;
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
                     await Task.Delay(100, ct);
+                    for(int z  = 1; z < 5; z++) { 
+                        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); await Delay(1000, ct);
+                        if (Bv.IsInMainUi(CaptureToRectArea()))
+                        {
+                            break;
+                        }
+                    }
+                    await Task.Delay(100, ct);
                     return true;
                 }
                 else
@@ -206,6 +215,7 @@ internal class GoToSereniteaPotTask
             }
             return false;
         }
+        Logger.LogInformation("领取尘歌壶奖励:未识别到手指");
         return false;
     }
 
@@ -613,7 +623,7 @@ internal class GoToSereniteaPotTask
         //  * 5. 领取奖励
         //  */
         // 进入尘歌壶
-        if (await IntoSereniteaPotByBag(ct))
+        if (!await IntoSereniteaPotByBag(ct))
         {
             await IntoSereniteaPot(ct);
         }
