@@ -61,7 +61,7 @@ public class Duel
         LogScreenResolution();
         try
         {
-            Notify.Event(NotificationEvent.TcgStart).Success("自动七胜召唤启动");
+            Notify.Event(NotificationEvent.TcgStart).Success("自动七圣召唤启动");
             
             AutoGeniusInvokationAssets.DestroyInstance();
             
@@ -306,7 +306,7 @@ public class Duel
             throw;
         }
         
-        Notify.Event(NotificationEvent.TcgEnd).Success("自动七胜召唤结束");
+        Notify.Event(NotificationEvent.TcgEnd).Success("自动七圣召唤结束");
     }
 
     private HashSet<ElementalType> PredictionDiceType()
