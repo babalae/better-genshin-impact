@@ -16,6 +16,7 @@ using static MiniMapMatchConfig;
 public class BaseMapLayerByTemplateMatch
 {
     public string LayerGroupId { get; set; } = string.Empty;
+    public string LayerId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public float Scale { get; set; } = 1;
     public int Floor { get; set; } = 0;
@@ -29,15 +30,15 @@ public class BaseMapLayerByTemplateMatch
     
     public void LoadLayer(string layerDir)
     {
-        SpeedTimer speedTimer = new($"加载 {LayerGroupId} 地图图片");
-        var colorMapFileName = "color_" + LayerGroupId + ".webp";
+        SpeedTimer speedTimer = new($"加载 {LayerId} 地图图片");
+        var colorMapFileName = LayerId + "_color" + ".webp";
         var colorMapPath = Path.Combine(layerDir, colorMapFileName);
-        var coarseColorMap = Cv2.ImRead(colorMapPath)?? throw new Exception($"彩色分层地图 {LayerGroupId} 读取失败");
+        var coarseColorMap = Cv2.ImRead(colorMapPath)?? throw new Exception($"彩色分层地图 {LayerId} 读取失败");
         speedTimer.Record("精确匹配用彩图");
         CoarseColorMatcher = new FastSqDiffMatcher(coarseColorMap, new Size(52, 52));
-        var grayMapFileName = "gray_" + LayerGroupId + (IsOverSize ? ".png" : ".webp");
+        var grayMapFileName = LayerId + "_gray" + (IsOverSize ? ".png" : ".webp");
         var grayMapPath = Path.Combine(layerDir, grayMapFileName);
-        FineGrayMap = Cv2.ImRead(grayMapPath, ImreadModes.Grayscale)?? throw new Exception($"灰度分层地图 {LayerGroupId} 读取失败");
+        FineGrayMap = Cv2.ImRead(grayMapPath, ImreadModes.Grayscale)?? throw new Exception($"灰度分层地图 {LayerId} 读取失败");
         speedTimer.Record("粗匹配用灰度图");
         speedTimer.DebugPrint();
     }
@@ -103,10 +104,10 @@ public class BaseMapLayerByTemplateMatch
 
     private Point WorldToMap(Point2f pos, float zoom)
     {
-        return new Point((int)Math.Round((pos.X / GlobalScale - Left) * Scale / zoom), (int)Math.Round((pos.Y / GlobalScale - Top) * Scale / zoom));
+        return new Point((int)Math.Round((Left - pos.X) * Scale / zoom), (int)Math.Round((Top - pos.Y) * Scale / zoom));
     }
     private Point2f MapToWorld(Point2f pos, float zoom, int miniMapSize)
     {
-        return new Point2f(GlobalScale * ((pos.X + miniMapSize / 2.0f) * zoom / Scale + Left), GlobalScale * ( (pos.Y + miniMapSize / 2.0f ) * zoom / Scale + Top));
+        return new Point2f(Left - (pos.X + miniMapSize / 2.0f) * zoom / Scale ,  Top - (pos.Y + miniMapSize / 2.0f ) * zoom / Scale);
     }
 }
