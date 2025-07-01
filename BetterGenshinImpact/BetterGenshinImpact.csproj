@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.46.3-alpha.1</Version>
+		<Version>0.46.3-alpha.4</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -26,15 +26,7 @@
 		<None Remove="Assets\Strings\*.html" />
 		<None Remove="Assets\Strings\*.md" />
 		<None Remove="Assets\Audios\*.mp3" />
-		<None Update="Assets\Model\PaddleOCR\chinese_cht_PP-OCRv3_rec_infer\chinese_cht_dict.txt">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\latin_PP-OCRv3_rec_infer\latin_dict.txt">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\ppocr_keys_v1.txt">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
+		<None Update="Assets\Config\*"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -113,6 +105,9 @@
 		</None>
 		<None Update="Assets\Model\**">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Assets\Config\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>

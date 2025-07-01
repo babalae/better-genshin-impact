@@ -167,11 +167,6 @@ public partial class ScriptGroupProject : ObservableObject
             JsScriptSettingsObject ??= new ExpandoObject();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
-            if (!(pathingPartyConfig is { Enabled: true, JsScriptUseEnabled: true }))
-            {
-                pathingPartyConfig = null;
-            }
-
             await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
         }
         else if (Type == "KeyMouse")

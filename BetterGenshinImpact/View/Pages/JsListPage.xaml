@@ -91,6 +91,7 @@
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
                          ItemsSource="{Binding ScriptItems}"
+                         SelectedItem="{Binding SelectedScriptProject, Mode=TwoWay}"
                          SelectionMode="Single">
                 <b:Interaction.Triggers>
                     <b:EventTrigger EventName="SelectionChanged">
